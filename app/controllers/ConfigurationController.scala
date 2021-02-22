@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import models.binary.{DataSetDAO, DataSetService}
 import models.configuration.{DataSetConfigurationService, UserConfiguration}
 import models.user.UserService
-import oxalis.security.WkEnv
+import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.Messages
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json._
@@ -40,8 +40,9 @@ class ConfigurationController @Inject()(
     }
   }
 
-  def readDataSetViewConfiguration(organizationName: String, dataSetName: String) =
+  def readDataSetViewConfiguration(organizationName: String, dataSetName: String, sharingToken: Option[String]) =
     sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
+      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       request.identity.toFox
         .flatMap(
           user =>
@@ -49,7 +50,9 @@ class ConfigurationController @Inject()(
               .getDataSetViewConfigurationForUserAndDataset(request.body, user, dataSetName, organizationName)(
                 GlobalAccessContext))
         .orElse(
-          dataSetConfigurationService.getDataSetViewConfigurationForDataset(request.body, dataSetName, organizationName)
+          dataSetConfigurationService.getDataSetViewConfigurationForDataset(request.body,
+                                                                            dataSetName,
+                                                                            organizationName)(ctx)
         )
         .getOrElse(Map.empty)
         .map(configuration => Ok(toJson(configuration)))

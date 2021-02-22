@@ -212,11 +212,17 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   };
 
   getTabTitle = () => {
-    const titleArray: Array<string> = [
-      this.props.displayName,
-      this.props.organization,
-      "webKnossos",
-    ];
+    const getDescriptors = () => {
+      switch (this.state.status) {
+        case "loading":
+          return ["Loading"];
+        case "failedLoading":
+          return ["Error"];
+        default:
+          return [this.props.displayName, this.props.organization];
+      }
+    };
+    const titleArray: Array<string> = [...getDescriptors(), "webKnossos"];
     return titleArray.filter(elem => elem).join(" | ");
   };
 
@@ -297,7 +303,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   >
                     <Icon
                       type="setting"
-                      className="withoutMargin"
+                      className="withoutIconMargin"
                       style={{
                         display: "flex",
                         alignItems: "center",

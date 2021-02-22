@@ -542,7 +542,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             {search}
           </div>
         )}
-        <h3>My Annotations</h3>
         {this.renderSearchTags()}
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         <Spin spinning={this.state.isLoading} size="large">

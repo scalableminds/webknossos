@@ -189,7 +189,8 @@
     "three": "^0.106.0",
     "tween.js": "^16.3.1",
     "url-join": "^4.0.0",
-    "worker-loader": "^2.0.0"
+    "worker-loader": "^2.0.0",
+    "zip-js-webpack": "^1.0.0"
   },
   "resolutions": {
     "**/mini-store": "^1.1.0"

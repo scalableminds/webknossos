@@ -1,15 +1,17 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Tabs } from "antd";
+import { Spin, Tabs, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
-import * as Utils from "libs/utils";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
+import { WhatsNextHeader } from "admin/welcome_ui";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getUser } from "admin/admin_rest_api";
+import { getUser, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
 import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
@@ -17,7 +19,6 @@ import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import { WhatsNextBanner } from "admin/onboarding";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
@@ -32,13 +33,15 @@ type OwnProps = {|
 type StateProps = {|
   activeUser: APIUser,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type DispatchProps = {|
+  updateActiveUser: APIUser => void,
+|};
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   activeTabKey: string,
   user: ?APIUser,
-  showWhatsNextBanner: boolean,
 };
 
 export const urlTokenToTabKeyMap = {
@@ -71,7 +74,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     this.state = {
       activeTabKey,
       user: null,
-      showWhatsNextBanner: Utils.getUrlParamValue("showWhatsNextBanner") === "true",
     };
   }
 
@@ -135,7 +137,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             userId={this.props.userId}
           />
         </TabPane>,
-        <TabPane tab="Shared Annotations" key="sharedAnnotations">
+        <TabPane
+          tab={
+            <div>
+              Shared Annotations
+              <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the annotation view.">
+                <Icon type="info-circle-o" style={{ color: "gray", marginLeft: 6 }} />
+              </Tooltip>
+            </div>
+          }
+          key="sharedAnnotations"
+        >
           <SharedAnnotationsView />
         </TabPane>,
       ];
@@ -144,8 +156,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     }
   }
 
+  onDismissWelcomeBanner = () => {
+    const [newUserSync] = updateNovelUserExperienceInfos(this.props.activeUser, {
+      hasSeenDashboardWelcomeBanner: true,
+    });
+
+    this.props.updateActiveUser(newUserSync);
+  };
+
   render() {
     const { user } = this.state;
+    const { activeUser } = this.props;
     if (!user) {
       return (
         <div className="text-center" style={{ marginTop: 50, width: "100vw" }}>
@@ -172,14 +193,16 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       </h3>
     ) : null;
 
-    const whatsNextBanner = this.state.showWhatsNextBanner ? (
-      <WhatsNextBanner activeUser={this.props.activeUser} />
-    ) : null;
+    const whatsNextBanner =
+      !this.props.isAdminView &&
+      !activeUser.novelUserExperienceInfos.hasSeenDashboardWelcomeBanner ? (
+        <WhatsNextHeader activeUser={activeUser} onDismiss={this.onDismissWelcomeBanner} />
+      ) : null;
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
-        <div className="container" style={{ paddingBottom: 50 }}>
-          {whatsNextBanner}
+        {whatsNextBanner}
+        <div className="container">
           {userHeader}
           <DatasetCacheProvider>
             <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
@@ -196,4 +219,13 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(DashboardView));
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  updateActiveUser(activeUser: APIUser) {
+    dispatch(setActiveUserAction(activeUser));
+  },
+});
+
+export default connect<Props, OwnProps, _, _, _, _>(
+  mapStateToProps,
+  mapDispatchToProps,
+)(withRouter(DashboardView));

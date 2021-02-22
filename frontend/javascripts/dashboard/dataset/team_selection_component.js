@@ -11,6 +11,7 @@ const { Option } = Select;
 type Props = {
   value?: APITeam | Array<APITeam>,
   onChange?: (value: APITeam | Array<APITeam>) => void,
+  afterFetchedTeams?: (Array<APITeam>) => void,
   mode?: "default" | "multiple",
   allowNonEditableTeams?: boolean,
   disabled?: boolean,
@@ -50,6 +51,9 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
       possibleTeams,
       isFetchingData: false,
     });
+    if (this.props.afterFetchedTeams != null) {
+      this.props.afterFetchedTeams(possibleTeams);
+    }
   }
 
   onSelectTeams = (selectedTeamIdsOrId: string | Array<string>) => {

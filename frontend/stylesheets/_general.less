@@ -43,3 +43,27 @@ p {
   border-radius: 50%;
   margin-right: 5px;
 }
+
+.centered-items {
+  display: flex;
+  flex-direction: row;
+}
+
+.centered-items > * {
+  margin: 6px;
+  font-size: 14;
+}
+
+.centered-items:first-child {
+  margin-left: 0px;
+}
+
+.centered-items:last-child {
+  margin-right: 0px;
+}
+
+.no-footer-modal {
+  .ant-modal-footer {
+    display: none;
+  }
+}

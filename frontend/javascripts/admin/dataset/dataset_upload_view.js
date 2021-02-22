@@ -1,18 +1,18 @@
 // @flow
-import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Checkbox } from "antd";
+import { Form, Button, Upload, Icon, Col, Row, Tooltip, Modal, Progress, Alert } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
 import { type RouterHistory, withRouter } from "react-router-dom";
-import type { APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
+import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
-import { finishDatasetUpload, createResumableUpload } from "admin/admin_rest_api";
+import { finishDatasetUpload, createResumableUpload, startJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
+import { createReader, BlobReader } from "zip-js-webpack";
 import {
   CardContainer,
   DatasetNameFormItem,
@@ -29,7 +29,7 @@ const FormItem = Form.Item;
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
-  onUploaded: (string, string, boolean, ?Vector3) => Promise<void>,
+  onUploaded: (string, string, boolean) => Promise<void> | void,
 |};
 type StateProps = {|
   activeUser: ?APIUser,
@@ -45,8 +45,8 @@ type State = {
   isUploading: boolean,
   needsConversion: boolean,
   isRetrying: boolean,
-  isFinished: boolean,
   uploadProgress: number,
+  selectedTeams: APITeam | Array<APITeam>,
 };
 
 class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, State> {
@@ -54,9 +54,19 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     isUploading: false,
     needsConversion: false,
     isRetrying: false,
-    isFinished: false,
     uploadProgress: 0,
+    selectedTeams: [],
   };
+
+  static getDerivedStateFromProps(props) {
+    if (
+      props.datastores.length === 1 &&
+      props.form.getFieldValue("datastore") !== props.datastores[0].url
+    ) {
+      props.form.setFieldsValue({ datastore: props.datastores[0].url });
+    }
+    return null;
+  }
 
   isDatasetManagerOrAdmin = () =>
     this.props.activeUser &&
@@ -68,10 +78,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
       return e.slice(-1);
     }
     return e && e.fileList.slice(-1);
-  };
-
-  handleCheckboxChange = evt => {
-    this.setState({ needsConversion: evt.target.checked });
   };
 
   handleSubmit = evt => {
@@ -120,13 +126,13 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
 
         resumableUpload.on("fileSuccess", file => {
-          this.setState({ isFinished: true });
+          const { form } = this.props;
           const uploadInfo = {
             uploadId: file.uniqueIdentifier,
             organization: datasetId.owningOrganization,
             name: datasetId.name,
             initialTeams: formValues.initialTeams.map(team => team.id),
-            needsConversion: formValues.needsConversion,
+            needsConversion: this.state.needsConversion,
           };
 
           finishDatasetUpload(formValues.datastore, uploadInfo).then(
@@ -134,19 +140,36 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
               Toast.success(messages["dataset.upload_success"]);
               trackAction("Upload dataset");
               await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+              if (this.state.needsConversion) {
+                await startJob(formValues.name, activeUser.organization, formValues.scale);
+                Toast.info(
+                  <React.Fragment>
+                    The conversion for the uploaded dataset was started.
+                    <br />
+                    Click{" "}
+                    <a
+                      target="_blank"
+                      href="https://github.com/scalableminds/webknossos-cuber/"
+                      rel="noopener noreferrer"
+                    >
+                      here
+                    </a>{" "}
+                    to see all running jobs.
+                  </React.Fragment>,
+                );
+              }
+              form.setFieldsValue({ name: null, zipFile: null });
               this.setState({ isUploading: false });
               this.props.onUploaded(
                 activeUser.organization,
                 formValues.name,
                 this.state.needsConversion,
-                formValues.scale,
               );
             },
             () => {
               Toast.error(messages["dataset.upload_failed"]);
               this.setState({
                 isUploading: false,
-                isFinished: false,
                 isRetrying: false,
                 uploadProgress: 0,
               });
@@ -176,85 +199,199 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     });
   };
 
+  getUploadModal = () => {
+    const { form } = this.props;
+    const { isRetrying, uploadProgress, isUploading } = this.state;
+    return (
+      <Modal
+        visible={isUploading}
+        closable={false}
+        keyboard={false}
+        maskClosable={false}
+        className="no-footer-modal"
+        cancelButtonProps={{ style: { display: "none" } }}
+        okButtonProps={{ style: { display: "none" } }}
+      >
+        <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+          <Icon type="folder" style={{ fontSize: 50 }} />
+          <br />
+          {isRetrying
+            ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+            : `Uploading Dataset ${form.getFieldValue("name")}.`}
+          <br />
+          {isRetrying ? "Retrying to continue the upload..." : null}
+          <br />
+          <Progress
+            // Round to 1 digit after the comma. Don't show 100%, since there is
+            // some additional delay until the UI shows the next screen.
+            // Otherwise, the user might think that nothing will happen after 100%
+            // was reached.
+            percent={Math.min(99.9, Math.round(uploadProgress * 1000) / 10)}
+            status="active"
+          />
+        </div>
+      </Modal>
+    );
+  };
+
+  handleFileDrop = file => {
+    const { form } = this.props;
+    const filenameParts = file.name.split(".");
+    if (filenameParts[filenameParts.length - 1] !== "zip") {
+      Modal.error({
+        content: messages["dataset.upload_none_zip_error"],
+      });
+      // Directly setting the zip file to null does not work.
+      setTimeout(() => form.setFieldsValue({ zipFile: null }), 500);
+      return false;
+    }
+    if (!form.getFieldValue("name")) {
+      const filename = filenameParts.slice(0, -1).join(".");
+      form.setFieldsValue({ name: filename });
+      form.validateFields(["name"]);
+    }
+    file.thumbUrl = "/assets/images/folder.svg";
+    // Set the file here, as setting it after checking for the wkw format
+    // results in an error: When trying to upload the file it is somehow undefined.
+    form.setFieldsValue({ zipFile: [file] });
+    const blobReader = new BlobReader(file);
+    createReader(
+      blobReader,
+      reader => {
+        reader.getEntries(entries => {
+          const wkwFile = entries.find(entry =>
+            Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
+          );
+          const isNotWkwFormat = wkwFile == null;
+          this.setState({
+            needsConversion: isNotWkwFormat,
+          });
+          if (isNotWkwFormat && !features().jobsEnabled) {
+            form.setFieldsValue({ zipFile: null });
+            Modal.info({
+              content: (
+                <div>
+                  The selected dataset does not seem to be in the WKW format. Please convert the
+                  dataset using{" "}
+                  <a
+                    target="_blank"
+                    href="https://github.com/scalableminds/webknossos-cuber/"
+                    rel="noopener noreferrer"
+                  >
+                    webknossos-cuber
+                  </a>{" "}
+                  or use a webKnossos instance which integrates a conversion service, such as{" "}
+                  <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
+                    webknossos.org
+                  </a>
+                  .
+                </div>
+              ),
+            });
+          }
+        });
+      },
+      () => {
+        Modal.error({
+          content: messages["dataset.upload_invalid_zip"],
+        });
+        form.setFieldsValue({ zipFile: null });
+      },
+    );
+    return false;
+  };
+
   render() {
     const { form, activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
-    const { isUploading, isRetrying, isFinished, uploadProgress } = this.state;
-    let tooltip;
-    if (isFinished) {
-      tooltip = "Converting Dataset...";
-    } else {
-      tooltip = `${isRetrying ? "Retrying... - " : ""}${Math.round(
-        uploadProgress * 100,
-      )}% completed`;
-    }
+    const { needsConversion } = this.state;
+    const uploadableDatastores = datastores.filter(datastore => datastore.allowsUpload);
+    const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
-        <Spin spinning={isUploading} tip={tooltip} size="large">
-          <CardContainer withoutCard={withoutCard} title="Upload Dataset">
-            <Form onSubmit={this.handleSubmit} layout="vertical">
-              <Row gutter={8}>
-                <Col span={12}>
-                  <DatasetNameFormItem form={form} activeUser={activeUser} />
-                </Col>
-                <Col span={12}>
-                  <DatastoreFormItem
-                    form={form}
-                    datastores={datastores.filter(datastore => datastore.allowsUpload)}
-                  />
-                </Col>
-              </Row>
-              <FormItem label="Teams allowed to access this dataset" hasFeedback>
-                {getFieldDecorator("initialTeams", {
-                  rules: [
-                    {
-                      required: !isDatasetManagerOrAdmin,
-                      message: !isDatasetManagerOrAdmin
-                        ? messages["dataset.import.required.initialTeam"]
-                        : null,
-                    },
-                  ],
-                  initialValue: [],
-                })(
-                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
-                    <TeamSelectionComponent
-                      mode="multiple"
-                      onChange={selectedTeams =>
-                        form.setFieldsValue({ initialTeams: selectedTeams })
-                      }
-                    />
-                  </Tooltip>,
-                )}
-              </FormItem>
-              {features().jobsEnabled && (
-                <FormItemWithInfo
-                  label="Convert"
-                  info="If your dataset is not yet in WKW or KNOSSOS format, it needs to be converted."
-                >
-                  {getFieldDecorator("needsConversion", {
-                    initialValue: false,
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            {features().isDemoInstance && (
+              <Alert
+                message={
+                  <>
+                    We are happy to help!
+                    <br />
+                    Please <a href="mailto:hello@webknossos.org">contact us</a> if you have any
+                    trouble uploading your data or the uploader doesn&apos;t support your format
+                    yet.
+                  </>
+                }
+                type="info"
+                style={{ marginBottom: 50 }}
+              />
+            )}
+            <Row gutter={8}>
+              <Col span={12}>
+                <DatasetNameFormItem form={form} activeUser={activeUser} />
+              </Col>
+              <Col span={12}>
+                <FormItem label="Teams allowed to access this dataset" hasFeedback>
+                  {getFieldDecorator("initialTeams", {
+                    rules: [
+                      {
+                        required: !isDatasetManagerOrAdmin,
+                        message: !isDatasetManagerOrAdmin
+                          ? messages["dataset.import.required.initialTeam"]
+                          : null,
+                      },
+                    ],
+                    initialValue: [],
                   })(
-                    <Checkbox
-                      checked={this.state.needsConversion}
-                      onChange={evt => {
-                        this.handleCheckboxChange(evt);
-                        form.setFieldsValue({ needsConversion: this.state.needsConversion });
-                      }}
-                    >
-                      Needs Conversion
-                    </Checkbox>,
+                    <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
+                      <TeamSelectionComponent
+                        mode="multiple"
+                        value={this.state.selectedTeams}
+                        onChange={selectedTeams => {
+                          if (!Array.isArray(selectedTeams)) {
+                            // Making sure that we always have an array even when only one team is selected.
+                            selectedTeams = [selectedTeams];
+                          }
+                          form.setFieldsValue({ initialTeams: selectedTeams });
+                          this.setState({ selectedTeams });
+                        }}
+                        afterFetchedTeams={fetchedTeams => {
+                          if (!features().isDemoInstance) {
+                            return;
+                          }
+                          const teamOfOrganisation = fetchedTeams.find(
+                            team => team.name === team.organization,
+                          );
+                          if (teamOfOrganisation == null) {
+                            return;
+                          }
+                          this.setState({ selectedTeams: [teamOfOrganisation] });
+                          form.setFieldsValue({
+                            initialTeams: [teamOfOrganisation],
+                          });
+                        }}
+                      />
+                    </Tooltip>,
                   )}
-                </FormItemWithInfo>
-              )}
-              {this.state.needsConversion && (
+                </FormItem>
+              </Col>
+            </Row>
+            <DatastoreFormItem
+              form={form}
+              datastores={uploadableDatastores}
+              hidden={hasOnlyOneDatastoreOrNone}
+            />
+            {features().jobsEnabled && needsConversion ? (
+              <React.Fragment>
                 <FormItemWithInfo
                   label="Voxel Size"
                   info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
                   disabled={this.state.needsConversion}
                 >
                   {getFieldDecorator("scale", {
+                    initialValue: [0, 0, 0],
                     rules: [
                       {
                         required: this.state.needsConversion,
@@ -275,47 +412,35 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                     />,
                   )}
                 </FormItemWithInfo>
+                <br />
+                Your dataset is not yet in WKW Format. Therefore you need to define the voxel size.
+              </React.Fragment>
+            ) : null}
+            <FormItem label="Dataset ZIP File" hasFeedback>
+              {getFieldDecorator("zipFile", {
+                rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
+                valuePropName: "fileList",
+                getValueFromEvent: this.normFile,
+              })(
+                <Upload.Dragger name="files" beforeUpload={this.handleFileDrop} listType="picture">
+                  <p className="ant-upload-drag-icon">
+                    <Icon type="inbox" style={{ margin: 0 }} />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or Drag your ZIP File to this Area to Upload
+                  </p>
+                </Upload.Dragger>,
               )}
-              <FormItem label="Dataset ZIP File" hasFeedback>
-                {getFieldDecorator("zipFile", {
-                  rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
-                  valuePropName: "fileList",
-                  getValueFromEvent: this.normFile,
-                })(
-                  <Upload.Dragger
-                    name="files"
-                    beforeUpload={file => {
-                      if (!form.getFieldValue("name")) {
-                        const filename = file.name
-                          .split(".")
-                          .slice(0, -1)
-                          .join(".");
-                        form.setFieldsValue({ name: filename });
-                        form.validateFields(["name"]);
-                      }
-                      form.setFieldsValue({ zipFile: [file] });
+            </FormItem>
 
-                      return false;
-                    }}
-                  >
-                    <p className="ant-upload-drag-icon">
-                      <Icon type="inbox" style={{ margin: 0 }} />
-                    </p>
-                    <p className="ant-upload-text">
-                      Click or Drag your ZIP File to this Area to Upload
-                    </p>
-                  </Upload.Dragger>,
-                )}
-              </FormItem>
-
-              <FormItem style={{ marginBottom: 0 }}>
-                <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
-                  Upload
-                </Button>
-              </FormItem>
-            </Form>
-          </CardContainer>
-        </Spin>
+            <FormItem style={{ marginBottom: 0 }}>
+              <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
+                Upload
+              </Button>
+            </FormItem>
+          </Form>
+        </CardContainer>
+        {this.getUploadModal()}
       </div>
     );
   }

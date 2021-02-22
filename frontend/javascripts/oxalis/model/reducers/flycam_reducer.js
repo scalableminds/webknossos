@@ -105,15 +105,23 @@ function resetMatrix(matrix: Matrix4x4, dataSetScale: Vector3) {
   return newMatrix;
 }
 
-function moveReducer(state: OxalisState, vector: Vector3, floorZ: boolean): OxalisState {
+function moveReducer(state: OxalisState, vector: Vector3, clampToEdge: boolean): OxalisState {
   const matrix = cloneMatrix(state.flycam.currentMatrix);
   if (!vector.includes(NaN)) {
     matrix[12] += vector[0];
     matrix[13] += vector[1];
     matrix[14] += vector[2];
   }
-  if (floorZ) {
-    matrix[14] = Math.floor(matrix[14]);
+  if (clampToEdge) {
+    if (vector[2] > 0) {
+      // If the direction is incrementing, we clamp to .0 so that subsequent movements
+      // go from .0 to 0.999 before the next slice is shown.
+      matrix[14] = Math.floor(matrix[14]);
+    } else {
+      // If the direction is decrementing, we clamp to .999 so that subsequent movements
+      // go from .999 to .0 before the next slice is shown.
+      matrix[14] = Math.floor(matrix[14]) + 0.999;
+    }
   }
   return update(state, { flycam: { currentMatrix: { $set: matrix } } });
 }
@@ -235,7 +243,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         const dim = Dimensions.getIndices(planeId)[2];
         vector[dim] *= state.flycam.spaceDirectionOrtho[dim];
       }
-      return moveReducer(state, vector, action.floorZ);
+      return moveReducer(state, vector, action.clampToEdge);
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {

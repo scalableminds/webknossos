@@ -12,6 +12,7 @@ type MoveFlycamOrthoAction = {
   type: "MOVE_FLYCAM_ORTHO",
   vector: Vector3,
   planeId: ?OrthoView,
+  floorZ: boolean,
 };
 type MovePlaneFlycamOrthoAction = {
   type: "MOVE_PLANE_FLYCAM_ORTHO",
@@ -92,7 +93,9 @@ export const setDirectionAction = (direction: Vector3): SetDirectionAction => ({
 export const moveFlycamOrthoAction = (
   vector: Vector3,
   planeId: ?OrthoView,
-): MoveFlycamOrthoAction => ({ type: "MOVE_FLYCAM_ORTHO", vector, planeId });
+  // If floorZ is true, the z coordinate is floored after applying the passed vector.
+  floorZ: boolean = false,
+): MoveFlycamOrthoAction => ({ type: "MOVE_FLYCAM_ORTHO", vector, planeId, floorZ });
 export const movePlaneFlycamOrthoAction = (
   vector: Vector3,
   planeId: OrthoView,

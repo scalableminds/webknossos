@@ -138,19 +138,37 @@ class JobListView extends React.PureComponent<Props, State> {
                 fixed="right"
                 width={150}
                 render={(__, job: APIJob) => (
-                  <span>
-                    {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
-                      <Link
-                        to={`/datasets/${this.props.activeUser.organization}/${
-                          job.datasetName
-                        }/view`}
-                        title="View Dataset"
-                      >
-                        <Icon type="eye-o" />
-                        View
-                      </Link>
-                    )}
-                  </span>
+                  <div>
+                    <span>
+                      {job.state === "SUCCESS" &&
+                        job.datasetName &&
+                        !job.exportFileName &&
+                        this.props.activeUser && (
+                          <Link
+                            to={`/datasets/${this.props.activeUser.organization}/${
+                              job.datasetName
+                            }/view`}
+                            title="View Dataset"
+                          >
+                            <Icon type="eye-o" />
+                            View
+                          </Link>
+                        )}
+                    </span>
+                    <span>
+                      {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
+                        <a
+                          href={`/api/jobs/downloadExport/${this.props.activeUser.organization}/${
+                            job.exportFileName
+                          }`}
+                          title="Download"
+                        >
+                          <Icon type="download" />
+                          Download
+                        </a>
+                      )}
+                    </span>
+                  </div>
                 )}
               />
             </Table>

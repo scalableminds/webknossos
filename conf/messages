@@ -313,7 +313,9 @@ initialData.organizationsNotEmpty=There are already organizations present in the
 
 job.notFound = Job with id {0} could not be found.
 job.couldNotRunCubing = Failed to start WKW conversion job.
+job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
+job.export.fileNotFound = Exported file not found. The link may be expired.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

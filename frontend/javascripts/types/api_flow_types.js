@@ -545,6 +545,7 @@ export type APIFeatureToggles = {
 export type APIJob = {
   +id: string,
   +datasetName: ?string,
+  +exportFileName: ?string,
   +type: string,
   +state: string,
   +createdAt: number,

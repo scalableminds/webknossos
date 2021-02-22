@@ -1,5 +1,8 @@
 package controllers
 
+import java.nio.file.{Files, Paths}
+import java.util.Date
+
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
@@ -19,6 +22,7 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 
 case class Job(
     _id: ObjectId,
@@ -91,7 +95,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
     } else {
       val updateResult = for {
         _ <- Fox.successful(celeryInfosLastUpdated = System.currentTimeMillis())
-        celeryInfoJson <- flowerRpc("/api/tasks").getWithJsonResponse[JsObject]
+        celeryInfoJson <- flowerRpc("/api/tasks?offset=0").getWithJsonResponse[JsObject]
         celeryInfoMap <- celeryInfoJson
           .validate[Map[String, JsObject]] ?~> "Could not validate celery response as json map"
         _ <- Fox.serialCombined(celeryInfoMap.keys.toList)(jobId =>
@@ -169,6 +173,39 @@ class JobsController @Inject()(jobDAO: JobDAO,
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
         js <- jobService.publicWrites(job)
       } yield Ok(js)
+    }
+
+  def runTiffExportJob(organizationName: String,
+                       dataSetName: String,
+                       layerName: String,
+                       bbox: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+        command = "export_tiff"
+        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}__${Random.alphanumeric.take(12).mkString}.zip"
+        commandArgs = Json.obj(
+          "kwargs" -> Json.obj("organization_name" -> organizationName,
+                               "dataset_name" -> dataSetName,
+                               "layer_name" -> layerName,
+                               "bbox" -> bbox,
+                               "export_file_name" -> exportFileName))
+        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
+        js <- jobService.publicWrites(job)
+      } yield Ok(js)
+    }
+
+  def downloadExport(organizationName: String, exportFileName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+        filePath = Paths.get("binaryData", organizationName, ".export", exportFileName)
+        _ <- bool2Fox(Files.exists(filePath)) ?~> "job.export.fileNotFound"
+      } yield Ok.sendPath(filePath, inline = false)
     }
 
 }

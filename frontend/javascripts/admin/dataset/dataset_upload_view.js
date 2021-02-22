@@ -149,7 +149,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
             organization: datasetId.owningOrganization,
             name: datasetId.name,
             initialTeams: formValues.initialTeams.map(team => team.id),
-            needsConversion: formValues.needsConversion,
+            needsConversion: this.state.needsConversion,
           };
 
           finishDatasetUpload(formValues.datastore, uploadInfo).then(

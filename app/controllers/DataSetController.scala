@@ -16,6 +16,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
 import javax.inject.Inject
+import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.duration._
@@ -31,6 +32,7 @@ class DataSetController @Inject()(userService: UserService,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
+                                  analyticsService: AnalyticsService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with RemoteOriginHelpers {
@@ -215,6 +217,9 @@ class DataSetController @Inject()(userService: UserService,
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
+          _ = request.identity.map { user =>
+            analyticsService.track(OpenDatasetEvent(user, dataSet))
+          }
         } yield {
           Ok(Json.toJson(js))
         }
@@ -255,6 +260,7 @@ class DataSetController @Inject()(userService: UserService,
                                          sortingKey.getOrElse(dataSet.created),
                                          isPublic)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
+            _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
             dataStore <- dataSetService.dataStoreFor(updated)
             js <- dataSetService.publicWrites(updated, Some(request.identity), organization, dataStore)

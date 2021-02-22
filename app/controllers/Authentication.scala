@@ -31,6 +31,7 @@ import java.net.URLEncoder
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
 import javax.inject.Inject
+import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -124,6 +125,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                inviteDAO: InviteDAO,
                                brainTracing: BrainTracing,
                                organizationDAO: OrganizationDAO,
+                               analyticsService: AnalyticsService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
                                defaultMails: DefaultMails,
@@ -225,6 +227,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            lastName,
                                            autoActivate,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
+                _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
                 _ <- Fox.runOptional(inviteBox.toOption)(i =>
                   inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
@@ -317,6 +320,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
+      _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
       _ = Mailer ! Send(
         defaultMails
@@ -330,6 +334,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       for {
         _ <- Fox.serialCombined(request.body.recipients)(recipient =>
           inviteService.inviteOneRecipient(recipient, request.identity, request.body.autoActivate))
+        _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
       } yield Ok
   }
 
@@ -511,6 +516,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                isActive = true,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
+                    _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     _ <- createOrganizationFolder(organization.name, user.loginInfo) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(

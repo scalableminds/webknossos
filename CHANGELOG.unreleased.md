@@ -35,6 +35,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed some scenarios where the Meshes tab could cause errors (e.g., when the UI was used but no segmentation layer was available). [#5142](https://github.com/scalableminds/webknossos/pull/5142)
 - Fixed a bug where the user (and telemetry) would get a cryptic error message when trying to register with an email that is already in use. [#5152](https://github.com/scalableminds/webknossos/pull/5152)
 - Fixed a bug where default dataset configuration could not be loaded if a dataset was accessed via sharing token [#5164](https://github.com/scalableminds/webknossos/pull/5164)
+- Fixed a bug where viewing a volume task as compound annotation failed for tasks with single instances. [#5198](https://github.com/scalableminds/webknossos/pull/5198)
 
 ### Removed
 - Support for KNOSSOS cubes data format was removed. Use the [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber) tool to convert existing datasets saved as KNOSSOS cubes. [#5085](https://github.com/scalableminds/webknossos/pull/5085)

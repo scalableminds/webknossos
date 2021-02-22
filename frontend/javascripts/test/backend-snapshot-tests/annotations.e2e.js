@@ -39,6 +39,18 @@ test("getAnnotationInformation()", async t => {
   t.snapshot(annotation, { id: "annotations-getAnnotationInformation" });
 });
 
+test("getAnnotationInformation() for public annotation while logged out", async t => {
+  setCurrToken("invalidToken");
+  const annotationId = "68135c192faeb34c0081c05e";
+  const annotation = await api.getAnnotationInformation(
+    annotationId,
+    APIAnnotationTypeEnum.Explorational,
+  );
+  t.is(annotation.id, annotationId);
+  t.snapshot(annotation, { id: "annotations-getAnnotationInformation-public" });
+  setCurrToken(tokenUserA);
+});
+
 test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   const annotationId = "78135c192faeb34c0081c05d";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);

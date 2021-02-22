@@ -472,9 +472,8 @@ class TracingApi {
 
       const currentScript = task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
-      const isDifferentScript = currentScript !== nextScript;
-      // Changes in the task's script cannot be handled without reload right now.
-      const needsReloadDueToScript = isDifferentScript || nextScript != null;
+      // A hot-swap of the task is not possible, currently, when a script is involved.
+      const needsReloadDueToScript = currentScript != null || nextScript != null;
 
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;
 

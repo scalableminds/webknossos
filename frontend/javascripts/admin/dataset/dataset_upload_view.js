@@ -1,5 +1,17 @@
 // @flow
-import { Form, Button, Upload, Icon, Col, Row, Tooltip, Modal, Progress, Alert } from "antd";
+import {
+  Form,
+  Button,
+  Upload,
+  Icon,
+  Col,
+  Row,
+  Tooltip,
+  Modal,
+  Progress,
+  Alert,
+  Switch,
+} from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import moment from "moment";
@@ -57,6 +69,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
+    isDirectoryUploadEnabled: false,
   };
 
   static getDerivedStateFromProps(props) {
@@ -74,7 +87,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
   normFile = e => {
-    console.log("Upload event:", e);
+    console.log("normFile returns:", Array.isArray(e) ? e : e && e.fileList);
 
     if (Array.isArray(e)) {
       return e;
@@ -254,7 +267,12 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   handleFileDrop = file => {
-    /*const { form } = this.props;
+    console.log("handleFileDrop", file);
+    return false;
+  };
+
+  validateDroppedFiles = file => {
+    const { form } = this.props;
 
     const filenameParts = file.name.split(".");
     if (filenameParts[filenameParts.length - 1] !== "zip") {
@@ -317,8 +335,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
         });
         form.setFieldsValue({ zipFile: null });
       },
-    );*/
-    return false;
+    );
   };
 
   render() {
@@ -436,28 +453,39 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 Your dataset is not yet in WKW Format. Therefore you need to define the voxel size.
               </React.Fragment>
             ) : null}
-            <FormItem label="Dataset ZIP File" hasFeedback>
-              {getFieldDecorator("zipFile", {
-                rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
-                valuePropName: "fileList",
-                getValueFromEvent: this.normFile,
-              })(
-                <Upload.Dragger
-                  multiple
-                  directory
-                  name="files"
-                  beforeUpload={this.handleFileDrop}
-                  listType="picture"
-                >
-                  <p className="ant-upload-drag-icon">
-                    <Icon type="inbox" style={{ margin: 0 }} />
-                  </p>
-                  <p className="ant-upload-text">
-                    Click or Drag your ZIP File to this Area to Upload
-                  </p>
-                </Upload.Dragger>,
-              )}
-            </FormItem>
+            <Switch
+              onChange={value => this.setState({ isDirectoryUploadEnabled: value })}
+              checked={this.state.isDirectoryUploadEnabled}
+            >
+              Select Directory
+            </Switch>
+            <div className="max-height-for-upload">
+              <FormItem label="Dataset" hasFeedback>
+                {getFieldDecorator("zipFile", {
+                  rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
+                  valuePropName: "fileList",
+                  getValueFromEvent: this.normFile,
+                })(
+                  <Upload.Dragger
+                    multiple
+                    directory={this.state.isDirectoryUploadEnabled}
+                    name="files"
+                    beforeUpload={this.handleFileDrop}
+                    listType={
+                      (form.getFieldValue("zipFile") || []).length > 10 ? "text" : "picture"
+                    }
+                  >
+                    <p className="ant-upload-drag-icon">
+                      <Icon type="inbox" style={{ margin: 0 }} />
+                    </p>
+                    <p className="ant-upload-text">
+                      Click or Drag your File(s) to this Area to Upload. Either drop a zip archive
+                      or multiple image files.
+                    </p>
+                  </Upload.Dragger>,
+                )}
+              </FormItem>
+            </div>
 
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>

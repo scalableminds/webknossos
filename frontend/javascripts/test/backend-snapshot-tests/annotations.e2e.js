@@ -41,7 +41,7 @@ test("getAnnotationInformation()", async t => {
 
 test("getAnnotationInformation() for public annotation while logged out", async t => {
   setCurrToken("invalidToken");
-  const annotationId = "68135c192faeb34c0081c05e";
+  const annotationId = "88135c192faeb34c0081c05d";
   const annotation = await api.getAnnotationInformation(
     annotationId,
     APIAnnotationTypeEnum.Explorational,

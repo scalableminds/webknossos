@@ -937,7 +937,7 @@ export function createResumableUpload(
   myUploadId: string,
 ): Promise<*> {
   const generateUniqueIdentifier = file =>
-    `${myUploadId}/${file.webkitRelativePath || file.relativePath || file.name}`;
+    `${myUploadId}/${file.path || file.webkitRelativePath || file.relativePath || file.name}`;
 
   const additionalParameters = {
     ...datasetId,

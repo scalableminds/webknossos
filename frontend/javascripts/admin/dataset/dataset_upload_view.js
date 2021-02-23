@@ -1,5 +1,6 @@
 // @flow
 import {
+  Avatar,
   Form,
   Button,
   Upload,
@@ -10,12 +11,13 @@ import {
   Modal,
   Progress,
   Alert,
-  Switch,
+  List,
 } from "antd";
 import { connect } from "react-redux";
-import React from "react";
+import React, { useMemo } from "react";
 import moment from "moment";
 import _ from "lodash";
+import { useDropzone } from "react-dropzone";
 
 import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
@@ -38,8 +40,6 @@ import { syncValidator } from "types/validation";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
-
-const UNSUPPORTED_FILE_EXTENSIONS = ["tar", "rar"];
 
 type OwnProps = {|
   datastores: Array<APIDataStore>,
@@ -71,7 +71,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
-    isDirectoryUploadEnabled: true,
   };
 
   static getDerivedStateFromProps(props) {
@@ -103,11 +102,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
     this.props.form.validateFields(async (err, formValues) => {
       const { activeUser } = this.props;
-
-      // Workaround: Antd replaces file objects in the formValues with a wrapper file
-      // The original file object is contained in the originFileObj property
-      // This is most likely not intentional and may change in a future Antd version
-      formValues.zipFile = formValues.zipFile.map(wrapperFile => wrapperFile.originFileObj);
 
       if (!err && activeUser != null) {
         Toast.info("Uploading dataset");
@@ -190,7 +184,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                   </React.Fragment>,
                 );
               }
-              form.setFieldsValue({ name: null, zipFile: null });
+              form.setFieldsValue({ name: null, zipFile: [] });
               this.setState({ isUploading: false });
               this.props.onUploaded(
                 activeUser.organization,
@@ -225,8 +219,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
         resumableUpload.on("fileRetry", () => {
           this.setState({ isRetrying: true });
         });
-
-        console.log("addFiles", formValues.zipFile);
 
         resumableUpload.addFiles(formValues.zipFile);
       }
@@ -268,81 +260,82 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     );
   };
 
-  handleFileDrop = file => {
-    console.log("handleFileDrop", file);
+  onFilesChange = files => {
+    this.maybeSetUploadName(files);
+    this.validateFiles(files);
+  };
+
+  validateFiles = files => {
     const { form } = this.props;
 
-    if (!form.getFieldValue("name")) {
+    let needsConversion = true;
+    for (const file of files) {
       const filenameParts = file.name.split(".");
+      const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
+      if (fileExtension === "zip") {
+        createReader(
+          new BlobReader(file),
+          reader => {
+            reader.getEntries(entries => {
+              const wkwFile = entries.find(entry =>
+                Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
+              );
+              const hasArchiveWkwFile = wkwFile != null;
+              this.handleNeedsConversionInfo(!hasArchiveWkwFile);
+            });
+          },
+          () => {
+            Modal.error({
+              content: messages["dataset.upload_invalid_zip"],
+            });
+            form.setFieldsValue({ zipFile: [] });
+          },
+        );
+        // We return here since not more than 1 zip archive is supported anyway.
+        return;
+      } else if (fileExtension === "wkw") {
+        needsConversion = false;
+      }
+    }
+
+    this.handleNeedsConversionInfo(needsConversion);
+  };
+
+  handleNeedsConversionInfo = needsConversion => {
+    this.setState({ needsConversion });
+    if (needsConversion && !features().jobsEnabled) {
+      form.setFieldsValue({ zipFile: [] });
+      Modal.info({
+        content: (
+          <div>
+            The selected dataset does not seem to be in the WKW format. Please convert the dataset
+            using{" "}
+            <a
+              target="_blank"
+              href="https://github.com/scalableminds/webknossos-cuber/"
+              rel="noopener noreferrer"
+            >
+              webknossos-cuber
+            </a>{" "}
+            or use a webKnossos instance which integrates a conversion service, such as{" "}
+            <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
+              webknossos.org
+            </a>
+            .
+          </div>
+        ),
+      });
+    }
+  };
+
+  maybeSetUploadName = files => {
+    const { form } = this.props;
+    if (!form.getFieldValue("name") && files.length > 0) {
+      const filenameParts = files[0].name.split(".");
       const filename = filenameParts.slice(0, -1).join(".");
       form.setFieldsValue({ name: filename });
       form.validateFields(["name"]);
     }
-    // file.thumbUrl = "/assets/images/folder.svg";
-    // Set the file here, as setting it after checking for the wkw format
-    // results in an error: When trying to upload the file it is somehow undefined.
-    // form.setFieldsValue({ zipFile: [file] });
-
-    // Return false so that the file is not uploaded now
-    return false;
-  };
-
-  validateDroppedFiles = file => {
-    const filenameParts = file.name.split(".");
-    const fileExtension = filenameParts[filenameParts.length - 1];
-    if (UNSUPPORTED_FILE_EXTENSIONS.includes(fileExtension)) {
-      Modal.error({
-        content: messages["dataset.unsupported_file_type"],
-      });
-      // Directly setting the zip file to null does not work.
-      setTimeout(() => form.setFieldsValue({ zipFile: null }), 500);
-      return false;
-    }
-
-    const blobReader = new BlobReader(file);
-    createReader(
-      blobReader,
-      reader => {
-        reader.getEntries(entries => {
-          const wkwFile = entries.find(entry =>
-            Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
-          );
-          const isNotWkwFormat = wkwFile == null;
-          this.setState({
-            needsConversion: isNotWkwFormat,
-          });
-          if (isNotWkwFormat && !features().jobsEnabled) {
-            form.setFieldsValue({ zipFile: null });
-            Modal.info({
-              content: (
-                <div>
-                  The selected dataset does not seem to be in the WKW format. Please convert the
-                  dataset using{" "}
-                  <a
-                    target="_blank"
-                    href="https://github.com/scalableminds/webknossos-cuber/"
-                    rel="noopener noreferrer"
-                  >
-                    webknossos-cuber
-                  </a>{" "}
-                  or use a webKnossos instance which integrates a conversion service, such as{" "}
-                  <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
-                    webknossos.org
-                  </a>
-                  .
-                </div>
-              ),
-            });
-          }
-        });
-      },
-      () => {
-        Modal.error({
-          content: messages["dataset.upload_invalid_zip"],
-        });
-        form.setFieldsValue({ zipFile: null });
-      },
-    );
   };
 
   render() {
@@ -433,6 +426,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                   label="Voxel Size"
                   info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
                   disabled={this.state.needsConversion}
+                  help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
                 >
                   {getFieldDecorator("scale", {
                     initialValue: [0, 0, 0],
@@ -456,49 +450,62 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                     />,
                   )}
                 </FormItemWithInfo>
-                <br />
-                Your dataset is not yet in WKW Format. Therefore you need to define the voxel size.
               </React.Fragment>
             ) : null}
-            <Switch
-              onChange={value => this.setState({ isDirectoryUploadEnabled: value })}
-              checked={this.state.isDirectoryUploadEnabled}
-            >
-              Select Directory
-            </Switch>
-            <div className="max-height-for-upload">
-              <FormItem label="Dataset" hasFeedback>
-                {getFieldDecorator("zipFile", {
-                  rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
-                  valuePropName: "fileList",
-                  getValueFromEvent: this.normFile,
-                })(
-                  <Upload.Dragger
-                    multiple
-                    directory={this.state.isDirectoryUploadEnabled}
-                    name="files"
-                    beforeUpload={this.handleFileDrop}
-                    openFileDialogOnClick={false}
-                    listType={
-                      (form.getFieldValue("zipFile") || []).length > 10 ? "text" : "picture"
-                    }
-                  >
-                    <p className="ant-upload-drag-icon">
-                      <Icon type="inbox" style={{ margin: 0 }} />
-                    </p>
-                    <p className="ant-upload-text">
-                      Drag your File(s) to this Area to Upload. Either individual image files, a zip
-                      archive or a folder.
-                    </p>
 
-                    <Button>
-                      <Icon type="upload" /> Click to Upload
-                    </Button>
-                  </Upload.Dragger>,
-                )}
-              </FormItem>
-            </div>
-
+            <FormItem label="Dataset" hasFeedback>
+              {getFieldDecorator("zipFile", {
+                rules: [
+                  { required: true, message: messages["dataset.import.required.zipFile"] },
+                  {
+                    validator: syncValidator(
+                      files =>
+                        files.filter(file => Utils.isFileExtensionEqualTo(file.path, "zip"))
+                          .length <= 1,
+                      "You cannot upload more than one archive.",
+                    ),
+                  },
+                  {
+                    validator: syncValidator(
+                      files =>
+                        files.filter(file =>
+                          Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
+                        ).length == 0,
+                      "Tar and rar archives are not supported currently. Please use zip archives.",
+                    ),
+                  },
+                  {
+                    validator: syncValidator(files => {
+                      const archives = files.filter(file =>
+                        Utils.isFileExtensionEqualTo(file.path, "zip"),
+                      );
+                      // Either there are no archives, or all files are archives
+                      return archives.length === 0 || archives.length === files.length;
+                    }, "Archives cannot be mixed with other files."),
+                  },
+                  {
+                    validator: syncValidator(files => {
+                      const wkwFiles = files.filter(file =>
+                        Utils.isFileExtensionEqualTo(file.path, "wkw"),
+                      );
+                      const imageFiles = files.filter(file =>
+                        Utils.isFileExtensionEqualTo(file.path, [
+                          "tif",
+                          "tiff",
+                          "jpg",
+                          "jpeg",
+                          "png",
+                        ]),
+                      );
+                      return wkwFiles.length === 0 || imageFiles.length === 0;
+                    }, "WKW files should not be mixed with image files."),
+                  },
+                ],
+                valuePropName: "fileList",
+                initialValue: [],
+                onChange: this.onFilesChange,
+              })(<FileUploadArea />)}
+            </FormItem>
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Upload
@@ -510,6 +517,128 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
       </div>
     );
   }
+}
+
+const baseStyle = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  padding: "20px",
+  borderWidth: 2,
+  borderRadius: 2,
+  borderColor: "#eeeeee",
+  borderStyle: "dashed",
+  backgroundColor: "#fafafa",
+  color: "rgba(0, 0, 0, 0.85)",
+  fontSize: 16,
+  outline: "none",
+  transition: "border .24s ease-in-out",
+  cursor: "pointer",
+};
+
+const activeStyle = {
+  borderColor: "#2196f3",
+};
+
+const acceptStyle = {
+  borderColor: "#00e676",
+};
+
+const rejectStyle = {
+  borderColor: "#ff1744",
+};
+
+function FileUploadArea({ fileList, onChange }) {
+  const onDropAccepted = acceptedFiles => {
+    onChange(_.uniqBy(fileList.concat(acceptedFiles), file => file.path));
+  };
+  const removeFile = file => {
+    onChange(_.without(fileList, file));
+  };
+  const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
+    onDropAccepted,
+  });
+  const acceptedFiles = fileList;
+
+  const style = useMemo(
+    () => ({
+      ...baseStyle,
+      ...(isDragActive ? activeStyle : {}),
+      ...(isDragAccept ? acceptStyle : {}),
+      ...(isDragReject ? rejectStyle : {}),
+    }),
+    [isDragActive, isDragReject, isDragAccept],
+  );
+
+  const files = acceptedFiles.map(file => <li key={file.path}>{file.path}</li>);
+
+  const showSmallFileList = files.length > 10;
+  const list = (
+    <List
+      itemLayout="horizontal"
+      dataSource={acceptedFiles}
+      size={showSmallFileList ? "small" : "default"}
+      renderItem={item => (
+        <List.Item
+          actions={[
+            <a key="list-loadmore-edit" onClick={() => removeFile(item)}>
+              remove
+            </a>,
+          ]}
+        >
+          <List.Item.Meta
+            avatar={
+              !showSmallFileList && (
+                <Avatar>
+                  <Icon type="file" />
+                </Avatar>
+              )
+            }
+            title={
+              <span>
+                {showSmallFileList && <Icon type="file" />} {item.name}
+              </span>
+            }
+            description={
+              !showSmallFileList && (
+                <span>
+                  Located in:{" ."}
+                  {item.path
+                    .split("/")
+                    .slice(0, -1)
+                    .join("/") + "/"}
+                </span>
+              )
+            }
+          />
+        </List.Item>
+      )}
+    />
+  );
+
+  return (
+    <div>
+      <div {...getRootProps({ style })}>
+        <input {...getInputProps()} />
+        <Icon type="inbox" style={{ fontSize: 48, color: "#41a9ff" }} />
+        <p style={{ maxWidth: 800, textAlign: "center", marginTop: 8 }}>
+          Drag your file(s) to this area to upload them. Either add individual image files, a zip
+          archive or a folder. Alternatively, click to select your files via a file picker.{" "}
+          {features().jobsEnabled
+            ? "Your data is automatically converted to WKW after upload if necessary."
+            : null}
+        </p>
+      </div>
+
+      {files.length > 0 ? (
+        <div style={{ marginTop: 8 }}>
+          <h5>Files</h5>
+          <div style={{ maxHeight: 600, overflowY: "auto" }}>{list}</div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

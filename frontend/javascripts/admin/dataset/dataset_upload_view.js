@@ -39,6 +39,8 @@ import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 
+const UNSUPPORTED_FILE_EXTENSIONS = ["tar", "rar"];
+
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
@@ -69,7 +71,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
-    isDirectoryUploadEnabled: false,
+    isDirectoryUploadEnabled: true,
   };
 
   static getDerivedStateFromProps(props) {
@@ -268,30 +270,35 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
   handleFileDrop = file => {
     console.log("handleFileDrop", file);
+    const { form } = this.props;
+
+    if (!form.getFieldValue("name")) {
+      const filenameParts = file.name.split(".");
+      const filename = filenameParts.slice(0, -1).join(".");
+      form.setFieldsValue({ name: filename });
+      form.validateFields(["name"]);
+    }
+    // file.thumbUrl = "/assets/images/folder.svg";
+    // Set the file here, as setting it after checking for the wkw format
+    // results in an error: When trying to upload the file it is somehow undefined.
+    // form.setFieldsValue({ zipFile: [file] });
+
+    // Return false so that the file is not uploaded now
     return false;
   };
 
   validateDroppedFiles = file => {
-    const { form } = this.props;
-
     const filenameParts = file.name.split(".");
-    if (filenameParts[filenameParts.length - 1] !== "zip") {
+    const fileExtension = filenameParts[filenameParts.length - 1];
+    if (UNSUPPORTED_FILE_EXTENSIONS.includes(fileExtension)) {
       Modal.error({
-        content: messages["dataset.upload_none_zip_error"],
+        content: messages["dataset.unsupported_file_type"],
       });
       // Directly setting the zip file to null does not work.
       setTimeout(() => form.setFieldsValue({ zipFile: null }), 500);
       return false;
     }
-    if (!form.getFieldValue("name")) {
-      const filename = filenameParts.slice(0, -1).join(".");
-      form.setFieldsValue({ name: filename });
-      form.validateFields(["name"]);
-    }
-    file.thumbUrl = "/assets/images/folder.svg";
-    // Set the file here, as setting it after checking for the wkw format
-    // results in an error: When trying to upload the file it is somehow undefined.
-    form.setFieldsValue({ zipFile: [file] });
+
     const blobReader = new BlobReader(file);
     createReader(
       blobReader,
@@ -471,6 +478,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                     directory={this.state.isDirectoryUploadEnabled}
                     name="files"
                     beforeUpload={this.handleFileDrop}
+                    openFileDialogOnClick={false}
                     listType={
                       (form.getFieldValue("zipFile") || []).length > 10 ? "text" : "picture"
                     }
@@ -479,9 +487,13 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                       <Icon type="inbox" style={{ margin: 0 }} />
                     </p>
                     <p className="ant-upload-text">
-                      Click or Drag your File(s) to this Area to Upload. Either drop a zip archive
-                      or multiple image files.
+                      Drag your File(s) to this Area to Upload. Either individual image files, a zip
+                      archive or a folder.
                     </p>
+
+                    <Button>
+                      <Icon type="upload" /> Click to Upload
+                    </Button>
                   </Upload.Dragger>,
                 )}
               </FormItem>

@@ -254,6 +254,7 @@ type UserBoundingBoxInputProps = {
   tooltipTitle: string,
   onChange: UserBoundingBoxInputUpdate => void,
   onDelete: () => void,
+  onExport: () => void,
 };
 
 type State = {
@@ -338,19 +339,24 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
   render() {
     const { name } = this.state;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-    const { tooltipTitle, color, isVisible, onDelete } = this.props;
+    const { tooltipTitle, color, isVisible, onDelete, onExport } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = { margin: "auto 0px auto 6px" };
     return (
       <React.Fragment>
         <Row style={{ marginBottom: 16 }}>
-          <Col span={22}>
+          <Col span={20}>
             <Switch
               size="small"
               onChange={this.handleVisibilityChange}
               checked={isVisible}
               style={{ margin: "auto 0px" }}
             />
+          </Col>
+          <Col span={2}>
+            <Tooltip title="Export data from this bouding box.">
+              <Icon type="download" onClick={onExport} style={iconStyle} />
+            </Tooltip>
           </Col>
           <Col span={2}>
             <Tooltip title="Delete this bounding box.">

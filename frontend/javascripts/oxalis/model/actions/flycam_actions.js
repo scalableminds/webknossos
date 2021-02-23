@@ -95,6 +95,7 @@ export const moveFlycamOrthoAction = (
   planeId: ?OrthoView,
   // If clampToEdge is true, the z coordinate is clamped to the edge (either .0 or 0.999)
   // so that subsequent, fractional movements go from .0 to .999 (or the other way round).
+  // Only works if planeId is provided.
   clampToEdge: boolean = false,
 ): MoveFlycamOrthoAction => ({ type: "MOVE_FLYCAM_ORTHO", vector, planeId, clampToEdge });
 export const movePlaneFlycamOrthoAction = (

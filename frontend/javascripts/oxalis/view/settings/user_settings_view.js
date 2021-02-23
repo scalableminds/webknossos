@@ -142,15 +142,16 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   handleExportUserBoundingBox = (id: number) => {
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
     const selectedBoundingBox = userBoundingBoxes.find(boundingBox => boundingBox.id === id);
-    console.log("Export box with id", id, "and bbox", selectedBoundingBox.boundingBox, " and dataset ", this.props.dataset);
-    renderIndependently(destroy => (
-      <ExportBoundingBoxModal
-        organizationName={"sample organization"}
-        destroy={destroy}
-        onOk={destroy}
-      />
-    ));
-  }
+    if (selectedBoundingBox) {
+      renderIndependently(destroy => (
+        <ExportBoundingBoxModal
+          dataset={this.props.dataset}
+          boundingBox={selectedBoundingBox.boundingBox}
+          destroy={destroy}
+        />
+      ));
+    }
+  };
 
   getViewportOptions = () => {
     switch (this.props.viewMode) {

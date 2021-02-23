@@ -108,7 +108,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   }
 
   def finishUpload(uploadInformation: UploadInformation,
-                   checkCompletion: Boolean = true): Fox[(DataSourceId, List[String])] = {
+                   checkCompletion: Boolean = true): Fox[(DataSourceId, List[String], Long)] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
@@ -139,7 +139,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           logger.warn(errorMsg)
           Fox.failure(errorMsg)
       }
-    } yield (dataSourceId, uploadInformation.initialTeams)
+      dataSetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
+    } yield (dataSourceId, uploadInformation.initialTeams, dataSetSizeBytes)
   }
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
@@ -147,11 +148,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       allSavedChunkIds.get(uploadId) match {
         case Some((fileCountForUpload, savedChunkIdsForUpload)) =>
           val allFilesPresent = fileCountForUpload == savedChunkIdsForUpload.keySet.size
-          logger.info(s"expected ${fileCountForUpload} files, found ${savedChunkIdsForUpload.keySet.size}")
+          logger.info(s"expected $fileCountForUpload files, found ${savedChunkIdsForUpload.keySet.size}")
           val allFilesComplete = savedChunkIdsForUpload.forall { entry: (String, (Long, mutable.HashSet[Int])) =>
             val chunkNumber = entry._2._1
             val savedChunksSet = entry._2._2
-            logger.info(s"for file ${entry._1} expected ${chunkNumber} chunks, found ${savedChunksSet.size}")
+            logger.info(s"for file ${entry._1} expected $chunkNumber chunks, found ${savedChunksSet.size}")
             savedChunksSet.size == chunkNumber
           }
           for {

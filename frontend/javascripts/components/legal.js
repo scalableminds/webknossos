@@ -183,6 +183,15 @@ export class Privacy extends LegalBase {
                     Airbrake is a legitimate interest to provide and improve the service.
                   </li>
                   <li>
+                    Amplitude is a product analytics tool. Features that are used by registered
+                    users are logged in Amplitude. With each event, pseudonymized user identifiers
+                    are transmitted to Amplitude. The purpose of product analytics is to optimize
+                    and maintain the service. Amplitude is operated by Amplitude Inc., 631 Howard
+                    St., Floor 5, San Francisco, CA 94105, USA. After 30 days data is automatically
+                    deleted from the service. The legal basis for using Amplitude is a legitimate
+                    interest to provide and improve the service.
+                  </li>
+                  <li>
                     Request logs are collected that contain a series of general data and information
                     when a data subject or automated systems calls up webKnossos. This general data
                     and information are stored in the server log files. Collected may be (1) the

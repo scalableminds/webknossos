@@ -1426,6 +1426,7 @@ type IsosurfaceRequest = {
   voxelDimensions: Vector3,
   cubeSize: Vector3,
   scale: Vector3,
+  isInitialRequest: boolean,
 };
 
 export function computeIsosurface(
@@ -1433,7 +1434,15 @@ export function computeIsosurface(
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
+  const {
+    position,
+    zoomStep,
+    segmentId,
+    voxelDimensions,
+    cubeSize,
+    scale,
+    isInitialRequest,
+  } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,
@@ -1453,6 +1462,7 @@ export function computeIsosurface(
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
           scale,
+          isInitialRequest,
         },
       },
     );

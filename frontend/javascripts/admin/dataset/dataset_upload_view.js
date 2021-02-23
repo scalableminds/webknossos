@@ -1,18 +1,5 @@
 // @flow
-import {
-  Avatar,
-  Form,
-  Button,
-  Upload,
-  Icon,
-  Col,
-  Row,
-  Tooltip,
-  Modal,
-  Progress,
-  Alert,
-  List,
-} from "antd";
+import { Avatar, Form, Button, Icon, Col, Row, Tooltip, Modal, Progress, Alert, List } from "antd";
 import { connect } from "react-redux";
 import React, { useMemo } from "react";
 import moment from "moment";
@@ -304,7 +291,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   handleNeedsConversionInfo = needsConversion => {
     this.setState({ needsConversion });
     if (needsConversion && !features().jobsEnabled) {
-      form.setFieldsValue({ zipFile: [] });
+      this.props.form.setFieldsValue({ zipFile: [] });
       Modal.info({
         content: (
           <div>
@@ -470,7 +457,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                       files =>
                         files.filter(file =>
                           Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
-                        ).length == 0,
+                        ).length === 0,
                       "Tar and rar archives are not supported currently. Please use zip archives.",
                     ),
                   },
@@ -603,11 +590,11 @@ function FileUploadArea({ fileList, onChange }) {
             description={
               !showSmallFileList && (
                 <span>
-                  Located in:{" ."}
-                  {item.path
+                  Located in:{" "}
+                  {`${item.path
                     .split("/")
                     .slice(0, -1)
-                    .join("/") + "/"}
+                    .join("/")}/`}
                 </span>
               )
             }

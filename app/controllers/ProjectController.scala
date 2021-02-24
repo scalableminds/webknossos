@@ -41,11 +41,11 @@ class ProjectController @Inject()(projectService: ProjectService,
   def listWithStatus = sil.SecuredAction.async { implicit request =>
     for {
       projects <- projectDAO.findAll ?~> "project.list.failed"
-      allCounts <- taskDAO.countAllOpenInstancesGroupedByProjects
+      allCounts <- taskDAO.countOpenInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
-          openTaskInstances <- Fox.successful(allCounts.getOrElse(project._id, 0))
-          r <- projectService.publicWritesWithStatus(project, openTaskInstances)
+          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0, 0)))
+          r <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
         } yield r
       }
     } yield {
@@ -127,11 +127,11 @@ class ProjectController @Inject()(projectService: ProjectService,
       taskTypeIdValidated <- ObjectId.parse(taskTypeId)
       _ <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       projects <- projectDAO.findAllWithTaskType(taskTypeId) ?~> "project.list.failed"
-      allCounts <- taskDAO.countAllOpenInstancesGroupedByProjects
+      allCounts <- taskDAO.countOpenInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
-          openTaskInstances <- Fox.successful(allCounts.getOrElse(project._id, 0))
-          r <- projectService.publicWritesWithStatus(project, openTaskInstances)
+          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0, 0)))
+          r <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
         } yield r
       }
     } yield {
@@ -166,8 +166,8 @@ class ProjectController @Inject()(projectService: ProjectService,
         _ <- bool2Fox(delta.getOrElse(1L) >= 0) ?~> "project.increaseTaskInstances.negative"
         project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName) ~> NOT_FOUND
         _ <- taskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
-        openInstanceCount <- taskDAO.countOpenInstancesForProject(project._id)
-        js <- projectService.publicWritesWithStatus(project, openInstanceCount)
+        openInstancesAndTime <- taskDAO.countOpenInstancesAndTimeForProject(project._id)
+        js <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
       } yield Ok(js)
   }
 

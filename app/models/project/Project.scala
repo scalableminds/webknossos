@@ -219,11 +219,9 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
       )
     }
 
-  def publicWritesWithStatus(project: Project, openTaskInstances: Int)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWritesWithStatus(project: Project, openTaskInstances: Int, tracingTime: Int)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       projectJson <- publicWrites(project)
-    } yield {
-      projectJson + ("numberOfOpenAssignments" -> JsNumber(openTaskInstances))
-    }
+    } yield projectJson ++ Json.obj("numberOfOpenAssignments" -> JsNumber(openTaskInstances), "tracingTime" -> tracingTime)
 
 }

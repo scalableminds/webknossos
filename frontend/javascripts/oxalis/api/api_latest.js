@@ -472,12 +472,18 @@ class TracingApi {
 
       const currentScript = task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
-      const isDifferentScript = currentScript !== nextScript;
+      // A hot-swap of the task is not possible, currently, when a script is involved.
+      const needsReloadDueToScript = currentScript != null || nextScript != null;
 
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (isDifferentDataset || isDifferentTaskType || isDifferentScript || involvesVolumeTask) {
+      if (
+        isDifferentDataset ||
+        isDifferentTaskType ||
+        needsReloadDueToScript ||
+        involvesVolumeTask
+      ) {
         location.href = newTaskUrl;
       } else {
         await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
@@ -1342,6 +1348,7 @@ class UserApi {
     - scale
     - tdViewDisplayPlanes
     - newNodeNewTree
+    - centerNewNode
     - highlightCommentedNodes
     - keyboardDelay
     - particleSize

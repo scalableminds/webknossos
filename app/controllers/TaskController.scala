@@ -187,7 +187,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
 
   def listExperienceDomains: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      experienceDomains <- taskDAO.listExperienceDomains
+      experienceDomains <- taskDAO.listExperienceDomains(request.identity._organization)
     } yield Ok(Json.toJson(experienceDomains))
   }
 }

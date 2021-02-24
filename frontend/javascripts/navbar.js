@@ -219,11 +219,19 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
           Keyboard Shortcuts
         </a>
       </Menu.Item>
-      <Menu.Item key="credits">
-        <a target="_blank" href="https://publication.webknossos.org" rel="noopener noreferrer">
-          About & Credits
-        </a>
-      </Menu.Item>
+      {features().isDemoInstance ? (
+        <Menu.Item key="contact">
+          <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+            Contact
+          </a>
+        </Menu.Item>
+      ) : (
+        <Menu.Item key="credits">
+          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+            About & Credits
+          </a>
+        </Menu.Item>
+      )}
       {version !== "" ? (
         <Menu.Item disabled key="version">
           Version: {version}

@@ -14,6 +14,7 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
+import play.api.libs.ws.WSResponse
 
 class TracingStoreWkRpcClient @Inject()(
     rpc: RPC,
@@ -30,7 +31,7 @@ class TracingStoreWkRpcClient @Inject()(
   def reportTracingUpdates(tracingId: String,
                            timestamps: List[Long],
                            statistics: Option[JsObject],
-                           userToken: Option[String]): Fox[_] =
+                           userToken: Option[String]): Fox[WSResponse] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
       .post(
@@ -38,6 +39,12 @@ class TracingStoreWkRpcClient @Inject()(
                  "statistics" -> statistics,
                  "tracingId" -> tracingId,
                  "userToken" -> userToken))
+
+  def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
+    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/reportIsosurfaceRequest")
+      .addQueryString("key" -> tracingStoreKey)
+      .addQueryStringOptional("token", userToken)
+      .post()
 
   def getDataSource(organizationNameOpt: Option[String], dataSetName: String): Fox[DataSourceLike] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource/$dataSetName")

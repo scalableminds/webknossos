@@ -37,16 +37,10 @@ const WelcomeHeader = ({ history }) => (
     <div
       style={{
         backgroundColor: "rgba(88, 88, 88, 0.4)",
-        backgroundImage: "linear-gradient(to bottom, #449efd7a 0%, #041a4abf 85%, #00050fc2 100%)",
+        backgroundImage: "linear-gradient(0deg, #222222 0%, rgba(23, 103, 139, 0.73) 70%)",
       }}
     >
-      <div
-        style={{
-          maxWidth: 1300,
-          margin: "auto",
-          padding: "80px 0px",
-        }}
-      >
+      <div className="welcome-header-content">
         <Row type="flex" align="middle" style={{ color: "white" }}>
           <Col xs={{ span: 0 }} xl={{ span: 4 }}>
             <img
@@ -111,16 +105,10 @@ const WelcomeHeader = ({ history }) => (
             </div>
           </Col>
           <Col xs={{ span: 24 }} lg={{ span: 7 }} xl={{ span: 6 }}>
-            <div
-              style={{
-                backgroundColor: "white",
-                padding: 20,
-                boxShadow: "0 0 10px rgba(0, 0, 0, 0.38)",
-              }}
-            >
+            <div className="spotlight-registration-form">
               <SpotlightRegistrationForm
                 onRegistered={() => {
-                  history.push("/dashboard?showWhatsNextBanner");
+                  history.push("/dashboard");
                 }}
               />
               <p style={{ textAlign: "center" }}>

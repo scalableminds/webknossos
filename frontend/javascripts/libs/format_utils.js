@@ -50,7 +50,7 @@ export function formatScale(scaleArr: ?Vector3, roundTo?: number = 2): string {
       unit = "mm³";
     } else if (smallestValue > 1000) {
       scaleArrAdjusted = scaleArr.map(value => value / 1000);
-      unit = "μm³";
+      unit = "µm³";
     }
     const scaleArrRounded = scaleArrAdjusted.map(value => Utils.roundTo(value, roundTo));
     return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}/voxel`;
@@ -63,7 +63,7 @@ export function formatNumberToLength(numberInNm: number): string {
   if (numberInNm < 1000) {
     return `${numberInNm.toFixed(0)}${ThinSpace}nm`;
   } else if (numberInNm < 1000000) {
-    return `${(numberInNm / 1000).toFixed(1)}${ThinSpace}μm`;
+    return `${(numberInNm / 1000).toFixed(1)}${ThinSpace}µm`;
   } else {
     return `${(numberInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
   }

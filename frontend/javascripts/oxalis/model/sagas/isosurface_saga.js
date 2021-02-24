@@ -153,9 +153,11 @@ function* ensureSuitableIsosurface(
   removeExistingIsosurface: boolean = false,
 ): Saga<void> {
   const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
-  if (segmentId === 0) {
+  const layer = Model.getSegmentationLayer();
+  if (segmentId === 0 || layer == null) {
     return;
   }
+
   yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
 }
 
@@ -229,6 +231,7 @@ function* loadIsosurfaceWithNeighbors(
       currentPosition,
       zoomStep,
       resolutionInfo,
+      isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
     );
     isInitialRequest = false;
@@ -251,6 +254,7 @@ function* maybeLoadIsosurface(
   clippedPosition: Vector3,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
+  isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
 ): Saga<Array<Vector3>> {
   const threeDMap = getMapForSegment(segmentId);
@@ -293,6 +297,7 @@ function* maybeLoadIsosurface(
           voxelDimensions,
           cubeSize,
           scale,
+          isInitialRequest,
         },
       );
 

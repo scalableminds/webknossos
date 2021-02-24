@@ -202,18 +202,15 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const tryParsingFileAsZip = async file => {
       try {
-        const findFileNameWithExtension = (fileName: string, ext: string) =>
-          _.last(fileName.split(".")).toLowerCase() === ext;
-
         const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
         const nmlFileName = Object.keys(zipFile.files).find(key =>
-          findFileNameWithExtension(key, "nml"),
+          Utils.isFileExtensionEqualTo(key, "nml"),
         );
         const nmlFile = await zipFile.file(nmlFileName).async("blob");
         const nmlImportActions = await tryParsingFileAsNml(nmlFile);
 
         const dataFileName = Object.keys(zipFile.files).find(key =>
-          findFileNameWithExtension(key, "zip"),
+          Utils.isFileExtensionEqualTo(key, "zip"),
         );
         if (dataFileName) {
           const dataBlob = await zipFile.file(dataFileName).async("blob");

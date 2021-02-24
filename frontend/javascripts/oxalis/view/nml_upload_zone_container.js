@@ -38,7 +38,7 @@ function OverlayDropZone({ children }) {
     bottom: 0,
     left: 0,
     padding: "2.5em 0",
-    background: "rgba(0, 0, 0, 0.65)",
+    background: "rgba(0, 0, 0, 0.45)",
     textAlign: "center",
     zIndex: 1000,
   };
@@ -173,7 +173,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           }}
           onDrop={this.onDrop}
         >
-          <NmlDropArea showClickHint isUpdateAllowed={this.props.isUpdateAllowed} />
+          {({ getRootProps }) => (
+            <div {...getRootProps()}>
+              <NmlDropArea showClickHint isUpdateAllowed={this.props.isUpdateAllowed} />
+            </div>
+          )}
         </Dropzone>
       </Modal>
     );
@@ -232,27 +236,31 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         onDragEnter={this.onDragEnter}
         onDragLeave={this.onDragLeave}
       >
-        {
-          // While dragging files over the view, the OverlayDropZone is rendered
-          // which shows a hint to the user that he may drop files here.
-        }
-        {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
-          <OverlayDropZone>
-            <NmlDropArea showClickHint={false} isUpdateAllowed={this.props.isUpdateAllowed} />
-          </OverlayDropZone>
-        ) : null}
-        {
-          // If the user explicitly selected the menu option to import NMLs,
-          // we show a proper modal which renderes almost the same hint ("You may drag... or click").
-        }
-        {this.props.showDropzoneModal ? this.renderDropzoneModal() : null}
+        {({ getRootProps }) => (
+          <div {...getRootProps()}>
+            {
+              // While dragging files over the view, the OverlayDropZone is rendered
+              // which shows a hint to the user that he may drop files here.
+            }
+            {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
+              <OverlayDropZone>
+                <NmlDropArea showClickHint={false} isUpdateAllowed={this.props.isUpdateAllowed} />
+              </OverlayDropZone>
+            ) : null}
+            {
+              // If the user explicitly selected the menu option to import NMLs,
+              // we show a proper modal which renderes almost the same hint ("You may drag... or click").
+            }
+            {this.props.showDropzoneModal ? this.renderDropzoneModal() : null}
 
-        {
-          // Once, files were dropped, we render the import modal
-        }
-        {this.renderImportModal()}
+            {
+              // Once, files were dropped, we render the import modal
+            }
+            {this.renderImportModal()}
 
-        {this.props.children}
+            {this.props.children}
+          </div>
+        )}
       </Dropzone>
     );
   }

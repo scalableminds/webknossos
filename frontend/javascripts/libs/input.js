@@ -51,9 +51,47 @@ type HammerJsEvent = {
   srcEvent: MouseEvent,
 };
 
+function intersect(array1, array2) {
+  return array1.filter(value => array2.includes(value));
+}
+
+function expandKeyCombo(key: KeyboardKey) {
+  const macros = KeyboardJS._locale._macros;
+
+  const { keyNames } = new KeyboardJS.KeyCombo(key);
+
+  let expandedKeys = keyNames.slice(0);
+  for (const keyName of keyNames) {
+    const keyCode = KeyboardJS._locale.getKeyCodes(keyName);
+    const aliases = KeyboardJS._locale.getKeyNames(keyCode);
+    expandedKeys = expandedKeys.concat(aliases);
+  }
+
+  for (let i = 0; i < macros.length; i += 1) {
+    const macro = macros[i];
+
+    if (intersect(macro.keyNames, keyNames).length > 0 || macro.keyCombo.check(keyNames)) {
+      for (let j = 0; j < macro.keyNames.length; j += 1) {
+        if (expandedKeys.indexOf(macro.keyNames[j]) === -1) {
+          expandedKeys.push(macro.keyNames[j]);
+        }
+      }
+      const macroTriggers = macro.keyCombo.keyNames;
+      for (let j = 0; j < macroTriggers.length; j += 1) {
+        if (expandedKeys.indexOf(macroTriggers[j]) === -1) {
+          expandedKeys.push(macroTriggers[j]);
+        }
+      }
+    }
+  }
+  return expandedKeys;
+}
+
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
 function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
+  const expandedKeys = expandKeyCombo(key);
+  return !_.isEqual(new Set(expandedKeys), new Set(event.pressedKeys));
   const bindingHasCtrl = key.toLowerCase().indexOf("ctrl") !== -1;
   const bindingHasShift = key.toLowerCase().indexOf("shift") !== -1;
   const bindingHasSuper = key.toLowerCase().indexOf("super") !== -1;

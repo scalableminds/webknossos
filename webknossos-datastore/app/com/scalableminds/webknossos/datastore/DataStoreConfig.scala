@@ -7,29 +7,28 @@ import play.api.Configuration
 import scala.concurrent.duration._
 
 class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
-  override def raw = configuration
+  override def raw: Configuration = configuration
 
   object Http {
-    val uri = get[String]("http.uri")
+    val uri: String = get[String]("http.uri")
   }
 
   object Braingames {
     object Binary {
       object ChangeHandler {
-        val enabled = get[Boolean]("braingames.binary.changeHandler.enabled")
-        val tickerInterval = get[Int]("braingames.binary.changeHandler.tickerInterval") minutes
+        val enabled: Boolean = get[Boolean]("braingames.binary.changeHandler.enabled")
+        val tickerInterval: FiniteDuration = get[Int]("braingames.binary.changeHandler.tickerInterval") minutes
       }
-      val baseFolder = get[String]("braingames.binary.baseFolder")
-      val loadTimeout = get[Int]("braingames.binary.loadTimeout") seconds
-      val cacheMaxSize = get[Int]("braingames.binary.cacheMaxSize")
-      val mappingCacheMaxSize = get[Int]("braingames.binary.mappingCacheMaxSize")
-      val agglomerateCacheMaxSize = get[Int]("braingames.binary.agglomerateCacheMaxSize")
-      val agglomerateStandardBlockSize = get[Int]("braingames.binary.agglomerateStandardBlockSize")
-      val agglomerateFileCacheMaxSize = get[Int]("braingames.binary.agglomerateFileCacheMaxSize")
-      val agglomerateMaxReaderRange = get[Int]("braingames.binary.agglomerateMaxReaderRange")
-      val isosurfaceTimeout = get[Int]("braingames.binary.isosurfaceTimeout") seconds
-      val isosurfaceActorPoolSize = get[Int](path = "braingames.binary.isosurfaceActorPoolSize")
-      val agglomerateSkeletonEdgeLimit = get[Int]("braingames.binary.agglomerateSkeletonEdgeLimit")
+      val baseFolder: String = get[String]("braingames.binary.baseFolder")
+      val cacheMaxSize: Int = get[Int]("braingames.binary.cacheMaxSize")
+      val mappingCacheMaxSize: Int = get[Int]("braingames.binary.mappingCacheMaxSize")
+      val agglomerateCacheMaxSize: Int = get[Int]("braingames.binary.agglomerateCacheMaxSize")
+      val agglomerateStandardBlockSize: Int = get[Int]("braingames.binary.agglomerateStandardBlockSize")
+      val agglomerateFileCacheMaxSize: Int = get[Int]("braingames.binary.agglomerateFileCacheMaxSize")
+      val agglomerateMaxReaderRange: Int = get[Int]("braingames.binary.agglomerateMaxReaderRange")
+      val isosurfaceTimeout: FiniteDuration = get[Int]("braingames.binary.isosurfaceTimeout") seconds
+      val isosurfaceActorPoolSize: Int = get[Int](path = "braingames.binary.isosurfaceActorPoolSize")
+      val agglomerateSkeletonEdgeLimit: Int = get[Int]("braingames.binary.agglomerateSkeletonEdgeLimit")
 
       val children = List(ChangeHandler)
     }
@@ -37,11 +36,11 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
   }
 
   object Datastore {
-    val key = get[String]("datastore.key")
-    val name = get[String]("datastore.name")
+    val key: String = get[String]("datastore.key")
+    val name: String = get[String]("datastore.name")
     object WebKnossos {
-      val uri = get[String]("datastore.webKnossos.uri")
-      val pingIntervalMinutes = get[Int]("datastore.webKnossos.pingIntervalMinutes") minutes
+      val uri: String = get[String]("datastore.webKnossos.uri")
+      val pingIntervalMinutes: FiniteDuration = get[Int]("datastore.webKnossos.pingIntervalMinutes") minutes
     }
     val children = List(WebKnossos)
   }

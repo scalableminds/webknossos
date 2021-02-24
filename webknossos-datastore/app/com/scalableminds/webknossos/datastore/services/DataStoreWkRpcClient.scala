@@ -39,21 +39,21 @@ class DataStoreWkRpcClient @Inject()(
 
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name
-  private val dataStoreUrl: String = config.Http.uri
+  private val dataStoreUri: String = config.Http.uri
 
-  private val webKnossosUrl: String = config.Datastore.WebKnossos.uri
+  private val webKnossosUri: String = config.Datastore.WebKnossos.uri
 
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingIntervalMinutes
 
   def tick(): Unit = reportStatus(ok = true)
 
   def reportStatus(ok: Boolean): Fox[_] =
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/status")
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
-      .patch(DataStoreStatus(ok, dataStoreUrl))
+      .patch(DataStoreStatus(ok, dataStoreUri))
 
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
@@ -65,7 +65,7 @@ class DataStoreWkRpcClient @Inject()(
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
       _ = Thread.sleep(sleepDuration)
-      _ <- rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/reportDatasetUpload")
+      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
@@ -75,25 +75,25 @@ class DataStoreWkRpcClient @Inject()(
   }
 
   def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/reportIsosurfaceRequest")
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportIsosurfaceRequest")
       .addQueryString("key" -> dataStoreKey)
       .addQueryStringOptional("token", userToken)
       .post()
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
       .silent
       .put(dataSources)
 
   def validateDataSourceUpload(id: DataSourceId): Fox[_] =
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload").addQueryString("key" -> dataStoreKey).post(id)
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload").addQueryString("key" -> dataStoreKey).post(id)
 
   def deleteErroneousDataSource(id: DataSourceId): Fox[_] =
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/deleteErroneous").addQueryString("key" -> dataStoreKey).post(id)
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteErroneous").addQueryString("key" -> dataStoreKey).post(id)
 
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
       .addQueryStringOptional("token", token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)

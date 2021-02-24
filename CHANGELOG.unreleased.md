@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Users are no longer allowed to deactivate their own accounts.  [#5070](https://github.com/scalableminds/webknossos/pull/5070)
 - A user needs to confirm his choice if he really wants to leave the dataset upload view while it's still loading. [#5051](https://github.com/scalableminds/webknossos/pull/5049)
 - Mailer now uses only TLS1.2 instead of JDK default. [#5138](https://github.com/scalableminds/webknossos/pull/5138)
+- Make keyboard-driven movement through the dataset better aligned with the configured move value in certain scenarios. [#5201](https://github.com/scalableminds/webknossos/pull/5201)
 - User experienced domains are now separated by organization. [#5149](https://github.com/scalableminds/webknossos/pull/5149)
 - Changed the default request timeouts for standalone datastores and tracingstores to match those of local ones (10000s instead of 75s). [#5174](https://github.com/scalableminds/webknossos/pull/5174)
 

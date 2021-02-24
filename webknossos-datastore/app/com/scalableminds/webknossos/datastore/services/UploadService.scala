@@ -59,7 +59,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
                         chunkFile: File): Fox[Unit] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     val uploadDir = uploadDirectory(datasourceId.team, uploadId)
-    val filePath = uploadFileId.split("/").tail.mkString("/")
+    val filePathRaw = uploadFileId.split("/").tail.mkString("/")
+    val filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
     logger.info(
       s"handleUploadChunk uploadId $uploadFileId ${datasourceId.name}, currentChunkNumber $currentChunkNumber, totalFileCount: $totalFileCount")
     val isNewChunk = allSavedChunkIds.synchronized {

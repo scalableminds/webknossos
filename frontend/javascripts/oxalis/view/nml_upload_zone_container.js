@@ -6,6 +6,7 @@ import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";
 
+import { navbarHeight } from "navbar";
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
@@ -229,7 +230,6 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     return (
       <Dropzone
         disableClick
-        style={{ position: "relative" }}
         multiple
         disablePreview
         onDrop={this.onDrop}
@@ -237,7 +237,10 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         onDragLeave={this.onDragLeave}
       >
         {({ getRootProps }) => (
-          <div {...getRootProps()}>
+          <div
+            {...getRootProps()}
+            style={{ position: "relative", minHeight: `calc(100vh - ${navbarHeight}px)` }}
+          >
             {
               // While dragging files over the view, the OverlayDropZone is rendered
               // which shows a hint to the user that he may drop files here.

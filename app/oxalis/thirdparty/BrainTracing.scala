@@ -38,7 +38,7 @@ class BrainTracing @Inject()(actorSystem: ActorSystem,
       implicit ec: ExecutionContext): Future[String] = {
     val result = Promise[String]()
     val brainTracingRequest = ws
-      .url(conf.Braintracing.url + conf.Braintracing.createUserScript)
+      .url(conf.Braintracing.uri + conf.Braintracing.createUserScript)
       .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
       .addQueryStringParameters("license" -> conf.Braintracing.license,
                                 "firstname" -> user.firstName,

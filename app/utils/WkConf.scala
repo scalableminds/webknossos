@@ -30,7 +30,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Http {
     val uri: String = get[String]("http.uri")
-    val port: Int = get[Int]("http.port")
   }
 
   object Mail {
@@ -87,7 +86,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object Braintracing {
     val active: Boolean = get[Boolean]("braintracing.active")
     val organizationName: String = get[String]("braintracing.organizationName")
-    val url: String = get[String]("braintracing.url")
+    val uri: String = get[String]("braintracing.uri")
     val createUserScript: String = get[String]("braintracing.createUserScript")
     val user: String = get[String]("braintracing.user")
     val password: String = get[String]("braintracing.password")
@@ -149,7 +148,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object Jobs {
     object Flower {
       val uri: String = get[String]("jobs.flower.uri")
-      val username: String = get[String]("jobs.flower.username")
+      val user: String = get[String]("jobs.flower.user")
       val password: String = get[String]("jobs.flower.password")
     }
     val children = List(Flower)

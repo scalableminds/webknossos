@@ -394,9 +394,15 @@ class VolumeTracingService @Inject()(
       } else None
     } yield bucketPosOpt
 
-  def merge(tracings: Seq[VolumeTracing]): VolumeTracing = tracings.reduceLeft(mergeTwo)
+  def merge(tracings: Seq[VolumeTracing]): VolumeTracing =
+    tracings
+      .reduceLeft(mergeTwo)
+      .copy(
+        createdTimestamp = System.currentTimeMillis(),
+        version = 0L,
+      )
 
-  def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
+  private def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
     val largestSegmentId = Math.max(tracingA.largestSegmentId, tracingB.largestSegmentId)
     val mergedBoundingBox = combineBoundingBoxes(Some(tracingA.boundingBox), Some(tracingB.boundingBox))
     val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
@@ -405,8 +411,6 @@ class VolumeTracingService @Inject()(
                                                      tracingB.userBoundingBoxes)
 
     tracingA.copy(
-      createdTimestamp = System.currentTimeMillis(),
-      version = 0L,
       largestSegmentId = largestSegmentId,
       boundingBox = mergedBoundingBox.getOrElse(
         com.scalableminds.webknossos.datastore.geometry.BoundingBox(

@@ -934,10 +934,12 @@ export function createResumableUpload(
   datasetId: APIDatasetId,
   datastoreUrl: string,
   totalFileCount: number,
-  myUploadId: string,
+  uploadId: string,
 ): Promise<*> {
-  const generateUniqueIdentifier = file =>
-    `${myUploadId}/${file.path || file.webkitRelativePath || file.relativePath || file.name}`;
+  // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
+  // In case this "enrichment" of the file should change at some point, fall back to file.name
+  // which is an official part of the File API.
+  const generateUniqueIdentifier = file => `${uploadId}/${file.path || file.name}`;
 
   const additionalParameters = {
     ...datasetId,

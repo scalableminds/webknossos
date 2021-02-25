@@ -74,16 +74,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
-  normFile = e => {
-    console.log("normFile returns:", Array.isArray(e) ? e : e && e.fileList);
-
-    if (Array.isArray(e)) {
-      return e;
-    }
-
-    return e && e.fileList;
-  };
-
   handleSubmit = evt => {
     evt.preventDefault();
 
@@ -538,7 +528,10 @@ const rejectStyle = {
 
 function FileUploadArea({ fileList, onChange }) {
   const onDropAccepted = acceptedFiles => {
-    onChange(_.uniqBy(fileList.concat(acceptedFiles), file => file.path));
+    // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
+    // In case this "enrichment" of the file should change at some point, fall back to file.name
+    // which is an official part of the File API.
+    onChange(_.uniqBy(fileList.concat(acceptedFiles), file => file.path || file.name));
   };
   const removeFile = file => {
     onChange(_.without(fileList, file));
@@ -584,19 +577,13 @@ function FileUploadArea({ fileList, onChange }) {
             }
             title={
               <span>
-                {showSmallFileList && <Icon type="file" />} {item.name}
+                {showSmallFileList && <Icon type="file" />}{" "}
+                <span style={{ color: "darkgrey" }}>{`${item.path
+                  .split("/")
+                  .slice(0, -1)
+                  .join("/")}/`}</span>
+                {item.name}
               </span>
-            }
-            description={
-              !showSmallFileList && (
-                <span>
-                  Located in:{" "}
-                  {`${item.path
-                    .split("/")
-                    .slice(0, -1)
-                    .join("/")}/`}
-                </span>
-              )
             }
           />
         </List.Item>

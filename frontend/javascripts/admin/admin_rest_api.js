@@ -936,10 +936,15 @@ export function createResumableUpload(
   totalFileCount: number,
   uploadId: string,
 ): Promise<*> {
-  // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
-  // In case this "enrichment" of the file should change at some point, fall back to file.name
-  // which is an official part of the File API.
-  const generateUniqueIdentifier = file => `${uploadId}/${file.path || file.name}`;
+  const generateUniqueIdentifier = file => {
+    if (file.path == null) {
+      // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
+      // In case this "enrichment" of the file should change at some point (e.g., due to library changes),
+      // throw an error.
+      throw new Error("file.path is undefined.");
+    }
+    return `${uploadId}/${file.path || file.name}`;
+  };
 
   const additionalParameters = {
     ...datasetId,

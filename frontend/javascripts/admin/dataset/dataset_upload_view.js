@@ -529,9 +529,7 @@ const rejectStyle = {
 function FileUploadArea({ fileList, onChange }) {
   const onDropAccepted = acceptedFiles => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
-    // In case this "enrichment" of the file should change at some point, fall back to file.name
-    // which is an official part of the File API.
-    onChange(_.uniqBy(fileList.concat(acceptedFiles), file => file.path || file.name));
+    onChange(_.uniqBy(fileList.concat(acceptedFiles), file => file.path));
   };
   const removeFile = file => {
     onChange(_.without(fileList, file));

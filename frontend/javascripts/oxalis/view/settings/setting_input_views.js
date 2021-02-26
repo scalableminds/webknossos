@@ -344,15 +344,18 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const { tooltipTitle, color, isVisible, onDelete, onExport } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = { margin: "auto 0px auto 6px" };
-    const exportButton = features().jobsEnabled ? (
-      <Tooltip title="Export data from this bouding box.">
-        <Icon type="download" onClick={onExport} style={iconStyle} />
-      </Tooltip>
+    const exportColumn = features().jobsEnabled ? (
+      <Col span={2}>
+        <Tooltip title="Export data from this bouding box.">
+          <Icon type="download" onClick={onExport} style={iconStyle} />
+        </Tooltip>
+      </Col>
     ) : null;
+    const visibilityColSpan = exportColumn == null ? 22 : 20;
     return (
       <React.Fragment>
         <Row style={{ marginBottom: 16 }}>
-          <Col span={20}>
+          <Col span={visibilityColSpan}>
             <Switch
               size="small"
               onChange={this.handleVisibilityChange}
@@ -360,7 +363,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               style={{ margin: "auto 0px" }}
             />
           </Col>
-          <Col span={2}>{exportButton}</Col>
+          {exportColumn}
           <Col span={2}>
             <Tooltip title="Delete this bounding box.">
               <Icon type="delete" onClick={onDelete} style={iconStyle} />

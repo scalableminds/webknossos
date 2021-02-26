@@ -20,7 +20,6 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
   };
 
   const handleStartExport = layerName => {
-    console.log("start export for", layerName);
     startTiffExportJob(
       dataset.name,
       dataset.owningOrganization,
@@ -61,28 +60,16 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
         <a href="/jobs" target="_blank">
           Jobs Overview Page
         </a>{" "}
-        for running exports and to download the results.
+        to see running exports and to download the results.
       </p>
     ) : null;
-
-  console.log(dataset.dataSource.dataLayers);
 
   const bboxText = Utils.computeArrayFromBoundingBox(boundingBox).join(", ");
 
   return (
-    <Modal
-      title="Export Bounding Box as Tiff Stack"
-      onCancel={handleClose}
-      visible
-      width={500}
-      footer={[
-        <Button key="close" type="primary" onClick={handleClose}>
-          close
-        </Button>,
-      ]}
-    >
+    <Modal title="Export Bounding Box as Tiff Stack" onCancel={handleClose} visible width={500}>
       <p>
-        Data from the selected bounding box at {bboxText} will be exported as tiff stack zip
+        Data from the selected bounding box at {bboxText} will be exported as a tiff stack zip
         archive.
       </p>
       <p>Please select a layer to export:</p>

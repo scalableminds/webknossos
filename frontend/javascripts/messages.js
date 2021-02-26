@@ -38,7 +38,7 @@ export const settings = {
     (will take longer until you see data) or alternatively,
     improving the quality progressively (data will be loaded faster,
     but it will take more time until the best quality is shown).`,
-  mergerMode: "Enable Merger Mode",
+  mergerMode: "Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
   overwriteMode: "Volume Annotation Overwrite Mode",

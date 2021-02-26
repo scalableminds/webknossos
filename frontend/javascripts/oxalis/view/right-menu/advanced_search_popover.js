@@ -111,7 +111,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
         <Popover
           title="Search"
           trigger="click"
-          placement="rightTop"
+          placement="left"
           overlayClassName="search-input-popover"
           visible={isVisible}
           onVisibleChange={newVisibility =>

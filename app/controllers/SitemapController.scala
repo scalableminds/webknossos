@@ -10,7 +10,8 @@ import utils.SitemapWriter
 
 class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv]) extends Controller {
 
-  def getSitemap(prefix: Option[String] = None): Action[AnyContent] = sil.UserAwareAction {
+  // Only called explicitly via RequestHandler
+  def getSitemap(prefix: String): Action[AnyContent] = sil.UserAwareAction {
     val downloadStream = sitemapWriter.toSitemapStream(prefix)
 
     Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
@@ -18,4 +19,5 @@ class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[
       .withHeaders(CONTENT_DISPOSITION ->
         """sitemap.xml""")
   }
+
 }

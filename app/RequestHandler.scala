@@ -36,7 +36,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       val path = request.path.replaceFirst("^(/assets/)", "")
       Some(assets.at(path = "/public", file = path))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
-      Some(sitemapController.getSitemap(Some(conf.Http.uri)))
+      Some(sitemapController.getSitemap(conf.Http.uri))
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
     } else Some(demoProxyController.proxyPageOrMainView)

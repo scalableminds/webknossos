@@ -47,10 +47,9 @@ class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUser
     extends LazyLogging {
   implicit val ctx: DBAccessContext = GlobalAccessContext
 
-  def isSuperUser(userId: ObjectId): Fox[Boolean] =
+  def isSuperUser(multiUserId: ObjectId): Fox[Boolean] =
     for {
-      user <- userDAO.findOne(userId)
-      multiUser <- multiUserDAO.findOne(user._multiUser)
+      multiUser <- multiUserDAO.findOne(multiUserId)
     } yield multiUser.isSuperUser
 
   def multiUserIdFor(userId: ObjectId): Fox[String] =
@@ -67,7 +66,7 @@ trait AnalyticsEvent {
   def userId: String = user._multiUser.toString
   def userProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     for {
-      isSuperUser <- analyticsLookUpService.isSuperUser(user._id)
+      isSuperUser <- analyticsLookUpService.isSuperUser(user._multiUser)
     } yield {
       Json.obj(
         "organization_id" -> user._organization.id,

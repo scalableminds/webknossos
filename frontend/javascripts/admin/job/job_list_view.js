@@ -3,7 +3,7 @@ import _ from "lodash";
 
 import { PropTypes } from "@scalableminds/prop-types";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Table, Spin, Input, Icon } from "antd";
+import { Table, Spin, Input, Icon, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -12,6 +12,7 @@ import { getJobs } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import type { OxalisState } from "oxalis/store";
+import FormattedDate from "components/formatted_date";
 
 const refreshInterval = 5000;
 
@@ -81,6 +82,66 @@ class JobListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
+  renderDescription = (__: Any, job: APIJob) => {
+    if (job.type === "tiff_cubing") {
+      return <span>{`Tiff to WKW conversion of ${job.datasetName}`}</span>;
+    } else if (job.type === "export_tiff") {
+      return (
+        <span>
+          Tiff export from {job.layerName} layer of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>
+        </span>
+      );
+    }
+  };
+
+  renderActions = (__: Any, job: APIJob) => {
+    if (job.type === "tiff_cubing") {
+      return (
+        <span>
+          {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
+            <Link
+              to={`/datasets/${this.props.activeUser.organization}/${job.datasetName}/view`}
+              title="View Dataset"
+            >
+              <Icon type="eye-o" />
+              View
+            </Link>
+          )}
+        </span>
+      );
+    } else if (job.type === "export_tiff") {
+      return (
+        <span>
+          {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
+            <a href={`/api/jobs/${job.id}/downloadExport/${job.exportFileName}`} title="Download">
+              <Icon type="download" />
+              Download
+            </a>
+          )}
+        </span>
+      );
+    } else return null;
+  };
+
+  renderState = (__: Any, job: APIJob) => {
+    const stateString = _.capitalize(job.state.toLowerCase());
+    if (job.state === "SUCCESS") return stateString;
+    else {
+      return (
+        <Tooltip
+          title={
+            "Something whent wrong when executing this job. Feel free to contact us if you need assistance."
+          }
+        >
+          {stateString}
+        </Tooltip>
+      );
+    }
+  };
+
   render() {
     return (
       <div className="container">
@@ -115,21 +176,17 @@ class JobListView extends React.PureComponent<Props, State> {
                 key="id"
                 sorter={Utils.localeCompareBy(typeHint, job => job.id)}
               />
-              <Column
-                title="Description"
-                key="datasetName"
-                render={job => `${job.type} of ${job.datasetName}`}
-              />
+              <Column title="Description" key="datasetName" render={this.renderDescription} />
               <Column
                 title="Created at"
                 key="createdAt"
-                render={job => new Date(job.createdAt).toUTCString()}
+                render={job => <FormattedDate timestamp={job.createdAt} />}
                 sorter={Utils.compareBy(typeHint, job => job.createdAt)}
               />
               <Column
                 title="State"
                 key="state"
-                render={job => _.capitalize(job.state.toLowerCase())}
+                render={this.renderState}
                 sorter={Utils.localeCompareBy(typeHint, job => job.state)}
               />
               <Column
@@ -137,39 +194,7 @@ class JobListView extends React.PureComponent<Props, State> {
                 key="actions"
                 fixed="right"
                 width={150}
-                render={(__, job: APIJob) => (
-                  <div>
-                    <span>
-                      {job.state === "SUCCESS" &&
-                        job.datasetName &&
-                        !job.exportFileName &&
-                        this.props.activeUser && (
-                          <Link
-                            to={`/datasets/${this.props.activeUser.organization}/${
-                              job.datasetName
-                            }/view`}
-                            title="View Dataset"
-                          >
-                            <Icon type="eye-o" />
-                            View
-                          </Link>
-                        )}
-                    </span>
-                    <span>
-                      {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
-                        <a
-                          href={`/api/jobs/downloadExport/${this.props.activeUser.organization}/${
-                            job.exportFileName
-                          }`}
-                          title="Download"
-                        >
-                          <Icon type="download" />
-                          Download
-                        </a>
-                      )}
-                    </span>
-                  </div>
-                )}
+                render={this.renderActions}
               />
             </Table>
           </Spin>

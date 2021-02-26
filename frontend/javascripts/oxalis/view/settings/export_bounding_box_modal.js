@@ -44,7 +44,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
         <Button
           key={layerName}
           onClick={() => handleStartExport(layerName)}
-          disabled={startedExports.includes(layerName)}
+          // disabled={startedExports.includes(layerName)} //TODO re-enable before merge, this is just to make development easier
         >
           {layerName}
           {startedExports.includes(layerName) ? " (started)" : null}
@@ -67,7 +67,13 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
   const bboxText = Utils.computeArrayFromBoundingBox(boundingBox).join(", ");
 
   return (
-    <Modal title="Export Bounding Box as Tiff Stack" onCancel={handleClose} visible width={500}>
+    <Modal
+      title="Export Bounding Box as Tiff Stack"
+      onCancel={handleClose}
+      visible
+      width={500}
+      footer={null}
+    >
       <p>
         Data from the selected bounding box at {bboxText} will be exported as a tiff stack zip
         archive.

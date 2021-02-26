@@ -195,6 +195,6 @@ GET           /time/user/:userId                                                
 # Long-Running Jobs
 GET           /jobs                                                                 controllers.JobsController.list
 GET           /jobs/:id                                                             controllers.JobsController.get(id: String)
+GET           /jobs/:id/downloadExport/:exportFileName                              controllers.JobsController.downloadExport(id: String, exportFileName: String)
 GET           /jobs/run/cubing/:organizationName/:dataSetName                       controllers.JobsController.runCubingJob(organizationName: String, dataSetName: String, scale: String)
 GET           /jobs/run/tiffExport/:organizationName/:dataSetName/:layerName        controllers.JobsController.runTiffExportJob(organizationName: String, dataSetName: String, layerName: String, bbox: String)
-GET           /jobs/downloadExport/:organizationName/:exportFileName                controllers.JobsController.downloadExport(organizationName: String, exportFileName: String)

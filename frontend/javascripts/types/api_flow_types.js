@@ -546,6 +546,8 @@ export type APIJob = {
   +id: string,
   +datasetName: ?string,
   +exportFileName: ?string,
+  +layerName: ?string,
+  +organizationName: ?string,
   +type: string,
   +state: string,
   +createdAt: number,

@@ -794,8 +794,10 @@ export async function getJobs(): Promise<Array<APIJob>> {
     id: job.id,
     type: job.command,
     datasetName: job.commandArgs.kwargs.dataset_name,
+    organizationName: job.commandArgs.kwargs.organization_name,
+    layerName: job.commandArgs.kwargs.layer_name,
     exportFileName: job.commandArgs.kwargs.export_file_name,
-    state: job.celeryInfo.state,
+    state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
 }

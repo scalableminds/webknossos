@@ -22,7 +22,6 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
 
 case class Job(
     _id: ObjectId,
@@ -185,7 +184,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                                                                      organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
         command = "export_tiff"
-        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}__${Random.alphanumeric.take(12).mkString}.zip"
+        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}.zip"
         commandArgs = Json.obj(
           "kwargs" -> Json.obj("organization_name" -> organizationName,
                                "dataset_name" -> dataSetName,
@@ -197,13 +196,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def downloadExport(organizationName: String, exportFileName: String): Action[AnyContent] =
+  def downloadExport(jobId: String, exportFileName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName)
-        _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
-        filePath = Paths.get("binaryData", organizationName, ".export", exportFileName)
+        jobIdValidated <- ObjectId.parse(jobId)
+        job <- jobDAO.findOne(jobIdValidated)
+        organization <- organizationDAO.findOne(request.identity._organization)
+        filePath = Paths.get("binaryData", organization.name, ".export", job.celeryJobId, exportFileName)
         _ <- bool2Fox(Files.exists(filePath)) ?~> "job.export.fileNotFound"
       } yield Ok.sendPath(filePath, inline = false)
     }

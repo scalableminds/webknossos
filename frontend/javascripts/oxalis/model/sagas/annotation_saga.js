@@ -15,7 +15,7 @@ import constants from "oxalis/constants";
 import messages from "messages";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
-const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 8;
+const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export function* pushAnnotationUpdateAsync(): Saga<void> {
   const tracing = yield* select(state => state.tracing);

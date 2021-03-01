@@ -393,9 +393,9 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/organizations/:organizationId/edit"
+                path="/organizations/:organizationName/edit"
                 render={({ match }) => (
-                  <OrganizationEditView organizationId={match.params.organizationId} />
+                  <OrganizationEditView organizationName={match.params.organizationName || ""} />
                 )}
               />
               <Route

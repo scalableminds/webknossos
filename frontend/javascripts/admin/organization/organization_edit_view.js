@@ -1,83 +1,83 @@
 // @flow
-import { type RouterHistory, withRouter } from "react-router-dom";
-import { Form, Button, Card, Radio, Input, Spin } from "antd";
+import { withRouter } from "react-router-dom";
+import { Form, Button, Card, Radio, Input, Icon, Row } from "antd";
 import React from "react";
-import _ from "lodash";
 
-import type { BoundingBoxObject } from "oxalis/store";
-import type { Vector6 } from "oxalis/constants";
+import { confirmAsync } from "dashboard/dataset/helper_components";
+import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
 import Enum from "Enumjs";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
-type Props = {
-  form: Object,
-  history: RouterHistory,
-};
-
-export const PlanEnum = Enum.make({
+export const PricingPlanEnum = Enum.make({
   Basic: "Basic",
   Premium: "Premium",
   Pilot: "Pilot",
+  Custom: "Custom",
 });
-type Plan = $Keys<typeof PlanEnum>;
+type PricingPlan = $Keys<typeof PricingPlanEnum>;
+
+type Props = { organizationName: string, form: Object };
 
 type State = {
   displayName: string,
-  plan: Plan,
-  isUploading: boolean,
+  newUserMailingList: string,
+  pricingPlan: ?PricingPlan,
   isFetchingData: boolean,
+  isDeleting: boolean,
 };
 
 class OrganizationEditView extends React.PureComponent<Props, State> {
   state = {
     displayName: "",
-    isUploading: false,
-    plan: PlanEnum.Basic,
+    newUserMailingList: "",
+    pricingPlan: null,
     isFetchingData: false,
+    isDeleting: false,
   };
 
   componentDidMount() {
     this.fetchData();
-    this.applyDefaults();
   }
 
   async fetchData() {
-    this.setState({ isFetchingData: true });
-    const plan = PlanEnum.Basic;
-    const displayName = "Display Name";
-    /* const [datasets, projects, scripts, taskTypes] = await Promise.all([
-      getActiveDatasets(),
-      getProjects(),
-      getScripts(),
-      getTaskTypes(),
-    ]); */
-    this.setState({ plan, displayName, isFetchingData: false });
-  }
-
-  async applyDefaults() {
-    const plan = PlanEnum.Basic;
-    const displayName = "Display Name One";
-    this.setState({ plan, displayName, isFetchingData: false });
-  }
-
-  transformBoundingBox(boundingBox: Vector6): BoundingBoxObject {
-    return {
-      topLeft: [boundingBox[0] || 0, boundingBox[1] || 0, boundingBox[2] || 0],
-      width: boundingBox[3] || 0,
-      height: boundingBox[4] || 0,
-      depth: boundingBox[5] || 0,
-    };
+    if (this.props.organizationName) {
+      this.setState({ isFetchingData: true });
+      const { displayName, newUserMailingList, pricingPlan } = await getOrganization(
+        this.props.organizationName,
+      );
+      this.setState({ displayName, pricingPlan, newUserMailingList, isFetchingData: false });
+    }
   }
 
   handleSubmit = e => {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
-        console.log("Everything's fine", formValues);
+        await updateOrganization(
+          this.props.organizationName,
+          formValues.displayName,
+          formValues.newUserMailingList,
+        );
+        window.location.replace(`${window.location.origin}/dashboard/datasets`);
       }
     });
+  };
+
+  handleDeleteButtonClicked = async (): Promise<void> => {
+    const isDeleteConfirmed = await confirmAsync({
+      title: `Deleting an organization cannot be undone. Are you certain you want to delete the organization ${
+        this.state.displayName
+      }?`,
+      okText: "Yes, Delete Organization now",
+    });
+    if (isDeleteConfirmed) {
+      this.setState({ isDeleting: true });
+      await deleteOrganization(this.props.organizationName);
+      this.setState({ isDeleting: false });
+      window.location.replace(`${window.location.origin}/dashboard`);
+    }
   };
 
   normFile = e => {
@@ -92,46 +92,67 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
 
     return (
       <div className="container" style={{ paddingTop: 20 }}>
-        <Spin spinning={this.state.isUploading}>
-          <Card title={<h3>Edit {this.state.displayName}</h3>}>
-            <Form onSubmit={this.handleSubmit} layout="vertical">
-              <FormItem label="Display Name">
-                {getFieldDecorator("displayName", {
-                  rules: [
-                    {
-                      required: true,
-                      pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
-                      message: "The organization name must not contain any special characters.",
-                    },
-                  ],
-                })(<Input icon="tag-o" placeholder={this.state.displayName} autoFocus />)}
-              </FormItem>
-              <FormItem label="Billing Plan">
-                {getFieldDecorator("billingPlan", {
-                  initialValue: this.state.plan,
-                })(
-                  <RadioGroup>
-                    <Radio value={PlanEnum.Basic} disabled={this.state.isFetchingData}>
-                      Basic
-                    </Radio>
-                    <Radio value={PlanEnum.Pilot} disabled={this.state.isFetchingData}>
-                      Pilot
-                    </Radio>
-                    <Radio value={PlanEnum.Premium} disabled={this.state.isFetchingData}>
-                      Premium
-                    </Radio>
-                  </RadioGroup>,
-                )}
-              </FormItem>
-
+        <Card title={<h3>Edit {this.state.displayName}</h3>}>
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <FormItem label="Display Name">
+              {getFieldDecorator("displayName", {
+                rules: [
+                  {
+                    required: true,
+                    pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
+                    message: "The organization name must not contain any special characters.",
+                  },
+                ],
+                initialValue: this.state.displayName,
+              })(<Input icon="tag-o" autoFocus />)}
+            </FormItem>
+            <FormItem label="Billing Plan">
+              {getFieldDecorator("pricingPlan", {
+                initialValue: this.state.pricingPlan,
+              })(
+                <RadioGroup>
+                  <Radio value={PricingPlanEnum.Basic} disabled={this.state.isFetchingData}>
+                    Basic
+                  </Radio>
+                  <Radio value={PricingPlanEnum.Pilot} disabled={this.state.isFetchingData}>
+                    Pilot
+                  </Radio>
+                  <Radio value={PricingPlanEnum.Premium} disabled={this.state.isFetchingData}>
+                    Premium
+                  </Radio>
+                  <Radio value={PricingPlanEnum.Custom} disabled={this.state.isFetchingData}>
+                    Custom
+                  </Radio>
+                </RadioGroup>,
+              )}
+            </FormItem>
+            <FormItem>
+              {getFieldDecorator("newUserMailingList", {
+                rules: [
+                  {
+                    required: false,
+                    type: "email",
+                  },
+                ],
+                initialValue: this.state.newUserMailingList,
+              })(<Input prefix={<Icon type="mail" style={{ fontSize: 13 }} />} />)}
+            </FormItem>
+            <Row type="flex" justify="space-between">
               <FormItem>
                 <Button type="primary" htmlType="submit">
                   Submit Changes
                 </Button>
               </FormItem>
-            </Form>
-          </Card>
-        </Spin>
+              <Button
+                type="danger"
+                loading={this.state.isDeleting}
+                onClick={this.handleDeleteButtonClicked}
+              >
+                Delete Organization
+              </Button>
+            </Row>
+          </Form>
+        </Card>
       </div>
     );
   }

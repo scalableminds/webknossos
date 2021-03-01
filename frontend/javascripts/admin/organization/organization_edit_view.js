@@ -1,6 +1,6 @@
 // @flow
 import { withRouter } from "react-router-dom";
-import { Form, Button, Card, Radio, Input, Icon, Row } from "antd";
+import { Form, Button, Card, Radio, Input, Icon, Row, Col } from "antd";
 import React from "react";
 
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -47,20 +47,26 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       const { displayName, newUserMailingList, pricingPlan } = await getOrganization(
         this.props.organizationName,
       );
-      this.setState({ displayName, pricingPlan, newUserMailingList, isFetchingData: false });
+      this.setState({
+        displayName,
+        pricingPlan: Enum.coalesce(PricingPlanEnum, pricingPlan),
+        newUserMailingList,
+        isFetchingData: false,
+      });
     }
   }
 
   handleSubmit = e => {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues) => {
+      console.log(formValues);
       if (!err) {
         await updateOrganization(
           this.props.organizationName,
           formValues.displayName,
           formValues.newUserMailingList,
         );
-        window.location.replace(`${window.location.origin}/dashboard/datasets`);
+        // window.location.replace(`${window.location.origin}/dashboard/datasets`);
       }
     });
   };
@@ -104,28 +110,73 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                   },
                 ],
                 initialValue: this.state.displayName,
-              })(<Input icon="tag-o" autoFocus />)}
+              })(<Input icon="tag-o" autoFocus disabled={this.state.isFetchingData} />)}
             </FormItem>
-            <FormItem label="Billing Plan">
-              {getFieldDecorator("pricingPlan", {
-                initialValue: this.state.pricingPlan,
-              })(
-                <RadioGroup>
-                  <Radio value={PricingPlanEnum.Basic} disabled={this.state.isFetchingData}>
-                    Basic
-                  </Radio>
-                  <Radio value={PricingPlanEnum.Pilot} disabled={this.state.isFetchingData}>
-                    Pilot
-                  </Radio>
-                  <Radio value={PricingPlanEnum.Premium} disabled={this.state.isFetchingData}>
-                    Premium
-                  </Radio>
-                  <Radio value={PricingPlanEnum.Custom} disabled={this.state.isFetchingData}>
-                    Custom
-                  </Radio>
-                </RadioGroup>,
-              )}
+
+            <FormItem>
+              {" "}
+              <Row gutter={10}>
+                {getFieldDecorator("pricingPlan", {
+                  initialValue: Enum.coalesce(PricingPlanEnum, this.state.pricingPlan),
+                })(
+                  <RadioGroup>
+                    <Col span={6}>
+                      <Card
+                        title="Basic"
+                        hoverable
+                        extra={
+                          this.state.pricingPlan === PricingPlanEnum.Basic && (
+                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
+                          )
+                        }
+                      >
+                        Only the Basics.
+                      </Card>
+                    </Col>
+                    <Col span={6}>
+                      <Card
+                        title="Pilot"
+                        hoverable
+                        extra={
+                          this.state.pricingPlan === PricingPlanEnum.Pilot && (
+                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
+                          )
+                        }
+                      >
+                        Pilots only.
+                      </Card>
+                    </Col>
+                    <Col span={6}>
+                      <Card
+                        title="Premium"
+                        hoverable
+                        extra={
+                          this.state.pricingPlan === PricingPlanEnum.Premium && (
+                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
+                          )
+                        }
+                      >
+                        All the Stuff of your Dreams.
+                      </Card>
+                    </Col>
+                    <Col span={6}>
+                      <Card
+                        title="Custom"
+                        hoverable
+                        extra={
+                          this.state.pricingPlan === PricingPlanEnum.Custom && (
+                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
+                          )
+                        }
+                      >
+                        Your Individual Solution.
+                      </Card>
+                    </Col>
+                  </RadioGroup>,
+                )}
+              </Row>
             </FormItem>
+
             <FormItem>
               {getFieldDecorator("newUserMailingList", {
                 rules: [
@@ -135,11 +186,16 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                   },
                 ],
                 initialValue: this.state.newUserMailingList,
-              })(<Input prefix={<Icon type="mail" style={{ fontSize: 13 }} />} />)}
+              })(
+                <Input
+                  prefix={<Icon type="mail" style={{ fontSize: 13 }} />}
+                  disabled={this.state.isFetchingData}
+                />,
+              )}
             </FormItem>
             <Row type="flex" justify="space-between">
               <FormItem>
-                <Button type="primary" htmlType="submit">
+                <Button type="primary" htmlType="submit" disabled={this.state.isFetchingData}>
                   Submit Changes
                 </Button>
               </FormItem>
@@ -147,6 +203,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 type="danger"
                 loading={this.state.isDeleting}
                 onClick={this.handleDeleteButtonClicked}
+                disabled={this.state.isFetchingData}
               >
                 Delete Organization
               </Button>

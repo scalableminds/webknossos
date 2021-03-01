@@ -17,11 +17,11 @@ import models.configuration.UserConfiguration
 import models.team._
 import oxalis.mail.DefaultMails
 import oxalis.security.TokenDAO
-import oxalis.user.UserCache
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
+import models.organization.OrganizationDAO
 import net.liftweb.common.Box
 
 import scala.concurrent.{ExecutionContext, Future}

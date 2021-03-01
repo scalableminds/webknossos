@@ -7,7 +7,7 @@ import models.analytics.{AnalyticsService, IsosurfaceRequestEvent, UpdateAnnotat
 import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
-import models.team.OrganizationDAO
+import models.organization.OrganizationDAO
 import models.user.time.TimeSpanService
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages

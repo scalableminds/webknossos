@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.Annotation
 import models.binary.{DataSet, DataStore}
-import models.team.Organization
+import models.organization.Organization
 import models.user.{MultiUserDAO, User, UserDAO}
 import org.joda.time.DateTime
 import play.api.libs.json._

@@ -6,7 +6,7 @@ import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.team.OrganizationDAO
+import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User}
 import play.api.libs.ws.{WSAuthScheme, WSClient}
 import utils.WkConf

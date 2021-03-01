@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, RunJobEvent}
-import models.team.OrganizationDAO
+import models.organization.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Failure, Full}
 import oxalis.security.WkEnv

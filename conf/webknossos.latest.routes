@@ -2,199 +2,199 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET           /buildinfo                                                            controllers.Application.buildInfo
-GET           /features                                                             controllers.Application.features
-GET           /health                                                               controllers.Application.health
-POST          /analytics/:namespace                                                 controllers.Application.analytics(namespace)
-POST          /triggers/initialData                                                 controllers.InitialDataController.triggerInsert
-GET           /maintenance                                                          controllers.MaintenanceController.info
-POST          /maintenance                                                          controllers.MaintenanceController.initMaintenance
-DELETE        /maintenance                                                          controllers.MaintenanceController.closeMaintenance
+GET           /buildinfo                                                       controllers.Application.buildInfo
+GET           /features                                                        controllers.Application.features
+GET           /health                                                          controllers.Application.health
+POST          /analytics/:namespace                                            controllers.Application.analytics(namespace)
+POST          /triggers/initialData                                            controllers.InitialDataController.triggerInsert
+GET           /maintenance                                                     controllers.MaintenanceController.info
+POST          /maintenance                                                     controllers.MaintenanceController.initMaintenance
+DELETE        /maintenance                                                     controllers.MaintenanceController.closeMaintenance
 
 # Authentication
-POST          /auth/register                                                        controllers.Authentication.register
-POST          /auth/joinOrganization/:inviteToken                                   controllers.Authentication.joinOrganization(inviteToken: String)
-POST          /auth/login                                                           controllers.Authentication.authenticate
-GET           /auth/token                                                           controllers.Authentication.getToken
-DELETE        /auth/token                                                           controllers.Authentication.deleteToken
-GET           /auth/switch                                                          controllers.Authentication.switchMultiUser(to: String)
-POST          /auth/switchOrganization/:organizationName                            controllers.Authentication.switchOrganization(organizationName: String)
-POST          /auth/sendInvites                                                     controllers.Authentication.sendInvites
-POST          /auth/startResetPassword                                              controllers.Authentication.handleStartResetPassword
-POST          /auth/changePassword                                                  controllers.Authentication.changePassword
-POST          /auth/resetPassword                                                   controllers.Authentication.handleResetPassword
-GET           /auth/logout                                                          controllers.Authentication.logout
-GET           /auth/sso                                                             controllers.Authentication.singleSignOn(sso: String, sig: String)
-POST          /auth/createOrganizationWithAdmin                                     controllers.Authentication.createOrganizationWithAdmin
+POST          /auth/register                                                   controllers.AuthenticationController.register
+POST          /auth/joinOrganization/:inviteToken                              controllers.AuthenticationController.joinOrganization(inviteToken: String)
+POST          /auth/login                                                      controllers.AuthenticationController.authenticate
+GET           /auth/token                                                      controllers.AuthenticationController.getToken
+DELETE        /auth/token                                                      controllers.AuthenticationController.deleteToken
+GET           /auth/switch                                                     controllers.AuthenticationController.switchMultiUser(to: String)
+POST          /auth/switchOrganization/:organizationName                       controllers.AuthenticationController.switchOrganization(organizationName: String)
+POST          /auth/sendInvites                                                controllers.AuthenticationController.sendInvites
+POST          /auth/startResetPassword                                         controllers.AuthenticationController.handleStartResetPassword
+POST          /auth/changePassword                                             controllers.AuthenticationController.changePassword
+POST          /auth/resetPassword                                              controllers.AuthenticationController.handleResetPassword
+GET           /auth/logout                                                     controllers.AuthenticationController.logout
+GET           /auth/sso                                                        controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
+POST          /auth/createOrganizationWithAdmin                                controllers.AuthenticationController.createOrganizationWithAdmin
 
 # Configurations
-GET           /user/userConfiguration                                               controllers.ConfigurationController.read
-PUT           /user/userConfiguration                                               controllers.ConfigurationController.update
-POST          /dataSetConfigurations/:organizationName/:dataSetName                 controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String, sharingToken: Option[String])
-PUT           /dataSetConfigurations/:organizationName/:dataSetName                 controllers.ConfigurationController.updateDataSetViewConfiguration(organizationName: String, dataSetName: String)
-GET           /dataSetConfigurations/default/:organizationName/:dataSetName         controllers.ConfigurationController.readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
-PUT           /dataSetConfigurations/default/:organizationName/:dataSetName         controllers.ConfigurationController.updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
+GET           /user/userConfiguration                                          controllers.ConfigurationController.read
+PUT           /user/userConfiguration                                          controllers.ConfigurationController.update
+POST          /dataSetConfigurations/:organizationName/:dataSetName            controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String, sharingToken: Option[String])
+PUT           /dataSetConfigurations/:organizationName/:dataSetName            controllers.ConfigurationController.updateDataSetViewConfiguration(organizationName: String, dataSetName: String)
+GET           /dataSetConfigurations/default/:organizationName/:dataSetName    controllers.ConfigurationController.readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
+PUT           /dataSetConfigurations/default/:organizationName/:dataSetName    controllers.ConfigurationController.updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
 
 # Users
-POST          /user/tasks/request                                                   controllers.TaskController.request
-GET           /user/tasks/peek                                                      controllers.TaskController.peekNext
+POST          /user/tasks/request                                              controllers.TaskController.request
+GET           /user/tasks/peek                                                 controllers.TaskController.peekNext
 
-GET           /users                                                                controllers.UserController.list
-GET           /user                                                                 controllers.UserController.current
-GET           /user/tasks                                                           controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /user/annotations                                                     controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /user/loggedTime                                                      controllers.UserController.loggedTime
-GET           /users/:id                                                            controllers.UserController.user(id: String)
-PATCH         /users/:id                                                            controllers.UserController.update(id: String)
-PUT           /users/:id/taskTypeId                                                 controllers.UserController.updateLastTaskTypeId(id: String)
-PUT           /users/:id/novelUserExperienceInfos                                   controllers.UserController.updateNovelUserExperienceInfos(id: String)
-GET           /users/:id/tasks                                                      controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /users/:id/loggedTime                                                 controllers.UserController.userLoggedTime(id: String)
-POST          /users/loggedTime                                                     controllers.UserController.usersLoggedTime
-GET           /users/:id/annotations                                                controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /users                                                           controllers.UserController.list
+GET           /user                                                            controllers.UserController.current
+GET           /user/tasks                                                      controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /user/annotations                                                controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /user/loggedTime                                                 controllers.UserController.loggedTime
+GET           /users/:id                                                       controllers.UserController.user(id: String)
+PATCH         /users/:id                                                       controllers.UserController.update(id: String)
+PUT           /users/:id/taskTypeId                                            controllers.UserController.updateLastTaskTypeId(id: String)
+PUT           /users/:id/novelUserExperienceInfos                              controllers.UserController.updateNovelUserExperienceInfos(id: String)
+GET           /users/:id/tasks                                                 controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /users/:id/loggedTime                                            controllers.UserController.userLoggedTime(id: String)
+POST          /users/loggedTime                                                controllers.UserController.usersLoggedTime
+GET           /users/:id/annotations                                           controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 # Team
-GET           /teams                                                                controllers.TeamController.list(isEditable: Option[Boolean])
-POST          /teams                                                                controllers.TeamController.create
-DELETE        /teams/:id                                                            controllers.TeamController.delete(id: String)
-GET           /teams/:id/openTasksOverview                                          controllers.ReportController.openTasksOverview(id: String)
-GET           /teams/:id/progressOverview                                           controllers.ReportController.projectProgressOverview(id: String)
+GET           /teams                                                           controllers.TeamController.list(isEditable: Option[Boolean])
+POST          /teams                                                           controllers.TeamController.create
+DELETE        /teams/:id                                                       controllers.TeamController.delete(id: String)
+GET           /teams/:id/openTasksOverview                                     controllers.ReportController.openTasksOverview(id: String)
+GET           /teams/:id/progressOverview                                      controllers.ReportController.projectProgressOverview(id: String)
 
 # DataSets
-POST          /datasets/:organizationName/:dataSetName/createExplorational          controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
-GET           /datasets                                                             controllers.DataSetController.list
-POST          /datasets                                                             controllers.DataSetController.create(typ: String)
-POST          /datasets/addForeign                                                  controllers.DataSetController.addForeignDataStoreAndDataSet
-GET           /datasets/disambiguate/:dataSetName/toNew                             controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/health                       controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
-PATCH         /datasets/:organizationName/:dataSetName                              controllers.DataSetController.update(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/accessList                   controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/sharingToken                 controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
-DELETE        /datasets/:organizationName/:dataSetName/sharingToken                 controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
-PATCH         /datasets/:organizationName/:dataSetName/teams                        controllers.DataSetController.updateTeams(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail      controllers.DataSetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
-PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache          controllers.DataSetController.removeFromThumbnailCache(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/isValidNewName               controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName                              controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
+POST          /datasets/:organizationName/:dataSetName/createExplorational     controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
+GET           /datasets                                                        controllers.DataSetController.list
+POST          /datasets                                                        controllers.DataSetController.create(typ: String)
+POST          /datasets/addForeign                                             controllers.DataSetController.addForeignDataStoreAndDataSet
+GET           /datasets/disambiguate/:dataSetName/toNew                        controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/health                  controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
+PATCH         /datasets/:organizationName/:dataSetName                         controllers.DataSetController.update(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/accessList              controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/sharingToken            controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
+DELETE        /datasets/:organizationName/:dataSetName/sharingToken            controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
+PATCH         /datasets/:organizationName/:dataSetName/teams                   controllers.DataSetController.updateTeams(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail controllers.DataSetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
+PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache     controllers.DataSetController.removeFromThumbnailCache(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName/isValidNewName          controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
+GET           /datasets/:organizationName/:dataSetName                         controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
 # Datastores
-GET           /datastores                                                           controllers.DataStoreController.list
-PUT           /datastores/:name/datasource                                          controllers.WKDataStoreController.updateOne(name: String)
-PUT           /datastores/:name/datasources                                         controllers.WKDataStoreController.updateAll(name: String)
-PATCH         /datastores/:name/status                                              controllers.WKDataStoreController.statusUpdate(name: String)
-POST          /datastores/:name/verifyUpload                                        controllers.WKDataStoreController.validateDataSetUpload(name: String)
-POST          /datastores/:name/reportDatasetUpload                                 controllers.WKDataStoreController.reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
-POST          /datastores/:name/deleteErroneous                                     controllers.WKDataStoreController.deleteErroneous(name: String)
-POST          /datastores/:name/reportIsosurfaceRequest                             controllers.WKDataStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
-POST          /datastores/:name/validateUserAccess                                  controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
-POST          /datastores                                                           controllers.DataStoreController.create
-DELETE        /datastores/:name                                                     controllers.DataStoreController.delete(name: String)
-PUT           /datastores/:name                                                     controllers.DataStoreController.update(name: String)
+GET           /datastores                                                      controllers.DataStoreController.list
+PUT           /datastores/:name/datasource                                     controllers.WKDataStoreController.updateOne(name: String)
+PUT           /datastores/:name/datasources                                    controllers.WKDataStoreController.updateAll(name: String)
+PATCH         /datastores/:name/status                                         controllers.WKDataStoreController.statusUpdate(name: String)
+POST          /datastores/:name/verifyUpload                                   controllers.WKDataStoreController.validateDataSetUpload(name: String)
+POST          /datastores/:name/reportDatasetUpload                            controllers.WKDataStoreController.reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
+POST          /datastores/:name/deleteErroneous                                controllers.WKDataStoreController.deleteErroneous(name: String)
+POST          /datastores/:name/reportIsosurfaceRequest                        controllers.WKDataStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
+POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
+POST          /datastores                                                      controllers.DataStoreController.create
+DELETE        /datastores/:name                                                controllers.DataStoreController.delete(name: String)
+PUT           /datastores/:name                                                controllers.DataStoreController.update(name: String)
 
 # Tracingstores
-GET           /tracingstore                                                         controllers.TracingStoreController.listOne
-POST          /tracingstores/:name/handleTracingUpdateReport                        controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
-POST          /tracingstores/:name/reportIsosurfaceRequest                          controllers.WKTracingStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
-POST          /tracingstores/:name/validateUserAccess                               controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
-PUT           /tracingstores/:name                                                  controllers.TracingStoreController.update(name: String)
-GET           /tracingstores/:name/dataSource/:dataSetName                          controllers.WKTracingStoreController.dataSource(name: String, organizationName: Option[String], dataSetName: String)
+GET           /tracingstore                                                    controllers.TracingStoreController.listOne
+POST          /tracingstores/:name/handleTracingUpdateReport                   controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
+POST          /tracingstores/:name/reportIsosurfaceRequest                     controllers.WKTracingStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
+POST          /tracingstores/:name/validateUserAccess                          controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
+PUT           /tracingstores/:name                                             controllers.TracingStoreController.update(name: String)
+GET           /tracingstores/:name/dataSource/:dataSetName                     controllers.WKTracingStoreController.dataSource(name: String, organizationName: Option[String], dataSetName: String)
 
 # User access tokens for datastore authentification
-POST          /userToken/generate                                                   controllers.UserTokenController.generateTokenForDataStore
+POST          /userToken/generate                                              controllers.UserTokenController.generateTokenForDataStore
 
 # Annotations
-POST          /annotations/upload                                                   controllers.AnnotationIOController.upload
-POST          /annotations/:typ/:id/duplicate                                       controllers.AnnotationController.duplicate(typ: String, id: String)
-PATCH         /annotations/:typ/:id/edit                                            controllers.AnnotationController.editAnnotation(typ: String, id: String)
+POST          /annotations/upload                                              controllers.AnnotationIOController.upload
+POST          /annotations/:typ/:id/duplicate                                  controllers.AnnotationController.duplicate(typ: String, id: String)
+PATCH         /annotations/:typ/:id/edit                                       controllers.AnnotationController.editAnnotation(typ: String, id: String)
 
-PATCH         /annotations/:typ/:id/finish                                          controllers.AnnotationController.finish(typ: String, id: String, timestamp: Long)
-PATCH         /annotations/:typ/finish                                              controllers.AnnotationController.finishAll(typ: String, timestamp: Long)
-PATCH         /annotations/:typ/:id/reopen                                          controllers.AnnotationController.reopen(typ: String, id: String)
-PUT           /annotations/:typ/:id/reset                                           controllers.AnnotationController.reset(typ: String, id: String)
-PATCH         /annotations/:typ/:id/transfer                                        controllers.AnnotationController.transfer(typ: String, id: String)
+PATCH         /annotations/:typ/:id/finish                                     controllers.AnnotationController.finish(typ: String, id: String, timestamp: Long)
+PATCH         /annotations/:typ/finish                                         controllers.AnnotationController.finishAll(typ: String, timestamp: Long)
+PATCH         /annotations/:typ/:id/reopen                                     controllers.AnnotationController.reopen(typ: String, id: String)
+PUT           /annotations/:typ/:id/reset                                      controllers.AnnotationController.reset(typ: String, id: String)
+PATCH         /annotations/:typ/:id/transfer                                   controllers.AnnotationController.transfer(typ: String, id: String)
 
-GET           /annotations/:typ/:id/info                                            controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
-PATCH         /annotations/:typ/:id/makeHybrid                                      controllers.AnnotationController.makeHybrid(typ: String, id: String)
-PATCH         /annotations/:typ/:id/downsample                                      controllers.AnnotationController.downsample(typ: String, id: String)
-PATCH         /annotations/:typ/:id/unlinkFallback                                  controllers.AnnotationController.unlinkFallback(typ: String, id: String)
-DELETE        /annotations/:typ/:id                                                 controllers.AnnotationController.cancel(typ: String, id: String)
-POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                      controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                        controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
+GET           /annotations/:typ/:id/info                                       controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
+PATCH         /annotations/:typ/:id/makeHybrid                                 controllers.AnnotationController.makeHybrid(typ: String, id: String)
+PATCH         /annotations/:typ/:id/downsample                                 controllers.AnnotationController.downsample(typ: String, id: String)
+PATCH         /annotations/:typ/:id/unlinkFallback                             controllers.AnnotationController.unlinkFallback(typ: String, id: String)
+DELETE        /annotations/:typ/:id                                            controllers.AnnotationController.cancel(typ: String, id: String)
+POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                 controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+GET           /annotations/:typ/:id/download                                   controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
 
-GET           /annotations/:typ/:id/loggedTime                                      controllers.AnnotationController.loggedTime(typ: String, id: String)
+GET           /annotations/:typ/:id/loggedTime                                 controllers.AnnotationController.loggedTime(typ: String, id: String)
 
-GET           /annotations/shared                                                   controllers.AnnotationController.sharedAnnotations()
-GET           /annotations/:typ/:id/sharedTeams                                     controllers.AnnotationController.getSharedTeams(typ: String, id: String)
-PATCH         /annotations/:typ/:id/sharedTeams                                     controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
+GET           /annotations/shared                                              controllers.AnnotationController.sharedAnnotations()
+GET           /annotations/:typ/:id/sharedTeams                                controllers.AnnotationController.getSharedTeams(typ: String, id: String)
+PATCH         /annotations/:typ/:id/sharedTeams                                controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
 
 # Meshes
-POST          /meshes                                                               controllers.MeshController.create
-PUT           /meshes/:id                                                           controllers.MeshController.update(id: String)
-DELETE        /meshes/:id                                                           controllers.MeshController.delete(id: String)
-GET           /meshes/:id                                                           controllers.MeshController.get(id: String)
-PUT           /meshes/:id/data                                                      controllers.MeshController.updateData(id: String)
-GET           /meshes/:id/data                                                      controllers.MeshController.getData(id: String)
+POST          /meshes                                                          controllers.MeshController.create
+PUT           /meshes/:id                                                      controllers.MeshController.update(id: String)
+DELETE        /meshes/:id                                                      controllers.MeshController.delete(id: String)
+GET           /meshes/:id                                                      controllers.MeshController.get(id: String)
+PUT           /meshes/:id/data                                                 controllers.MeshController.updateData(id: String)
+GET           /meshes/:id/data                                                 controllers.MeshController.getData(id: String)
 
 # Tasks
-POST          /tasks                                                                controllers.TaskController.create
-POST          /tasks/createFromFiles                                                controllers.TaskController.createFromFiles
-POST          /tasks/list                                                           controllers.TaskController.listTasks
-GET           /tasks/experienceDomains                                              controllers.TaskController.listExperienceDomains
-GET           /tasks/:id                                                            controllers.TaskController.read(id: String)
-DELETE        /tasks/:id                                                            controllers.TaskController.delete(id: String)
-PUT           /tasks/:id                                                            controllers.TaskController.update(id: String)
-GET           /tasks/:id/annotations                                                controllers.AnnotationController.annotationsForTask(id: String)
+POST          /tasks                                                           controllers.TaskController.create
+POST          /tasks/createFromFiles                                           controllers.TaskController.createFromFiles
+POST          /tasks/list                                                      controllers.TaskController.listTasks
+GET           /tasks/experienceDomains                                         controllers.TaskController.listExperienceDomains
+GET           /tasks/:id                                                       controllers.TaskController.read(id: String)
+DELETE        /tasks/:id                                                       controllers.TaskController.delete(id: String)
+PUT           /tasks/:id                                                       controllers.TaskController.update(id: String)
+GET           /tasks/:id/annotations                                           controllers.AnnotationController.annotationsForTask(id: String)
 
 # TaskTypes
-GET           /taskTypes                                                            controllers.TaskTypeController.list
-POST          /taskTypes                                                            controllers.TaskTypeController.create
-DELETE        /taskTypes/:id                                                        controllers.TaskTypeController.delete(id: String)
-GET           /taskTypes/:id/tasks                                                  controllers.TaskController.listTasksForType(id: String)
-GET           /taskTypes/:id/projects                                               controllers.ProjectController.projectsForTaskType(id: String)
-GET           /taskTypes/:id                                                        controllers.TaskTypeController.get(id: String)
-PUT           /taskTypes/:id                                                        controllers.TaskTypeController.update(id: String)
+GET           /taskTypes                                                       controllers.TaskTypeController.list
+POST          /taskTypes                                                       controllers.TaskTypeController.create
+DELETE        /taskTypes/:id                                                   controllers.TaskTypeController.delete(id: String)
+GET           /taskTypes/:id/tasks                                             controllers.TaskController.listTasksForType(id: String)
+GET           /taskTypes/:id/projects                                          controllers.ProjectController.projectsForTaskType(id: String)
+GET           /taskTypes/:id                                                   controllers.TaskTypeController.get(id: String)
+PUT           /taskTypes/:id                                                   controllers.TaskTypeController.update(id: String)
 
 # Scripts
-GET           /scripts                                                              controllers.ScriptController.list
-POST          /scripts                                                              controllers.ScriptController.create
-GET           /scripts/:id                                                          controllers.ScriptController.get(id: String)
-PUT           /scripts/:id                                                          controllers.ScriptController.update(id: String)
-DELETE        /scripts/:id                                                          controllers.ScriptController.delete(id: String)
+GET           /scripts                                                         controllers.ScriptController.list
+POST          /scripts                                                         controllers.ScriptController.create
+GET           /scripts/:id                                                     controllers.ScriptController.get(id: String)
+PUT           /scripts/:id                                                     controllers.ScriptController.update(id: String)
+DELETE        /scripts/:id                                                     controllers.ScriptController.delete(id: String)
 
 # Projects
-GET           /projects                                                             controllers.ProjectController.list
-GET           /projects/assignments                                                 controllers.ProjectController.listWithStatus
-POST          /projects                                                             controllers.ProjectController.create
-GET           /projects/:name                                                       controllers.ProjectController.read(name: String)
-DELETE        /projects/:name                                                       controllers.ProjectController.delete(name: String)
-PUT           /projects/:name                                                       controllers.ProjectController.update(name: String)
-GET           /projects/:name/tasks                                                 controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-PATCH         /projects/:name/incrementEachTasksInstances                           controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
-PATCH         /projects/:name/pause                                                 controllers.ProjectController.pause(name: String)
-PATCH         /projects/:name/resume                                                controllers.ProjectController.resume(name: String)
-GET           /projects/:name/usersWithActiveTasks                                  controllers.ProjectController.usersWithActiveTasks(name:String)
-POST          /projects/:name/transferActiveTasks                                   controllers.ProjectController.transferActiveTasks(name:String)
+GET           /projects                                                        controllers.ProjectController.list
+GET           /projects/assignments                                            controllers.ProjectController.listWithStatus
+POST          /projects                                                        controllers.ProjectController.create
+GET           /projects/:name                                                  controllers.ProjectController.read(name: String)
+DELETE        /projects/:name                                                  controllers.ProjectController.delete(name: String)
+PUT           /projects/:name                                                  controllers.ProjectController.update(name: String)
+GET           /projects/:name/tasks                                            controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+PATCH         /projects/:name/incrementEachTasksInstances                      controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
+PATCH         /projects/:name/pause                                            controllers.ProjectController.pause(name: String)
+PATCH         /projects/:name/resume                                           controllers.ProjectController.resume(name: String)
+GET           /projects/:name/usersWithActiveTasks                             controllers.ProjectController.usersWithActiveTasks(name:String)
+POST          /projects/:name/transferActiveTasks                              controllers.ProjectController.transferActiveTasks(name:String)
 
 # Statistics
-GET           /statistics/webknossos                                                controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
-GET           /statistics/users                                                     controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
+GET           /statistics/webknossos                                           controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
+GET           /statistics/users                                                controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 #Organizations
-GET           /organizations                                                        controllers.OrganizationController.list
-GET           /organizations/byInvite/:inviteToken                                  controllers.OrganizationController.getByInvite(inviteToken: String)
-GET           /organizations/default                                                controllers.OrganizationController.getDefault
-GET           /organizationsIsEmpty                                                 controllers.OrganizationController.organizationsIsEmpty
-GET           /organizations/:organizationName                                      controllers.OrganizationController.get(organizationName: String)
-GET           /operatorData                                                         controllers.OrganizationController.getOperatorData
+GET           /organizations                                                   controllers.OrganizationController.list
+GET           /organizations/byInvite/:inviteToken                             controllers.OrganizationController.getByInvite(inviteToken: String)
+GET           /organizations/default                                           controllers.OrganizationController.getDefault
+GET           /organizationsIsEmpty                                            controllers.OrganizationController.organizationsIsEmpty
+GET           /organizations/:organizationName                                 controllers.OrganizationController.get(organizationName: String)
+GET           /operatorData                                                    controllers.OrganizationController.getOperatorData
 
 #Timelogging
-GET           /time/allusers/:year/:month                                           controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/userlist/:year/:month                                           controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/user/:userId                                                    controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
+GET           /time/allusers/:year/:month                                      controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
+GET           /time/userlist/:year/:month                                      controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
+GET           /time/user/:userId                                               controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
 
 # Long-Running Jobs
-GET           /jobs                                                                 controllers.JobsController.list
-GET           /jobs/:id                                                             controllers.JobsController.get(id: String)
-GET           /jobs/:id/downloadExport/:exportFileName                              controllers.JobsController.downloadExport(id: String, exportFileName: String)
-GET           /jobs/run/cubing/:organizationName/:dataSetName                       controllers.JobsController.runCubingJob(organizationName: String, dataSetName: String, scale: String)
-GET           /jobs/run/tiffExport/:organizationName/:dataSetName/:layerName        controllers.JobsController.runTiffExportJob(organizationName: String, dataSetName: String, layerName: String, bbox: String)
+GET           /jobs                                                            controllers.JobsController.list
+GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
+GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
+GET           /jobs/run/cubing/:organizationName/:dataSetName                  controllers.JobsController.runCubingJob(organizationName: String, dataSetName: String, scale: String)
+GET           /jobs/run/tiffExport/:organizationName/:dataSetName/:layerName   controllers.JobsController.runTiffExportJob(organizationName: String, dataSetName: String, layerName: String, bbox: String)

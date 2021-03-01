@@ -32,9 +32,10 @@ import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary._
 import models.mesh.{MeshDAO, MeshService}
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
-import models.team.{OrganizationDAO, Team, TeamDAO}
+import models.team.{Team, TeamDAO}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -80,7 +81,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext)
     extends BoxImplicits
     with FoxImplicits
-    with TextUtils
     with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -587,14 +587,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])],
                         zipFileName: String): Future[TemporaryFile] = {
-    val zipped = temporaryFileCreator.create(normalize(zipFileName), ".zip")
+    val zipped = temporaryFileCreator.create(TextUtils.normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
 
     def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])]): Future[Boolean] =
       nmls match {
         case (nml, name, volumeDataOpt) :: tail =>
           if (volumeDataOpt.isDefined) {
-            val subZip = temporaryFileCreator.create(normalize(name), ".zip")
+            val subZip = temporaryFileCreator.create(TextUtils.normalize(name), ".zip")
             val subZipper =
               ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.path.toString))))
             volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(name + "_data.zip", volumeData))

@@ -11,7 +11,7 @@ import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.WkSilhouetteEnvironment
-import oxalis.telemetry.SlackNotificationService.SlackNotificationService
+import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import utils.{SQLClient, WkConf}
 

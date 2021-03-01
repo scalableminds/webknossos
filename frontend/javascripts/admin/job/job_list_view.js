@@ -82,22 +82,24 @@ class JobListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  renderDescription = (__: Any, job: APIJob) => {
-    if (job.type === "tiff_cubing") {
+  renderDescription = (__: any, job: APIJob) => {
+    if (job.type === "tiff_cubing" && job.datasetName) {
       return <span>{`Tiff to WKW conversion of ${job.datasetName}`}</span>;
-    } else if (job.type === "export_tiff") {
+    } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
       return (
         <span>
-          Tiff export from {job.layerName} layer of{" "}
+          Tiff export from {job.layerName || "a"} layer of{" "}
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>
         </span>
       );
+    } else {
+      return <span>{job.type}</span>;
     }
   };
 
-  renderActions = (__: Any, job: APIJob) => {
+  renderActions = (__: any, job: APIJob) => {
     if (job.type === "tiff_cubing") {
       return (
         <span>
@@ -126,16 +128,12 @@ class JobListView extends React.PureComponent<Props, State> {
     } else return null;
   };
 
-  renderState = (__: Any, job: APIJob) => {
+  renderState = (__: any, job: APIJob) => {
     const stateString = _.capitalize(job.state.toLowerCase());
     if (job.state === "SUCCESS") return stateString;
     else {
       return (
-        <Tooltip
-          title={
-            "Something whent wrong when executing this job. Feel free to contact us if you need assistance."
-          }
-        >
+        <Tooltip title="Something whent wrong when executing this job. Feel free to contact us if you need assistance.">
           {stateString}
         </Tooltip>
       );

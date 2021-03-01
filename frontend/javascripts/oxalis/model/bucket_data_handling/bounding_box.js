@@ -67,15 +67,6 @@ class BoundingBox {
     );
   }
 
-  dimensions(): Vector3 {
-    return max - min;
-  }
-
-  volume(): number {
-    const dimensions = this.dimensions()
-    return edge_lengths[0] * edge_lengths[1] * edge_lengths[2];
-  }
-
   intersectedWith(other: BoundingBox): BoundingBox {
     const newMin = [
       Math.max(this.min[0], other.min[0]),

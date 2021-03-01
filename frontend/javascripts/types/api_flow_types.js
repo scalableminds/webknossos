@@ -540,6 +540,8 @@ export type APIFeatureToggles = {
   +allowDeleteDatasets: boolean,
   +jobsEnabled: boolean,
   +publicDemoDatasetUrl: string,
+  +exportTiffMaxVolumeMVx: number,
+  +exportTiffMaxEdgeLengthVx: number,
 };
 
 export type APIJob = {

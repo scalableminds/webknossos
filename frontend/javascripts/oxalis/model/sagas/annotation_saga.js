@@ -15,6 +15,8 @@ import constants from "oxalis/constants";
 import messages from "messages";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
+/* Note that this must stay in sync with the back-end constant
+  compare https://github.com/scalableminds/webknossos/issues/5223 */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export function* pushAnnotationUpdateAsync(): Saga<void> {

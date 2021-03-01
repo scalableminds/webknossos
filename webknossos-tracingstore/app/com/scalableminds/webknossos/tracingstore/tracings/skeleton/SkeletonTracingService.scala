@@ -151,9 +151,14 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
   }
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing =
-    tracings.reduceLeft(mergeTwo)
+    tracings
+      .reduceLeft(mergeTwo)
+      .copy(
+        createdTimestamp = System.currentTimeMillis(),
+        version = 0L,
+      )
 
-  def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing): SkeletonTracing = {
+  private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing): SkeletonTracing = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
     val groupMapping = TreeUtils.calculateGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
     val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
@@ -168,7 +173,6 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
       trees = mergedTrees,
       treeGroups = mergedGroups,
       boundingBox = mergedBoundingBox,
-      version = 0,
       userBoundingBox = None,
       userBoundingBoxes = userBoundingBoxes
     )

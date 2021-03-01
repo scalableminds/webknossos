@@ -4,6 +4,7 @@ import java.nio.file.{Files, Paths}
 import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
@@ -134,6 +135,13 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
 
   private def flowerRpc(route: String): RPCRequest =
     rpc(wkConf.Jobs.Flower.uri + route).withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
+
+  def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
+    for {
+      boundingBox <- BoundingBox.fromForm(bbox).toFox
+      _ <- bool2Fox(boundingBox.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
+      _ <- bool2Fox(boundingBox.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
+    } yield ()
 }
 
 class JobsController @Inject()(jobDAO: JobDAO,
@@ -183,6 +191,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+        _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
         command = "export_tiff"
         exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}.zip"
         commandArgs = Json.obj(

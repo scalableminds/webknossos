@@ -1,5 +1,5 @@
 // @flow
-import { Button, Modal } from "antd";
+import { Button, Modal, Alert } from "antd";
 import React, { useState } from "react";
 import type { BoundingBoxType } from "oxalis/constants";
 import type { APIDataset } from "types/api_flow_types";
@@ -53,12 +53,12 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
       </p>
     ) : null,
   );
-  const dimensions = boundingBox.dimensions();
-  const volume = boundingBox.volume();
+  const dimensions = [9000,2,3]; // boundingBox.dimensions();
+  const volume = 12313987445; //boundingBox.volume();
   const volumeExceeded = volume > features().exportTiffMaxVolumeMVx * 1024 * 1024;
   const edgeLengthExceeded = dimensions.some((length) => length > features().exportTiffMaxEdgeLengthVx);
-  const volumeExceededMessage = volumeExceeded ? <Alert type="warning" message={`The volume of the selected bounding box (${boundingBox.volume()} vx) is too large. Tiff export is only supported for up to 1Gvx at a time.`} /> : null;
-  const edgeLengthExceededMessage = edgeLengthExceeded ? <Alert type="warning" message={`An edge length of the selected bounding box (${boundingBox.dimensions()}) is too large. Tiff export is only supported for boxes with no edge length over ${features().exportTiffMaxEdgeLengthVx} vx.`} /> : null;
+  const volumeExceededMessage = volumeExceeded ? <Alert type="error" message={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${features().exportTiffMaxVolumeMVx} Mvx.`} /> : null;
+  const edgeLengthExceededMessage = edgeLengthExceeded ? <Alert type="error" message={`An edge length of the selected bounding box (${dimensions}) is too large. Tiff export is only supported for boxes with no edge length over ${features().exportTiffMaxEdgeLengthVx} vx.`} /> : null;
 
   const downloadHint =
     startedExports.length > 0 ? (
@@ -85,12 +85,11 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
         Data from the selected bounding box at {bboxText} will be exported as a tiff stack zip
         archive.
       </p>
-      <p>Please select a layer to export:</p>
 
       {volumeExceededMessage}
       {edgeLengthExceededMessage}
 
-      { volumeExceeded || edgeLengthExceeded ? null : exportButtonsList }
+      { volumeExceeded || edgeLengthExceeded ? null : <div> <p>Please select a layer to export:</p> {exportButtonsList}</div>}
 
       {downloadHint}
     </Modal>

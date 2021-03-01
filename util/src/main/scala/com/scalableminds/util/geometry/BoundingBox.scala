@@ -34,6 +34,13 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   def toSql =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)
+
+  def volume: Long =
+    width * height * depth
+
+  def dimensions: Point3D =
+    Point3D(width, height, depth)
+
 }
 
 object BoundingBox {

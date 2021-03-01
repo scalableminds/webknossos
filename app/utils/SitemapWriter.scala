@@ -16,14 +16,14 @@ case class SitemapURL(url: String,
                       changeFreq: Option[String] = None,
                       priority: Option[String] = None)
 
-class SitemapWriter @Inject()(publicationDAO: PublicationDAO)(implicit ec: ExecutionContext) extends FoxImplicits {
-  private lazy val outputService = XMLOutputFactory.newInstance()
-  val standardPrefix = "https://webknossos.org"
-  val standardURLs = List(SitemapURL("/"), SitemapURL("/features"), SitemapURL("/pricing"))
+class SitemapWriter @Inject()(publicationDAO: PublicationDAO, wkConf: WkConf)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
+  private val proxyURLs = wkConf.Proxy.routes.map(SitemapURL(_))
+  private lazy val outputFactory = XMLOutputFactory.newInstance()
 
-  def toSitemapStream(prefix: Option[String]) = Enumerator.outputStream { os =>
+  def toSitemapStream(prefix: String): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
     implicit val writer: IndentingXMLStreamWriter =
-      new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
+      new IndentingXMLStreamWriter(outputFactory.createXMLStreamWriter(os))
 
     for {
       sitemap <- toSitemap(prefix)
@@ -31,7 +31,7 @@ class SitemapWriter @Inject()(publicationDAO: PublicationDAO)(implicit ec: Execu
     } yield sitemap
   }
 
-  def toSitemap(prefix: Option[String])(implicit writer: XMLStreamWriter): Fox[Unit] =
+  private def toSitemap(prefix: String)(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       _ = writer.writeStartDocument()
@@ -45,24 +45,24 @@ class SitemapWriter @Inject()(publicationDAO: PublicationDAO)(implicit ec: Execu
       _ = writer.writeEndDocument()
     } yield ()
 
-  def writeURL(sitemapURL: SitemapURL, prefix: Option[String])(implicit writer: XMLStreamWriter) = {
+  private def writeURL(sitemapURL: SitemapURL, prefix: String)(implicit writer: XMLStreamWriter): Unit = {
     writer.writeStartElement("url")
-    writeElement("loc", prefix.getOrElse(standardPrefix) + sitemapURL.url)
+    writeElement("loc", prefix + sitemapURL.url)
     sitemapURL.lastMod.foreach(writeElement("lastmod", _))
     sitemapURL.changeFreq.foreach(writeElement("changefreq", _))
     sitemapURL.priority.foreach(writeElement("priority", _))
     writer.writeEndElement()
   }
 
-  def writeElement(element: String, value: String)(implicit writer: XMLStreamWriter) = {
+  private def writeElement(element: String, value: String)(implicit writer: XMLStreamWriter): Unit = {
     writer.writeStartElement(element)
     writer.writeCharacters(value)
     writer.writeEndElement()
   }
 
-  def getAllURLs =
+  private def getAllURLs: Fox[List[SitemapURL]] =
     for {
       publications <- publicationDAO.findAll(GlobalAccessContext)
-    } yield standardURLs ::: publications.map(pub => SitemapURL("/publication/" + pub._id.id, None, Some("weekly")))
+    } yield proxyURLs ::: publications.map(pub => SitemapURL("/publication/" + pub._id.id, None, Some("weekly")))
 
 }

@@ -1,6 +1,6 @@
 package oxalis.cleanup
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Cancellable}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
@@ -17,7 +17,8 @@ class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContex
     akkaIsShuttingDown = true
   }
 
-  def register[T](description: String, interval: FiniteDuration, runOnShutdown: Boolean = false)(job: => Fox[T]) =
+  def register[T](description: String, interval: FiniteDuration, runOnShutdown: Boolean = false)(
+      job: => Fox[T]): Cancellable =
     system.scheduler.schedule(interval, interval)(runJob(description, job, runOnShutdown))
 
   private def runJob[T](description: String, job: => Fox[T], runOnShutdown: Boolean): Unit =

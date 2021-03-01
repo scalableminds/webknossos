@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import type { BoundingBoxType } from "oxalis/constants";
 import type { APIDataset } from "types/api_flow_types";
 import { startTiffExportJob } from "admin/admin_rest_api";
+import features from "features";
 import * as Utils from "libs/utils";
 
 type Props = {
@@ -52,6 +53,12 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
       </p>
     ) : null,
   );
+  const dimensions = boundingBox.dimensions();
+  const volume = boundingBox.volume();
+  const volumeExceeded = volume > features().exportTiffMaxVolumeMVx * 1024 * 1024;
+  const edgeLengthExceeded = dimensions.some((length) => length > features().exportTiffMaxEdgeLengthVx);
+  const volumeExceededMessage = volumeExceeded ? <Alert type="warning" message={`The volume of the selected bounding box (${boundingBox.volume()} vx) is too large. Tiff export is only supported for up to 1Gvx at a time.`} /> : null;
+  const edgeLengthExceededMessage = edgeLengthExceeded ? <Alert type="warning" message={`An edge length of the selected bounding box (${boundingBox.dimensions()}) is too large. Tiff export is only supported for boxes with no edge length over ${features().exportTiffMaxEdgeLengthVx} vx.`} /> : null;
 
   const downloadHint =
     startedExports.length > 0 ? (
@@ -80,7 +87,10 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
       </p>
       <p>Please select a layer to export:</p>
 
-      {exportButtonsList}
+      {volumeExceededMessage}
+      {edgeLengthExceededMessage}
+
+      { volumeExceeded || edgeLengthExceeded ? null : exportButtonsList }
 
       {downloadHint}
     </Modal>

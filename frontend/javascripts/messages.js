@@ -38,7 +38,7 @@ export const settings = {
     (will take longer until you see data) or alternatively,
     improving the quality progressively (data will be loaded faster,
     but it will take more time until the best quality is shown).`,
-  mergerMode: "Enable Merger Mode",
+  mergerMode: "Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
   overwriteMode: "Volume Annotation Overwrite Mode",
@@ -209,6 +209,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
+  "dataset.upload_none_zip_error":
+    "It looks like the selected file is not a zip file. WebKnossos only supports uploading zipped datasets. Please ensure that your dataset is compressed to a zip archive.",
+  "dataset.upload_invalid_zip":
+    "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":
     "WARNING: The upload is still in progress and will be aborted when hitting OK. Please click cancel and wait until the upload is finished before leaving the page.",
   "dataset.add_success": "The dataset was added successfully.",

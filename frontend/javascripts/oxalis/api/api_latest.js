@@ -140,6 +140,12 @@ function assertVolume(tracing: Tracing): VolumeTracing {
  * All tracing related API methods. This is the newest version of the API (version 3).
  * @version 3
  * @class
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.tracing.getActiveNodeId();
+ *   api.tracing.getActiveTreeId();
+ *   ...
+ * }
  */
 class TracingApi {
   model: OxalisModel;
@@ -472,12 +478,18 @@ class TracingApi {
 
       const currentScript = task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
-      const isDifferentScript = currentScript !== nextScript;
+      // A hot-swap of the task is not possible, currently, when a script is involved.
+      const needsReloadDueToScript = currentScript != null || nextScript != null;
 
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (isDifferentDataset || isDifferentTaskType || isDifferentScript || involvesVolumeTask) {
+      if (
+        isDifferentDataset ||
+        isDifferentTaskType ||
+        needsReloadDueToScript ||
+        involvesVolumeTask
+      ) {
         location.href = newTaskUrl;
       } else {
         await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
@@ -817,6 +829,12 @@ class TracingApi {
 
 /**
  * All binary data / layer related API methods.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.data.getLayerNames();
+ *   api.data.reloadBuckets(...);
+ *   ...
+ * }
  */
 class DataApi {
   model: OxalisModel;
@@ -1317,6 +1335,12 @@ class DataApi {
 
 /**
  * All user configuration related API methods.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.user.getConfiguration(...);
+ *   api.user.setConfiguration(...);
+ *   ...
+ * }
  */
 class UserApi {
   model: OxalisModel;
@@ -1377,6 +1401,12 @@ type Handler = {
 
 /**
  * Utility API methods to control wK.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.utils.sleep(...);
+ *   api.utils.showToast(...);
+ *   ...
+ * }
  */
 class UtilsApi {
   model: OxalisModel;

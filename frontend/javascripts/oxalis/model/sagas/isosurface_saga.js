@@ -231,6 +231,7 @@ function* loadIsosurfaceWithNeighbors(
       currentPosition,
       zoomStep,
       resolutionInfo,
+      isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
     );
     isInitialRequest = false;
@@ -253,6 +254,7 @@ function* maybeLoadIsosurface(
   clippedPosition: Vector3,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
+  isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
 ): Saga<Array<Vector3>> {
   const threeDMap = getMapForSegment(segmentId);
@@ -295,6 +297,7 @@ function* maybeLoadIsosurface(
           voxelDimensions,
           cubeSize,
           scale,
+          isInitialRequest,
         },
       );
 

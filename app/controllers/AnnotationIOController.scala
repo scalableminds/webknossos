@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDe
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.NmlParseResult
@@ -49,6 +50,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        taskTypeDAO: TaskTypeDAO,
                                        tracingStoreService: TracingStoreService,
                                        annotationService: AnnotationService,
+                                       analyticsService: AnalyticsService,
                                        sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
                                        nmlService: NmlService)(implicit ec: ExecutionContext)
@@ -106,6 +108,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                                        AnnotationType.Explorational,
                                                        name,
                                                        description)
+            _ = analyticsService.track(UploadAnnotationEvent(request.identity, annotation))
           } yield
             JsonOk(
               Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
@@ -209,6 +212,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
+        _ = analyticsService.track(DownloadAnnotationEvent(request.identity, id, typ))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
           case AnnotationType.CompoundProject => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))

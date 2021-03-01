@@ -425,6 +425,10 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 
+export function isFileExtensionEqualTo(fileName: string, extension: string) {
+  return _.last(fileName.split(".")).toLowerCase() === extension;
+}
+
 // Only use this function if you really need a busy wait (useful
 // for testing performance-related edge cases). Prefer `sleep`
 // otherwise.

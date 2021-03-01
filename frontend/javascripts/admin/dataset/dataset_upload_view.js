@@ -485,7 +485,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 valuePropName: "fileList",
                 initialValue: [],
                 onChange: this.onFilesChange,
-              })(<FileUploadArea />)}
+              })(
+                // $FlowIssue[prop-missing] Flow doesn't know that onChange and fileList are passed by getFieldDecorator
+                <FileUploadArea />,
+              )}
             </FormItem>
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>

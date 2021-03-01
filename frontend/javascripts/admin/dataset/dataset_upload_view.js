@@ -245,6 +245,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   validateFiles = files => {
     const { form } = this.props;
 
+    if (files.length === 0) {
+      return;
+    }
+
     let needsConversion = true;
     for (const file of files) {
       const filenameParts = file.name.split(".");

@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.user.Invite
+import models.team.PricingPlan.PricingPlan
+import models.user.{Invite, User}
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -18,6 +19,7 @@ case class Organization(
     additionalInformation: String,
     logoUrl: String,
     displayName: String,
+    pricingPlan: PricingPlan,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
@@ -28,7 +30,13 @@ case class Organization(
 class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  def publicWrites(organization: Organization): Fox[JsObject] =
+  def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
+    val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
+      Json.obj(
+        "newUserMailingList" -> organization.newUserMailingList,
+        "pricingPlan" -> organization.pricingPlan
+      )
+    } else Json.obj()
     Fox.successful(
       Json.obj(
         "id" -> organization._id.toString,
@@ -36,7 +44,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit e
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
         "displayName" -> organization.displayName
-      ))
+      ) ++ adminOnlyInfo
+    )
+  }
 
   def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
       implicit ctx: DBAccessContext): Fox[Organization] =
@@ -66,20 +76,23 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
   def parse(r: OrganizationsRow): Fox[Organization] =
-    Fox.successful(
+    for {
+      pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
+    } yield {
       Organization(
         ObjectId(r._Id),
         r.name,
         r.additionalinformation,
         r.logourl,
         r.displayname,
+        pricingPlan,
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
         r.created.getTime,
         r.isdeleted
       )
-    )
+    }
 
   override def readAccessQ(requestingUserId: ObjectId): String =
     s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))" +
@@ -132,5 +145,14 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
               where a._id = ${annotationId}""".as[String])
       r <- rList.headOption.toFox
     } yield r
+
+  def updateFields(organizationId: ObjectId, displayName: String, newUserMailingList: String)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(organizationId)
+      _ <- run(sqlu"""update webknossos.organizations
+                      set displayName = $displayName, newUserMailingList = $newUserMailingList
+                      where _id = $organizationId""")
+    } yield ()
 
 }

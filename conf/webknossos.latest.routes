@@ -183,6 +183,8 @@ GET           /organizations/byInvite/:inviteToken                              
 GET           /organizations/default                                            controllers.OrganizationController.getDefault
 GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)
+PATCH         /organizations/:organizationName                                  controllers.OrganizationController.update(organizationName: String)
+DELETE        /organizations/:organizationName                                  controllers.OrganizationController.delete(organizationName: String)
 GET           /operatorData                                                     controllers.OrganizationController.getOperatorData
 
 #Timelogging

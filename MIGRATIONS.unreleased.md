@@ -9,4 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 -
 
 ### Postgres Evolutions:
--
+- [066-publications-foreign-key.sql](conf/evolutions/066-publications-foreign-key.sql)

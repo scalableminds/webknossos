@@ -20,8 +20,9 @@ import net.liftweb.common.{Box, Full}
 import oxalis.security.CompactRandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
-
 import javax.inject.Inject
+import models.organization.{Organization, OrganizationDAO}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,

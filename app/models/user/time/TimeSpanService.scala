@@ -6,10 +6,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation._
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
-import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing

@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, IsosurfaceRequestEvent, UploadDatasetEvent}
 import models.binary._
-import models.team.OrganizationDAO
+import models.organization.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages

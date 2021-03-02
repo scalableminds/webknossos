@@ -114,19 +114,6 @@ const shortcuts = [
     ],
     action: "Rotate 3D View",
   },
-  {
-    key: "5",
-    keybinding: [
-      <span key="scale-1" className="keyboard-key-icon">
-        K
-      </span>,
-      "/",
-      <span key="scale-2" className="keyboard-key-icon">
-        L
-      </span>,
-    ],
-    action: "Scale Up/Down Viewports",
-  },
 ];
 
 export function convertPixelsToNm(

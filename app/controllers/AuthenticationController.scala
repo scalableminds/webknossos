@@ -1,15 +1,22 @@
 package controllers
 
+import java.net.URLEncoder
+
 import akka.actor.ActorSystem
+import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
+import com.mohiva.play.silhouette.api.services.AuthenticatorResult
 import com.mohiva.play.silhouette.api.util.Credentials
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail._
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import models.binary.{DataStore, DataStoreDAO}
+import javax.inject.Inject
+import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
+import models.binary.DataStoreDAO
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -20,123 +27,38 @@ import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc._
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, _}
 import utils.{ObjectId, WkConf}
-import java.net.URLEncoder
-
-import com.mohiva.play.silhouette.api.actions.SecuredRequest
-import com.mohiva.play.silhouette.api.services.AuthenticatorResult
-import javax.inject.Inject
-import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object AuthForms {
-
-  val passwordMinLength = 8
-
-  // Sign up
-  case class SignUpData(organization: String,
-                        organizationDisplayName: String,
-                        email: String,
-                        firstName: String,
-                        lastName: String,
-                        password: String,
-                        inviteToken: Option[String])
-
-  def signUpForm(implicit messages: Messages): Form[SignUpData] =
-    Form(
-      mapping(
-        "organization" -> text,
-        "organizationDisplayName" -> text,
-        "email" -> email,
-        "password" -> tuple(
-          "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
-          "password2" -> nonEmptyText
-        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
-        "firstName" -> nonEmptyText,
-        "lastName" -> nonEmptyText,
-        "inviteToken" -> optional(nonEmptyText),
-      )((organization, organizationDisplayName, email, password, firstName, lastName, inviteToken) =>
-        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1, inviteToken))(
-        signUpData =>
-          Some(
-            (signUpData.organization,
-             signUpData.organizationDisplayName,
-             signUpData.email,
-             ("", ""),
-             signUpData.firstName,
-             signUpData.lastName,
-             signUpData.inviteToken))))
-
-  // Sign in
-  case class SignInData(email: String, password: String)
-
-  val signInForm: Form[SignInData] = Form(
-    mapping(
-      "email" -> email,
-      "password" -> nonEmptyText
-    )(SignInData.apply)(SignInData.unapply))
-
-  // Start password recovery
-  val emailForm: Form[String] = Form(single("email" -> email))
-
-  // Password recovery
-  case class ResetPasswordData(token: String, password1: String, password2: String)
-
-  def resetPasswordForm(implicit messages: Messages): Form[ResetPasswordData] =
-    Form(
-      mapping(
-        "token" -> text,
-        "password" -> tuple(
-          "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
-          "password2" -> nonEmptyText
-        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
-      )((token, password) => ResetPasswordData(token, password._1, password._2))(resetPasswordData =>
-        Some(resetPasswordData.token, (resetPasswordData.password1, resetPasswordData.password1))))
-
-  case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
-
-  def changePasswordForm(implicit messages: Messages): Form[ChangePasswordData] =
-    Form(
-      mapping(
-        "oldPassword" -> nonEmptyText,
-        "password" -> tuple(
-          "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
-          "password2" -> nonEmptyText
-        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
-      )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))(changePasswordData =>
-        Some(changePasswordData.oldPassword, (changePasswordData.password1, changePasswordData.password2))))
-}
-
-class Authentication @Inject()(actorSystem: ActorSystem,
-                               credentialsProvider: CredentialsProvider,
-                               passwordHasher: PasswordHasher,
-                               initialDataService: InitialDataService,
-                               userService: UserService,
-                               dataStoreDAO: DataStoreDAO,
-                               teamDAO: TeamDAO,
-                               organizationService: OrganizationService,
-                               inviteService: InviteService,
-                               inviteDAO: InviteDAO,
-                               brainTracing: BrainTracing,
-                               organizationDAO: OrganizationDAO,
-                               analyticsService: AnalyticsService,
-                               userDAO: UserDAO,
-                               multiUserDAO: MultiUserDAO,
-                               defaultMails: DefaultMails,
-                               rpc: RPC,
-                               conf: WkConf,
-                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class AuthenticationController @Inject()(
+    actorSystem: ActorSystem,
+    credentialsProvider: CredentialsProvider,
+    passwordHasher: PasswordHasher,
+    initialDataService: InitialDataService,
+    userService: UserService,
+    dataStoreDAO: DataStoreDAO,
+    teamDAO: TeamDAO,
+    organizationService: OrganizationService,
+    inviteService: InviteService,
+    inviteDAO: InviteDAO,
+    brainTracing: BrainTracing,
+    organizationDAO: OrganizationDAO,
+    analyticsService: AnalyticsService,
+    userDAO: UserDAO,
+    multiUserDAO: MultiUserDAO,
+    defaultMails: DefaultMails,
+    rpc: RPC,
+    conf: WkConf,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
+    with AuthForms
     with FoxImplicits {
-
-  import AuthForms._
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   private val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
@@ -147,62 +69,17 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private lazy val ssoKey =
     conf.Application.Authentication.ssoKey
 
-  def normalizeName(name: String): Option[String] = {
-    val replacementMap = Map(
-      "ü" -> "ue",
-      "Ü" -> "Ue",
-      "ö" -> "oe",
-      "Ö" -> "Oe",
-      "ä" -> "ae",
-      "Ä" -> "Ae",
-      "ß" -> "ss",
-      "é" -> "e",
-      "è" -> "e",
-      "ê" -> "e",
-      "È" -> "E",
-      "É" -> "E",
-      "Ê" -> "E",
-      "Ç" -> "C",
-      "ç" -> "c",
-      "ñ" -> "n",
-      "Ñ" -> "N",
-      "ë" -> "e",
-      "Ë" -> "E",
-      "ï" -> "i",
-      "Ï" -> "I",
-      "å" -> "a",
-      "Å" -> "A",
-      "œ" -> "oe",
-      "Œ" -> "Oe",
-      "æ" -> "ae",
-      "Æ" -> "Ae",
-      "þ" -> "th",
-      "Þ" -> "Th",
-      "ø" -> "oe",
-      "Ø" -> "Oe",
-      "í" -> "i",
-      "ì" -> "i"
-    )
-
-    val finalName =
-      name.map(c => replacementMap.getOrElse(c.toString, c.toString)).mkString.replaceAll("[^A-Za-z0-9_\\-\\s]", "")
-    if (finalName.isEmpty)
-      None
-    else
-      Some(finalName)
-  }
-
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val email = signUpData.email.toLowerCase
         var errors = List[String]()
-        val firstName = normalizeName(signUpData.firstName).getOrElse {
+        val firstName = TextUtils.normalizeStrong(signUpData.firstName).getOrElse {
           errors ::= Messages("user.firstName.invalid")
           ""
         }
-        val lastName = normalizeName(signUpData.lastName).getOrElse {
+        val lastName = TextUtils.normalizeStrong(signUpData.lastName).getOrElse {
           errors ::= Messages("user.lastName.invalid")
           ""
         }
@@ -484,15 +361,15 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
-        creatingOrganizationsIsAllowed(request.identity).futureBox.flatMap {
+        organizationService.assertMayCreateOrganization(request.identity).futureBox.flatMap {
           case Full(_) =>
             val email = signUpData.email.toLowerCase
             var errors = List[String]()
-            val firstName = normalizeName(signUpData.firstName).getOrElse {
+            val firstName = TextUtils.normalizeStrong(signUpData.firstName).getOrElse {
               errors ::= Messages("user.firstName.invalid")
               ""
             }
-            val lastName = normalizeName(signUpData.lastName).getOrElse {
+            val lastName = TextUtils.normalizeStrong(signUpData.lastName).getOrElse {
               errors ::= Messages("user.lastName.invalid")
               ""
             }
@@ -506,7 +383,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
-                    organization <- createOrganization(
+                    organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"
                     user <- userService.insert(organization._id,
@@ -517,7 +394,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-                    _ <- createOrganizationFolder(organization.name, user.loginInfo) ?~> "organization.folderCreation.failed"
+                    dataStoreToken <- bearerTokenAuthenticatorService
+                      .createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
+                      .toFox
+                    _ <- organizationService
+                      .createOrganizationFolder(organization.name, dataStoreToken) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(
                       defaultMails.newOrganizationMail(organization.displayName,
@@ -537,47 +418,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     )
   }
 
-  private def creatingOrganizationsIsAllowed(requestingUser: Option[User]): Fox[Unit] = {
-    val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
-    val activatedInConfig = bool2Fox(conf.Features.isDemoInstance) ?~> "allowOrganizationCreation.notEnabled"
-    val userIsSuperUser = requestingUser.toFox.flatMap(user =>
-      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
-
-    Fox.sequenceOfFulls[Unit](List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
-  }
-
-  private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =
-    for {
-      normalizedDisplayName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
-      organizationName = organizationNameOpt
-        .flatMap(normalizeName)
-        .getOrElse(normalizedDisplayName)
-        .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
-      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
-      organization = Organization(ObjectId.generate, organizationName, "", "", organizationDisplayName)
-      organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
-      _ <- organizationDAO.insertOne(organization)
-      _ <- teamDAO.insertOne(organizationTeam)
-      _ <- initialDataService.insertLocalDataStoreIfEnabled
-    } yield {
-      organization
-    }
-
-  private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo) = {
-    def sendRPCToDataStore(dataStore: DataStore, token: String) =
-      rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
-        .addQueryString("token" -> token, "organizationName" -> organizationName)
-        .get
-        .futureBox
-
-    for {
-      token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
-      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Future.sequence(datastores.map(sendRPCToDataStore(_, token)))
-    } yield ()
-  }
-
 }
 
 case class InviteParameters(
@@ -587,4 +427,83 @@ case class InviteParameters(
 
 object InviteParameters {
   implicit val jsonFormat: Format[InviteParameters] = Json.format[InviteParameters]
+}
+
+trait AuthForms {
+
+  val passwordMinLength = 8
+
+  // Sign up
+  case class SignUpData(organization: String,
+                        organizationDisplayName: String,
+                        email: String,
+                        firstName: String,
+                        lastName: String,
+                        password: String,
+                        inviteToken: Option[String])
+
+  def signUpForm(implicit messages: Messages): Form[SignUpData] =
+    Form(
+      mapping(
+        "organization" -> text,
+        "organizationDisplayName" -> text,
+        "email" -> email,
+        "password" -> tuple(
+          "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
+          "password2" -> nonEmptyText
+        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
+        "firstName" -> nonEmptyText,
+        "lastName" -> nonEmptyText,
+        "inviteToken" -> optional(nonEmptyText),
+      )((organization, organizationDisplayName, email, password, firstName, lastName, inviteToken) =>
+        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1, inviteToken))(
+        signUpData =>
+          Some(
+            (signUpData.organization,
+             signUpData.organizationDisplayName,
+             signUpData.email,
+             ("", ""),
+             signUpData.firstName,
+             signUpData.lastName,
+             signUpData.inviteToken))))
+
+  // Sign in
+  case class SignInData(email: String, password: String)
+
+  val signInForm: Form[SignInData] = Form(
+    mapping(
+      "email" -> email,
+      "password" -> nonEmptyText
+    )(SignInData.apply)(SignInData.unapply))
+
+  // Start password recovery
+  val emailForm: Form[String] = Form(single("email" -> email))
+
+  // Password recovery
+  case class ResetPasswordData(token: String, password1: String, password2: String)
+
+  def resetPasswordForm(implicit messages: Messages): Form[ResetPasswordData] =
+    Form(
+      mapping(
+        "token" -> text,
+        "password" -> tuple(
+          "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
+          "password2" -> nonEmptyText
+        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+      )((token, password) => ResetPasswordData(token, password._1, password._2))(resetPasswordData =>
+        Some(resetPasswordData.token, (resetPasswordData.password1, resetPasswordData.password1))))
+
+  case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
+
+  def changePasswordForm(implicit messages: Messages): Form[ChangePasswordData] =
+    Form(
+      mapping(
+        "oldPassword" -> nonEmptyText,
+        "password" -> tuple(
+          "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
+          "password2" -> nonEmptyText
+        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+      )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))(changePasswordData =>
+        Some(changePasswordData.oldPassword, (changePasswordData.password1, changePasswordData.password2))))
+
 }

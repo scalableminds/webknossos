@@ -140,6 +140,12 @@ function assertVolume(tracing: Tracing): VolumeTracing {
  * All tracing related API methods. This is the newest version of the API (version 3).
  * @version 3
  * @class
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.tracing.getActiveNodeId();
+ *   api.tracing.getActiveTreeId();
+ *   ...
+ * }
  */
 class TracingApi {
   model: OxalisModel;
@@ -823,6 +829,12 @@ class TracingApi {
 
 /**
  * All binary data / layer related API methods.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.data.getLayerNames();
+ *   api.data.reloadBuckets(...);
+ *   ...
+ * }
  */
 class DataApi {
   model: OxalisModel;
@@ -1323,6 +1335,12 @@ class DataApi {
 
 /**
  * All user configuration related API methods.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.user.getConfiguration(...);
+ *   api.user.setConfiguration(...);
+ *   ...
+ * }
  */
 class UserApi {
   model: OxalisModel;
@@ -1383,6 +1401,12 @@ type Handler = {
 
 /**
  * Utility API methods to control wK.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.utils.sleep(...);
+ *   api.utils.showToast(...);
+ *   ...
+ * }
  */
 class UtilsApi {
   model: OxalisModel;

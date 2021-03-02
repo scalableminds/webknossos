@@ -237,7 +237,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryAND(
                 this.state.projects,
-                ["name", "team", "priority", "owner", "numberOfOpenAssignments"],
+                ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
                 this.state.searchQuery,
               )}
               rowKey="id"
@@ -287,6 +287,18 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 key="numberOfOpenAssignments"
                 width={200}
                 sorter={Utils.compareBy(typeHint, project => project.numberOfOpenAssignments)}
+              />
+              <Column
+                title="Time [h]"
+                dataIndex="tracingTime"
+                key="tracingTime"
+                width={200}
+                sorter={Utils.compareBy(typeHint, project => project.tracingTime)}
+                render={tracingTimeMs =>
+                  Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  })
+                }
               />
               <Column
                 title="Time Limit"

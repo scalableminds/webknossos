@@ -15,7 +15,7 @@ import net.liftweb.common.{Box, Full}
 import org.joda.time.DateTime
 import oxalis.security._
 import play.api.libs.json.Json
-import utils.{ObjectId, WkConf}
+import utils.{ObjectId, StoreModules, WkConf}
 import javax.inject.Inject
 import models.organization.{Organization, OrganizationDAO}
 import play.api.mvc.{Action, AnyContent}
@@ -47,6 +47,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    projectDAO: ProjectDAO,
                                    publicationDAO: PublicationDAO,
                                    organizationDAO: OrganizationDAO,
+                                   storeModules: StoreModules,
                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -130,18 +131,22 @@ Samplecountry
     } yield ()
 
   private def insertDefaultUser(): Fox[Unit] =
-    userService.defaultUser.futureBox.flatMap {
-      case Full(_) => Fox.successful(())
-      case _ =>
-        for {
-          _ <- multiUserDAO.insertOne(defaultMultiUser)
-          _ <- userDAO.insertOne(defaultUser)
-          _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser, Map("sampleExp" -> 10))
-          _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
-                                                     TeamMembership(organizationTeam._id, isTeamManager = true))
-          _ = logger.info("Inserted default user scmboy")
-        } yield ()
-    }.toFox
+    userService
+      .userFromMultiUserEmail(defaultUserEmail)
+      .futureBox
+      .flatMap {
+        case Full(_) => Fox.successful(())
+        case _ =>
+          for {
+            _ <- multiUserDAO.insertOne(defaultMultiUser)
+            _ <- userDAO.insertOne(defaultUser)
+            _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser, Map("sampleExp" -> 10))
+            _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
+                                                       TeamMembership(organizationTeam._id, isTeamManager = true))
+            _ = logger.info("Inserted default user scmboy")
+          } yield ()
+      }
+      .toFox
 
   private def insertToken(): Fox[Unit] = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
@@ -196,7 +201,7 @@ Samplecountry
   private def insertProject(): Fox[Unit] =
     projectDAO.findAll.flatMap { projects =>
       if (projects.isEmpty) {
-        userService.defaultUser.flatMap { user =>
+        userService.userFromMultiUserEmail(defaultUserEmail).flatMap { user =>
           val project = Project(ObjectId.generate,
                                 organizationTeam._id,
                                 user._id,
@@ -217,12 +222,12 @@ Samplecountry
   }
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
-    if (conf.Datastore.enabled) {
+    if (storeModules.localDataStoreEnabled) {
       dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local datastore")
           dataStoreDAO.insertOne(
-            DataStore("localhost",
+            DataStore(conf.Datastore.name,
                       conf.Http.uri,
                       conf.Datastore.publicUri.getOrElse(conf.Http.uri),
                       conf.Datastore.key))
@@ -231,12 +236,12 @@ Samplecountry
     } else Fox.successful(())
 
   private def insertLocalTracingStoreIfEnabled(): Fox[Unit] =
-    if (conf.Tracingstore.enabled) {
+    if (storeModules.localTracingStoreEnabled) {
       tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
-            TracingStore("localhost",
+            TracingStore(conf.Tracingstore.name,
                          conf.Http.uri,
                          conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
                          conf.Tracingstore.key))
@@ -245,7 +250,7 @@ Samplecountry
     } else Fox.successful(())
 
   private def updateLocalDataStorePublicUri(): Fox[Unit] =
-    if (conf.Datastore.enabled) {
+    if (storeModules.localDataStoreEnabled) {
       dataStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { storeOpt: Box[DataStore] =>
         storeOpt match {
           case Full(store) =>
@@ -259,7 +264,7 @@ Samplecountry
     } else Fox.successful(())
 
   private def updateLocalTracingStorePublicUri(): Fox[Unit] =
-    if (conf.Tracingstore.enabled) {
+    if (storeModules.localTracingStoreEnabled) {
       tracingStoreDAO.findOneByUrl(conf.Http.uri).futureBox.flatMap { storeOpt: Box[TracingStore] =>
         storeOpt match {
           case Full(store) =>

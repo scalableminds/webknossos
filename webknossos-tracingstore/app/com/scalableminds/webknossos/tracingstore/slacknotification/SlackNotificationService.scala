@@ -11,7 +11,7 @@ class SlackNotificationService @Inject()(rpc: RPC, config: TracingStoreConfig) e
   lazy val url: String = config.SlackNotifications.url
 
   def reportUnusalRequest(msg: String): Unit =
-    if (url != "empty") {
+    if (url.nonEmpty) {
       rpc(url).postJson(
         Json.obj(
           "attachments" -> Json.arr(

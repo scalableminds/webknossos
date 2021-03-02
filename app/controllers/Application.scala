@@ -13,7 +13,7 @@ import oxalis.security.WkEnv
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
+import utils.{ObjectId, SQLClient, SimpleSQLDAO, StoreModules, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -21,6 +21,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             multiUserDAO: MultiUserDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
+                            storeModules: StoreModules,
                             sil: Silhouette[WkEnv],
                             rpc: RPC)(implicit ec: ExecutionContext)
     extends Controller {
@@ -35,7 +36,8 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
           "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
-          "token" -> token
+          "token" -> token,
+          "modules" -> conf.Play.Modules.enabled
         ))
     }
   }
@@ -60,24 +62,20 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
 
   def health: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     def checkDatastoreHealthIfEnabled: Fox[Unit] =
-      if (conf.Datastore.enabled) {
+      if (storeModules.localDataStoreEnabled) {
         for {
           response <- rpc(s"${conf.Http.uri}/data/health").get
           if response.status == 200
         } yield ()
-      } else {
-        Fox.successful(())
-      }
+      } else Fox.successful(())
 
     def checkTracingstoreHealthIfEnabled: Fox[Unit] =
-      if (conf.Tracingstore.enabled) {
+      if (storeModules.localTracingStoreEnabled) {
         for {
           response <- rpc(s"${conf.Http.uri}/tracings/health").get
           if response.status == 200
         } yield ()
-      } else {
-        Fox.successful(())
-      }
+      } else Fox.successful(())
 
     for {
       _ <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"

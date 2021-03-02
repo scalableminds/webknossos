@@ -15,7 +15,7 @@ class SlackNotificationService @Inject()(rpc: RPC, conf: WkConf) extends LazyLog
     noticeError(ex.toString + ": " + ex.getLocalizedMessage + "\n" + message)
 
   def noticeError(msg: String): Unit =
-    if (url != "empty") {
+    if (url.nonEmpty) {
       logger.info(s"Sending Slack notification: $msg")
       rpc(url).postJson(
         Json.obj(
@@ -28,7 +28,7 @@ class SlackNotificationService @Inject()(rpc: RPC, conf: WkConf) extends LazyLog
     }
 
   def noticeBaseAnnotationTaskCreation(taskType: List[String], numberOfTasks: Int): Unit =
-    if (url != "empty") {
+    if (url.nonEmpty) {
       rpc(url).postJson(
         Json.obj(
           "attachments" -> Json.arr(

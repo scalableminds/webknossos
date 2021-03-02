@@ -13,6 +13,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val uri: String = get[String]("http.uri")
   }
 
+  object Play {
+    object Modules {
+      val enabled: Seq[String] = getList[String]("play.modules.enabled")
+    }
+  }
+
   object WebKnossos {
     val tabTitle: String = get[String]("webKnossos.tabTitle")
     object User {
@@ -31,11 +37,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       val children = List(User)
     }
     object SampleOrganization {
-      val enabled: Boolean = get[Boolean]("webKnossos.initialData.sampleOrganization.enabled")
+      val enabled: Boolean = get[Boolean]("webKnossos.sampleOrganization.enabled")
       object User {
-        val email: String = get[String]("webKnossos.initialData.sampleOrganization.user.email")
-        val password: String = get[String]("webKnossos.initialData.sampleOrganization.user.password")
-        val isSuperUser: Boolean = get[Boolean]("webKnossos.initialData.sampleOrganization.user.isSuperUser")
+        val email: String = get[String]("webKnossos.sampleOrganization.user.email")
+        val password: String = get[String]("webKnossos.sampleOrganization.user.password")
+        val isSuperUser: Boolean = get[Boolean]("webKnossos.sampleOrganization.user.isSuperUser")
       }
       val children = List(User)
     }
@@ -52,14 +58,14 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   object Datastore {
-    val enabled: Boolean = get[Boolean]("datastore.enabled")
     val key: String = get[String]("datastore.key")
+    val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
   }
 
   object Tracingstore {
-    val enabled: Boolean = get[Boolean]("tracingstore.enabled")
     val key: String = get[String]("tracingstore.key")
+    val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("tracingstore.publicUri")
   }
 

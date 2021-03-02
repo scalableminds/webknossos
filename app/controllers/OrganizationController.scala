@@ -69,6 +69,6 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def getOperatorData: Action[AnyContent] = Action {
-    Ok(Json.toJson(conf.operatorData))
+    Ok(Json.toJson(conf.WebKnossos.operatorData))
   }
 }

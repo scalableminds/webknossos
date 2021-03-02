@@ -52,8 +52,8 @@ class InitialDataService @Inject()(userService: UserService,
     with LazyLogging {
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
 
-  private val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
-  private val defaultUserPassword = conf.Application.Authentication.DefaultUser.password
+  private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email
+  private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
   private val additionalInformation = """**Sample Organization**
 
 Sample Street 123
@@ -75,7 +75,7 @@ Samplecountry
     multiUserId,
     defaultUserEmail,
     userService.createPasswordInfo(defaultUserPassword),
-    isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
+    isSuperUser = conf.WebKnossos.SampleOrganization.User.isSuperUser,
   )
   private val defaultUser = User(
     userId,
@@ -120,7 +120,7 @@ Samplecountry
 
   private def assertInitialDataEnabled: Fox[Unit] =
     for {
-      _ <- bool2Fox(conf.Application.insertInitialData) ?~> "initialData.notEnabled"
+      _ <- bool2Fox(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
     } yield ()
 
   def assertNoOrganizationsPresent: Fox[Unit] =

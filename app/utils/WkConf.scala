@@ -20,6 +20,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       val inviteExpiry: Duration = get[Duration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
     }
+    val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
     object Tasks {
       val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
     }
@@ -29,49 +30,25 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       }
       val children = List(User)
     }
-    val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
-
-    val children = List(User, Tasks, Cache)
-  }
-
-  object Application {
-
-    val insertInitialData: Boolean = get[Boolean]("application.insertInitialData")
-    val insertLocalConnectDatastore: Boolean = get[Boolean]("application.insertLocalConnectDatastore")
-    val title: String = get[String]("application.title")
-
-    object Authentication {
-      object DefaultUser {
-        val email: String = get[String]("application.authentication.defaultUser.email")
-        val password: String = get[String]("application.authentication.defaultUser.password")
-        val isSuperUser: Boolean = get[Boolean]("application.authentication.defaultUser.isSuperUser")
+    object SampleOrganization {
+      val enabled: Boolean = get[Boolean]("webKnossos.initialData.sampleOrganization.enabled")
+      object User {
+        val email: String = get[String]("webKnossos.initialData.sampleOrganization.user.email")
+        val password: String = get[String]("webKnossos.initialData.sampleOrganization.user.password")
+        val isSuperUser: Boolean = get[Boolean]("webKnossos.initialData.sampleOrganization.user.isSuperUser")
       }
-      val ssoKey: String = get[String]("application.authentication.ssoKey")
-
-      val children = List(DefaultUser)
+      val children = List(User)
     }
-    val children = List(Authentication)
+    val operatorData: String = get[String]("webKnossos.operatorData")
+    val children = List(User, Tasks, Cache, SampleOrganization)
   }
 
-  object Mail {
-    val enabled: Boolean = get[Boolean]("mail.enabled")
-    val logToStdout: Boolean = get[Boolean]("mail.logToStdout")
-    object Smtp {
-      val host: String = get[String]("mail.smtp.host")
-      val port: Int = get[Int]("mail.smtp.port")
-      val tls: Boolean = get[Boolean]("mail.smtp.tls")
-      val auth: Boolean = get[Boolean]("mail.smtp.auth")
-      val user: String = get[String]("mail.smtp.user")
-      val pass: String = get[String]("mail.smtp.pass")
-    }
-    val demoSender: String = get[String]("mail.demoSender")
-    val defaultSender: String = get[String]("mail.defaultSender")
-  }
-
-
-  object Proxy {
-    val prefix: String = get[String]("proxy.prefix")
-    val routes: List[String] = getList[String]("proxy.routes")
+  object Features {
+    val isDemoInstance: Boolean = get[Boolean]("features.isDemoInstance")
+    val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
+    val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
+    val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
+    val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
   }
 
   object Datastore {
@@ -86,31 +63,24 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val publicUri: Option[String] = getOptional[String]("tracingstore.publicUri")
   }
 
-  object Braintracing {
-    val enabled: Boolean = get[Boolean]("braintracing.enabled")
-    val organizationName: String = get[String]("braintracing.organizationName")
-    val uri: String = get[String]("braintracing.uri")
-    val createUserScript: String = get[String]("braintracing.createUserScript")
-    val user: String = get[String]("braintracing.user")
-    val password: String = get[String]("braintracing.password")
-    val license: String = get[String]("braintracing.license")
+  object Proxy {
+    val prefix: String = get[String]("proxy.prefix")
+    val routes: List[String] = getList[String]("proxy.routes")
   }
 
-  object Features {
-    val isDemoInstance: Boolean = get[Boolean]("features.isDemoInstance")
-    val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
-    val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
-    val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
-    val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
+  object Mail {
+    val logToStdout: Boolean = get[Boolean]("mail.logToStdout")
+    object Smtp {
+      val host: String = get[String]("mail.smtp.host")
+      val port: Int = get[Int]("mail.smtp.port")
+      val tls: Boolean = get[Boolean]("mail.smtp.tls")
+      val auth: Boolean = get[Boolean]("mail.smtp.auth")
+      val user: String = get[String]("mail.smtp.user")
+      val pass: String = get[String]("mail.smtp.pass")
+    }
+    val demoSender: String = get[String]("mail.demoSender")
+    val defaultSender: String = get[String]("mail.defaultSender")
   }
-
-  object BackendAnalytics {
-    val uri: String = get[String]("backendAnalytics.uri")
-    val key: String = get[String]("backendAnalytics.key")
-    val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
-  }
-
-  val operatorData: String = get[String]("operatorData")
 
   object Silhouette {
     object TokenAuthenticator {
@@ -131,23 +101,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val children = List(TokenAuthenticator, CookieAuthenticator)
   }
 
-  object Airbrake {
-    val projectID: String = get[String]("airbrake.projectID")
-    val projectKey: String = get[String]("airbrake.projectKey")
-    val environment: String = get[String]("airbrake.environment")
-  }
-
-  object SlackNotifications {
-    val url: String = get[String]("slackNotifications.url")
-  }
-
-  object Google {
-    object Analytics {
-      val trackingID: String = get[String]("google.analytics.trackingID")
-    }
-    val children = List(Analytics)
-  }
-
   object Jobs {
     object Flower {
       val uri: String = get[String]("jobs.flower.uri")
@@ -157,19 +110,50 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val children = List(Flower)
   }
 
+  object Braintracing {
+    val enabled: Boolean = get[Boolean]("braintracing.enabled")
+    val organizationName: String = get[String]("braintracing.organizationName")
+    val uri: String = get[String]("braintracing.uri")
+    val createUserScript: String = get[String]("braintracing.createUserScript")
+    val user: String = get[String]("braintracing.user")
+    val password: String = get[String]("braintracing.password")
+    val license: String = get[String]("braintracing.license")
+  }
+
+  object Airbrake {
+    val projectID: String = get[String]("airbrake.projectID")
+    val projectKey: String = get[String]("airbrake.projectKey")
+    val environment: String = get[String]("airbrake.environment")
+  }
+
+  object GoogleAnalytics {
+    val trackingID: String = get[String]("googleAnalytics.trackingID")
+  }
+
+  object SlackNotifications {
+    val url: String = get[String]("slackNotifications.url")
+  }
+
+  object BackendAnalytics {
+    val uri: String = get[String]("backendAnalytics.uri")
+    val key: String = get[String]("backendAnalytics.key")
+    val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
+  }
+
   val children =
-    List(Application,
-         Http,
-         Mail,
-         WebKnossos,
-         Datastore,
-         Tracingstore,
-         User,
-         Braintracing,
-         Features,
-         Silhouette,
-         Airbrake,
-         Google,
-         BackendAnalytics,
-         Jobs)
+    List(
+      Http,
+      WebKnossos,
+      Features,
+      Tracingstore,
+      Datastore,
+      Proxy,
+      Mail,
+      Silhouette,
+      Jobs,
+      Braintracing,
+      Airbrake,
+      GoogleAnalytics,
+      BackendAnalytics
+    )
 }

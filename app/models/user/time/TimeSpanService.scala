@@ -32,7 +32,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     extends FoxImplicits
     with LazyLogging {
   private val MaxTracingPauseMillis =
-    conf.WebKnossos.User.Time.tracingPauseInSeconds.toMillis
+    conf.WebKnossos.User.timeTrackingPause.toMillis
 
   def logUserInteraction(timestamp: Long, user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -112,7 +112,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         timeSpan.addTime(duration, timestamp)
       } else {
         logger.info(
-          s"Not updating previous timespan due to negative duration ${duration} ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=${this})")
+          s"Not updating previous timespan due to negative duration $duration ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=$this)")
         timeSpan
       }
     }
@@ -135,7 +135,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       val start = pair.head
       val end = pair.last
       val duration = end - start
-      if (duration >= MaxTracingPause) {
+      if (duration >= MaxTracingPauseMillis) {
         updateTimeSpan(current, start)
         current = createNewTimeSpan(end, _user, annotation)
       }
@@ -150,9 +150,9 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     val duration = current - last.lastUpdate
     if (duration < 0) {
       logger.info(
-        s"Negative timespan duration ${duration} ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=${this})")
+        s"Negative timespan duration $duration ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=$this)")
     }
-    duration < MaxTracingPause
+    duration < MaxTracingPauseMillis
   }
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =

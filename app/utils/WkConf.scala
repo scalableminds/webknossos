@@ -9,6 +9,31 @@ import scala.concurrent.duration._
 class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   override def raw: Configuration = configuration
 
+  object Http {
+    val uri: String = get[String]("http.uri")
+  }
+
+  object WebKnossos {
+    val tabTitle: String = get[String]("webKnossos.tabTitle")
+    object User {
+      val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
+      val inviteExpiry: Duration = get[Duration]("webKnossos.user.inviteExpiry")
+      val ssoKey: String = get[String]("webKnossos.user.ssoKey")
+    }
+    object Tasks {
+      val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
+    }
+    object Cache {
+      object User {
+        val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.cache.user.timeout")
+      }
+      val children = List(User)
+    }
+    val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
+
+    val children = List(User, Tasks, Cache)
+  }
+
   object Application {
 
     val insertInitialData: Boolean = get[Boolean]("application.insertInitialData")
@@ -22,14 +47,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
         val isSuperUser: Boolean = get[Boolean]("application.authentication.defaultUser.isSuperUser")
       }
       val ssoKey: String = get[String]("application.authentication.ssoKey")
-      val inviteExpiry: Duration = get[Duration]("application.authentication.inviteExpiry")
+
       val children = List(DefaultUser)
     }
     val children = List(Authentication)
-  }
-
-  object Http {
-    val uri: String = get[String]("http.uri")
   }
 
   object Mail {
@@ -47,26 +68,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val defaultSender: String = get[String]("mail.defaultSender")
   }
 
-  object WebKnossos {
-    object User {
-      object Time {
-        val tracingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.time.tracingPause")
-      }
-      val children = List(Time)
-    }
-    object Tasks {
-      val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
-    }
-    object Cache {
-      object User {
-        val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.cache.user.timeout")
-      }
-      val children = List(User)
-    }
-    val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
-
-    val children = List(User, Tasks, Cache)
-  }
 
   object Proxy {
     val prefix: String = get[String]("proxy.prefix")
@@ -86,7 +87,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   object Braintracing {
-    val active: Boolean = get[Boolean]("braintracing.active")
+    val enabled: Boolean = get[Boolean]("braintracing.enabled")
     val organizationName: String = get[String]("braintracing.organizationName")
     val uri: String = get[String]("braintracing.uri")
     val createUserScript: String = get[String]("braintracing.createUserScript")

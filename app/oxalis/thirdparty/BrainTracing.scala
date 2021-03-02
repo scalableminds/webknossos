@@ -29,7 +29,7 @@ class BrainTracing @Inject()(actorSystem: ActorSystem,
     for {
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      result <- if (organization.name == conf.Braintracing.organizationName && conf.Braintracing.active)
+      result <- if (organization.name == conf.Braintracing.organizationName && conf.Braintracing.enabled)
         register(user, multiUser.email, password).toFox.map(Some(_))
       else Fox.successful(None)
     } yield result

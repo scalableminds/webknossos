@@ -98,7 +98,6 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   private def startActors(actorSystem: ActorSystem) {
     val mailerConf = MailerConfig(
-      conf.Mail.enabled,
       conf.Mail.logToStdout,
       conf.Mail.Smtp.host,
       conf.Mail.Smtp.port,

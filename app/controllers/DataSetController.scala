@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import com.scalableminds.webknossos.datastore.controllers.RemoteOriginHelpers
 import models.binary._
-import models.team.{OrganizationDAO, TeamDAO}
+import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -17,6 +17,7 @@ import play.api.libs.json._
 import utils.ObjectId
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
+import models.organization.OrganizationDAO
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.duration._

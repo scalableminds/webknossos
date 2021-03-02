@@ -41,7 +41,7 @@ type BindingMap<T: Function> = { [key: KeyboardKey]: T };
 type MouseButtonWhich = 1 | 2 | 3;
 type MouseButtonString = "left" | "middle" | "right";
 type MouseHandler =
-  | ((deltaY: number, modifier: ?ModifierKeys) => void)
+  | ((deltaYorX: number, modifier: ?ModifierKeys) => void)
   | ((position: Point2, id: ?string, event: MouseEvent) => void)
   | ((delta: Point2, position: Point2, id: ?string, event: MouseEvent) => void);
 type HammerJsEvent = {
@@ -526,10 +526,8 @@ export class InputMouse {
     if (isDragging && this.ignoreScrollingWhileDragging) {
       return;
     }
-    let delta = 0;
-    if (event.deltaY != null) {
-      delta = -Number(event.deltaY);
-    }
+    // For some mouses on MacOS, `shift + wheel` will scroll horizontally instead of vertically
+    const delta = -(Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY);
     let modifier: ?ModifierKeys = null;
     if (event.shiftKey) {
       modifier = "shift";

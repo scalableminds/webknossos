@@ -12,20 +12,20 @@ POST          /maintenance                                                      
 DELETE        /maintenance                                                      controllers.MaintenanceController.closeMaintenance
 
 # Authentication
-POST          /auth/register                                                    controllers.Authentication.register
-POST          /auth/joinOrganization/:inviteToken                               controllers.Authentication.joinOrganization(inviteToken: String)
-POST          /auth/login                                                       controllers.Authentication.authenticate
-GET           /auth/token                                                       controllers.Authentication.getToken
-DELETE        /auth/token                                                       controllers.Authentication.deleteToken
-GET           /auth/switch                                                      controllers.Authentication.switchMultiUser(to: String)
-POST          /auth/switchOrganization/:organizationName                        controllers.Authentication.switchOrganization(organizationName: String)
-POST          /auth/sendInvites                                                 controllers.Authentication.sendInvites
-POST          /auth/startResetPassword                                          controllers.Authentication.handleStartResetPassword
-POST          /auth/changePassword                                              controllers.Authentication.changePassword
-POST          /auth/resetPassword                                               controllers.Authentication.handleResetPassword
-GET           /auth/logout                                                      controllers.Authentication.logout
-GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
-POST          /auth/createOrganizationWithAdmin                                 controllers.Authentication.createOrganizationWithAdmin
+POST          /auth/register                                                    controllers.AuthenticationController.register
+POST          /auth/joinOrganization/:inviteToken                               controllers.AuthenticationController.joinOrganization(inviteToken: String)
+POST          /auth/login                                                       controllers.AuthenticationController.authenticate
+GET           /auth/token                                                       controllers.AuthenticationController.getToken
+DELETE        /auth/token                                                       controllers.AuthenticationController.deleteToken
+GET           /auth/switch                                                      controllers.AuthenticationController.switchMultiUser(to: String)
+POST          /auth/switchOrganization/:organizationName                        controllers.AuthenticationController.switchOrganization(organizationName: String)
+POST          /auth/sendInvites                                                 controllers.AuthenticationController.sendInvites
+POST          /auth/startResetPassword                                          controllers.AuthenticationController.handleStartResetPassword
+POST          /auth/changePassword                                              controllers.AuthenticationController.changePassword
+POST          /auth/resetPassword                                               controllers.AuthenticationController.handleResetPassword
+GET           /auth/logout                                                      controllers.AuthenticationController.logout
+GET           /auth/sso                                                         controllers.AuthenticationController.singleSignOn(sso: String, sig: String)
+POST          /auth/createOrganizationWithAdmin                                 controllers.AuthenticationController.createOrganizationWithAdmin
 
 # Configurations
 GET           /user/userConfiguration                                           controllers.ConfigurationController.read

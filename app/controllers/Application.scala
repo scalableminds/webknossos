@@ -37,7 +37,8 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
           "token" -> token,
-          "modules" -> conf.Play.Modules.enabled
+          "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
+          "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
         ))
     }
   }

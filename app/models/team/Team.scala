@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation.AnnotationDAO
+import models.organization.{Organization, OrganizationDAO}
 import models.project.ProjectDAO
 import models.task.TaskTypeDAO
 import models.user.User

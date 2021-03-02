@@ -9,8 +9,8 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | CTRL / CMD + Z                | Undo                                        |
 | CTRL / CMD + Y                | Redo                                        |
 | CTRL / CMD + S                | Save                                        |
-| I or ALT + Mousewheel         | Zoom In                                     |
-| O or ALT + Mousewheel         | Zoom Out                                    |
+| I or CTRL + Mousewheel        | Zoom In                                     |
+| O or CTRL + Mousewheel        | Zoom Out                                    |
 | P                             | Select Previous Comment                     |
 | N                             | Select Next Comment                         |
 | 3                             | Toggle Segmentation Opacity                 |

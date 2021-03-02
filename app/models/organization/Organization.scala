@@ -1,12 +1,11 @@
-package models.team
+package models.organization
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+import models.team.PricingPlan
 import models.team.PricingPlan.PricingPlan
-import models.user.{Invite, User}
-import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -26,46 +25,6 @@ case class Organization(
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
-
-class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
-
-  def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
-    val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
-      Json.obj(
-        "newUserMailingList" -> organization.newUserMailingList,
-        "pricingPlan" -> organization.pricingPlan
-      )
-    } else Json.obj()
-    Fox.successful(
-      Json.obj(
-        "id" -> organization._id.toString,
-        "name" -> organization.name,
-        "additionalInformation" -> organization.additionalInformation,
-        "enableAutoVerify" -> organization.enableAutoVerify,
-        "displayName" -> organization.displayName
-      ) ++ adminOnlyInfo
-    )
-  }
-
-  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
-      implicit ctx: DBAccessContext): Fox[Organization] =
-    inviteOpt match {
-      case Some(invite) => organizationDAO.findOne(invite._organization)
-      case None =>
-        organizatioNameOpt match {
-          case Some(organizationName) => organizationDAO.findOneByName(organizationName)
-          case None =>
-            for {
-              allOrganizations <- organizationDAO.findAll
-              _ <- bool2Fox(allOrganizations.length == 1) ?~> "organization.ambiguous"
-              defaultOrganization <- allOrganizations.headOption
-            } yield defaultOrganization
-        }
-
-    }
-
-}
 
 class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
@@ -95,18 +54,18 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     }
 
   override def readAccessQ(requestingUserId: ObjectId): String =
-    s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))" +
-      s"or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))"
+    s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))" +
+      s"or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = '$requestingUserId')))"
 
   override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
-    case Some(a) => "true"
+    case Some(_) => "true"
     case _       => "false"
   }
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[OrganizationsRow])
+      rList <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[OrganizationsRow])
       parsed <- Fox.serialCombined(rList.toList)(r => parse(r))
     } yield parsed
 
@@ -114,15 +73,14 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}"
-          .as[OrganizationsRow])
+        sql"select #$columns from #$existingCollectionName where name = $name and #$accessQuery".as[OrganizationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed
 
   def insertOne(o: Organization): Fox[Unit] =
     for {
-      r <- run(
+      _ <- run(
         sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)
                   values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${new java.sql.Timestamp(
           o.created)}, ${o.isDeleted})
@@ -142,7 +100,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
               from webknossos.annotations_ a
               join webknossos.datasets_ d on a._dataSet = d._id
               join webknossos.organizations_ o on d._organization = o._id
-              where a._id = ${annotationId}""".as[String])
+              where a._id = $annotationId""".as[String])
       r <- rList.headOption.toFox
     } yield r
 

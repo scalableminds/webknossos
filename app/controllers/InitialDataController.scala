@@ -17,6 +17,7 @@ import oxalis.security._
 import play.api.libs.json.Json
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
+import models.organization.{Organization, OrganizationDAO}
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext

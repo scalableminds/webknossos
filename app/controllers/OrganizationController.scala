@@ -4,7 +4,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
-import models.team._
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, UserDAO}
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
@@ -87,7 +87,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
           _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- organizationDAO.updateFields(organization._id, displayName, newUserMailingList)
           updated <- organizationDAO.findOne(organization._id)
-          organizationJson <- organizationService.publicWrites(organization)
+          organizationJson <- organizationService.publicWrites(updated)
         } yield Ok(organizationJson)
     }
   }

@@ -26,7 +26,7 @@ import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO}
 import models.user.{User, UserExperiencesDAO, UserService, UserTeamRolesDAO}
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.telemetry.SlackNotificationService.SlackNotificationService
+import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import utils.ObjectId

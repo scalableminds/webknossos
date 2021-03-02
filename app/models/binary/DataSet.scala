@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.team._
+import models.organization.OrganizationDAO
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._

@@ -24,9 +24,9 @@ import models.annotation._
 import models.annotation.nml.NmlResults.NmlParseResult
 import models.annotation.nml.{NmlResults, NmlService, NmlWriter}
 import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
-import models.team.OrganizationDAO
 import models.user._
 import oxalis.security.WkEnv
 import play.api.i18n.{Messages, MessagesProvider}

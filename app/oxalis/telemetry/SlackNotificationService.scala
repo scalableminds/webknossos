@@ -1,4 +1,4 @@
-package oxalis.telemetry.SlackNotificationService
+package oxalis.telemetry
 
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging

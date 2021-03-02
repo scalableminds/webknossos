@@ -50,16 +50,22 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object WebKnossos {
     object User {
       object Time {
-        val tracingPauseInSeconds: FiniteDuration = get[Int]("webKnossos.user.time.tracingPauseInSeconds") seconds
+        val tracingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.time.tracingPause")
       }
       val children = List(Time)
     }
     object Tasks {
       val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
     }
+    object Cache {
+      object User {
+        val timeout: FiniteDuration = get[FiniteDuration]("webKnossos.cache.user.timeout")
+      }
+      val children = List(User)
+    }
     val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
 
-    val children = List(User, Tasks)
+    val children = List(User, Tasks, Cache)
   }
 
   object Proxy {
@@ -77,10 +83,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val enabled: Boolean = get[Boolean]("tracingstore.enabled")
     val key: String = get[String]("tracingstore.key")
     val publicUri: Option[String] = getOptional[String]("tracingstore.publicUri")
-  }
-
-  object User {
-    val cacheTimeoutInMinutes: FiniteDuration = get[Int]("user.cacheTimeoutInMinutes") minutes
   }
 
   object Braintracing {

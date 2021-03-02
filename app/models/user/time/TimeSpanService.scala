@@ -31,7 +31,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val MaxTracingPause =
+  private val MaxTracingPauseMillis =
     conf.WebKnossos.User.Time.tracingPauseInSeconds.toMillis
 
   def logUserInteraction(timestamp: Long, user: User, annotation: Annotation)(

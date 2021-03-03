@@ -2,7 +2,11 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike, UnusableInboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  InboxDataSource,
+  InboxDataSourceLike,
+  UnusableInboxDataSource
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
@@ -39,8 +43,8 @@ class DataSourceController @Inject()(
     }
   }
 
-  def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean): Action[AnyContent] = Action.async {
-    implicit request =>
+  def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean): Action[AnyContent] =
+    Action.async { implicit request =>
       {
         accessTokenService.validateAccessForSyncBlock(
           UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
@@ -57,7 +61,7 @@ class DataSourceController @Inject()(
           }
         }
       }
-  }
+    }
 
   def triggerInboxCheck(): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
@@ -133,14 +137,15 @@ class DataSourceController @Inject()(
 
   }
 
-  def fetchSampleDataSource(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        for {
-          _ <- sampleDatasetService.initDownload(organizationName, dataSetName)
-        } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
+  def fetchSampleDataSource(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+        AllowRemoteOrigin {
+          for {
+            _ <- sampleDatasetService.initDownload(organizationName, dataSetName)
+          } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
+        }
       }
-    }
   }
 
   def listSampleDataSources(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
@@ -229,22 +234,21 @@ class DataSourceController @Inject()(
     }
   }
 
-  def update(organizationName: String, dataSetName: String): Action[DataSource] = Action.async(validateJson[DataSource]) {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              _ <- Fox.successful(())
-              dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-                "dataSource.notFound") ~> 404
-              _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
-            } yield {
-              Ok
-            }
+  def update(organizationName: String, dataSetName: String): Action[DataSource] =
+    Action.async(validateJson[DataSource]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            _ <- Fox.successful(())
+            dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
+              "dataSource.notFound") ~> 404
+            _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
+          } yield {
+            Ok
           }
         }
-  }
+      }
+    }
 
   def createOrganizationDirectory(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
@@ -259,8 +263,8 @@ class DataSourceController @Inject()(
     }
   }
 
-  def reload(organizationName: String, dataSetName: String, layerName: Option[String] = None): Action[AnyContent] = Action.async {
-    implicit request =>
+  def reload(organizationName: String, dataSetName: String, layerName: Option[String] = None): Action[AnyContent] =
+    Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
         AllowRemoteOrigin {
           val count = binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
@@ -274,19 +278,19 @@ class DataSourceController @Inject()(
           } yield Ok(Json.toJson(reloadedDataSource))
         }
       }
-  }
-
-  def deleteOnDisk(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName))) {
-      AllowRemoteOrigin {
-        for {
-          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName,
-                                                                      dataSetName,
-                                                                      reason =
-                                                                        Some("the user wants to delete the dataset"))
-        } yield Ok
-      }
     }
+
+  def deleteOnDisk(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              _ <- binaryDataServiceHolder.binaryDataService
+                .deleteOnDisk(organizationName, dataSetName, reason = Some("the user wants to delete the dataset"))
+            } yield Ok
+          }
+        }
   }
 
 }

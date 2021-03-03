@@ -3,16 +3,15 @@ package com.scalableminds.webknossos.tracingstore
 import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import play.api.{Configuration, Environment}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 
-class TracingStoreModule(environment: Environment, configuration: Configuration) extends AbstractModule {
+class TracingStoreModule extends AbstractModule {
 
-  val system = ActorSystem("webknossos-tracingstore")
+  private val system: ActorSystem = ActorSystem("webknossos-tracingstore")
 
-  override def configure() = {
+  override def configure(): Unit = {
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(system)
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[SkeletonTracingService]).asEagerSingleton()

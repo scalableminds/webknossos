@@ -297,7 +297,7 @@ class VolumeTracingService @Inject()(
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       tracing
         .addUserBoundingBoxes(
-          NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), tracing.boundingBox))
+          NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), tracing.boundingBox))
         .withBoundingBox(dataSetBoundingBox.get)
     } else tracing
 

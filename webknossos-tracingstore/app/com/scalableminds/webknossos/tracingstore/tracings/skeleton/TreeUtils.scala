@@ -103,7 +103,9 @@ object TreeUtils {
       math.max(targetGroupMaxId + 1 - sourceGroupMinId, 0)
     }
 
-  def mergeGroups(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup], groupMapping: FunctionalGroupMapping): Seq[TreeGroup] = {
+  def mergeGroups(sourceGroups: Seq[TreeGroup],
+                  targetGroups: Seq[TreeGroup],
+                  groupMapping: FunctionalGroupMapping): Seq[TreeGroup] = {
     def applyGroupMappingRecursive(groups: Seq[TreeGroup]): Seq[TreeGroup] =
       groups.map(group =>
         group.withGroupId(groupMapping(group.groupId)).withChildren(applyGroupMappingRecursive(group.children)))

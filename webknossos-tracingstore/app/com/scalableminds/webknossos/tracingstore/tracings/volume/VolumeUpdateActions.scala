@@ -13,12 +13,13 @@ case class UpdateBucketVolumeAction(position: Point3D,
                                     base64Data: String,
                                     actionTimestamp: Option[Long] = None,
                                     info: Option[String] = None)
-  extends VolumeUpdateAction {
+    extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder.decode(base64Data)
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
-  override def transformToCompact: CompactVolumeUpdateAction = CompactVolumeUpdateAction("updateBucket", actionTimestamp, Json.obj())
+  override def transformToCompact: CompactVolumeUpdateAction =
+    CompactVolumeUpdateAction("updateBucket", actionTimestamp, Json.obj())
 }
 
 object UpdateBucketVolumeAction {
@@ -26,17 +27,18 @@ object UpdateBucketVolumeAction {
 }
 
 case class UpdateTracingVolumeAction(
-                                      activeSegmentId: Long,
-                                      editPosition: Point3D,
-                                      editRotation: Vector3D,
-                                      largestSegmentId: Long,
-                                      zoomLevel: Double,
-                                      actionTimestamp: Option[Long] = None,
-                                      info: Option[String] = None
-                                    ) extends VolumeUpdateAction {
+    activeSegmentId: Long,
+    editPosition: Point3D,
+    editRotation: Vector3D,
+    largestSegmentId: Long,
+    zoomLevel: Double,
+    actionTimestamp: Option[Long] = None,
+    info: Option[String] = None
+) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
-  override def transformToCompact: CompactVolumeUpdateAction = CompactVolumeUpdateAction("updateTracing", actionTimestamp, Json.obj())
+  override def transformToCompact: CompactVolumeUpdateAction =
+    CompactVolumeUpdateAction("updateTracing", actionTimestamp, Json.obj())
 }
 
 object UpdateTracingVolumeAction {
@@ -46,7 +48,7 @@ object UpdateTracingVolumeAction {
 case class RevertToVersionVolumeAction(sourceVersion: Long,
                                        actionTimestamp: Option[Long] = None,
                                        info: Option[String] = None)
-  extends VolumeUpdateAction {
+    extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
   override def transformToCompact: CompactVolumeUpdateAction =
@@ -60,7 +62,7 @@ object RevertToVersionVolumeAction {
 case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
                                    actionTimestamp: Option[Long] = None,
                                    info: Option[String] = None)
-  extends VolumeUpdateAction {
+    extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
@@ -76,13 +78,13 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
                                            isVisible: Boolean,
                                            actionTimestamp: Option[Long] = None,
                                            info: Option[String] = None)
-  extends VolumeUpdateAction {
+    extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateUserBoundingBoxVisibility",
-      actionTimestamp,
-      Json.obj("boundingBoxId" -> boundingBoxId, "newVisibility" -> isVisible))
+                              actionTimestamp,
+                              Json.obj("boundingBoxId" -> boundingBoxId, "newVisibility" -> isVisible))
 }
 
 object UpdateUserBoundingBoxVisibility {
@@ -90,7 +92,7 @@ object UpdateUserBoundingBoxVisibility {
 }
 
 case class RemoveFallbackLayer(actionTimestamp: Option[Long] = None, info: Option[String] = None)
-  extends VolumeUpdateAction {
+    extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
   override def transformToCompact: CompactVolumeUpdateAction =
@@ -102,7 +104,7 @@ object RemoveFallbackLayer {
 }
 
 case class ImportVolumeData(largestSegmentId: Long, actionTimestamp: Option[Long] = None, info: Option[String] = None)
-  extends VolumeUpdateAction {
+    extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
   override def transformToCompact: CompactVolumeUpdateAction =
@@ -114,7 +116,7 @@ object ImportVolumeData {
 }
 
 case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[String] = None)
-  extends VolumeUpdateAction {
+    extends VolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -128,7 +130,7 @@ object UpdateTdCamera {
 }
 
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)
-  extends VolumeUpdateAction
+    extends VolumeUpdateAction
 
 object CompactVolumeUpdateAction {
   implicit object compactVolumeUpdateActionFormat extends Format[CompactVolumeUpdateAction] {
@@ -162,20 +164,16 @@ object VolumeUpdateAction {
 
     override def writes(o: VolumeUpdateAction): JsValue = o match {
       case s: UpdateBucketVolumeAction =>
-        Json.obj("name" -> "updateBucket",
-          "value" -> Json.toJson(s)(UpdateBucketVolumeAction.jsonFormat))
+        Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.jsonFormat))
       case s: UpdateTracingVolumeAction =>
-        Json.obj("name" -> "updateTracing",
-          "value" -> Json.toJson(s)(UpdateTracingVolumeAction.jsonFormat))
+        Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.jsonFormat))
       case s: RevertToVersionVolumeAction =>
-        Json.obj("name" -> "revertToVersion",
-          "value" -> Json.toJson(s)(RevertToVersionVolumeAction.jsonFormat))
+        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionVolumeAction.jsonFormat))
       case s: UpdateUserBoundingBoxes =>
-        Json.obj("name" -> "updateUserBoundingBoxes",
-          "value" -> Json.toJson(s)(UpdateUserBoundingBoxes.jsonFormat))
+        Json.obj("name" -> "updateUserBoundingBoxes", "value" -> Json.toJson(s)(UpdateUserBoundingBoxes.jsonFormat))
       case s: UpdateUserBoundingBoxVisibility =>
         Json.obj("name" -> "updateUserBoundingBoxVisibility",
-          "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.jsonFormat))
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.jsonFormat))
       case s: RemoveFallbackLayer =>
         Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayer.jsonFormat))
       case s: ImportVolumeData =>

@@ -22,10 +22,11 @@ trait SkeletonUpdateActionHelper {
     BranchPoint(aBranchPoint.nodeId, aBranchPoint.timestamp)
   protected def convertComment(aComment: UpdateActionComment): Comment =
     Comment(aComment.nodeId, aComment.content)
-  protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]): Option[Color] = aColorOpt match {
-    case Some(aColor) => Some(convertColor(aColor))
-    case None         => None
-  }
+  protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]): Option[Color] =
+    aColorOpt match {
+      case Some(aColor) => Some(convertColor(aColor))
+      case None         => None
+    }
   protected def convertTreeGroup(aTreeGroup: UpdateActionTreeGroup): TreeGroup =
     TreeGroup(aTreeGroup.name, aTreeGroup.groupId, aTreeGroup.children.map(convertTreeGroup))
 }

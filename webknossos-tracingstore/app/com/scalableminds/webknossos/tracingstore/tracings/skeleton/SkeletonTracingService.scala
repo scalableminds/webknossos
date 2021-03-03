@@ -32,7 +32,8 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  implicit val updateActionJsonFormat: SkeletonUpdateAction.skeletonUpdateActionFormat.type = SkeletonUpdateAction.skeletonUpdateActionFormat
+  implicit val updateActionJsonFormat: SkeletonUpdateAction.skeletonUpdateActionFormat.type =
+    SkeletonUpdateAction.skeletonUpdateActionFormat
 
   def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -137,7 +138,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), bb)
+        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
       }
     } else None
 
@@ -203,15 +204,15 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
       Json.obj(
         "updateTracingActionCount" -> updateActions.count {
           case _: UpdateTracingSkeletonAction => true
-          case _ => false
+          case _                              => false
         },
         "createNodeActionCount" -> updateActions.count {
           case _: CreateNodeSkeletonAction => true
-          case _ => false
+          case _                           => false
         },
         "deleteNodeActionCount" -> updateActions.count {
           case _: DeleteNodeSkeletonAction => true
-          case _ => false
+          case _                           => false
         }
       )
     }

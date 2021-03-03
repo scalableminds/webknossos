@@ -31,22 +31,23 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def mergedFromContents(persist: Boolean): Action[SkeletonTracings] = Action.async(validateProto[SkeletonTracings]) { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          val tracings: List[Option[SkeletonTracing]] = request.body
-          val mergedTracing = tracingService.merge(tracings.flatten)
-          tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
-            Ok(Json.toJson(newId))
+  def mergedFromContents(persist: Boolean): Action[SkeletonTracings] = Action.async(validateProto[SkeletonTracings]) {
+    implicit request =>
+      log {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            val tracings: List[Option[SkeletonTracing]] = request.body
+            val mergedTracing = tracingService.merge(tracings.flatten)
+            tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
+              Ok(Json.toJson(newId))
+            }
           }
         }
       }
-    }
   }
 
-  def duplicate(tracingId: String, version: Option[Long], fromTask: Option[Boolean]): Action[AnyContent] = Action.async {
-    implicit request =>
+  def duplicate(tracingId: String, version: Option[Long], fromTask: Option[Boolean]): Action[AnyContent] =
+    Action.async { implicit request =>
       log {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
@@ -59,7 +60,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
           }
         }
       }
-  }
+    }
 
   def updateActionLog(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log {

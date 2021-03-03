@@ -12,8 +12,18 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
-import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, VoxelPosition, WebKnossosDataRequest, _}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  DataServiceDataRequest,
+  DataServiceMappingRequest,
+  DataServiceRequestSettings
+}
+import com.scalableminds.webknossos.datastore.models.{
+  DataRequest,
+  ImageThumbnail,
+  VoxelPosition,
+  WebKnossosDataRequest,
+  _
+}
 import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
@@ -69,8 +79,7 @@ class BinaryDataController @Inject()(
   }
 
   def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List("MISSING-BUCKETS" -> formatMissingBucketList(indices),
-         "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
+    List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
 
   def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
@@ -336,7 +345,9 @@ class BinaryDataController @Inject()(
   /**
     * Handles isosurface requests.
     */
-  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
+  def requestIsosurface(organizationName: String,
+                        dataSetName: String,
+                        dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
@@ -375,54 +386,50 @@ class BinaryDataController @Inject()(
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
-            } yield
-              Ok(
-                Json.obj("mean" -> meanAndStdDev._1, "stdDev" -> meanAndStdDev._2)
-              )
-          }
+  def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
+          } yield
+            Ok(
+              Json.obj("mean" -> meanAndStdDev._1, "stdDev" -> meanAndStdDev._2)
+            )
         }
-  }
+      }
+    }
 
-  def findData(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
-            } yield
-              Ok(
-                Json.obj("position" -> positionAndResolutionOpt.map(_._1),
-                         "resolution" -> positionAndResolutionOpt.map(_._2)))
-          }
+  def findData(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
+          } yield
+            Ok(
+              Json.obj("position" -> positionAndResolutionOpt.map(_._1),
+                       "resolution" -> positionAndResolutionOpt.map(_._2)))
         }
-  }
+      }
+    }
 
-  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
-                "histogram.layerMissing",
-                dataLayerName)
-              listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages(
-                "histogram.failed",
-                dataLayerName)
-            } yield Ok(Json.toJson(listOfHistograms))
-          }
+  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
+              "histogram.layerMissing",
+              dataLayerName)
+            listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
+                                                                                                    dataLayerName)
+          } yield Ok(Json.toJson(listOfHistograms))
         }
-  }
+      }
+    }
 
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =

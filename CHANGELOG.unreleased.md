@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added CTRL+Scroll for zooming, which enables pinch-to-zoom on some trackpads. [#5224](https://github.com/scalableminds/webknossos/pull/5224)
+- The time spent on a project is now displayed in the project list. [#5209](https://github.com/scalableminds/webknossos/pull/5209)
 
 ### Changed
 -

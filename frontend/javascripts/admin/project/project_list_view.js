@@ -2,7 +2,7 @@
 
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Icon, Spin, Button, Input, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
@@ -237,7 +237,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryAND(
                 this.state.projects,
-                ["name", "team", "priority", "owner", "numberOfOpenAssignments"],
+                ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
                 this.state.searchQuery,
               )}
               rowKey="id"
@@ -287,6 +287,20 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 key="numberOfOpenAssignments"
                 width={200}
                 sorter={Utils.compareBy(typeHint, project => project.numberOfOpenAssignments)}
+              />
+              <Column
+                title={
+                  <Tooltip title="Total time spent annotating for this project">Time [h]</Tooltip>
+                }
+                dataIndex="tracingTime"
+                key="tracingTime"
+                width={200}
+                sorter={Utils.compareBy(typeHint, project => project.tracingTime)}
+                render={tracingTimeMs =>
+                  Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  })
+                }
               />
               <Column
                 title="Time Limit"

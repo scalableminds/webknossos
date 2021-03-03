@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.util.datastructures.UnionFind
 import net.liftweb.common.{Box, Failure, Full}
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 object TreeValidator {
@@ -145,6 +146,7 @@ object TreeValidator {
         f
     }
 
+  @tailrec
   private def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int]): Seq[Int] =
     treeGroups match {
       case head :: tail => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)

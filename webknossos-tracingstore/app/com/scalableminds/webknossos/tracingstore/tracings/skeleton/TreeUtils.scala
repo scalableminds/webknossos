@@ -11,7 +11,7 @@ object TreeUtils {
 
   val nodeIdReferenceRegex: Regex = "#([0-9]+)" r
 
-  def minNodeId(trees: Seq[Tree]) = {
+  private def minNodeId(trees: Seq[Tree]) = {
     val nodes = trees.flatMap(_.nodes)
     if (nodes.isEmpty)
       0
@@ -19,7 +19,7 @@ object TreeUtils {
       nodes.map(_.id).min
   }
 
-  def maxNodeId(trees: Seq[Tree]) = {
+  private def maxNodeId(trees: Seq[Tree]) = {
     val nodes = trees.flatMap(_.nodes)
     if (nodes.isEmpty)
       0
@@ -27,7 +27,7 @@ object TreeUtils {
       nodes.map(_.id).max
   }
 
-  def maxTreeId(trees: Seq[Tree]) =
+  private def maxTreeId(trees: Seq[Tree]) =
     if (trees.isEmpty)
       0
     else
@@ -36,7 +36,7 @@ object TreeUtils {
   def mergeTrees(sourceTrees: Seq[Tree],
                  targetTrees: Seq[Tree],
                  nodeMapping: FunctionalNodeMapping,
-                 groupMapping: FunctionalGroupMapping) = {
+                 groupMapping: FunctionalGroupMapping): Seq[Tree] = {
     val treeMaxId = maxTreeId(targetTrees)
 
     val sourceNodeIds: Set[Int] = sourceTrees.flatMap(_.nodes.map(_.id)).toSet
@@ -49,7 +49,7 @@ object TreeUtils {
     targetTrees ++ mappedSourceTrees
   }
 
-  def applyNodeMapping(tree: Tree, f: Int => Int, sourceNodeIds: Set[Int]) =
+  private def applyNodeMapping(tree: Tree, f: Int => Int, sourceNodeIds: Set[Int]) =
     tree
       .withNodes(tree.nodes.map(node => node.withId(f(node.id))))
       .withEdges(tree.edges.map(edge => edge.withSource(f(edge.source)).withTarget(f(edge.target))))
@@ -57,7 +57,7 @@ object TreeUtils {
         comment.withNodeId(f(comment.nodeId)).withContent(updateNodeReferences(comment.content, f, sourceNodeIds))))
       .withBranchPoints(tree.branchPoints.map(bp => bp.withNodeId(f(bp.nodeId))))
 
-  def updateNodeReferences(comment: String, f: Int => Int, sourceNodeIds: Set[Int]) = {
+  private def updateNodeReferences(comment: String, f: Int => Int, sourceNodeIds: Set[Int]) = {
     def replacer(m: Match) = {
       val oldId = m.toString.substring(1).toInt
       val newId = if (sourceNodeIds.contains(oldId)) f(oldId) else oldId
@@ -66,13 +66,13 @@ object TreeUtils {
     nodeIdReferenceRegex.replaceAllIn(comment, m => replacer(m))
   }
 
-  def calculateNodeMapping(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) = {
+  def calculateNodeMapping(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]): Int => Int = {
     val nodeIdOffset = calculateNodeOffset(sourceTrees, targetTrees)
     (nodeId: Int) =>
       nodeId + nodeIdOffset
   }
 
-  def calculateNodeOffset(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) =
+  private def calculateNodeOffset(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) =
     if (targetTrees.isEmpty)
       0
     else {
@@ -81,7 +81,7 @@ object TreeUtils {
       math.max(targetNodeMaxId + 1 - sourceNodeMinId, 0)
     }
 
-  def calculateGroupMapping(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup]) = {
+  def calculateGroupMapping(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup]): Int => Int = {
     val groupIdOffset = calculateGroupIdOffset(sourceGroups, targetGroups)
     (groupId: Int) =>
       groupId + groupIdOffset
@@ -94,7 +94,7 @@ object TreeUtils {
     if (groups.isEmpty) Int.MaxValue
     else (groups.map(_.groupId) ++ groups.map(g => minGroupIdRecursive(g.children))).min
 
-  def calculateGroupIdOffset(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup]) =
+  private def calculateGroupIdOffset(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup]) =
     if (targetGroups.isEmpty)
       0
     else {
@@ -103,7 +103,7 @@ object TreeUtils {
       math.max(targetGroupMaxId + 1 - sourceGroupMinId, 0)
     }
 
-  def mergeGroups(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup], groupMapping: FunctionalGroupMapping) = {
+  def mergeGroups(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup], groupMapping: FunctionalGroupMapping): Seq[TreeGroup] = {
     def applyGroupMappingRecursive(groups: Seq[TreeGroup]): Seq[TreeGroup] =
       groups.map(group =>
         group.withGroupId(groupMapping(group.groupId)).withChildren(applyGroupMappingRecursive(group.children)))
@@ -111,13 +111,7 @@ object TreeUtils {
     applyGroupMappingRecursive(sourceGroups) ++ targetGroups
   }
 
-  def subtract(t1: Tree, t2: Tree) =
-    t1.withNodes((t1.nodes.toSet -- t2.nodes.toSet).toSeq).withEdges((t1.edges.toSet -- t2.edges.toSet).toSeq)
-
-  def add(t1: Tree, t2: Tree) =
-    t1.withNodes((t1.nodes ++ t2.nodes).toSet.toSeq).withEdges((t1.edges ++ t2.edges).toSet.toSeq)
-
-  def getAllChildrenGroups(rootGroup: TreeGroup) = {
+  def getAllChildrenGroups(rootGroup: TreeGroup): Seq[TreeGroup] = {
     def childIter(currentGroup: Seq[TreeGroup]): Seq[TreeGroup] =
       currentGroup match {
         case Seq() => Seq.empty

@@ -2,18 +2,14 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  InboxDataSource,
-  InboxDataSourceLike,
-  UnusableInboxDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike, UnusableInboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{Action, MultipartFormData, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import java.io.File
 
 import play.api.libs.Files
@@ -32,7 +28,7 @@ class DataSourceController @Inject()(
     extends Controller
     with FoxImplicits {
 
-  def list() = Action.async { implicit request =>
+  def list(): Action[AnyContent] = Action.async { implicit request =>
     {
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.listDataSources) {
         AllowRemoteOrigin {
@@ -43,7 +39,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean) = Action.async {
+  def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean): Action[AnyContent] = Action.async {
     implicit request =>
       {
         accessTokenService.validateAccessForSyncBlock(
@@ -52,11 +48,10 @@ class DataSourceController @Inject()(
             val dsOption: Option[InboxDataSource] =
               dataSourceRepository.find(DataSourceId(dataSetName, organizationName))
             dsOption match {
-              case Some(ds) => {
+              case Some(ds) =>
                 val dslike: InboxDataSourceLike = ds
                 if (returnFormatLike) Ok(Json.toJson(dslike))
                 else Ok(Json.toJson(ds))
-              }
               case _ => Ok
             }
           }
@@ -64,7 +59,7 @@ class DataSourceController @Inject()(
       }
   }
 
-  def triggerInboxCheck() = Action.async { implicit request =>
+  def triggerInboxCheck(): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         dataSourceService.checkInbox(verbose = true)
@@ -73,7 +68,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def triggerInboxCheckBlocking() = Action.async { implicit request =>
+  def triggerInboxCheckBlocking(): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
@@ -138,7 +133,7 @@ class DataSourceController @Inject()(
 
   }
 
-  def fetchSampleDataSource(organizationName: String, dataSetName: String) = Action.async { implicit request =>
+  def fetchSampleDataSource(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
@@ -148,7 +143,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def listSampleDataSources(organizationName: String) = Action.async { implicit request =>
+  def listSampleDataSources(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
     AllowRemoteOrigin {
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
         Ok(Json.toJson(sampleDatasetService.listWithStatus(organizationName)))
@@ -156,7 +151,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def explore(organizationName: String, dataSetName: String) = Action.async { implicit request =>
+  def explore(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
@@ -189,7 +184,7 @@ class DataSourceController @Inject()(
       organizationName: String,
       dataSetName: String,
       dataLayerName: String
-  ) = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
@@ -202,7 +197,7 @@ class DataSourceController @Inject()(
       organizationName: String,
       dataSetName: String,
       dataLayerName: String
-  ) = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
@@ -219,7 +214,7 @@ class DataSourceController @Inject()(
       dataLayerName: String,
       mappingName: String,
       agglomerateId: Long
-  ) = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -234,7 +229,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def update(organizationName: String, dataSetName: String) = Action.async(validateJson[DataSource]) {
+  def update(organizationName: String, dataSetName: String): Action[DataSource] = Action.async(validateJson[DataSource]) {
     implicit request =>
       accessTokenService
         .validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
@@ -251,7 +246,7 @@ class DataSourceController @Inject()(
         }
   }
 
-  def createOrganizationDirectory(organizationName: String) = Action.async { implicit request =>
+  def createOrganizationDirectory(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
@@ -264,7 +259,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def reload(organizationName: String, dataSetName: String, layerName: Option[String] = None) = Action.async {
+  def reload(organizationName: String, dataSetName: String, layerName: Option[String] = None): Action[AnyContent] = Action.async {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
         AllowRemoteOrigin {
@@ -281,7 +276,7 @@ class DataSourceController @Inject()(
       }
   }
 
-  def deleteOnDisk(organizationName: String, dataSetName: String) = Action.async { implicit request =>
+  def deleteOnDisk(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {

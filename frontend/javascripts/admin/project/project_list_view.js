@@ -2,7 +2,7 @@
 
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Icon, Spin, Button, Input, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
@@ -289,7 +289,9 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 sorter={Utils.compareBy(typeHint, project => project.numberOfOpenAssignments)}
               />
               <Column
-                title="Time [h]"
+                title={
+                  <Tooltip title="Total time spent annotating for this project">Time [h]</Tooltip>
+                }
                 dataIndex="tracingTime"
                 key="tracingTime"
                 width={200}

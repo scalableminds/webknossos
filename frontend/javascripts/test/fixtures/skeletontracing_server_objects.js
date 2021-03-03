@@ -62,7 +62,10 @@ export const tracing: ServerSkeletonTracing = {
       name: "explorative_2017-08-09_SCM_Boy_001",
     },
   ],
-  treeGroups: [],
+  treeGroups: [
+    { children: [], name: "Group 1", groupId: 1 },
+    { children: [{ children: [], name: "Group 3", groupId: 3 }], name: "Group 2", groupId: 2 },
+  ],
   dataSetName: "ROI2017_wkw",
   createdTimestamp: 1502302761387,
   userBoundingBoxes: [],

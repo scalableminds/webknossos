@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 
 case class AnnotationIdentifier(annotationType: AnnotationType, identifier: ObjectId) {
 
-  def toUniqueString =
+  def toUniqueString: String =
     annotationType + "__" + identifier
 
 }

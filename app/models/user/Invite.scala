@@ -117,7 +117,7 @@ class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                     ${new java.sql.Timestamp(i.expirationDateTime.getMillis)}, ${new java.sql.Timestamp(i.created)}, ${i.isDeleted})""")
     } yield ()
 
-  def deleteAllExpired: Fox[Unit] = {
+  def deleteAllExpired(): Fox[Unit] = {
     val q = for {
       row <- collection if notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis)
     } yield isDeletedColumn(row)

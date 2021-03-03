@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import org.joda.time.DateTime
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsValue, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -12,7 +12,7 @@ import utils.{ObjectId, SQLClient, SQLDAO}
 import scala.concurrent.ExecutionContext
 
 case class TimeSpanRequest(users: List[String], start: Long, end: Long)
-object TimeSpanRequest { implicit val timeSpanRequest = Json.format[TimeSpanRequest] }
+object TimeSpanRequest { implicit val timeSpanRequest: OFormat[TimeSpanRequest] = Json.format[TimeSpanRequest] }
 
 case class TimeSpan(
     _id: ObjectId,
@@ -26,24 +26,24 @@ case class TimeSpan(
 ) {
   def createdAsDateTime = new DateTime(created)
 
-  def addTime(duration: Long, timestamp: Long) =
+  def addTime(duration: Long, timestamp: Long): TimeSpan =
     this.copy(lastUpdate = timestamp, time = time + duration, numberOfUpdates = this.numberOfUpdates + 1)
 }
 
 object TimeSpan {
 
-  def groupByMonth(timeSpan: TimeSpan) =
+  def groupByMonth(timeSpan: TimeSpan): Month =
     Month(timeSpan.createdAsDateTime.getMonthOfYear, timeSpan.createdAsDateTime.getYear)
 
-  def groupByWeek(timeSpan: TimeSpan) =
+  def groupByWeek(timeSpan: TimeSpan): Week =
     Week(timeSpan.createdAsDateTime.getWeekOfWeekyear, timeSpan.createdAsDateTime.getWeekyear)
 
-  def groupByDay(timeSpan: TimeSpan) =
+  def groupByDay(timeSpan: TimeSpan): Day =
     Day(timeSpan.createdAsDateTime.getDayOfMonth,
         timeSpan.createdAsDateTime.getMonthOfYear,
         timeSpan.createdAsDateTime.getYear)
 
-  def createFrom(start: Long, end: Long, _user: ObjectId, _annotation: Option[ObjectId]) =
+  def createFrom(start: Long, end: Long, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
     TimeSpan(ObjectId.generate, _user, _annotation, time = end - start, lastUpdate = end, created = start)
 
 }
@@ -96,7 +96,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           .as[(Long, java.sql.Timestamp, String, String, String, String, String, String)])
     } yield formatTimespanTuples(tuples)
 
-  def formatTimespanTuples(
+  private def formatTimespanTuples(
       tuples: Vector[(Long, java.sql.Timestamp, String, String, String, String, String, String)]) = {
 
     def formatTimespanTuple(tuple: (Long, java.sql.Timestamp, String, String, String, String, String, String)) = {
@@ -138,18 +138,18 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findAll(start: Option[Long], end: Option[Long], organizationId: ObjectId): Fox[List[TimeSpan]] =
     for {
-      r <- run(sql"""select #${columnsWithPrefix("t.")} from #${existingCollectionName} t
+      r <- run(sql"""select #${columnsWithPrefix("t.")} from #$existingCollectionName t
               join webknossos.users u on t._user = u._id
               where t.created >= ${new java.sql.Timestamp(start.getOrElse(0))} and t.created <= ${new java.sql.Timestamp(
         end.getOrElse(MAX_TIMESTAMP))}
-              and u._organization = ${organizationId}
+              and u._organization = $organizationId
           """.as[TimespansRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def insertOne(t: TimeSpan): Fox[Unit] =
     for {
-      r <- run(
+      _ <- run(
         sqlu"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
                 values(${t._id.id}, ${t._user.id}, ${t._annotation.map(_.id)}, ${t.time}, ${new java.sql.Timestamp(
           t.lastUpdate)}, ${t.numberOfUpdates}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
@@ -157,7 +157,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def updateOne(t: TimeSpan): Fox[Unit] =
     for { //note that t.created is skipped
-      r <- run(sqlu"""update webknossos.timespans
+      _ <- run(sqlu"""update webknossos.timespans
                 set
                   _user = ${t._user.id},
                   _annotation = ${t._annotation.map(_.id)},

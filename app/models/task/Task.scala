@@ -250,13 +250,13 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       firstResult <- result.headOption
     } yield (firstResult._1, firstResult._2.getOrElse(0))
 
-  def countOpenInstancesAndTimeByProject: Fox[Map[ObjectId, (Int, Int)]] =
+  def countOpenInstancesAndTimeByProject: Fox[Map[ObjectId, (Int, Long)]] =
     for {
       rowsRaw <- run(sql"""select _project, sum(openInstances), sum(tracingtime)
               from webknossos.tasks_
               group by _project
-           """.as[(String, Int, Option[Int])])
-    } yield rowsRaw.toList.map(r => (ObjectId(r._1), (r._2, r._3.getOrElse(0)))).toMap
+           """.as[(String, Int, Option[Long])])
+    } yield rowsRaw.toList.map(r => (ObjectId(r._1), (r._2, r._3.getOrElse(0L)))).toMap
 
   def listExperienceDomains(organizationId: ObjectId): Fox[List[String]] =
     for {

@@ -133,7 +133,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   object GoogleAnalytics {
-    val trackingID: String = get[String]("googleAnalytics.trackingID")
+    val trackingId: String = get[String]("googleAnalytics.trackingId")
   }
 
   object SlackNotifications {

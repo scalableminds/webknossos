@@ -29,9 +29,7 @@ class TimeController @Inject()(userService: UserService,
         users <- userDAO.findAll
         filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
         js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
-      } yield {
-        Ok(js)
-      }
+      } yield Ok(js)
     }
 
   //list user with working hours > 0 (only one user is also possible)
@@ -49,9 +47,7 @@ class TimeController @Inject()(userService: UserService,
             .map(email => userService.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
         _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
-      } yield {
-        Ok(js)
-      }
+      } yield Ok(js)
     }
 
   def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long): Action[AnyContent] =
@@ -62,18 +58,14 @@ class TimeController @Inject()(userService: UserService,
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user == request.identity) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
-      } yield {
-        Ok(js)
-      }
+      } yield Ok(js)
     }
 
-  //helper methods
-
-  def loggedTimeForUserListByMonth(users: List[User],
-                                   year: Int,
-                                   month: Int,
-                                   startDay: Option[Int],
-                                   endDay: Option[Int]): Fox[JsValue] = {
+  private def loggedTimeForUserListByMonth(users: List[User],
+                                           year: Int,
+                                           month: Int,
+                                           startDay: Option[Int],
+                                           endDay: Option[Int]): Fox[JsValue] = {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
 
@@ -98,7 +90,7 @@ class TimeController @Inject()(userService: UserService,
     Fox.combined(futureJsObjects).map(jsObjectList => Json.toJson(jsObjectList))
   }
 
-  def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long): Fox[JsValue] = {
+  private def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long): Fox[JsValue] = {
     lazy val sDate = Calendar.getInstance()
     lazy val eDate = Calendar.getInstance()
 
@@ -108,14 +100,12 @@ class TimeController @Inject()(userService: UserService,
     getUserHours(user, sDate, eDate)
   }
 
-  def getUserHours(user: User, startDate: Calendar, endDate: Calendar): Fox[JsObject] =
+  private def getUserHours(user: User, startDate: Calendar, endDate: Calendar): Fox[JsObject] =
     for {
       userJs <- userService.compactWrites(user)
       timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,
                                                   Some(startDate.getTimeInMillis),
                                                   Some(endDate.getTimeInMillis))
-    } yield {
-      Json.obj("user" -> userJs, "timelogs" -> timeJs)
-    }
+    } yield Json.obj("user" -> userJs, "timelogs" -> timeJs)
 
 }

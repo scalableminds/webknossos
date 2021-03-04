@@ -31,7 +31,7 @@ class DataSourceRepository @Inject()(
   def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      _ = removeAll
+      _ = removeAll()
       _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
       _ <- webKnossosServer.reportDataSources(dataSources)
     } yield ()

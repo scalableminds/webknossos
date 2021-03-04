@@ -17,11 +17,11 @@ import scala.util.{Success, Try}
  */
 
 case class CombinedAuthenticator(actualAuthenticator: StorableAuthenticator) extends StorableAuthenticator {
-  def id = actualAuthenticator.id
+  def id: String = actualAuthenticator.id
   override type Value = Cookie
   override type Settings = this.type
 
-  override def loginInfo = actualAuthenticator.loginInfo
+  override def loginInfo: LoginInfo = actualAuthenticator.loginInfo
   override def isValid: Boolean = actualAuthenticator.isValid
 }
 

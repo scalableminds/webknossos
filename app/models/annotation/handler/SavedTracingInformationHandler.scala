@@ -30,7 +30,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
       val id = formatHash(annotation.id)
-      normalize(s"${dataSetName}__${task}__${userName}__${id}")
+      normalize(s"${dataSetName}__${task}__${userName}__$id")
     }
 
   def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =

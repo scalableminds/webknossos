@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.image.Color
 import com.scalableminds.webknossos.datastore.geometry.{NamedBoundingBox => ProtoBoundingBox}
@@ -17,4 +17,4 @@ case class NamedBoundingBox(id: Int,
   def toProto: ProtoBoundingBox = ProtoBoundingBox(id, name, isVisible, convertColorOpt(color), boundingBox)
 }
 
-object NamedBoundingBox { implicit val jsonFormat = Json.format[NamedBoundingBox] }
+object NamedBoundingBox { implicit val jsonFormat: OFormat[NamedBoundingBox] = Json.format[NamedBoundingBox] }

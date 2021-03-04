@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
 import javax.inject.Inject
-import models.analytics.{AnalyticsDAO, AnalyticsEntry}
+import models.analytics.AnalyticsService
 import models.binary.DataStoreRpcClient
 import models.user.{MultiUserDAO, User}
 import oxalis.security.WkEnv
@@ -17,8 +17,8 @@ import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(analyticsDAO: AnalyticsDAO,
-                            multiUserDAO: MultiUserDAO,
+class Application @Inject()(multiUserDAO: MultiUserDAO,
+                            analyticsService: AnalyticsService,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
                             sil: Silhouette[WkEnv],
@@ -49,8 +49,8 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
       case _ => Fox.successful(None)
     }
 
-  def analytics(namespace: String): Action[JsValue] = sil.UserAwareAction(parse.json(1024 * 1024)) { implicit request =>
-    analyticsDAO.insertOne(AnalyticsEntry(ObjectId.generate, request.identity.map(_._id), namespace, request.body))
+  def trackAnalyticsEvent: Action[JsValue] = sil.UserAwareAction { implicit request =>
+    analyticsService.track(frontendAnalyticsEvent)
     Ok
   }
 

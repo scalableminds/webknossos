@@ -712,7 +712,7 @@ class TracingApi {
   }
 
   /**
-   * Starts an animation to center the given position.
+   * Starts an animation to center the given position. See setCameraPosition for a non-animated version of this function.
    *
    * @param position - Vector3
    * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
@@ -779,7 +779,7 @@ class TracingApi {
   }
 
   /**
-   * Sets the current camera position.
+   * Sets the current camera position. See centerPositionAnimated for an animated version of this function.
    *
    * @example
    * api.tracing.setCameraPosition([100, 100, 100])

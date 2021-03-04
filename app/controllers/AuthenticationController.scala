@@ -12,12 +12,9 @@ import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
-import models.binary.DataStoreDAO
 import models.organization.{OrganizationDAO, OrganizationService}
-import models.team._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
@@ -39,10 +36,7 @@ class AuthenticationController @Inject()(
     actorSystem: ActorSystem,
     credentialsProvider: CredentialsProvider,
     passwordHasher: PasswordHasher,
-    initialDataService: InitialDataService,
     userService: UserService,
-    dataStoreDAO: DataStoreDAO,
-    teamDAO: TeamDAO,
     organizationService: OrganizationService,
     inviteService: InviteService,
     inviteDAO: InviteDAO,
@@ -52,7 +46,6 @@ class AuthenticationController @Inject()(
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
-    rpc: RPC,
     conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)

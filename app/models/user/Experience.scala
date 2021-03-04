@@ -1,6 +1,6 @@
 package models.user
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.breakOut
 import scala.language.implicitConversions
@@ -12,9 +12,9 @@ import scala.language.implicitConversions
   */
 case class Experience(domain: String, value: Int) {
 
-  override def toString = if (isEmpty) "" else s"$domain: $value"
+  override def toString: String = if (isEmpty) "" else s"$domain: $value"
 
-  def isEmpty = domain == "" && value == 0
+  def isEmpty: Boolean = domain == "" && value == 0
 
   def toMap: Map[String, Int] =
     if (isEmpty)
@@ -24,7 +24,7 @@ case class Experience(domain: String, value: Int) {
 }
 
 object Experience {
-  implicit val experienceFormat = Json.format[Experience]
+  implicit val experienceFormat: OFormat[Experience] = Json.format[Experience]
 
   type Experiences = Map[String, Int]
 
@@ -33,7 +33,7 @@ object Experience {
       case (domain, value) => Experience(domain, value)
     }(breakOut)
 
-  def empty = Experience("", 0)
+  def empty: Experience = Experience("", 0)
 
-  def fromForm(domain: String, value: Int) = Experience(domain.trim, value)
+  def fromForm(domain: String, value: Int): Experience = Experience(domain.trim, value)
 }

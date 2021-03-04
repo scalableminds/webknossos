@@ -4,9 +4,8 @@ import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services._
-import play.api.{Configuration, Environment}
 
-class DataStoreModule(environment: Environment, configuration: Configuration) extends AbstractModule {
+class DataStoreModule extends AbstractModule {
 
   val system: ActorSystem = ActorSystem("webknossos-datastore")
 

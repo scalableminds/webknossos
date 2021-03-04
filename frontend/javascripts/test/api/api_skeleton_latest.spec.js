@@ -28,6 +28,17 @@ test("getActiveTree should get the active tree id", t => {
   t.is(api.tracing.getActiveTreeId(), 2);
 });
 
+test("getActiveGroupId should get the active group id", t => {
+  const api = t.context.api;
+  t.is(api.tracing.getActiveGroupId(), null);
+});
+
+test("setActiveGroupId should set the active group id", t => {
+  const api = t.context.api;
+  api.tracing.setActiveGroup(3);
+  t.is(api.tracing.getActiveGroupId(), 3);
+});
+
 test("getAllNodes should get a list of all nodes", t => {
   const api = t.context.api;
   const nodes = api.tracing.getAllNodes();
@@ -62,6 +73,13 @@ test("getCameraPosition should return the current camera position", t => {
   const api = t.context.api;
   const cameraPosition = api.tracing.getCameraPosition();
   t.deepEqual(cameraPosition, [1, 2, 3]);
+});
+
+test("setCameraPosition should set the current camera position", t => {
+  const api = t.context.api;
+  api.tracing.setCameraPosition([7, 8, 9]);
+  const cameraPosition = api.tracing.getCameraPosition();
+  t.deepEqual(cameraPosition, [7, 8, 9]);
 });
 
 test("Data Api: getLayerNames should get an array of all layer names", t => {

@@ -45,7 +45,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
         <Button
           key={layerName}
           onClick={() => handleStartExport(layerName)}
-          // disabled={startedExports.includes(layerName)} //TODO re-enable before merge, this is just to make development easier
+          disabled={startedExports.includes(layerName)}
         >
           {layerName}
           {startedExports.includes(layerName) ? " (started)" : null}
@@ -65,7 +65,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
       type="error"
       message={`The volume of the selected bounding box (${volume} vx) is too large. Tiff export is only supported for up to ${
         features().exportTiffMaxVolumeMVx
-      } Mvx.`}
+      } Megavoxels.`}
     />
   ) : null;
   const edgeLengthExceededMessage = edgeLengthExceeded ? (

@@ -143,31 +143,44 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
               Toast.success(messages["dataset.upload_success"]);
               trackAction("Upload dataset");
               await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+              let maybeError;
               if (this.state.needsConversion) {
-                await startJob(formValues.name, activeUser.organization, formValues.scale);
-                Toast.info(
-                  <React.Fragment>
-                    The conversion for the uploaded dataset was started.
-                    <br />
-                    Click{" "}
-                    <a
-                      target="_blank"
-                      href="https://github.com/scalableminds/webknossos-cuber/"
-                      rel="noopener noreferrer"
-                    >
-                      here
-                    </a>{" "}
-                    to see all running jobs.
-                  </React.Fragment>,
+                try {
+                  await startJob(formValues.name, activeUser.organization, formValues.scale);
+                } catch (error) {
+                  maybeError = error;
+                }
+                if (maybeError == null) {
+                  Toast.info(
+                    <React.Fragment>
+                      The conversion for the uploaded dataset was started.
+                      <br />
+                      Click{" "}
+                      <a
+                        target="_blank"
+                        href="https://github.com/scalableminds/webknossos-cuber/"
+                        rel="noopener noreferrer"
+                      >
+                        here
+                      </a>{" "}
+                      to see all running jobs.
+                    </React.Fragment>,
+                  );
+                } else {
+                  Toast.error(
+                    "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
+                  );
+                }
+              }
+              this.setState({ isUploading: false });
+              if (maybeError == null) {
+                form.setFieldsValue({ name: null, zipFile: [] });
+                this.props.onUploaded(
+                  activeUser.organization,
+                  formValues.name,
+                  this.state.needsConversion,
                 );
               }
-              form.setFieldsValue({ name: null, zipFile: [] });
-              this.setState({ isUploading: false });
-              this.props.onUploaded(
-                activeUser.organization,
-                formValues.name,
-                this.state.needsConversion,
-              );
             },
             () => {
               Toast.error(messages["dataset.upload_failed"]);

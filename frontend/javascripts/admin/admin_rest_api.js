@@ -125,6 +125,13 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
   });
 }
 
+export function trackAnalytics(eventType: string, eventProperties: Object): void {
+  Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
+    method: "POST",
+    data: eventProperties,
+  });
+}
+
 // ### Users
 export async function loginUser(formValues: { email: string, password: string }): Promise<Object> {
   await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
@@ -1418,7 +1425,6 @@ type IsosurfaceRequest = {
   voxelDimensions: Vector3,
   cubeSize: Vector3,
   scale: Vector3,
-  isInitialRequest: boolean,
 };
 
 export function computeIsosurface(
@@ -1426,15 +1432,7 @@ export function computeIsosurface(
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const {
-    position,
-    zoomStep,
-    segmentId,
-    voxelDimensions,
-    cubeSize,
-    scale,
-    isInitialRequest,
-  } = isosurfaceRequest;
+  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,
@@ -1454,7 +1452,6 @@ export function computeIsosurface(
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
           scale,
-          isInitialRequest,
         },
       },
     );

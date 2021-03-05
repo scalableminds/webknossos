@@ -6,14 +6,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
 import javax.inject.Inject
-import models.analytics.AnalyticsService
+import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.binary.DataStoreRpcClient
 import models.user.{MultiUserDAO, User}
 import oxalis.security.WkEnv
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
+import utils.{SQLClient, SimpleSQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -22,7 +22,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
                             sil: Silhouette[WkEnv],
-                            rpc: RPC)(implicit ec: ExecutionContext)
+                            rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -49,9 +49,12 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       case _ => Fox.successful(None)
     }
 
-  def trackAnalyticsEvent: Action[JsValue] = sil.UserAwareAction { implicit request =>
-    analyticsService.track(frontendAnalyticsEvent)
-    Ok
+  def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {
+    implicit request =>
+      request.identity.foreach { user =>
+        analyticsService.track(FrontendAnalyticsEvent(user, eventType, request.body))
+      }
+      Ok
   }
 
   def features: Action[AnyContent] = sil.UserAwareAction {

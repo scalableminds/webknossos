@@ -499,8 +499,8 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 initialValue: [],
                 onChange: this.onFilesChange,
               })(
-                // $FlowIssue[prop-missing] Flow doesn't know that onChange and fileList are passed by getFieldDecorator
-                <FileUploadArea />,
+                // Provide null values to satisfy flow (overwritten by getFieldDecorator)
+                <FileUploadArea onChange={_files => {}} fileList={[]} />,
               )}
             </FormItem>
             <FormItem style={{ marginBottom: 0 }}>
@@ -516,7 +516,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   }
 }
 
-const baseStyle = {
+const baseStyle: Object = {
   flex: 1,
   display: "flex",
   flexDirection: "column",
@@ -534,15 +534,15 @@ const baseStyle = {
   cursor: "pointer",
 };
 
-const activeStyle = {
+const activeStyle: Object = {
   borderColor: "#2196f3",
 };
 
-const acceptStyle = {
+const acceptStyle: Object = {
   borderColor: "#00e676",
 };
 
-const rejectStyle = {
+const rejectStyle: Object = {
   borderColor: "#ff1744",
 };
 
@@ -559,7 +559,7 @@ function FileUploadArea({ fileList, onChange }) {
   });
   const acceptedFiles = fileList;
 
-  const style = useMemo(
+  const style: Object = useMemo(
     () => ({
       ...baseStyle,
       ...(isDragActive ? activeStyle : {}),

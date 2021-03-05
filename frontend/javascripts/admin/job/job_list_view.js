@@ -133,7 +133,7 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.state === "SUCCESS") return stateString;
     else {
       return (
-        <Tooltip title="Something whent wrong when executing this job. Feel free to contact us if you need assistance.">
+        <Tooltip title="Something went wrong when executing this job. Feel free to contact us if you need assistance.">
           {stateString}
         </Tooltip>
       );

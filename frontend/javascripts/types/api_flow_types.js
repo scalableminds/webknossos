@@ -335,6 +335,7 @@ export type APIProjectCreator = APIProjectTypeBase & {
 
 export type APIProjectWithAssignments = APIProject & {
   +numberOfOpenAssignments: number,
+  +tracingTime: number,
 };
 
 export type APITask = {

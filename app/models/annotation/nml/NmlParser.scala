@@ -184,7 +184,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         Left(bb)
       } else {
         val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
-        Right(NamedBoundingBox(newId, Some("task bounding box"), None, Some(getRandomColor()), bb))
+        Right(NamedBoundingBox(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
       }
     }
 

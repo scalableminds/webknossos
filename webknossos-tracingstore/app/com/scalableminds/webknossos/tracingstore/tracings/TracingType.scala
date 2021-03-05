@@ -7,5 +7,5 @@ object TracingType extends Enumeration {
 
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
 
-  implicit val format = Format(Reads.enumNameReads(TracingType), Writes.enumNameWrites)
+  implicit val format: Format[TracingType.Value] = Format(Reads.enumNameReads(TracingType), Writes.enumNameWrites)
 }

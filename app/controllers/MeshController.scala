@@ -5,10 +5,10 @@ import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.AnnotationDAO
 import models.mesh.{MeshDAO, MeshInfo, MeshInfoParameters, MeshService}
 import oxalis.security.WkEnv
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer}
 import utils.ObjectId
-
 import javax.inject.Inject
+
 import scala.concurrent.ExecutionContext
 
 class MeshController @Inject()(meshDAO: MeshDAO,
@@ -18,7 +18,7 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     extends Controller
     with FoxImplicits {
 
-  def get(id: String) = sil.UserAwareAction.async { implicit request =>
+  def get(id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
       meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
@@ -27,33 +27,35 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     } yield JsonOk(meshInfoJs)
   }
 
-  def create = sil.SecuredAction.async(validateJson[MeshInfoParameters]) { implicit request =>
-    val params = request.body
-    val _id = ObjectId.generate
-    for {
-      _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed" ~> FORBIDDEN
-      _ <- meshDAO
-        .insertOne(MeshInfo(_id, params.annotationId, params.description, params.position)) ?~> "mesh.create.failed"
-      inserted <- meshDAO.findOne(_id) ?~> "mesh.notFound"
-      js <- meshService.publicWrites(inserted) ?~> "mesh.write.failed"
-    } yield Ok(js)
+  def create: Action[MeshInfoParameters] = sil.SecuredAction.async(validateJson[MeshInfoParameters]) {
+    implicit request =>
+      val params = request.body
+      val _id = ObjectId.generate
+      for {
+        _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- meshDAO
+          .insertOne(MeshInfo(_id, params.annotationId, params.description, params.position)) ?~> "mesh.create.failed"
+        inserted <- meshDAO.findOne(_id) ?~> "mesh.notFound"
+        js <- meshService.publicWrites(inserted) ?~> "mesh.write.failed"
+      } yield Ok(js)
   }
 
-  def update(id: String) = sil.SecuredAction.async(validateJson[MeshInfoParameters]) { implicit request =>
-    val params = request.body
-    for {
-      idValidated <- ObjectId.parse(id)
-      meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
-      _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
-      _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed" ~> FORBIDDEN
-      _ <- meshDAO
-        .updateOne(idValidated, params.annotationId, params.description, params.position) ?~> "mesh.update.failed"
-      updated <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
-      js <- meshService.publicWrites(updated) ?~> "mesh.write.failed"
-    } yield Ok(js)
+  def update(id: String): Action[MeshInfoParameters] = sil.SecuredAction.async(validateJson[MeshInfoParameters]) {
+    implicit request =>
+      val params = request.body
+      for {
+        idValidated <- ObjectId.parse(id)
+        meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
+        _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- meshDAO
+          .updateOne(idValidated, params.annotationId, params.description, params.position) ?~> "mesh.update.failed"
+        updated <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
+        js <- meshService.publicWrites(updated) ?~> "mesh.write.failed"
+      } yield Ok(js)
   }
 
-  def getData(id: String) = sil.SecuredAction.async { implicit request =>
+  def getData(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
       meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
@@ -62,7 +64,7 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     } yield Ok(data)
   }
 
-  def updateData(id: String) = sil.SecuredAction.async(parse.raw) { implicit request =>
+  def updateData(id: String): Action[RawBuffer] = sil.SecuredAction.async(parse.raw) { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
       meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND
@@ -72,7 +74,7 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     } yield Ok
   }
 
-  def delete(id: String) = sil.SecuredAction.async { implicit request =>
+  def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
       meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound" ~> NOT_FOUND

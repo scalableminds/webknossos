@@ -6,10 +6,10 @@ import utils.EnumUtils
 object AnnotationState extends Enumeration {
   type AnnotationState = Value
 
-  val Cancelled = Value("Cancelled")
-  val Active = Value("Active")
-  val Finished = Value("Finished")
-  val Initializing = Value("Initializing")
+  val Cancelled: AnnotationState = Value("Cancelled")
+  val Active: AnnotationState = Value("Active")
+  val Finished: AnnotationState = Value("Finished")
+  val Initializing: AnnotationState = Value("Initializing")
 
   implicit val enumReads: Reads[AnnotationState] = EnumUtils.enumReads(AnnotationState)
 

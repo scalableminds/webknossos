@@ -6,10 +6,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation._
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
-import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing
@@ -112,7 +112,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         timeSpan.addTime(duration, timestamp)
       } else {
         logger.info(
-          s"Not updating previous timespan due to negative duration ${duration} ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=${this})")
+          s"Not updating previous timespan due to negative duration $duration ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=$this)")
         timeSpan
       }
     }
@@ -150,7 +150,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     val duration = current - last.lastUpdate
     if (duration < 0) {
       logger.info(
-        s"Negative timespan duration ${duration} ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=${this})")
+        s"Negative timespan duration $duration ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=$this)")
     }
     duration < MaxTracingPause
   }

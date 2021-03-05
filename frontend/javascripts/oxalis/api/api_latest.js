@@ -624,6 +624,25 @@ class TracingApi {
     return lengthAcc;
   }
 
+  measureTreeLengthInVx(treeId: number): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const tree = skeletonTracing.trees[treeId];
+    if (!tree) {
+      throw new Error(`Tree with id ${treeId} not found.`);
+    }
+
+    // Pre-allocate vectors
+
+    let lengthAcc = 0;
+    for (const edge of tree.edges.all()) {
+      const sourceNode = tree.nodes.get(edge.source);
+      const targetNode = tree.nodes.get(edge.target);
+      lengthAcc += V3.length(V3.sub(sourceNode.position, targetNode.position));
+    }
+
+    return lengthAcc;
+  }
+
   measureAllTrees(): number {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
 

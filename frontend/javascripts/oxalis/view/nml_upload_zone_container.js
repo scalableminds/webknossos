@@ -235,6 +235,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         onDrop={this.onDrop}
         onDragEnter={this.onDragEnter}
         onDragLeave={this.onDragLeave}
+        noKeyboard
       >
         {({ getRootProps }) => (
           <div

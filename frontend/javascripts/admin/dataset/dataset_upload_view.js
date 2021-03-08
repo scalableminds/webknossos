@@ -7,7 +7,7 @@ import _ from "lodash";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { finishDatasetUpload, createResumableUpload, startJob } from "admin/admin_rest_api";
+import { finishDatasetUpload, createResumableUpload, startCubingJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -141,7 +141,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
               trackAction("Upload dataset");
               await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
               if (this.state.needsConversion) {
-                await startJob(formValues.name, activeUser.organization, formValues.scale);
+                await startCubingJob(formValues.name, activeUser.organization, formValues.scale);
                 Toast.info(
                   <React.Fragment>
                     The conversion for the uploaded dataset was started.

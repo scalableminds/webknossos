@@ -125,7 +125,9 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
   });
 }
 
-export function trackAnalytics(eventType: string, eventProperties: Object): void {
+export function sendAnalyticsEvent(eventType: string, eventProperties: Object): void {
+  // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
+  // since failing analytics events should not have an impact on the application logic.
   Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
     method: "POST",
     data: eventProperties,

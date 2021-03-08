@@ -31,7 +31,7 @@ import {
   take,
 } from "oxalis/model/sagas/effect-generators";
 import { stlIsosurfaceConstants } from "oxalis/view/right-menu/meshes_view";
-import { computeIsosurface, trackAnalytics } from "admin/admin_rest_api";
+import { computeIsosurface, sendAnalyticsEvent } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
@@ -284,7 +284,7 @@ function* maybeLoadIsosurface(
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
 
   if (isInitialRequest) {
-    trackAnalytics("request_isosurface", { mode: useDataStore ? "view" : "annotation" });
+    sendAnalyticsEvent("request_isosurface", { mode: useDataStore ? "view" : "annotation" });
   }
 
   let retryCount = 0;

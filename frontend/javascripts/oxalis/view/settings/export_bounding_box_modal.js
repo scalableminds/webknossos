@@ -10,10 +10,11 @@ import * as Utils from "libs/utils";
 type Props = {
   destroy: () => void,
   dataset: APIDataset,
+  hasVolumeTracing: boolean,
   boundingBox: BoundingBoxType,
 };
 
-const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
+const ExportBoundingBoxModal = ({ destroy, dataset, hasVolumeTracing, boundingBox }: Props) => {
   const [startedExports, setStartedExports] = useState([]);
 
   const handleClose = () => {
@@ -31,12 +32,15 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
   };
 
   const layerNames = dataset.dataSource.dataLayers.map(layer => {
-    const nameIfColor = layer.category === "color" ? layer.name : null;
+    const nameIfFromDataset = layer.category === "color" || !hasVolumeTracing ? layer.name : null;
     const nameIfVolume =
-      layer.category === "segmentation" && layer.fallbackLayerInfo && layer.fallbackLayerInfo.name
+      hasVolumeTracing &&
+      layer.category === "segmentation" &&
+      layer.fallbackLayerInfo &&
+      layer.fallbackLayerInfo.name
         ? layer.fallbackLayerInfo.name
         : null;
-    return nameIfColor || nameIfVolume;
+    return nameIfFromDataset || nameIfVolume;
   });
 
   const exportButtonsList = layerNames.map(layerName =>

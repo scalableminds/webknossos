@@ -190,7 +190,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
-        _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
         _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
         command = "export_tiff"
         exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}.zip"

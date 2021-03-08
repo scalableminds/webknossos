@@ -11,12 +11,13 @@ import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, RunJobEvent}
+import models.annotation.TracingStoreRpcClient
 import models.organization.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Failure, Full}
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -125,10 +126,12 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
   def runJob(command: String, commandArgs: JsObject, owner: User): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "jobs.disabled"
+      argsWrapped = Json.obj("kwargs" -> commandArgs)
+      argsWithToken = Json.obj("kwargs" -> (commandArgs ++ Json.obj("webknossos_token" -> TracingStoreRpcClient.webKnossosToken)))
       result <- flowerRpc(s"/api/task/async-apply/tasks.$command")
-        .postWithJsonResponse[JsValue, Map[String, JsValue]](commandArgs)
+        .postWithJsonResponse[JsValue, Map[String, JsValue]](argsWithToken)
       celeryJobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
-      job = Job(ObjectId.generate, owner._id, command, commandArgs, celeryJobId)
+      job = Job(ObjectId.generate, owner._id, command, argsWrapped, celeryJobId)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
@@ -173,9 +176,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                                                                      organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
         command = "tiff_cubing"
-        commandArgs = Json.obj(
-          "kwargs" -> Json
-            .obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale))
+        commandArgs = Json.obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale)
 
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
         js <- jobService.publicWrites(job)
@@ -193,13 +194,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
         _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
         _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
         command = "export_tiff"
-        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}.zip"
-        commandArgs = Json.obj(
-          "kwargs" -> Json.obj("organization_name" -> organizationName,
+        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__$layerName.zip"
+        commandArgs = Json.obj("organization_name" -> organizationName,
                                "dataset_name" -> dataSetName,
                                "layer_name" -> layerName,
                                "bbox" -> bbox,
-                               "export_file_name" -> exportFileName))
+                               "export_file_name" -> exportFileName,
+                               "volume_tracing_id" -> "c100dd44-c56b-486f-9e08-bf40d2ddd3a2")
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
         js <- jobService.publicWrites(job)
       } yield Ok(js)

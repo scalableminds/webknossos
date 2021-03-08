@@ -16,6 +16,11 @@ trait Formatter {
     sdf.format(date)
   }
 
+  def formatDateForFilename(date: Date): String = {
+    val sdf = new SimpleDateFormat("YYYY-MM-DD_HH-mm")
+    sdf.format(date)
+  }
+
   def formatHash(id: String): String =
     id.takeRight(6)
 

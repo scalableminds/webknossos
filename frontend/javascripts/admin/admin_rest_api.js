@@ -53,7 +53,7 @@ import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import DataLayer from "oxalis/model/data_layer";
@@ -794,18 +794,34 @@ export async function getJobs(): Promise<Array<APIJob>> {
     id: job.id,
     type: job.command,
     datasetName: job.commandArgs.kwargs.dataset_name,
-    state: job.celeryInfo.state,
+    organizationName: job.commandArgs.kwargs.organization_name,
+    layerName: job.commandArgs.kwargs.layer_name,
+    exportFileName: job.commandArgs.kwargs.export_file_name,
+    state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
 }
 
-export async function startJob(
-  jobName: string,
-  organization: string,
+export async function startCubingJob(
+  datasetName: string,
+  organizationName: string,
   scale: Vector3,
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
-    `/api/jobs/run/cubing/${organization}/${jobName}?scale=${scale.toString()}`,
+    `/api/jobs/run/cubing/${organizationName}/${datasetName}?scale=${scale.toString()}`,
+  );
+}
+
+export async function startTiffExportJob(
+  datasetName: string,
+  organizationName: string,
+  layerName: string,
+  bbox: Vector6,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}/${layerName}?bbox=${bbox.join(
+      ",",
+    )}`,
   );
 }
 

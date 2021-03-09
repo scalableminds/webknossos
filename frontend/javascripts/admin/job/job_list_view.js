@@ -86,9 +86,10 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.type === "tiff_cubing" && job.datasetName) {
       return <span>{`Tiff to WKW conversion of ${job.datasetName}`}</span>;
     } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
+      const layerLabel = job.tracingId != null ? "volume annotation" : job.layerName || "a";
       return (
         <span>
-          Tiff export from {job.layerName || "a"} layer of{" "}
+          Tiff export from {layerLabel} layer of{" "}
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>

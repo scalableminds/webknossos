@@ -2,53 +2,93 @@
 import { Button, Modal, Alert } from "antd";
 import React, { useState } from "react";
 import type { BoundingBoxType } from "oxalis/constants";
-import type { APIDataset } from "types/api_flow_types";
+import type { VolumeTracing } from "oxalis/store";
+import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import { startTiffExportJob } from "admin/admin_rest_api";
+import Model from "oxalis/model";
 import features from "features";
 import * as Utils from "libs/utils";
 
 type Props = {
   destroy: () => void,
+  volumeTracing: ?VolumeTracing,
   dataset: APIDataset,
   boundingBox: BoundingBoxType,
 };
 
-const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox }: Props) => {
+const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }: Props) => {
   const [startedExports, setStartedExports] = useState([]);
 
   const handleClose = () => {
     destroy();
   };
 
-  const handleStartExport = layerName => {
-    startTiffExportJob(
+  const exportKey = layerInfos => (layerInfos.layerName || "") + (layerInfos.tracingId || "");
+
+  const handleStartExport = async layerInfos => {
+    setStartedExports(startedExports.concat(exportKey(layerInfos)));
+    if (layerInfos.tracingId) {
+      await Model.ensureSavedState();
+    }
+    await startTiffExportJob(
       dataset.name,
       dataset.owningOrganization,
-      layerName,
       Utils.computeArrayFromBoundingBox(boundingBox),
+      layerInfos.layerName,
+      layerInfos.tracingId,
     );
-    setStartedExports(startedExports.concat(layerName));
   };
 
-  const layerNames = dataset.dataSource.dataLayers.map(layer => {
-    const nameIfColor = layer.category === "color" ? layer.name : null;
-    const nameIfVolume =
-      layer.category === "segmentation" && layer.fallbackLayerInfo && layer.fallbackLayerInfo.name
-        ? layer.fallbackLayerInfo.name
+  const hasMag1 = (layer: APIDataLayer) => layer.resolutions.map(r => Math.max(...r)).includes(1);
+
+  const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
+    const infosIfFromDataset =
+      layer.category === "color" || volumeTracing == null
+        ? {
+            displayName: layer.name,
+            layerName: layer.name,
+            tracingId: null,
+            tracingVersion: null,
+            hasMag1: hasMag1(layer),
+          }
         : null;
-    return nameIfColor || nameIfVolume;
+    const infosIfVolumeWithFallback =
+      layer.category === "segmentation" &&
+      volumeTracing != null &&
+      layer.fallbackLayerInfo &&
+      layer.fallbackLayerInfo.name
+        ? {
+            displayName: "Volume Annotation with fallback segmentation",
+            layerName: layer.fallbackLayerInfo.name,
+            tracingId: volumeTracing.tracingId,
+            tracingVersion: volumeTracing.version,
+            hasMag1: hasMag1(layer),
+          }
+        : null;
+    const infosIfVolumeWithoutFallback =
+      layer.category === "segmentation" && volumeTracing != null && !layer.fallbackLayerInfo
+        ? {
+            displayName: "Volume Annotation",
+            layerName: null,
+            tracingId: volumeTracing.tracingId,
+            tracingVersion: volumeTracing.version,
+            hasMag1: hasMag1(layer),
+          }
+        : null;
+    return infosIfFromDataset || infosIfVolumeWithFallback || infosIfVolumeWithoutFallback;
   });
 
-  const exportButtonsList = layerNames.map(layerName =>
-    layerName ? (
+  const exportButtonsList = allLayerInfos.map(layerInfos =>
+    layerInfos ? (
       <p>
         <Button
-          key={layerName}
-          onClick={() => handleStartExport(layerName)}
-          disabled={startedExports.includes(layerName)}
+          key={exportKey(layerInfos)}
+          onClick={() => handleStartExport(layerInfos)}
+          disabled={startedExports.includes(exportKey(layerInfos)) || !layerInfos.hasMag1}
         >
-          {layerName}
-          {startedExports.includes(layerName) ? " (started)" : null}
+          {layerInfos.displayName}
+          {!layerInfos.hasMag1 ? " (resolution 1 missing)" : ""}
+          {startedExports.includes(exportKey(layerInfos)) ? " (started)" : ""}
         </Button>
       </p>
     ) : null,

@@ -127,11 +127,11 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "jobs.disabled"
       argsWrapped = Json.obj("kwargs" -> commandArgs)
-      argsWithToken = Json.obj("kwargs" -> (commandArgs ++ Json.obj("webknossos_token" -> TracingStoreRpcClient.webKnossosToken)))
       result <- flowerRpc(s"/api/task/async-apply/tasks.$command")
-        .postWithJsonResponse[JsValue, Map[String, JsValue]](argsWithToken)
+        .postWithJsonResponse[JsValue, Map[String, JsValue]](argsWrapped)
       celeryJobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
-      job = Job(ObjectId.generate, owner._id, command, argsWrapped, celeryJobId)
+      argsWithoutToken = Json.obj("kwargs" -> (commandArgs - "webknossos_token"))
+      job = Job(ObjectId.generate, owner._id, command, argsWithoutToken, celeryJobId)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
@@ -185,8 +185,10 @@ class JobsController @Inject()(jobDAO: JobDAO,
 
   def runTiffExportJob(organizationName: String,
                        dataSetName: String,
-                       layerName: String,
-                       bbox: String): Action[AnyContent] =
+                       bbox: String,
+                       layerName: Option[String],
+                       tracingId: Option[String],
+                       tracingVersion: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
@@ -194,13 +196,17 @@ class JobsController @Inject()(jobDAO: JobDAO,
         _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
         _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
         command = "export_tiff"
-        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__$layerName.zip"
-        commandArgs = Json.obj("organization_name" -> organizationName,
-                               "dataset_name" -> dataSetName,
-                               "layer_name" -> layerName,
-                               "bbox" -> bbox,
-                               "export_file_name" -> exportFileName,
-                               "volume_tracing_id" -> "c100dd44-c56b-486f-9e08-bf40d2ddd3a2")
+        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${tracingId.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
+        commandArgs = Json.obj(
+          "organization_name" -> organizationName,
+          "dataset_name" -> dataSetName,
+          "bbox" -> bbox,
+          "webknossos_token" -> TracingStoreRpcClient.webKnossosToken,
+          "export_file_name" -> exportFileName,
+          "layer_name" -> layerName,
+          "volume_tracing_id" -> tracingId,
+          "volume_tracing_version" -> tracingVersion
+        )
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
         js <- jobService.publicWrites(job)
       } yield Ok(js)

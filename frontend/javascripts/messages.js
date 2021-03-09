@@ -105,7 +105,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
   "tracing.tree_length_notification": (treeName: string, length: string, lengthInVx: number) =>
-    `The tree ${treeName} has a total path length of ${length} (${lengthInVx} vx)`,
+    `The tree ${treeName} has a total path length of ${length} (${lengthInVx})`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""

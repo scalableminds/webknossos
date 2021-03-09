@@ -633,7 +633,10 @@ class TracingApi {
     return result;
   }
 
-  measureTreeLength(treeId: number): number {
+  /**
+   * Measures the length of the given tree and returns the length in nanometer and in voxels.
+   */
+  measureTreeLength(treeId: number): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
     const tree = skeletonTracing.trees[treeId];
     if (!tree) {
@@ -644,47 +647,39 @@ class TracingApi {
 
     // Pre-allocate vectors
 
-    let lengthAcc = 0;
+    let lengthNmAcc = 0;
+    let lengthVxAcc = 0;
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.get(edge.source);
       const targetNode = tree.nodes.get(edge.target);
-      lengthAcc += V3.scaledDist(sourceNode.position, targetNode.position, datasetScale);
+      lengthNmAcc += V3.scaledDist(sourceNode.position, targetNode.position, datasetScale);
+      lengthVxAcc += V3.length(V3.sub(sourceNode.position, targetNode.position));
     }
 
-    return lengthAcc;
+    return [lengthNmAcc, lengthVxAcc];
   }
 
-  measureTreeLengthInVx(treeId: number): number {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    const tree = skeletonTracing.trees[treeId];
-    if (!tree) {
-      throw new Error(`Tree with id ${treeId} not found.`);
-    }
-
-    // Pre-allocate vectors
-
-    let lengthAcc = 0;
-    for (const edge of tree.edges.all()) {
-      const sourceNode = tree.nodes.get(edge.source);
-      const targetNode = tree.nodes.get(edge.target);
-      lengthAcc += V3.length(V3.sub(sourceNode.position, targetNode.position));
-    }
-
-    return lengthAcc;
-  }
-
-  measureAllTrees(): number {
+  /**
+   * Measures the length of all trees and returns the length in nanometer and in voxels.
+   */
+  measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
 
-    const totalLength = _.values(skeletonTracing.trees).reduce(
-      (sum, currentTree) => sum + this.measureTreeLength(currentTree.treeId),
-      0,
-    );
+    let totalLengthNm = 0;
+    let totalLengthVx = 0;
+    _.values(skeletonTracing.trees).forEach(currentTree => {
+      const [lengthNm, lengthVx] = this.measureTreeLength(currentTree.treeId);
+      totalLengthNm += lengthNm;
+      totalLengthVx += lengthVx;
+    });
 
-    return totalLength;
+    return [totalLengthNm, totalLengthVx];
   }
 
-  measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): number {
+  /**
+   * Returns the length of the shortest path between two nodes in nanometer and in voxels.
+   */
+  measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
     const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
       skeletonTracing,
@@ -703,9 +698,14 @@ class TracingApi {
     const datasetScale = Store.getState().dataset.dataSource.scale;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap = {};
+    // The distance map is also maintained in voxel space. This information is only
+    // used when returning the final distance. The actual path finding is only done in
+    // the physical space (nm-based).
+    const distanceMapVx = {};
     const getDistance = nodeId =>
       distanceMap[nodeId] != null ? distanceMap[nodeId] : Number.POSITIVE_INFINITY;
     distanceMap[sourceNode.id] = 0;
+    distanceMapVx[sourceNode.id] = 0;
     // The priority queue saves node id and distance tuples.
     const priorityQueue = new PriorityQueue<[number, number]>({
       comparator: ([_first, firstDistance], [_second, secondDistance]) =>
@@ -718,16 +718,18 @@ class TracingApi {
       // Calculate the distance to all neighbours and update the distances.
       for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
         const neighbourNodeId = source === nextNodeId ? target : source;
-        const neightbourPosition = sourceTree.nodes.get(neighbourNodeId).position;
+        const neighbourPosition = sourceTree.nodes.get(neighbourNodeId).position;
         const neighbourDistance =
-          distance + V3.scaledDist(nextNodePosition, neightbourPosition, datasetScale);
+          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;
+          const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
+          distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }
     }
-    return distanceMap[targetNodeId];
+    return [distanceMap[targetNodeId], distanceMapVx[targetNodeId]];
   }
 
   /**

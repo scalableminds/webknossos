@@ -42,40 +42,29 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }
   const hasMag1 = (layer: APIDataLayer) => layer.resolutions.map(r => Math.max(...r)).includes(1);
 
   const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
-    const infosIfFromDataset =
-      layer.category === "color" || volumeTracing == null
-        ? {
-            displayName: layer.name,
-            layerName: layer.name,
-            tracingId: null,
-            tracingVersion: null,
-            hasMag1: hasMag1(layer),
-          }
-        : null;
-    const infosIfVolumeWithFallback =
-      layer.category === "segmentation" &&
-      volumeTracing != null &&
-      layer.fallbackLayerInfo &&
-      layer.fallbackLayerInfo.name
-        ? {
-            displayName: "Volume Annotation with fallback segmentation",
-            layerName: layer.fallbackLayerInfo.name,
-            tracingId: volumeTracing.tracingId,
-            tracingVersion: volumeTracing.version,
-            hasMag1: hasMag1(layer),
-          }
-        : null;
-    const infosIfVolumeWithoutFallback =
-      layer.category === "segmentation" && volumeTracing != null && !layer.fallbackLayerInfo
-        ? {
-            displayName: "Volume Annotation",
-            layerName: null,
-            tracingId: volumeTracing.tracingId,
-            tracingVersion: volumeTracing.version,
-            hasMag1: hasMag1(layer),
-          }
-        : null;
-    return infosIfFromDataset || infosIfVolumeWithFallback || infosIfVolumeWithoutFallback;
+    if (layer.category === "color" || volumeTracing == null)
+      return {
+        displayName: layer.name,
+        layerName: layer.name,
+        tracingId: null,
+        tracingVersion: null,
+        hasMag1: hasMag1(layer),
+      };
+    if (layer.fallbackLayerInfo != null)
+      return {
+        displayName: "Volume annotation with fallback segmentation",
+        layerName: layer.fallbackLayerInfo.name,
+        tracingId: volumeTracing.tracingId,
+        tracingVersion: volumeTracing.version,
+        hasMag1: hasMag1(layer),
+      };
+    return {
+      displayName: "Volume annotation",
+      layerName: null,
+      tracingId: volumeTracing.tracingId,
+      tracingVersion: volumeTracing.version,
+      hasMag1: hasMag1(layer),
+    };
   });
 
   const exportButtonsList = allLayerInfos.map(layerInfos =>

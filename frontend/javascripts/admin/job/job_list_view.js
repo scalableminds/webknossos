@@ -92,7 +92,8 @@ class JobListView extends React.PureComponent<Props, State> {
           Tiff export from {layerLabel} layer of{" "}
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
-          </Link>
+          </Link>{" "}
+          (Bounding Box {job.boundingBox})
         </span>
       );
     } else {

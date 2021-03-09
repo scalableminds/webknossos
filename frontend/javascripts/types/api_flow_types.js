@@ -552,6 +552,7 @@ export type APIJob = {
   +layerName: ?string,
   +tracingId: ?string,
   +organizationName: ?string,
+  +boundingBox: ?string,
   +type: string,
   +state: string,
   +createdAt: number,

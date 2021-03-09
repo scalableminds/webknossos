@@ -34,7 +34,7 @@ trait RequestLogging extends AbstractRequestLogging {
     def logTimeFormatted(executionTime: Long, request: Request[_], result: Result): Unit = {
       val debugString = s"Request ${request.method} ${request.uri} took ${BigDecimal(executionTime / 1e9)
         .setScale(2, BigDecimal.RoundingMode.HALF_UP)} seconds and was${if (result.header.status != 200) " not "
-      else " "}successfull"
+      else " "}successful"
       logger.info(debugString)
       notifier(debugString)
     }

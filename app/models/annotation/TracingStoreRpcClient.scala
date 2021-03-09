@@ -21,7 +21,7 @@ import net.liftweb.common.Box
 import scala.concurrent.ExecutionContext
 
 object TracingStoreRpcClient {
-  lazy val webKnossosToken = DataStoreRpcClient.webKnossosToken
+  lazy val webKnossosToken: String = DataStoreRpcClient.webKnossosToken
 }
 
 class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: RPC)(implicit ec: ExecutionContext)
@@ -31,7 +31,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
 
   def getSkeletonTracing(tracingId: String, version: Option[Long]): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/skeleton/${tracingId}")
+    rpc(s"${tracingStore.url}/tracings/skeleton/$tracingId")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryStringOptional("version", version.map(_.toString))
       .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
@@ -78,7 +78,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
                                versionString: Option[String] = None,
                                fromTask: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/skeleton/${skeletonTracingId}/duplicate")
+    rpc(s"${tracingStore.url}/tracings/skeleton/$skeletonTracingId/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryStringOptional("version", versionString)
       .addQueryString("fromTask" -> fromTask.toString)
@@ -91,7 +91,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
                              resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
                              downsample: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
-    rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
+    rpc(s"${tracingStore.url}/tracings/volume/$volumeTracingId/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryString("fromTask" -> fromTask.toString)
       .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
@@ -134,7 +134,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
         .addQueryString("persist" -> persistTracing.toString)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
       packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
-      _ <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialDataMultiple")
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialDataMultiple")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .post(packedVolumeDataZips)
     } yield tracingId
@@ -153,7 +153,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
       _ <- initialData match {
         case Some(file) =>
-          rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialData")
+          rpc(s"${tracingStore.url}/tracings/volume/$tracingId/initialData")
             .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
             .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
             .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
@@ -161,9 +161,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
         case _ =>
           Fox.successful(())
       }
-    } yield {
-      tracingId
-    }
+    } yield tracingId
   }
 
   def getVolumeTracing(tracingId: String,
@@ -171,25 +169,23 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
                        skipVolumeData: Boolean): Fox[(VolumeTracing, Option[Source[ByteString, _]])] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
-      tracing <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}")
+      tracing <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- Fox.runIf(!skipVolumeData) {
-        rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allData")
+        rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allData")
           .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
           .addQueryStringOptional("version", version.map(_.toString))
           .getStream
       }
-    } yield {
-      (tracing, data)
-    }
+    } yield (tracing, data)
   }
 
   def getVolumeDataStream(tracingId: String, version: Option[Long] = None): Fox[Source[ByteString, _]] = {
     logger.debug("Called to get volume data (stream)." + baseInfo)
     for {
-      data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allData")
+      data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allData")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .addQueryStringOptional("version", version.map(_.toString))
         .getStream
@@ -199,7 +195,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
   def getVolumeData(tracingId: String, version: Option[Long] = None): Fox[Array[Byte]] = {
     logger.debug("Called to get volume data." + baseInfo)
     for {
-      data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allDataBlocking")
+      data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataBlocking")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithBytesResponse

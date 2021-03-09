@@ -53,12 +53,12 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {
-      override def allowAccess(userOption: Option[User]) =
+      override def allowAccess(userOption: Option[User]): Fox[Boolean] =
         if (annotation.visibility == AnnotationVisibility.Public) Fox.successful(true)
         else if (annotation.visibility == AnnotationVisibility.Internal) {
           (for {
             user <- option2Fox(userOption)
-            owner <- userService.findOneById(annotation._user, true)(GlobalAccessContext)
+            owner <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
           } yield owner._organization == user._organization).orElse(Fox.successful(false))
         } else {
           (for {
@@ -67,12 +67,12 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
           } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
         }
 
-      override def allowUpdate(user: Option[User]) =
+      override def allowUpdate(user: Option[User]): Fox[Boolean] =
         Fox.successful(user.exists { user =>
           annotation._user == user._id && !(annotation.state == Finished)
         })
 
-      override def allowFinish(userOption: Option[User]) =
+      override def allowFinish(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- option2Fox(userOption)
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
@@ -81,7 +81,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
         }).orElse(Fox.successful(false))
 
       /* used in backend only to allow repeatable finish calls */
-      override def allowFinishSoft(userOption: Option[User]) =
+      override def allowFinishSoft(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- option2Fox(userOption)
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)

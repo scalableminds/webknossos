@@ -6,6 +6,8 @@ import _ from "lodash";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 
+import features from "features";
+
 type NumberSliderSettingProps = {
   onChange: (value: number) => void,
   value: number,
@@ -254,6 +256,7 @@ type UserBoundingBoxInputProps = {
   tooltipTitle: string,
   onChange: UserBoundingBoxInputUpdate => void,
   onDelete: () => void,
+  onExport: () => void,
 };
 
 type State = {
@@ -338,13 +341,21 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
   render() {
     const { name } = this.state;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-    const { tooltipTitle, color, isVisible, onDelete } = this.props;
+    const { tooltipTitle, color, isVisible, onDelete, onExport } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = { margin: "auto 0px auto 6px" };
+    const exportColumn = features().jobsEnabled ? (
+      <Col span={2}>
+        <Tooltip title="Export data from this bouding box.">
+          <Icon type="download" onClick={onExport} style={iconStyle} />
+        </Tooltip>
+      </Col>
+    ) : null;
+    const visibilityColSpan = exportColumn == null ? 22 : 20;
     return (
       <React.Fragment>
         <Row style={{ marginBottom: 16 }}>
-          <Col span={22}>
+          <Col span={visibilityColSpan}>
             <Switch
               size="small"
               onChange={this.handleVisibilityChange}
@@ -352,6 +363,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               style={{ margin: "auto 0px" }}
             />
           </Col>
+          {exportColumn}
           <Col span={2}>
             <Tooltip title="Delete this bounding box.">
               <Icon type="delete" onClick={onDelete} style={iconStyle} />

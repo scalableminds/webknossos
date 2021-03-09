@@ -79,6 +79,11 @@ type State = {
   activeTreeDropdownId: ?number,
 };
 
+const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
+  prevProps.trees !== nextProps.trees ||
+  prevProps.treeGroups !== nextProps.treeGroups ||
+  prevProps.sortBy !== nextProps.sortBy;
+
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   state = {
     expandedGroupIds: { [MISSING_GROUP_ID]: true },
@@ -89,12 +94,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
-    if (
-      prevState.prevProps == null ||
-      prevState.prevProps.trees !== nextProps.trees ||
-      prevState.prevProps.treeGroups !== nextProps.treeGroups ||
-      prevState.prevProps.sortBy !== nextProps.sortBy
-    ) {
+    if (prevState.prevProps == null || didTreeDataChange(prevState.prevProps, nextProps)) {
       // Insert the trees into the corresponding groups and create a
       // groupTree object that can be rendered using a SortableTree component
       const groupToTreesMap = createGroupToTreesMap(nextProps.trees);
@@ -125,10 +125,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   async componentDidUpdate(prevProps: Props) {
     // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
     // Also remove the searchFocusOffset from the state and hard-code it as 0
-    if (
-      prevProps.trees !== this.props.trees &&
-      prevProps.activeTreeId !== this.props.activeTreeId
-    ) {
+    const didSearchTermChange =
+      prevProps.activeTreeId !== this.props.activeTreeId ||
+      prevProps.activeGroupId !== this.props.activeGroupId;
+    if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
       // eslint-disable-next-line react/no-did-update-set-state
       await this.setState({ searchFocusOffset: 1 });
       // eslint-disable-next-line react/no-did-update-set-state

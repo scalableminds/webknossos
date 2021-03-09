@@ -71,10 +71,9 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
       logger.info(s"Successfully tested Redis health at $address:$port. Reply: $reply)")
       Fox.successful(())
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         logger.error(s"Redis health check failed at $address:$port (reply: ${e.getMessage})")
         Fox.failure(s"Redis health check failed")
-      }
     }
 
   def withExceptionHandler[B](f: => B): Fox[B] =
@@ -83,11 +82,10 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
         Fox.successful(f)
       }
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         val msg = "Redis access exception: " + e.getMessage
         logger.error(msg)
         Fox.failure(msg)
-      }
     }
 
 }

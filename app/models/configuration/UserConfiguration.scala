@@ -4,16 +4,16 @@ import play.api.libs.json.{JsBoolean, JsValue, _}
 
 case class UserConfiguration(configuration: Map[String, JsValue]) {
 
-  def configurationOrDefaults =
+  def configurationOrDefaults: Map[String, JsValue] =
     UserConfiguration.default.configuration ++ configuration
 
 }
 
 object UserConfiguration {
 
-  implicit val userConfigurationFormat = Json.format[UserConfiguration]
+  implicit val userConfigurationFormat: OFormat[UserConfiguration] = Json.format[UserConfiguration]
 
-  val default = UserConfiguration(
+  val default: UserConfiguration = UserConfiguration(
     Map(
       "moveValue" -> JsNumber(300),
       "moveValue3d" -> JsNumber(300),

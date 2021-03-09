@@ -23,7 +23,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig, lifecycle: Applicat
 
   lazy val volumeUpdates = new FossilDBClient("volumeUpdates", config)
 
-  def shutdown() = {
+  def shutdown(): Unit = {
     healthClient.shutdown()
     skeletons.shutdown()
     skeletonUpdates.shutdown()

@@ -92,7 +92,7 @@ class JobListView extends React.PureComponent<Props, State> {
           <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
             {job.datasetName}
           </Link>{" "}
-          (Box {job.boundingBox})
+          (Bounding Box {job.boundingBox})
         </span>
       );
     } else {

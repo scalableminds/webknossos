@@ -34,10 +34,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, hasVolumeTracing, boundingBo
   const layerNames = dataset.dataSource.dataLayers.map(layer => {
     const nameIfFromDataset = layer.category === "color" || !hasVolumeTracing ? layer.name : null;
     const nameIfVolume =
-      hasVolumeTracing &&
-      layer.category === "segmentation" &&
-      layer.fallbackLayerInfo &&
-      layer.fallbackLayerInfo.name
+      hasVolumeTracing && layer.category === "segmentation" && layer.fallbackLayerInfo != null
         ? layer.fallbackLayerInfo.name
         : null;
     return nameIfFromDataset || nameIfVolume;

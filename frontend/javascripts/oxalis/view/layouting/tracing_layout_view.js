@@ -196,14 +196,15 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }));
   };
 
-  onLayoutChange = (layoutConfig, layoutName) => {
+  onLayoutChange = () => {
+    console.log("called update :D");
     recalculateInputCatcherSizes();
     window.needsRerender = true;
-    this.currentLayoutConfig = layoutConfig;
+    /* this.currentLayoutConfig = layoutConfig;
     this.currentLayoutName = layoutName;
     if (this.props.autoSaveLayouts) {
       this.saveCurrentLayout();
-    }
+    } */
   };
 
   allowDrop(dragNode, dropInfo) {
@@ -242,7 +243,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       case "CommentTabView": {
         return <CommentTabView key="CommentTabView" portalKey="CommentTabView" />;
       }
-      case "b": {
+      case "AbstractTreeTabView": {
         return <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />;
       }
       case "MappingInfoView": {
@@ -284,9 +285,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         return this.renderSettingsTab(node.getId());
       }
       case "viewport": {
-        return (
-          <InputCatcher viewportID={OrthoViews.PLANE_XY} displayScalebars={displayScalebars} />
-        );
+        return <InputCatcher viewportID={node.getId()} displayScalebars={displayScalebars} />;
       }
       case "sub": {
         let { model } = node.getExtraData();
@@ -315,6 +314,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   toggleSidebar(side) {
     this.state.layoutModel.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
+    this.onLayoutChange();
   }
 
   saveCurrentLayout = () => {
@@ -404,9 +404,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialAnnotationType={this.props.initialAnnotationType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
-            setControllerStatus={(newStatus: ControllerStatus) =>
-              this.setState({ status: newStatus })
-            }
+            setControllerStatus={(newStatus: ControllerStatus) => {
+              this.setState({ status: newStatus });
+              setTimeout(() => this.onLayoutChange(), 500);
+            }}
             showNodeContextMenuAt={this.showNodeContextMenuAt}
           />
           <CrossOriginApi />
@@ -484,6 +485,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   <FlexLayout.Layout
                     model={this.state.layoutModel}
                     factory={(...args) => this.layoutFactory(...args)}
+                    onModelChange={() => this.onLayoutChange()}
                   />
                 </div>
                 <div id="footer" className="footer">

@@ -28,6 +28,8 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
     return { top: 0, left: 0, width: 0, height: 0 };
   }
 
+  // TODO Maybe get rid of this width and height calculation and just use css props (if makeQuadratic) is not set
+
   const getExtent = () => {
     let { width, height } = noneOverflowWrapper.getBoundingClientRect();
     // These values should be floored, so that the rendered area does not overlap

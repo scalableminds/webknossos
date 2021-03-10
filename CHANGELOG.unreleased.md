@@ -23,3 +23,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Removed
 -
+
+### Breaking Change
+- The front-end API methods `measurePathLengthBetweenNodes`, `measureAllTrees` and `measureTreeLength` were changed to return a tuple containing the distance in nm and in vx (instead of only returning the distance in nm). [#5240](https://github.com/scalableminds/webknossos/pull/5240)

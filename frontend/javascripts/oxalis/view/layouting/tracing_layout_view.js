@@ -314,7 +314,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   toggleSidebar(side) {
     this.state.layoutModel.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
-    this.onLayoutChange();
+    // giving flex layout some time so do the resizing.
+    setTimeout(() => this.onLayoutChange(), 50);
   }
 
   saveCurrentLayout = () => {

@@ -168,6 +168,9 @@ class TDController extends React.PureComponent<Props> {
       },
       pinch: delta => this.zoomTDView(delta, true),
       mouseMove: (delta: Point2, position: Point2) => {
+        if (this.props.planeView == null) {
+          return;
+        }
         this.props.planeView.throttledPerformIsosurfaceHitTest([position.x, position.y]);
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

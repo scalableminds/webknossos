@@ -19,6 +19,9 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     with DataSetDeleter
     with LazyLogging {
 
+  /* Note that this must stay in sync with the back-end constant
+    compare https://github.com/scalableminds/webknossos/issues/5223 */
+  private val MaxMagForAgglomerateMapping = 16
   lazy val cache = new DataCubeCache(maxCacheSize)
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
@@ -51,7 +54,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
         for {
           data <- handleDataRequest(request)
           mappedData = convertIfNecessary(
-            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= 16,
+            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= MaxMagForAgglomerateMapping,
             data,
             agglomerateService.applyAgglomerate(request)
           )

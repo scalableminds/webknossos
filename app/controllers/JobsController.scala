@@ -1,13 +1,17 @@
 package controllers
 
+import java.nio.file.{Files, Paths}
+import java.util.Date
+
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, RunJobEvent}
-import models.team.OrganizationDAO
+import models.organization.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Failure, Full}
 import oxalis.security.WkEnv
@@ -91,7 +95,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
     } else {
       val updateResult = for {
         _ <- Fox.successful(celeryInfosLastUpdated = System.currentTimeMillis())
-        celeryInfoJson <- flowerRpc("/api/tasks").getWithJsonResponse[JsObject]
+        celeryInfoJson <- flowerRpc("/api/tasks?offset=0").getWithJsonResponse[JsObject]
         celeryInfoMap <- celeryInfoJson
           .validate[Map[String, JsObject]] ?~> "Could not validate celery response as json map"
         _ <- Fox.serialCombined(celeryInfoMap.keys.toList)(jobId =>
@@ -131,6 +135,13 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
 
   private def flowerRpc(route: String): RPCRequest =
     rpc(wkConf.Jobs.Flower.uri + route).withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
+
+  def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
+    for {
+      boundingBox <- BoundingBox.createFrom(bbox).toFox ?~> "job.export.tiff.invalidBoundingBox"
+      _ <- bool2Fox(boundingBox.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
+      _ <- bool2Fox(boundingBox.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
+    } yield ()
 }
 
 class JobsController @Inject()(jobDAO: JobDAO,
@@ -169,6 +180,40 @@ class JobsController @Inject()(jobDAO: JobDAO,
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
         js <- jobService.publicWrites(job)
       } yield Ok(js)
+    }
+
+  def runTiffExportJob(organizationName: String,
+                       dataSetName: String,
+                       layerName: String,
+                       bbox: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+        _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
+        command = "export_tiff"
+        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}.zip"
+        commandArgs = Json.obj(
+          "kwargs" -> Json.obj("organization_name" -> organizationName,
+                               "dataset_name" -> dataSetName,
+                               "layer_name" -> layerName,
+                               "bbox" -> bbox,
+                               "export_file_name" -> exportFileName))
+        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
+        js <- jobService.publicWrites(job)
+      } yield Ok(js)
+    }
+
+  def downloadExport(jobId: String, exportFileName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        jobIdValidated <- ObjectId.parse(jobId)
+        job <- jobDAO.findOne(jobIdValidated)
+        organization <- organizationDAO.findOne(request.identity._organization)
+        filePath = Paths.get("binaryData", organization.name, ".export", job.celeryJobId, exportFileName)
+        _ <- bool2Fox(Files.exists(filePath)) ?~> "job.export.fileNotFound"
+      } yield Ok.sendPath(filePath, inline = false)
     }
 
 }

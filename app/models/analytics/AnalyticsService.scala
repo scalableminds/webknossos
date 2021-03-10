@@ -1,14 +1,14 @@
 package models.analytics
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.Annotation
 import models.binary.{DataSet, DataStore}
-import models.team.Organization
-import models.user.{User, UserDAO}
+import models.organization.Organization
+import models.user.{MultiUserDAO, User, UserDAO}
 import org.joda.time.DateTime
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
@@ -43,10 +43,18 @@ class AnalyticsService @Inject()(rpc: RPC, wkConf: WkConf, analyticsLookUpServic
   }
 }
 
-class AnalyticsLookUpService @Inject()(userDAO: UserDAO, wkConf: WkConf) extends LazyLogging {
+class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUserDAO, wkConf: WkConf)
+    extends LazyLogging {
+  implicit val ctx: DBAccessContext = GlobalAccessContext
+
+  def isSuperUser(multiUserId: ObjectId): Fox[Boolean] =
+    for {
+      multiUser <- multiUserDAO.findOne(multiUserId)
+    } yield multiUser.isSuperUser
+
   def multiUserIdFor(userId: ObjectId): Fox[String] =
     for {
-      user <- userDAO.findOne(userId)(GlobalAccessContext)
+      user <- userDAO.findOne(userId)
     } yield user._multiUser.id
 
   def webknossos_uri: String = wkConf.Http.uri
@@ -56,10 +64,17 @@ trait AnalyticsEvent {
   def eventType: String
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject]
   def userId: String = user._multiUser.toString
-  def userProperties(analyticsLookUpService: AnalyticsLookUpService): JsObject =
-    Json.obj("organization_id" -> user._organization.id,
-             "is_organization_admin" -> user.isAdmin,
-             "webknossos_uri" -> analyticsLookUpService.webknossos_uri)
+  def userProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    for {
+      isSuperUser <- analyticsLookUpService.isSuperUser(user._multiUser)
+    } yield {
+      Json.obj(
+        "organization_id" -> user._organization.id,
+        "is_organization_admin" -> user.isAdmin,
+        "is_superuser" -> isSuperUser,
+        "webknossos_uri" -> analyticsLookUpService.webknossos_uri
+      )
+    }
   def timestamp: String = DateTime.now().getMillis.toString
 
   def user: User
@@ -67,12 +82,13 @@ trait AnalyticsEvent {
   def toJson(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     for {
       eventProperties <- eventProperties(analyticsLookUpService)
+      userProperties <- userProperties(analyticsLookUpService)
     } yield {
       Json.obj(
         "event_type" -> eventType,
         "user_id" -> userId,
         "time" -> timestamp,
-        "user_properties" -> userProperties(analyticsLookUpService),
+        "user_properties" -> userProperties,
         "event_properties" -> eventProperties,
       )
     }

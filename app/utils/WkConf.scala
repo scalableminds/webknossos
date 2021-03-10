@@ -100,6 +100,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
+    val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
+    val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
   }
 
   object BackendAnalytics {

@@ -37,9 +37,8 @@ case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
 object UpdateActionGroup {
 
   implicit def updateActionGroupReads[T <: GeneratedMessage with Message[T]](
-      implicit fmt: Reads[UpdateAction[T]]): Reads[UpdateActionGroup[T]] = new Reads[UpdateActionGroup[T]] {
-
-    override def reads(json: JsValue): JsResult[UpdateActionGroup[T]] =
+      implicit fmt: Reads[UpdateAction[T]]): Reads[UpdateActionGroup[T]] =
+    (json: JsValue) =>
       for {
         version <- json.validate((JsPath \ "version").read[Long])
         timestamp <- json.validate((JsPath \ "timestamp").read[Long])
@@ -58,13 +57,11 @@ object UpdateActionGroup {
                              transactionId,
                              transactionGroupCount,
                              transactionGroupIndex)
-      }
-  }
+    }
 
   implicit def updateActionGroupWrites[T <: GeneratedMessage with Message[T]](
-      implicit fmt: Writes[UpdateAction[T]]): Writes[UpdateActionGroup[T]] = new Writes[UpdateActionGroup[T]] {
-
-    override def writes(value: UpdateActionGroup[T]): JsValue =
+      implicit fmt: Writes[UpdateAction[T]]): Writes[UpdateActionGroup[T]] =
+    (value: UpdateActionGroup[T]) =>
       Json.obj(
         "version" -> value.version,
         "timestamp" -> value.timestamp,
@@ -74,7 +71,6 @@ object UpdateActionGroup {
         "transactionId" -> value.transactionId,
         "transactionGroupCount" -> value.transactionGroupCount,
         "transactionGroupIndex" -> value.transactionGroupIndex
-      )
-  }
+    )
 
 }

@@ -3,9 +3,8 @@ import controllers.{InitialDataService, JobService}
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
 import models.task.TaskService
-import models.user._
+import models.user.{UserCache, _}
 import models.user.time.TimeSpanService
-import oxalis.user.UserCache
 import utils.SQLClient
 
 class WebKnossosModule extends AbstractModule {

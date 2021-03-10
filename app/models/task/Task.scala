@@ -241,24 +241,22 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       firstResult <- result.headOption
     } yield firstResult
 
-  def countOpenInstancesForProject(projectId: ObjectId): Fox[Int] =
+  def countOpenInstancesAndTimeForProject(projectId: ObjectId): Fox[(Int, Int)] =
     for {
-      result <- run(sql"""select sum(openInstances)
+      result <- run(sql"""select sum(openInstances), sum(tracingtime)
                           from webknossos.tasks_
                           where _project = ${projectId.id}
-                          group by _project""".as[Int])
+                          group by _project""".as[(Int, Option[Int])])
       firstResult <- result.headOption
-    } yield firstResult
+    } yield (firstResult._1, firstResult._2.getOrElse(0))
 
-  def countAllOpenInstancesGroupedByProjects: Fox[Map[ObjectId, Int]] =
+  def countOpenInstancesAndTimeByProject: Fox[Map[ObjectId, (Int, Long)]] =
     for {
-      rowsRaw <- run(sql"""select _project, sum(openInstances)
+      rowsRaw <- run(sql"""select _project, sum(openInstances), sum(tracingtime)
               from webknossos.tasks_
               group by _project
-           """.as[(String, Int)])
-    } yield {
-      rowsRaw.toList.map(r => (ObjectId(r._1), r._2)).toMap
-    }
+           """.as[(String, Int, Option[Long])])
+    } yield rowsRaw.toList.map(r => (ObjectId(r._1), (r._2, r._3.getOrElse(0L)))).toMap
 
   def listExperienceDomains(organizationId: ObjectId): Fox[List[String]] =
     for {

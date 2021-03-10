@@ -5586,6 +5586,11 @@ flatted@^2.0.0:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-2.0.2.tgz#4575b21e2bcee7434aa9be662f4b7b5f9c2b5138"
   integrity sha512-r5wGx7YeOwNWNlCA0wQ86zKyDLMQr+/RB8xy74M4hTphfmjlijTSSXGuH8rnvKZnfT9i+75zmd8jcKdMR4O6jA==
 
+flexlayout-react@^0.5.5:
+  version "0.5.5"
+  resolved "https://registry.yarnpkg.com/flexlayout-react/-/flexlayout-react-0.5.5.tgz#e96dbb61bd29868836aff5139d558fb13abf1287"
+  integrity sha512-y8fQQ1nfBdSmBELoD/nEplEIxRZfDtHT1Lg50M4iXkvlF9blnkQktmngiYR2tO/wr6fy2+2cV+tX0HXoeHY8cQ==
+
 flow-annotation-check@^1.8.1:
   version "1.11.4"
   resolved "https://registry.yarnpkg.com/flow-annotation-check/-/flow-annotation-check-1.11.4.tgz#8339db0667ec8a8e4230c5d0f68c5011dcfebdaf"

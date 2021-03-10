@@ -10,6 +10,7 @@ import { withRouter } from "react-router-dom";
 import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
 
+import FlexLayout from "flexlayout-react";
 import Request from "libs/request";
 import {
   ArbitraryViewport,
@@ -35,6 +36,8 @@ import OxalisController from "oxalis/controller";
 import type { ControllerStatus } from "oxalis/controller";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import SettingsView from "oxalis/view/settings/settings_view";
+import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
+import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import TDViewControls from "oxalis/view/td_view_controls";
 import Toast from "libs/toast";
@@ -51,6 +54,7 @@ import TabTitle from "../components/tab_title_component";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
+import defaultLayout from "./default_layout";
 
 const { Sider } = Layout;
 
@@ -86,6 +90,7 @@ type State = {
   clickedNodeId: ?number,
   nodeContextMenuGlobalPosition: Vector3,
   nodeContextMenuViewport: ?OrthoView,
+  layoutModel: Object,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -135,7 +140,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       clickedNodeId: null,
       nodeContextMenuGlobalPosition: [0, 0, 0],
       nodeContextMenuViewport: null,
+      layoutModel: FlexLayout.Model.fromJson(defaultLayout),
     };
+    this.state.layoutModel.setOnAllowDrop(this.allowDrop);
   }
 
   componentDidCatch(error: Error) {
@@ -199,6 +206,117 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }
   };
 
+  allowDrop(dragNode, dropInfo) {
+    const dropNode = dropInfo.node;
+
+    // prevent non-border tabs dropping into borders
+    if (
+      dropNode.getType() === "border" &&
+      (dragNode.getParent() == null || dragNode.getParent().getType() !== "border")
+    ) {
+      console.info("You cannot move this tab into a sidebar!");
+      return false;
+    }
+
+    // prevent border tabs dropping into main layout
+    if (
+      dropNode.getType() !== "border" &&
+      dragNode.getParent() != null &&
+      dragNode.getParent().getType() === "border"
+    ) {
+      console.info("You cannot move this tab out of this sidebar!");
+      return false;
+    }
+
+    return true;
+  }
+
+  renderTab(id: string): ?React.Node {
+    switch (id) {
+      case "DatasetInfoTabView": {
+        return <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />;
+      }
+      case "TreesTabView": {
+        return <TreesTabView key="TreesTabView" portalKey="TreesTabView" />;
+      }
+      case "CommentTabView": {
+        return <CommentTabView key="CommentTabView" portalKey="CommentTabView" />;
+      }
+      case "b": {
+        return <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />;
+      }
+      case "MappingInfoView": {
+        return <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />;
+      }
+      case "MeshesView": {
+        return <MeshesView key="MeshesView" portalKey="MeshesView" />;
+      }
+      default: {
+        console.error(`The tab with id ${id} is unknown`);
+        return null;
+      }
+    }
+  }
+
+  renderSettingsTab(id: string): ?React.Node {
+    switch (id) {
+      case "UserSettingsView": {
+        return <UserSettingsView />;
+      }
+      case "DatasetSettingsView": {
+        return <DatasetSettingsView />;
+      }
+      default: {
+        console.error(`The settings tab with id ${id} is unknown`);
+        return null;
+      }
+    }
+  }
+
+  layoutFactory(node): ?React.Node {
+    const { displayScalebars } = this.props;
+    const component = node.getComponent();
+    switch (component) {
+      case "tab": {
+        return this.renderTab(node.getId());
+      }
+      case "settings-tab": {
+        return this.renderSettingsTab(node.getId());
+      }
+      case "viewport": {
+        return (
+          <InputCatcher viewportID={OrthoViews.PLANE_XY} displayScalebars={displayScalebars} />
+        );
+      }
+      case "sub": {
+        let { model } = node.getExtraData();
+        if (model == null) {
+          model = FlexLayout.Model.fromJson(node.getConfig().model);
+          node.getExtraData().model = model;
+          // save submodel on save event
+          node.setEventListener("save", () => {
+            this.state.layoutModel.doAction(
+              FlexLayout.Actions.updateNodeAttributes(node.getId(), {
+                config: { model: node.getExtraData().model.toJson() },
+              }),
+            );
+          });
+        }
+
+        return (
+          <FlexLayout.Layout model={model} factory={(...args) => this.layoutFactory(...args)} />
+        );
+      }
+      default: {
+        return null;
+      }
+    }
+  }
+
+  toggleSidebar(side) {
+    this.state.layoutModel.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
+  }
+
   saveCurrentLayout = () => {
     if (this.currentLayoutConfig == null || this.currentLayoutName == null) {
       return;
@@ -254,7 +372,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
+    const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -360,9 +478,32 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 <SettingsView dontRenderContents={isSettingsCollapsed} />
               </Sider>
               <MergerModeController />
-              <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
+              <div id={canvasAndLayoutContainerID} style={{ position: "relative", width: "100%" }}>
                 <TracingView />
-                <GoldenLayoutAdapter
+                <div id="container1" className="conti">
+                  <FlexLayout.Layout
+                    model={this.state.layoutModel}
+                    factory={(...args) => this.layoutFactory(...args)}
+                  />
+                </div>
+                <div id="footer" className="footer">
+                  <button
+                    type="button"
+                    className="left-sidebar-button"
+                    onClick={() => this.toggleSidebar("left")}
+                  >
+                    &lt;
+                  </button>
+                  <button
+                    type="button"
+                    className="right-sidebar-button"
+                    onClick={() => this.toggleSidebar("right")}
+                  >
+                    &gt;
+                  </button>
+                  I am an awesome Footer.🦶
+                </div>
+                {/* <GoldenLayoutAdapter
                   id="layoutContainer"
                   style={GOLDEN_LAYOUT_ADAPTER_STYLE}
                   layoutKey={layoutType}
@@ -372,7 +513,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   {/*
                    * All possible layout panes are passed here. Depending on the actual layout,
                    *  the components are rendered or not.
-                   */}
+                   *}
                   <InputCatcher
                     viewportID={OrthoViews.PLANE_XY}
                     key="xy"
@@ -412,7 +553,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />
                   <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
                   <MeshesView key="MeshesView" portalKey="MeshesView" />
-                </GoldenLayoutAdapter>
+                  </GoldenLayoutAdapter> */}
               </div>
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400}>

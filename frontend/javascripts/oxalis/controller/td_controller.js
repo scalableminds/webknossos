@@ -14,7 +14,6 @@ import {
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   setViewportAction,
@@ -169,7 +168,7 @@ class TDController extends React.PureComponent<Props> {
       },
       pinch: delta => this.zoomTDView(delta, true),
       mouseMove: (delta: Point2, position: Point2) => {
-        Store.dispatch(setMousePositionAction([position.x, position.y]));
+        this.props.planeView.throttledPerformIsosurfaceHitTest([position.x, position.y]);
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (skeletonControls != null) {
@@ -185,7 +184,7 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        const hitPosition = this.props.planeView.performIsosurfaceHitTest();
+        const hitPosition = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
         if (!hitPosition) {
           return;
         }

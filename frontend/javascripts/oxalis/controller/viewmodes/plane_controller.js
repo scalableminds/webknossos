@@ -491,7 +491,8 @@ class PlaneController extends React.PureComponent<Props> {
         this.moveZ(delta, true);
         break;
       }
-      case "alt": {
+      case "alt":
+      case "ctrl": {
         this.zoomPlanes(Utils.clamp(-1, delta, 1), true);
         break;
       }

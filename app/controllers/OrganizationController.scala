@@ -4,7 +4,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
-import models.team._
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.InviteDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsNull, Json}

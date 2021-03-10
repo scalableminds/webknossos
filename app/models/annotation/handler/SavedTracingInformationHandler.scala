@@ -1,6 +1,7 @@
 package models.annotation.handler
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
@@ -16,6 +17,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
                                                annotationRestrictionDefults: AnnotationRestrictionDefaults,
                                                userService: UserService)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
+    with Formatter
     with FoxImplicits {
 
   override val cache = false
@@ -27,8 +29,8 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       dataSetName <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
-      val id = oxalis.view.helpers.formatHash(annotation.id)
-      normalize(s"${dataSetName}__${task}__${userName}__${id}")
+      val id = formatHash(annotation.id)
+      normalize(s"${dataSetName}__${task}__${userName}__$id")
     }
 
   def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =

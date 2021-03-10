@@ -40,7 +40,7 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
                                                   finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
-  def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
+  def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       task <- taskDAO.findOne(taskId) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)

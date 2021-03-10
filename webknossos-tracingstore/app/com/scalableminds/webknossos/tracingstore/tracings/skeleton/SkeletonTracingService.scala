@@ -1,16 +1,16 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.ExecutionContext
 
@@ -22,18 +22,18 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
-    with FoxImplicits
-    with TextUtils {
+    with FoxImplicits {
 
-  val tracingType = TracingType.skeleton
+  val tracingType: TracingType.Value = TracingType.skeleton
 
-  val tracingStore = tracingDataStore.skeletons
+  val tracingStore: FossilDBClient = tracingDataStore.skeletons
 
-  val tracingMigrationService = SkeletonTracingMigrationService
+  val tracingMigrationService: SkeletonTracingMigrationService.type = SkeletonTracingMigrationService
 
-  implicit val tracingCompanion = SkeletonTracing
+  implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  implicit val updateActionJsonFormat = SkeletonUpdateAction.skeletonUpdateActionFormat
+  implicit val updateActionJsonFormat: SkeletonUpdateAction.skeletonUpdateActionFormat.type =
+    SkeletonUpdateAction.skeletonUpdateActionFormat
 
   def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -114,26 +114,23 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
                    remainingUpdates: List[SkeletonUpdateAction]): Fox[SkeletonTracing] =
       tracingFox.futureBox.flatMap {
         case Empty => Fox.empty
-        case Full(tracing) => {
+        case Full(tracing) =>
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion, _, _) :: tail => {
+            case RevertToVersionAction(sourceVersion, _, _) :: tail =>
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
-            }
             case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)
           }
-        }
         case _ => tracingFox
       }
 
     updates match {
       case List() => Full(tracing)
-      case head :: tail => {
+      case _ :: _ =>
         for {
           updated <- updateIter(Some(tracing), updates)
         } yield updated.withVersion(newVersion)
-      }
     }
   }
 
@@ -141,7 +138,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), bb)
+        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
       }
     } else None
 
@@ -185,7 +182,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
                       newTracing: SkeletonTracing,
                       toCache: Boolean): Fox[Unit] = Fox.successful(())
 
-  def updateActionLog(tracingId: String) = {
+  def updateActionLog(tracingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
@@ -195,31 +192,28 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
         fromJson[List[SkeletonUpdateAction]])
       updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
-    } yield (Json.toJson(updateActionGroupsJs))
+    } yield Json.toJson(updateActionGroupsJs)
   }
 
-  def updateActionStatistics(tracingId: String) =
+  def updateActionStatistics(tracingId: String): Fox[JsObject] =
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(
         fromJson[List[SkeletonUpdateAction]])
       updateActions = updateActionGroups.flatten
     } yield {
       Json.obj(
-        "updateTracingActionCount" -> updateActions.count(updateAction =>
-          updateAction match {
-            case a: UpdateTracingSkeletonAction => true
-            case _                              => false
-        }),
-        "createNodeActionCount" -> updateActions.count(updateAction =>
-          updateAction match {
-            case a: CreateNodeSkeletonAction => true
-            case _                           => false
-        }),
-        "deleteNodeActionCount" -> updateActions.count(updateAction =>
-          updateAction match {
-            case a: DeleteNodeSkeletonAction => true
-            case _                           => false
-        })
+        "updateTracingActionCount" -> updateActions.count {
+          case _: UpdateTracingSkeletonAction => true
+          case _                              => false
+        },
+        "createNodeActionCount" -> updateActions.count {
+          case _: CreateNodeSkeletonAction => true
+          case _                           => false
+        },
+        "deleteNodeActionCount" -> updateActions.count {
+          case _: DeleteNodeSkeletonAction => true
+          case _                           => false
+        }
       )
     }
 }

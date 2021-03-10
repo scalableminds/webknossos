@@ -43,9 +43,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     for {
       task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound" ~> NOT_FOUND
       js <- taskService.publicWrites(task)
-    } yield {
-      Ok(js)
-    }
+    } yield Ok(js)
   }
 
   def create: Action[List[TaskParameters]] = sil.SecuredAction.async(validateJson[List[TaskParameters]]) {
@@ -93,9 +91,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
 
       fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
       result <- taskCreationService.createTasks(fullParamsWithTracings, request.identity)
-    } yield {
-      Ok(Json.toJson(result))
-    }
+    } yield Ok(Json.toJson(result))
   }
 
   def update(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
@@ -110,9 +106,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
         updatedTask <- taskDAO.findOne(taskIdValidated)
         json <- taskService.publicWrites(updatedTask)
-      } yield {
-        JsonOk(json, Messages("task.editSuccess"))
-      }
+      } yield JsonOk(json, Messages("task.editSuccess"))
   }
 
   def delete(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -123,9 +117,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages(
         "notAllowed")
       _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
-    } yield {
-      JsonOk(Messages("task.removed"))
-    }
+    } yield JsonOk(Messages("task.removed"))
   }
 
   def listTasksForType(taskTypeId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -133,9 +125,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
       tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
-    } yield {
-      Ok(Json.toJson(js))
-    }
+    } yield Ok(Json.toJson(js))
   }
 
   def listTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
@@ -152,9 +142,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                                                 userIdOpt,
                                                                 randomizeOpt)
       jsResult <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
-    } yield {
-      Ok(Json.toJson(jsResult))
-    }
+    } yield Ok(Json.toJson(jsResult))
   }
 
   def request: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -169,9 +157,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
         annotationJSON <- annotationService.publicWrites(annotation, Some(user))
-      } yield {
-        JsonOk(annotationJSON, Messages("task.assigned"))
-      }
+      } yield JsonOk(annotationJSON, Messages("task.assigned"))
     }
   }
 

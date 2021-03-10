@@ -40,6 +40,7 @@ import {
   getNodeAndTreeOrNull,
   getActiveNode,
   getActiveTree,
+  getActiveGroup,
   getTree,
   getFlatTreeGroups,
   getTreeGroupsMap,
@@ -74,6 +75,7 @@ import {
   setNodeRadiusAction,
   setTreeNameAction,
   setActiveTreeAction,
+  setActiveGroupAction,
   setActiveTreeByNameAction,
   setTreeColorIndexAction,
   setTreeVisibilityAction,
@@ -140,6 +142,12 @@ function assertVolume(tracing: Tracing): VolumeTracing {
  * All tracing related API methods. This is the newest version of the API (version 3).
  * @version 3
  * @class
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.tracing.getActiveNodeId();
+ *   api.tracing.getActiveTreeId();
+ *   ...
+ * }
  */
 class TracingApi {
   model: OxalisModel;
@@ -174,6 +182,16 @@ class TracingApi {
     const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveTree(tracing)
       .map(tree => tree.treeId)
+      .getOrElse(null);
+  }
+
+  /**
+   * Returns the id of the current active group.
+   */
+  getActiveGroupId(): ?number {
+    const tracing = assertSkeleton(Store.getState().tracing);
+    return getActiveGroup(tracing)
+      .map(group => group.groupId)
       .getOrElse(null);
   }
 
@@ -324,6 +342,18 @@ class TracingApi {
     const { tracing } = Store.getState();
     assertSkeleton(tracing);
     Store.dispatch(setActiveTreeByNameAction(treeName));
+  }
+
+  /**
+   * Makes the specified group active. Nodes cannot be added through the UI when a group is active.
+   *
+   * @example
+   * api.tracing.setActiveGroup(3);
+   */
+  setActiveGroup(groupId: number) {
+    const { tracing } = Store.getState();
+    assertSkeleton(tracing);
+    Store.dispatch(setActiveGroupAction(groupId));
   }
 
   /**
@@ -682,7 +712,7 @@ class TracingApi {
   }
 
   /**
-   * Starts an animation to center the given position.
+   * Starts an animation to center the given position. See setCameraPosition for a non-animated version of this function.
    *
    * @param position - Vector3
    * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
@@ -746,6 +776,16 @@ class TracingApi {
    */
   getCameraPosition(): Vector3 {
     return getPosition(Store.getState().flycam);
+  }
+
+  /**
+   * Sets the current camera position. See centerPositionAnimated for an animated version of this function.
+   *
+   * @example
+   * api.tracing.setCameraPosition([100, 100, 100])
+   */
+  setCameraPosition(position: Vector3) {
+    Store.dispatch(setPositionAction(position));
   }
 
   //  VOLUMETRACING API
@@ -823,6 +863,12 @@ class TracingApi {
 
 /**
  * All binary data / layer related API methods.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.data.getLayerNames();
+ *   api.data.reloadBuckets(...);
+ *   ...
+ * }
  */
 class DataApi {
   model: OxalisModel;
@@ -1323,6 +1369,12 @@ class DataApi {
 
 /**
  * All user configuration related API methods.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.user.getConfiguration(...);
+ *   api.user.setConfiguration(...);
+ *   ...
+ * }
  */
 class UserApi {
   model: OxalisModel;
@@ -1383,6 +1435,12 @@ type Handler = {
 
 /**
  * Utility API methods to control wK.
+ * @example
+ * window.webknossos.apiReady(3).then(api => {
+ *   api.utils.sleep(...);
+ *   api.utils.showToast(...);
+ *   ...
+ * }
  */
 class UtilsApi {
   model: OxalisModel;

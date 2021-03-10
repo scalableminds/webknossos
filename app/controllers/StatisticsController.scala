@@ -9,9 +9,10 @@ import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import play.api.i18n.{Messages}
+import play.api.i18n.Messages
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -25,12 +26,12 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
 
-  val intervalHandler = Map(
+  private val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
     "week" -> TimeSpan.groupByWeek _
   )
 
-  def intervalTracingTimeJson[T <: models.user.time.Interval](times: Map[T, Duration]) = times.map {
+  private def intervalTracingTimeJson[T <: models.user.time.Interval](times: Map[T, Duration]) = times.map {
     case (interval, duration) =>
       Json.obj(
         "start" -> interval.start.toString,
@@ -39,14 +40,13 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
       )
   }
 
-  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = sil.SecuredAction.async {
-    implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
       intervalHandler.get(interval) match {
         case Some(handler) =>
           for {
             organizationId <- Fox.successful(request.identity._organization)
-            _ <- Fox
-              .assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, organizationId)) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, organizationId)) ?~> "notAllowed" ~> FORBIDDEN
             times <- timeSpanService.loggedTimePerInterval(handler, start, end, organizationId)
             numberOfUsers <- userDAO.countAllForOrganization(organizationId)
             numberOfDatasets <- dataSetDAO.countAllForOrganization(organizationId)
@@ -66,13 +66,12 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
         case _ =>
           Fox.successful(BadRequest(Messages("statistics.interval.invalid")))
       }
-  }
+    }
 
-  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = sil.SecuredAction.async {
-    implicit request =>
+  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
         handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
         users <- userDAO.findAll //Access query ensures only users of own orga are shown
         usersWithTimes <- Fox.serialCombined(users)(user =>
@@ -90,8 +89,6 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
             }
           case _ => Fox.failure("serialization.failed")
         })
-      } yield {
-        Ok(Json.toJson(json))
-      }
-  }
+      } yield Ok(Json.toJson(json))
+    }
 }

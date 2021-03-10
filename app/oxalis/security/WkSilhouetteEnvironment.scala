@@ -23,9 +23,9 @@ class WkSilhouetteEnvironment @Inject()(
     userService: UserService,
     cookieHeaderEncoding: CookieHeaderEncoding)(implicit val executionContext: ExecutionContext)
     extends Environment[WkEnv] {
-  val eventBusObject = EventBus()
+  private val eventBusObject = EventBus()
 
-  val cookieSettings = CookieAuthenticatorSettings(
+  private val cookieSettings = CookieAuthenticatorSettings(
     conf.Silhouette.CookieAuthenticator.cookieName,
     conf.Silhouette.CookieAuthenticator.cookiePath,
     None,
@@ -38,16 +38,16 @@ class WkSilhouetteEnvironment @Inject()(
     conf.Silhouette.CookieAuthenticator.authenticatorExpiry.toMillis millis
   )
 
-  val tokenSettings = BearerTokenAuthenticatorSettings(
+  private val tokenSettings = BearerTokenAuthenticatorSettings(
     authenticatorIdleTimeout = Some(conf.Silhouette.TokenAuthenticator.authenticatorIdleTimeout.toMillis millis),
     authenticatorExpiry = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis millis
   )
 
-  val fingerprintGenerator = new DefaultFingerprintGenerator(false)
-  val idGenerator = new CompactRandomIDGenerator
-  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
+  private val fingerprintGenerator = new DefaultFingerprintGenerator(false)
+  private val idGenerator = new CompactRandomIDGenerator
+  private val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
 
-  val combinedAuthenticatorService = CombinedAuthenticatorService(
+  val combinedAuthenticatorService: CombinedAuthenticatorService = CombinedAuthenticatorService(
     cookieSettings,
     tokenSettings,
     bearerTokenAuthenticatorDAO,

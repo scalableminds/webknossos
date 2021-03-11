@@ -5,7 +5,7 @@ import type { BoundingBoxType } from "oxalis/constants";
 import type { VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import { startTiffExportJob } from "admin/admin_rest_api";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor"
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import features from "features";
 import * as Utils from "libs/utils";

@@ -191,15 +191,16 @@ case class UploadDatasetEvent(user: User, dataSet: DataSet, dataStore: DataStore
       ))
 }
 
-case class IsosurfaceRequestEvent(user: User, mode: String)(implicit ec: ExecutionContext) extends AnalyticsEvent {
-  def eventType: String = "request_isosurface"
-  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("mode" -> mode))
-}
-
 case class ChangeDatasetSettingsEvent(user: User, dataSet: DataSet)(implicit ec: ExecutionContext)
     extends AnalyticsEvent {
   def eventType: String = "change_dataset_settings"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(Json.obj("dataset_id" -> dataSet._id.id))
+}
+
+case class FrontendAnalyticsEvent(user: User, eventType: String, eventProperties: JsObject)(
+    implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  override def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(eventProperties ++ Json.obj("is_frontend_event" -> true))
 }

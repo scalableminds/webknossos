@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, IsosurfaceRequestEvent, UpdateAnnotationEvent}
+import models.analytics.{AnalyticsService, UpdateAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
@@ -52,16 +52,6 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
         Ok
       }
     }
-  }
-
-  def reportIsosurfaceRequest(name: String, token: Option[String]): Action[AnyContent] = Action.async {
-    implicit request =>
-      tracingStoreService.validateAccess(name) { _ =>
-        for {
-          userOpt <- Fox.runOptional(token)(bearerTokenService.userForToken(_)(GlobalAccessContext))
-          _ = userOpt.map(user => analyticsService.track(IsosurfaceRequestEvent(user, "annotation")))
-        } yield Ok
-      }
   }
 
   private def ensureAnnotationNotFinished(annotation: Annotation) =

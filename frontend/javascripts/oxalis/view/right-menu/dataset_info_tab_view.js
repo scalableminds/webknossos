@@ -7,6 +7,7 @@ import { Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
+import { Link } from "react-router-dom";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
@@ -191,7 +192,12 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   }
 
   getDatasetName(isDatasetViewMode: boolean) {
-    const { name: datasetName, displayName, description: datasetDescription } = this.props.dataset;
+    const {
+      name: datasetName,
+      displayName,
+      description: datasetDescription,
+      owningOrganization,
+    } = this.props.dataset;
 
     if (isDatasetViewMode) {
       return (
@@ -211,7 +217,17 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       );
     }
 
-    return <p>Dataset: {datasetName}</p>;
+    return (
+      <p>
+        Dataset:{" "}
+        <Link
+          to={`/datasets/${owningOrganization}/${datasetName}/view`}
+          title={`Click to view dataset ${datasetName} without annotation`}
+        >
+          {datasetName}
+        </Link>
+      </p>
+    );
   }
 
   getTracingName(isDatasetViewMode: boolean) {

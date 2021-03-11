@@ -22,11 +22,6 @@ case class AnnotationSettings(
 )
 
 object AnnotationSettings {
-  val ORTHOGONAL = "orthogonal"
-  val OBLIQUE = "oblique"
-  val FLIGHT = "flight"
-  val VOLUME = "volume"
-
   private val skeletonModes = List(TracingMode.orthogonal, TracingMode.oblique, TracingMode.flight)
   private val volumeModes = List(TracingMode.volume)
   private val allModes = skeletonModes ::: volumeModes

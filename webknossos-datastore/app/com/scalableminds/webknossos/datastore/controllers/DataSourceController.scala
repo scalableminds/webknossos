@@ -105,7 +105,6 @@ class DataSourceController @Inject()(
                 case (name, organization, chunkNumber, chunkSize, totalChunkCount, totalFileCount, uploadId) =>
                   val id = DataSourceId(name, organization)
                   val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
-                  logger.info(s"handle upload chunk, uploadId: ${uploadId}")
                   for {
                     _ <- if (!uploadService.isKnownUpload(uploadId))
                       webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"

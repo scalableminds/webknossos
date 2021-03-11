@@ -61,8 +61,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     val uploadDir = uploadDirectory(datasourceId.team, uploadId)
     val filePathRaw = uploadFileId.split("/").tail.mkString("/")
     val filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
-    logger.info(
-      s"handleUploadChunk uploadId $uploadFileId ${datasourceId.name}, currentChunkNumber $currentChunkNumber, totalFileCount: $totalFileCount")
     val isNewChunk = allSavedChunkIds.synchronized {
       allSavedChunkIds.get(uploadId) match {
         case Some((_, savedChunkIdsForUpload)) =>
@@ -116,7 +114,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     val uploadDir = uploadDirectory(uploadInformation.organization, uploadId)
     val unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
-    logger.info(s"finishUpload, uploadId $uploadId")
+    logger.info(
+      s"Finishing dataset upload of ${uploadInformation.organization}/${uploadInformation.name} with id $uploadId...")
 
     for {
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
@@ -149,11 +148,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       allSavedChunkIds.get(uploadId) match {
         case Some((fileCountForUpload, savedChunkIdsForUpload)) =>
           val allFilesPresent = fileCountForUpload == savedChunkIdsForUpload.keySet.size
-          logger.info(s"expected $fileCountForUpload files, found ${savedChunkIdsForUpload.keySet.size}")
           val allFilesComplete = savedChunkIdsForUpload.forall { entry: (String, (Long, mutable.HashSet[Int])) =>
             val chunkNumber = entry._2._1
             val savedChunksSet = entry._2._2
-            logger.info(s"for file ${entry._1} expected $chunkNumber chunks, found ${savedChunksSet.size}")
             savedChunksSet.size == chunkNumber
           }
           for {

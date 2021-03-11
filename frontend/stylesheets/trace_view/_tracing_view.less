@@ -88,7 +88,6 @@
 }
 
 .tracing-layout {
-  padding-top: 4px;
   height: ~"calc(100vh - 48px)";
   display: flex;
 
@@ -191,7 +190,12 @@
 }
 
 // Dark mode for UI within navbar
-.ant-layout-header {
+.ant-layout-header,
+.ant-layout-footer {
+  width: 100%;
+  z-index: 1000;
+  color: rgba(255, 255, 255, 0.67) !important;
+  background: #001529 !important;
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
@@ -276,4 +280,41 @@
       color: white;
     }
   }
+}
+
+.footer {
+  left: 0px;
+  bottom: 0px;
+  right: 0px;
+  position: absolute;
+  height: @footer-height;
+  overflow: hidden;
+  font-size: 14px;
+  text-align: center;
+  vertical-align: middle;
+  padding: 2px;
+}
+
+.left-sidebar-button,
+.right-sidebar-button {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  height: auto;
+  padding: 0px 6px;
+}
+.left-sidebar-button {
+  left: 8px;
+}
+.right-sidebar-button {
+  right: 8px;
+}
+
+.flex-layout-container {
+  left: 0px;
+  top: 0px;
+  right: 0px;
+  height: calc(100% - @footer-height);
+  position: absolute;
+  overflow: hidden;
 }

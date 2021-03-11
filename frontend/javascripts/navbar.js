@@ -362,13 +362,9 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     padding: 0,
     overflowX: "auto",
     position: "fixed",
-    width: "100%",
-    zIndex: 1000,
     height: navbarHeight,
     display: "flex",
     alignItems: "center",
-    color: "rgba(255, 255, 255, 0.67)",
-    background: "#001529",
     whiteSpace: "nowrap",
   };
 

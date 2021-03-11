@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Alert, Icon, Layout, Tooltip } from "antd";
+import { Alert, Icon, Layout, Tooltip, Button } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
@@ -56,7 +56,13 @@ import { determineLayout } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 import defaultLayout from "./default_layout";
 
-const { Sider } = Layout;
+/*
+ * TODOS for this PR:
+ * Enable saving of UI config
+ * Beaufity UI
+ */
+
+const { Sider, Footer } = Layout;
 
 type OwnProps = {|
   initialAnnotationType: AnnotationType,
@@ -197,7 +203,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   };
 
   onLayoutChange = () => {
-    console.log("called update :D");
     recalculateInputCatcherSizes();
     window.needsRerender = true;
     /* this.currentLayoutConfig = layoutConfig;
@@ -274,37 +279,44 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }
   }
 
+  renderSubLayout(node) {
+    let { model } = node.getExtraData();
+    if (model == null) {
+      model = FlexLayout.Model.fromJson(node.getConfig().model);
+      node.getExtraData().model = model;
+      // save submodel on save event
+      node.setEventListener("save", () => {
+        this.state.layoutModel.doAction(
+          FlexLayout.Actions.updateNodeAttributes(node.getId(), {
+            config: { model: node.getExtraData().model.toJson() },
+          }),
+        );
+      });
+    }
+
+    return <FlexLayout.Layout model={model} factory={(...args) => this.layoutFactory(...args)} />;
+  }
+
   layoutFactory(node): ?React.Node {
     const { displayScalebars } = this.props;
     const component = node.getComponent();
+    const id = node.getId();
     switch (component) {
       case "tab": {
-        return this.renderTab(node.getId());
+        return this.renderTab(id);
       }
       case "settings-tab": {
-        return this.renderSettingsTab(node.getId());
+        return this.renderSettingsTab(id);
       }
       case "viewport": {
-        return <InputCatcher viewportID={node.getId()} displayScalebars={displayScalebars} />;
+        return (
+          <InputCatcher viewportID={id} displayScalebars={displayScalebars}>
+            {id === OrthoViews.TDView ? <TDViewControls /> : null}
+          </InputCatcher>
+        );
       }
       case "sub": {
-        let { model } = node.getExtraData();
-        if (model == null) {
-          model = FlexLayout.Model.fromJson(node.getConfig().model);
-          node.getExtraData().model = model;
-          // save submodel on save event
-          node.setEventListener("save", () => {
-            this.state.layoutModel.doAction(
-              FlexLayout.Actions.updateNodeAttributes(node.getId(), {
-                config: { model: node.getExtraData().model.toJson() },
-              }),
-            );
-          });
-        }
-
-        return (
-          <FlexLayout.Layout model={model} factory={(...args) => this.layoutFactory(...args)} />
-        );
+        return this.renderSubLayout(node);
       }
       default: {
         return null;
@@ -314,8 +326,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   toggleSidebar(side) {
     this.state.layoutModel.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
-    // giving flex layout some time so do the resizing.
-    setTimeout(() => this.onLayoutChange(), 50);
+    // Workaround so that onLayoutChange is called after the update of flexlayout.
+    // Calling the method without a timeout does not work.
+    setTimeout(() => this.onLayoutChange(), 1);
   }
 
   saveCurrentLayout = () => {
@@ -347,6 +360,32 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
+
+  getSidebarButtons() {
+    const SidebarButton = (side: string) => (
+      <Button
+        className={`${side}-sidebar-button`}
+        onClick={() => this.toggleSidebar(side)}
+        size="small"
+      >
+        <Icon
+          type={side}
+          className="withoutIconMargin"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        />
+      </Button>
+    );
+    return (
+      <React.Fragment>
+        {SidebarButton("left")}
+        {SidebarButton("right")}
+      </React.Fragment>
+    );
+  }
 
   render() {
     if (this.state.hasError) {
@@ -482,21 +521,29 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               <MergerModeController />
               <div id={canvasAndLayoutContainerID} style={{ position: "relative", width: "100%" }}>
                 <TracingView />
-                <div id="container1" className="conti">
+                <div className="flex-layout-container">
                   <FlexLayout.Layout
                     model={this.state.layoutModel}
                     factory={(...args) => this.layoutFactory(...args)}
                     onModelChange={() => this.onLayoutChange()}
                   />
                 </div>
-                <div id="footer" className="footer">
-                  <button
-                    type="button"
+                {/* <div id="footer" className="footer">
+                  <ButtonComponent
                     className="left-sidebar-button"
                     onClick={() => this.toggleSidebar("left")}
+                    size="small"
                   >
-                    &lt;
-                  </button>
+                    <Icon
+                      type="left"
+                      className="withoutIconMargin"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    />
+                  </ButtonComponent>
                   <button
                     type="button"
                     className="right-sidebar-button"
@@ -505,7 +552,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                     &gt;
                   </button>
                   I am an awesome Footer.🦶
-                </div>
+                    </div> */}
                 {/* <GoldenLayoutAdapter
                   id="layoutContainer"
                   style={GOLDEN_LAYOUT_ADAPTER_STYLE}
@@ -563,6 +610,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   <VersionView allowUpdate={isUpdateTracingAllowed} />
                 </Sider>
               ) : null}
+              <Footer className="footer">
+                {this.getSidebarButtons()}
+                🦶Footer🦶
+              </Footer>
             </Layout>
           </Layout>
         </NmlUploadZoneContainer>

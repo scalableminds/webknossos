@@ -1,6 +1,6 @@
 // @flow
 
-import { OrthoViews, AllTracingTabs } from "oxalis/constants";
+import { OrthoViews, AllTracingTabs, AllSettingsTabs } from "oxalis/constants";
 
 const infoTabs = {};
 Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
@@ -13,7 +13,7 @@ Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
 });
 
 const settingsTabs = {};
-Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
+Object.entries(AllSettingsTabs).forEach(([tabKey, { name, id }]: any) => {
   settingsTabs[tabKey] = {
     type: "tab",
     name,
@@ -23,7 +23,7 @@ Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
 });
 
 const viewports = {};
-Object.keys(AllTracingTabs).forEach(viewportId => {
+Object.keys(OrthoViews).forEach(viewportId => {
   viewports[viewportId] = {
     type: "tab",
     name: viewportId,
@@ -32,14 +32,19 @@ Object.keys(AllTracingTabs).forEach(viewportId => {
   };
 });
 
-function buildBorder(side, setsOfTabs: Array<Array<Object>>): Object {
+function buildTabset(setsOfTabs: Array<Array<Object>>) {
   const tabsetWeight = 100 / setsOfTabs.length;
-  const tabsets = setsOfTabs.forEach(tabs => ({
+  const tabsets = setsOfTabs.map(tabs => ({
     type: "tabset",
     weight: tabsetWeight,
     selected: 0,
-    children: [tabs],
+    children: tabs,
   }));
+  return tabsets;
+}
+
+function buildBorder(side, setsOfTabs: Array<Array<Object>>): Object {
+  const tabsets = buildTabset(setsOfTabs);
   const border = {
     type: "border",
     location: side,
@@ -62,7 +67,7 @@ function buildBorder(side, setsOfTabs: Array<Array<Object>>): Object {
                 {
                   type: "row",
                   weight: 100,
-                  children: [tabsets],
+                  children: tabsets,
                 },
               ],
             },
@@ -75,57 +80,37 @@ function buildBorder(side, setsOfTabs: Array<Array<Object>>): Object {
 }
 
 // TODO make a builder for the main layout
+function buildMainLayout(rowsOfSetOfTabs: any) {
+  const rowWeight = 100 / rowsOfSetOfTabs.length;
+  const rows = rowsOfSetOfTabs.map(setsOfTabs => {
+    const tabsets = buildTabset(setsOfTabs);
+    return {
+      type: "row",
+      weight: rowWeight,
+      children: tabsets,
+    };
+  });
+  const mainLayout = {
+    type: "row",
+    weight: 100,
+    children: rows,
+  };
+  return mainLayout;
+}
+
 const defaultLayout = {
   global: { splitterSize: 4, tabEnableRename: false, tabEnableClose: false, tabEnableDrag: true },
   borders: [
     buildBorder("left", [Object.values(settingsTabs)]),
     buildBorder("right", [
-      [infoTabs.DatasetInfoTab, infoTabs.TreesTabView, infoTabs.CommentTabView],
+      [infoTabs.DatasetInfoTabView, infoTabs.TreesTabView, infoTabs.CommentTabView],
       [infoTabs.MappingInfoView, infoTabs.MeshesView, infoTabs.AbstractTreeTabView],
     ]),
   ],
-  layout: {
-    type: "row",
-    weight: 100,
-    children: [
-      {
-        type: "row",
-        weight: 50,
-        children: [
-          {
-            type: "tabset",
-            weight: 50,
-            selected: 0,
-            children: [viewports.PLANE_XY],
-          },
-          {
-            type: "tabset",
-            weight: 50,
-            selected: 0,
-            children: [viewports.PLANE_XZ],
-          },
-        ],
-      },
-      {
-        type: "row",
-        weight: 50,
-        children: [
-          {
-            type: "tabset",
-            weight: 50,
-            selected: 0,
-            children: [viewports.PLANE_YZ],
-          },
-          {
-            type: "tabset",
-            weight: 50,
-            selected: 0,
-            children: [viewports.TDView],
-          },
-        ],
-      },
-    ],
-  },
+  layout: buildMainLayout([
+    [[viewports.PLANE_XY], [viewports.PLANE_XZ]],
+    [[viewports.PLANE_YZ], [viewports.TDView]],
+  ]),
 };
 
 export default defaultLayout;

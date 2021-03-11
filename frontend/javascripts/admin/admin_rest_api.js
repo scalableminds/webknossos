@@ -805,6 +805,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     datasetName: job.commandArgs.kwargs.dataset_name,
     organizationName: job.commandArgs.kwargs.organization_name,
     layerName: job.commandArgs.kwargs.layer_name,
+    boundingBox: job.commandArgs.kwargs.bbox,
     exportFileName: job.commandArgs.kwargs.export_file_name,
     state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,

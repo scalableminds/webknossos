@@ -138,7 +138,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
 
   def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
     for {
-      boundingBox <- BoundingBox.fromForm(bbox).toFox
+      boundingBox <- BoundingBox.createFrom(bbox).toFox ?~> "job.export.tiff.invalidBoundingBox"
       _ <- bool2Fox(boundingBox.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.export.tiff.volumeExceeded"
       _ <- bool2Fox(boundingBox.dimensions.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.export.tiff.edgeLengthExceeded"
     } yield ()
@@ -190,7 +190,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
-        _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
         _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
         command = "export_tiff"
         exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${layerName}.zip"

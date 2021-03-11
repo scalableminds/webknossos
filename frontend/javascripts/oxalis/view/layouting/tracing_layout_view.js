@@ -54,7 +54,7 @@ import TabTitle from "../components/tab_title_component";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
-import defaultLayout from "./default_layout";
+import defaultLayout from "./default_layouts";
 
 /*
  * TODOS for this PR:

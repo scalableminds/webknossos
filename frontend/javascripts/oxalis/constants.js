@@ -84,6 +84,24 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 
+export const AllTracingTabs = {
+  DatasetInfoTab: { id: "DatasetInfoTabView", name: "Info", shortName: "Info" },
+  TreesTab: { id: "TreesTabView", name: "Trees", shortName: "Trees" },
+  CommentTab: { id: "CommentTabView", name: "Comments", shortName: "Comments" },
+  MappingInfoTab: { id: "MappingInfoView", name: "Volume", shortName: "Volume" },
+  MeshesTab: { id: "MeshesView", name: "Meshes", shortName: "Mehes" },
+  AbstractTreeTab: { id: "AbstractTreeTabView", name: "AbstractTree", shortName: "AbsTree" },
+};
+
+export const AllSettingsTabs = {
+  UserSettingsTab: {
+    id: "UserSettingsView",
+    name: "Annotation",
+    shortName: "Annotation",
+  },
+  DatasetSettingsTab: { id: "DatasetSettingsView", name: "Dataset", shortName: "Dataset" },
+};
+
 export const OrthoViewGrayCrosshairColor = 0x222222;
 
 export const ControlModeEnum = {

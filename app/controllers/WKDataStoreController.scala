@@ -7,14 +7,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, IsosurfaceRequestEvent, UploadDatasetEvent}
+import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.organization.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsError, JsSuccess, JsValue}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.Action
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -61,16 +61,6 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
         }
       }
     }
-
-  def reportIsosurfaceRequest(name: String, token: Option[String]): Action[AnyContent] = Action.async {
-    implicit request =>
-      dataStoreService.validateAccess(name) { _ =>
-        for {
-          userOpt <- Fox.runOptional(token)(bearerTokenService.userForToken(_)(GlobalAccessContext))
-          _ = userOpt.map(user => analyticsService.track(IsosurfaceRequestEvent(user, "view")))
-        } yield Ok
-      }
-  }
 
   def statusUpdate(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { _ =>

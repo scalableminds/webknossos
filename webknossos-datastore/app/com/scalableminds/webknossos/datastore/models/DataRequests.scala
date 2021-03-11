@@ -53,7 +53,6 @@ case class WebKnossosIsosurfaceRequest(
     segmentId: Long,
     voxelDimensions: Vector3I,
     scale: Vector3D,
-    isInitialRequest: Boolean,
     mapping: Option[String] = None,
     mappingType: Option[String] = None
 ) {

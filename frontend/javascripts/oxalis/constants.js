@@ -89,7 +89,7 @@ export const AllTracingTabs = {
   TreesTabView: { id: "TreesTabView", name: "Trees", shortName: "Trees" },
   CommentTabView: { id: "CommentTabView", name: "Comments", shortName: "Comments" },
   MappingInfoView: { id: "MappingInfoView", name: "Volume", shortName: "Volume" },
-  MeshesView: { id: "MeshesView", name: "Meshes", shortName: "Mehes" },
+  MeshesView: { id: "MeshesView", name: "Meshes", shortName: "Meshes" },
   AbstractTreeTabView: {
     id: "AbstractTreeTabView",
     name: "AbstractTree",

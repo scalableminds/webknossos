@@ -10,9 +10,17 @@ import _ from "lodash";
 
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
-import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
+import Constants, {
+  type ControlMode,
+  ControlModeEnum,
+  type ViewMode,
+  OrthoViews,
+  AllTracingTabs,
+  AllSettingsTabs,
+  ArbitraryViews,
+} from "oxalis/constants";
 
-import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
+import { Pane, Column, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 8;
@@ -93,57 +101,175 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
+function Row(children: Array<any>, weight?: number) {
+  weight = weight != null ? weight : 100;
+  return {
+    type: "row",
+    weight,
+    children,
+  };
+}
+
+function Tabset(children: Array<any>, weight?: number) {
+  weight = weight != null ? weight : 100;
+  return {
+    type: "tabset",
+    weight,
+    selected: 0,
+    children,
+  };
+}
+
+function Tab(name: string, id: string, component: string) {
+  return {
+    type: "tab",
+    name,
+    component,
+    id,
+  };
+}
+
+const infoTabs = {};
+Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
+  infoTabs[tabKey] = Tab(name, id, "tab");
+});
+
+const settingsTabs = {};
+Object.entries(AllSettingsTabs).forEach(([tabKey, { name, id }]: any) => {
+  settingsTabs[tabKey] = Tab(name, id, "settings-tab");
+});
+
+const OrthoViewports = {};
+Object.keys(OrthoViews).forEach(viewportId => {
+  OrthoViewports[viewportId] = Tab(viewportId, viewportId, "viewport");
+});
+
+const ArbitraryViewports = {};
+Object.keys(ArbitraryViews).forEach(viewportId => {
+  ArbitraryViewports[viewportId] = Tab(viewportId, viewportId, "viewport");
+});
+const subLayoutGlobalSettings = { tabSetEnableDivide: false, tabEnableClose: false };
+const globalLayoutSettings = {
+  splitterSize: 4,
+  tabEnableRename: false,
+  tabEnableClose: false,
+  tabEnableDrag: true,
+};
+
+function buildTabset(setsOfTabs: Array<Array<Object>>) {
+  const tabsetWeight = 100 / setsOfTabs.length;
+  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight));
+  return tabsets;
+}
+
+function buildBorder(side, setsOfTabs: Array<Array<Object>>, width: number): Object {
+  const tabsets = buildTabset(setsOfTabs);
+  const border = {
+    type: "border",
+    location: side,
+    id: `${side}-sidebar`,
+    barSize: 0.01,
+    size: width,
+    children: [
+      {
+        type: "tab",
+        name: "container",
+        id: `${side}-sidebar-tab-container`,
+        component: "sub",
+        config: {
+          model: {
+            global: subLayoutGlobalSettings,
+            layout: Row([Row(tabsets)]),
+          },
+        },
+      },
+    ],
+  };
+  return border;
+}
+
+function buildMainLayout(rowsOfSetOfTabs: any) {
+  const rowWeight = 100 / rowsOfSetOfTabs.length;
+  const rows = rowsOfSetOfTabs.map(setsOfTabs => {
+    const tabsets = buildTabset(setsOfTabs);
+    return Row(tabsets, rowWeight);
+  });
+  const mainLayout = Row(rows);
+  return mainLayout;
+}
+
+function buildLayout(settings, borders, mainLayout) {
+  return {
+    global: settings,
+    borders,
+    layout: mainLayout,
+  };
+}
+
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
-  const defaultViewportWidthInPercent = 33;
-  const defaultViewport2dWidthInPercent = 66;
+  const defaultBorderWidth = isInIframe ? 200 : 400;
+  const leftSiderbar = buildBorder("left", [Object.values(settingsTabs)], 400);
+  const rightSidebarWithSkeleton = buildBorder(
+    "right",
+    [
+      [infoTabs.DatasetInfoTabView, infoTabs.TreesTabView, infoTabs.CommentTabView],
+      [infoTabs.MappingInfoView, infoTabs.MeshesView, infoTabs.AbstractTreeTabView],
+    ],
+    defaultBorderWidth,
+  );
+  const rightSidebarWithoutSkeleton = buildBorder(
+    "right",
+    [[infoTabs.DatasetInfoTabView, infoTabs.MappingInfoView, infoTabs.MeshesView]],
+    defaultBorderWidth,
+  );
+  const OrthoMainLayout = buildMainLayout([
+    [[OrthoViewports.PLANE_XY], [OrthoViewports.PLANE_XZ]],
+    [[OrthoViewports.PLANE_YZ], [OrthoViewports.TDView]],
+  ]);
+  const OrthoMainLayout2d = buildMainLayout([
+    [
+      [
+        OrthoViewports.PLANE_XY,
+        OrthoViewports.PLANE_YZ,
+        OrthoViewports.PLANE_XZ,
+        OrthoViewports.TDView,
+      ],
+    ],
+  ]);
 
-  let OrthoLayout;
-  let OrthoLayoutView;
-  let VolumeTracingView;
-  let OrthoLayout2d;
-  let OrthoLayoutView2d;
-  let VolumeTracingView2d;
+  const OrthoLayout = buildLayout(
+    globalLayoutSettings,
+    [leftSiderbar, rightSidebarWithSkeleton],
+    OrthoMainLayout,
+  );
 
-  if (isInIframe) {
-    const getGridWithExtraTabs = tabs => [
-      Column(Panes.xy, Panes.xz),
-      Column(Panes.yz, Stack(Panes.td, ...tabs)),
-    ];
-    const getGridWithExtraTabs2d = tabs => [
-      Column(Panes.xy, Stack(Panes.xz, Panes.yz, Panes.td, ...tabs)),
-    ];
-
-    OrthoLayout = createLayout(Row(...getGridWithExtraTabs(SkeletonRightHandColumnItems)));
-    OrthoLayoutView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
-    VolumeTracingView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
-    OrthoLayout2d = createLayout(Row(...getGridWithExtraTabs2d(SkeletonRightHandColumnItems)));
-    OrthoLayoutView2d = createLayout(
-      Row(...getGridWithExtraTabs2d(NonSkeletonRightHandColumnItems)),
-    );
-    VolumeTracingView2d = createLayout(
-      Row(...getGridWithExtraTabs2d(NonSkeletonRightHandColumnItems)),
-    );
-  } else {
-    const OrthoViewsGrid = [
-      setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
-      setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
-    ];
-    const OrthoViewsGrid2d = [
-      setGlContainerWidth(
-        Column(Stack(Panes.xy, Panes.xz, Panes.yz, Panes.td)),
-        defaultViewport2dWidthInPercent,
-      ),
-    ];
-
-    OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-    OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-    VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-    OrthoLayout2d = createLayout(Row(...OrthoViewsGrid2d, SkeletonRightHandColumn));
-    OrthoLayoutView2d = createLayout(Row(...OrthoViewsGrid2d, NonSkeletonRightHandColumn));
-    VolumeTracingView2d = createLayout(Row(...OrthoViewsGrid2d, NonSkeletonRightHandColumn));
-  }
-
+  const OrthoLayoutView = buildLayout(
+    globalLayoutSettings,
+    [leftSiderbar, rightSidebarWithoutSkeleton],
+    OrthoMainLayout,
+  );
+  const VolumeTracingView = buildLayout(
+    globalLayoutSettings,
+    [leftSiderbar, rightSidebarWithoutSkeleton],
+    OrthoMainLayout,
+  );
+  const OrthoLayout2d = buildLayout(
+    globalLayoutSettings,
+    [leftSiderbar, rightSidebarWithSkeleton],
+    OrthoMainLayout2d,
+  );
+  const OrthoLayoutView2d = buildLayout(
+    globalLayoutSettings,
+    [leftSiderbar, rightSidebarWithoutSkeleton],
+    OrthoMainLayout2d,
+  );
+  const VolumeTracingView2d = buildLayout(
+    globalLayoutSettings,
+    [leftSiderbar, rightSidebarWithoutSkeleton],
+    OrthoMainLayout2d,
+  );
+  // TODO: create ArbitraryView default layout; Adapt tracing view to use the specific layoutKey or so; add saving layouts; add support for multiple layouts
   const eventual3DViewportForArbitrary = show3DViewportInArbitrary ? [Panes.td] : [];
   const arbitraryPanes = [Panes.arbitraryViewport, NonSkeletonRightHandColumn].concat(
     eventual3DViewportForArbitrary,

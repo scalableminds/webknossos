@@ -5,6 +5,7 @@ import type { BoundingBoxType } from "oxalis/constants";
 import type { VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import { startTiffExportJob } from "admin/admin_rest_api";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor"
 import Model from "oxalis/model";
 import features from "features";
 import * as Utils from "libs/utils";
@@ -39,7 +40,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }
     );
   };
 
-  const hasMag1 = (layer: APIDataLayer) => layer.resolutions.map(r => Math.max(...r)).includes(1);
+  const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
   const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
     if (layer.category === "color" || volumeTracing == null)

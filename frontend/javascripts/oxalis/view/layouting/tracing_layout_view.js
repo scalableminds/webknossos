@@ -46,6 +46,7 @@ import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import Statusbar from "statusbar";
 import TabTitle from "../components/tab_title_component";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
@@ -355,7 +356,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 collapsed={isSettingsCollapsed}
                 collapsedWidth={0}
                 width={360}
-                style={{ zIndex: 100, marginRight: isSettingsCollapsed ? 0 : 8 }}
+                style={{ zIndex: 100, marginRight: isSettingsCollapsed ? 0 : 8, marginBottom: 11 }}
               >
                 <SettingsView dontRenderContents={isSettingsCollapsed} />
               </Sider>
@@ -420,6 +421,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 </Sider>
               ) : null}
             </Layout>
+            <Statusbar />
           </Layout>
         </NmlUploadZoneContainer>
       </React.Fragment>

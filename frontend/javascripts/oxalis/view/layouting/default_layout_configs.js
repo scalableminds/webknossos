@@ -10,6 +10,7 @@ import _ from "lodash";
 
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
+import { statusbarHeight } from "statusbar";
 import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
@@ -90,7 +91,7 @@ export const getGroundTruthLayoutRect = () => {
   }
   // The -1s are a workaround, since otherwise scrollbars
   // would appear from time to time
-  return { width: width - 1, height: height - 1 };
+  return { width: width - 1, height: height - 1 - statusbarHeight };
 };
 
 const _getDefaultLayouts = () => {

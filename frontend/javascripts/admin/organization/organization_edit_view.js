@@ -1,6 +1,6 @@
 // @flow
 import { withRouter } from "react-router-dom";
-import { Form, Button, Card, Radio, Input, Icon, Row, Col } from "antd";
+import { Form, Button, Card, Input, Icon, Row } from "antd";
 import React from "react";
 
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -8,7 +8,6 @@ import { getOrganization, deleteOrganization, updateOrganization } from "admin/a
 import Enum from "Enumjs";
 
 const FormItem = Form.Item;
-const RadioGroup = Radio.Group;
 
 export const PricingPlanEnum = Enum.make({
   Basic: "Basic",
@@ -99,7 +98,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     return (
       <div className="container" style={{ paddingTop: 20 }}>
         <Card title={<h3>Edit {this.state.displayName}</h3>}>
-          <Form onSubmit={this.handleSubmit} layout="vertical">
+          <Form onSubmit={this.handleSubmit} layout="vertical" style={{ maxWidth: "350px" }}>
             <FormItem label="Display Name">
               {getFieldDecorator("displayName", {
                 rules: [
@@ -111,73 +110,8 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 ],
                 initialValue: this.state.displayName,
               })(<Input icon="tag-o" autoFocus disabled={this.state.isFetchingData} />)}
-            </FormItem>
-
-            <FormItem>
-              {" "}
-              <Row gutter={10}>
-                {getFieldDecorator("pricingPlan", {
-                  initialValue: Enum.coalesce(PricingPlanEnum, this.state.pricingPlan),
-                })(
-                  <RadioGroup>
-                    <Col span={6}>
-                      <Card
-                        title="Basic"
-                        hoverable
-                        extra={
-                          this.state.pricingPlan === PricingPlanEnum.Basic && (
-                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
-                          )
-                        }
-                      >
-                        Only the Basics.
-                      </Card>
-                    </Col>
-                    <Col span={6}>
-                      <Card
-                        title="Pilot"
-                        hoverable
-                        extra={
-                          this.state.pricingPlan === PricingPlanEnum.Pilot && (
-                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
-                          )
-                        }
-                      >
-                        Pilots only.
-                      </Card>
-                    </Col>
-                    <Col span={6}>
-                      <Card
-                        title="Premium"
-                        hoverable
-                        extra={
-                          this.state.pricingPlan === PricingPlanEnum.Premium && (
-                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
-                          )
-                        }
-                      >
-                        All the Stuff of your Dreams.
-                      </Card>
-                    </Col>
-                    <Col span={6}>
-                      <Card
-                        title="Custom"
-                        hoverable
-                        extra={
-                          this.state.pricingPlan === PricingPlanEnum.Custom && (
-                            <Icon type="star" theme="filled" style={{ color: "blue" }} />
-                          )
-                        }
-                      >
-                        Your Individual Solution.
-                      </Card>
-                    </Col>
-                  </RadioGroup>,
-                )}
-              </Row>
-            </FormItem>
-
-            <FormItem>
+            </FormItem>{" "}
+            <FormItem label="New User Email">
               {getFieldDecorator("newUserMailingList", {
                 rules: [
                   {
@@ -190,8 +124,15 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 <Input
                   prefix={<Icon type="mail" style={{ fontSize: 13 }} />}
                   disabled={this.state.isFetchingData}
+                  placeholder="email address"
                 />,
               )}
+            </FormItem>
+            <FormItem>
+              <div className="ant-form-item-label" style={{ paddingTop: 5 }}>
+                <label style={{ paddingRight: 20 }}>Pricing Plan</label>
+                <span className="bordered">{this.state.pricingPlan}</span>
+              </div>
             </FormItem>
             <Row type="flex" justify="space-between">
               <FormItem>

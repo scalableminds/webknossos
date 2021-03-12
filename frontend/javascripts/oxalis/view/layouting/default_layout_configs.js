@@ -21,7 +21,7 @@ import Constants, {
 } from "oxalis/constants";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 8;
+export const currentLayoutVersion = 9;
 export const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
@@ -200,7 +200,6 @@ const _getDefaultLayouts = () => {
   const OrthoLayoutView2d = buildOrthoLayout(false, true);
   const VolumeTracingView2d = buildOrthoLayout(false, true);
 
-  // TODO: create ArbitraryView default layout; Adapt tracing view to use the specific layoutKey or so; add saving layouts; add support for multiple layouts
   const eventual3DViewportForArbitrary = show3DViewportInArbitrary
     ? [[[OrthoViewports.TDView]]]
     : [];
@@ -308,7 +307,7 @@ export const mapLayoutKeysToLanguage = {
   OrthoLayoutView: "Orthogonal Mode - View Only",
   ArbitraryLayoutView: "Arbitrary Mode - View Only",
   VolumeTracingView: "Volume Mode",
-  ArbitraryLayout: "Arbitray Mode",
+  ArbitraryLayout: "Arbitrary Mode",
   OrthoLayout: "Orthogonal Mode",
   OrthoLayoutView2d: "Orthogonal Mode 2D - View Only",
   VolumeTracingView2d: "Volume Mode 2D",

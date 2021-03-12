@@ -26,10 +26,7 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
+type OwnProps = {||};
 type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
@@ -42,7 +39,7 @@ type DispatchProps = {|
   setAnnotationDescription: string => void,
 |};
 
-type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
+type Props = {| ...StateProps, ...DispatchProps |};
 
 const shortcuts = [
   {

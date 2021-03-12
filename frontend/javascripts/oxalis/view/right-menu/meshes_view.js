@@ -129,17 +129,14 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
+type OwnProps = {||};
 type StateProps = {|
   meshes: Array<MeshMetaData>,
   isImporting: boolean,
 |};
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
-type Props = {| ...OwnProps, ...DispatchProps, ...StateProps |};
+type Props = {| ...DispatchProps, ...StateProps |};
 
 const getCheckboxStyle = isLoaded =>
   isLoaded

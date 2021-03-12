@@ -15,15 +15,12 @@ import AbstractTreeRenderer, {
 } from "oxalis/view/right-menu/abstract_tree_renderer";
 import window from "libs/window";
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
+type OwnProps = {||};
 type StateProps = {|
   dispatch: Dispatch<*>,
   skeletonTracing: ?SkeletonTracing,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 type State = {
   visible: boolean,

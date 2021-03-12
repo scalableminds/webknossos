@@ -23,7 +23,8 @@ const disableLayoutPersistance = false;
 
 const localStorageKeys = {
   currentLayoutVersion: "currentLayoutVersion",
-  goldenWkLayouts: "goldenWkLayouts",
+  wkFlexLayouts: "wkFlexLayouts",
+  outdatedGoldenWkLayouts: "goldenWkLayouts",
 };
 
 function readStoredLayoutConfigs() {
@@ -35,7 +36,9 @@ function readStoredLayoutConfigs() {
   if (getIsInIframe() || !storedLayoutVersion || disableLayoutPersistance) {
     return defaultLayoutConfig;
   }
-  const layoutString = UserLocalStorage.getItem(localStorageKeys.goldenWkLayouts, false);
+  // Remove the old golden layout layouts.
+  UserLocalStorage.removeItem(localStorageKeys.outdatedGoldenWkLayouts, false);
+  const layoutString = UserLocalStorage.getItem(localStorageKeys.wkFlexLayouts, false);
   if (!layoutString) {
     return defaultLayoutConfig;
   }
@@ -43,43 +46,7 @@ function readStoredLayoutConfigs() {
     const version = JSON.parse(storedLayoutVersion);
     const layouts = JSON.parse(layoutString);
     if (currentLayoutVersion > version) {
-      if (version !== 5) {
-        return defaultLayoutConfig;
-      }
-      // migrate to newset schema
-      const withMulipleLayoutsSchema = {
-        OrthoLayoutView: {
-          "Custom Layout": layouts.OrthoLayoutView || defaultLayoutConfig.OrthoLayoutView,
-        },
-        VolumeTracingView: {
-          "Custom Layout": layouts.VolumeTracingView || defaultLayoutConfig.VolumeTracingView,
-        },
-        ArbitraryLayout: {
-          "Custom Layout": layouts.ArbitraryLayout || defaultLayoutConfig.ArbitraryLayout,
-        },
-        OrthoLayout: {
-          "Custom Layout": layouts.OrthoLayout || defaultLayoutConfig.OrthoLayout,
-        },
-        OrthoLayout2d: {
-          "Custom Layout": layouts.OrthoLayout2d || defaultLayoutConfig.OrthoLayout2d,
-        },
-        OrthoLayoutView2d: {
-          "Custom Layout": layouts.OrthoLayoutView2d || defaultLayoutConfig.OrthoLayoutView2d,
-        },
-        VolumeTracingView2d: {
-          "Custom Layout": layouts.VolumeTracingView2d || defaultLayoutConfig.VolumeTracingView2d,
-        },
-        LastActiveLayouts: {
-          OrthoLayoutView: "Custom Layout",
-          VolumeTracingView: "Custom Layout",
-          ArbitraryLayout: "Custom Layout",
-          OrthoLayout: "Custom Layout",
-          OrthoLayout2d: "Custom Layout",
-          OrthoLayoutView2d: "Custom Layout",
-          VolumeTracingView2d: "Custom Layout",
-        },
-      };
-      return withMulipleLayoutsSchema;
+      return defaultLayoutConfig;
     }
     if (
       layouts.OrthoLayoutView &&
@@ -114,7 +81,7 @@ function persistLayoutConfigs() {
     return;
   }
   const { storedLayouts } = Store.getState().uiInformation;
-  UserLocalStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts), false);
+  UserLocalStorage.setItem(localStorageKeys.wkFlexLayouts, JSON.stringify(storedLayouts), false);
   UserLocalStorage.setItem(
     localStorageKeys.currentLayoutVersion,
     JSON.stringify(currentLayoutVersion),
@@ -137,13 +104,7 @@ export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string)
   if (!layout) {
     return getDefaultLayouts()[layoutKey];
   }
-  // Use default dimensions and settings
-  const { dimensions, settings } = getDefaultLayouts()[layoutKey];
-  return {
-    ...layout,
-    dimensions,
-    settings,
-  };
+  return layout;
 }
 
 function getDeepCopyOfStoredLayouts(): Object {
@@ -181,10 +142,6 @@ export function addNewLayout(
   }
   if (newLayouts[layoutKey]) {
     newLayouts[layoutKey][newLayoutName] = configForLayout;
-    // might happen during migration
-    if (!newLayouts.LastActiveLayouts) {
-      newLayouts.LastActiveLayouts = {};
-    }
     newLayouts.LastActiveLayouts[layoutKey] = newLayoutName;
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();
@@ -197,17 +154,13 @@ export function addNewLayout(
 export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
   const newLayouts = getDeepCopyOfStoredLayouts();
   if (newLayouts[layoutKey] && newLayouts[layoutKey][activeLayout]) {
-    // might happen during migration
-    if (!newLayouts.LastActiveLayouts) {
-      newLayouts.LastActiveLayouts = {};
-    }
     newLayouts.LastActiveLayouts[layoutKey] = activeLayout;
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();
   } else {
     throw new Error(
-      `Active layout could not be set. The given layout ${layoutKey} was not found in layouts for
-      ${mapLayoutKeysToLanguage[layoutKey]}`,
+      `Active layout could not be set. The given layout ${layoutKey}  with name ${activeLayout} 
+      was not found in layouts for ${mapLayoutKeysToLanguage[layoutKey]}.`,
     );
   }
 }

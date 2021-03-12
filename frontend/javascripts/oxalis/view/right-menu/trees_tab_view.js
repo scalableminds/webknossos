@@ -102,10 +102,7 @@ type TreeOrTreeGroup = {
   type: string,
 };
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
+type OwnProps = {||};
 type StateProps = {|
   onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,

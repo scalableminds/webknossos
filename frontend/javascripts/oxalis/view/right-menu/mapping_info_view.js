@@ -35,9 +35,7 @@ import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combination
 
 const { Option, OptGroup } = Select;
 
-type OwnProps = {|
-  portalKey: string,
-|};
+type OwnProps = {||};
 type StateProps = {|
   dataset: APIDataset,
   segmentationLayer: ?APISegmentationLayer,
@@ -57,7 +55,7 @@ type StateProps = {|
   isMergerModeEnabled: boolean,
   allowUpdate: boolean,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 type State = {
   // shouldMappingBeEnabled is the UI state which is directly connected to the

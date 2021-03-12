@@ -36,7 +36,7 @@ import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
-import getDefaultLayouts, { determineLayout } from "./default_layout_configs";
+import { determineLayout } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 /*

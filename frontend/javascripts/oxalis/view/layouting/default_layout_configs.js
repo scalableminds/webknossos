@@ -1,7 +1,7 @@
 /*
  * This file defines:
- *  - the main panes which can be arranged in WK Core
- *  - the different layout types which specify which panes exist in which layout and what their default arrangement is
+ *  - the main tabs which can be arranged in WK Core
+ *  - the different layout types which specify which tabs exist in which layout and what their default arrangement is
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
 
@@ -20,63 +20,11 @@ import Constants, {
   ArbitraryViews,
 } from "oxalis/constants";
 
-import { Pane, Column, Stack } from "./golden_layout_helpers";
-
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 8;
 export const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
-
-const LayoutSettings = {
-  showPopoutIcon: false,
-  showCloseIcon: false,
-  showMaximiseIcon: true,
-};
-
-// While the first parameter to `Pane` is the title of the pane, the second one is an id
-// which is used to match the children provided to GoldenLayoutAdapter (in tracing_layout_view)
-// with the panes in the layout config.
-const Panes = {
-  xy: Pane("XY", "xy"),
-  xz: Pane("XZ", "xz"),
-  yz: Pane("YZ", "yz"),
-  td: Pane("3D", "td"),
-  DatasetInfoTabView: Pane("Info", "DatasetInfoTabView"),
-  TreesTabView: Pane("Trees", "TreesTabView"),
-  CommentTabView: Pane("Comments", "CommentTabView"),
-  AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
-  arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
-  Mappings: Pane("Segmentation", "MappingInfoView"),
-  Meshes: Pane("Meshes", "MeshesView"),
-};
-
-function setGlContainerWidth(container: Object, width: number) {
-  container.width = width;
-  return container;
-}
-
-const createLayout = (...content: Array<*>) => ({
-  settings: LayoutSettings,
-  dimensions: {
-    headerHeight: layoutHeaderHeight,
-    borderWidth: 1,
-  },
-  content,
-});
-
-const SkeletonRightHandColumnItems = [
-  Panes.DatasetInfoTabView,
-  Panes.TreesTabView,
-  Panes.CommentTabView,
-  Panes.AbstractTreeTabView,
-  Panes.Mappings,
-  Panes.Meshes,
-];
-const SkeletonRightHandColumn = Stack(...SkeletonRightHandColumnItems);
-
-const NonSkeletonRightHandColumnItems = [Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes];
-const NonSkeletonRightHandColumn = Stack(...NonSkeletonRightHandColumnItems);
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
@@ -101,7 +49,7 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
-function Row(children: Array<any>, weight?: number) {
+function Row(children: Array<any>, weight?: number): Object {
   weight = weight != null ? weight : 100;
   return {
     type: "row",
@@ -110,7 +58,7 @@ function Row(children: Array<any>, weight?: number) {
   };
 }
 
-function Tabset(children: Array<any>, weight?: number) {
+function Tabset(children: Array<any>, weight?: number): Object {
   weight = weight != null ? weight : 100;
   return {
     type: "tabset",
@@ -120,7 +68,7 @@ function Tabset(children: Array<any>, weight?: number) {
   };
 }
 
-function Tab(name: string, id: string, component: string) {
+function Tab(name: string, id: string, component: string): Object {
   return {
     type: "tab",
     name,
@@ -238,47 +186,37 @@ const _getDefaultLayouts = () => {
     ],
   ]);
 
-  const OrthoLayout = buildLayout(
-    globalLayoutSettings,
-    [leftSiderbar, rightSidebarWithSkeleton],
-    OrthoMainLayout,
-  );
+  const buildOrthoLayout = (withSkeleton: boolean, is2D: boolean) =>
+    buildLayout(
+      globalLayoutSettings,
+      [leftSiderbar, withSkeleton ? rightSidebarWithSkeleton : rightSidebarWithoutSkeleton],
+      is2D ? OrthoMainLayout2d : OrthoMainLayout,
+    );
 
-  const OrthoLayoutView = buildLayout(
-    globalLayoutSettings,
-    [leftSiderbar, rightSidebarWithoutSkeleton],
-    OrthoMainLayout,
-  );
-  const VolumeTracingView = buildLayout(
-    globalLayoutSettings,
-    [leftSiderbar, rightSidebarWithoutSkeleton],
-    OrthoMainLayout,
-  );
-  const OrthoLayout2d = buildLayout(
-    globalLayoutSettings,
-    [leftSiderbar, rightSidebarWithSkeleton],
-    OrthoMainLayout2d,
-  );
-  const OrthoLayoutView2d = buildLayout(
-    globalLayoutSettings,
-    [leftSiderbar, rightSidebarWithoutSkeleton],
-    OrthoMainLayout2d,
-  );
-  const VolumeTracingView2d = buildLayout(
-    globalLayoutSettings,
-    [leftSiderbar, rightSidebarWithoutSkeleton],
-    OrthoMainLayout2d,
-  );
+  const OrthoLayout = buildOrthoLayout(true, false);
+  const OrthoLayoutView = buildOrthoLayout(false, false);
+  const VolumeTracingView = buildOrthoLayout(false, false);
+  const OrthoLayout2d = buildOrthoLayout(true, true);
+  const OrthoLayoutView2d = buildOrthoLayout(false, true);
+  const VolumeTracingView2d = buildOrthoLayout(false, true);
+
   // TODO: create ArbitraryView default layout; Adapt tracing view to use the specific layoutKey or so; add saving layouts; add support for multiple layouts
-  const eventual3DViewportForArbitrary = show3DViewportInArbitrary ? [Panes.td] : [];
-  const arbitraryPanes = [Panes.arbitraryViewport, NonSkeletonRightHandColumn].concat(
-    eventual3DViewportForArbitrary,
-  );
-  const ArbitraryLayoutView = createLayout(Row(...arbitraryPanes));
-  const arbitraryPanesWithSkeleton = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
-    eventual3DViewportForArbitrary,
-  );
-  const ArbitraryLayout = createLayout(Row(...arbitraryPanesWithSkeleton));
+  const eventual3DViewportForArbitrary = show3DViewportInArbitrary
+    ? [[[OrthoViewports.TDView]]]
+    : [];
+  const ArbitraryMainLayout = buildMainLayout([
+    [[ArbitraryViewports.arbitraryViewport]],
+    ...eventual3DViewportForArbitrary,
+  ]);
+  const buildArbitraryLayout = (withSkeleton: boolean) =>
+    buildLayout(
+      globalLayoutSettings,
+      [leftSiderbar, withSkeleton ? rightSidebarWithSkeleton : rightSidebarWithoutSkeleton],
+      ArbitraryMainLayout,
+    );
+
+  const ArbitraryLayoutView = buildArbitraryLayout(false);
+  const ArbitraryLayout = buildArbitraryLayout(true);
   return {
     OrthoLayout,
     OrthoLayoutView,

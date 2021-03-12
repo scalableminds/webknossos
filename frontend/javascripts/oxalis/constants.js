@@ -74,7 +74,7 @@ export const OrthoViewColors: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0xc81414, // red
   [OrthoViews.PLANE_YZ]: 0x1414c8, // blue
   [OrthoViews.PLANE_XZ]: 0x14c814, // green
-  [OrthoViews.TDView]: 0xffffff,
+  [OrthoViews.TDView]: 0xbfbfbf,
 };
 
 export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {

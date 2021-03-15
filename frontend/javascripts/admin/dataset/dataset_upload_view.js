@@ -7,7 +7,12 @@ import _ from "lodash";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { finishDatasetUpload, createResumableUpload, startCubingJob } from "admin/admin_rest_api";
+import {
+  finishDatasetUpload,
+  createResumableUpload,
+  startCubingJob,
+  sendFailedRequestAnalyticsEvent,
+} from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -166,7 +171,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 this.state.needsConversion,
               );
             },
-            () => {
+            error => {
+              sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
+                dataset_name: datasetId.name,
+              });
               Toast.error(messages["dataset.upload_failed"]);
               this.setState({
                 isUploading: false,

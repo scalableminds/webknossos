@@ -134,6 +134,20 @@ export function sendAnalyticsEvent(eventType: string, eventProperties: Object): 
   });
 }
 
+export function sendFailedRequestAnalyticsEvent(
+  requestType: string,
+  error: Object,
+  requestProperties: Object,
+): void {
+  const eventProperties = {
+    request_type: requestType,
+    request_properties: requestProperties,
+    status: error.status || 0,
+    messages: error.messages || [],
+  };
+  sendAnalyticsEvent("request_failed", eventProperties);
+}
+
 // ### Users
 export async function loginUser(formValues: { email: string, password: string }): Promise<Object> {
   await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });

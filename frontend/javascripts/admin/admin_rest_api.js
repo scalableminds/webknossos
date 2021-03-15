@@ -970,10 +970,25 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string): Promise<*> {
-  const getRandomString = () => {
-    const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
-    return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
+export function createResumableUpload(
+  datasetId: APIDatasetId,
+  datastoreUrl: string,
+  totalFileCount: number,
+  uploadId: string,
+): Promise<*> {
+  const generateUniqueIdentifier = file => {
+    if (file.path == null) {
+      // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
+      // In case this "enrichment" of the file should change at some point (e.g., due to library changes),
+      // throw an error.
+      throw new Error("file.path is undefined.");
+    }
+    return `${uploadId}/${file.path || file.name}`;
+  };
+
+  const additionalParameters = {
+    ...datasetId,
+    totalFileCount,
   };
 
   return doWithToken(
@@ -981,14 +996,14 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        query: datasetId,
+        query: additionalParameters,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         // Only increase this value when https://github.com/scalableminds/webknossos/issues/5056 is fixed
         simultaneousUploads: 1,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
-        generateUniqueIdentifier: getRandomString,
+        generateUniqueIdentifier,
       }),
   );
 }

@@ -1,12 +1,19 @@
 package models.annotation
 
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import models.annotation.AnnotationSettings._
+import models.annotation.AnnotationSettings.skeletonModes
 import play.api.libs.json._
 
+object TracingMode extends ExtendedEnumeration {
+  type TracingMode = Value
+  val orthogonal, oblique, flight, volume = Value
+}
+
 case class AnnotationSettings(
-    allowedModes: List[String] = SKELETON_MODES,
+    allowedModes: List[TracingMode.Value] = skeletonModes,
     preferredMode: Option[String] = None,
     branchPointsAllowed: Boolean = true,
     somaClickingAllowed: Boolean = true,
@@ -15,33 +22,18 @@ case class AnnotationSettings(
 )
 
 object AnnotationSettings {
-  val ORTHOGONAL = "orthogonal"
-  val OBLIQUE = "oblique"
-  val FLIGHT = "flight"
-  val VOLUME = "volume"
+  private val skeletonModes = List(TracingMode.orthogonal, TracingMode.oblique, TracingMode.flight)
+  private val volumeModes = List(TracingMode.volume)
+  private val allModes = skeletonModes ::: volumeModes
 
-  val SKELETON_MODES = List(ORTHOGONAL, OBLIQUE, FLIGHT)
-  val VOLUME_MODES = List(VOLUME)
-  val ALL_MODES: List[String] = SKELETON_MODES ::: VOLUME_MODES
-
-  def defaultFor(tracingType: TracingType.Value): AnnotationSettings = tracingType match {
+  def defaultFor(tracingType: TracingType): AnnotationSettings = tracingType match {
     case TracingType.skeleton =>
-      AnnotationSettings(allowedModes = SKELETON_MODES)
+      AnnotationSettings(allowedModes = skeletonModes)
     case TracingType.volume =>
-      AnnotationSettings(allowedModes = VOLUME_MODES)
+      AnnotationSettings(allowedModes = volumeModes)
     case TracingType.hybrid =>
-      AnnotationSettings(allowedModes = ALL_MODES)
+      AnnotationSettings(allowedModes = allModes)
   }
 
-  implicit val annotationSettingsWrites: OWrites[AnnotationSettings] = Json.writes[AnnotationSettings]
-
-  implicit val annotationSettingsReads: Reads[AnnotationSettings] =
-    Json
-      .reads[AnnotationSettings]
-      .filter(JsonValidationError("annotation.preferedMode.invalid")) { a =>
-        a.preferredMode.forall(ALL_MODES.contains)
-      }
-      .filter(JsonValidationError("annotation.mode.invalid")) { a =>
-        a.allowedModes.forall(ALL_MODES.contains)
-      }
+  implicit val jsonFormat: OFormat[AnnotationSettings] = Json.format[AnnotationSettings]
 }

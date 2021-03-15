@@ -500,7 +500,7 @@ export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
         const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
         if (value != null && (typeof value === "string" || value instanceof Object)) {
           const values = getRecursiveValues(value);
-          return _.some(values, v => v.toString().match(regexp));
+          return _.some(values, v => v != null && v.toString().match(regexp));
         } else {
           return false;
         }
@@ -531,7 +531,7 @@ export function filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
             const values = getRecursiveValues(value);
-            return _.some(values, v => v.toString().match(pattern));
+            return _.some(values, v => v != null && v.toString().match(pattern));
           } else {
             return false;
           }

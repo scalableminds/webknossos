@@ -22,8 +22,6 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
-{% embed url="https://www.youtube.com/watch?v=G3dryPbfV3o "%}
-
 ### Proof-Reading and Merging Segments
 
 webKnossos support proof-reading of segments from automatic segmentations. With "Merger Mode" individual segments (e.g. from over-segmentation) can be combined to refine the segmentation. 
@@ -43,39 +41,24 @@ Mapping files are in JSON and need to follow this schema. All segment IDs belong
 ```
 {
   {
-
-   "name": "astrocytes",
-
-   "classes": [
-
-                [
-
-                        69381,
-
-                        69445,
-
-                        138248
-
-                ], [
-
-                        138307,
-
-                        343831
-
-                ], [
-
-                        348348,
-
-                        132432,
-
-                        387433,
-
-                        338330
-
-                ]
-
+    "name": "astrocytes",
+    "classes": [
+      [
+        69381,
+        69445,
+        138248
+      ],
+      [
+        138307,
+        343831
+      ],
+      [
+        348348,
+        132432,
+        387433,
+        338330
+      ]
     ]
-
   }
 }
 ```

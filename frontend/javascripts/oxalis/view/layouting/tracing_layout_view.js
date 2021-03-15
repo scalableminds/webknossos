@@ -16,12 +16,10 @@ import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/sto
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
-import ButtonComponent from "oxalis/view/components/button_component";
 import NodeContextMenu from "oxalis/view/node_context_menu";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
 import type { ControllerStatus } from "oxalis/controller";
-import SettingsView from "oxalis/view/settings/settings_view";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import Toast from "libs/toast";
 import TracingView from "oxalis/view/tracing_view";
@@ -41,13 +39,7 @@ import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 /*
  * TODOS for this PR:
- * Enable saving of UI config
- * Fix maximize: When a pane is maximized, the on model change needs to be called.
- * After maximise the 3d viewport buttons are broken / in small or Iframe mode.
  * Spacing in the left sidebar in the settings between settings is off.
- * Fix adding new layout
- * Layout wechsel sollte ein onLayoutChange ausführen
- *
  * Beaufity UI
  */
 
@@ -76,7 +68,6 @@ type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type PropsWithRouter = {| ...OwnProps, ...StateProps, ...DispatchProps, history: RouterHistory |};
 
 type State = {
-  isSettingsCollapsed: boolean,
   activeLayoutName: string,
   hasError: boolean,
   status: ControllerStatus,
@@ -119,7 +110,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }
     const layout = props.storedLayouts[layoutType][lastActiveLayoutName];
     this.state = {
-      isSettingsCollapsed: true,
       activeLayoutName: lastActiveLayoutName,
       hasError: false,
       status: "loading",
@@ -180,34 +170,26 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     });
   };
 
-  handleSettingsCollapse = () => {
-    this.setState(prevState => ({
-      isSettingsCollapsed: !prevState.isSettingsCollapsed,
-    }));
-  };
-
-  onLayoutChange = (model: ?Object) => {
+  onLayoutChange = (model?: Object, layoutName?: string) => {
     recalculateInputCatcherSizes();
     window.needsRerender = true;
     if (model != null) {
       this.setState({ model });
     }
     if (this.props.autoSaveLayouts) {
-      console.log("saving cause of model change");
-      this.saveCurrentLayout();
+      this.saveCurrentLayout(layoutName);
     }
   };
 
   deferredOnLayoutChange = (model?: Object) => setTimeout(() => this.onLayoutChange(model), 1);
 
-  saveCurrentLayout = () => {
+  saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(
       this.props.initialCommandType.type,
       this.props.viewMode,
       this.props.is2d,
     );
-    console.log("storing", layoutKey, this.state.activeLayoutName);
-    storeLayoutConfig(this.state.model, layoutKey, this.state.activeLayoutName);
+    storeLayoutConfig(this.state.model, layoutKey, layoutName || this.state.activeLayoutName);
   };
 
   getTabTitle = () => {
@@ -243,7 +225,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       nodeContextMenuGlobalPosition,
       nodeContextMenuViewport,
       status,
-      isSettingsCollapsed,
       activeLayoutName,
     } = this.state;
 
@@ -254,8 +235,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
-    const layout = this.props.storedLayouts[layoutType][activeLayoutName];
-    console.log("layout:", layoutType, activeLayoutName);
 
     const createNewTracing = async (
       files: Array<File>,
@@ -301,21 +280,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             <RenderToPortal portalId="navbarTracingSlot">
               {status === "loaded" ? (
                 <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
-                  <ButtonComponent
-                    className={isSettingsCollapsed ? "" : "highlight-togglable-button"}
-                    onClick={this.handleSettingsCollapse}
-                    shape="circle"
-                  >
-                    <Icon
-                      type="setting"
-                      className="withoutIconMargin"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    />
-                  </ButtonComponent>
                   <ActionBarView
                     layoutProps={{
                       storedLayoutNamesForView: currentLayoutNames,
@@ -356,21 +320,13 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               ) : null}
             </RenderToPortal>
             <Layout style={{ display: "flex" }}>
-              <Sider
-                collapsible
-                trigger={null}
-                collapsed={isSettingsCollapsed}
-                collapsedWidth={0}
-                width={360}
-                style={{ zIndex: 100, marginRight: isSettingsCollapsed ? 0 : 8 }}
-              >
-                <SettingsView dontRenderContents={isSettingsCollapsed} />
-              </Sider>
               <MergerModeController />
-              <div id={canvasAndLayoutContainerID} style={{ position: "relative", width: "100%" }}>
+              <div
+                id={canvasAndLayoutContainerID}
+                style={{ position: "relative", width: "100%", height: "100%" }}
+              >
                 <TracingView />
                 <FlexLayoutWrapper
-                  layout={layout}
                   onLayoutChange={this.onLayoutChange}
                   layoutKey={layoutType}
                   layoutName={activeLayoutName}

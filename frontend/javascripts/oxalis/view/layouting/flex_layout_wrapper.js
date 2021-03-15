@@ -18,6 +18,15 @@ import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
+import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
+import { type LayoutKeys } from "./default_layout_configs";
+// TODO: use the layout emitter
+/*
+const unbindResetListener = layoutEmitter.on("resetLayout", () => {
+      resetDefaultLayouts();
+      this.rebuildLayout();
+    });
+*/
 
 const { Footer } = Layout;
 
@@ -27,10 +36,9 @@ type StateProps = {|
 |};
 
 type OwnProps = {|
-  layout: Object,
-  layoutKey: string,
+  layoutKey: LayoutKeys,
   layoutName: string,
-  onLayoutChange: Object => void,
+  onLayoutChange: (model: Object, layoutName: string) => void,
 |};
 
 type Props = {| ...OwnProps, ...StateProps |};
@@ -39,28 +47,30 @@ type State = {
 };
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
-  static getDerivedStateFromProps(props: Props) {
-    const { layout } = props;
-    const model = FlexLayout.Model.fromJson(layout);
-    console.log("got new model");
-    return { model };
-  }
-
   constructor(props: Props) {
     super(props);
-    const { layout } = props;
+    const { layoutKey, layoutName } = props;
+    const layout = getLayoutConfig(layoutKey, layoutName);
     this.state = {
       model: FlexLayout.Model.fromJson(layout),
     };
     this.state.model.setOnAllowDrop(this.allowDrop);
   }
 
-  /* componentDidUpdate(prevProps: Props) {
+  componentDidUpdate(prevProps: Props) {
     const { layoutName, layoutKey } = this.props;
     if (layoutName !== prevProps.layoutName || layoutKey !== prevProps.layoutKey) {
-      setTimeout(this.onLayoutChange, 1);
+      this.rebuildLayout();
     }
-  } */
+  }
+
+  rebuildLayout() {
+    const { layoutName, layoutKey } = this.props;
+    const layout = getLayoutConfig(layoutKey, layoutName);
+    const model = FlexLayout.Model.fromJson(layout);
+    this.setState({ model });
+    setTimeout(this.onLayoutChange, 1);
+  }
 
   allowDrop(dragNode: Object, dropInfo: Object) {
     const dropNode = dropInfo.node;
@@ -70,6 +80,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       dropNode.getType() === "border" &&
       (dragNode.getParent() == null || dragNode.getParent().getType() !== "border")
     ) {
+      // TODO: Add Info toasts for this.
       console.info("You cannot move this tab into a sidebar!");
       return false;
     }
@@ -163,7 +174,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       model = FlexLayout.Model.fromJson(node.getConfig().model);
       node.getExtraData().model = model;
     }
-
     return <FlexLayout.Layout model={model} factory={(...args) => this.layoutFactory(...args)} />;
   }
 
@@ -190,15 +200,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
+    console.log("on layout change called");
     const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
-    this.props.onLayoutChange(currentLayoutModel);
+    // Workaround so that onLayoutChange is called after the update of flexlayout.
+    // Calling the method without a timeout does not work.
+    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
   };
 
   toggleSidebar(side: string) {
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
-    // Workaround so that onLayoutChange is called after the update of flexlayout.
-    // Calling the method without a timeout does not work.
-    setTimeout(() => this.onLayoutChange(), 1);
+    this.onLayoutChange();
   }
 
   getSidebarButtons() {

@@ -89,7 +89,9 @@ function Scalebar({ zoomValue, dataset, widthInPixels, heightInPixels }: Props) 
 const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => {
   const [width, height] = getViewportExtents(state)[ownProps.viewportID];
   const zoomValue =
-    ownProps.viewportID === OrthoViews.TDView ? getTDViewZoom(state) : getZoomValue(state.flycam);
+    ownProps.viewportID === OrthoViews.TDView.id
+      ? getTDViewZoom(state)
+      : getZoomValue(state.flycam);
   return {
     zoomValue,
     dataset: state.dataset,

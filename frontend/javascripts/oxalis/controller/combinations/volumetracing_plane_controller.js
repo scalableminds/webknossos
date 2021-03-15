@@ -49,10 +49,10 @@ const isAutomaticBrushEnabled = () =>
 const simulateTracing = async (): Promise<void> => {
   Store.dispatch(setToolAction(VolumeToolEnum.TRACE));
 
-  const controls = getPlaneMouseControls(OrthoViews.PLANE_XY);
+  const controls = getPlaneMouseControls(OrthoViews.PLANE_XY.id);
   let pos = (x, y) => ({ x, y });
 
-  controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, ({}: any));
+  controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY.id, ({}: any));
   await Utils.sleep(100);
   const nullDelta = { x: 0, y: 0 };
   controls.leftDownMove(nullDelta, pos(200, 100));

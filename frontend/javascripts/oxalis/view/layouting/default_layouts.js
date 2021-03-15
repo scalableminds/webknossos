@@ -1,9 +1,9 @@
 // @flow
 
-import { OrthoViews, AllTracingTabs, AllSettingsTabs } from "oxalis/constants";
+import { OrthoViews, TracingTabs, SettingsTabs } from "oxalis/constants";
 
 const infoTabs = {};
-Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
+Object.entries(TracingTabs).forEach(([tabKey, { name, id }]: any) => {
   infoTabs[tabKey] = {
     type: "tab",
     name,
@@ -13,7 +13,7 @@ Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
 });
 
 const settingsTabs = {};
-Object.entries(AllSettingsTabs).forEach(([tabKey, { name, id }]: any) => {
+Object.entries(SettingsTabs).forEach(([tabKey, { name, id }]: any) => {
   settingsTabs[tabKey] = {
     type: "tab",
     name,

@@ -31,12 +31,11 @@ export const Vector3Indicies = [0, 1, 2];
 export const Vector4Indicies = [0, 1, 2, 3];
 export const Vector5Indicies = [0, 1, 2, 3, 4];
 export const Vector6Indicies = [0, 1, 2, 3, 4, 5];
-
 export const OrthoViews = {
-  PLANE_XY: "PLANE_XY",
-  PLANE_YZ: "PLANE_YZ",
-  PLANE_XZ: "PLANE_XZ",
-  TDView: "TDView",
+  PLANE_XY: { id: "PLANE_XY", name: "XY", shortName: "XY" },
+  PLANE_YZ: { id: "PLANE_YZ", name: "YZ", shortName: "YZ" },
+  PLANE_XZ: { id: "PLANE_XZ", name: "XZ", shortName: "XZ" },
+  TDView: { id: "TDView", name: "3D", shortName: "3D" },
 };
 export type OrthoView = $Keys<typeof OrthoViews>;
 export type OrthoViewMap<T> = { [key: OrthoView]: T };
@@ -45,8 +44,8 @@ export type OrthoViewRects = $ReadOnly<OrthoViewMap<Rect>>;
 
 export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
-  arbitraryViewport: "arbitraryViewport",
-  TDView: "TDView",
+  arbitraryViewport: { id: "arbitraryViewport", name: "Arbitrary View", short: "Arbitrary" },
+  TDView: { id: "TDView", name: "3D", shortName: "3D" },
 };
 export type ArbitraryView = $Keys<typeof ArbitraryViews>;
 export type ArbitraryViewMap<T> = { [key: ArbitraryView]: T };
@@ -65,26 +64,26 @@ export const OrthoViewIndices = {
   TDView: OrthoViewValues.indexOf("TDView"),
 };
 export const OrthoViewValuesWithoutTDView = [
-  OrthoViews.PLANE_XY,
-  OrthoViews.PLANE_YZ,
-  OrthoViews.PLANE_XZ,
+  OrthoViews.PLANE_XY.id,
+  OrthoViews.PLANE_YZ.id,
+  OrthoViews.PLANE_XZ.id,
 ];
 
 export const OrthoViewColors: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY]: 0xc81414, // red
-  [OrthoViews.PLANE_YZ]: 0x1414c8, // blue
-  [OrthoViews.PLANE_XZ]: 0x14c814, // green
-  [OrthoViews.TDView]: 0xffffff,
+  [OrthoViews.PLANE_XY.id]: 0xc81414, // red
+  [OrthoViews.PLANE_YZ.id]: 0x1414c8, // blue
+  [OrthoViews.PLANE_XZ.id]: 0x14c814, // green
+  [OrthoViews.TDView.id]: 0xffffff,
 };
 
 export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
-  [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
-  [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
-  [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
-  [OrthoViews.TDView]: [0x000000, 0x000000],
+  [OrthoViews.PLANE_XY.id]: [0x0000ff, 0x00ff00],
+  [OrthoViews.PLANE_YZ.id]: [0xff0000, 0x00ff00],
+  [OrthoViews.PLANE_XZ.id]: [0x0000ff, 0xff0000],
+  [OrthoViews.TDView.id]: [0x000000, 0x000000],
 };
 
-export const AllTracingTabs = {
+export const TracingTabs = {
   DatasetInfoTabView: { id: "DatasetInfoTabView", name: "Info", shortName: "Info" },
   TreesTabView: { id: "TreesTabView", name: "Trees", shortName: "Trees" },
   CommentTabView: { id: "CommentTabView", name: "Comments", shortName: "Comments" },
@@ -97,7 +96,7 @@ export const AllTracingTabs = {
   },
 };
 
-export const AllSettingsTabs = {
+export const SettingsTabs = {
   UserSettingsTab: {
     id: "UserSettingsView",
     name: "Annotation",

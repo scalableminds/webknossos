@@ -484,7 +484,7 @@ class PlaneMaterialFactory {
               this.uniforms.isMouseInCanvas.value = false;
               return;
             }
-            if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+            if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView.id) {
               return;
             }
 

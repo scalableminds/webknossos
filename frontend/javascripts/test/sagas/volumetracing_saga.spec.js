@@ -53,7 +53,10 @@ const initialState = update(defaultState, {
 const ACTIVE_CELL_ID = 5;
 
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
-const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
+const startEditingAction = VolumeTracingActions.startEditingAction(
+  [0, 0, 0],
+  OrthoViews.PLANE_XY.id,
+);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 
@@ -111,7 +114,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   startEditingSaga.next();
   // Pass position
   const layer = startEditingSaga.next([1, 1, 1]).value;
-  t.is(layer.plane, OrthoViews.PLANE_XY);
+  t.is(layer.plane, OrthoViews.PLANE_XY.id);
 });
 
 test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
@@ -125,15 +128,15 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY.id, 10, [1, 1, 1]);
   saga.next(volumeLayer);
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   saga.next({ addToLayerAction: addToLayerActionFn([2, 3, 4]) });
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   saga.next({ addToLayerAction: addToLayerActionFn([3, 4, 5]) });
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   t.deepEqual(volumeLayer.minCoord, [-1, 0, 1]);
   t.deepEqual(volumeLayer.maxCoord, [5, 6, 7]);
 });
@@ -149,11 +152,11 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY.id, 10, [1, 1, 1]);
   saga.next(volumeLayer);
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   // Validate that finishLayer was called
   expectValueDeepEqual(
     t,
@@ -180,11 +183,11 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY.id, 10, [1, 1, 1]);
   saga.next(volumeLayer);
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
-  saga.next(OrthoViews.PLANE_XY);
+  saga.next(OrthoViews.PLANE_XY.id);
   // Validate that finishLayer was called
   expectValueDeepEqual(
     t,

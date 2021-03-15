@@ -15,8 +15,8 @@ import Constants, {
   ControlModeEnum,
   type ViewMode,
   OrthoViews,
-  AllTracingTabs,
-  AllSettingsTabs,
+  TracingTabs,
+  SettingsTabs,
   ArbitraryViews,
 } from "oxalis/constants";
 
@@ -78,12 +78,12 @@ function Tab(name: string, id: string, component: string): Object {
 }
 
 const infoTabs = {};
-Object.entries(AllTracingTabs).forEach(([tabKey, { name, id }]: any) => {
+Object.entries(TracingTabs).forEach(([tabKey, { name, id }]: any) => {
   infoTabs[tabKey] = Tab(name, id, "tab");
 });
 
 const settingsTabs = {};
-Object.entries(AllSettingsTabs).forEach(([tabKey, { name, id }]: any) => {
+Object.entries(SettingsTabs).forEach(([tabKey, { name, id }]: any) => {
   settingsTabs[tabKey] = Tab(name, id, "settings-tab");
 });
 

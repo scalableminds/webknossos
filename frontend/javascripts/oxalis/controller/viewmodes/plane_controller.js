@@ -120,7 +120,7 @@ class PlaneController extends React.PureComponent<Props> {
     this.planeView = new PlaneView();
     this.forceUpdate();
 
-    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY.id));
     this.start();
   }
 
@@ -134,10 +134,10 @@ class PlaneController extends React.PureComponent<Props> {
     // catchers (only necessary for HammerJS). We should refactor the
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
-    const tdId = `inputcatcher_${OrthoViews.TDView}`;
+    const tdId = `inputcatcher_${OrthoViews.TDView.id}`;
     Utils.waitForElementWithId(tdId).then(() => {
       OrthoViewValuesWithoutTDView.forEach(id => {
-        const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
+        const inputcatcherId = `inputcatcher_${OrthoViews[id].id}`;
         Utils.waitForElementWithId(inputcatcherId).then(el => {
           if (!document.body.contains(el)) {
             console.error("el is not attached anymore");
@@ -389,7 +389,7 @@ class PlaneController extends React.PureComponent<Props> {
       return;
     }
     const { activeViewport } = Store.getState().viewModeData.plane;
-    if (activeViewport === OrthoViews.TDView) {
+    if (activeViewport === OrthoViews.TDView.id) {
       return;
     }
 
@@ -433,7 +433,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   zoomTDView(value: number): void {
     const zoomToPosition = null;
-    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
+    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView.id);
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
@@ -441,7 +441,7 @@ class PlaneController extends React.PureComponent<Props> {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
     const { activeViewport } = Store.getState().viewModeData.plane;
-    if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
+    if (this.isMouseOver() && activeViewport !== OrthoViews.TDView.id) {
       const mousePos = this.getMousePosition();
       const moveVector = [
         this.zoomPos[0] - mousePos[0],
@@ -588,21 +588,21 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const diffY = ((center[1] - clickPos.y) / viewportScale[1]) * zoomFactors[1];
 
   switch (activeViewport) {
-    case OrthoViews.PLANE_XY:
+    case OrthoViews.PLANE_XY.id:
       position = [
         curGlobalPos[0] - diffX * planeRatio[0],
         curGlobalPos[1] - diffY * planeRatio[1],
         curGlobalPos[2],
       ];
       break;
-    case OrthoViews.PLANE_YZ:
+    case OrthoViews.PLANE_YZ.id:
       position = [
         curGlobalPos[0],
         curGlobalPos[1] - diffY * planeRatio[1],
         curGlobalPos[2] - diffX * planeRatio[2],
       ];
       break;
-    case OrthoViews.PLANE_XZ:
+    case OrthoViews.PLANE_XZ.id:
       position = [
         curGlobalPos[0] - diffX * planeRatio[0],
         curGlobalPos[1],

@@ -360,12 +360,12 @@ export function getPlaneExtentInVoxel(
 
 export function getRotationOrtho(planeId: OrthoView): Vector3 {
   switch (planeId) {
-    case OrthoViews.PLANE_YZ:
+    case OrthoViews.PLANE_YZ.id:
       return [0, 270, 0];
-    case OrthoViews.PLANE_XZ:
+    case OrthoViews.PLANE_XZ.id:
       return [90, 0, 0];
     default:
-    case OrthoViews.PLANE_XY:
+    case OrthoViews.PLANE_XY.id:
       return [0, 0, 0];
   }
 }
@@ -411,9 +411,27 @@ function getAreas(
   datasetScale: Vector3,
 ): OrthoViewMap<Area> {
   return {
-    [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XY),
-    [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XZ),
-    [OrthoViews.PLANE_YZ]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_YZ),
+    [OrthoViews.PLANE_XY.id]: getArea(
+      rects,
+      position,
+      zoomStep,
+      datasetScale,
+      OrthoViews.PLANE_XY.id,
+    ),
+    [OrthoViews.PLANE_XZ.id]: getArea(
+      rects,
+      position,
+      zoomStep,
+      datasetScale,
+      OrthoViews.PLANE_XZ.id,
+    ),
+    [OrthoViews.PLANE_YZ.id]: getArea(
+      rects,
+      position,
+      zoomStep,
+      datasetScale,
+      OrthoViews.PLANE_YZ.id,
+    ),
   };
 }
 

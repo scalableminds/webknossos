@@ -142,21 +142,21 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   renderViewport(id: string): ?React.Node {
     const { displayScalebars, isUpdateTracingAllowed } = this.props;
     switch (id) {
-      case OrthoViews.PLANE_XY:
-      case OrthoViews.PLANE_YZ:
-      case OrthoViews.PLANE_XZ: {
+      case OrthoViews.PLANE_XY.id:
+      case OrthoViews.PLANE_YZ.id:
+      case OrthoViews.PLANE_XZ.id: {
         return <InputCatcher viewportID={id} displayScalebars={displayScalebars} />;
       }
-      case OrthoViews.TDView: {
+      case OrthoViews.TDView.id: {
         return (
           <InputCatcher viewportID={id} displayScalebars={displayScalebars}>
             <TDViewControls />
           </InputCatcher>
         );
       }
-      case ArbitraryViews.arbitraryViewport: {
+      case ArbitraryViews.arbitraryViewport.id: {
         return (
-          <InputCatcher viewportID={ArbitraryViews.arbitraryViewport}>
+          <InputCatcher viewportID={ArbitraryViews.arbitraryViewport.id}>
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );

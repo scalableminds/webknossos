@@ -5,6 +5,7 @@ In this type of annotation, you can label groups of voxels with efficient drawin
 
 {% embed url="https://www.youtube.com/watch?v=Sq4AuWanK14" %}
 
+
 ### Tools
 Select one of the drawing tools from the toolbar or toggle through with the keyboard shortcut *W*.
 

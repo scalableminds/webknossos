@@ -5,13 +5,14 @@ import java.util.concurrent.ConcurrentHashMap
 
 import akka.util.ByteString
 import com.google.inject.Inject
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import net.liftweb.common.Full
 import play.api.libs.json.{Json, OFormat}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class SampleDatasetInfo(url: String, description: String)
 
@@ -66,13 +67,16 @@ class SampleDataSourceService @Inject()(rpc: RPC,
       _ = responseBox match {
         case Full(response) =>
           val bytes: ByteString = response.bodyAsBytes
-          val fileName = s"${System.currentTimeMillis()}-${id.name}"
-          val tmpfile = new RandomAccessFile(uploadService.dataBaseDir.resolve(s".$fileName.temp").toFile, "rw")
+          val downloadId = s"sampleDataset-${System.currentTimeMillis()}-${id.name}"
+          val downloadDir = uploadService.uploadDirectory(id.team, downloadId)
+          PathUtils.ensureDirectory(downloadDir)
+          val tmpfile = new RandomAccessFile(downloadDir.resolve("dataset.zip").toFile, "rw")
           tmpfile.write(bytes.toArray)
           tmpfile.close()
 
           uploadService
-            .finishUpload(UploadInformation(fileName, id.team, id.name, List.empty, needsConversion = None))
+            .finishUpload(UploadInformation(downloadId, id.team, id.name, List.empty, needsConversion = None),
+                          checkCompletion = false)
             .map { _ =>
               runningDownloads.remove(id)
             }

@@ -42,7 +42,7 @@ class PlaneView {
   unbindChangedScaleListener: () => void;
 
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
-  throttledPerformIsosurfaceHitTest: () => ?typeof THREE.Vector3;
+  throttledPerformIsosurfaceHitTest: ([number, number]) => ?typeof THREE.Vector3;
 
   running: boolean;
   needsRerender: boolean;
@@ -135,8 +135,6 @@ class PlaneView {
 
       clearCanvas(renderer);
 
-      this.throttledPerformIsosurfaceHitTest();
-
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
@@ -150,16 +148,12 @@ class PlaneView {
     }
   }
 
-  performIsosurfaceHitTest(): ?typeof THREE.Vector3 {
+  performIsosurfaceHitTest(mousePosition: [number, number]): ?typeof THREE.Vector3 {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
-    const { mousePosition, hoveredIsosurfaceId } = storeState.temporaryConfiguration;
-
-    if (mousePosition == null) {
-      return null;
-    }
+    const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
 
     // Outside of the 3D viewport, we don't do isosurface hit tests
     if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {

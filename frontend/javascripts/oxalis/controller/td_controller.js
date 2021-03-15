@@ -14,7 +14,6 @@ import {
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   setViewportAction,
@@ -152,7 +151,14 @@ class TDController extends React.PureComponent<Props> {
   updateControls = () => this.controls.update(true);
 
   getTDViewMouseControls(): Object {
-    const baseControls = {
+    const skeletonControls =
+      this.props.tracing != null &&
+      this.props.tracing.skeleton != null &&
+      this.props.planeView != null
+        ? skeletonController.getTDViewMouseControls(this.props.planeView)
+        : null;
+
+    const controls = {
       leftDownMove: (delta: Point2) => this.moveTDView(delta),
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => {
@@ -161,42 +167,43 @@ class TDController extends React.PureComponent<Props> {
         this.setTargetAndFixPosition();
       },
       pinch: delta => this.zoomTDView(delta, true),
+      mouseMove: (delta: Point2, position: Point2) => {
+        if (this.props.planeView == null) {
+          return;
+        }
+        this.props.planeView.throttledPerformIsosurfaceHitTest([position.x, position.y]);
+      },
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        if (skeletonControls != null) {
+          skeletonControls.leftClick(pos, plane, event, isTouch);
+        }
+
+        if (this.props.planeView == null) {
+          return;
+        }
+
+        if (!event.shiftKey && !event.ctrlKey) {
+          // No modifiers were pressed. No isosurface related action is necessary.
+          return;
+        }
+
+        const hitPosition = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
+        if (!hitPosition) {
+          return;
+        }
+        const unscaledPosition = V3.divide3(hitPosition.toArray(), this.props.scale);
+
+        if (event.shiftKey) {
+          Store.dispatch(setPositionAction(unscaledPosition));
+        } else if (event.ctrlKey) {
+          const storeState = Store.getState();
+          const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
+          Store.dispatch(removeIsosurfaceAction(hoveredIsosurfaceId));
+        }
+      },
     };
 
-    const skeletonControls =
-      this.props.tracing != null &&
-      this.props.tracing.skeleton != null &&
-      this.props.planeView != null
-        ? skeletonController.getTDViewMouseControls(this.props.planeView)
-        : {
-            mouseMove: (delta: Point2, position: Point2) => {
-              Store.dispatch(setMousePositionAction([position.x, position.y]));
-            },
-            leftClick: (_pos: Point2, _plane: OrthoView, event: MouseEvent) => {
-              if (this.props.planeView == null) {
-                return;
-              }
-              const hitPosition = this.props.planeView.performIsosurfaceHitTest();
-              if (!hitPosition) {
-                return;
-              }
-
-              const unscaledPosition = V3.divide3(hitPosition.toArray(), this.props.scale);
-
-              if (event.shiftKey) {
-                Store.dispatch(setPositionAction(unscaledPosition));
-              } else if (event.ctrlKey) {
-                const storeState = Store.getState();
-                const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
-                Store.dispatch(removeIsosurfaceAction(hoveredIsosurfaceId));
-              }
-            },
-          };
-
-    return {
-      ...baseControls,
-      ...skeletonControls,
-    };
+    return controls;
   }
 
   setTargetAndFixPosition(position?: Vector3): void {

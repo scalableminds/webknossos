@@ -50,6 +50,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a bug where the listing of users that have open tasks of a project failed. [#5115](https://github.com/scalableminds/webknossos/pull/5115)
+- Fixed shift+clicking isosurfaces in annotations which contain skeletons. [#5257](https://github.com/scalableminds/webknossos/pull/5257)
 
 ## [21.02.0](https://github.com/scalableminds/webknossos/releases/tag/21.02.0) - 2021-01-20
 [Commits](https://github.com/scalableminds/webknossos/compare/21.01.0...21.02.0)

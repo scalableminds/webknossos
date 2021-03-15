@@ -347,7 +347,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-          <span style={{ fontWeight: 700 }}>
+          <span style={{ fontWeight: 700, wordWrap: "break-word" }}>
             {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
           </span>
 

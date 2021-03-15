@@ -209,8 +209,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
-  "dataset.upload_none_zip_error":
-    "It looks like the selected file is not a zip file. WebKnossos only supports uploading zipped datasets. Please ensure that your dataset is compressed to a zip archive.",
+  "dataset.unsupported_file_type":
+    "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
   "dataset.upload_invalid_zip":
     "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":

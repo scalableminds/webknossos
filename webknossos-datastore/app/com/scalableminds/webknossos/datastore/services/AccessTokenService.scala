@@ -1,29 +1,25 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.cache.SyncCacheApi
-import play.api.libs.json.{Format, Json, OFormat, Reads, Writes}
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{Request, Result}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
-object AccessMode extends Enumeration {
-
+object AccessMode extends ExtendedEnumeration {
+  type AccessMode = Value
   val administrate, list, read, write, delete = Value
-
-  implicit val jsonFormat: Format[AccessMode.Value] = Format(Reads.enumNameReads(AccessMode), Writes.enumNameWrites)
 }
 
-object AccessResourceType extends Enumeration {
-
+object AccessResourceType extends ExtendedEnumeration {
+  type AccessResourceType = Value
   val datasource, tracing, webknossos = Value
-
-  implicit val jsonFormat: Format[AccessResourceType.Value] =
-    Format(Reads.enumNameReads(AccessResourceType), Writes.enumNameWrites)
 }
 
 case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {

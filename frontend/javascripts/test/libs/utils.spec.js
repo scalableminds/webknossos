@@ -25,6 +25,21 @@ test("filterWithSearchQueryOR: complex case", t => {
   t.deepEqual(matchedElements, [collection[0], collection[2]]);
 });
 
+test("filterWithSearchQueryOR: deep case different data types", t => {
+  const collection = [
+    { prop: { prop2: 7 } },
+    { prop: { prop2: false } },
+    { prop: { prop2: null } },
+    { prop: { prop2: undefined } },
+    { prop: { prop2: "" } },
+    { prop: { prop2: "no m_tch" } },
+    { prop: { prop2: "a keyword" } },
+  ];
+  const matchedElements = Utils.filterWithSearchQueryOR(collection, ["prop"], "a key");
+  t.is(matchedElements.length, 2);
+  t.deepEqual(matchedElements, [collection[1], collection[6]]);
+});
+
 test("filterWithSearchQueryAND: simple case", t => {
   const collection = [{ prop: "match" }, { prop: "a MATCH!" }, { prop: "no m_tch" }];
   const matchedElements = Utils.filterWithSearchQueryAND(collection, ["prop"], "match");
@@ -45,6 +60,21 @@ test("filterWithSearchQueryAND: complex case", t => {
   );
   t.is(matchedElements.length, 1);
   t.deepEqual(matchedElements, [collection[2]]);
+});
+
+test("filterWithSearchQueryAND: deep case different data types", t => {
+  const collection = [
+    { prop: { prop2: 7 } },
+    { prop: { prop2: false } },
+    { prop: { prop2: null } },
+    { prop: { prop2: undefined } },
+    { prop: { prop2: "" } },
+    { prop: { prop2: "no m_tch" } },
+    { prop: { prop2: "a keyword" } },
+  ];
+  const matchedElements = Utils.filterWithSearchQueryAND(collection, ["prop"], "a key");
+  t.is(matchedElements.length, 1);
+  t.deepEqual(matchedElements, [collection[6]]);
 });
 
 test("chunkIntoTimeWindows 1/2", async t => {

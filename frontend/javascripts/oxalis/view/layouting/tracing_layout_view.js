@@ -150,8 +150,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     const refreshMessage = document.createElement("p");
     refreshMessage.innerHTML = "Reloading webKnossos...";
     refreshMessage.style.position = "absolute";
-    refreshMessage.style.top = 30;
-    refreshMessage.style.left = 50;
+    refreshMessage.style.top = "10px";
+    refreshMessage.style.left = "10px";
     document.body.appendChild(refreshMessage);
 
     // Do a complete page refresh to make sure all tracing data is garbage

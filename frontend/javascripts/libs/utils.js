@@ -425,8 +425,17 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 
-export function isFileExtensionEqualTo(fileName: string, extension: string) {
-  return _.last(fileName.split(".")).toLowerCase() === extension;
+export function isFileExtensionEqualTo(
+  fileName: string,
+  extensionOrExtensions: string | Array<string>,
+) {
+  const passedExtension = _.last(fileName.split(".")).toLowerCase();
+
+  if (Array.isArray(extensionOrExtensions)) {
+    return extensionOrExtensions.includes(passedExtension);
+  }
+
+  return passedExtension === extensionOrExtensions;
 }
 
 // Only use this function if you really need a busy wait (useful

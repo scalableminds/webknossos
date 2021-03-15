@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
+import { /* ArbitraryViewport, */ type Rect, type Viewport } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
@@ -22,7 +22,7 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
 
 // Is able to make the input catcher a square (if makeQuadratic is true)
 // and returns its position within the document relative to the rendering canvas
-function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean): Rect {
+function adaptInputCatcher(inputCatcherDOM: HTMLElement /* , makeQuadratic: boolean */): Rect {
   const noneOverflowWrapper = inputCatcherDOM.closest(".flexlayout-dont-overflow");
   if (!noneOverflowWrapper) {
     return { top: 0, left: 0, width: 0, height: 0 };
@@ -56,7 +56,7 @@ const renderedInputCatchers = new Map();
 export function recalculateInputCatcherSizes() {
   const viewportRects = {};
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
-    const rect = adaptInputCatcher(inputCatcher, viewportID === ArbitraryViewport);
+    const rect = adaptInputCatcher(inputCatcher /* , viewportID === ArbitraryViewport */);
     viewportRects[viewportID] = rect;
   }
   Store.dispatch(setInputCatcherRects(viewportRects));

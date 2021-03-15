@@ -18,7 +18,7 @@ import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
-import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
+import { /* layoutEmitter, */ getLayoutConfig } from "./layout_persistence";
 import { type LayoutKeys } from "./default_layout_configs";
 // TODO: use the layout emitter
 /*

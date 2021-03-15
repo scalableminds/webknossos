@@ -57,6 +57,13 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.state.model.setOnAllowDrop(this.allowDrop);
   }
 
+  /* componentDidMount() {
+    // The code is buggy when an input catcher is not rendered.
+    // this might help. Otherwise look where the area of an inputcatcher is calculated.
+    this.onLayoutChange();
+    // setTimeout(this.onLayoutChange, 500);
+  } */
+
   componentDidUpdate(prevProps: Props) {
     const { layoutName, layoutKey } = this.props;
     if (layoutName !== prevProps.layoutName || layoutKey !== prevProps.layoutKey) {
@@ -141,6 +148,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   renderViewport(id: string): ?React.Node {
     const { displayScalebars, isUpdateTracingAllowed } = this.props;
+    console.log("rendering input catcher", id);
     switch (id) {
       case OrthoViews.PLANE_XY.id:
       case OrthoViews.PLANE_YZ.id:

@@ -58,12 +58,12 @@ function Row(children: Array<any>, weight?: number): Object {
   };
 }
 
-function Tabset(children: Array<any>, weight?: number): Object {
+function Tabset(children: Array<any>, weight?: number, defaultSelectedIndex?: number): Object {
   weight = weight != null ? weight : 100;
   return {
     type: "tabset",
     weight,
-    selected: 0,
+    selected: defaultSelectedIndex || 0,
     children,
   };
 }
@@ -96,7 +96,11 @@ const ArbitraryViewports = {};
 Object.keys(ArbitraryViews).forEach(([viewportId, { name, id }]: any) => {
   ArbitraryViewports[viewportId] = Tab(name, id, "viewport");
 });
-const subLayoutGlobalSettings = { tabSetEnableDivide: false, tabEnableClose: false };
+const subLayoutGlobalSettings = {
+  splitterSize: 4,
+  tabSetEnableDivide: false,
+  tabEnableClose: false,
+};
 const globalLayoutSettings = {
   splitterSize: 4,
   tabEnableRename: false,
@@ -104,14 +108,19 @@ const globalLayoutSettings = {
   tabEnableDrag: true,
 };
 
-function buildTabset(setsOfTabs: Array<Array<Object>>) {
+function buildTabsets(setsOfTabs: Array<Array<Object>>, defaultSelectedIndex?: number) {
   const tabsetWeight = 100 / setsOfTabs.length;
-  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight));
+  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight, defaultSelectedIndex));
   return tabsets;
 }
 
-function buildBorder(side, setsOfTabs: Array<Array<Object>>, width: number): Object {
-  const tabsets = buildTabset(setsOfTabs);
+function buildBorder(
+  side,
+  setsOfTabs: Array<Array<Object>>,
+  width: number,
+  defaultSelectedIndex?: number,
+): Object {
+  const tabsets = buildTabsets(setsOfTabs, defaultSelectedIndex);
   const border = {
     type: "border",
     location: side,
@@ -139,7 +148,7 @@ function buildBorder(side, setsOfTabs: Array<Array<Object>>, width: number): Obj
 function buildMainLayout(rowsOfSetOfTabs: any) {
   const rowWeight = 100 / rowsOfSetOfTabs.length;
   const rows = rowsOfSetOfTabs.map(setsOfTabs => {
-    const tabsets = buildTabset(setsOfTabs);
+    const tabsets = buildTabsets(setsOfTabs);
     return Row(tabsets, rowWeight);
   });
   const mainLayout = Row(rows);
@@ -157,7 +166,7 @@ function buildLayout(settings, borders, mainLayout) {
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
   const defaultBorderWidth = isInIframe ? 200 : 400;
-  const leftSiderbar = buildBorder("left", [Object.values(settingsTabs)], 400);
+  const leftSiderbar = buildBorder("left", [Object.values(settingsTabs)], 400, 1);
   const rightSidebarWithSkeleton = buildBorder(
     "right",
     [

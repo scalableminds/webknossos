@@ -23,14 +23,14 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
 // Is able to make the input catcher a square (if makeQuadratic is true)
 // and returns its position within the document relative to the rendering canvas
 function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean): Rect {
-  const noneOverflowWrapper = inputCatcherDOM.closest(".gl-dont-overflow");
+  const noneOverflowWrapper = inputCatcherDOM.closest(".flexlayout-dont-overflow");
   if (!noneOverflowWrapper) {
     return { top: 0, left: 0, width: 0, height: 0 };
   }
 
   // TODO Maybe get rid of this width and height calculation and just use css props (if makeQuadratic) is not set
 
-  const getExtent = () => {
+  /* const getExtent = () => {
     let { width, height } = noneOverflowWrapper.getBoundingClientRect();
     // These values should be floored, so that the rendered area does not overlap
     // with the golden layout containers
@@ -46,7 +46,7 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
   };
   const [width, height] = getExtent();
   inputCatcherDOM.style.width = `${width}px`;
-  inputCatcherDOM.style.height = `${height}px`;
+  inputCatcherDOM.style.height = `${height}px`; */
 
   return makeRectRelativeToCanvas(inputCatcherDOM.getBoundingClientRect());
 }
@@ -81,7 +81,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
     const { viewportID } = this.props;
 
     return (
-      <div className="gl-dont-overflow">
+      <div className="flexlayout-dont-overflow">
         <div
           id={`inputcatcher_${viewportID}`}
           ref={domElement => {

@@ -30,13 +30,14 @@
 
   & > div > div {
     // By default, panes should get a scrollbar if the content is too large.
-    // This can be disabled (e.g., for the input catchers) by setting gl-dont-overflow
+    // This can be disabled (e.g., for the input catchers) by setting flexlayout-dont-overflow
     // as the class of the pane's child
     overflow: auto;
   }
 }
 
-.gl-dont-overflow {
+.flexlayout-dont-overflow {
+  // TODO
   overflow: hidden;
   height: 100%;
 }

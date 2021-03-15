@@ -4,6 +4,49 @@
 .flexlayout__tabset {
   background-color: transparent;
 }
-.flexlayout__tab_border {
+.flexlayout__tab_border,
+.flexlayout__tabset-selected {
+  background-color: white !important;
+}
+
+.flexlayout__tabset_tabbar_inner_tab_container_top {
+  border: none !important;
+}
+
+.flexlayout__splitter:hover,
+.flexlayout__splitter_drag {
+  background-color: gray;
+}
+
+.flexlayout__tab_button--selected,
+.flexlayout__tab_button:hover {
+  .flexlayout__tab_button_content {
+    background-color: white;
+    color: #1890ff;
+    border-bottom: 1px solid #1890ff;
+  }
+}
+
+.flexlayout__tab_button {
+  // These properties are copied from antd's styling:
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+  font-weight: 400;
+  font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  &:hover {
+    cursor: move;
+  }
   background-color: white;
+}
+
+.flexlayout-dont-overflow {
+  overflow: hidden;
+  height: 100%;
+}
+
+.flexlayout__outline_rect,
+.flexlayout__outline_rect_edge {
+  border-color: rgba(24, 144, 255, 0.85) !important;
 }

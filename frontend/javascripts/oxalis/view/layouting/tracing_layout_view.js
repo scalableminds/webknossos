@@ -9,9 +9,10 @@ import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
+import _ from "lodash";
 
 import Request from "libs/request";
-import { type ViewMode, type Vector3, type OrthoView } from "oxalis/constants";
+import Constants, { type ViewMode, type Vector3, type OrthoView } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -81,9 +82,6 @@ type State = {
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
-  currentLayoutConfig: Object;
-  currentLayoutName: string;
-
   static getDerivedStateFromError() {
     // DO NOT set hasError back to false EVER as this will trigger a remount of the Controller
     // with unforeseeable consequences
@@ -122,7 +120,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   componentDidMount() {
-    window.addEventListener("resize", () => this.deferredOnLayoutChange());
+    window.addEventListener("resize", () => this.debouncedOnLayoutChange());
   }
 
   componentDidCatch(error: Error) {
@@ -181,7 +179,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     }
   };
 
-  deferredOnLayoutChange = (model?: Object) => setTimeout(() => this.onLayoutChange(model), 1);
+  // eslint-disable-next-line react/sort-comp
+  debouncedOnLayoutChange = _.debounce(this.onLayoutChange, Constants.RESIZE_THROTTLE_TIME / 5);
 
   saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(

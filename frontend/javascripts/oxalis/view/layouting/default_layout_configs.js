@@ -88,13 +88,13 @@ Object.entries(SettingsTabs).forEach(([tabKey, { name, id }]: any) => {
 });
 
 const OrthoViewports = {};
-Object.keys(OrthoViews).forEach(viewportId => {
-  OrthoViewports[viewportId] = Tab(viewportId, viewportId, "viewport");
+Object.entries(OrthoViews).forEach(([viewportId, { name, id }]: any) => {
+  OrthoViewports[viewportId] = Tab(name, id, "viewport");
 });
 
 const ArbitraryViewports = {};
-Object.keys(ArbitraryViews).forEach(viewportId => {
-  ArbitraryViewports[viewportId] = Tab(viewportId, viewportId, "viewport");
+Object.keys(ArbitraryViews).forEach(([viewportId, { name, id }]: any) => {
+  ArbitraryViewports[viewportId] = Tab(name, id, "viewport");
 });
 const subLayoutGlobalSettings = { tabSetEnableDivide: false, tabEnableClose: false };
 const globalLayoutSettings = {

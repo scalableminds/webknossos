@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
 import com.scalableminds.webknossos.datastore.services.{
   AccessMode,
   AccessResourceType,
@@ -90,7 +91,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       }
     }
 
-  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode.Value, userBox: Box[User])(
+  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
       implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     // Write access is explicitly handled here depending on userBox,
     // Read access is ensured in findOneBySourceName, depending on the implicit DBAccessContext (to allow sharingTokens)
@@ -139,9 +140,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingId: String,
-                                  mode: AccessMode.Value,
-                                  userBox: Box[User]): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
 
     def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {

@@ -4,7 +4,7 @@ import net.liftweb.common.{Box, Empty, Full}
 
 case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
-  val bottomRight = topLeft.move(width, height, depth)
+  val bottomRight: Point3D = topLeft.move(width, height, depth)
 
   def intersects(other: BoundingBox): Boolean =
     math.max(topLeft.x, other.topLeft.x) < math.min(bottomRight.x, other.bottomRight.x) &&
@@ -29,42 +29,45 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
   def center: Point3D =
     topLeft.move(bottomRight).scale(0.5f)
 
-  def scale(s: Float) =
+  def scale(s: Float): BoundingBox =
     BoundingBox(topLeft.scale(s), (width * s).toInt, (height * s).toInt, (depth * s).toInt)
 
   def toSql =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)
+
+  def volume: Long =
+    width.toLong * height.toLong * depth.toLong
+
+  def dimensions: Point3D =
+    Point3D(width, height, depth)
+
 }
 
 object BoundingBox {
 
   import play.api.libs.json._
 
-  val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
+  private val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
-  def empty =
+  def empty: BoundingBox =
     BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
 
-  def toForm(b: BoundingBox): Some[String] =
-    Some(
-      "%d, %d, %d, %d, %d, %d".format(
-        b.topLeft.x,
-        b.topLeft.y,
-        b.topLeft.z,
-        b.topLeft.x + b.width,
-        b.topLeft.y + b.height,
-        b.topLeft.z + b.depth
-      ))
-
-  def fromForm(s: String): Box[BoundingBox] =
+  def createFrom(s: String): Box[BoundingBox] =
     s match {
-      case formRx(minX, minY, minZ, maxX, maxY, maxZ) =>
-        createFrom(
-          Point3D(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
-          Point3D(Integer.parseInt(maxX), Integer.parseInt(maxY), Integer.parseInt(maxZ))
-        )
+      case formRx(minX, minY, minZ, width, height, depth) =>
+        try {
+          Full(
+            BoundingBox(
+              Point3D(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
+              Integer.parseInt(width),
+              Integer.parseInt(height),
+              Integer.parseInt(depth)
+            ))
+        } catch {
+          case _: NumberFormatException => Empty
+        }
       case _ =>
-        null
+        Empty
     }
 
   def combine(bbs: List[BoundingBox]): BoundingBox =
@@ -91,14 +94,11 @@ object BoundingBox {
     else
       Empty
 
-  def createFrom(width: Int, height: Int, deph: Int, topLeft: Point3D): BoundingBox =
-    BoundingBox(topLeft, width, height, deph)
-
-  def fromSQL(ints: List[Int]) =
+  def fromSQL(ints: List[Int]): Option[BoundingBox] =
     if (ints.length == 6)
       Some(BoundingBox(Point3D(ints(0), ints(1), ints(2)), ints(3), ints(4), ints(5)))
     else
       None
 
-  implicit val boundingBoxFormat = Json.format[BoundingBox]
+  implicit val boundingBoxFormat: OFormat[BoundingBox] = Json.format[BoundingBox]
 }

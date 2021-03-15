@@ -53,7 +53,7 @@ import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import DataLayer from "oxalis/model/data_layer";
@@ -123,6 +123,29 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
     }
     throw error;
   });
+}
+
+export function sendAnalyticsEvent(eventType: string, eventProperties: Object): void {
+  // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
+  // since failing analytics events should not have an impact on the application logic.
+  Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
+    method: "POST",
+    data: eventProperties,
+  });
+}
+
+export function sendFailedRequestAnalyticsEvent(
+  requestType: string,
+  error: Object,
+  requestProperties: Object,
+): void {
+  const eventProperties = {
+    request_type: requestType,
+    request_properties: requestProperties,
+    status: error.status || 0,
+    messages: error.messages || [],
+  };
+  sendAnalyticsEvent("request_failed", eventProperties);
 }
 
 // ### Users
@@ -794,18 +817,35 @@ export async function getJobs(): Promise<Array<APIJob>> {
     id: job.id,
     type: job.command,
     datasetName: job.commandArgs.kwargs.dataset_name,
-    state: job.celeryInfo.state,
+    organizationName: job.commandArgs.kwargs.organization_name,
+    layerName: job.commandArgs.kwargs.layer_name,
+    boundingBox: job.commandArgs.kwargs.bbox,
+    exportFileName: job.commandArgs.kwargs.export_file_name,
+    state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
 }
 
-export async function startJob(
-  jobName: string,
-  organization: string,
+export async function startCubingJob(
+  datasetName: string,
+  organizationName: string,
   scale: Vector3,
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
-    `/api/jobs/run/cubing/${organization}/${jobName}?scale=${scale.toString()}`,
+    `/api/jobs/run/cubing/${organizationName}/${datasetName}?scale=${scale.toString()}`,
+  );
+}
+
+export async function startTiffExportJob(
+  datasetName: string,
+  organizationName: string,
+  layerName: string,
+  bbox: Vector6,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}/${layerName}?bbox=${bbox.join(
+      ",",
+    )}`,
   );
 }
 
@@ -1433,7 +1473,6 @@ type IsosurfaceRequest = {
   voxelDimensions: Vector3,
   cubeSize: Vector3,
   scale: Vector3,
-  isInitialRequest: boolean,
 };
 
 export function computeIsosurface(
@@ -1441,15 +1480,7 @@ export function computeIsosurface(
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const {
-    position,
-    zoomStep,
-    segmentId,
-    voxelDimensions,
-    cubeSize,
-    scale,
-    isInitialRequest,
-  } = isosurfaceRequest;
+  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,
@@ -1469,7 +1500,6 @@ export function computeIsosurface(
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
           scale,
-          isInitialRequest,
         },
       },
     );

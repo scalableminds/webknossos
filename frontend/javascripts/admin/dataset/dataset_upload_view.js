@@ -9,7 +9,12 @@ import { useDropzone } from "react-dropzone";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { finishDatasetUpload, createResumableUpload, startJob } from "admin/admin_rest_api";
+import {
+  finishDatasetUpload,
+  createResumableUpload,
+  startCubingJob,
+  sendFailedRequestAnalyticsEvent,
+} from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -146,7 +151,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
               let maybeError;
               if (this.state.needsConversion) {
                 try {
-                  await startJob(formValues.name, activeUser.organization, formValues.scale);
+                  await startCubingJob(formValues.name, activeUser.organization, formValues.scale);
                 } catch (error) {
                   maybeError = error;
                 }
@@ -182,7 +187,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 );
               }
             },
-            () => {
+            error => {
+              sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
+                dataset_name: datasetId.name,
+              });
               Toast.error(messages["dataset.upload_failed"]);
               this.setState({
                 isUploading: false,

@@ -541,11 +541,17 @@ export type APIFeatureToggles = {
   +allowDeleteDatasets: boolean,
   +jobsEnabled: boolean,
   +publicDemoDatasetUrl: string,
+  +exportTiffMaxVolumeMVx: number,
+  +exportTiffMaxEdgeLengthVx: number,
 };
 
 export type APIJob = {
   +id: string,
   +datasetName: ?string,
+  +exportFileName: ?string,
+  +layerName: ?string,
+  +organizationName: ?string,
+  +boundingBox: ?string,
   +type: string,
   +state: string,
   +createdAt: number,

@@ -140,53 +140,49 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
             needsConversion: this.state.needsConversion,
           };
 
-          finishDatasetUpload(formValues.datastore, uploadInfo)
-            .catch(error => {
+          finishDatasetUpload(formValues.datastore, uploadInfo).then(
+            async () => {
+              Toast.success(messages["dataset.upload_success"]);
+              trackAction("Upload dataset");
+              await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+              if (this.state.needsConversion) {
+                await startCubingJob(formValues.name, activeUser.organization, formValues.scale);
+                Toast.info(
+                  <React.Fragment>
+                    The conversion for the uploaded dataset was started.
+                    <br />
+                    Click{" "}
+                    <a
+                      target="_blank"
+                      href="https://github.com/scalableminds/webknossos-cuber/"
+                      rel="noopener noreferrer"
+                    >
+                      here
+                    </a>{" "}
+                    to see all running jobs.
+                  </React.Fragment>,
+                );
+              }
+              form.setFieldsValue({ name: null, zipFile: null });
+              this.setState({ isUploading: false });
+              this.props.onUploaded(
+                activeUser.organization,
+                formValues.name,
+                this.state.needsConversion,
+              );
+            },
+            error => {
               sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
                 dataset_name: datasetId.name,
               });
-              throw error;
-            })
-            .then(
-              async () => {
-                Toast.success(messages["dataset.upload_success"]);
-                trackAction("Upload dataset");
-                await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-                if (this.state.needsConversion) {
-                  await startCubingJob(formValues.name, activeUser.organization, formValues.scale);
-                  Toast.info(
-                    <React.Fragment>
-                      The conversion for the uploaded dataset was started.
-                      <br />
-                      Click{" "}
-                      <a
-                        target="_blank"
-                        href="https://github.com/scalableminds/webknossos-cuber/"
-                        rel="noopener noreferrer"
-                      >
-                        here
-                      </a>{" "}
-                      to see all running jobs.
-                    </React.Fragment>,
-                  );
-                }
-                form.setFieldsValue({ name: null, zipFile: null });
-                this.setState({ isUploading: false });
-                this.props.onUploaded(
-                  activeUser.organization,
-                  formValues.name,
-                  this.state.needsConversion,
-                );
-              },
-              () => {
-                Toast.error(messages["dataset.upload_failed"]);
-                this.setState({
-                  isUploading: false,
-                  isRetrying: false,
-                  uploadProgress: 0,
-                });
-              },
-            );
+              Toast.error(messages["dataset.upload_failed"]);
+              this.setState({
+                isUploading: false,
+                isRetrying: false,
+                uploadProgress: 0,
+              });
+            },
+          );
         });
 
         resumableUpload.on("fileAdded", () => {

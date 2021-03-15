@@ -28,6 +28,8 @@ type StateProps = {|
 
 type OwnProps = {|
   layout: Object,
+  layoutKey: string,
+  layoutName: string,
   onLayoutChange: Object => void,
 |};
 
@@ -39,8 +41,8 @@ type State = {
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   static getDerivedStateFromProps(props: Props) {
     const { layout } = props;
-    console.log("got", layout);
     const model = FlexLayout.Model.fromJson(layout);
+    console.log("got new model");
     return { model };
   }
 
@@ -52,6 +54,13 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     };
     this.state.model.setOnAllowDrop(this.allowDrop);
   }
+
+  /* componentDidUpdate(prevProps: Props) {
+    const { layoutName, layoutKey } = this.props;
+    if (layoutName !== prevProps.layoutName || layoutKey !== prevProps.layoutKey) {
+      setTimeout(this.onLayoutChange, 1);
+    }
+  } */
 
   allowDrop(dragNode: Object, dropInfo: Object) {
     const dropNode = dropInfo.node;
@@ -153,17 +162,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     if (model == null) {
       model = FlexLayout.Model.fromJson(node.getConfig().model);
       node.getExtraData().model = model;
-      // save submodel on save event
-      console.log("adding new listener");
-      node.setEventListener("save", () => {
-        console.log("updating sub component");
-        /* debugger;
-        this.state.model.doAction(
-          FlexLayout.Actions.updateNodeAttributes(node.getId(), {
-            config: { model: node.getExtraData().model.toJson() },
-          }),
-        ); */
-      });
     }
 
     return <FlexLayout.Layout model={model} factory={(...args) => this.layoutFactory(...args)} />;
@@ -172,7 +170,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   layoutFactory(node: Object): ?React.Node {
     const component = node.getComponent();
     const id = node.getId();
-    console.log("rendering factory");
     switch (component) {
       case "tab": {
         return this.renderTab(id);
@@ -194,8 +191,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   onLayoutChange = () => {
     const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
-    console.log("sending updated json", currentLayoutModel);
-    console.log(JSON.stringify(currentLayoutModel));
     this.props.onLayoutChange(currentLayoutModel);
   };
 

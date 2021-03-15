@@ -79,7 +79,6 @@ function buildBorder(side, setsOfTabs: Array<Array<Object>>): Object {
   return border;
 }
 
-// TODO make a builder for the main layout
 function buildMainLayout(rowsOfSetOfTabs: any) {
   const rowWeight = 100 / rowsOfSetOfTabs.length;
   const rows = rowsOfSetOfTabs.map(setsOfTabs => {

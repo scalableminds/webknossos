@@ -42,6 +42,12 @@ import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 /*
  * TODOS for this PR:
  * Enable saving of UI config
+ * Fix maximize: When a pane is maximized, the on model change needs to be called.
+ * After maximise the 3d viewport buttons are broken / in small or Iframe mode.
+ * Spacing in the left sidebar in the settings between settings is off.
+ * Fix adding new layout
+ * Layout wechsel sollte ein onLayoutChange ausführen
+ *
  * Beaufity UI
  */
 
@@ -126,7 +132,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   componentDidMount() {
-    window.addEventListener("resize", () => this.onLayoutChange());
+    window.addEventListener("resize", () => this.deferredOnLayoutChange());
   }
 
   componentDidCatch(error: Error) {
@@ -187,9 +193,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.setState({ model });
     }
     if (this.props.autoSaveLayouts) {
+      console.log("saving cause of model change");
       this.saveCurrentLayout();
     }
   };
+
+  deferredOnLayoutChange = (model?: Object) => setTimeout(() => this.onLayoutChange(model), 1);
 
   saveCurrentLayout = () => {
     const layoutKey = determineLayout(
@@ -197,6 +206,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.viewMode,
       this.props.is2d,
     );
+    console.log("storing", layoutKey, this.state.activeLayoutName);
     storeLayoutConfig(this.state.model, layoutKey, this.state.activeLayoutName);
   };
 
@@ -245,6 +255,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
     const layout = this.props.storedLayouts[layoutType][activeLayoutName];
+    console.log("layout:", layoutType, activeLayoutName);
 
     const createNewTracing = async (
       files: Array<File>,
@@ -358,7 +369,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               <MergerModeController />
               <div id={canvasAndLayoutContainerID} style={{ position: "relative", width: "100%" }}>
                 <TracingView />
-                <FlexLayoutWrapper layout={layout} onLayoutChange={this.onLayoutChange} />
+                <FlexLayoutWrapper
+                  layout={layout}
+                  onLayoutChange={this.onLayoutChange}
+                  layoutKey={layoutType}
+                  layoutName={activeLayoutName}
+                />
               </div>
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400}>

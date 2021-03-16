@@ -78,6 +78,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const { layoutName, layoutKey } = this.props;
     const layout = getLayoutConfig(layoutKey, layoutName);
     const model = FlexLayout.Model.fromJson(layout);
+    model.setOnAllowDrop(this.allowDrop);
     this.setState({ model });
     setTimeout(this.onLayoutChange, 1);
   }

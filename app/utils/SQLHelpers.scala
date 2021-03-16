@@ -84,7 +84,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
     sqlClient.getSlackNotificationService.warnWithException(
-      "SQL error",
+      "SQL Error",
       ex,
       s"Causing query: ${query.getDumpInfo.mainInfo}"
     )

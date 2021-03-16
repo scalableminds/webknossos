@@ -139,6 +139,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object SlackNotifications {
     val url: String = get[String]("slackNotifications.url")
+    val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
 
   object Google {

@@ -86,7 +86,7 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import JSZip from "jszip";
-import { formatNumberToLength } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
@@ -640,10 +640,12 @@ class TreesTabView extends React.PureComponent<Props, State> {
     ) : null;
 
   handleMeasureAllSkeletonsLength = () => {
-    const totalLength = api.tracing.measureAllTrees();
+    const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
 
     notification.open({
-      message: `The total length of all skeletons is ${formatNumberToLength(totalLength)}.`,
+      message: `The total length of all skeletons is ${formatNumberToLength(
+        totalLengthNm,
+      )} (${formatLengthAsVx(totalLengthVx)}).`,
       icon: <i className="fas fa-ruler" />,
     });
   };

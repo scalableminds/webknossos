@@ -1,16 +1,9 @@
 package models.annotation
 
-import play.api.libs.json.{Reads, Writes}
-import utils.EnumUtils
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 
-object AnnotationVisibility extends Enumeration {
+object AnnotationVisibility extends ExtendedEnumeration {
   type AnnotationVisibility = Value
 
   val Private, Internal, Public = Value
-
-  implicit val enumReads: Reads[AnnotationVisibility.Value] = EnumUtils.enumReads(AnnotationVisibility)
-
-  implicit def enumWrites: Writes[AnnotationVisibility.Value] = EnumUtils.enumWrites
-
-  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }

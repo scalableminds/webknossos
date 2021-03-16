@@ -353,8 +353,6 @@ class BinaryDataController @Inject()(
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-            _ = if (request.body.isInitialRequest)
-              accessTokenService.webKnossosServer.reportIsosurfaceRequest(accessTokenService.tokenFromRequest(request))
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
             isosurfaceRequest = IsosurfaceRequest(
               Some(dataSource),

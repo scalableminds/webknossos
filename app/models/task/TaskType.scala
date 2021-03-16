@@ -4,15 +4,16 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import models.annotation.AnnotationSettings
+import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
-
 import javax.inject.Inject
+
 import scala.concurrent.ExecutionContext
 
 case class TaskType(
@@ -22,7 +23,7 @@ case class TaskType(
     description: String,
     settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
     recommendedConfiguration: Option[JsValue] = None,
-    tracingType: TracingType.Value = TracingType.skeleton,
+    tracingType: TracingType = TracingType.skeleton,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -35,7 +36,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
       team: String,
       settings: AnnotationSettings,
       recommendedConfiguration: Option[JsValue],
-      tracingType: TracingType.Value
+      tracingType: TracingType
   ): TaskType =
     TaskType(ObjectId.generate, ObjectId(team), summary, description, settings, recommendedConfiguration, tracingType)
 
@@ -75,6 +76,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def parse(r: TasktypesRow): Fox[TaskType] =
     for {
       tracingType <- TracingType.fromString(r.tracingtype) ?~> "failed to parse tracing type"
+      settingsAllowedModes <- Fox.combined(parseArrayTuple(r.settingsAllowedmodes).map(TracingMode.fromString(_).toFox)) ?~> "failed to parse tracing mode"
     } yield
       TaskType(
         ObjectId(r._Id),
@@ -82,7 +84,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.summary,
         r.description,
         AnnotationSettings(
-          parseArrayTuple(r.settingsAllowedmodes),
+          settingsAllowedModes,
           r.settingsPreferredmode,
           r.settingsBranchpointsallowed,
           r.settingsSomaclickingallowed,
@@ -123,37 +125,45 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def insertOne(t: TaskType): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.taskTypes(_id, _team, summary, description, settings_allowedModes, settings_preferredMode,
-                                                       settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode, settings_resolutionRestrictions_min, settings_resolutionRestrictions_max, recommendedConfiguration, tracingType, created, isDeleted)
-                         values(${t._id.id}, ${t._team.id}, ${t.summary}, ${t.description}, '#${sanitize(
-          writeArrayTuple(t.settings.allowedModes))}', #${optionLiteral(t.settings.preferredMode.map(sanitize))},
-                                ${t.settings.branchPointsAllowed}, ${t.settings.somaClickingAllowed}, ${t.settings.mergerMode}, #${optionLiteral(
-          t.settings.resolutionRestrictions.min.map(_.toString))}, #${optionLiteral(
-          t.settings.resolutionRestrictions.max.map(_.toString))}, #${optionLiteral(
-          t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))}, '#${t.tracingType.toString}',
-                                ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
+      _ <- run(sqlu"""insert into webknossos.taskTypes(
+                          _id, _team, summary, description, settings_allowedModes, settings_preferredMode,
+                          settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode,
+                          settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
+                          recommendedConfiguration, tracingType, created, isDeleted)
+                       values(${t._id.id}, ${t._team.id}, ${t.summary}, ${t.description},
+                              '#${sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))}',
+                              #${optionLiteral(t.settings.preferredMode.map(sanitize))},
+                              ${t.settings.branchPointsAllowed},
+                              ${t.settings.somaClickingAllowed},
+                              ${t.settings.mergerMode},
+                              #${optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))},
+                              #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
+                              #${optionLiteral(t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
+                              '#${t.tracingType.toString}',
+                              ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+                       """)
     } yield ()
 
   def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that t.created is skipped
       _ <- assertUpdateAccess(t._id)
+      allowedModesLiteral = sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))
+      resolutionMinLiteral = optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))
+      resolutionMaxLiteral = optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))
+      configurationLiteral = optionLiteral(t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))
       _ <- run(sqlu"""update webknossos.taskTypes
-                          set
-                           _team = ${t._team.id},
-                           summary = ${t.summary},
-                           description = ${t.description},
-                           settings_allowedModes = '#${sanitize(writeArrayTuple(t.settings.allowedModes))}',
-                           settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize))},
-                           settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
-                           settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
-                           settings_mergerMode = ${t.settings.mergerMode},
-                           settings_resolutionRestrictions_min = #${optionLiteral(
-        t.settings.resolutionRestrictions.min.map(_.toString))},
-                           settings_resolutionRestrictions_max = #${optionLiteral(
-        t.settings.resolutionRestrictions.max.map(_.toString))},
-                           recommendedConfiguration = #${optionLiteral(
-        t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
+                        set
+                         _team = ${t._team.id},
+                         summary = ${t.summary},
+                         description = ${t.description},
+                         settings_allowedModes = '#$allowedModesLiteral',
+                         settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize))},
+                         settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
+                         settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
+                         settings_mergerMode = ${t.settings.mergerMode},
+                         settings_resolutionRestrictions_min = #$resolutionMinLiteral,
+                           settings_resolutionRestrictions_max = #$resolutionMaxLiteral,
+                           recommendedConfiguration = #$configurationLiteral,
                            isDeleted = ${t.isDeleted}
                           where _id = ${t._id.id}""")
     } yield ()

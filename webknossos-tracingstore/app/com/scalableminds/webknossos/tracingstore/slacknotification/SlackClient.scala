@@ -6,7 +6,6 @@ import play.api.libs.json.Json
 
 import scala.concurrent.duration.DurationInt
 
-
 class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnabled: Boolean) extends LazyLogging {
 
   private lazy val RateLimitInterval = 1 minute
@@ -37,20 +36,22 @@ class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnable
     } else {
       if (testAndSetRateLimit) {
         if (verboseLoggingEnabled) {
-          logger.info(s"Sending slack notification: $jsonMessage. Sent $messagesSentSinceReset messages since rate reset.")
+          logger.info(
+            s"Sending slack notification: $jsonMessage. Sent $messagesSentSinceReset messages since rate reset.")
         }
         rpc(slackUri).postJson(
           Json.obj("attachments" -> Json.arr(jsonMessage))
         )
       } else {
         if (verboseLoggingEnabled) {
-          logger.info(s"Not sending slack notification as rate limit of $messagesSentSinceReset was reached. Message was: $jsonMessage")
+          logger.info(
+            s"Not sending slack notification as rate limit of $messagesSentSinceReset was reached. Message was: $jsonMessage")
         }
       }
     }
   }
 
-  private def testAndSetRateLimit: Boolean = {
+  private def testAndSetRateLimit: Boolean =
     this.synchronized {
       val currentTimestamp = System.currentTimeMillis()
       if (currentTimestamp - lastResetTimestamp > RateLimitInterval.toMillis) {
@@ -64,5 +65,4 @@ class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnable
         } else false
       }
     }
-  }
 }

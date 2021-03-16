@@ -41,7 +41,9 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
   def version: Long = versionedKey.version
 }
 
-class FossilDBClient(collection: String, config: TracingStoreConfig, slackNotificationService: SlackNotificationService) extends FoxImplicits with LazyLogging {
+class FossilDBClient(collection: String, config: TracingStoreConfig, slackNotificationService: SlackNotificationService)
+    extends FoxImplicits
+    with LazyLogging {
   private val address = config.Tracingstore.Fossildb.address
   private val port = config.Tracingstore.Fossildb.port
   private val channel =

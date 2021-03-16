@@ -199,7 +199,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   }
 
   private def looksLikeLayerDir(children: Seq[Path]): Boolean = {
-    val layerDirChildRegex = """(\d+)""".r
+    val layerDirChildRegex = """(\d+)|(\d+-\d+-\d+)""".r
     children.nonEmpty && children.exists(path =>
       path.getFileName.toString match {
         case layerDirChildRegex(_*) => true

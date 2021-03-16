@@ -93,7 +93,7 @@ Object.entries(OrthoViews).forEach(([viewportId, { name, id }]: any) => {
 });
 
 const ArbitraryViewports = {};
-Object.keys(ArbitraryViews).forEach(([viewportId, { name, id }]: any) => {
+Object.entries(ArbitraryViews).forEach(([viewportId, { name, id }]: any) => {
   ArbitraryViewports[viewportId] = Tab(name, id, "viewport");
 });
 const subLayoutGlobalSettings = {

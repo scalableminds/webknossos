@@ -83,7 +83,11 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   }
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
-    sqlClient.getSlackNotificationService.noticeError(ex, s"Causing query: ${query.getDumpInfo.mainInfo}")
+    sqlClient.getSlackNotificationService.warnWithException(
+      "SQL error",
+      ex,
+      s"Causing query: ${query.getDumpInfo.mainInfo}"
+    )
 
   def writeArrayTuple(elements: List[String]): String = {
     val commaSeparated = elements.mkString(",")

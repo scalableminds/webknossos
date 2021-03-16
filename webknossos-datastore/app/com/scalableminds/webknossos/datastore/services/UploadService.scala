@@ -106,9 +106,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
         case Full(_) =>
           if (datasetNeedsConversion)
             Fox.successful(())
-          else
+          else {
+            addLayerAndResolutionDirIfMissing(dataSourceDir)
             dataSourceRepository.updateDataSource(
               dataSourceService.dataSourceFromFolder(dataSourceDir, dataSourceId.team))
+          }
         case e =>
           deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
           dataSourceRepository.cleanUpDataSource(dataSourceId)
@@ -134,6 +136,38 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     logger.info(s"Unpacking dataset to $dataSourceDir")
     dataSourceDir
+  }
+
+  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit = {
+    if (Files.exists(dataSourceDir)) {
+      for {
+        listing: Seq[Path] <- PathUtils.listDirectories(dataSourceDir)
+      } yield {
+        if (looksLikeMagDir(listing)) {
+          logger.info("Looks like mag dir")
+        } else if (looksLikeLayerDir(listing)) {
+          logger.info("Looks like layer dir")
+        } else {
+          logger.info("Looks ok")
+        }
+      }
+    }
+  }
+
+  private def looksLikeMagDir(children: Seq[Path]): Boolean = {
+    val magDirChildRegex = """z(\d+)""".r
+    children.nonEmpty && children.forall(path => path.getFileName.toString match {
+      case magDirChildRegex(_*) => true
+      case _ => false
+    })
+  }
+
+  private def looksLikeLayerDir(children: Seq[Path]): Boolean = {
+    val layerDirChildRegex = """(\d+)""".r
+    children.nonEmpty && children.exists(path => path.getFileName.toString match {
+      case layerDirChildRegex(_*) => true
+      case _ => false
+    })
   }
 
   def cleanUpOrphanFileChunks(): Box[Unit] =

@@ -36,7 +36,12 @@ import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
 import { determineLayout } from "./default_layout_configs";
-import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
+import {
+  storeLayoutConfig,
+  setActiveLayout,
+  getLastActiveLayout,
+  getLayoutConfig,
+} from "./layout_persistence";
 
 /*
  * TODOS for this PR:
@@ -95,18 +100,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.viewMode,
       this.props.is2d,
     );
-    let lastActiveLayoutName;
-    if (
-      props.storedLayouts.LastActiveLayouts &&
-      props.storedLayouts.LastActiveLayouts[layoutType]
-    ) {
-      lastActiveLayoutName = props.storedLayouts.LastActiveLayouts[layoutType];
-    } else {
-      // added as a fallback when there are no stored last active layouts
-      const firstStoredLayout = Object.keys(props.storedLayouts[layoutType])[0];
-      lastActiveLayoutName = firstStoredLayout;
-    }
-    const layout = props.storedLayouts[layoutType][lastActiveLayoutName];
+    const lastActiveLayoutName = getLastActiveLayout(layoutType);
+    const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
     this.state = {
       activeLayoutName: lastActiveLayoutName,
       hasError: false,
@@ -143,6 +138,23 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     // collected and all events are canceled, etc.
     location.reload();
   }
+
+  onStatusLoaded = (newStatus: ControllerStatus) => {
+    this.setState({ status: newStatus });
+    // After the data is loaded recalculate the layout type and the active layout.
+    const { initialCommandType, viewMode, is2d } = this.props;
+    const layoutType = determineLayout(initialCommandType.type, viewMode, is2d);
+    const lastActiveLayoutName = getLastActiveLayout(layoutType);
+    const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
+    this.setState({
+      activeLayoutName: lastActiveLayoutName,
+      model: layout,
+    });
+    setTimeout(() => {
+      recalculateInputCatcherSizes();
+      window.needsRerender = true;
+    }, 500);
+  };
 
   showNodeContextMenuAt = (
     xPos: number,
@@ -265,13 +277,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialAnnotationType={this.props.initialAnnotationType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
-            setControllerStatus={(newStatus: ControllerStatus) => {
-              this.setState({ status: newStatus });
-              setTimeout(() => {
-                recalculateInputCatcherSizes();
-                window.needsRerender = true;
-              }, 500);
-            }}
+            setControllerStatus={this.onStatusLoaded}
             showNodeContextMenuAt={this.showNodeContextMenuAt}
           />
           <CrossOriginApi />
@@ -325,11 +331,13 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 style={{ position: "relative", width: "100%", height: "100%" }}
               >
                 <TracingView />
-                <FlexLayoutWrapper
-                  onLayoutChange={this.onLayoutChange}
-                  layoutKey={layoutType}
-                  layoutName={activeLayoutName}
-                />
+                {status === "loaded" ? (
+                  <FlexLayoutWrapper
+                    onLayoutChange={this.onLayoutChange}
+                    layoutKey={layoutType}
+                    layoutName={activeLayoutName}
+                  />
+                ) : null}
               </div>
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400}>

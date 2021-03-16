@@ -107,6 +107,17 @@ export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string)
   return layout;
 }
 
+export function getLastActiveLayout(layoutKey: LayoutKeys) {
+  const { storedLayouts } = Store.getState().uiInformation;
+  if (storedLayouts.LastActiveLayouts && storedLayouts.LastActiveLayouts[layoutKey]) {
+    return storedLayouts.LastActiveLayouts[layoutKey];
+  } else {
+    // added as a fallback when there are no stored last active layouts
+    const firstStoredLayout = Object.keys(storedLayouts[layoutKey])[0];
+    return firstStoredLayout;
+  }
+}
+
 function getDeepCopyOfStoredLayouts(): Object {
   const currentLayouts = Store.getState().uiInformation.storedLayouts;
   return _.cloneDeep(currentLayouts);

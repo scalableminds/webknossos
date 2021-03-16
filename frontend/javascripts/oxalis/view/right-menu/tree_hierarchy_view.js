@@ -39,7 +39,7 @@ import {
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
-import { formatNumberToLength } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
@@ -290,9 +290,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
-    const length = api.tracing.measureTreeLength(treeId);
+    const [lengthInNm, lengthInVx] = api.tracing.measureTreeLength(treeId);
+
     notification.open({
-      message: messages["tracing.tree_length_notification"](treeName, formatNumberToLength(length)),
+      message: messages["tracing.tree_length_notification"](
+        treeName,
+        formatNumberToLength(lengthInNm),
+        formatLengthAsVx(lengthInVx),
+      ),
       icon: <i className="fas fa-ruler" />,
     });
   };

@@ -146,7 +146,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       renderIndependently(destroy => (
         <ExportBoundingBoxModal
           dataset={this.props.dataset}
-          hasVolumeTracing={this.props.tracing.volume != null}
+          volumeTracing={this.props.tracing.volume}
           boundingBox={selectedBoundingBox.boundingBox}
           destroy={destroy}
         />

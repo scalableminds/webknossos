@@ -821,6 +821,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     layerName: job.commandArgs.kwargs.layer_name,
     boundingBox: job.commandArgs.kwargs.bbox,
     exportFileName: job.commandArgs.kwargs.export_file_name,
+    tracingId: job.commandArgs.kwargs.volume_tracing_id,
     state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
@@ -839,13 +840,18 @@ export async function startCubingJob(
 export async function startTiffExportJob(
   datasetName: string,
   organizationName: string,
-  layerName: string,
   bbox: Vector6,
+  layerName: ?string,
+  tracingId: ?string,
+  tracingVersion: ?number = null,
 ): Promise<Array<APIJob>> {
+  const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
+  const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
+  const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
   return Request.receiveJSON(
-    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}/${layerName}?bbox=${bbox.join(
+    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}`,
+    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}`,
   );
 }
 

@@ -2,9 +2,11 @@
 import * as React from "react";
 import FlexLayout from "flexlayout-react";
 import { connect } from "react-redux";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, AnnotationType } from "oxalis/store";
 import { Icon, Layout, Button } from "antd";
 import _ from "lodash";
+import Toast from "libs/toast";
+import messages from "messages";
 
 import { OrthoViews, ArbitraryViews } from "oxalis/constants";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
@@ -18,21 +20,19 @@ import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
-import { /* layoutEmitter, */ getLayoutConfig } from "./layout_persistence";
-import { type LayoutKeys } from "./default_layout_configs";
-// TODO: use the layout emitter
-/*
-const unbindResetListener = layoutEmitter.on("resetLayout", () => {
-      resetDefaultLayouts();
-      this.rebuildLayout();
-    });
-*/
+import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
+import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
 
 const { Footer } = Layout;
 
 type StateProps = {|
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
+  datasetName: string,
+  organization: string,
+  annotationType: AnnotationType,
+  name: string,
+  taskId: ?string,
 |};
 
 type OwnProps = {|
@@ -47,6 +47,8 @@ type State = {
 };
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
+  unbindResetListener: () => void;
+
   constructor(props: Props) {
     super(props);
     const { layoutKey, layoutName } = props;
@@ -55,20 +57,21 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       model: FlexLayout.Model.fromJson(layout),
     };
     this.state.model.setOnAllowDrop(this.allowDrop);
+    this.unbindResetListener = layoutEmitter.on("resetLayout", () => {
+      resetDefaultLayouts();
+      this.rebuildLayout();
+    });
   }
-
-  /* componentDidMount() {
-    // The code is buggy when an input catcher is not rendered.
-    // this might help. Otherwise look where the area of an inputcatcher is calculated.
-    this.onLayoutChange();
-    // setTimeout(this.onLayoutChange, 500);
-  } */
 
   componentDidUpdate(prevProps: Props) {
     const { layoutName, layoutKey } = this.props;
     if (layoutName !== prevProps.layoutName || layoutKey !== prevProps.layoutKey) {
       this.rebuildLayout();
     }
+  }
+
+  componentWillUnmount() {
+    this.unbindResetListener();
   }
 
   rebuildLayout() {
@@ -82,23 +85,22 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   allowDrop(dragNode: Object, dropInfo: Object) {
     const dropNode = dropInfo.node;
 
-    // prevent non-border tabs dropping into borders
+    // Prevent center tabs being moved into a sidebar.
     if (
       dropNode.getType() === "border" &&
       (dragNode.getParent() == null || dragNode.getParent().getType() !== "border")
     ) {
-      // TODO: Add Info toasts for this.
-      console.info("You cannot move this tab into a sidebar!");
+      Toast.info(messages["ui.moving_center_tab_into_sidebar_error"]);
       return false;
     }
 
-    // prevent border tabs dropping into main layout
+    // Prevent sidebar tabs being moved into the center.
     if (
       dropNode.getType() !== "border" &&
       dragNode.getParent() != null &&
       dragNode.getParent().getType() === "border"
     ) {
-      console.info("You cannot move this tab out of this sidebar!");
+      Toast.info(messages["ui.moving_sidebar_tab_into_center_error"]);
       return false;
     }
     return true;
@@ -125,7 +127,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return <MeshesView />;
       }
       default: {
-        console.error(`The tab with id ${id} is unknown`);
+        console.error(`The tab with id ${id} is unknown.`);
         return null;
       }
     }
@@ -140,7 +142,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return <DatasetSettingsView />;
       }
       default: {
-        console.error(`The settings tab with id ${id} is unknown`);
+        console.error(`The settings tab with id ${id} is unknown.`);
         return null;
       }
     }
@@ -148,7 +150,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   renderViewport(id: string): ?React.Node {
     const { displayScalebars, isUpdateTracingAllowed } = this.props;
-    console.log("rendering input catcher", id);
     switch (id) {
       case OrthoViews.PLANE_XY.id:
       case OrthoViews.PLANE_YZ.id:
@@ -170,7 +171,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         );
       }
       default: {
-        console.error(`The settings tab with id ${id} is unknown`);
+        console.error(`The settings tab with id ${id} is unknown.`);
         return null;
       }
     }
@@ -208,10 +209,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
-    console.log("on layout change called");
     const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
     // Workaround so that onLayoutChange is called after the update of flexlayout.
-    // Calling the method without a timeout does not work.
+    // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
     setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
   };
 
@@ -229,7 +229,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       >
         <Icon
           type={side}
-          className="withoutIconMargin"
+          className="without-icon-margin"
           style={{
             display: "flex",
             alignItems: "center",
@@ -247,6 +247,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   render() {
+    const { datasetName, organization, annotationType, name, taskId } = this.props;
+    const tracingName = name || "[untitled]";
+    let footerText = `${datasetName} | ${organization} | `;
+    footerText += taskId != null ? `${annotationType} : ${taskId}` : tracingName;
+
     return (
       <React.Fragment>
         <div className="flex-layout-container">
@@ -258,7 +263,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         </div>
         <Footer className="footer">
           {this.getSidebarButtons()}
-          🦶Footer🦶
+          {footerText}
         </Footer>
       </React.Fragment>
     );
@@ -269,6 +274,11 @@ function mapStateToProps(state: OxalisState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    datasetName: state.dataset.name,
+    organization: state.dataset.owningOrganization,
+    annotationType: state.tracing.annotationType,
+    name: state.tracing.name,
+    taskId: state.task != null ? state.task.id : null,
   };
 }
 

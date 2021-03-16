@@ -107,7 +107,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
         }}
       >
         <div
-          className="withoutIconMargin"
+          className="without-icon-margin"
           style={{
             fontSize: 32,
             background: "#1790ff",

@@ -7,8 +7,8 @@ const defaultViewportRect = {
   // The bounds are 0 to avoid initially rendering hidden / non-rendered viewports.
   top: 0,
   left: 0,
-  width: 0,
-  height: 0,
+  width: Constants.VIEWPORT_WIDTH,
+  height: Constants.VIEWPORT_WIDTH,
 };
 
 const initialAnnotationInfo = {

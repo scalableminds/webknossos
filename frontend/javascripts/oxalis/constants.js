@@ -51,6 +51,7 @@ export type ArbitraryView = $Keys<typeof ArbitraryViews>;
 export type ArbitraryViewMap<T> = { [key: ArbitraryView]: T };
 
 export type Viewport = OrthoView | typeof ArbitraryViewport;
+export const allViewports: Array<Viewport> = Object.keys(OrthoViews).concat([ArbitraryViewport]);
 
 export type ViewportMap<T> = { [key: Viewport]: T };
 export type ViewportExtents = $ReadOnly<ViewportMap<Vector2>>;

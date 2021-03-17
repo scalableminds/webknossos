@@ -7,6 +7,7 @@ import { Icon, Layout, Button } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
 import messages from "messages";
+import { InputKeyboardNoLoop } from "libs/input";
 
 import { OrthoViews, ArbitraryViews } from "oxalis/constants";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
@@ -22,6 +23,11 @@ import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
+import {
+  getMaximizedItemId,
+  getBorderOpenStatus,
+  type BorderOpenStatus,
+} from "./flex_layout_helper";
 
 const { Footer } = Layout;
 
@@ -48,15 +54,14 @@ type State = {
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   unbindResetListener: () => void;
+  borderOpenStatus: BorderOpenStatus = { left: false, right: false };
+  isRightSidebarOpen: boolean = false;
+  maximizedItemId: ?string = null;
+  unbindMaximizeListener: () => void;
 
   constructor(props: Props) {
     super(props);
-    const { layoutKey, layoutName } = props;
-    const layout = getLayoutConfig(layoutKey, layoutName);
-    this.state = {
-      model: FlexLayout.Model.fromJson(layout),
-    };
-    this.state.model.setOnAllowDrop(this.allowDrop);
+    this.state = { model: this.getNewLayout() };
     this.unbindResetListener = layoutEmitter.on("resetLayout", () => {
       resetDefaultLayouts();
       this.rebuildLayout();
@@ -72,15 +77,46 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   componentWillUnmount() {
     this.unbindResetListener();
+    this.unbindMaximizeListener();
+  }
+
+  getNewLayout() {
+    const { layoutName, layoutKey } = this.props;
+    const layout = getLayoutConfig(layoutKey, layoutName);
+    if (this.unbindMaximizeListener != null) {
+      this.unbindMaximizeListener();
+    }
+    this.unbindMaximizeListener = this.attachMaximizeListener();
+    const model = FlexLayout.Model.fromJson(layout);
+    this.maximizedItemId = getMaximizedItemId(model);
+    this.borderOpenStatus = getBorderOpenStatus(model);
+    model.setOnAllowDrop(this.allowDrop);
+    return model;
   }
 
   rebuildLayout() {
-    const { layoutName, layoutKey } = this.props;
-    const layout = getLayoutConfig(layoutKey, layoutName);
-    const model = FlexLayout.Model.fromJson(layout);
-    model.setOnAllowDrop(this.allowDrop);
+    const model = this.getNewLayout();
     this.setState({ model });
     setTimeout(this.onLayoutChange, 1);
+  }
+
+  attachMaximizeListener() {
+    const toggleMaximize = () => {
+      const { model } = this.state;
+      const activeNode = model.getActiveTabset();
+      if (activeNode == null) {
+        return;
+      }
+      const toggleMaximiseAction = FlexLayout.Actions.maximizeToggle(activeNode.getId());
+      model.doAction(toggleMaximiseAction);
+      this.onAction(toggleMaximiseAction);
+    };
+
+    const keyboardNoLoop = new InputKeyboardNoLoop(
+      { ".": toggleMaximize },
+      { supportInputElements: false },
+    );
+    return () => keyboardNoLoop.destroy();
   }
 
   allowDrop(dragNode: Object, dropInfo: Object) {
@@ -184,7 +220,14 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       model = FlexLayout.Model.fromJson(node.getConfig().model);
       node.getExtraData().model = model;
     }
-    return <FlexLayout.Layout model={model} factory={(...args) => this.layoutFactory(...args)} />;
+    return (
+      <FlexLayout.Layout
+        model={model}
+        factory={(...args) => this.layoutFactory(...args)}
+        onAction={this.onAction}
+        onModelChange={() => this.onLayoutChange()}
+      />
+    );
   }
 
   layoutFactory(node: Object): ?React.Node {
@@ -216,8 +259,32 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
   };
 
-  toggleSidebar(side: string) {
+  onMaximizeToggle = () => {
+    Object.entries(this.borderOpenStatus).forEach(([side, isOpen]) => {
+      if (isOpen) {
+        this.toggleSidebar(side, false);
+      }
+    });
+  };
+
+  onAction = (action: typeof FlexLayout.Action) => {
+    const { type, data } = action;
+    if (type === "FlexLayout_MaximizeToggle") {
+      if (data.node === this.maximizedItemId) {
+        this.maximizedItemId = null;
+      } else {
+        this.maximizedItemId = data.node;
+      }
+      this.onMaximizeToggle();
+    }
+    return action;
+  };
+
+  toggleSidebar(side: string, toggleInternalState: boolean = true) {
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
+    if (toggleInternalState) {
+      this.borderOpenStatus[side] = !this.borderOpenStatus[side];
+    }
     this.onLayoutChange();
   }
 
@@ -260,6 +327,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             model={this.state.model}
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
+            onAction={this.onAction}
           />
         </div>
         <Footer className="footer">

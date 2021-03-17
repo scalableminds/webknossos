@@ -52,8 +52,8 @@ export default function determineBucketsForOblique(
   // Cast a vertical "scan line" and check how many buckets are intersected.
   // That amount N is used as a measure to cast N + 1 (steps) vertical scanlines.
   const stepRatePoints = M4x4.transformVectorsAffine(queryMatrix, [
-    [-enlargedHalfExtent, -enlargedHalfExtent, -10],
-    [-enlargedHalfExtent, +enlargedHalfExtent, -10],
+    [-enlargedHalfExtent, -enlargedHalfExtent, 0],
+    [-enlargedHalfExtent, +enlargedHalfExtent, 0],
   ]);
   const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], resolutions, logZoomStep);
   const steps = stepRateBuckets.length + 1;

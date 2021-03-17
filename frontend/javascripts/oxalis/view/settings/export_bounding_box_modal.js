@@ -2,54 +2,83 @@
 import { Button, Modal, Alert } from "antd";
 import React, { useState } from "react";
 import type { BoundingBoxType } from "oxalis/constants";
-import type { APIDataset } from "types/api_flow_types";
+import type { VolumeTracing } from "oxalis/store";
+import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import { startTiffExportJob } from "admin/admin_rest_api";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import Model from "oxalis/model";
 import features from "features";
 import * as Utils from "libs/utils";
 
 type Props = {
   destroy: () => void,
+  volumeTracing: ?VolumeTracing,
   dataset: APIDataset,
-  hasVolumeTracing: boolean,
   boundingBox: BoundingBoxType,
 };
 
-const ExportBoundingBoxModal = ({ destroy, dataset, hasVolumeTracing, boundingBox }: Props) => {
+const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }: Props) => {
   const [startedExports, setStartedExports] = useState([]);
 
   const handleClose = () => {
     destroy();
   };
 
-  const handleStartExport = layerName => {
-    startTiffExportJob(
+  const exportKey = layerInfos => (layerInfos.layerName || "") + (layerInfos.tracingId || "");
+
+  const handleStartExport = async layerInfos => {
+    setStartedExports(startedExports.concat(exportKey(layerInfos)));
+    if (layerInfos.tracingId) {
+      await Model.ensureSavedState();
+    }
+    await startTiffExportJob(
       dataset.name,
       dataset.owningOrganization,
-      layerName,
       Utils.computeArrayFromBoundingBox(boundingBox),
+      layerInfos.layerName,
+      layerInfos.tracingId,
     );
-    setStartedExports(startedExports.concat(layerName));
   };
 
-  const layerNames = dataset.dataSource.dataLayers.map(layer => {
-    const nameIfFromDataset = layer.category === "color" || !hasVolumeTracing ? layer.name : null;
-    const nameIfVolume =
-      hasVolumeTracing && layer.category === "segmentation" && layer.fallbackLayerInfo != null
-        ? layer.fallbackLayerInfo.name
-        : null;
-    return nameIfFromDataset || nameIfVolume;
+  const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
+
+  const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
+    if (layer.category === "color" || volumeTracing == null)
+      return {
+        displayName: layer.name,
+        layerName: layer.name,
+        tracingId: null,
+        tracingVersion: null,
+        hasMag1: hasMag1(layer),
+      };
+    if (layer.fallbackLayerInfo != null)
+      return {
+        displayName: "Volume annotation with fallback segmentation",
+        layerName: layer.fallbackLayerInfo.name,
+        tracingId: volumeTracing.tracingId,
+        tracingVersion: volumeTracing.version,
+        hasMag1: hasMag1(layer),
+      };
+    return {
+      displayName: "Volume annotation",
+      layerName: null,
+      tracingId: volumeTracing.tracingId,
+      tracingVersion: volumeTracing.version,
+      hasMag1: hasMag1(layer),
+    };
   });
 
-  const exportButtonsList = layerNames.map(layerName =>
-    layerName ? (
+  const exportButtonsList = allLayerInfos.map(layerInfos =>
+    layerInfos ? (
       <p>
         <Button
-          key={layerName}
-          onClick={() => handleStartExport(layerName)}
-          disabled={startedExports.includes(layerName)}
+          key={exportKey(layerInfos)}
+          onClick={() => handleStartExport(layerInfos)}
+          disabled={startedExports.includes(exportKey(layerInfos)) || !layerInfos.hasMag1}
         >
-          {layerName}
-          {startedExports.includes(layerName) ? " (started)" : null}
+          {layerInfos.displayName}
+          {!layerInfos.hasMag1 ? " (resolution 1 missing)" : ""}
+          {startedExports.includes(exportKey(layerInfos)) ? " (started)" : ""}
         </Button>
       </p>
     ) : null,

@@ -550,6 +550,7 @@ export type APIJob = {
   +datasetName: ?string,
   +exportFileName: ?string,
   +layerName: ?string,
+  +tracingId: ?string,
   +organizationName: ?string,
   +boundingBox: ?string,
   +type: string,

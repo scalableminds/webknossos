@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ArbitraryViewport, allViewports, type Rect, type Viewport } from "oxalis/constants";
+import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
@@ -15,8 +15,6 @@ type Props = {
   displayScalebars?: boolean,
 };
 
-const getEmptyRect = () => ({ top: 0, left: 0, width: 0, height: 0 });
-
 function ignoreContextMenu(event: SyntheticInputEvent<>) {
   // hide contextmenu, while rightclicking a canvas
   event.preventDefault();
@@ -27,7 +25,7 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
 function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean): Rect {
   const noneOverflowWrapper = inputCatcherDOM.closest(".flexlayout-dont-overflow");
   if (!noneOverflowWrapper) {
-    return getEmptyRect();
+    return { top: 0, left: 0, width: 0, height: 0 };
   }
   if (makeQuadratic) {
     const getQuadraticExtent = () => {
@@ -47,7 +45,6 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
 }
 
 const renderedInputCatchers = new Map();
-const notRenderedInputCatchers = new Set(allViewports);
 
 // TODO: Look why the tests fail
 export function recalculateInputCatcherSizes() {
@@ -56,9 +53,6 @@ export function recalculateInputCatcherSizes() {
     const makeQuadratic = viewportID === ArbitraryViewport;
     const rect = adaptInputCatcher(inputCatcher, makeQuadratic);
     viewportRects[viewportID] = rect;
-  }
-  for (const viewportID of notRenderedInputCatchers) {
-    viewportRects[viewportID] = getEmptyRect();
   }
   Store.dispatch(setInputCatcherRects(viewportRects));
 }
@@ -69,14 +63,12 @@ class InputCatcher extends React.PureComponent<Props, {}> {
   componentDidMount() {
     if (this.domElement) {
       renderedInputCatchers.set(this.props.viewportID, this.domElement);
-      notRenderedInputCatchers.delete(this.props.viewportID);
     }
   }
 
   componentWillUnmount() {
     if (this.domElement) {
       renderedInputCatchers.delete(this.props.viewportID);
-      notRenderedInputCatchers.add(this.props.viewportID);
     }
   }
 

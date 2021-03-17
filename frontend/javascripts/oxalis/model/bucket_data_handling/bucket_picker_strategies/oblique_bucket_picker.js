@@ -47,9 +47,17 @@ export default function determineBucketsForOblique(
   // buckets are already on the GPU when the user moves a little.
   const enlargementFactor = 1.1;
   const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
-  const steps = 30;
-  const stepSize = enlargedExtent / steps;
   const enlargedHalfExtent = enlargedExtent / 2;
+
+  // Cast a vertical "scan line" and check how many buckets are intersected.
+  // That amount N is used as a measure to cast N + 1 (steps) vertical scanlines.
+  const stepRatePoints = M4x4.transformVectorsAffine(queryMatrix, [
+    [-enlargedHalfExtent, -enlargedHalfExtent, -10],
+    [-enlargedHalfExtent, +enlargedHalfExtent, -10],
+  ]);
+  const stepRateBuckets = traverse(stepRatePoints[0], stepRatePoints[1], resolutions, logZoomStep);
+  const steps = stepRateBuckets.length + 1;
+  const stepSize = enlargedExtent / steps;
 
   // This array holds the start and end points
   // of horizontal lines which cover the entire rendered plane.
@@ -59,8 +67,13 @@ export default function determineBucketsForOblique(
     queryMatrix,
     _.flatten(
       _.range(steps + 1).map(idx => [
+        // Cast lines at z=-10
         [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, -10],
         [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, -10],
+        // Cast lines at z=0
+        [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 0],
+        [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 0],
+        // Cast lines at z=10
         [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 10],
         [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 10],
       ]),

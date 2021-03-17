@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The time spent on a project is now displayed in the project list. [#5209](https://github.com/scalableminds/webknossos/pull/5209)
 - Added the possibility to export binary data as tiff (if long-runnings jobs are enabled). [#5195](https://github.com/scalableminds/webknossos/pull/5195)
 - Added a link to dataset view mode from annotation mode info tab. [#5262](https://github.com/scalableminds/webknossos/pull/5262)
+- Added the possibility to export also volume annotations as tiff (if long-runnings jobs are enabled). [#5246](https://github.com/scalableminds/webknossos/pull/5246)
 
 ### Changed
 - Measured distances will be shown in voxel space, too. [#5240](https://github.com/scalableminds/webknossos/pull/5240)

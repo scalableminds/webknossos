@@ -101,7 +101,6 @@ function generateRandomName() {
   return "wk_tmp_" + random;
 }
 
-
 function sortAndClean(dumpedDir) {
   glob.sync(dumpedDir + "/**", { nodir: true }).forEach(function(fileName) {
     replace({ files: fileName, replace: /,$/gm, with: "" });

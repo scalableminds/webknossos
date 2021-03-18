@@ -13,9 +13,11 @@ import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
+import BorderToggleButton from "oxalis/view/components/border_toggle_button";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 import features from "features";
+import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -54,7 +56,7 @@ function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "flex" }}>
       <Avatar
         className="hover-effect-via-opacity"
         style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
@@ -398,6 +400,17 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
         handleLogout={handleLogout}
       />,
     );
+    if (isInAnnotationView) {
+      trailingNavItems.push(
+        <div key="right-border-navbar-toggle" className="center-item-using-flex">
+          <BorderToggleButton
+            side="right"
+            onClick={() => layoutEmitter.emit("toggleBorder", "right")}
+            style={{ position: "unset", height: 32, marginLeft: 8 }}
+          />
+        </div>,
+      );
+    }
   }
 
   if (!_isAuthenticated && features().isDemoInstance && !Utils.getIsInIframe()) {
@@ -436,6 +449,33 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       style={{ height: "100%", marginLeft: 2, marginRight: 10, borderLeft: "1px #666879 solid" }}
     />
   );
+  const headerLeftMenuItems = [
+    <Menu.Item key="0">
+      <Link to="/dashboard" style={{ fontWeight: 400 }}>
+        <CollapsibleMenuTitle
+          title="webKnossos"
+          icon={<span className="logo" />}
+          collapse={collapseAllNavItems}
+        />
+      </Link>
+    </Menu.Item>,
+  ].concat(menuItems);
+  if (isInAnnotationView) {
+    const leftBorderToggleButton = (
+      <Menu.Item
+        key="left-border-navbar-toggle"
+        className="center-item-using-flex"
+        style={{ marginLeft: 8 }}
+      >
+        <BorderToggleButton
+          side="left"
+          onClick={() => layoutEmitter.emit("toggleBorder", "left")}
+          style={{ position: "unset", height: 32, marginRight: 8 }}
+        />
+      </Menu.Item>
+    );
+    headerLeftMenuItems.unshift(leftBorderToggleButton);
+  }
 
   return (
     <Header style={navbarStyle} className={collapseAllNavItems ? "collapsed-nav-header" : ""}>
@@ -447,17 +487,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
         subMenuCloseDelay={subMenuCloseDelay}
         triggerSubMenuAction="click"
       >
-        {[
-          <Menu.Item key="0">
-            <Link to="/dashboard" style={{ fontWeight: 400 }}>
-              <CollapsibleMenuTitle
-                title="webKnossos"
-                icon={<span className="logo" />}
-                collapse={collapseAllNavItems}
-              />
-            </Link>
-          </Menu.Item>,
-        ].concat(menuItems)}
+        {headerLeftMenuItems}
       </Menu>
 
       {isInAnnotationView ? separator : null}

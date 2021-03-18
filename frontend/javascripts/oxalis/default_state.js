@@ -204,6 +204,7 @@ const defaultState: OxalisState = {
     isInAnnotationView: false,
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
+    borderOpenStatus: { right: false, left: false },
   },
   isosurfaces: {},
 };

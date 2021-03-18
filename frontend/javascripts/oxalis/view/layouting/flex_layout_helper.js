@@ -2,12 +2,8 @@
 // TODO: Better use the models interface for this
 
 // TODO: Rename each sidebar to border
-import { Model } from "flexlayout-react";
-
-export type BorderOpenStatus = {
-  left: boolean,
-  right: boolean,
-};
+import { Model, Actions } from "flexlayout-react";
+import type { BorderOpenStatus } from "oxalis/store";
 
 export function getMaximizedItemId(model: typeof Model): ?string {
   const maximizedTabset = model.getMaximizedTabset();
@@ -24,4 +20,21 @@ export function getBorderOpenStatus(model: typeof Model): BorderOpenStatus {
     }
   });
   return openStatus;
+}
+
+export function adjustModelToBorderOpenStatus(
+  model: typeof Model,
+  borderOpenStatus: BorderOpenStatus,
+) {
+  const borders = model.getBorderSet().getBorders();
+  borders.forEach(border => {
+    const selectedNode = border.getSelectedNode();
+    const side = border.getLocation().getName();
+    if (
+      (selectedNode != null && borderOpenStatus[side] === false) ||
+      (selectedNode == null && borderOpenStatus[side] === true)
+    ) {
+      model.doAction(Actions.selectTab(`${side}-sidebar-tab-container`));
+    }
+  });
 }

@@ -291,24 +291,36 @@
   position: absolute;
   height: @footer-height;
   overflow: hidden;
-  font-size: 14px;
+  font-size: 11px;
   text-align: center;
-  vertical-align: middle;
-  padding: 2px;
+  padding: 0px;
 }
 
-.left-sidebar-button,
-.right-sidebar-button {
+.center-item-using-flex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.left-border-button,
+.right-border-button {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 0px;
+  bottom: 0px;
   height: auto;
   padding: 0px 6px;
+  &.small-border-icon > i {
+    font-size: 13px !important;
+  }
+  i {
+    font-size: 16px;
+    margin: 0;
+  }
 }
-.left-sidebar-button {
+.left-border-button {
   left: 8px;
 }
-.right-sidebar-button {
+.right-border-button {
   right: 8px;
 }
 

@@ -2,11 +2,13 @@
 import * as React from "react";
 import FlexLayout from "flexlayout-react";
 import { connect } from "react-redux";
-import type { OxalisState, AnnotationType } from "oxalis/store";
-import { Icon, Layout, Button } from "antd";
+import type { Dispatch } from "redux";
+import { type OxalisState, type AnnotationType, type BorderOpenStatus } from "oxalis/store";
+import { Layout } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
 import messages from "messages";
+import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { InputKeyboardNoLoop } from "libs/input";
 
 import { OrthoViews, ArbitraryViews } from "oxalis/constants";
@@ -22,14 +24,17 @@ import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
+import BorderToggleButton from "../components/border_toggle_button";
 import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
 import {
   getMaximizedItemId,
   getBorderOpenStatus,
-  type BorderOpenStatus,
+  adjustModelToBorderOpenStatus,
 } from "./flex_layout_helper";
 
 const { Footer } = Layout;
+type Model = typeof FlexLayout.Model;
+type Action = typeof FlexLayout.Action;
 
 type StateProps = {|
   displayScalebars: boolean,
@@ -39,6 +44,7 @@ type StateProps = {|
   annotationType: AnnotationType,
   name: string,
   taskId: ?string,
+  borderOpenStatus: BorderOpenStatus,
 |};
 
 type OwnProps = {|
@@ -46,26 +52,29 @@ type OwnProps = {|
   layoutName: string,
   onLayoutChange: (model: Object, layoutName: string) => void,
 |};
-
-type Props = {| ...OwnProps, ...StateProps |};
+type DispatchProps = {|
+  setBorderOpenStatus: BorderOpenStatus => void,
+|};
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type State = {
-  model: Object,
+  model: Model,
 };
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
-  unbindResetListener: () => void;
+  unbindListeners: Array<() => void>;
   borderOpenStatus: BorderOpenStatus = { left: false, right: false };
   isRightSidebarOpen: boolean = false;
   maximizedItemId: ?string = null;
-  unbindMaximizeListener: () => void;
 
   constructor(props: Props) {
     super(props);
-    this.state = { model: this.getNewLayout() };
-    this.unbindResetListener = layoutEmitter.on("resetLayout", () => {
-      resetDefaultLayouts();
-      this.rebuildLayout();
-    });
+    const model = this.getCurrentModel();
+    this.unbindListeners = [];
+    this.addListeners();
+    this.borderOpenStatus = getBorderOpenStatus(model);
+    props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatus));
+    this.updateToModelStateAndAdjustIt(model);
+    this.state = { model };
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -76,26 +85,45 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   componentWillUnmount() {
-    this.unbindResetListener();
-    this.unbindMaximizeListener();
+    this.unbindAllListeners();
   }
 
-  getNewLayout() {
+  addListeners() {
+    this.unbindListeners.push(
+      layoutEmitter.on("resetLayout", () => {
+        resetDefaultLayouts();
+        this.rebuildLayout();
+      }),
+    );
+    this.unbindListeners.push(
+      layoutEmitter.on("toggleBorder", side => {
+        this.toggleBorder(side);
+      }),
+    );
+    this.unbindListeners.push(this.attachMaximizeListener());
+  }
+
+  unbindAllListeners() {
+    this.unbindListeners.forEach(unbind => unbind());
+  }
+
+  getCurrentModel() {
     const { layoutName, layoutKey } = this.props;
     const layout = getLayoutConfig(layoutKey, layoutName);
-    if (this.unbindMaximizeListener != null) {
-      this.unbindMaximizeListener();
-    }
-    this.unbindMaximizeListener = this.attachMaximizeListener();
     const model = FlexLayout.Model.fromJson(layout);
+    return model;
+  }
+
+  updateToModelStateAndAdjustIt(model: Model) {
     this.maximizedItemId = getMaximizedItemId(model);
-    this.borderOpenStatus = getBorderOpenStatus(model);
+    adjustModelToBorderOpenStatus(model, this.borderOpenStatus);
     model.setOnAllowDrop(this.allowDrop);
     return model;
   }
 
   rebuildLayout() {
-    const model = this.getNewLayout();
+    const model = this.getCurrentModel();
+    this.updateToModelStateAndAdjustIt(model);
     this.setState({ model });
     setTimeout(this.onLayoutChange, 1);
   }
@@ -260,14 +288,18 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   onMaximizeToggle = () => {
+    const { borderOpenStatus: currentBorderOpenStatus } = this.props;
+    const isMaximizing = this.maximizedItemId != null;
+    // If a tab is maximized, this.borderOpenStatus will not change and therefore save the BorderOpenStatus before maximizing.
     Object.entries(this.borderOpenStatus).forEach(([side, isOpen]) => {
-      if (isOpen) {
-        this.toggleSidebar(side, false);
+      if ((isOpen && isMaximizing) || (!isMaximizing && currentBorderOpenStatus[side] !== isOpen)) {
+        // Close all border if a tab is maximized and restore border status before maximizing.
+        this.toggleBorder(side, false);
       }
     });
   };
 
-  onAction = (action: typeof FlexLayout.Action) => {
+  onAction = (action: Action) => {
     const { type, data } = action;
     if (type === "FlexLayout_MaximizeToggle") {
       if (data.node === this.maximizedItemId) {
@@ -280,36 +312,24 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return action;
   };
 
-  toggleSidebar(side: string, toggleInternalState: boolean = true) {
+  toggleBorder(side: string, toggleInternalState: boolean = true) {
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
-    if (toggleInternalState) {
+    const borderOpenStatusCopy = _.cloneDeep(this.props.borderOpenStatus);
+    borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
+    this.props.setBorderOpenStatus(borderOpenStatusCopy);
+
+    if (toggleInternalState && this.maximizedItemId == null) {
+      // Only adjust the internal state if the toggle is not automated and no tab is maximized.
       this.borderOpenStatus[side] = !this.borderOpenStatus[side];
     }
     this.onLayoutChange();
   }
 
   getSidebarButtons() {
-    const SidebarButton = (side: string) => (
-      <Button
-        className={`${side}-sidebar-button`}
-        onClick={() => this.toggleSidebar(side)}
-        size="small"
-      >
-        <Icon
-          type={side}
-          className="without-icon-margin"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        />
-      </Button>
-    );
     return (
       <React.Fragment>
-        {SidebarButton("left")}
-        {SidebarButton("right")}
+        <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} small />
+        <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} small />
       </React.Fragment>
     );
   }
@@ -348,7 +368,18 @@ function mapStateToProps(state: OxalisState): StateProps {
     annotationType: state.tracing.annotationType,
     name: state.tracing.name,
     taskId: state.task != null ? state.task.id : null,
+    borderOpenStatus: state.uiInformation.borderOpenStatus,
+  };
+}
+function mapDispatchToProps(dispatch: Dispatch<*>) {
+  return {
+    setBorderOpenStatus(borderOpenStatus: BorderOpenStatus) {
+      dispatch(setBorderOpenStatusAction(borderOpenStatus));
+    },
   };
 }
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(FlexLayoutWrapper);
+export default connect<Props, OwnProps, _, _, _, _>(
+  mapStateToProps,
+  mapDispatchToProps,
+)(FlexLayoutWrapper);

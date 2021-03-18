@@ -127,6 +127,7 @@ function buildBorder(
     id: `${side}-sidebar`,
     barSize: 0.01,
     size: width,
+    selected: 0,
     children: [
       {
         type: "tab",

@@ -7,6 +7,7 @@ import {
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import { mod } from "libs/utils";
 
 const aggregatePerDimension = (aggregateFn, buckets): Vector3 =>
   // $FlowIssue[invalid-tuple-arity]
@@ -69,7 +70,7 @@ export default function determineBucketsForFlight(
 
   const iterStep = 8;
   for (let y = -halfWidth; y <= halfWidth; y += iterStep) {
-    const xOffset = y % iterStep;
+    const xOffset = mod(y, iterStep);
     for (let x = -halfWidth - xOffset; x <= halfWidth + xOffset; x += iterStep) {
       const z = 0;
       const transformedVec = transformAndApplyMatrix([x, y, z]);

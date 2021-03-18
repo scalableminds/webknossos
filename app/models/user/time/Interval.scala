@@ -1,7 +1,7 @@
 package models.user.time
 
 import org.joda.time.{DateTime, DateTimeConstants}
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 trait Interval {
   def start: DateTime
@@ -23,17 +23,17 @@ case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
 
   override def toString = f"$year%d-$month%02d"
 
-  def start =
+  def start: DateTime =
     jodaMonth.dayOfMonth().withMinimumValue().millisOfDay().withMinimumValue()
 
-  def jodaMonth = new DateTime().withYear(year).withMonthOfYear(month)
+  private def jodaMonth: DateTime = new DateTime().withYear(year).withMonthOfYear(month)
 
-  def end =
+  def end: DateTime =
     jodaMonth.dayOfMonth().withMaximumValue().millisOfDay().withMaximumValue()
 }
 
 object Month {
-  implicit val monthFormat = Json.format[Month]
+  implicit val monthFormat: OFormat[Month] = Json.format[Month]
 }
 
 case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
@@ -50,17 +50,17 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   override def toString = f"$year%d-W$week%02d"
 
-  def start =
+  def start: DateTime =
     jodaWeek.withDayOfWeek(DateTimeConstants.MONDAY).millisOfDay().withMinimumValue()
 
-  def jodaWeek = new DateTime().withYear(year).withWeekOfWeekyear(week)
+  private def jodaWeek: DateTime = new DateTime().withYear(year).withWeekOfWeekyear(week)
 
-  def end =
+  def end: DateTime =
     jodaWeek.dayOfWeek().withMaximumValue().millisOfDay().withMaximumValue()
 }
 
 object Week {
-  implicit val weekFormat = Json.format[Week]
+  implicit val weekFormat: OFormat[Week] = Json.format[Week]
 }
 
 case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Day] {
@@ -77,15 +77,15 @@ case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Da
 
   override def toString = f"$year%d-$month%02d-$day%02d"
 
-  def start =
+  def start: DateTime =
     jodaDay.millisOfDay().withMinimumValue()
 
-  def jodaDay = new DateTime().withDate(year, month, day)
+  private def jodaDay = new DateTime().withDate(year, month, day)
 
-  def end =
+  def end: DateTime =
     jodaDay.millisOfDay().withMaximumValue()
 }
 
 object Day {
-  implicit val dayFormat = Json.format[Day]
+  implicit val dayFormat: OFormat[Day] = Json.format[Day]
 }

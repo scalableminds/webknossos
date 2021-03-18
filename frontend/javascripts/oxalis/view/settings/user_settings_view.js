@@ -47,6 +47,9 @@ import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxa
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
+import renderIndependently from "libs/render_independently";
+import ExportBoundingBoxModal from "oxalis/view/settings/export_bounding_box_modal";
+
 const { Panel } = Collapse;
 
 type UserSettingsViewProps = {
@@ -134,6 +137,21 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
     const updatedUserBoundingBoxes = userBoundingBoxes.filter(boundingBox => boundingBox.id !== id);
     this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  };
+
+  handleExportUserBoundingBox = (id: number) => {
+    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+    const selectedBoundingBox = userBoundingBoxes.find(boundingBox => boundingBox.id === id);
+    if (selectedBoundingBox) {
+      renderIndependently(destroy => (
+        <ExportBoundingBoxModal
+          dataset={this.props.dataset}
+          volumeTracing={this.props.tracing.volume}
+          boundingBox={selectedBoundingBox.boundingBox}
+          destroy={destroy}
+        />
+      ));
+    }
   };
 
   getViewportOptions = () => {
@@ -437,6 +455,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
                 isVisible={bb.isVisible}
                 onChange={_.partial(this.handleChangeUserBoundingBox, bb.id)}
                 onDelete={_.partial(this.handleDeleteUserBoundingBox, bb.id)}
+                onExport={_.partial(this.handleExportUserBoundingBox, bb.id)}
               />
             ))}
             <div style={{ display: "inline-block", width: "100%" }}>

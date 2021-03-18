@@ -24,15 +24,6 @@ CREATE TABLE webknossos.releaseInformation (
 INSERT INTO webknossos.releaseInformation(schemaVersion) values(67);
 COMMIT TRANSACTION;
 
-CREATE TABLE webknossos.analytics(
-  _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
-  _user CHAR(24),
-  namespace VARCHAR(256) NOT NULL,
-  value JSONB NOT NULL,
-  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT valueIsJsonObject CHECK(jsonb_typeof(value) = 'object')
-);
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
@@ -385,7 +376,6 @@ CREATE TABLE webknossos.invites(
 );
 
 
-CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
 CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;
@@ -441,8 +431,6 @@ CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE INDEX ON webknossos.invites(tokenValue);
 
-ALTER TABLE webknossos.analytics
-  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE;
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,

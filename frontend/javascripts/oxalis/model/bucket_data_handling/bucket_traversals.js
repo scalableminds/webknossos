@@ -5,6 +5,7 @@ import {
   globalPositionToBucketPosition,
   getBucketExtent,
 } from "oxalis/model/helpers/position_converter";
+import { mod } from "libs/utils";
 
 // Attention: Note that the implemented paper uses the term "voxel" for the unit
 // we usually refer to as bucket. This is reflected in comments as well as variable naming.
@@ -162,11 +163,11 @@ function initializeTMax(
   // We perform a similar computation in y and store the result in tMaxY.
   // The minimum of these two values will indicate how much we can travel along the ray and still remain in the current voxel.
 
-  const positiveRest = [u[0] % voxelSize[0], u[1] % voxelSize[1], u[2] % voxelSize[2]];
+  const positiveRest = [mod(u[0], voxelSize[0]), mod(u[1], voxelSize[1]), mod(u[2], voxelSize[2])];
   const negativeRest = [
-    voxelSize[0] - (u[0] % voxelSize[0]),
-    voxelSize[1] - (u[1] % voxelSize[1]),
-    voxelSize[2] - (u[2] % voxelSize[2]),
+    voxelSize[0] - mod(u[0], voxelSize[0]),
+    voxelSize[1] - mod(u[1], voxelSize[1]),
+    voxelSize[2] - mod(u[2], voxelSize[2]),
   ];
 
   // $FlowIssue[invalid-tuple-arity] Flow does not understand that mapping a tuple returns a tuple

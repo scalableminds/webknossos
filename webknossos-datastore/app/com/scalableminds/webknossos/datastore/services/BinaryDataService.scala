@@ -21,7 +21,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
 
   /* Note that this must stay in sync with the back-end constant
     compare https://github.com/scalableminds/webknossos/issues/5223 */
-  private val MaxMagForAgglomerateMapping = 16;
+  private val MaxMagForAgglomerateMapping = 16
   lazy val cache = new DataCubeCache(maxCacheSize)
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {

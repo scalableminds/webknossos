@@ -24,6 +24,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -64,7 +65,7 @@ class VolumeTracingService @Inject()(
   implicit val updateActionJsonFormat: VolumeUpdateAction.volumeUpdateActionFormat.type =
     VolumeUpdateAction.volumeUpdateActionFormat
 
-  val tracingType: TracingType.Value = TracingType.volume
+  val tracingType: TracingType = TracingType.volume
 
   val tracingStore: FossilDBClient = tracingDataStore.volumes
 
@@ -297,7 +298,7 @@ class VolumeTracingService @Inject()(
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       tracing
         .addUserBoundingBoxes(
-          NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), tracing.boundingBox))
+          NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), tracing.boundingBox))
         .withBoundingBox(dataSetBoundingBox.get)
     } else tracing
 

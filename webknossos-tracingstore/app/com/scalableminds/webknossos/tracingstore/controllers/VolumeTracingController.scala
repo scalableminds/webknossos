@@ -20,7 +20,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
-import play.api.mvc.{Action, MultipartFormData, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
@@ -43,8 +43,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]) = Action.async {
-    implicit request =>
+  def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]): Action[AnyContent] =
+    Action.async { implicit request =>
       log {
         logTime(slackNotificationService.reportUnusalRequest) {
           accessTokenService.validateAccess(UserAccessRequest.webknossos) {
@@ -62,23 +62,24 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           }
         }
       }
-  }
+    }
 
-  def mergedFromContents(persist: Boolean) = Action.async(validateProto[VolumeTracings]) { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          val tracings: List[Option[VolumeTracing]] = request.body
-          val mergedTracing = tracingService.merge(tracings.flatten)
-          tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
-            Ok(Json.toJson(newId))
+  def mergedFromContents(persist: Boolean): Action[VolumeTracings] = Action.async(validateProto[VolumeTracings]) {
+    implicit request =>
+      log {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            val tracings: List[Option[VolumeTracing]] = request.body
+            val mergedTracing = tracingService.merge(tracings.flatten)
+            tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
+              Ok(Json.toJson(newId))
+            }
           }
         }
       }
-    }
   }
 
-  def initialDataMultiple(tracingId: String) = Action.async { implicit request =>
+  def initialDataMultiple(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
@@ -95,7 +96,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+  def allData(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
@@ -110,7 +111,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def allDataBlocking(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+  def allDataBlocking(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
@@ -118,26 +119,25 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
             data <- tracingService.allDataFile(tracingId, tracing)
             _ = Thread.sleep(5)
-          } yield {
-            Ok.sendFile(data)
-          }
+          } yield Ok.sendFile(data)
         }
       }
     }
   }
 
-  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
-          for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            (data, indices) <- tracingService.data(tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+  def data(tracingId: String): Action[List[WebKnossosDataRequest]] =
+    Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+      log {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              (data, indices) <- tracingService.data(tracingId, tracing, request.body)
+            } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+          }
         }
       }
     }
-  }
 
   private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
     List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
@@ -149,7 +149,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
                 fromTask: Option[Boolean],
                 minResolution: Option[Int],
                 maxResolution: Option[Int],
-                downsample: Option[Boolean]) = Action.async { implicit request =>
+                downsample: Option[Boolean]): Action[AnyContent] = Action.async { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
@@ -164,31 +164,28 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
                                                               dataSetBoundingBox,
                                                               resolutionRestrictions)
               _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
-            } yield {
-              Ok(Json.toJson(newId))
-            }
+            } yield Ok(Json.toJson(newId))
           }
         }
       }
     }
   }
 
-  def unlinkFallback(tracingId: String) = Action.async(validateJson[DataSourceLike]) { implicit request =>
-    log {
-      logTime(slackNotificationService.reportUnusalRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-          AllowRemoteOrigin {
-            for {
-              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              updatedTracing = tracingService.unlinkFallback(tracing, request.body)
-              newId <- tracingService.save(updatedTracing, None, 0L)
-            } yield {
-              Ok(Json.toJson(newId))
+  def unlinkFallback(tracingId: String): Action[DataSourceLike] = Action.async(validateJson[DataSourceLike]) {
+    implicit request =>
+      log {
+        logTime(slackNotificationService.reportUnusalRequest) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+            AllowRemoteOrigin {
+              for {
+                tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+                updatedTracing = tracingService.unlinkFallback(tracing, request.body)
+                newId <- tracingService.save(updatedTracing, None, 0L)
+              } yield Ok(Json.toJson(newId))
             }
           }
         }
       }
-    }
   }
 
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
@@ -207,21 +204,19 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
 
-  def updateActionLog(tracingId: String) = Action.async { implicit request =>
+  def updateActionLog(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
             updateLog <- tracingService.updateActionLog(tracingId)
-          } yield {
-            Ok(updateLog)
-          }
+          } yield Ok(updateLog)
         }
       }
     }
   }
 
-  def requestIsosurface(tracingId: String) =
+  def requestIsosurface(tracingId: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
@@ -230,8 +225,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             // consecutive 3D points (i.e., nine floats) form a triangle.
             // There are no shared vertices between triangles.
             (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
-            _ = if (request.body.isInitialRequest)
-              webKnossosServer.reportIsosurfaceRequest(accessTokenService.tokenFromRequest(request))
           } yield {
             // We need four bytes for each float
             val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -243,12 +236,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
 
   private def getNeighborIndices(neighbors: List[Int]) =
-    List(("NEIGHBORS" -> formatNeighborList(neighbors)), ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+    List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")
 
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def findData(tracingId: String) = Action.async { implicit request =>
+  def findData(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
       AllowRemoteOrigin {
         for {

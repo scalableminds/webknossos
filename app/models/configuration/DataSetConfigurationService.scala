@@ -50,7 +50,8 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
     defaultVC ++ adminVC
   }
 
-  def getCompleteAdminViewConfiguration(dataSetName: String, organizationName: String)(implicit ctx: DBAccessContext) =
+  def getCompleteAdminViewConfiguration(dataSetName: String, organizationName: String)(
+      implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)
       dataSetViewConfiguration = getDataSetViewConfigurationFromDefaultAndAdmin(dataSet)

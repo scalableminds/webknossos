@@ -96,16 +96,18 @@ const ArbitraryViewports = {};
 Object.entries(ArbitraryViews).forEach(([viewportId, { name, id }]: any) => {
   ArbitraryViewports[viewportId] = Tab(name, id, "viewport");
 });
-const subLayoutGlobalSettings = {
-  splitterSize: 4,
-  tabSetEnableDivide: false,
-  tabEnableClose: false,
-};
+
 const globalLayoutSettings = {
   splitterSize: 4,
   tabEnableRename: false,
   tabEnableClose: false,
-  tabEnableDrag: true,
+  tabSetHeaderHeight: 20,
+  tabSetTabStripHeight: 20,
+};
+
+const subLayoutGlobalSettings = {
+  ...globalLayoutSettings,
+  tabSetEnableDivide: false,
 };
 
 function buildTabsets(setsOfTabs: Array<Array<Object>>, defaultSelectedIndex?: number) {

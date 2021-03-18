@@ -18,6 +18,7 @@ import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
 import NodeContextMenu from "oxalis/view/node_context_menu";
+import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
 import type { ControllerStatus } from "oxalis/controller";
@@ -31,17 +32,18 @@ import { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
+import {
+  layoutEmitter,
+  storeLayoutConfig,
+  setActiveLayout,
+  getLastActiveLayout,
+  getLayoutConfig,
+} from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
 import { determineLayout } from "./default_layout_configs";
-import {
-  storeLayoutConfig,
-  setActiveLayout,
-  getLastActiveLayout,
-  getLayoutConfig,
-} from "./layout_persistence";
 
 /*
  * TODOS for this PR:
@@ -66,6 +68,7 @@ type StateProps = {|
   is2d: boolean,
   displayName: string,
   organization: string,
+  isLeftBorderOpen: boolean,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
@@ -221,6 +224,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
+  toggleLeftBorder = () => {
+    layoutEmitter.emit("toggleBorder", "left");
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -245,7 +252,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
+    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, isLeftBorderOpen } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -285,6 +292,21 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             <RenderToPortal portalId="navbarTracingSlot">
               {status === "loaded" ? (
                 <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
+                  <ButtonComponent
+                    className={isLeftBorderOpen ? "highlight-togglable-button" : ""}
+                    onClick={this.toggleLeftBorder}
+                    shape="circle"
+                  >
+                    <Icon
+                      type="setting"
+                      className="withoutIconMargin"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    />
+                  </ButtonComponent>
                   <ActionBarView
                     layoutProps={{
                       storedLayoutNamesForView: currentLayoutNames,
@@ -370,6 +392,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
+    isLeftBorderOpen: state.uiInformation.borderOpenStatus.left,
   };
 }
 

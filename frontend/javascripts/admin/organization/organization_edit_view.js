@@ -58,14 +58,13 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   handleSubmit = e => {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues) => {
-      console.log(formValues);
       if (!err) {
         await updateOrganization(
           this.props.organizationName,
           formValues.displayName,
           formValues.newUserMailingList,
         );
-        // window.location.replace(`${window.location.origin}/dashboard/datasets`);
+        window.location.replace(`${window.location.origin}/dashboard/datasets`);
       }
     });
   };
@@ -105,11 +104,19 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                   {
                     required: true,
                     pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
-                    message: "The organization name must not contain any special characters.",
+                    message:
+                      "The organization name must not contain any special characters and can not be empty.",
                   },
                 ],
                 initialValue: this.state.displayName,
-              })(<Input icon="tag-o" autoFocus disabled={this.state.isFetchingData} />)}
+              })(
+                <Input
+                  icon="tag-o"
+                  autoFocus
+                  disabled={this.state.isFetchingData}
+                  placeholder="Display Name"
+                />,
+              )}
             </FormItem>{" "}
             <FormItem label="New User Email">
               {getFieldDecorator("newUserMailingList", {
@@ -124,14 +131,16 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 <Input
                   prefix={<Icon type="mail" style={{ fontSize: 13 }} />}
                   disabled={this.state.isFetchingData}
-                  placeholder="email address"
+                  placeholder="mail@example.com"
                 />,
               )}
             </FormItem>
             <FormItem>
               <div className="ant-form-item-label" style={{ paddingTop: 5 }}>
                 <label style={{ paddingRight: 20 }}>Pricing Plan</label>
-                <span className="bordered">{this.state.pricingPlan}</span>
+                <span className="bordered" style={{ cursor: "default" }}>
+                  {this.state.pricingPlan}
+                </span>
               </div>
             </FormItem>
             <Row type="flex" justify="space-between">

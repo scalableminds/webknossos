@@ -1,12 +1,10 @@
--- https://github.com/scalableminds/webknossos/pull/TODO
-
 START TRANSACTION;
 
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.organizations_;
 
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
-ALTER TABLE webknossos.organizations ADD COLUMN pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom';
+ALTER TABLE webknossos.organizations DROP COLUMN;
+DROP TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
 
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 
@@ -22,6 +20,6 @@ JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 67;
+UPDATE webknossos.releaseInformation SET schemaVersion = 68;
 
 COMMIT TRANSACTION;

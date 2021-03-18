@@ -1,11 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import play.api.libs.json._
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 
-object TracingType extends Enumeration {
+object TracingType extends ExtendedEnumeration {
+  type TracingType = Value
   val skeleton, volume, hybrid = Value
-
-  def fromString(s: String): Option[Value] = values.find(_.toString == s)
-
-  implicit val format: Format[TracingType.Value] = Format(Reads.enumNameReads(TracingType), Writes.enumNameWrites)
 }

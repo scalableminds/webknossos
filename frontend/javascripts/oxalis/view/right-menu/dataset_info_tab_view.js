@@ -223,6 +223,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         <Link
           to={`/datasets/${owningOrganization}/${datasetName}/view`}
           title={`Click to view dataset ${datasetName} without annotation`}
+          style={{ wordWrap: "break-word" }}
         >
           {datasetName}
         </Link>

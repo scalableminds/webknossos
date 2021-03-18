@@ -7,6 +7,7 @@ import _ from "lodash";
 
 import { V3 } from "libs/mjs";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { mod } from "libs/utils";
 import Store from "oxalis/store";
 import constants, {
   type BoundingBoxType,
@@ -92,9 +93,9 @@ class BoundingBox {
     // the start of the first chunk, because we'll intersect with `self`,
     // but it'll lead to all chunk borders being aligned correctly.
     const startAdjust = [
-      start[0] % chunkBorderAlignments[0],
-      start[1] % chunkBorderAlignments[1],
-      start[2] % chunkBorderAlignments[2],
+      mod(start[0], chunkBorderAlignments[0]),
+      mod(start[1], chunkBorderAlignments[1]),
+      mod(start[2], chunkBorderAlignments[2]),
     ];
 
     const boxes = [];

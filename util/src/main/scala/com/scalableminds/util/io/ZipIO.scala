@@ -159,37 +159,13 @@ object ZipIO extends LazyLogging {
                      truncateCommonPrefix: Boolean = false,
                      excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
 
-    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
-
-    def cutOffPathAtLastOccurrenceOf(path: Path, excludeFromPrefix: List[String]): Path = {
-      var lastExcludedIndex = -1
-      path.iterator().asScala.zipWithIndex.foreach {
-        case (subPath, idx) =>
-          excludeFromPrefix.foreach(e => {
-            if (subPath.toString.contains(e)) {
-              lastExcludedIndex = idx
-            }
-          })
-      }
-      lastExcludedIndex match {
-        case -1 => path
-        // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
-        case 0 => Paths.get("")
-        case i => path.subpath(0, i)
-      }
-    }
-
     val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
 
     val commonPrefix = if (truncateCommonPrefix) {
       val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
-      val strippedPrefix = cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
-      // if only one file is in the zip and no layer name is given as prefix, do not remove file name as common prefix
-      zipEntries match {
-        case head :: tl if tl.isEmpty && isFileNameInPrefix(strippedPrefix, head.getName) =>
-          strippedPrefix.subpath(0, strippedPrefix.getNameCount - 1)
-        case _ => strippedPrefix
-      }
+      val strippedPrefix =
+        PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
+      PathUtils.removeSingleFileNameFromPrefix(strippedPrefix, zipEntries.map(_.getName))
     } else {
       Paths.get("")
     }

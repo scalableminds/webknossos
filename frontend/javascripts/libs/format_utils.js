@@ -59,14 +59,19 @@ export function formatScale(scaleArr: ?Vector3, roundTo?: number = 2): string {
   }
 }
 
-export function formatNumberToLength(numberInNm: number): string {
-  if (numberInNm < 1000) {
-    return `${numberInNm.toFixed(0)}${ThinSpace}nm`;
-  } else if (numberInNm < 1000000) {
-    return `${(numberInNm / 1000).toFixed(1)}${ThinSpace}µm`;
+export function formatNumberToLength(lengthInNm: number): string {
+  if (lengthInNm < 1000) {
+    return `${lengthInNm.toFixed(0)}${ThinSpace}nm`;
+  } else if (lengthInNm < 1000000) {
+    return `${(lengthInNm / 1000).toFixed(1)}${ThinSpace}µm`;
   } else {
-    return `${(numberInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
+    return `${(lengthInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
   }
+}
+
+export function formatLengthAsVx(lengthInVx: number, roundTo?: number = 2): string {
+  const roundedLength = Utils.roundTo(lengthInVx, roundTo);
+  return `${roundedLength} vx`;
 }
 
 export function formatExtentWithLength(

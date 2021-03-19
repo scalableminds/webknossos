@@ -110,7 +110,7 @@ const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
 
-// For some reason, taking the dataset scale from the uniform results is imprecise
+// For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
 // is directly inserted into the source via templating.
 const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;

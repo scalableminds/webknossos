@@ -225,8 +225,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             // consecutive 3D points (i.e., nine floats) form a triangle.
             // There are no shared vertices between triangles.
             (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
-            _ = if (request.body.isInitialRequest)
-              webKnossosServer.reportIsosurfaceRequest(accessTokenService.tokenFromRequest(request))
           } yield {
             // We need four bytes for each float
             val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)

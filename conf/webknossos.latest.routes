@@ -5,7 +5,7 @@
 GET           /buildinfo                                                       controllers.Application.buildInfo
 GET           /features                                                        controllers.Application.features
 GET           /health                                                          controllers.Application.health
-POST          /analytics/:namespace                                            controllers.Application.analytics(namespace)
+POST          /analytics/:eventType                                            controllers.Application.trackAnalyticsEvent(eventType)
 POST          /triggers/initialData                                            controllers.InitialDataController.triggerInsert
 GET           /maintenance                                                     controllers.MaintenanceController.info
 POST          /maintenance                                                     controllers.MaintenanceController.initMaintenance
@@ -85,7 +85,6 @@ PATCH         /datastores/:name/status                                         c
 POST          /datastores/:name/verifyUpload                                   controllers.WKDataStoreController.validateDataSetUpload(name: String)
 POST          /datastores/:name/reportDatasetUpload                            controllers.WKDataStoreController.reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteErroneous                                controllers.WKDataStoreController.deleteErroneous(name: String)
-POST          /datastores/:name/reportIsosurfaceRequest                        controllers.WKDataStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create
 DELETE        /datastores/:name                                                controllers.DataStoreController.delete(name: String)
@@ -94,7 +93,6 @@ PUT           /datastores/:name                                                c
 # Tracingstores
 GET           /tracingstore                                                    controllers.TracingStoreController.listOne
 POST          /tracingstores/:name/handleTracingUpdateReport                   controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
-POST          /tracingstores/:name/reportIsosurfaceRequest                     controllers.WKTracingStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
 POST          /tracingstores/:name/validateUserAccess                          controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
 PUT           /tracingstores/:name                                             controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource/:dataSetName                     controllers.WKTracingStoreController.dataSource(name: String, organizationName: Option[String], dataSetName: String)
@@ -197,4 +195,4 @@ GET           /jobs                                                            c
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
 GET           /jobs/run/cubing/:organizationName/:dataSetName                  controllers.JobsController.runCubingJob(organizationName: String, dataSetName: String, scale: String)
-GET           /jobs/run/tiffExport/:organizationName/:dataSetName/:layerName   controllers.JobsController.runTiffExportJob(organizationName: String, dataSetName: String, layerName: String, bbox: String)
+GET           /jobs/run/tiffExport/:organizationName/:dataSetName              controllers.JobsController.runTiffExportJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String])

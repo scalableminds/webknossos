@@ -125,6 +125,29 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
   });
 }
 
+export function sendAnalyticsEvent(eventType: string, eventProperties: Object): void {
+  // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
+  // since failing analytics events should not have an impact on the application logic.
+  Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
+    method: "POST",
+    data: eventProperties,
+  });
+}
+
+export function sendFailedRequestAnalyticsEvent(
+  requestType: string,
+  error: Object,
+  requestProperties: Object,
+): void {
+  const eventProperties = {
+    request_type: requestType,
+    request_properties: requestProperties,
+    status: error.status || 0,
+    messages: error.messages || [],
+  };
+  sendAnalyticsEvent("request_failed", eventProperties);
+}
+
 // ### Users
 export async function loginUser(formValues: { email: string, password: string }): Promise<Object> {
   await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
@@ -798,6 +821,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     layerName: job.commandArgs.kwargs.layer_name,
     boundingBox: job.commandArgs.kwargs.bbox,
     exportFileName: job.commandArgs.kwargs.export_file_name,
+    tracingId: job.commandArgs.kwargs.volume_tracing_id,
     state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
@@ -816,13 +840,18 @@ export async function startCubingJob(
 export async function startTiffExportJob(
   datasetName: string,
   organizationName: string,
-  layerName: string,
   bbox: Vector6,
+  layerName: ?string,
+  tracingId: ?string,
+  tracingVersion: ?number = null,
 ): Promise<Array<APIJob>> {
+  const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
+  const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
+  const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
   return Request.receiveJSON(
-    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}/${layerName}?bbox=${bbox.join(
+    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}`,
+    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}`,
   );
 }
 
@@ -947,10 +976,25 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string): Promise<*> {
-  const getRandomString = () => {
-    const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
-    return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
+export function createResumableUpload(
+  datasetId: APIDatasetId,
+  datastoreUrl: string,
+  totalFileCount: number,
+  uploadId: string,
+): Promise<*> {
+  const generateUniqueIdentifier = file => {
+    if (file.path == null) {
+      // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
+      // In case this "enrichment" of the file should change at some point (e.g., due to library changes),
+      // throw an error.
+      throw new Error("file.path is undefined.");
+    }
+    return `${uploadId}/${file.path || file.name}`;
+  };
+
+  const additionalParameters = {
+    ...datasetId,
+    totalFileCount,
   };
 
   return doWithToken(
@@ -958,14 +1002,14 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        query: datasetId,
+        query: additionalParameters,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         // Only increase this value when https://github.com/scalableminds/webknossos/issues/5056 is fixed
         simultaneousUploads: 1,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
-        generateUniqueIdentifier: getRandomString,
+        generateUniqueIdentifier,
       }),
   );
 }
@@ -1435,7 +1479,6 @@ type IsosurfaceRequest = {
   voxelDimensions: Vector3,
   cubeSize: Vector3,
   scale: Vector3,
-  isInitialRequest: boolean,
 };
 
 export function computeIsosurface(
@@ -1443,15 +1486,7 @@ export function computeIsosurface(
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const {
-    position,
-    zoomStep,
-    segmentId,
-    voxelDimensions,
-    cubeSize,
-    scale,
-    isInitialRequest,
-  } = isosurfaceRequest;
+  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,
@@ -1471,7 +1506,6 @@ export function computeIsosurface(
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
           scale,
-          isInitialRequest,
         },
       },
     );

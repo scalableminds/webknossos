@@ -117,7 +117,7 @@ trait VolumeTracingBucketHelper
     with BucketKeys
     with VolumeBucketReversionHelper {
 
-  protected val cacheTimeout: FiniteDuration = 20 minutes
+  protected val cacheTimeout: FiniteDuration = 70 minutes
 
   implicit def volumeDataStore: FossilDBClient
   implicit def volumeDataCache: TemporaryVolumeDataStore

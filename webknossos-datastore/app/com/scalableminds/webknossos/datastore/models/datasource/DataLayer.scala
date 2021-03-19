@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -7,18 +8,12 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
-object DataFormat extends Enumeration {
-
+object DataFormat extends ExtendedEnumeration {
   val wkw, tracing = Value
-
-  implicit val jsonFormat: Format[DataFormat.Value] = Format(Reads.enumNameReads(DataFormat), Writes.enumNameWrites)
 }
 
-object Category extends Enumeration {
-
+object Category extends ExtendedEnumeration {
   val color, mask, segmentation = Value
-
-  implicit val jsonFormat: Format[Category.Value] = Format(Reads.enumNameReads(Category), Writes.enumNameWrites)
 
   def fromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
@@ -27,15 +22,10 @@ object Category extends Enumeration {
       case ElementClass.uint64 => segmentation
       case _                   => color
     }
-
-  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
-object ElementClass extends Enumeration {
-
+object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
-
-  implicit val jsonFormat: Format[ElementClass.Value] = Format(Reads.enumNameReads(ElementClass), Writes.enumNameWrites)
 
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
@@ -68,8 +58,6 @@ object ElementClass extends Enumeration {
     case ElementClass.uint32 => 1L << 32L
     case ElementClass.uint64 => (1L << 63L) - 1
   }
-
-  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
 object LayerViewConfiguration {

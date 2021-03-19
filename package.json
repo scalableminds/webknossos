@@ -174,7 +174,7 @@
     "react": "^16.8.0",
     "react-debounce-render": "^6.0.0",
     "react-dom": "^16.8.0",
-    "react-dropzone": "^4.2.13",
+    "react-dropzone": "^11.3.1",
     "react-google-charts": "^2.0.0",
     "react-redux": "^7.2.0",
     "react-remarkable": "^1.1.3",

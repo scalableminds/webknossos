@@ -1,7 +1,4 @@
 // @flow
-// TODO: Better use the models interface for this
-
-// TODO: Rename each sidebar to border
 import { Model, Actions } from "flexlayout-react";
 import type { BorderOpenStatus } from "oxalis/store";
 
@@ -34,7 +31,7 @@ export function adjustModelToBorderOpenStatus(
       (selectedNode != null && borderOpenStatus[side] === false) ||
       (selectedNode == null && borderOpenStatus[side] === true)
     ) {
-      model.doAction(Actions.selectTab(`${side}-sidebar-tab-container`));
+      model.doAction(Actions.selectTab(`${side}-border-tab-container`));
     }
   });
 }

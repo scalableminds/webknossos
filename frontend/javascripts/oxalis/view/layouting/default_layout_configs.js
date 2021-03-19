@@ -126,7 +126,7 @@ function buildBorder(
   const border = {
     type: "border",
     location: side,
-    id: `${side}-sidebar`,
+    id: `${side}-border`,
     barSize: 0.01,
     size: width,
     selected: 0,
@@ -134,7 +134,7 @@ function buildBorder(
       {
         type: "tab",
         name: "container",
-        id: `${side}-sidebar-tab-container`,
+        id: `${side}-border-tab-container`,
         component: "sub",
         config: {
           model: {
@@ -170,7 +170,7 @@ const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
   const defaultBorderWidth = isInIframe ? 200 : 400;
   const leftSiderbar = buildBorder("left", [Object.values(settingsTabs)], 400, 1);
-  const rightSidebarWithSkeleton = buildBorder(
+  const rightBorderWithSkeleton = buildBorder(
     "right",
     [
       [infoTabs.DatasetInfoTabView, infoTabs.TreesTabView, infoTabs.CommentTabView],
@@ -178,7 +178,7 @@ const _getDefaultLayouts = () => {
     ],
     defaultBorderWidth,
   );
-  const rightSidebarWithoutSkeleton = buildBorder(
+  const rightBorderWithoutSkeleton = buildBorder(
     "right",
     [[infoTabs.DatasetInfoTabView, infoTabs.MappingInfoView, infoTabs.MeshesView]],
     defaultBorderWidth,
@@ -201,7 +201,7 @@ const _getDefaultLayouts = () => {
   const buildOrthoLayout = (withSkeleton: boolean, is2D: boolean) =>
     buildLayout(
       globalLayoutSettings,
-      [leftSiderbar, withSkeleton ? rightSidebarWithSkeleton : rightSidebarWithoutSkeleton],
+      [leftSiderbar, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
       is2D ? OrthoMainLayout2d : OrthoMainLayout,
     );
 
@@ -222,7 +222,7 @@ const _getDefaultLayouts = () => {
   const buildArbitraryLayout = (withSkeleton: boolean) =>
     buildLayout(
       globalLayoutSettings,
-      [leftSiderbar, withSkeleton ? rightSidebarWithSkeleton : rightSidebarWithoutSkeleton],
+      [leftSiderbar, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
       ArbitraryMainLayout,
     );
 

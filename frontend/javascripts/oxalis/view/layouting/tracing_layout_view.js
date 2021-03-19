@@ -45,12 +45,6 @@ import FlexLayoutWrapper from "./flex_layout_wrapper";
 
 import { determineLayout } from "./default_layout_configs";
 
-/*
- * TODOS for this PR:
- * Spacing in the left sidebar in the settings between settings is off.
- * Beaufity UI
- */
-
 const { Sider } = Layout;
 
 type OwnProps = {|

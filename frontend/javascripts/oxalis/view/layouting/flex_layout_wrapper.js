@@ -64,7 +64,6 @@ type State = {
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
   borderOpenStatus: BorderOpenStatus = { left: false, right: false };
-  isRightSidebarOpen: boolean = false;
   maximizedItemId: ?string = null;
 
   constructor(props: Props) {
@@ -151,22 +150,22 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   allowDrop(dragNode: Object, dropInfo: Object) {
     const dropNode = dropInfo.node;
 
-    // Prevent center tabs being moved into a sidebar.
+    // Prevent center tabs being moved into a border.
     if (
       dropNode.getType() === "border" &&
       (dragNode.getParent() == null || dragNode.getParent().getType() !== "border")
     ) {
-      Toast.info(messages["ui.moving_center_tab_into_sidebar_error"]);
+      Toast.info(messages["ui.moving_center_tab_into_border_error"]);
       return false;
     }
 
-    // Prevent sidebar tabs being moved into the center.
+    // Prevent border tabs being moved into the center.
     if (
       dropNode.getType() !== "border" &&
       dragNode.getParent() != null &&
       dragNode.getParent().getType() === "border"
     ) {
-      Toast.info(messages["ui.moving_sidebar_tab_into_center_error"]);
+      Toast.info(messages["ui.moving_border_tab_into_center_error"]);
       return false;
     }
     return true;
@@ -319,7 +318,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   toggleBorder(side: string, toggleInternalState: boolean = true) {
-    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-sidebar-tab-container`));
+    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     const borderOpenStatusCopy = _.cloneDeep(this.props.borderOpenStatus);
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
@@ -329,15 +328,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       this.borderOpenStatus[side] = !this.borderOpenStatus[side];
     }
     this.onLayoutChange();
-  }
-
-  getSidebarButtons() {
-    return (
-      <React.Fragment>
-        <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} small />
-        <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} small />
-      </React.Fragment>
-    );
   }
 
   render() {
@@ -357,7 +347,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
           />
         </div>
         <Footer className="footer">
-          {this.getSidebarButtons()}
+          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} small />
+          <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} small />
           {footerText}
         </Footer>
       </React.Fragment>

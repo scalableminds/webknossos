@@ -22,9 +22,10 @@ function BorderToggleButton(props: Props) {
   const mirrorIconStyle = { transform: "scale(-1, 1)" };
   const placement = side === "left" ? "right" : "left";
   const iconStyle = borderOpenStatus[side] === false ? mirrorIconStyle : null;
+  const tooltipTitle = `${borderOpenStatus[side] === false ? "Open" : "Hide"} ${side} sidebar`;
 
   return (
-    <Tooltip title={`Toggle ${side} sidebar`} placement={placement}>
+    <Tooltip title={tooltipTitle} placement={placement}>
       <Button
         className={`${side}-border-button ${additionalClass}`}
         onClick={onClick}

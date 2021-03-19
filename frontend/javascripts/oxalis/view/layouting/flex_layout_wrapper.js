@@ -146,6 +146,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return () => keyboardNoLoop.destroy();
   }
 
+  // Taken from the FlexLayout examples.
   allowDrop(dragNode: Object, dropInfo: Object) {
     const dropNode = dropInfo.node;
 
@@ -318,7 +319,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   toggleBorder(side: string, toggleInternalState: boolean = true) {
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
-    // The most recent version is of borderOpenStatus is needed as two border toggles might be executed directly after another.
+    // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
     const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];

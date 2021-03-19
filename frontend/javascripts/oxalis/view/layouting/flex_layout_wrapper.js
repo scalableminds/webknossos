@@ -35,6 +35,7 @@ import {
 const { Footer } = Layout;
 type Model = typeof FlexLayout.Model;
 type Action = typeof FlexLayout.Action;
+const MIN_BORDER_WIDTH = 300;
 
 type StateProps = {|
   displayScalebars: boolean,
@@ -308,6 +309,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         this.maximizedItemId = data.node;
       }
       this.onMaximizeToggle();
+    }
+    if (type === "FlexLayout_AdjustBorderSplit" && data.pos < MIN_BORDER_WIDTH) {
+      const side = data.node === "border_left" ? "left" : "right";
+      this.toggleBorder(side);
+      return undefined;
     }
     return action;
   };

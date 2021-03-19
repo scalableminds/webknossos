@@ -18,7 +18,7 @@ Sharing a dataset is useful for multiple scenarios:
 
 webKnossos shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
 
-{% embed url="https://www.youtube.com/watch?v=muJLCnzEAqk "%}
+{% embed url="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=512s "%}
 
 {% embed url="https://www.youtube.com/watch?v=Ut4m6L3nYdY "%}
 

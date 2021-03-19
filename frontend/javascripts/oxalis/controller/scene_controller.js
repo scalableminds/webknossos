@@ -128,6 +128,29 @@ class SceneController {
       return cube;
     };
 
+    let renderedLines = [];
+
+    window.addLine = (a: Vector3, b: Vector3) => {
+      const material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+
+      const points = [];
+      points.push(new THREE.Vector3(...a));
+      points.push(new THREE.Vector3(...b));
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+      const line = new THREE.Line(geometry, material);
+      this.rootNode.add(line);
+      renderedLines.push(line);
+    };
+
+    window.removeLines = () => {
+      for (const line of renderedLines) {
+        this.rootNode.remove(line);
+      }
+      renderedLines = [];
+    };
+
     window.removeBucketMesh = (mesh: typeof THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 

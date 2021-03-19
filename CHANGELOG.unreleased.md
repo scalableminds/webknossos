@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The time spent on a project is now displayed in the project list. [#5209](https://github.com/scalableminds/webknossos/pull/5209)
 - Added the possibility to export binary data as tiff (if long-runnings jobs are enabled). [#5195](https://github.com/scalableminds/webknossos/pull/5195)
 - Added a link to dataset view mode from annotation mode info tab. [#5262](https://github.com/scalableminds/webknossos/pull/5262)
+- Added the possibility to export also volume annotations as tiff (if long-runnings jobs are enabled). [#5246](https://github.com/scalableminds/webknossos/pull/5246)
 - WKW Dataset uploads with missing mag or layer dir no longer fail, instead the paths are automatically added (defaults to color/1). [#5285](https://github.com/scalableminds/webknossos/pull/5285)
 
 ### Changed
@@ -23,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a regression in the task search which could lead to a frontend crash. [#5267](https://github.com/scalableminds/webknossos/pull/5267)
+- Fixed a rendering bug in oblique mode. [#5289](https://github.com/scalableminds/webknossos/pull/5289)
 
 ### Removed
 -

@@ -1,7 +1,7 @@
 ## Volume Annotations
 
 In addition to [skeleton annotations](./skeleton_annotation.md), webKnossos also supports volume / segmentation annotations.
-In this type of annotation, you can label groups of voxels with efficient drawing tools.
+With this type of annotation, you can label groups of voxels with efficient drawing tools.
 
 {% embed url="https://www.youtube.com/watch?v=Sq4AuWanK14" %}
 

@@ -153,7 +153,6 @@
     "file-saver": "^2.0.1",
     "flexlayout-react": "^0.5.5",
     "glsl-parser": "git+https://github.com/anvaka/glslx.git#glsl-parser",
-    "golden-layout": "^1.5.9",
     "hammerjs": "^2.0.8",
     "history": "^4.7.2",
     "immutability-helper": "^2.6.6",

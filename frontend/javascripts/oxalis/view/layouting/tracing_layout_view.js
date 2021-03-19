@@ -112,7 +112,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   componentDidMount() {
-    window.addEventListener("resize", () => this.debouncedOnLayoutChange());
+    window.addEventListener("resize", this.debouncedOnLayoutChange);
   }
 
   componentDidCatch(error: Error) {
@@ -123,6 +123,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   componentWillUnmount() {
     // Replace entire document with loading message
     document.body.removeChild(document.getElementById("main-container"));
+    window.removeEventListener("resize", this.debouncedOnLayoutChange);
 
     const refreshMessage = document.createElement("p");
     refreshMessage.innerHTML = "Reloading webKnossos...";
@@ -189,7 +190,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   };
 
   // eslint-disable-next-line react/sort-comp
-  debouncedOnLayoutChange = _.debounce(this.onLayoutChange, Constants.RESIZE_THROTTLE_TIME / 5);
+  debouncedOnLayoutChange = _.debounce(
+    () => this.onLayoutChange(),
+    Constants.RESIZE_THROTTLE_TIME / 5,
+  );
 
   saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(

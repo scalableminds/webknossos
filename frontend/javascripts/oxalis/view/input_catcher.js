@@ -46,7 +46,6 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
 
 const renderedInputCatchers = new Map();
 
-// TODO: Look why the tests fail
 export function recalculateInputCatcherSizes() {
   const viewportRects = {};
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {

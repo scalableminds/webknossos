@@ -18,22 +18,21 @@ type Props = {| ...OwnProps, ...StateProps |};
 function BorderToggleButton(props: Props) {
   const { onClick, side, small, style, borderOpenStatus } = props;
   const additionalClass = small === true ? "small-border-icon" : "";
+  const size = small === true ? "small" : "default";
   const mirrorIconStyle = { transform: "scale(-1, 1)" };
   const placement = side === "left" ? "right" : "left";
   const iconClass = borderOpenStatus[side] === true ? "fa-outdent" : "fa-indent";
+  const iconStyle = side === "right" ? mirrorIconStyle : null;
 
   return (
     <Tooltip title={`Toggle ${side} sidebar`} placement={placement}>
       <Button
         className={`${side}-border-button ${additionalClass}`}
         onClick={onClick}
-        size={small === true ? "small" : "default"}
-        style={style != null ? style : null}
+        size={size}
+        style={style}
       >
-        <i
-          className={`fas ${iconClass} center-item-using-flex`}
-          style={side === "right" ? mirrorIconStyle : null}
-        />
+        <i className={`fas ${iconClass} center-item-using-flex`} style={iconStyle} />
       </Button>
     </Tooltip>
   );

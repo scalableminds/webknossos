@@ -3,7 +3,7 @@ import * as React from "react";
 import FlexLayout from "flexlayout-react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { type OxalisState, type AnnotationType, type BorderOpenStatus } from "oxalis/store";
+import Store, { type OxalisState, type AnnotationType, type BorderOpenStatus } from "oxalis/store";
 import { Layout } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
@@ -45,7 +45,6 @@ type StateProps = {|
   annotationType: AnnotationType,
   name: string,
   taskId: ?string,
-  borderOpenStatus: BorderOpenStatus,
 |};
 
 type OwnProps = {|
@@ -288,7 +287,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   onMaximizeToggle = () => {
-    const { borderOpenStatus: currentBorderOpenStatus } = this.props;
+    const currentBorderOpenStatus = Store.getState().uiInformation.borderOpenStatus;
     const isMaximizing = this.maximizedItemId != null;
     // If a tab is maximized, this.borderOpenStatus will not change and therefore save the BorderOpenStatus before maximizing.
     Object.entries(this.borderOpenStatus).forEach(([side, isOpen]) => {
@@ -319,10 +318,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   toggleBorder(side: string, toggleInternalState: boolean = true) {
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
-    const borderOpenStatusCopy = _.cloneDeep(this.props.borderOpenStatus);
+    // The most recent version is of borderOpenStatus is needed as two border toggles might be executed directly after another.
+    // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
+    const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
-
     if (toggleInternalState && this.maximizedItemId == null) {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
       this.borderOpenStatus[side] = !this.borderOpenStatus[side];
@@ -365,7 +365,6 @@ function mapStateToProps(state: OxalisState): StateProps {
     annotationType: state.tracing.annotationType,
     name: state.tracing.name,
     taskId: state.task != null ? state.task.id : null,
-    borderOpenStatus: state.uiInformation.borderOpenStatus,
   };
 }
 function mapDispatchToProps(dispatch: Dispatch<*>) {

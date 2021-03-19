@@ -49,7 +49,7 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
-function Row(children: Array<any>, weight?: number): Object {
+function Row(children: Array<Object>, weight?: number): Object {
   weight = weight != null ? weight : 100;
   return {
     type: "row",
@@ -58,7 +58,7 @@ function Row(children: Array<any>, weight?: number): Object {
   };
 }
 
-function Tabset(children: Array<any>, weight?: number, defaultSelectedIndex?: number): Object {
+function Tabset(children: Array<Object>, weight?: number, defaultSelectedIndex?: number): Object {
   weight = weight != null ? weight : 100;
   return {
     type: "tabset",
@@ -78,6 +78,7 @@ function Tab(name: string, id: string, component: string): Object {
 }
 
 const infoTabs = {};
+// Flow does not understand that the values must have a name and an id.
 Object.entries(TracingTabs).forEach(([tabKey, { name, id }]: any) => {
   infoTabs[tabKey] = Tab(name, id, "tab");
 });
@@ -148,7 +149,7 @@ function buildBorder(
   return border;
 }
 
-function buildMainLayout(rowsOfSetOfTabs: any) {
+function buildMainLayout(rowsOfSetOfTabs: Array<Object>) {
   const rowWeight = 100 / rowsOfSetOfTabs.length;
   const rows = rowsOfSetOfTabs.map(setsOfTabs => {
     const tabsets = buildTabsets(setsOfTabs);

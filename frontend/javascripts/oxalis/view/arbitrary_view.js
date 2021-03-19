@@ -14,7 +14,6 @@ import {
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Constants, { ArbitraryViewport, type OrthoViewMap, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";

@@ -12,7 +12,7 @@ import type { OxalisState } from "oxalis/store";
 import {
   finishDatasetUpload,
   createResumableUpload,
-  startCubingJob,
+  startConvertToWkwJob,
   sendFailedRequestAnalyticsEvent,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
@@ -151,7 +151,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
               let maybeError;
               if (this.state.needsConversion) {
                 try {
-                  await startCubingJob(formValues.name, activeUser.organization, formValues.scale);
+                  await startConvertToWkwJob(
+                    formValues.name,
+                    activeUser.organization,
+                    formValues.scale,
+                  );
                 } catch (error) {
                   maybeError = error;
                 }

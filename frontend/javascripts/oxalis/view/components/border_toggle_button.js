@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Button, Tooltip } from "antd";
+import { Button, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import type { OxalisState, BorderOpenStatus } from "oxalis/store";
 
@@ -21,8 +21,7 @@ function BorderToggleButton(props: Props) {
   const size = small === true ? "small" : "default";
   const mirrorIconStyle = { transform: "scale(-1, 1)" };
   const placement = side === "left" ? "right" : "left";
-  const iconClass = borderOpenStatus[side] === true ? "fa-outdent" : "fa-indent";
-  const iconStyle = side === "right" ? mirrorIconStyle : null;
+  const iconStyle = borderOpenStatus[side] === false ? mirrorIconStyle : null;
 
   return (
     <Tooltip title={`Toggle ${side} sidebar`} placement={placement}>
@@ -32,7 +31,7 @@ function BorderToggleButton(props: Props) {
         size={size}
         style={style}
       >
-        <i className={`fas ${iconClass} center-item-using-flex`} style={iconStyle} />
+        <Icon className="center-item-using-flex" style={iconStyle} type={`${side}-square`} />
       </Button>
     </Tooltip>
   );

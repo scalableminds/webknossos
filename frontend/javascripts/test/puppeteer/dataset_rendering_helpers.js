@@ -10,7 +10,7 @@ import pixelmatch from "pixelmatch";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 
-export const DEV_AUTH_TOKEN = "secretScmBoyToken";
+export const DEV_AUTH_TOKEN = process.env.DEV_AUTH_TOKEN || "secretScmBoyToken";
 
 type Screenshot = {
   screenshot: Buffer,

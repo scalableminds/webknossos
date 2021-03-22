@@ -176,6 +176,12 @@ case class RunJobEvent(user: User, command: String)(implicit ec: ExecutionContex
     Fox.successful(Json.obj("command" -> command))
 }
 
+case class FailedJobEvent(user: User, command: String)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+  def eventType: String = "failed_job"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(Json.obj("command" -> command))
+}
+
 case class UploadDatasetEvent(user: User, dataSet: DataSet, dataStore: DataStore, dataSetSizeBytes: Long)(
     implicit ec: ExecutionContext)
     extends AnalyticsEvent {

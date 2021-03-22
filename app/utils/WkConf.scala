@@ -19,6 +19,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       object DefaultUser {
         val email: String = get[String]("application.authentication.defaultUser.email")
         val password: String = get[String]("application.authentication.defaultUser.password")
+        val token: String = get[String]("application.authentication.defaultUser.token")
         val isSuperUser: Boolean = get[Boolean]("application.authentication.defaultUser.isSuperUser")
       }
       val ssoKey: String = get[String]("application.authentication.ssoKey")
@@ -139,6 +140,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object SlackNotifications {
     val url: String = get[String]("slackNotifications.url")
+    val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
 
   object Google {

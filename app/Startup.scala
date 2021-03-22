@@ -1,10 +1,10 @@
-import java.io.File
+import java.io.{ByteArrayOutputStream, File}
 
 import akka.actor.{ActorSystem, Props}
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
-import io.apigee.trireme.core.NodeEnvironment
+import io.apigee.trireme.core.{NodeEnvironment, Sandbox}
 import javax.inject._
 import models.annotation.AnnotationDAO
 import models.user.InviteService
@@ -79,6 +79,8 @@ class Startup @Inject()(actorSystem: ActorSystem,
     logger.info("Running diff_schema.js tools/postgres/schema.sql DB")
     val nodeEnv = new NodeEnvironment()
     nodeEnv.setDefaultNodeVersion("0.12")
+    val nodeOutput = new ByteArrayOutputStream()
+    nodeEnv.setSandbox(new Sandbox().setStdout(nodeOutput).setStderr(nodeOutput))
     val script = nodeEnv.createScript(
       "diff_schema.js",
       new File("tools/postgres/diff_schema.js"),
@@ -88,9 +90,10 @@ class Startup @Inject()(actorSystem: ActorSystem,
     if (status.getExitCode == 0) {
       logger.info("Schema is up to date.")
     } else {
-      val errorMessage = new StringBuilder("Database schema does not fit to schema.sql!")
-      logger.error(errorMessage.toString())
-      slackNotificationService.noticeError(errorMessage.toString())
+      val nodeOut = new String(nodeOutput.toByteArray, "UTF-8")
+      val errorMessage = s"Database schema does not fit to schema.sql! \n ${nodeOut}"
+      logger.error(errorMessage)
+      slackNotificationService.warn("SQL schema mismatch", errorMessage)
     }
 
     Future.successful(())

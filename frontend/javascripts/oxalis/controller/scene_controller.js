@@ -29,6 +29,7 @@ import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Store, { type UserBoundingBox } from "oxalis/store";
 import * as Utils from "libs/utils";
+import ColorGenerator from "libs/color_generator";
 import app from "app";
 import constants, {
   type BoundingBoxType,
@@ -40,7 +41,7 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl.js";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
@@ -60,6 +61,8 @@ class SceneController {
   renderer: typeof THREE.WebGLRenderer;
   scene: typeof THREE.Scene;
   rootGroup: typeof THREE.Object3D;
+  // Group for all meshes including a light.
+  meshesRootGroup: typeof THREE.Object3D;
   stlMeshes: { [key: string]: typeof THREE.Mesh } = {};
 
   // isosurfacesRootGroup holds lights and one group per segmentation id.
@@ -95,12 +98,14 @@ class SceneController {
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
     this.isosurfacesRootGroup = new THREE.Group();
+    this.meshesRootGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.isosurfacesRootGroup);
+    this.scene.add(this.meshesRootGroup);
 
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
@@ -158,6 +163,27 @@ class SceneController {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
+  constructSceneMesh(color: typeof THREE.Color, geometry: typeof THREE.Geometry) {
+    const meshMaterial = new THREE.MeshLambertMaterial({ color });
+    meshMaterial.side = THREE.DoubleSide;
+    meshMaterial.transparent = true;
+
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
+
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    const tweenAnimation = new TWEEN.Tween({ opacity: 0 });
+    tweenAnimation
+      .to({ opacity: 0.95 }, 500)
+      .onUpdate(function onUpdate() {
+        meshMaterial.opacity = this.opacity;
+        app.vent.trigger("rerender");
+      })
+      .start();
+    return mesh;
+  }
+
   addSTL(meshMetaData: MeshMetaData, geometry: typeof THREE.Geometry): void {
     const { id, position } = meshMetaData;
     if (this.stlMeshes[id] != null) {
@@ -165,10 +191,13 @@ class SceneController {
       return;
     }
     geometry.computeVertexNormals();
-
-    const meshMaterial = new THREE.MeshNormalMaterial();
-    const mesh = new THREE.Mesh(geometry, meshMaterial);
-    this.scene.add(mesh);
+    geometry.computeFaceNormals();
+    const meshNumber = _.size(this.stlMeshes);
+    const rgbColor = ColorGenerator.distinctColorForId(meshNumber);
+    const { h } = new THREE.Color().setRGB(rgbColor[0], rgbColor[1], rgbColor[2]).getHSL();
+    const color = new THREE.Color().setHSL(h, 0.5, 0.1);
+    const mesh = this.constructSceneMesh(color, geometry);
+    this.meshesRootGroup.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
   }
@@ -194,24 +223,7 @@ class SceneController {
   addIsosurfaceFromGeometry(geometry: typeof THREE.Geometry, segmentationId: number): void {
     const [hue] = jsConvertCellIdToHSLA(segmentationId);
     const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
-
-    const meshMaterial = new THREE.MeshLambertMaterial({ color });
-    meshMaterial.side = THREE.DoubleSide;
-    meshMaterial.transparent = true;
-
-    const mesh = new THREE.Mesh(geometry, meshMaterial);
-
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-
-    const tweenAnimation = new TWEEN.Tween({ opacity: 0 });
-    tweenAnimation
-      .to({ opacity: 0.95 }, 500)
-      .onUpdate(function onUpdate() {
-        meshMaterial.opacity = this.opacity;
-        app.vent.trigger("rerender");
-      })
-      .start();
+    const mesh = this.constructSceneMesh(color, geometry);
 
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();
@@ -237,12 +249,14 @@ class SceneController {
     // The PlaneView attaches a directional light directly to the TD camera,
     // so that the light moves along the cam.
 
-    const ambientLight = new THREE.AmbientLight(0x404040, 15); // soft white light
-    this.isosurfacesRootGroup.add(ambientLight);
+    const ambientLightForIsosurfaces = new THREE.AmbientLight(0x404040, 15); // soft white light
+    this.isosurfacesRootGroup.add(ambientLightForIsosurfaces);
+    const ambientLightForMeshes = new THREE.AmbientLight(0x404040, 15); // soft white light
+    this.meshesRootGroup.add(ambientLightForMeshes);
   }
 
   removeSTL(id: string): void {
-    this.rootGroup.remove(this.stlMeshes[id]);
+    this.meshesRootGroup.remove(this.stlMeshes[id]);
   }
 
   setMeshVisibility(id: string, visibility: boolean): void {

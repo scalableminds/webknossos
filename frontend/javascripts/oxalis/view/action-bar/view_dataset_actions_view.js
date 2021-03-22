@@ -3,10 +3,18 @@ import React, { useState, type Node } from "react";
 import { Dropdown, Icon, Menu } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 type Props = {
   layoutMenu: Node,
 };
+
+export const screenshotMenuItem = (
+  <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>
+    <Icon type="camera" />
+    Screenshot (Q)
+  </Menu.Item>
+);
 
 export default function ViewDatasetActionsView(props: Props) {
   const [shareDatasetModalVisibility, setShareDatasetModalVisibility] = useState(false);
@@ -18,11 +26,12 @@ export default function ViewDatasetActionsView(props: Props) {
   );
   const overlayMenu = (
     <Menu>
-      {props.layoutMenu}
       <Menu.Item key="share-button" onClick={() => setShareDatasetModalVisibility(true)}>
         <Icon type="share-alt" />
         Share
       </Menu.Item>
+      {screenshotMenuItem}
+      {props.layoutMenu}
     </Menu>
   );
 

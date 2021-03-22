@@ -4,24 +4,25 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import play.api.libs.json.Json
 
 class SlackNotificationService @Inject()(rpc: RPC, config: TracingStoreConfig) extends LazyLogging {
+  private lazy val slackClient = new SlackClient(rpc,
+                                                 config.SlackNotifications.url,
+                                                 name = s"webKnossos-tracingstore at ${config.Http.uri}",
+                                                 config.SlackNotifications.verboseLoggingEnabled)
 
-  lazy val url: String = config.SlackNotifications.url
+  def noticeSlowRequest(msg: String): Unit =
+    slackClient.info(
+      title = s"Slow request",
+      msg = msg
+    )
 
-  def reportUnusalRequest(msg: String): Unit =
-    if (url != "empty") {
-      rpc(url).postJson(
-        Json.obj(
-          "attachments" -> Json.arr(
-            Json.obj(
-              "title" -> s"Unusual request report from webknossos-tracingstore at ${config.Http.uri}",
-              "text" -> msg,
-              "color" -> "#333ccc"
-            )
-          )
-        )
-      )
-    }
+  def reportFossilWriteError(requestType: String, error: Exception): Unit = {
+    if (error.getMessage.contains("UNAVAILABLE")) return // Filter out expected errors during fossildb restart
+    slackClient.warn(
+      title = s"Error during fossildb write",
+      msg = s"$requestType request to FossilDB failed: ${error.getMessage}"
+    )
+  }
+
 }

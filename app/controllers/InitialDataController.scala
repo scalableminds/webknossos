@@ -54,6 +54,7 @@ class InitialDataService @Inject()(userService: UserService,
 
   private val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
   private val defaultUserPassword = conf.Application.Authentication.DefaultUser.password
+  private val defaultUserToken = conf.Application.Authentication.DefaultUser.token
   private val additionalInformation = """**Sample Organization**
 
 Sample Street 123
@@ -151,7 +152,7 @@ Samplecountry
       case _ =>
         val newToken = Token(
           ObjectId.generate,
-          "secretScmBoyToken",
+          defaultUserToken,
           LoginInfo("credentials", defaultUser._id.id),
           new DateTime(System.currentTimeMillis()),
           new DateTime(System.currentTimeMillis() + expiryTime),

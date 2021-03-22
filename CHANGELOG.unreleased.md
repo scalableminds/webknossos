@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - 
 
 ### Fixed
-- 
+-
 
 ### Removed
 -

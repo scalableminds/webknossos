@@ -49,7 +49,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def save = Action.async(validateProto[T]) { implicit request =>
     log {
-      logTime(slackNotificationService.reportUnusalRequest) {
+      logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             val tracing = request.body
@@ -64,7 +64,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def saveMultiple = Action.async(validateProto[Ts]) { implicit request =>
     log {
-      logTime(slackNotificationService.reportUnusalRequest) {
+      logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
@@ -110,7 +110,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
     log {
-      logTime(slackNotificationService.reportUnusalRequest) {
+      logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
           AllowRemoteOrigin {
             val updateGroups = request.body

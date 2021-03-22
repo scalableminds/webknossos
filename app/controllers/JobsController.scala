@@ -4,18 +4,20 @@ import java.nio.file.{Files, Paths}
 import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, RunJobEvent}
+import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.annotation.TracingStoreRpcClient
 import models.organization.OrganizationDAO
-import models.user.User
+import models.user.{User, UserDAO}
 import net.liftweb.common.{Failure, Full}
 import oxalis.security.WkEnv
+import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
@@ -60,6 +62,14 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""_owner = '$requestingUserId'"""
 
+  def getAllByCeleryIds(celeryJobIds: List[String]): Fox[List[Job]] =
+    for {
+      rList <- run(
+        sql"select #$columns from #$existingCollectionName where celeryJobId in #${writeStructTupleWithQuotes(celeryJobIds)}"
+          .as[JobsRow])
+      parsed <- Fox.combined(rList.toList.map(parse))
+    } yield parsed
+
   def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
     for {
       results: Seq[String] <- run(
@@ -82,8 +92,12 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
 }
 
-class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsService: AnalyticsService)(
-    implicit ec: ExecutionContext)
+class JobService @Inject()(wkConf: WkConf,
+                           userDAO: UserDAO,
+                           jobDAO: JobDAO,
+                           rpc: RPC,
+                           analyticsService: AnalyticsService,
+                           slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -99,6 +113,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
         celeryInfoJson <- flowerRpc("/api/tasks?offset=0").getWithJsonResponse[JsObject]
         celeryInfoMap <- celeryInfoJson
           .validate[Map[String, JsObject]] ?~> "Could not validate celery response as json map"
+        _ = trackAllNewlyFailed(celeryInfoMap)
         _ <- Fox.serialCombined(celeryInfoMap.keys.toList)(jobId =>
           jobDAO.updateCeleryInfoByCeleryId(jobId, celeryInfoMap(jobId)))
       } yield ()
@@ -108,6 +123,51 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
         case _          => logger.warn(s"Could not update celery infos (empty)")
       }
     }
+
+  private def trackAllNewlyFailed(celeryInfoMap: Map[String, JsObject]): Fox[Unit] =
+    for {
+      oldJobs <- jobDAO.getAllByCeleryIds(celeryInfoMap.keys.toList)
+      nowFailedJobInfos = filterFailed(celeryInfoMap: Map[String, JsObject])
+      newlyFailedJobs = getNewlyFailedJobs(oldJobs, nowFailedJobInfos)
+      _ = newlyFailedJobs.map(trackNewlyFailed)
+    } yield ()
+
+  private def filterFailed(celeryInfoMap: Map[String, JsObject]): Map[String, JsObject] =
+    celeryInfoMap.filter(tuple => {
+      val statusOpt = (tuple._2 \ "state").validate[String]
+      statusOpt match {
+        case JsSuccess(status, _) =>
+          if (status == "FAILURE") true
+          else false
+        case _ => false
+      }
+    })
+
+  private def getNewlyFailedJobs(oldJobs: List[Job], nowFailedJobInfos: Map[String, JsObject]): List[Job] = {
+    val failableStates = List("STARTED", "PENDING", "RETRY")
+    val previouslyFailableJobs = oldJobs.filter(job => {
+      val oldSatusOpt = (job.celeryInfo \ "state").validate[String]
+      oldSatusOpt match {
+        case JsSuccess(status, _) => failableStates.contains(status)
+        case _                    => true
+      }
+    })
+    val newlyFailedJobs = previouslyFailableJobs.filter(job => nowFailedJobInfos.contains(job.celeryJobId))
+    newlyFailedJobs.map { job =>
+      job.copy(celeryInfo = nowFailedJobInfos(job.celeryJobId))
+    }
+  }
+
+  private def trackNewlyFailed(job: Job): Unit = {
+    for {
+      user <- userDAO.findOne(job._owner)(GlobalAccessContext)
+      _ = analyticsService.track(FailedJobEvent(user, job.command))
+      _ = slackNotificationService.warn(
+        "Failed job",
+        s"Job ${job._id} failed. Command ${job.command}, celeryJobId: ${job.celeryJobId}.")
+    } yield ()
+    ()
+  }
 
   def publicWrites(job: Job): Fox[JsObject] =
     Fox.successful(

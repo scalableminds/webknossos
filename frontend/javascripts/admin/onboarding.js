@@ -472,7 +472,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <Row type="flex" gutter={50}>
         <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-          <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=115s">watch this video</a>.
+          <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
         </FeatureCard>
         <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}

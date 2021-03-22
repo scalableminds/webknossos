@@ -72,6 +72,7 @@ type Props = {
 };
 
 type State = {
+  isColorPickerVisible: boolean,
   prevProps: ?Props,
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
@@ -86,6 +87,7 @@ const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   state = {
+    isColorPickerVisible: false,
     expandedGroupIds: { [MISSING_GROUP_ID]: true },
     groupTree: [],
     prevProps: null,
@@ -129,6 +131,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       prevProps.activeTreeId !== this.props.activeTreeId ||
       prevProps.activeGroupId !== this.props.activeGroupId;
     if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
+      console.log("componentDidUpdate Workaround");
       // eslint-disable-next-line react/no-did-update-set-state
       await this.setState({ searchFocusOffset: 1 });
       // eslint-disable-next-line react/no-did-update-set-state
@@ -275,9 +278,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
     if (isVisible) {
+      console.log("handleTreeDropdownMenuVisibility. treeId", treeId);
       this.setState({ activeTreeDropdownId: treeId });
       return;
     }
+    if (this.state.isColorPickerVisible) {
+      return;
+    }
+    console.log("handleTreeDropdownMenuVisibility to null");
     this.setState({ activeTreeDropdownId: null });
   };
 
@@ -404,6 +412,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   opacity: 0,
                   cursor: "pointer",
                 }}
+                onClick={() => this.setState({ isColorPickerVisible: true })}
+                onBlur={() => this.setState({ isColorPickerVisible: false })}
                 onChange={event => {
                   let color = Utils.hexToRgb(event.target.value);
                   color = Utils.map3(component => component / 255, color);
@@ -427,6 +437,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             <i className="fas fa-ruler" /> Measure Skeleton Length
           </Menu.Item>
         </Menu>
+      );
+      console.log(
+        `this.state.activeTreeDropdownId (${this.state.activeTreeDropdownId}) === tree.treeId (${
+          tree.treeId
+        })`,
+        this.state.activeTreeDropdownId === tree.treeId,
       );
       const dropdownMenu = (
         <Dropdown
@@ -491,6 +507,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   render() {
+    console.log("tree hierarchy view render");
     const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>

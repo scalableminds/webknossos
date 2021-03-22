@@ -6,7 +6,8 @@ import Store from "oxalis/store";
 import constants, {
   type OrthoView,
   ArbitraryViewport,
-  OrthoViewValuesWithoutTDView,
+  OrthoViewValues,
+  OrthoViews,
 } from "oxalis/constants";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -39,11 +40,13 @@ export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: typeof THREE.Scene,
   camera?: typeof THREE.Camera,
+  clearColor?: number,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
   scene = scene || defaultScene;
   camera = camera || scene.getObjectByName(plane);
+  clearColor = clearColor != null ? clearColor : 0x000000;
 
   renderer.autoClear = true;
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
@@ -52,7 +55,7 @@ export function renderToTexture(
 
   renderer.setViewport(0, 0 + height, width, height);
   renderer.setScissorTest(false);
-  renderer.setClearColor(0x000000, 1);
+  renderer.setClearColor(clearColor, 1);
 
   const renderTarget = new THREE.WebGLRenderTarget(width, height);
   const buffer = new Uint8Array(width * height * 4);
@@ -77,13 +80,14 @@ export async function downloadScreenshot() {
   const baseName = `${datasetName}__${x}_${y}_${z}`;
 
   const planeIds =
-    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValuesWithoutTDView : [ArbitraryViewport];
+    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
 
-    const buffer = renderToTexture(planeId);
+    const clearColor = planeId === OrthoViews.TDView ? 0xffffff : 0x000000;
+    const buffer = renderToTexture(planeId, null, null, clearColor);
 
     // eslint-disable-next-line no-await-in-loop
     const blob = await convertBufferToImage(buffer, width, height);

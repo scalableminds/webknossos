@@ -6,8 +6,8 @@ import Store from "oxalis/store";
 import constants, {
   type OrthoView,
   ArbitraryViewport,
+  OrthoViewColors,
   OrthoViewValues,
-  OrthoViews,
 } from "oxalis/constants";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -86,7 +86,8 @@ export async function downloadScreenshot() {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
 
-    const clearColor = planeId === OrthoViews.TDView ? 0xffffff : 0x000000;
+    // $FlowIssue[prop-missing] planeId cannot be arbitraryViewport in OrthoViewColors access
+    const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
     const buffer = renderToTexture(planeId, null, null, clearColor);
 
     // eslint-disable-next-line no-await-in-loop

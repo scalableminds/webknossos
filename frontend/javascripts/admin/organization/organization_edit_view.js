@@ -71,9 +71,13 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
 
   handleDeleteButtonClicked = async (): Promise<void> => {
     const isDeleteConfirmed = await confirmAsync({
-      title: `Deleting an organization cannot be undone. Are you certain you want to delete the organization ${
-        this.state.displayName
-      }?`,
+      title: (
+        <p>
+          Deleting an organization cannot be undone. Are you certain you want to delete the
+          organization {this.state.displayName}? <br />
+          Attention: You will be logged out.
+        </p>
+      ),
       okText: "Yes, Delete Organization now",
     });
     if (isDeleteConfirmed) {
@@ -96,8 +100,11 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
 
     return (
       <div className="container" style={{ paddingTop: 20 }}>
-        <Card title={<h3>Edit {this.state.displayName}</h3>}>
-          <Form onSubmit={this.handleSubmit} layout="vertical" style={{ maxWidth: "350px" }}>
+        <Card
+          title={<h3>Edit {this.state.displayName} </h3>}
+          style={{ margin: "auto", maxWidth: "500px" }}
+        >
+          <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Display Name">
               {getFieldDecorator("displayName", {
                 rules: [

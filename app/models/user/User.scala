@@ -237,7 +237,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
 
   // use with care!
-  def deleteAllWithOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deleteAllWithOrganization(organizationId: ObjectId): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.users set isDeleted = true where _organization = $organizationId""")
     } yield ()

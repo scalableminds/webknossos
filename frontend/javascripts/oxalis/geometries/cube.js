@@ -104,7 +104,7 @@ class Cube {
       vec(min[0], max[1], min[2]),
     ];
 
-    this.crossSections[OrthoViews.PLANE_XY.id].geometry.vertices = [
+    this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [
       vec(min[0], min[1], 0),
       vec(min[0], max[1], 0),
       vec(max[0], max[1], 0),
@@ -112,7 +112,7 @@ class Cube {
       vec(min[0], min[1], 0),
     ];
 
-    this.crossSections[OrthoViews.PLANE_YZ.id].geometry.vertices = [
+    this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [
       vec(0, min[1], min[2]),
       vec(0, min[1], max[2]),
       vec(0, max[1], max[2]),
@@ -120,7 +120,7 @@ class Cube {
       vec(0, min[1], min[2]),
     ];
 
-    this.crossSections[OrthoViews.PLANE_XZ.id].geometry.vertices = [
+    this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [
       vec(min[0], 0, min[2]),
       vec(min[0], 0, max[2]),
       vec(max[0], 0, max[2]),
@@ -177,7 +177,7 @@ class Cube {
       }
     }
 
-    this.cube.visible = this.visible && id === OrthoViews.TDView.id;
+    this.cube.visible = this.visible && id === OrthoViews.TDView;
   }
 
   setVisibility(visible: boolean) {

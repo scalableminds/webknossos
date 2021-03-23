@@ -110,7 +110,7 @@ class TDController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    const tdView = OrthoViews.TDView.id;
+    const tdView = OrthoViews.TDView;
     const inputcatcherId = `inputcatcher_${tdView}`;
     Utils.waitForElementWithId(inputcatcherId).then(view => {
       if (!this.isStarted) {
@@ -123,7 +123,7 @@ class TDController extends React.PureComponent<Props> {
 
   initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
-    const tdCamera = this.props.cameras[OrthoViews.TDView.id];
+    const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
       view,
@@ -162,7 +162,7 @@ class TDController extends React.PureComponent<Props> {
       leftDownMove: (delta: Point2) => this.moveTDView(delta),
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => {
-        Store.dispatch(setViewportAction(OrthoViews.TDView.id));
+        Store.dispatch(setViewportAction(OrthoViews.TDView));
         // Fix the rotation target of the TrackballControls
         this.setTargetAndFixPosition();
       },
@@ -230,7 +230,7 @@ class TDController extends React.PureComponent<Props> {
 
     const nmVector = new THREE.Vector3(...invertedDiff);
     // moves camera by the nm vector
-    const camera = this.props.cameras[OrthoViews.TDView.id];
+    const camera = this.props.cameras[OrthoViews.TDView];
 
     const rotation = THREE.Vector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
     // reverse euler order
@@ -249,12 +249,12 @@ class TDController extends React.PureComponent<Props> {
     if (zoomToMouse && this.mouseController) {
       zoomToPosition = this.mouseController.position;
     }
-    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView.id);
+    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
   moveTDView(delta: Point2): void {
-    const [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView.id);
+    const [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
     Store.dispatch(moveTDViewXAction((delta.x / scaleX) * -1));
     Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
   }

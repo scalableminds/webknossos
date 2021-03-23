@@ -607,12 +607,12 @@ class TracingApi {
     Store.dispatch(centerTDViewAction());
   };
 
-  rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY.id);
-  rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ.id);
-  rotate3DViewToXZ = (): void => rotate3DViewTo(OrthoViews.PLANE_XZ.id);
+  rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY);
+  rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ);
+  rotate3DViewToXZ = (): void => rotate3DViewTo(OrthoViews.PLANE_XZ);
 
   rotate3DViewToDiagonal = (animate: boolean = true): void => {
-    rotate3DViewTo(OrthoViews.TDView.id, animate);
+    rotate3DViewTo(OrthoViews.TDView, animate);
   };
 
   getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
@@ -749,7 +749,7 @@ class TracingApi {
     // Let the user still manipulate the "third dimension" during animation
     const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
-      skipDimensions && activeViewport !== OrthoViews.TDView.id
+      skipDimensions && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
 

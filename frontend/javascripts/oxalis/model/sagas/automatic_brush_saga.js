@@ -91,7 +91,7 @@ const getPredictionForTile = async (
     el => ((el - mean) / stdDev) * (1 / 3) ** 0.5,
   );
   // When interpreting the 3d data slice as a 2d slice, the x and y axis are flipped only on the YZ plane
-  const isXYflipped = activeViewport === OrthoViews.PLANE_YZ.id;
+  const isXYflipped = activeViewport === OrthoViews.PLANE_YZ;
   const { useWebworker, useGPU } = getUseWebworkerAndGPU();
 
   return useWebworker

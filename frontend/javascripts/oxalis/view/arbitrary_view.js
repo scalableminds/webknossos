@@ -200,7 +200,7 @@ class ArbitraryView {
           this.plane.meshes.debuggerPlane.visible = true;
         }
 
-        renderViewport(OrthoViews.TDView.id, this.tdCamera);
+        renderViewport(OrthoViews.TDView, this.tdCamera);
       }
 
       this.needsRerender = false;

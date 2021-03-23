@@ -73,9 +73,9 @@ class SceneController {
     _.extend(this, BackboneEvents);
     this.current = 0;
     this.isPlaneVisible = {
-      [OrthoViews.PLANE_XY.id]: true,
-      [OrthoViews.PLANE_YZ.id]: true,
-      [OrthoViews.PLANE_XZ.id]: true,
+      [OrthoViews.PLANE_XY]: true,
+      [OrthoViews.PLANE_YZ]: true,
+      [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
   }
@@ -287,14 +287,14 @@ class SceneController {
     }
 
     this.planes = {
-      [OrthoViews.PLANE_XY.id]: new Plane(OrthoViews.PLANE_XY.id),
-      [OrthoViews.PLANE_YZ.id]: new Plane(OrthoViews.PLANE_YZ.id),
-      [OrthoViews.PLANE_XZ.id]: new Plane(OrthoViews.PLANE_XZ.id),
+      [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY),
+      [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
+      [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
 
-    this.planes[OrthoViews.PLANE_XY.id].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ.id].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ.id].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
+    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
@@ -333,8 +333,8 @@ class SceneController {
     this.userBoundingBoxes.forEach(bbCube => bbCube.updateForCam(id));
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
-    this.isosurfacesRootGroup.visible = id === OrthoViews.TDView.id;
-    if (id !== OrthoViews.TDView.id) {
+    this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
+    if (id !== OrthoViews.TDView) {
       let ind;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
@@ -345,7 +345,7 @@ class SceneController {
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
-            planeId === OrthoViews.PLANE_XY.id ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+            planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(pos, originalPosition);
         } else {
           this.planes[planeId].setVisible(false);

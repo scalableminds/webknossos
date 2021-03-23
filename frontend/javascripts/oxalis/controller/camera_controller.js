@@ -133,14 +133,14 @@ class CameraController extends React.PureComponent<Props> {
 
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
-      const tdCamera = this.props.cameras[OrthoViews.TDView.id];
+      const tdCamera = this.props.cameras[OrthoViews.TDView];
 
       const oldMid = (tdCamera.right + tdCamera.left) / 2;
       const oldWidth = tdCamera.right - tdCamera.left;
       const oldHeight = tdCamera.top - tdCamera.bottom;
 
       const oldAspectRatio = oldWidth / oldHeight;
-      const tdRect = inputCatcherRects[OrthoViews.TDView.id];
+      const tdRect = inputCatcherRects[OrthoViews.TDView];
       const newAspectRatio = tdRect.width / tdRect.height;
 
       // Do not update the tdCamera if the tdView is not visible (height === 0)
@@ -159,9 +159,9 @@ class CameraController extends React.PureComponent<Props> {
     const gPos = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
     const cPos = voxelToNm(state.dataset.dataSource.scale, gPos);
-    this.props.cameras[OrthoViews.PLANE_XY.id].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_YZ.id].position.set(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_XZ.id].position.set(cPos[0], cPos[1], cPos[2]);
+    this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
+    this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
+    this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
   }
 
   bindToEvents() {
@@ -195,7 +195,7 @@ class CameraController extends React.PureComponent<Props> {
   // TD-View methods
 
   updateTDCamera(cameraData: CameraData): void {
-    const tdCamera = this.props.cameras[OrthoViews.TDView.id];
+    const tdCamera = this.props.cameras[OrthoViews.TDView];
 
     tdCamera.position.set(...cameraData.position);
     tdCamera.left = cameraData.left;
@@ -245,9 +245,9 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   // First, the camera is either positioned at the current center of the flycam or in the dataset center.
   // Second, the camera is moved backwards by a clipping offset into the wanted direction.
   // Together with matching lookUp (up) vectors and keeping the width and height, the position and rotation updates correctly.
-  if (id === OrthoViews.TDView.id && (height <= 0 || width <= 0)) {
+  if (id === OrthoViews.TDView && (height <= 0 || width <= 0)) {
     // This should only be the case when initializing the 3D-viewport.
-    const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView.id);
+    const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
     const datasetCenter = voxelToNm(dataset.dataSource.scale, getDatasetCenter(dataset));
     // The camera has no width and height which might be due to a bug or the camera has not been initialized.
     // Thus we zoom out to show the whole dataset.
@@ -264,7 +264,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       datasetCenter[1] + clippingOffsetFactor,
       flycamPos[2] - clippingOffsetFactor,
     ];
-  } else if (id === OrthoViews.TDView.id) {
+  } else if (id === OrthoViews.TDView) {
     position = [
       flycamPos[0] + clippingOffsetFactor,
       flycamPos[1] + clippingOffsetFactor,
@@ -273,14 +273,14 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     up = [0, 0, -1];
   } else {
     const positionOffset: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY.id]: [0, 0, -clippingOffsetFactor],
-      [OrthoViews.PLANE_YZ.id]: [clippingOffsetFactor, 0, 0],
-      [OrthoViews.PLANE_XZ.id]: [0, clippingOffsetFactor, 0],
+      [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
+      [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
+      [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
     };
     const upVector: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY.id]: [0, -1, 0],
-      [OrthoViews.PLANE_YZ.id]: [0, -1, 0],
-      [OrthoViews.PLANE_XZ.id]: [0, 0, -1],
+      [OrthoViews.PLANE_XY]: [0, -1, 0],
+      [OrthoViews.PLANE_YZ]: [0, -1, 0],
+      [OrthoViews.PLANE_XZ]: [0, 0, -1],
     };
     up = upVector[id];
     position = [

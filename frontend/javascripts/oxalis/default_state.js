@@ -172,7 +172,7 @@ const defaultState: OxalisState = {
   },
   viewModeData: {
     plane: {
-      activeViewport: OrthoViews.PLANE_XY.id,
+      activeViewport: OrthoViews.PLANE_XY,
       tdCamera: {
         near: 0,
         far: 0,

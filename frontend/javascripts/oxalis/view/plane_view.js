@@ -69,16 +69,16 @@ class PlaneView {
       scene.add(this.cameras[plane]);
     }
 
-    createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView.id]);
+    createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView]);
 
-    this.cameras[OrthoViews.PLANE_XY.id].position.z = -1;
-    this.cameras[OrthoViews.PLANE_YZ.id].position.x = 1;
-    this.cameras[OrthoViews.PLANE_XZ.id].position.y = 1;
-    this.cameras[OrthoViews.TDView.id].position.copy(new THREE.Vector3(10, 10, -10));
-    this.cameras[OrthoViews.PLANE_XY.id].up = new THREE.Vector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_YZ.id].up = new THREE.Vector3(0, -1, 0);
-    this.cameras[OrthoViews.PLANE_XZ.id].up = new THREE.Vector3(0, 0, -1);
-    this.cameras[OrthoViews.TDView.id].up = new THREE.Vector3(0, 0, -1);
+    this.cameras[OrthoViews.PLANE_XY].position.z = -1;
+    this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
+    this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
+    this.cameras[OrthoViews.TDView].position.copy(new THREE.Vector3(10, 10, -10));
+    this.cameras[OrthoViews.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
+    this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
+    this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
+    this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
     for (const plane of OrthoViewValues) {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
     }
@@ -125,10 +125,10 @@ class PlaneView {
 
       const storeState = Store.getState();
       const viewport = {
-        [OrthoViews.PLANE_XY.id]: getInputCatcherRect(storeState, "PLANE_XY"),
-        [OrthoViews.PLANE_YZ.id]: getInputCatcherRect(storeState, "PLANE_YZ"),
-        [OrthoViews.PLANE_XZ.id]: getInputCatcherRect(storeState, "PLANE_XZ"),
-        [OrthoViews.TDView.id]: getInputCatcherRect(storeState, "TDView"),
+        [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
+        [OrthoViews.PLANE_YZ]: getInputCatcherRect(storeState, "PLANE_YZ"),
+        [OrthoViews.PLANE_XZ]: getInputCatcherRect(storeState, "PLANE_XZ"),
+        [OrthoViews.TDView]: getInputCatcherRect(storeState, "TDView"),
       };
 
       renderer.autoClear = true;
@@ -156,7 +156,7 @@ class PlaneView {
     const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
 
     // Outside of the 3D viewport, we don't do isosurface hit tests
-    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView.id) {
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
       if (hoveredIsosurfaceId !== 0) {
         // Reset hoveredIsosurfaceId if we are outside of the 3D viewport,
         // since that id takes precedence over the shader-calculated cell id
@@ -172,7 +172,7 @@ class PlaneView {
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1, // y is inverted
     );
 
-    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView.id]);
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);

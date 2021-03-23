@@ -54,10 +54,10 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY.id]: 0,
-  [OrthoViews.PLANE_YZ.id]: 1,
-  [OrthoViews.PLANE_XZ.id]: 2,
-  [OrthoViews.TDView.id]: 3,
+  [OrthoViews.PLANE_XY]: 0,
+  [OrthoViews.PLANE_YZ]: 1,
+  [OrthoViews.PLANE_XZ]: 2,
+  [OrthoViews.TDView]: 3,
 };
 
 // eslint-disable-next-line no-unused-vars
@@ -69,7 +69,7 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
   }
 
   const [x, y, z] = getPosition(Store.getState().flycam);
-  setWaypoint([x + 1, y + 1, z], OrthoViews.PLANE_XY.id, false);
+  setWaypoint([x + 1, y + 1, z], OrthoViews.PLANE_XY, false);
   _.defer(() => simulateTracing(nodesPerTree, nodesAlreadySet + 1));
 }
 
@@ -117,7 +117,7 @@ export function getTDViewMouseControls(planeView: PlaneView): Object {
         event.shiftKey,
         event.altKey,
         event.ctrlKey,
-        OrthoViews.TDView.id,
+        OrthoViews.TDView,
         isTouch,
       ),
   };
@@ -372,7 +372,7 @@ function onRightClick(
     return;
   }
   const { activeViewport } = Store.getState().viewModeData.plane;
-  if (activeViewport === OrthoViews.TDView.id) {
+  if (activeViewport === OrthoViews.TDView) {
     return;
   }
 

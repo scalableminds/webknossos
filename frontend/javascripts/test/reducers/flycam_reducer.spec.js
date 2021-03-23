@@ -150,7 +150,7 @@ test("Flycam should roll the flycam", t => {
 });
 
 test("Flycam should move in ortho mode", t => {
-  const moveAction = FlycamActions.moveFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY.id);
+  const moveAction = FlycamActions.moveFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY);
   const newState = FlycamReducer(initialState, moveAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [2, 0, 0]);
@@ -160,29 +160,21 @@ test("Flycam should move in ortho mode with dynamicSpaceDirection", t => {
   let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
   newState = FlycamReducer(
     newState,
-    FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY.id),
+    FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY),
   );
 
   equalWithEpsilon(t, getPosition(newState.flycam), [2, 0, -2]);
 });
 
 test("Flycam should move by plane in ortho mode (1/3)", t => {
-  const moveAction = FlycamActions.movePlaneFlycamOrthoAction(
-    [2, 0, 0],
-    OrthoViews.PLANE_XY.id,
-    true,
-  );
+  const moveAction = FlycamActions.movePlaneFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY, true);
   const newState = FlycamReducer(initialState, moveAction);
 
   t.deepEqual(getPosition(newState.flycam), [4, 0, 0]);
 });
 
 test("Flycam should move by plane in ortho mode (2/3)", t => {
-  const moveAction = FlycamActions.movePlaneFlycamOrthoAction(
-    [2, 2, 0],
-    OrthoViews.PLANE_XZ.id,
-    true,
-  );
+  const moveAction = FlycamActions.movePlaneFlycamOrthoAction([2, 2, 0], OrthoViews.PLANE_XZ, true);
   const newState = FlycamReducer(initialState, moveAction);
 
   t.deepEqual(getPosition(newState.flycam), [4, 0, 2]);
@@ -191,7 +183,7 @@ test("Flycam should move by plane in ortho mode (2/3)", t => {
 test("Flycam should move by plane in ortho mode (3/3)", t => {
   const moveAction = FlycamActions.movePlaneFlycamOrthoAction(
     [2, 2, 0],
-    OrthoViews.PLANE_XZ.id,
+    OrthoViews.PLANE_XZ,
     false,
   );
   const newState = FlycamReducer(initialState, moveAction);
@@ -203,7 +195,7 @@ test("Flycam should move by plane in ortho mode with dynamicSpaceDirection", t =
   let newState = FlycamReducer(initialState, FlycamActions.setDirectionAction([0, 0, -2]));
   newState = FlycamReducer(
     newState,
-    FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY.id, true),
+    FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true),
   );
 
   equalWithEpsilon(t, getPosition(newState.flycam), [0, 0, -2]);

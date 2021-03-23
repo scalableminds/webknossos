@@ -459,19 +459,19 @@ class VolumeLayer {
     out: Vector3 | Float32Array,
   ) => void {
     switch (this.plane) {
-      case OrthoViews.PLANE_XY.id:
+      case OrthoViews.PLANE_XY:
         return (coordX, coordY, out) => {
           out[0] = coordX;
           out[1] = coordY;
           out[2] = this.thirdDimensionValue;
         };
-      case OrthoViews.PLANE_YZ.id:
+      case OrthoViews.PLANE_YZ:
         return (coordX, coordY, out) => {
           out[0] = this.thirdDimensionValue;
           out[1] = coordY;
           out[2] = coordX;
         };
-      case OrthoViews.PLANE_XZ.id:
+      case OrthoViews.PLANE_XZ:
         return (coordX, coordY, out) => {
           out[0] = coordX;
           out[1] = this.thirdDimensionValue;

@@ -15,9 +15,11 @@ import Constants, {
   ControlModeEnum,
   type ViewMode,
   OrthoViews,
+  OrthoViewsToName,
   TracingTabs,
   SettingsTabs,
   ArbitraryViews,
+  ArbitraryViewsToName,
 } from "oxalis/constants";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
@@ -89,13 +91,15 @@ Object.entries(SettingsTabs).forEach(([tabKey, { name, id }]: any) => {
 });
 
 const OrthoViewports = {};
-Object.entries(OrthoViews).forEach(([viewportId, { name, id }]: any) => {
-  OrthoViewports[viewportId] = Tab(name, id, "viewport");
+Object.keys(OrthoViews).forEach(viewportId => {
+  const name = OrthoViewsToName[viewportId];
+  OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 
 const ArbitraryViewports = {};
-Object.entries(ArbitraryViews).forEach(([viewportId, { name, id }]: any) => {
-  ArbitraryViewports[viewportId] = Tab(name, id, "viewport");
+Object.keys(ArbitraryViews).forEach(viewportId => {
+  const name = ArbitraryViewsToName[viewportId];
+  ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 
 const globalLayoutSettings = {

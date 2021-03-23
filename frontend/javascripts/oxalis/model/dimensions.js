@@ -15,11 +15,11 @@ const Dimensions = {
   getIndices(planeID: OrthoView): DimensionMap {
     // Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
     switch (planeID) {
-      case OrthoViews.PLANE_XY.id:
+      case OrthoViews.PLANE_XY:
         return [0, 1, 2]; // of each plane. For example, moving along the
-      case OrthoViews.PLANE_YZ.id:
+      case OrthoViews.PLANE_YZ:
         return [2, 1, 0]; // X-Axis of the YZ-Plane is equivalent to moving
-      case OrthoViews.PLANE_XZ.id:
+      case OrthoViews.PLANE_XZ:
         return [0, 2, 1]; // along the Z axis in the cube -> ind[0]=2
       default:
         return [0, 0, 0];
@@ -40,11 +40,11 @@ const Dimensions = {
     // Return the plane in which dim is always the same
     switch (dim) {
       case 2:
-        return OrthoViews.PLANE_XY.id;
+        return OrthoViews.PLANE_XY;
       case 0:
-        return OrthoViews.PLANE_YZ.id;
+        return OrthoViews.PLANE_YZ;
       case 1:
-        return OrthoViews.PLANE_XZ.id;
+        return OrthoViews.PLANE_XZ;
       default:
         throw new Error(`Unrecognized dimension: ${dim}`);
     }
@@ -53,11 +53,11 @@ const Dimensions = {
   thirdDimensionForPlane(planeID: OrthoView): DimensionIndices {
     // Opposite of planeForThirdDimension
     switch (planeID) {
-      case OrthoViews.PLANE_XY.id:
+      case OrthoViews.PLANE_XY:
         return 2;
-      case OrthoViews.PLANE_YZ.id:
+      case OrthoViews.PLANE_YZ:
         return 0;
-      case OrthoViews.PLANE_XZ.id:
+      case OrthoViews.PLANE_XZ:
         return 1;
       default:
         throw new Error(`Unrecognized plane ID: ${planeID}`);

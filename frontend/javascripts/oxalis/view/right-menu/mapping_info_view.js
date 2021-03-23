@@ -149,7 +149,7 @@ class MappingInfoView extends React.Component<Props, State> {
     const customColors = isMappingEnabled ? mappingColors : null;
 
     let globalMousePosition;
-    if (mousePosition && activeViewport !== OrthoViews.TDView.id) {
+    if (mousePosition && activeViewport !== OrthoViews.TDView) {
       const [x, y] = mousePosition;
       globalMousePosition = calculateGlobalPos({ x, y });
     }

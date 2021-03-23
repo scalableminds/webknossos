@@ -61,20 +61,22 @@ function OverlayDropZone({ children }) {
   );
 }
 
-function NmlDropArea({ showClickHint, isUpdateAllowed }) {
+function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
+  const clickInput = clickAllowed ? <input {...getInputProps()} /> : null;
   return (
-    <React.Fragment>
+    <div style={{ textAlign: "center", cursor: "pointer" }}>
+      {clickInput}
       <div>
         <Icon type="inbox" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
       </div>
       {isUpdateAllowed ? (
-        <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
+        <h5>Drop NML files here{clickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
           Drop NML files here to <b>create a new tracing</b>.
         </h5>
       )}
-    </React.Fragment>
+    </div>
   );
 }
 
@@ -174,9 +176,13 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           }}
           onDrop={this.onDrop}
         >
-          {({ getRootProps }) => (
+          {({ getRootProps, getInputProps }) => (
             <div {...getRootProps()}>
-              <NmlDropArea showClickHint isUpdateAllowed={this.props.isUpdateAllowed} />
+              <NmlDropArea
+                clickAllowed
+                isUpdateAllowed={this.props.isUpdateAllowed}
+                getInputProps={getInputProps}
+              />
             </div>
           )}
         </Dropzone>
@@ -237,7 +243,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         onDragLeave={this.onDragLeave}
         noKeyboard
       >
-        {({ getRootProps }) => (
+        {({ getRootProps, getInputProps }) => (
           <div
             {...getRootProps()}
             style={{ position: "relative", minHeight: `calc(100vh - ${navbarHeight}px)` }}
@@ -248,7 +254,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             }
             {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
               <OverlayDropZone>
-                <NmlDropArea showClickHint={false} isUpdateAllowed={this.props.isUpdateAllowed} />
+                <NmlDropArea
+                  clickAllowed={false}
+                  isUpdateAllowed={this.props.isUpdateAllowed}
+                  getInputProps={getInputProps}
+                />
               </OverlayDropZone>
             ) : null}
             {

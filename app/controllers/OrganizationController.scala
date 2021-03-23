@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.organization.{OrganizationDAO, OrganizationService}
-import models.user.{InviteDAO, UserDAO}
+import models.user.{InviteDAO, MultiUserDAO, UserDAO}
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
@@ -20,6 +20,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                        inviteDAO: InviteDAO,
                                        conf: WkConf,
                                        userDAO: UserDAO,
+                                       multiUserDAO: MultiUserDAO,
                                        wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                        sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
@@ -100,6 +101,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       _ = logger.info(s"Deleting organizaion ${organization._id}")
       _ <- organizationDAO.deleteOne(organization._id)
       _ <- userDAO.deleteAllWithOrganization(organization._id)
+      _ <- multiUserDAO.removeLastLoggedInIdentitiesWithOrga(organization._id)
       _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
     } yield Ok
   }

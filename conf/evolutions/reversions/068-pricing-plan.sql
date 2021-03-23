@@ -20,6 +20,6 @@ JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 68;
+UPDATE webknossos.releaseInformation SET schemaVersion = 67;
 
 COMMIT TRANSACTION;

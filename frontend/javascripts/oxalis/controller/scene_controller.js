@@ -29,7 +29,6 @@ import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Store, { type UserBoundingBox } from "oxalis/store";
 import * as Utils from "libs/utils";
-import ColorGenerator from "libs/color_generator";
 import app from "app";
 import constants, {
   type BoundingBoxType,

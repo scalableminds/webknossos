@@ -7,7 +7,6 @@ import type { OxalisState, BorderOpenStatus } from "oxalis/store";
 type OwnProps = {|
   onClick: () => void,
   side: "left" | "right",
-  small?: boolean,
   style?: Object,
 |};
 type StateProps = {|
@@ -16,9 +15,7 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 
 function BorderToggleButton(props: Props) {
-  const { onClick, side, small, style, borderOpenStatus } = props;
-  const additionalClass = small === true ? "small-border-icon" : "";
-  const size = small === true ? "small" : "default";
+  const { onClick, side, style, borderOpenStatus } = props;
   const mirrorIconStyle = { transform: "scale(-1, 1)" };
   const placement = side === "left" ? "right" : "left";
   const iconStyle = borderOpenStatus[side] === false ? mirrorIconStyle : null;
@@ -27,9 +24,9 @@ function BorderToggleButton(props: Props) {
   return (
     <Tooltip title={tooltipTitle} placement={placement}>
       <Button
-        className={`${side}-border-button ${additionalClass}`}
+        className={`${side}-border-button dark-mode-button`}
         onClick={onClick}
-        size={size}
+        size="small"
         style={style}
       >
         <Icon className="center-item-using-flex" style={iconStyle} type={`${side}-square`} />

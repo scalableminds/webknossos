@@ -191,18 +191,31 @@
   line-height: normal;
 }
 
-// Dark mode for UI within navbar
+@dark-bg: #383d48;
+@dark-fg: #f1f1f1;
+@dark-border: #585868;
+@primary-border: #1890ff;
+@hover-border: #40a9ff;
+
+.dark-mode-button {
+  background-color: @dark-bg;
+  color: @dark-fg;
+  border-color: @dark-border;
+  &:hover,
+  &:focus {
+    border-color: @hover-border;
+    background-color: @dark-bg;
+    color: @dark-fg;
+  }
+}
+
+// Dark mode for UI within navbar and footer
 .ant-layout-header,
 .ant-layout-footer {
   width: 100%;
   z-index: 1000;
   color: rgba(255, 255, 255, 0.67) !important;
   background: #001529 !important;
-  @dark-bg: #383d48;
-  @dark-fg: #f1f1f1;
-  @dark-border: #585868;
-  @primary-border: #1890ff;
-  @hover-border: #40a9ff;
 
   .ant-btn,
   .ant-input,
@@ -309,11 +322,8 @@
   bottom: 0px;
   height: auto;
   padding: 0px 6px;
-  &.small-border-icon > i {
-    font-size: 13px !important;
-  }
   i {
-    font-size: 16px;
+    font-size: 13px !important;
     margin: 0;
   }
 }

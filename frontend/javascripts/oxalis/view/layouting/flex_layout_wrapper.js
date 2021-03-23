@@ -29,6 +29,7 @@ import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
 import {
   getMaximizedItemId,
   getBorderOpenStatus,
+  getBorderWidths,
   adjustModelToBorderOpenStatus,
 } from "./flex_layout_helper";
 
@@ -58,6 +59,8 @@ type DispatchProps = {|
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type State = {
   model: Model,
+  leftBorderButtonPosition: number,
+  rightBorderButtonPosition: number,
 };
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
@@ -73,7 +76,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.borderOpenStatus = getBorderOpenStatus(model);
     props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatus));
     this.updateToModelStateAndAdjustIt(model);
-    this.state = { model };
+    const { left, right } = getBorderWidths(model);
+    this.state = { model, leftBorderButtonPosition: left, rightBorderButtonPosition: right };
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -123,7 +127,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   rebuildLayout() {
     const model = this.getCurrentModel();
     this.updateToModelStateAndAdjustIt(model);
-    this.setState({ model });
+    const { left, right } = getBorderWidths(model);
+    this.setState({ model, leftBorderButtonPosition: left, rightBorderButtonPosition: right });
     setTimeout(this.onLayoutChange, 1);
   }
 
@@ -299,6 +304,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     });
   };
 
+  updateButtonPosition = (model: Model) => {
+    const { left, right } = getBorderWidths(model);
+    this.setState({ leftBorderButtonPosition: left, rightBorderButtonPosition: right });
+  };
+
   onAction = (action: Action) => {
     const { type, data } = action;
     if (type === "FlexLayout_MaximizeToggle") {
@@ -309,10 +319,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
       this.onMaximizeToggle();
     }
-    if (type === "FlexLayout_AdjustBorderSplit" && data.pos < MIN_BORDER_WIDTH) {
+    if (type === "FlexLayout_AdjustBorderSplit") {
       const side = data.node === "border_left" ? "left" : "right";
-      this.toggleBorder(side);
-      return undefined;
+      const width = data.pos;
+      if (width < MIN_BORDER_WIDTH) {
+        this.toggleBorder(side);
+        // !!!! The model is not up to date !!!!
+        return undefined;
+      } else {
+        this.setState({ [`${side}BorderButtonPosition`]: width });
+      }
     }
     return action;
   };
@@ -324,6 +340,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
+    this.updateButtonPosition(this.state.model);
     if (toggleInternalState && this.maximizedItemId == null) {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
       this.borderOpenStatus[side] = !this.borderOpenStatus[side];
@@ -331,25 +348,61 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.onLayoutChange();
   }
 
+  getTopBorderToggleButtons() {
+    const { leftBorderButtonPosition, rightBorderButtonPosition } = this.state;
+    const buttonWidth = 21;
+    const baseStyle = {
+      position: "absolute",
+      top: 20,
+      bottom: "auto",
+      zIndex: 21,
+    };
+    const leftButtonStyle = {
+      ...baseStyle,
+      left: Math.max(leftBorderButtonPosition - buttonWidth, 0),
+      right: "auto",
+    };
+    const rightButtonStyle = {
+      ...baseStyle,
+      left: "auto",
+      right: Math.max(rightBorderButtonPosition - buttonWidth, 0),
+    };
+    return (
+      <React.Fragment>
+        <BorderToggleButton
+          side="left"
+          onClick={() => this.toggleBorder("left")}
+          style={leftButtonStyle}
+        />
+        <BorderToggleButton
+          side="right"
+          onClick={() => this.toggleBorder("right")}
+          style={rightButtonStyle}
+        />
+      </React.Fragment>
+    );
+  }
+
   render() {
     const { datasetName, organization, annotationType, name, taskId } = this.props;
     const tracingName = name || "[untitled]";
     let footerText = `${datasetName} | ${organization} | `;
     footerText += taskId != null ? `${annotationType} : ${taskId}` : tracingName;
-
+    const { model } = this.state;
     return (
       <React.Fragment>
         <div className="flex-layout-container">
+          {this.getTopBorderToggleButtons()}
           <FlexLayout.Layout
-            model={this.state.model}
+            model={model}
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
           />
         </div>
         <Footer className="footer">
-          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} small />
-          <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} small />
+          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
+          <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} />
           {footerText}
         </Footer>
       </React.Fragment>

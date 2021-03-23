@@ -35,3 +35,15 @@ export function adjustModelToBorderOpenStatus(
     }
   });
 }
+
+export function getBorderWidths(model: typeof Model) {
+  const borderWidths = { left: 0, right: 0 };
+  const borders = model.getBorderSet().getBorders();
+  borders.forEach(border => {
+    const size = border.getSize();
+    const side = border.getLocation().getName();
+    const isCollapsed = border.getSelectedNode() == null;
+    borderWidths[side] = isCollapsed ? 0 : size;
+  });
+  return borderWidths;
+}

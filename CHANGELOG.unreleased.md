@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - WKW Dataset uploads with missing mag or layer dir no longer fail, instead the paths are automatically added (defaults to color/1). [#5285](https://github.com/scalableminds/webknossos/pull/5285)
 
 ### Changed
+- webKnossos is now part of the [image.sc support community](https://forum.image.sc/tag/webknossos). [#5332](https://github.com/scalableminds/webknossos/pull/5332)
 - Measured distances will be shown in voxel space, too. [#5240](https://github.com/scalableminds/webknossos/pull/5240)
 
 ### Fixed

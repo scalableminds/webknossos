@@ -62,6 +62,5 @@ export type DatasourceConfiguration = {
     team: string,
   },
   dataLayers: Array<DataLayer>,
-  // Add minimum=0 and exclusiveMinimum=true to items
   scale: Array<number>,
 };

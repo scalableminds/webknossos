@@ -5,8 +5,11 @@ import java.nio.file.{Path, _}
 
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
+import org.apache.commons.io.FileUtils
 
 import scala.collection.JavaConverters._
+import scala.reflect.io.Directory
+import scala.util.Random
 
 object PathUtils extends PathUtils
 
@@ -79,6 +82,9 @@ trait PathUtils extends LazyLogging {
   def listFiles(directory: Path, filters: (Path => Boolean)*): Box[List[Path]] =
     listDirectoryEntries(directory, 1, 1, filters :+ fileFilter _: _*)(r => Full(r.toList))
 
+  def listFilesRecursive(directory: Path, maxDepth: Int, filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 1, filters :+ fileFilter _: _*)(r => Full(r.toList))
+
   def lazyFileStream[A](directory: Path, filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
     listDirectoryEntries(directory, 1, 1, filters :+ fileFilter _: _*)(f)
 
@@ -99,7 +105,7 @@ trait PathUtils extends LazyLogging {
     }
 
   // not following symlinks
-  def listDirectoriesRaw(directory: Path) = Box[List[Path]] {
+  def listDirectoriesRaw(directory: Path): Box[List[Path]] =
     try {
       val directoryStream = Files.walk(directory, 1)
       val r = directoryStream.iterator().asScala.toList
@@ -112,6 +118,56 @@ trait PathUtils extends LazyLogging {
         logger.error(ex.getClass.getCanonicalName)
         Failure(errorMsg)
     }
+
+  /*
+   * removes the end of a path, after the last occurence of any of excludeFromPrefix
+   * example:  /path/to/color/layer/that/is/named/color/and/has/files
+   *    becomes  /path/to/color/layer/that/is/named/color
+   *    if "color" is in excludeFromPrefix
+   */
+  def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
+    var lastCutOffIndex = -1
+    path.iterator().asScala.zipWithIndex.foreach {
+      case (subPath, idx) =>
+        cutOffList.foreach(e => {
+          if (subPath.toString.contains(e)) {
+            lastCutOffIndex = idx
+          }
+        })
+    }
+    lastCutOffIndex match {
+      case -1 => path
+      // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
+      case 0 => Paths.get("")
+      case i => path.subpath(0, i)
+    }
+  }
+
+  // Remove a single file name from previously computed common prefix
+  def removeSingleFileNameFromPrefix(prefix: Path, fileNames: List[String]): Path = {
+    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
+
+    fileNames match {
+      case head :: tl if tl.isEmpty && isFileNameInPrefix(prefix, head) =>
+        prefix.subpath(0, prefix.getNameCount - 1)
+      case _ => prefix
+    }
+  }
+
+  def deleteDirectoryRecursively(path: Path): Box[Unit] = {
+    val directory = new Directory(new File(path.toString))
+    if (!directory.exists) return Full(())
+    if (directory.deleteRecursively()) {
+      Full(())
+    } else Failure(f"Failed to delete directory $path")
+  }
+
+  // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
+  def moveDirectoryViaTemp(source: Path, dst: Path): Unit = {
+    val tmpId = Random.alphanumeric.take(10).mkString("")
+    val tmpPath = source.getParent.resolve(s".${tmpId}")
+    FileUtils.moveDirectory(source.toFile, tmpPath.toFile)
+    FileUtils.moveDirectory(tmpPath.toFile, dst.toFile)
   }
 
 }

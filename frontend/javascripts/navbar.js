@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Icon, Layout, Menu, Popover } from "antd";
+import { Avatar, Icon, Layout, Menu, Popover, AutoComplete } from "antd";
 import { useHistory, Link } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
@@ -299,6 +299,18 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         </Menu.Item>
         <Menu.Item disabled key="organization">
           {orgDisplayName}
+        </Menu.Item>
+        <Menu.Item key="switch">
+          <AutoComplete
+            style={{ width: 200 }}
+            options={switchableOrganizations.map(org => ({
+              value: org,
+              label: org.displayName || org.name,
+            }))}
+            filterOption={(inputValue, option) =>
+              option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+            }
+          />
         </Menu.Item>
         {isMultiMember ? (
           /* The explicit width is a workaround for a layout bug (probably in antd) */

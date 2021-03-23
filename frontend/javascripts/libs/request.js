@@ -300,13 +300,15 @@ class Request {
               // to a datastore. Then, ping the datastore
               pingMentionedDataStores(text);
 
-              return Promise.reject(json);
+              /* eslint-disable-next-line prefer-promise-reject-errors */
+              return Promise.reject({ ...json, url: requestedUrl });
             } catch (jsonError) {
               if (showErrorToast) Toast.error(text);
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({
                 errors: [text],
                 status: error.status != null ? error.status : -1,
+                url: requestedUrl,
               });
             }
           },

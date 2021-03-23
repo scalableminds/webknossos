@@ -229,13 +229,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
-  def runCubingJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
+  def runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
-        command = "tiff_cubing"
+        command = "convert_to_wkw"
         commandArgs = Json.obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale)
 
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
@@ -243,7 +243,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runTiffExportJob(organizationName: String,
+  def runExportTiffJob(organizationName: String,
                        dataSetName: String,
                        bbox: String,
                        layerName: Option[String],

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import type { BoundingBoxType } from "oxalis/constants";
 import type { VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
-import { startTiffExportJob } from "admin/admin_rest_api";
+import { startExportTiffJob } from "admin/admin_rest_api";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import features from "features";
@@ -31,7 +31,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }
     if (layerInfos.tracingId) {
       await Model.ensureSavedState();
     }
-    await startTiffExportJob(
+    await startExportTiffJob(
       dataset.name,
       dataset.owningOrganization,
       Utils.computeArrayFromBoundingBox(boundingBox),

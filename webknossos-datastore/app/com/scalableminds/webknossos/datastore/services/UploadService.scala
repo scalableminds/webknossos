@@ -126,9 +126,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
         case Full(_) =>
           if (datasetNeedsConversion)
             Fox.successful(())
-          else
+          else {
+            addLayerAndResolutionDirIfMissing(unpackToDir)
             dataSourceRepository.updateDataSource(
               dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team))
+          }
         case Empty =>
           Fox.failure(s"Unknown error while unpacking dataset ${dataSourceId.name}")
           deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
@@ -168,6 +170,41 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       else
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     dataSourceDir
+  }
+
+  private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =
+    if (Files.exists(dataSourceDir)) {
+      for {
+        listing: Seq[Path] <- PathUtils.listDirectories(dataSourceDir)
+      } yield {
+        if (looksLikeMagDir(listing)) {
+          val targetDir = dataSourceDir.resolve("color").resolve("1")
+          logger.info(s"Looks like mag dir. Moving to $targetDir")
+          PathUtils.moveDirectoryViaTemp(dataSourceDir, targetDir)
+        } else if (looksLikeLayerDir(listing)) {
+          val targetDir = dataSourceDir.resolve("color")
+          logger.info(s"Looks like layer dir. Moving to $targetDir")
+          PathUtils.moveDirectoryViaTemp(dataSourceDir, targetDir)
+        }
+      }
+    }
+
+  private def looksLikeMagDir(children: Seq[Path]): Boolean = {
+    val magDirChildRegex = """z(\d+)""".r
+    children.nonEmpty && children.forall(path =>
+      path.getFileName.toString match {
+        case magDirChildRegex(_*) => true
+        case _                    => false
+    })
+  }
+
+  private def looksLikeLayerDir(children: Seq[Path]): Boolean = {
+    val layerDirChildRegex = """(\d+)|(\d+-\d+-\d+)""".r
+    children.nonEmpty && children.exists(path =>
+      path.getFileName.toString match {
+        case layerDirChildRegex(_*) => true
+        case _                      => false
+    })
   }
 
   private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =

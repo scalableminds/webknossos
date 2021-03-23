@@ -11,7 +11,7 @@ This article outlines commonly used features and operations for viewing, editing
 
 ![An example of a complex webKnossos skeleton annotation](images/tracing_ui_skeletontracing.jpg)
 
-{% embed url="https://www.youtube.com/watch?v=9cqLuJIDDFg "%}
+{% embed url="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=115s" %}
 
 ### Annotation Modes
 webKnossos supports several modes for displaying your dataset & interacting with skeleton annotations.

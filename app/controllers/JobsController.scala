@@ -63,12 +63,15 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     s"""_owner = '$requestingUserId'"""
 
   def getAllByCeleryIds(celeryJobIds: List[String]): Fox[List[Job]] =
-    for {
-      rList <- run(
-        sql"select #$columns from #$existingCollectionName where celeryJobId in #${writeStructTupleWithQuotes(celeryJobIds)}"
-          .as[JobsRow])
-      parsed <- Fox.combined(rList.toList.map(parse))
-    } yield parsed
+    if (celeryJobIds.isEmpty) Fox.successful(List())
+    else {
+      for {
+        rList <- run(
+          sql"select #$columns from #$existingCollectionName where celeryJobId in #${writeStructTupleWithQuotes(celeryJobIds)}"
+            .as[JobsRow])
+        parsed <- Fox.combined(rList.toList.map(parse))
+      } yield parsed
+    }
 
   def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
     for {
@@ -164,7 +167,7 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(FailedJobEvent(user, job.command))
       _ = slackNotificationService.warn(
         "Failed job",
-        s"Job ${job._id} failed. Command ${job.command}, celeryJobId: ${job.celeryJobId}.")
+        s"Job ${job._id} failed. Command ${job.command}, celery job id: ${job.celeryJobId}.")
     } yield ()
     ()
   }
@@ -229,13 +232,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
-  def runCubingJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
+  def runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
-        command = "tiff_cubing"
+        command = "convert_to_wkw"
         commandArgs = Json.obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale)
 
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
@@ -243,7 +246,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runTiffExportJob(organizationName: String,
+  def runExportTiffJob(organizationName: String,
                        dataSetName: String,
                        bbox: String,
                        layerName: Option[String],

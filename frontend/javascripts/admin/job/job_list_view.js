@@ -83,8 +83,8 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderDescription = (__: any, job: APIJob) => {
-    if (job.type === "tiff_cubing" && job.datasetName) {
-      return <span>{`Tiff to WKW conversion of ${job.datasetName}`}</span>;
+    if (job.type === "convert_to_wkw" && job.datasetName) {
+      return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
     } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
       const layerLabel = job.tracingId != null ? "volume annotation" : job.layerName || "a";
       return (
@@ -102,7 +102,7 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderActions = (__: any, job: APIJob) => {
-    if (job.type === "tiff_cubing") {
+    if (job.type === "convert_to_wkw") {
       return (
         <span>
           {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (

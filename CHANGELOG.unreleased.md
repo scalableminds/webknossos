@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed a regression in the task search which could lead to a frontend crash. [#5267](https://github.com/scalableminds/webknossos/pull/5267)
 - Fixed a rendering bug in oblique mode. [#5289](https://github.com/scalableminds/webknossos/pull/5289)
+- Fixed a bug where uploading NMLs from dashboard via file picker was inaccessible. [#5308](https://github.com/scalableminds/webknossos/pull/5308)
 
 ### Removed
 -

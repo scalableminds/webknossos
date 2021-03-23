@@ -139,7 +139,7 @@ export default {
         },
         scale: {
           type: "array",
-          items: { type: "number", minimum: 0, exclusiveMinimum: true },
+          items: { type: "number", exclusiveMinimum: 0 },
           minItems: 3,
           maxItems: 3,
         },

@@ -96,7 +96,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
                 <Button
                   onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
                 >
-                  Got to Dataset Settings
+                  Go to Dataset Settings
                 </Button>
                 <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
               </React.Fragment>

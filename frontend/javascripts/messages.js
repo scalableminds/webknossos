@@ -349,6 +349,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The project report page could not be refreshed. Please try to reload the page.",
   planned_maintenance:
     "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
-  "ui.moving_center_tab_into_border_error": "You cannot move this tab into a border!",
-  "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this border!",
+  "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
+  "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
 };

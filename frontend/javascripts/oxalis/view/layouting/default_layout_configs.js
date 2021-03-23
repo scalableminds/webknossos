@@ -22,6 +22,15 @@ import Constants, {
   ArbitraryViewsToName,
 } from "oxalis/constants";
 
+import type {
+  RowOrTabsetNode,
+  RowNode,
+  TabsetNode,
+  TabNode,
+  GlobalConfig,
+  Border,
+} from "./flex_layout_types";
+
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 9;
 export const layoutHeaderHeight = 20;
@@ -51,7 +60,7 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
-function Row(children: Array<Object>, weight?: number): Object {
+function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
   weight = weight != null ? weight : 100;
   return {
     type: "row",
@@ -60,7 +69,11 @@ function Row(children: Array<Object>, weight?: number): Object {
   };
 }
 
-function Tabset(children: Array<Object>, weight?: number, defaultSelectedIndex?: number): Object {
+function Tabset(
+  children: Array<TabNode>,
+  weight?: number,
+  defaultSelectedIndex?: number,
+): TabsetNode {
   weight = weight != null ? weight : 100;
   return {
     type: "tabset",
@@ -70,7 +83,7 @@ function Tabset(children: Array<Object>, weight?: number, defaultSelectedIndex?:
   };
 }
 
-function Tab(name: string, id: string, component: string): Object {
+function Tab(name: string, id: string, component: string): TabNode {
   return {
     type: "tab",
     name,
@@ -102,7 +115,7 @@ Object.keys(ArbitraryViews).forEach(viewportId => {
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 
-const globalLayoutSettings = {
+const globalLayoutSettings: GlobalConfig = {
   splitterSize: 4,
   tabEnableRename: false,
   tabEnableClose: false,
@@ -110,12 +123,15 @@ const globalLayoutSettings = {
   tabSetTabStripHeight: 20,
 };
 
-const subLayoutGlobalSettings = {
+const subLayoutGlobalSettings: GlobalConfig = {
   ...globalLayoutSettings,
   tabSetEnableDivide: false,
 };
 
-function buildTabsets(setsOfTabs: Array<Array<Object>>, defaultSelectedIndex?: number) {
+function buildTabsets(
+  setsOfTabs: Array<Array<TabNode>>,
+  defaultSelectedIndex?: number,
+): Array<TabsetNode> {
   const tabsetWeight = 100 / setsOfTabs.length;
   const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight, defaultSelectedIndex));
   return tabsets;
@@ -123,10 +139,10 @@ function buildTabsets(setsOfTabs: Array<Array<Object>>, defaultSelectedIndex?: n
 
 function buildBorder(
   side,
-  setsOfTabs: Array<Array<Object>>,
+  setsOfTabs: Array<Array<TabNode>>,
   width: number,
   defaultSelectedIndex?: number,
-): Object {
+): Border {
   const tabsets = buildTabsets(setsOfTabs, defaultSelectedIndex);
   const border = {
     type: "border",
@@ -153,7 +169,7 @@ function buildBorder(
   return border;
 }
 
-function buildMainLayout(rowsOfSetOfTabs: Array<Object>) {
+function buildMainLayout(rowsOfSetOfTabs: Array<Array<Array<TabNode>>>): RowNode {
   const rowWeight = 100 / rowsOfSetOfTabs.length;
   const rows = rowsOfSetOfTabs.map(setsOfTabs => {
     const tabsets = buildTabsets(setsOfTabs);
@@ -174,7 +190,12 @@ function buildLayout(settings, borders, mainLayout) {
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
   const defaultBorderWidth = isInIframe ? 200 : 400;
-  const leftSiderbar = buildBorder("left", [Object.values(settingsTabs)], 400, 1);
+  const leftSiderbar = buildBorder(
+    "left",
+    [((Object.values(settingsTabs): any): Array<TabNode>)],
+    400,
+    1,
+  );
   const rightBorderWithSkeleton = buildBorder(
     "right",
     [

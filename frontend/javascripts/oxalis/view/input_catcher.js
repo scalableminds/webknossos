@@ -27,7 +27,7 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
   if (!noneOverflowWrapper) {
     return { top: 0, left: 0, width: 0, height: 0 };
   }
-  // If the inputcatcher does not need to be quadratic, the extent is handle by css automatically.
+  // If the inputcatcher does not need to be quadratic, the extent is handled by css automatically.
   if (makeQuadratic) {
     const getQuadraticExtent = () => {
       let { width, height } = noneOverflowWrapper.getBoundingClientRect();

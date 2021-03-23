@@ -204,6 +204,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   renderSettingsTab(id: string): ?React.Node {
+    console.log("rendering id", id);
     switch (id) {
       case "UserSettingsView": {
         return <UserSettingsView />;
@@ -271,7 +272,13 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return this.renderTab(id);
       }
       case "settings-tab": {
-        return this.renderSettingsTab(id);
+        const activeNodeOfTabset = node.getParent().getSelectedNode();
+        if (activeNodeOfTabset.getId() === id) {
+          return this.renderSettingsTab(id);
+        } else {
+          // If the current settings tab is not selected, we do no render its contents so save performance.
+          return null;
+        }
       }
       case "viewport": {
         return this.renderViewport(id);

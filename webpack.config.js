@@ -1,3 +1,4 @@
+// @flow
 module.exports = function(env = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
@@ -25,13 +26,9 @@ module.exports = function(env = {}) {
       chunkFilename: "[name].css",
     }),
     // new HardSourceWebpackPlugin(),
-    // GoldenLayout requires these libraries to be available in
-    // the global scope
     new webpack.ProvidePlugin({
       React: "react",
       ReactDOM: "react-dom",
-      $: "jquery",
-      jQuery: "jquery",
     }),
     new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
       dot: true,

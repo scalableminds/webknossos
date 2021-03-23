@@ -163,7 +163,9 @@ class SceneController {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  constructSceneMesh(color: typeof THREE.Color, geometry: typeof THREE.Geometry) {
+  constructSceneMesh(cellId: number, geometry: typeof THREE.Geometry) {
+    const [hue] = jsConvertCellIdToHSLA(cellId);
+    const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
     const meshMaterial = new THREE.MeshLambertMaterial({ color });
     meshMaterial.side = THREE.DoubleSide;
     meshMaterial.transparent = true;
@@ -193,10 +195,7 @@ class SceneController {
     geometry.computeVertexNormals();
     geometry.computeFaceNormals();
     const meshNumber = _.size(this.stlMeshes);
-    const rgbColor = ColorGenerator.distinctColorForId(meshNumber);
-    const { h } = new THREE.Color().setRGB(rgbColor[0], rgbColor[1], rgbColor[2]).getHSL();
-    const color = new THREE.Color().setHSL(h, 0.5, 0.1);
-    const mesh = this.constructSceneMesh(color, geometry);
+    const mesh = this.constructSceneMesh(meshNumber, geometry);
     this.meshesRootGroup.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
@@ -221,9 +220,7 @@ class SceneController {
   }
 
   addIsosurfaceFromGeometry(geometry: typeof THREE.Geometry, segmentationId: number): void {
-    const [hue] = jsConvertCellIdToHSLA(segmentationId);
-    const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
-    const mesh = this.constructSceneMesh(color, geometry);
+    const mesh = this.constructSceneMesh(segmentationId, geometry);
 
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       const newGroup = new THREE.Group();

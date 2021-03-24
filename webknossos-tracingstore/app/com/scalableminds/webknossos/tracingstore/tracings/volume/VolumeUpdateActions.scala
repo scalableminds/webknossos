@@ -39,6 +39,8 @@ case class UpdateTracingVolumeAction(
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateTracing", actionTimestamp, Json.obj())
+
+  override def isViewOnlyChange: Boolean = true
 }
 
 object UpdateTracingVolumeAction {
@@ -85,6 +87,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
     CompactVolumeUpdateAction("updateUserBoundingBoxVisibility",
                               actionTimestamp,
                               Json.obj("boundingBoxId" -> boundingBoxId, "newVisibility" -> isVisible))
+  override def isViewOnlyChange: Boolean = true
 }
 
 object UpdateUserBoundingBoxVisibility {
@@ -123,6 +126,8 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[Str
 
   override def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateTdCamera", actionTimestamp, Json.obj())
+
+  override def isViewOnlyChange: Boolean = true
 }
 
 object UpdateTdCamera {

@@ -472,7 +472,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <Row type="flex" gutter={50}>
         <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-          <a href="https://youtu.be/W-dosptovEU?t=52">watch this video</a>.
+          <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
         </FeatureCard>
         <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
@@ -501,8 +501,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
         </FeatureCard>
         <FeatureCard header="Contact Us" icon={<Icon type="customer-service" />}>
-          <a href="mailto:hello@scalableminds.com">Get in touch</a>, if you have any further
-          questions or need help getting started.
+          <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}
+          <a href="https://forum.image.sc/tag/webknossos" target="_blank" rel="noopener noreferrer">
+            write a post in the forum
+          </a>
+          , if you have any further questions or need help getting started.
         </FeatureCard>
       </Row>
     </StepHeader>

@@ -1,5 +1,5 @@
 ## Publications
-The following publications used webKnossos for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@scalableminds.com) if your publication is missing.
+The following publications used webKnossos for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
 
 ## 2019
 * Alessandro Motta, Manuel Berning, Kevin M. Boergens, Benedikt Staffler, Marcel Beining, Sahil Loomba, Philipp Hennig, Heiko Wissler, Moritz Helmstaedter.

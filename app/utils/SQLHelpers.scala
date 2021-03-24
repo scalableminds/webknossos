@@ -222,6 +222,15 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
 
   def parse(row: X#TableElementType): Fox[C]
 
+  def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
+    for {
+      firstRow <- rowSeq.headOption.toFox ?~> s"Could not find object queried by $queryLabel in $collectionName"
+      parsed <- parse(firstRow) ?~> s"Could not parse database row for object queried by $queryLabel in $collectionName"
+    } yield parsed
+
+  def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =
+    Fox.combined(rowSeq.toList.map(parse))
+
   @silent // suppress warning about unused implicit ctx, as it is used in subclasses
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
     run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {

@@ -178,7 +178,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     } yield parsed
 
   def findAllByProjectAndTaskTypeAndIdsAndUser(
-      projectNameOpt: Option[String],
+      projectIdOpt: Option[ObjectId],
       taskTypeIdOpt: Option[ObjectId],
       taskIdsOpt: Option[List[ObjectId]],
       userIdOpt: Option[ObjectId],
@@ -192,10 +192,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       case Some(true) => "ORDER BY random()"
       case _          => ""
     }
-    val projectFilterFox = projectNameOpt match {
-      case Some(pName) => for { project <- projectDAO.findOneByName(pName) } yield s"(t._project = '${project._id}')"
-      case _           => Fox.successful("true")
-    }
+    val projectFilter = projectIdOpt.map(pId => s"(t._project = '$pId')").getOrElse("true")
     val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '$ttId')").getOrElse("true")
     val taskIdsFilter = taskIdsOpt
       .map(tIds => if (tIds.isEmpty) "false" else s"(t._id in ${writeStructTupleWithQuotes(tIds.map(_.toString))})")
@@ -209,7 +206,6 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       .getOrElse("true")
 
     for {
-      projectFilter <- projectFilterFox
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       q = sql"""select #${columnsWithPrefix("t.")}
                 from webknossos.tasks_ t

@@ -191,7 +191,7 @@ Samplecountry
           "sampleTaskType",
           "Check those cells out!"
         )
-        for { _ <- taskTypeDAO.insertOne(taskType) } yield ()
+        for { _ <- taskTypeDAO.insertOne(taskType, defaultOrganization._id) } yield ()
       } else Fox.successful(())
     }.toFox
 
@@ -207,7 +207,7 @@ Samplecountry
                                 paused = false,
                                 Some(5400000),
                                 isBlacklistedFromReport = false)
-          for { _ <- projectDAO.insertOne(project) } yield ()
+          for { _ <- projectDAO.insertOne(project, defaultOrganization._id) } yield ()
         }
       } else Fox.successful(())
     }.toFox

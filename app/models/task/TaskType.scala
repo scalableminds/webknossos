@@ -123,14 +123,14 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse)) ?~> ("SQLDAO Error: Could not parse one of the database rows in " + collectionName)
     } yield parsed
 
-  def insertOne(t: TaskType): Fox[Unit] =
+  def insertOne(t: TaskType, organizationId: ObjectId): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.taskTypes(
-                          _id, _team, summary, description, settings_allowedModes, settings_preferredMode,
+                          _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,
                           settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode,
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
-                       values(${t._id.id}, ${t._team.id}, ${t.summary}, ${t.description},
+                       values(${t._id.id}, $organizationId, ${t._team.id}, ${t.summary}, ${t.description},
                               '#${sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))}',
                               #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                               ${t.settings.branchPointsAllowed},
@@ -145,7 +145,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for { //note that t.created is skipped
+    for { // note that t.created is immutable, hence skipped here
       _ <- assertUpdateAccess(t._id)
       allowedModesLiteral = sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))
       resolutionMinLiteral = optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))

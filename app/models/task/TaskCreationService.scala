@@ -398,7 +398,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
             dataSet._id,
             description = tuple._1.map(_._1.description).openOr(None)
         ))
-      warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet)
+      warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet, requestingUser)
       zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
       taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
       result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
@@ -458,11 +458,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _          => Fox.successful(None)
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet)(
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet, requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
-      projects: List[Project] <- Fox.serialCombined(projectNames)(projectDAO.findOneByName(_))
+      projects: List[Project] <- Fox.serialCombined(projectNames)(
+        projectDAO.findOneByNameAndOrganization(_, requestingUser._organization))
       dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
       noAccessTeamIds = projects.map(_._team).diff(dataSetTeams.map(_._id))
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
@@ -491,18 +492,17 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _ => Fox.successful(())
     }
 
-  private def createTaskWithoutAnnotationBase(
-      paramBox: Box[TaskParameters],
-      skeletonTracingIdBox: Box[Option[String]],
-      volumeTracingIdBox: Box[Option[String]],
-      requestingUser: User)(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Task] =
+  private def createTaskWithoutAnnotationBase(paramBox: Box[TaskParameters],
+                                              skeletonTracingIdBox: Box[Option[String]],
+                                              volumeTracingIdBox: Box[Option[String]],
+                                              requestingUser: User)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))
       task = Task(

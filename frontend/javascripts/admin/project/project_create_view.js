@@ -92,9 +92,10 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditMode = this.props.projectId != null;
+    const projectName = this.props.form.getFieldValue("name");
     const title =
       isEditMode && this.props.projectId
-        ? `Update Project ${this.props.projectId}`
+        ? `Update Project ${projectName || this.props.projectId}`
         : "Create Project";
     const fullWidth = { width: "100%" };
 

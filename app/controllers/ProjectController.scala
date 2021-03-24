@@ -185,7 +185,7 @@ class ProjectController @Inject()(projectService: ProjectService,
         newUserId <- (request.body \ "userId").asOpt[String].toFox ?~> "user.id.notFound" ~> NOT_FOUND
         newUserIdValidated <- ObjectId.parse(newUserId)
         activeAnnotations <- annotationDAO.findAllActiveForProject(project._id)
-        updated <- Fox.serialCombined(activeAnnotations) { id =>
+        _ <- Fox.serialCombined(activeAnnotations) { id =>
           annotationService.transferAnnotationToUser(AnnotationType.Task.toString,
                                                      id.toString,
                                                      newUserIdValidated,

@@ -29,6 +29,7 @@ import type {
   TabNode,
   GlobalConfig,
   Border,
+  ModelConfig,
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
@@ -60,12 +61,12 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
-function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
-  weight = weight != null ? weight : 100;
+function Tab(name: string, id: string, component: string): TabNode {
   return {
-    type: "row",
-    weight,
-    children,
+    type: "tab",
+    name,
+    component,
+    id,
   };
 }
 
@@ -83,12 +84,12 @@ function Tabset(
   };
 }
 
-function Tab(name: string, id: string, component: string): TabNode {
+function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
+  weight = weight != null ? weight : 100;
   return {
-    type: "tab",
-    name,
-    component,
-    id,
+    type: "row",
+    weight,
+    children,
   };
 }
 
@@ -179,7 +180,7 @@ function buildMainLayout(rowsOfSetOfTabs: Array<Array<Array<TabNode>>>): RowNode
   return mainLayout;
 }
 
-function buildLayout(settings, borders, mainLayout) {
+function buildLayout(settings, borders, mainLayout): ModelConfig {
   return {
     global: settings,
     borders,

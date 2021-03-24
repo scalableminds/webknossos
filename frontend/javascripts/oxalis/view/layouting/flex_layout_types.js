@@ -16,8 +16,8 @@ export type TabsetNode = {
   children: Array<TabNode>,
 };
 
-// eslint-disable-next-line no-use-before-define
-export type RowOrTabsetNode = { ...RowNode, ...TabsetNode };
+// Using TabsetNode | RowNode does not work as flow is to pessimistic.
+export type RowOrTabsetNode = Object;
 
 export type RowNode = {
   type: "row",
@@ -47,5 +47,5 @@ export type GlobalConfig = {
 export type ModelConfig = {
   global: GlobalConfig,
   borders: Array<Border>,
-  layout: mainLayout,
+  layout: RowNode,
 };

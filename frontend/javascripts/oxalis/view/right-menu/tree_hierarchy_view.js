@@ -131,7 +131,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       prevProps.activeTreeId !== this.props.activeTreeId ||
       prevProps.activeGroupId !== this.props.activeGroupId;
     if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
-      console.log("componentDidUpdate Workaround");
       // eslint-disable-next-line react/no-did-update-set-state
       await this.setState({ searchFocusOffset: 1 });
       // eslint-disable-next-line react/no-did-update-set-state
@@ -278,14 +277,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
     if (isVisible) {
-      console.log("handleTreeDropdownMenuVisibility. treeId", treeId);
       this.setState({ activeTreeDropdownId: treeId });
       return;
     }
     if (this.state.isColorPickerVisible) {
       return;
     }
-    console.log("handleTreeDropdownMenuVisibility to null");
     this.setState({ activeTreeDropdownId: null });
   };
 
@@ -438,12 +435,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Menu.Item>
         </Menu>
       );
-      console.log(
-        `this.state.activeTreeDropdownId (${this.state.activeTreeDropdownId}) === tree.treeId (${
-          tree.treeId
-        })`,
-        this.state.activeTreeDropdownId === tree.treeId,
-      );
       const dropdownMenu = (
         <Dropdown
           overlay={menu}
@@ -507,7 +498,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    console.log("tree hierarchy view render");
     const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>

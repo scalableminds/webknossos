@@ -10,7 +10,6 @@ ALTER TABLE webknossos.projects DROP COLUMN _organization;
 ALTER TABLE webknossos.tasktypes DROP COLUMN _organization;
 
 ALTER TABLE webknossos.taskTypes ADD CONSTRAINT tasktypes_summary_key UNIQUE(summary);
-ALTER TABLE webknossos.projects ADD CONSTRAINT projects_name_key UNIQUE(name);
 
 CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects WHERE NOT isDeleted;
 CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;

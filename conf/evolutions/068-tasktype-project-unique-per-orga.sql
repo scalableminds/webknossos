@@ -9,7 +9,6 @@ ALTER TABLE webknossos.taskTypes ADD COLUMN _organization CHAR(24);
 ALTER TABLE webknossos.projects ADD COLUMN _organization CHAR(24);
 
 ALTER TABLE webknossos.taskTypes DROP CONSTRAINT tasktypes_summary_key;
-ALTER TABLE webknossos.projects DROP CONSTRAINT projects_name_key;
 
 UPDATE webknossos.projects set _organization = (select _organization from webknossos.users where _id = _owner);
 UPDATE webknossos.tasktypes set _organization = (select _organization from webknossos.teams where _id = _team);

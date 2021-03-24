@@ -827,17 +827,17 @@ export async function getJobs(): Promise<Array<APIJob>> {
   }));
 }
 
-export async function startCubingJob(
+export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,
   scale: Vector3,
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
-    `/api/jobs/run/cubing/${organizationName}/${datasetName}?scale=${scale.toString()}`,
+    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}`,
   );
 }
 
-export async function startTiffExportJob(
+export async function startExportTiffJob(
   datasetName: string,
   organizationName: string,
   bbox: Vector6,
@@ -849,7 +849,7 @@ export async function startTiffExportJob(
   const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
   const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
   return Request.receiveJSON(
-    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}?bbox=${bbox.join(
+    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
     )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}`,
   );

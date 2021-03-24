@@ -1,5 +1,10 @@
 // @flow
-module.exports = function(env = {}) {
+type EnvObject = {
+  production?: true,
+  PORT?: number,
+};
+
+module.exports = function(env: EnvObject = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
   var fs = require("fs");
@@ -24,11 +29,6 @@ module.exports = function(env = {}) {
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
-    }),
-    // new HardSourceWebpackPlugin(),
-    new webpack.ProvidePlugin({
-      React: "react",
-      ReactDOM: "react-dom",
     }),
     new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
       dot: true,
@@ -146,7 +146,7 @@ module.exports = function(env = {}) {
     devServer: {
       contentBase: `${__dirname}/public`,
       publicPath: "/assets/bundle/",
-      port: env.PORT ? env.PORT : 9002,
+      port: env.PORT != null ? env.PORT : 9002,
       hot: false,
       inline: false,
     },

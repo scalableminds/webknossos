@@ -76,10 +76,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasksRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      r <- run(sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasksRow])
+      parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
@@ -164,17 +162,15 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task")
       )
-      rList <- run(findTaskOfInsertedAnnotationQ)
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      r <- run(findTaskOfInsertedAnnotationQ)
+      parsed <- parseFirst(r, "task assignment query")
     } yield (parsed, annotationId)
   }
 
   def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false): Fox[Task] =
     for {
-      rList <- run(sql"#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}".as[TasksRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      r <- run(sql"#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}".as[TasksRow])
+      parsed <- parseFirst(r, "task peek query")
     } yield parsed
 
   def findAllByProjectAndTaskTypeAndIdsAndUser(

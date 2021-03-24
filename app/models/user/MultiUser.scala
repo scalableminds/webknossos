@@ -97,13 +97,10 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where email = $email and #$accessQuery".as[MultiusersRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
-    } yield {
-      parsed
-    }
+      parsed <- parseFirst(r, email)
+    } yield parsed
 
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {

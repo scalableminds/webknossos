@@ -108,17 +108,16 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasktypesRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      parsed <- parseFirst(r, id.toString)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TasktypesRow])
-      parsed <- Fox.combined(r.toList.map(parse)) ?~> ("SQLDAO Error: Could not parse one of the database rows in " + collectionName)
+      parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(t: TaskType, organizationId: ObjectId): Fox[Unit] =

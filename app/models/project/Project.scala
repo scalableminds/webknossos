@@ -89,7 +89,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[ProjectsRow])
-      parsed <- parseFirst(r, id.toString)
+      parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =

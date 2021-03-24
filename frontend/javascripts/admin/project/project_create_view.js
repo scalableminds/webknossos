@@ -21,7 +21,7 @@ const FormItem = Form.Item;
 const { Option } = Select;
 
 type OwnProps = {|
-  projectName?: ?string,
+  projectId?: ?string,
 |};
 type StateProps = {|
   activeUser: APIUser,
@@ -62,7 +62,7 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   async applyDefaults() {
-    const project = this.props.projectName ? await getProject(this.props.projectName) : null;
+    const project = this.props.projectId ? await getProject(this.props.projectId) : null;
     const defaultValues = {
       priority: 100,
       expectedTime: 90,
@@ -79,8 +79,8 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
-        if (this.props.projectName) {
-          await updateProject(this.props.projectName, formValues);
+        if (this.props.projectId) {
+          await updateProject(this.props.projectId, formValues);
         } else {
           await createProject(formValues);
         }
@@ -91,10 +91,10 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    const isEditMode = this.props.projectName != null;
+    const isEditMode = this.props.projectId != null;
     const title =
-      isEditMode && this.props.projectName
-        ? `Update Project ${this.props.projectName}`
+      isEditMode && this.props.projectId
+        ? `Update Project ${this.props.projectId}`
         : "Create Project";
     const fullWidth = { width: "100%" };
 

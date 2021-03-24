@@ -224,7 +224,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
 
   def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
     for {
-      firstRow <- rowSeq.headOption.toFox ?~> s"Could not find object queried by $queryLabel in $collectionName"
+      firstRow <- rowSeq.headOption.toFox
       parsed <- parse(firstRow) ?~> s"Could not parse database row for object queried by $queryLabel in $collectionName"
     } yield parsed
 

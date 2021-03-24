@@ -99,13 +99,11 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
-       or (select _organization from webknossos.teams where webknossos.teams._id = _team)
-          in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+       or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def updateAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
-      or (select _organization from webknossos.teams where webknossos.teams._id = _team)
-        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+       or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {

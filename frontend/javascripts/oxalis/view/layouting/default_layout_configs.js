@@ -142,16 +142,16 @@ function buildBorder(
   side,
   setsOfTabs: Array<Array<TabNode>>,
   width: number,
+  isBorderOpen: boolean,
   defaultSelectedIndex?: number,
 ): Border {
   const tabsets = buildTabsets(setsOfTabs, defaultSelectedIndex);
-  const border = {
+  const border: Border = {
     type: "border",
     location: side,
     id: `${side}-border`,
     barSize: 0.01,
     size: width,
-    selected: 0,
     children: [
       {
         type: "tab",
@@ -167,6 +167,9 @@ function buildBorder(
       },
     ],
   };
+  if (isBorderOpen) {
+    border.selected = 0;
+  }
   return border;
 }
 
@@ -190,11 +193,15 @@ function buildLayout(settings, borders, mainLayout): ModelConfig {
 
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
-  const defaultBorderWidth = isInIframe ? 200 : 400;
-  const leftSiderbar = buildBorder(
+  const defaultBorderWidth = isInIframe
+    ? Constants.DEFAULT_BORDER_WIDTH_IN_IFRAME
+    : Constants.DEFAULT_BORDER_WIDTH;
+  const borderIsOpenByDefault = !isInIframe;
+  const leftBorder = buildBorder(
     "left",
     [((Object.values(settingsTabs): any): Array<TabNode>)],
-    400,
+    defaultBorderWidth,
+    borderIsOpenByDefault,
     1,
   );
   const rightBorderWithSkeleton = buildBorder(
@@ -204,11 +211,13 @@ const _getDefaultLayouts = () => {
       [infoTabs.MappingInfoView, infoTabs.MeshesView, infoTabs.AbstractTreeTabView],
     ],
     defaultBorderWidth,
+    borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
     "right",
     [[infoTabs.DatasetInfoTabView, infoTabs.MappingInfoView, infoTabs.MeshesView]],
     defaultBorderWidth,
+    borderIsOpenByDefault,
   );
   const OrthoMainLayout = buildMainLayout([
     [[OrthoViewports.PLANE_XY], [OrthoViewports.PLANE_XZ]],
@@ -228,7 +237,7 @@ const _getDefaultLayouts = () => {
   const buildOrthoLayout = (withSkeleton: boolean, is2D: boolean) =>
     buildLayout(
       globalLayoutSettings,
-      [leftSiderbar, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
+      [leftBorder, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
       is2D ? OrthoMainLayout2d : OrthoMainLayout,
     );
 
@@ -249,7 +258,7 @@ const _getDefaultLayouts = () => {
   const buildArbitraryLayout = (withSkeleton: boolean) =>
     buildLayout(
       globalLayoutSettings,
-      [leftSiderbar, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
+      [leftBorder, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
       ArbitraryMainLayout,
     );
 

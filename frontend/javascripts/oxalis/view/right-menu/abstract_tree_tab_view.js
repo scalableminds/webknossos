@@ -15,7 +15,6 @@ import AbstractTreeRenderer, {
 } from "oxalis/view/right-menu/abstract_tree_renderer";
 import window from "libs/window";
 
-type OwnProps = {||};
 type StateProps = {|
   dispatch: Dispatch<*>,
   skeletonTracing: ?SkeletonTracing,
@@ -113,4 +112,4 @@ function mapStateToProps(state: OxalisState): $Shape<Props> {
   return { skeletonTracing: state.tracing.skeleton };
 }
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(AbstractTreeView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(AbstractTreeView);

@@ -31,6 +31,7 @@ import {
   getBorderOpenStatus,
   getBorderWidths,
   adjustModelToBorderOpenStatus,
+  isTabsetInBorder,
 } from "./flex_layout_helper";
 
 const { Footer } = Layout;
@@ -65,7 +66,9 @@ type State = {
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
-  borderOpenStatus: BorderOpenStatus = { left: false, right: false };
+  // This variable stores the border open status that should be active, when no main tab is maximized.
+  // It is used to compare with the actual border open status that is stored in the store.
+  borderOpenStatusWhenNotMaximized: BorderOpenStatus = { left: false, right: false };
   maximizedItemId: ?string = null;
 
   constructor(props: Props) {
@@ -73,8 +76,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const model = this.getCurrentModel();
     this.unbindListeners = [];
     this.addListeners();
-    this.borderOpenStatus = getBorderOpenStatus(model);
-    props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatus));
+    this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
+    props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
     this.updateToModelStateAndAdjustIt(model);
     const { left, right } = getBorderWidths(model);
     this.state = { model, leftBorderButtonPosition: left, rightBorderButtonPosition: right };
@@ -119,7 +122,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   updateToModelStateAndAdjustIt(model: Model) {
     this.maximizedItemId = getMaximizedItemId(model);
-    adjustModelToBorderOpenStatus(model, this.borderOpenStatus);
+    adjustModelToBorderOpenStatus(model, this.borderOpenStatusWhenNotMaximized);
     model.setOnAllowDrop(this.allowDrop);
     return model;
   }
@@ -204,7 +207,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   renderSettingsTab(id: string): ?React.Node {
-    console.log("rendering id", id);
     switch (id) {
       case "UserSettingsView": {
         return <UserSettingsView />;
@@ -258,7 +260,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       <FlexLayout.Layout
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
-        onAction={this.onAction}
+        onAction={data => this.onAction(data, false)}
         onModelChange={() => this.onLayoutChange()}
       />
     );
@@ -302,8 +304,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   onMaximizeToggle = () => {
     const currentBorderOpenStatus = Store.getState().uiInformation.borderOpenStatus;
     const isMaximizing = this.maximizedItemId != null;
-    // If a tab is maximized, this.borderOpenStatus will not change and therefore save the BorderOpenStatus before maximizing.
-    Object.entries(this.borderOpenStatus).forEach(([side, isOpen]) => {
+    // If a tab is maximized, this.borderOpenStatusWhenNotMaximized will not change and therefore save the BorderOpenStatus before maximizing.
+    Object.entries(this.borderOpenStatusWhenNotMaximized).forEach(([side, isOpen]) => {
       if ((isOpen && isMaximizing) || (!isMaximizing && currentBorderOpenStatus[side] !== isOpen)) {
         // Close all border if a tab is maximized and restore border status before maximizing.
         this.toggleBorder(side, false);
@@ -316,9 +318,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.setState({ leftBorderButtonPosition: left, rightBorderButtonPosition: right });
   };
 
-  onAction = (action: Action) => {
+  onAction = (action: Action, reactToMaximize: boolean = true) => {
     const { type, data } = action;
-    if (type === "FlexLayout_MaximizeToggle") {
+    const nodeId = data.node;
+    if (type === "FlexLayout_MaximizeToggle" && reactToMaximize) {
       if (data.node === this.maximizedItemId) {
         this.maximizedItemId = null;
       } else {
@@ -327,7 +330,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       this.onMaximizeToggle();
     }
     if (type === "FlexLayout_AdjustBorderSplit") {
-      const side = data.node === "border_left" ? "left" : "right";
+      const side = nodeId === "border_left" ? "left" : "right";
       const width = data.pos;
       if (width < MIN_BORDER_WIDTH) {
         this.toggleBorder(side);
@@ -350,7 +353,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.updateButtonPosition(this.state.model);
     if (toggleInternalState && this.maximizedItemId == null) {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
-      this.borderOpenStatus[side] = !this.borderOpenStatus[side];
+      this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
     this.onLayoutChange();
   }

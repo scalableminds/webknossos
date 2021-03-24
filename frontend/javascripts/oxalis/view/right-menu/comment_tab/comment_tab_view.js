@@ -77,7 +77,6 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparato
       );
 }
 
-type OwnProps = {||};
 type StateProps = {|
   skeletonTracing: ?SkeletonTracing,
   setActiveNode: (nodeId: number) => void,
@@ -494,7 +493,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(makeSkeletonTracingGuard(CommentTabView));

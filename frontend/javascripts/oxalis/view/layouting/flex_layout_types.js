@@ -31,7 +31,7 @@ export type Border = {
   id: string,
   barSize?: number,
   size?: number,
-  selected?: 0,
+  selected?: number,
   children: Array<TabNode>,
 };
 

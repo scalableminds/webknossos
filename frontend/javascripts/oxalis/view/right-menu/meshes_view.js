@@ -129,7 +129,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-type OwnProps = {||};
 type StateProps = {|
   meshes: Array<MeshMetaData>,
   isImporting: boolean,
@@ -394,7 +393,7 @@ class MeshesView extends React.Component<
   }
 }
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(MeshesView);

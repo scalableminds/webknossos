@@ -1,10 +1,4 @@
-// @flow
-type EnvObject = {
-  production?: true,
-  PORT?: number,
-};
-
-module.exports = function(env: EnvObject = {}) {
+module.exports = function(env = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
   var fs = require("fs");

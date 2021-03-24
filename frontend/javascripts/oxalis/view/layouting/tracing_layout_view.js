@@ -190,10 +190,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   };
 
   // eslint-disable-next-line react/sort-comp
-  debouncedOnLayoutChange = _.debounce(
-    () => this.onLayoutChange(),
-    Constants.RESIZE_THROTTLE_TIME / 5,
-  );
+  debouncedOnLayoutChange = _.debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
 
   saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(

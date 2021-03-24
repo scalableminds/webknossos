@@ -174,6 +174,8 @@ export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
 
 const Constants = {
   ARBITRARY_VIEW: 4,
+  DEFAULT_BORDER_WIDTH: 400,
+  DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
 
   MODE_PLANE_TRACING: "orthogonal",
   MODE_ARBITRARY: "flight",

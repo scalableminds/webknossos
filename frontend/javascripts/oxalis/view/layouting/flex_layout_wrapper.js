@@ -259,7 +259,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       <FlexLayout.Layout
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
-        onAction={data => this.onAction(data, false)}
         onModelChange={() => this.onLayoutChange()}
       />
     );
@@ -317,10 +316,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.setState({ leftBorderButtonPosition: left, rightBorderButtonPosition: right });
   };
 
-  onAction = (action: Action, reactToMaximize: boolean = true) => {
+  onAction = (action: Action) => {
     const { type, data } = action;
     const nodeId = data.node;
-    if (type === "FlexLayout_MaximizeToggle" && reactToMaximize) {
+    if (type === "FlexLayout_MaximizeToggle") {
       if (data.node === this.maximizedItemId) {
         this.maximizedItemId = null;
       } else {
@@ -333,7 +332,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       const width = data.pos;
       if (width < MIN_BORDER_WIDTH) {
         this.toggleBorder(side);
-        // !!!! The model is not up to date !!!!
         return undefined;
       } else {
         this.setState({ [`${side}BorderButtonPosition`]: width });

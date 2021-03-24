@@ -96,7 +96,7 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
 const infoTabs = {};
 // Flow does not understand that the values must have a name and an id.
 Object.entries(TracingTabs).forEach(([tabKey, { name, id }]: any) => {
-  infoTabs[tabKey] = Tab(name, id, "tab");
+  infoTabs[tabKey] = Tab(name, id, "right-border-tab");
 });
 
 const settingsTabs = {};

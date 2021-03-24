@@ -31,7 +31,6 @@ import {
   getBorderOpenStatus,
   getBorderWidths,
   adjustModelToBorderOpenStatus,
-  isTabsetInBorder,
 } from "./flex_layout_helper";
 
 const { Footer } = Layout;
@@ -73,7 +72,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    const model = this.getCurrentModel();
+    const model = this.loadCurrentModel();
     this.unbindListeners = [];
     this.addListeners();
     this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
@@ -113,7 +112,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.unbindListeners.forEach(unbind => unbind());
   }
 
-  getCurrentModel() {
+  loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
     const layout = getLayoutConfig(layoutKey, layoutName);
     const model = FlexLayout.Model.fromJson(layout);
@@ -128,7 +127,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   rebuildLayout() {
-    const model = this.getCurrentModel();
+    const model = this.loadCurrentModel();
     this.updateToModelStateAndAdjustIt(model);
     const { left, right } = getBorderWidths(model);
     this.setState({ model, leftBorderButtonPosition: left, rightBorderButtonPosition: right });
@@ -179,7 +178,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return true;
   }
 
-  renderTab(id: string): ?React.Node {
+  renderRightBorderTab(id: string): ?React.Node {
     switch (id) {
       case "DatasetInfoTabView": {
         return <DatasetInfoTabView />;
@@ -270,8 +269,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const component = node.getComponent();
     const id = node.getId();
     switch (component) {
-      case "tab": {
-        return this.renderTab(id);
+      case "right-border-tab": {
+        return this.renderRightBorderTab(id);
       }
       case "settings-tab": {
         const activeNodeOfTabset = node.getParent().getSelectedNode();

@@ -27,5 +27,6 @@
 
 ## Getting Help
 * [FAQ](./faq.md)
+* [Community Support](https://forum.image.sc/tag/webknossos)
 * [Email Support](mailto:hello@webknossos.org)
 * [Commercial Support](https://scalableminds.com)

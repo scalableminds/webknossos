@@ -14,7 +14,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - 
 
 ### Changed
-- 
+- webKnossos is now part of the [image.sc support community](https://forum.image.sc/tag/webknossos). [#5332](https://github.com/scalableminds/webknossos/pull/5332)
+- Meshes that are imported by the user in the meshes tab are now rendered the same way as generated isosurface meshes. [#5326](https://github.com/scalableminds/webknossos/pull/5326)
 
 ### Fixed
 -

@@ -510,7 +510,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         project._id,
         params.scriptId.map(ObjectId(_)),
         taskTypeIdValidated,
-        params.neededExperience,
+        params.neededExperience.trim,
         params.openInstances, //all instances are open at this time
         params.openInstances,
         tracingTime = None,
@@ -522,7 +522,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         creationInfo = params.creationInfo
       )
       _ <- taskDAO.insertOne(task)
-      _ <- userExperiencesDAO.insertExperienceToListing(params.neededExperience.domain, requestingUser._organization)
+      _ <- userExperiencesDAO.insertExperienceToListing(params.neededExperience.trim.domain,
+                                                        requestingUser._organization)
     } yield task
 
   private def taskToJsonWithOtherFox(taskFox: Fox[Task], otherFox: Fox[Unit])(

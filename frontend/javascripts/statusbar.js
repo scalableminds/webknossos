@@ -1,5 +1,5 @@
 // @flow
-import { Layout } from "antd";
+import { Layout, Col, Tooltip } from "antd";
 import _ from "lodash";
 import { connect } from "react-redux";
 import React from "react";
@@ -94,7 +94,7 @@ class Statusbar extends React.PureComponent<Props, State> {
     if (!hasSegmentation()) {
       return "No segmentation available";
     }
-    const { activeViewport, mousePosition } = this.props;
+    const { activeViewport, mousePosition, activeResolution } = this.props;
     let globalMousePosition;
     if (mousePosition && activeViewport !== OrthoViews.TDView) {
       const [x, y] = mousePosition;
@@ -102,7 +102,6 @@ class Statusbar extends React.PureComponent<Props, State> {
     }
 
     const segmentationLayerName = this.getSegmentationLayer().name;
-
     const cube = this.getSegmentationCube();
 
     const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
@@ -117,20 +116,72 @@ class Statusbar extends React.PureComponent<Props, State> {
     const getPosString = pos => V3.floor(pos).join(",");
     return (
       <Footer style={statusbarStyle} className={collapseAllNavItems ? "collapsed-nav-footer" : ""}>
-        <span style={{ paddingRight: 10 }}>
-          <img
-            src="/assets/images/icon-downsampling.svg"
-            style={{ width: 15, height: 15 }}
-            alt="Resolution"
-          />
-          {this.props.activeResolution.join("-")}{" "}
-        </span>
-        <span style={{ paddingRight: 10 }}>
-          Cell: {getIdForPos(globalMousePosition, renderedZoomStepForMousePosition)}
-        </span>
-        <span style={{ paddingRight: 10 }}>
-          Pos: [{getPosString(globalMousePosition || [0, 0, 0])}]
-        </span>
+        <Col span={6}>
+          <Tooltip
+            title={
+              <div>
+                Currently rendered resolution {activeResolution.join("-")}.<br />
+              </div>
+            }
+            placement="top"
+          >
+            <span>
+              <img
+                src="/assets/images/icon-downsampling.svg"
+                style={{ width: 15, height: 15 }}
+                alt="Resolution"
+              />
+              {activeResolution.join("-")}{" "}
+            </span>
+          </Tooltip>
+          <span style={{ paddingLeft: 30 }}>
+            Cell:{" "}
+            {globalMousePosition
+              ? getIdForPos(globalMousePosition, renderedZoomStepForMousePosition)
+              : "-"}
+          </span>
+          <span style={{ paddingLeft: 30 }}>
+            Pos: [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
+          </span>
+        </Col>
+        <Col span={12}>
+          <span>
+            <img
+              key="move-1"
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-mouse-left-drag.svg"
+              alt="Mouse Left Drag"
+              style={{ height: 12 }}
+            />
+            Move
+          </span>
+          <span style={{ paddingLeft: 30 }}>
+            <img
+              key="move-1"
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-mousewheel.svg"
+              alt="Mouse Wheel"
+              style={{ height: 12 }}
+            />
+            Move along 3rd axis
+          </span>
+          {activeViewport === OrthoViews.TDView && (
+            <span style={{ paddingLeft: 30 }}>
+              <img
+                key="move-1"
+                className="keyboard-mouse-icon"
+                src="/assets/images/icon-mouse-right.svg"
+                alt="Mouse Right"
+                style={{ height: 12 }}
+              />
+              Rotate 3D View
+            </span>
+          )}
+          <span key="zoom" className="bordered" style={{ paddingLeft: 30 }}>
+            I/O
+          </span>{" "}
+          Zoom in/out
+        </Col>
       </Footer>
     );
   }

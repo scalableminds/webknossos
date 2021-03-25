@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Meshes that are imported by the user in the meshes tab are now rendered the same way as generated isosurface meshes. [#5326](https://github.com/scalableminds/webknossos/pull/5326)
 
 ### Fixed
+- Fixed a bug where some values in the project list were displayed incorrectly after pausing/unpausing the project. [#5339](https://github.com/scalableminds/webknossos/pull/5339)
 - Fixed a bug where the page would scroll up unexpectedly when showing various confirm modals. [#5340](https://github.com/scalableminds/webknossos/pull/5340)
 
 ### Removed

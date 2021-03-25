@@ -137,7 +137,8 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     });
   };
 
-  confirmFinish(task: APITaskWithAnnotation) {
+  confirmFinish(task: APITaskWithAnnotation, event: SyntheticInputEvent<>) {
+    event.preventDefault();
     Modal.confirm({
       content: messages["annotation.finish"],
       onOk: async () => {
@@ -206,7 +207,8 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     );
   };
 
-  openTransferModal(annotationId: string) {
+  openTransferModal(annotationId: string, event: SyntheticInputEvent<>) {
+    event.preventDefault();
     this.setState({
       isTransferModalVisible: true,
       currentAnnotationId: annotationId,
@@ -247,7 +249,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         <br />
         {isAdmin || this.props.isAdminView ? (
           <div>
-            <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
+            <a href="#" onClick={event => this.openTransferModal(annotation.id, event)}>
               <Icon type="team" />
               Transfer
             </a>
@@ -267,12 +269,12 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
               Download
             </AsyncLink>
             <br />
-            <a href="#" onClick={() => this.resetTask(annotation)}>
+            <a href="#" onClick={event => this.resetTask(annotation, event)}>
               <Icon type="rollback" />
               Reset
             </a>
             <br />
-            <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
+            <a href="#" onClick={event => this.cancelAnnotation(annotation, event)}>
               <Icon type="delete" />
               Reset and Cancel
             </a>
@@ -280,7 +282,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
           </div>
         ) : null}
         {this.props.isAdminView ? null : (
-          <a href="#" onClick={() => this.confirmFinish(task)}>
+          <a href="#" onClick={event => this.confirmFinish(task, event)}>
             <Icon type="check-circle-o" />
             Finish
           </a>
@@ -289,7 +291,8 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     );
   };
 
-  resetTask(annotation: APIAnnotation) {
+  resetTask(annotation: APIAnnotation, event: SyntheticInputEvent<>) {
+    event.preventDefault();
     Modal.confirm({
       content: messages["task.confirm_reset"],
       cancelText: messages.no,
@@ -301,7 +304,8 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     });
   }
 
-  cancelAnnotation(annotation: APIAnnotation) {
+  cancelAnnotation(annotation: APIAnnotation, event: SyntheticInputEvent<>) {
+    event.preventDefault();
     const annotationId = annotation.id;
 
     Modal.confirm({

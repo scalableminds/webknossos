@@ -67,7 +67,8 @@ class TeamListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteTeam = (team: APITeam) => {
+  deleteTeam = (team: APITeam, event: SyntheticInputEvent<>) => {
+    event.preventDefault();
     Modal.confirm({
       title: messages["team.delete"],
       onOk: async () => {

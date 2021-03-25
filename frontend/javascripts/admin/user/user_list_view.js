@@ -95,7 +95,12 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     });
   }
 
-  activateUser = (selectedUser: APIUser, isActive: boolean = true): void => {
+  setUserActiveState = (
+    selectedUser: APIUser,
+    isActive: boolean,
+    event: SyntheticInputEvent<>,
+  ): void => {
+    event.preventDefault();
     this.setState(prevState => {
       const newUsers = prevState.users.map(user => {
         if (selectedUser.id === user.id) {
@@ -114,8 +119,12 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     });
   };
 
-  deactivateUser = (user: APIUser): void => {
-    this.activateUser(user, false);
+  activateUser = (user: APIUser, event: SyntheticInputEvent<>): void => {
+    this.setUserActiveState(user, true, event);
+  };
+
+  deactivateUser = (user: APIUser, event: SyntheticInputEvent<>): void => {
+    this.setUserActiveState(user, false, event);
   };
 
   changeEmail = (selectedUser: APIUser, newEmail: string): void => {
@@ -190,7 +199,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           <Row key={user.id} gutter={16}>
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
-              <a href="#" onClick={() => this.activateUser(user)}>
+              <a href="#" onClick={event => this.activateUser(user, event)}>
                 <Icon type="user-add" />
                 Activate User
               </a>
@@ -497,13 +506,13 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                   {// eslint-disable-next-line no-nested-ternary
                   user.isActive ? (
                     this.props.activeUser.isAdmin ? (
-                      <a href="#" onClick={() => this.deactivateUser(user)}>
+                      <a href="#" onClick={event => this.deactivateUser(user, event)}>
                         <Icon type="user-delete" />
                         Deactivate User
                       </a>
                     ) : null
                   ) : (
-                    <a href="#" onClick={() => this.activateUser(user)}>
+                    <a href="#" onClick={event => this.activateUser(user, event)}>
                       <Icon type="user-add" />
                       Activate User
                     </a>

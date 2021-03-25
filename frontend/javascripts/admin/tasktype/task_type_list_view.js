@@ -70,7 +70,8 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteTaskType = (taskType: APITaskType) => {
+  deleteTaskType = (taskType: APITaskType, event: SyntheticInputEvent<>) => {
+    event.preventDefault();
     Modal.confirm({
       title: messages["taskType.delete"],
       onOk: async () => {

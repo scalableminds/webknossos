@@ -65,7 +65,8 @@ class ScriptListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteScript = (script: APIScript) => {
+  deleteScript = (script: APIScript, event: SyntheticInputEvent<>) => {
+    event.preventDefault();
     Modal.confirm({
       title: messages["script.delete"],
       onOk: async () => {

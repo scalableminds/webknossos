@@ -5,9 +5,11 @@ import java.nio.file.{Path, _}
 
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
+import org.apache.commons.io.FileUtils
 
 import scala.collection.JavaConverters._
 import scala.reflect.io.Directory
+import scala.util.Random
 
 object PathUtils extends PathUtils
 
@@ -158,6 +160,14 @@ trait PathUtils extends LazyLogging {
     if (directory.deleteRecursively()) {
       Full(())
     } else Failure(f"Failed to delete directory $path")
+  }
+
+  // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
+  def moveDirectoryViaTemp(source: Path, dst: Path): Unit = {
+    val tmpId = Random.alphanumeric.take(10).mkString("")
+    val tmpPath = source.getParent.resolve(s".${tmpId}")
+    FileUtils.moveDirectory(source.toFile, tmpPath.toFile)
+    FileUtils.moveDirectory(tmpPath.toFile, dst.toFile)
   }
 
 }

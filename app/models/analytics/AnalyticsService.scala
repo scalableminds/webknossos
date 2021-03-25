@@ -147,11 +147,19 @@ case class DownloadAnnotationEvent(user: User, annotationId: String, annotationT
     Fox.successful(Json.obj("annotation_id" -> annotationId, "annotation_type" -> annotationType))
 }
 
-case class UpdateAnnotationEvent(user: User, annotation: Annotation)(implicit ec: ExecutionContext)
+case class UpdateAnnotationEvent(user: User, annotation: Annotation, changesCount: Int)(implicit ec: ExecutionContext)
     extends AnalyticsEvent {
   def eventType: String = "update_annotation"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("annotation_id" -> annotation._id.id))
+    Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "changes_count" -> changesCount))
+}
+
+case class UpdateAnnotationViewOnlyEvent(user: User, annotation: Annotation, changesCount: Int)(
+    implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  def eventType: String = "update_annotation_view_only"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(Json.obj("annotation_id" -> annotation._id.id, "changes_count" -> changesCount))
 }
 
 case class OpenDatasetEvent(user: User, dataSet: DataSet)(implicit ec: ExecutionContext) extends AnalyticsEvent {
@@ -172,6 +180,12 @@ case class OpenDatasetEvent(user: User, dataSet: DataSet)(implicit ec: Execution
 
 case class RunJobEvent(user: User, command: String)(implicit ec: ExecutionContext) extends AnalyticsEvent {
   def eventType: String = "run_job"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(Json.obj("command" -> command))
+}
+
+case class FailedJobEvent(user: User, command: String)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+  def eventType: String = "failed_job"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(Json.obj("command" -> command))
 }

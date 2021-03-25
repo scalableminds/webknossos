@@ -101,6 +101,14 @@ function generateRandomName() {
   return "wk_tmp_" + random;
 }
 
+function sortAndClean(dumpedDir) {
+  glob.sync(dumpedDir + "/**", { nodir: true }).forEach(function(fileName) {
+    replace({ files: fileName, replace: /,$/gm, with: "" });
+    replace({ files: fileName, replace: /\\r/gm, with: "  " });
+    sortFile(fileName);
+  });
+}
+
 function sortFile(fileName) {
   try {
     const content = fs.readFileSync(fileName);
@@ -134,16 +142,9 @@ try {
   program.parse(process.argv);
   dir1 = dump(p1);
   dir2 = dump(p2);
-  // sort and remove commas
-  glob.sync(dir1 + "/**", { nodir: true }).forEach(function(fileName) {
-    replace({ files: fileName, replace: /,$/gm, with: "" });
-    sortFile(fileName);
-  });
-  glob.sync(dir2 + "/**", { nodir: true }).forEach(function(fileName) {
-    replace({ files: fileName, replace: /,$/gm, with: "" });
-    sortFile(fileName);
-  });
-
+  // sort and remove commas and occurences of "\r"
+  sortAndClean(dir1);
+  sortAndClean(dir2);
   // diff
   try {
     execSync("diff --strip-trailing-cr -r " + dir1 + " " + dir2);

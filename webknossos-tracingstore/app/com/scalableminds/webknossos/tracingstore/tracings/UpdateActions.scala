@@ -16,6 +16,10 @@ trait UpdateAction[T <: GeneratedMessage with Message[T]] {
   def addInfo(info: Option[String]): UpdateAction[T] = this
 
   def transformToCompact: UpdateAction[T] = this
+
+  // For analytics we wan to know how many changes are view only (e.g. move camera, toggle tree visibility)
+  // Overridden in subclasses
+  def isViewOnlyChange: Boolean = false
 }
 
 object UpdateAction {
@@ -32,7 +36,10 @@ case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
     transactionId: Option[String],
     transactionGroupCount: Option[Int],
     transactionGroupIndex: Option[Int]
-)
+) {
+  def significantChangesCount: Int = actions.count(!_.isViewOnlyChange)
+  def viewChangesCount: Int = actions.count(_.isViewOnlyChange)
+}
 
 object UpdateActionGroup {
 

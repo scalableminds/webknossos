@@ -104,7 +104,7 @@ function generateRandomName() {
 function sortAndClean(dumpedDir) {
   glob.sync(dumpedDir + "/**", { nodir: true }).forEach(function(fileName) {
     replace({ files: fileName, replace: /,$/gm, with: "" });
-    replace({ files: fileName, replace: /\\r/gm, with: "" });
+    replace({ files: fileName, replace: /\\r/gm, with: "  " });
     sortFile(fileName);
   });
 }

@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import FlexLayout from "flexlayout-react";
+import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import Store, { type OxalisState, type AnnotationType, type BorderOpenStatus } from "oxalis/store";
@@ -29,8 +29,8 @@ import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
 import {
   getMaximizedItemId,
   getBorderOpenStatus,
-  getBorderWidths,
   adjustModelToBorderOpenStatus,
+  getPositionStatusOf,
 } from "./flex_layout_helper";
 
 const { Footer } = Layout;
@@ -59,8 +59,6 @@ type DispatchProps = {|
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type State = {
   model: Model,
-  leftBorderButtonPosition: number,
-  rightBorderButtonPosition: number,
 };
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
@@ -78,8 +76,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.borderOpenStatusWhenNotMaximized = getBorderOpenStatus(model);
     props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
     this.updateToModelStateAndAdjustIt(model);
-    const { left, right } = getBorderWidths(model);
-    this.state = { model, leftBorderButtonPosition: left, rightBorderButtonPosition: right };
+    this.state = { model };
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -129,8 +126,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   rebuildLayout() {
     const model = this.loadCurrentModel();
     this.updateToModelStateAndAdjustIt(model);
-    const { left, right } = getBorderWidths(model);
-    this.setState({ model, leftBorderButtonPosition: left, rightBorderButtonPosition: right });
+    this.setState({ model });
     setTimeout(this.onLayoutChange, 1);
   }
 
@@ -311,11 +307,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     });
   };
 
-  updateButtonPosition = (model: Model) => {
-    const { left, right } = getBorderWidths(model);
-    this.setState({ leftBorderButtonPosition: left, rightBorderButtonPosition: right });
-  };
-
   onAction = (action: Action) => {
     const { type, data } = action;
     const nodeId = data.node;
@@ -347,7 +338,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
     borderOpenStatusCopy[side] = !borderOpenStatusCopy[side];
     this.props.setBorderOpenStatus(borderOpenStatusCopy);
-    this.updateButtonPosition(this.state.model);
     if (toggleInternalState && this.maximizedItemId == null) {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
@@ -355,40 +345,34 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.onLayoutChange();
   }
 
-  getTopBorderToggleButtons() {
-    const { leftBorderButtonPosition, rightBorderButtonPosition } = this.state;
-    const buttonWidth = 21;
-    const baseStyle = {
-      position: "absolute",
-      top: 20,
-      bottom: "auto",
-      zIndex: 21,
-    };
-    const leftButtonStyle = {
-      ...baseStyle,
-      left: Math.max(leftBorderButtonPosition - buttonWidth, 0),
-      right: "auto",
-    };
-    const rightButtonStyle = {
-      ...baseStyle,
-      left: "auto",
-      right: Math.max(rightBorderButtonPosition - buttonWidth, 0),
-    };
-    return (
-      <React.Fragment>
-        <BorderToggleButton
-          side="left"
-          onClick={() => this.toggleBorder("left")}
-          style={leftButtonStyle}
-        />
-        <BorderToggleButton
-          side="right"
-          onClick={() => this.toggleBorder("right")}
-          style={rightButtonStyle}
-        />
-      </React.Fragment>
-    );
-  }
+  onRenderTabSet = (
+    tabSetNode: typeof TabSetNode,
+    renderValues: { buttons: Array<React.Node>, headerContent: React.Node },
+  ) => {
+    const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
+    if (isTopMost && isRightMost) {
+      renderValues.buttons.push(
+        <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} />,
+      );
+    }
+  };
+
+  onRenderTab = (tabNode: typeof TabNode, renderValues: Object) => {
+    const parent = tabNode.getParent();
+    if (parent.getType() !== "tabset") {
+      // Do not consider borders, only tabsets in the center layout.
+      return;
+    }
+    const parentTabSetNode = parent;
+    if (parentTabSetNode.getChildren()[0].getId() === tabNode.getId()) {
+      const { isTopMost, isLeftMost } = getPositionStatusOf(parentTabSetNode);
+      if (isTopMost && isLeftMost) {
+        renderValues.leading = (
+          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
+        );
+      }
+    }
+  };
 
   render() {
     const { datasetName, organization, annotationType, name, taskId } = this.props;
@@ -399,17 +383,18 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         <div className="flex-layout-container">
-          {this.getTopBorderToggleButtons()}
           <FlexLayout.Layout
             model={model}
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
+            onRenderTabSet={this.onRenderTabSet}
+            onRenderTab={this.onRenderTab}
           />
         </div>
         <Footer className="footer">
-          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
-          <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} />
+          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
+          <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
           {footerText}
         </Footer>
       </React.Fragment>

@@ -190,25 +190,13 @@
   line-height: normal;
 }
 
+// Dark mode for UI within navbar and footer
 @dark-bg: #383d48;
 @dark-fg: #f1f1f1;
 @dark-border: #585868;
 @primary-border: #1890ff;
 @hover-border: #40a9ff;
 
-.dark-mode-button {
-  background-color: @dark-bg;
-  color: @dark-fg;
-  border-color: @dark-border;
-  &:hover,
-  &:focus {
-    border-color: @hover-border;
-    background-color: @dark-bg;
-    color: @dark-fg;
-  }
-}
-
-// Dark mode for UI within navbar and footer
 .ant-layout-header,
 .ant-layout-footer {
   width: 100%;
@@ -314,22 +302,40 @@
   justify-content: center;
 }
 
+.no-hover-highlighting {
+  &:hover,
+  &:focus,
+  &:active {
+    border-color: initial;
+    background-color: initial;
+    color: initial;
+  }
+}
+
 .left-border-button,
 .right-border-button {
+  border: none;
+  padding: 0px 5px;
+  color: rgba(0, 0, 0, 0.65);
+  i {
+    font-size: 15px !important;
+    margin: 0;
+  }
+}
+
+.left-border-button.footer-button,
+.right-border-button.footer-button {
   position: absolute;
   top: 0px;
   bottom: 0px;
   height: auto;
-  padding: 0px 6px;
-  i {
-    font-size: 13px !important;
-    margin: 0;
-  }
+  color: @dark-fg;
+  background-color: inherit;
 }
-.left-border-button {
+.left-border-button.footer-button {
   left: 8px;
 }
-.right-border-button {
+.right-border-button.footer-button {
   right: 8px;
 }
 

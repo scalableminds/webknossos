@@ -8,7 +8,7 @@ import * as React from "react";
 import _ from "lodash";
 
 import { AsyncLink } from "components/async_clickables";
-import type { APIProjectWithAssignments, APIUser } from "types/api_flow_types";
+import type { APIProjectWithAssignments, APIProject, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
@@ -141,13 +141,22 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     });
   };
 
+  mergeProjectWithUpdated = (
+    oldProject: APIProjectWithAssignments,
+    updatedProject: APIProject,
+  ): APIProjectWithAssignments =>
+    // $FlowIgnore[prop-missing] flow does not understand that merging with type that is superset should produce that type.
+    ({ ...oldProject, ...updatedProject });
+
   pauseResumeProject = async (
     project: APIProjectWithAssignments,
-    APICall: string => Promise<APIProjectWithAssignments>,
+    APICall: string => Promise<APIProject>,
   ) => {
     const updatedProject = await APICall(project.name);
     this.setState(prevState => ({
-      projects: prevState.projects.map(p => (p.id === project.id ? updatedProject : p)),
+      projects: prevState.projects.map(p =>
+        p.id === project.id ? this.mergeProjectWithUpdated(p, updatedProject) : p,
+      ),
     }));
   };
 

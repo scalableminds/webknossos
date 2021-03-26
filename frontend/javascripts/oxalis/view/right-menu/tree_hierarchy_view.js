@@ -86,6 +86,7 @@ const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
   prevProps.sortBy !== nextProps.sortBy;
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
+  isColorPickerVisible: boolean = false;
   state = {
     isColorPickerVisible: false,
     expandedGroupIds: { [MISSING_GROUP_ID]: true },
@@ -280,7 +281,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.setState({ activeTreeDropdownId: treeId });
       return;
     }
-    if (this.state.isColorPickerVisible) {
+    if (this.isColorPickerVisible) {
+      console.log("ignore cause of isColorPickerVisible");
       return;
     }
     this.setState({ activeTreeDropdownId: null });
@@ -409,9 +411,20 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   opacity: 0,
                   cursor: "pointer",
                 }}
-                onClick={() => this.setState({ isColorPickerVisible: true })}
-                onBlur={() => this.setState({ isColorPickerVisible: false })}
+                onClick={() => {
+                  console.log("make color picker visible");
+                  this.isColorPickerVisible = true;
+                  this.setState(prevState => ({
+                    activeTreeDropdownId: prevState.activeTreeDropdownId,
+                  }));
+                }}
+                onBlur={() => {
+                  console.log("make color picker invisible");
+                  this.isColorPickerVisible = false;
+                  this.setState({ activeTreeDropdownId: null });
+                }}
                 onChange={event => {
+                  console.log("color picker change");
                   let color = Utils.hexToRgb(event.target.value);
                   color = Utils.map3(component => component / 255, color);
                   this.props.onSetTreeColor(tree.treeId, color);
@@ -435,14 +448,21 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Menu.Item>
         </Menu>
       );
+      console.log("generateNodeProps", this.state.activeTreeDropdownId);
+      // TODO: Investigate, why in this version the color picker instantly closes for the first time it is opened.
+      // -> e.g. Look for differences in the state between the first try to pick a color and the second one.
+      // Alternatively: Look for a color picker library: The following features should be supported:
+      // React, all common color spaces, copy and paste a color into a field, "good feeling of picking"
       const dropdownMenu = (
         <Dropdown
           overlay={menu}
-          placement="bottomCenter"
           visible={this.state.activeTreeDropdownId === tree.treeId}
-          onVisibleChange={isVisible =>
-            this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
-          }
+          placement="bottomCenter"
+          onVisibleChange={isVisible => {
+            console.log("visibility change", isVisible);
+            // return isVisible;
+            return this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
+          }}
         >
           <Icon type="setting" className="group-actions-icon" />
         </Dropdown>
@@ -499,6 +519,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   render() {
     const { activeTreeId, activeGroupId } = this.props;
+    console.log("render");
     return (
       <AutoSizer>
         {({ height, width }) => (

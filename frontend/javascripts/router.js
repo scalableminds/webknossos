@@ -516,7 +516,7 @@ class ReactRouter extends React.Component<Props> {
             </Switch>
           </Content>
         </Layout>
-        <QuickNavigationModal />
+        {isAuthenticated ? <QuickNavigationModal /> : null}
       </Router>
     );
   }

@@ -1,7 +1,10 @@
 // @flow
 
 import _ from "lodash";
-import { Icon, Input, Checkbox, Alert, Form, InputNumber, Col, Row, Tooltip, Table } from "antd";
+import { InfoCircleOutlined } from '@ant-design/icons';
+import { Form } from '@ant-design/compatible';
+import '@ant-design/compatible/assets/index.css';
+import { Input, Checkbox, Alert, InputNumber, Col, Row, Tooltip, Table } from "antd";
 import * as React from "react";
 
 import { Vector3Input } from "libs/vector_input";
@@ -81,7 +84,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
               <Checkbox>
                 Interpolation{" "}
                 <Tooltip title="If checked, bilinear interpolation will be used when rendering the data.">
-                  <Icon type="info-circle-o" style={{ color: "gray" }} />
+                  <InfoCircleOutlined style={{ color: "gray" }} />
                 </Tooltip>
               </Checkbox>,
             )}

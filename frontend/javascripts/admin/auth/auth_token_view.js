@@ -1,6 +1,9 @@
 // @flow
 import React from "react";
-import { Form, Input, Button, Col, Row, Spin } from "antd";
+import { CopyOutlined, SwapOutlined } from '@ant-design/icons';
+import { Form } from '@ant-design/compatible';
+import '@ant-design/compatible/assets/index.css';
+import { Input, Button, Col, Row, Spin } from "antd";
 import Clipboard from "clipboard-js";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
 import Toast from "libs/toast";
@@ -58,11 +61,11 @@ class AuthTokenView extends React.PureComponent<{}, State> {
                 <FormItem>
                   <Input.Group compact>
                     <Input value={this.state.currentToken} style={{ width: "90%" }} readOnly />
-                    <Button onClick={this.copyTokenToClipboard} icon="copy" />
+                    <Button onClick={this.copyTokenToClipboard} icon={<CopyOutlined />} />
                   </Input.Group>
                 </FormItem>
                 <FormItem>
-                  <Button icon="swap" onClick={this.handleRevokeToken}>
+                  <Button icon={<SwapOutlined />} onClick={this.handleRevokeToken}>
                     Revoke Token
                   </Button>
                 </FormItem>

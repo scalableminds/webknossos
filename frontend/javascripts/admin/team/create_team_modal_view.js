@@ -1,5 +1,8 @@
 // @flow
-import { Modal, Input, Form } from "antd";
+import { Form } from '@ant-design/compatible';
+
+import '@ant-design/compatible/assets/index.css';
+import { Modal, Input } from "antd";
 import * as React from "react";
 
 import { createTeam } from "admin/admin_rest_api";

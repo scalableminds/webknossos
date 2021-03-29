@@ -266,8 +266,14 @@ class DataSourceController @Inject()(
   def readMeshChunk(organizationName: String,
                     dataSetName: String,
                     dataLayerName: String): Action[MeshChunkDataRequest] =
-    Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
-      Fox.successful(Ok)
+    Action(validateJson[MeshChunkDataRequest]) { implicit request =>
+      //accessTokenService.validateAccessForSyncBlock(
+      //UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      AllowRemoteOrigin {
+        Ok(meshFileService
+            .readMeshChunk(organizationName, dataSetName, dataLayerName, request.body))
+      }
+      //}
     }
 
   def update(organizationName: String, dataSetName: String): Action[DataSource] =

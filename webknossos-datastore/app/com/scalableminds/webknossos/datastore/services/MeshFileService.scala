@@ -20,7 +20,7 @@ trait GenericJsonFormat[T] {
 case class ListMeshChunksRequest(
                                   meshFile: String,
     segmentId: Long,
-    mag: String
+    mag: Point3D
 )
 
 object ListMeshChunksRequest {
@@ -31,7 +31,7 @@ case class MeshChunkDataRequest(
     meshFile: String,
     position: Point3D,
     segmentId: Long,
-    mag: Int
+    mag: Point3D
 )
 
 object MeshChunkDataRequest {
@@ -67,8 +67,27 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
         .toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/${listMeshChunksRequest.mag}").asScala.toList
+    reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/${magLiteral(listMeshChunksRequest.mag)}").asScala.toList
   }
 
+  def readMeshChunk(organizationName: String, dataSetName: String, dataLayerName: String, meshChunkDataRequest: MeshChunkDataRequest): Array[Byte] = {
+    val hdfFile =
+      dataBaseDir
+        .resolve(organizationName)
+        .resolve(dataSetName)
+        .resolve(dataLayerName)
+        .resolve(meshesDir)
+        .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
+        .toFile
+
+    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    reader.readAsByteArray(s"/${meshChunkDataRequest.segmentId}/${magLiteral(meshChunkDataRequest.mag)}/${positionLiteral(meshChunkDataRequest.position)}")
+  }
+
+  private def positionLiteral(position: Point3D) =
+    s"${position.x}_${position.y}_${position.z}"
+
+  private def magLiteral(position: Point3D) =
+    s"${position.x}-${position.y}-${position.z}"
 
 }

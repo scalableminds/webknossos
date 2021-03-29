@@ -51,6 +51,7 @@ import TimeLineView from "admin/time/time_line_view";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
+import QuickNavigationModal from "oxalis/view/components/quick_navigation_modal";
 import features from "features";
 import window from "libs/window";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -515,6 +516,7 @@ class ReactRouter extends React.Component<Props> {
             </Switch>
           </Content>
         </Layout>
+        <QuickNavigationModal />
       </Router>
     );
   }

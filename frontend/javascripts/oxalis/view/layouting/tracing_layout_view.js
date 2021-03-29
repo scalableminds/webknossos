@@ -47,7 +47,6 @@ import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import TabTitle from "../components/tab_title_component";
-import QuickNavigationModal from "../components/quick_navigation_modal";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -423,7 +422,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             </Layout>
           </Layout>
         </NmlUploadZoneContainer>
-        <QuickNavigationModal />
       </React.Fragment>
     );
   }

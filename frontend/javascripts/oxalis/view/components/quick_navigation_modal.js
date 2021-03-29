@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import Shortcut from "libs/shortcut_component";
 import { Modal, AutoComplete } from "antd";
-import { type RouterHistory, withRouter } from "react-router-dom";
+import { location } from "libs/window";
+import { useHistory } from "react-router-dom";
 
 const dataSource = [
   { text: "My Datasets", value: "/dashboard/datasets" },
@@ -21,21 +22,17 @@ const dataSource = [
   { text: "Time Tracking", value: "/reports/timetracking" },
   { text: "Project Progress", value: "/reports/projectProgress" },
   { text: "Open Tasks", value: "/reports/openTasks" },
-  { text: "User Documentation", value: "docs.webkossos.org" },
-  { text: "Community Support", value: "forum.image.sc/tag/webknossos" },
   { text: "Frontend API", value: "/assets/docs/frontend-api/index.html" },
-  { text: "Keyboard Shortcuts", value: "docs.webknossos.org/reference/keyboard_shortcuts" },
+  { text: "User Documentation", value: "https://docs.webknossos.org" },
+  { text: "Community Support", value: "https://forum.image.sc/tag/webknossos" },
+  { text: "Keyboard Shortcuts", value: "https://docs.webknossos.org/reference/keyboard_shortcuts" },
 ];
 
-type Props = {
-  history: RouterHistory,
-};
-
-function QuickNavigationModal({ history }: Props) {
+export default function QuickNavigationModal() {
   const [showNavigationModal, setShowNavigationModal] = useState(false);
+  const history = useHistory();
 
   const toggleNavigationModal = () => {
-    console.log("called");
     if (document.activeElement != null && showNavigationModal) {
       document.activeElement.blur();
     }
@@ -43,12 +40,17 @@ function QuickNavigationModal({ history }: Props) {
   };
 
   const navigateTo = (path: string) => {
-    history.push(path);
+    toggleNavigationModal();
+    if (path.startsWith("/")) {
+      history.push(path);
+    } else {
+      location.assign(path);
+    }
   };
 
   return (
     <React.Fragment>
-      <Shortcut keys="ctrl + e" onTrigger={toggleNavigationModal} />
+      <Shortcut keys="ctrl + e" onTrigger={toggleNavigationModal} supportInputElements />
       <Modal
         title="Quick Navigation ..."
         visible={showNavigationModal}
@@ -57,20 +59,22 @@ function QuickNavigationModal({ history }: Props) {
         className="no-footer-modal"
         autoFocus
       >
-        <AutoComplete
-          style={{ width: "100%" }}
-          dataSource={dataSource}
-          placeholder="Jump to ..."
-          filterOption={(inputValue, option) =>
-            option.props.children.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
-          }
-          onSelect={value => navigateTo(value)}
-          autoFocus
-          dropdownMenuStyle={{ maxHeight: 250, overflowY: "auto" }}
-        />
+        {showNavigationModal ? (
+          // Remounting the component each time to easily clear it, auto focus it and open the dropdown by default.
+          <AutoComplete
+            style={{ width: "100%" }}
+            dataSource={dataSource}
+            placeholder="Jump to ..."
+            filterOption={(inputValue, option) =>
+              option.props.children.toLowerCase().indexOf(inputValue.toLowerCase()) !== -1
+            }
+            onSelect={value => navigateTo(value)}
+            dropdownMenuStyle={{ maxHeight: 250, overflowY: "auto" }}
+            autoFocus
+            defaultOpen
+          />
+        ) : null}
       </Modal>
     </React.Fragment>
   );
 }
-
-export default withRouter(QuickNavigationModal);

@@ -27,6 +27,7 @@ class DataSourceController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     sampleDatasetService: SampleDataSourceService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
+    meshFileService: MeshFileService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -238,14 +239,28 @@ class DataSourceController @Inject()(
 
   def listMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      Fox.successful(Ok)
+      accessTokenService.validateAccessForSyncBlock(
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          Ok(
+            Json.toJson(meshFileService
+              .exploreMeshFiles(organizationName, dataSetName, dataLayerName)))
+        }
+      }
     }
 
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String): Action[ListMeshChunksRequest] =
-    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      Fox.successful(Ok)
+    Action(validateJson[ListMeshChunksRequest]) { implicit request =>
+      //accessTokenService.validateAccessForSyncBlock(
+        //UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          Ok(
+            Json.toJson(meshFileService
+              .listMeshChunksForSegment(organizationName, dataSetName, dataLayerName, request.body)))
+        }
+      //}
     }
 
   def readMeshChunk(organizationName: String,

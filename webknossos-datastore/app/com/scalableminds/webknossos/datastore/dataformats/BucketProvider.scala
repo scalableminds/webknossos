@@ -12,6 +12,8 @@ import scala.concurrent.ExecutionContext
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
+  var requestCount: List[Int] = List()
+
   // To be defined in subclass.
   def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube] = Empty
 
@@ -20,17 +22,19 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
     cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
 
   private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Box[WKWCube] = {
+    requestCount = 1 :: requestCount
     val t = System.currentTimeMillis
     val result = loadFromUnderlying(readInstruction)
     val duration = System.currentTimeMillis - t
-    if (duration > 500) {
+    if (duration > 0) {
       val className = this.getClass.getName.split("\\.").last
-      logger.warn(
-        s"oading file in $className took ${if (duration > 3000) "really " else ""}long.\n"
-          + s"  duration: $duration\n"
+      logger.info(
+        s"Loading file in $className took $duration ms\n"
           + s"  dataSource: ${readInstruction.dataSource.id.name}\n"
           + s"  dataLayer: ${readInstruction.dataLayer.name}\n"
           + s"  cube: ${readInstruction.cube}"
+          + s"  this: ${this}"
+          + s"  requestCount: ${requestCount}"
       )
     }
     result

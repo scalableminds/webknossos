@@ -20,7 +20,7 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val t = System.currentTimeMillis
-    result = cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
+    var result = cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
     val duration = System.currentTimeMillis - t
       logger.info(
         s"Loading file took $duration ms\n"
@@ -28,6 +28,7 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
           + s"  dataLayer: ${readInstruction.dataLayer.name}\n"
           + s"  cube: ${readInstruction.cube}"
       )
+    result
   }
 
   private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Box[WKWCube] = {

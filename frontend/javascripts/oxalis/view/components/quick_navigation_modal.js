@@ -19,7 +19,6 @@ const defaultNavigations = [
   { text: "Add Script", value: "/scripts/create" },
   { text: "Change Password", value: "/auth/changePassword" },
   { text: "Show Auth Token", value: "/auth/token" },
-  // TODO: Add more
   { text: "User Documentation", value: "https://docs.webknossos.org" },
   { text: "Community Support", value: "https://forum.image.sc/tag/webknossos" },
   { text: "Keyboard Shortcuts", value: "https://docs.webknossos.org/reference/keyboard_shortcuts" },
@@ -102,17 +101,17 @@ export default function QuickNavigationModal() {
     }
   };
 
-  console.log(dataSource);
-
   return (
     <React.Fragment>
-      <Shortcut keys="ctrl + e" onTrigger={toggleNavigationModal} supportInputElements />
+      <Shortcut keys="ctrl + shift + q" onTrigger={toggleNavigationModal} supportInputElements />
       <Modal
         title="Quick Navigation ..."
         visible={showNavigationModal}
         onOk={toggleNavigationModal}
         onCancel={toggleNavigationModal}
         className="no-footer-modal"
+        transitionName=""
+        maskTransitionName=""
         autoFocus
       >
         {showNavigationModal ? (

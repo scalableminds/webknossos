@@ -6,13 +6,16 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
+import parseStlBuffer from "libs/parse_stl_buffer";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
+import { getMeshfileChunksForSegment, getMeshfileChunkData } from "admin/admin_rest_api";
 import type { OxalisState, IsosurfaceInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { Vector3Input } from "libs/vector_input";
 import {
   createMeshFromBufferAction,
@@ -87,6 +90,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isImporting: state.uiInformation.isImportingMesh,
   isosurfaces: state.isosurfaces,
   datasetConfiguration: state.datasetConfiguration,
+  dataset: state.dataset,
   mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
   flycam: state.flycam,
   activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
@@ -249,6 +253,46 @@ class MeshesView extends React.Component<
         Load Isosurface for centered Cell
       </Button>
     );
+    const getLoadMeshCellButton = () => (
+      <Button
+        onClick={async () => {
+          const pos = getPosition(this.props.flycam);
+          const id = getIdForPos(pos);
+          if (id === 0) {
+            Toast.info("No cell found at centered position");
+          }
+          const layerName =
+            this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name;
+          const availableChunks = await getMeshfileChunksForSegment(
+            this.props.dataset.dataStore.url,
+            this.props.dataset,
+            layerName,
+            "mesh_4-4-1",
+            id,
+            [4, 4, 1],
+          );
+          for (const chunkPos of availableChunks) {
+            // eslint-disable-next-line no-await-in-loop
+            const stlData = await getMeshfileChunkData(
+              this.props.dataset.dataStore.url,
+              this.props.dataset,
+              layerName,
+              "mesh_4-4-1",
+              id,
+              chunkPos,
+              [4, 4, 1],
+            );
+            const geometry = parseStlBuffer(stlData);
+            getSceneController().addIsosurfaceFromGeometry(geometry, id);
+          }
+        }}
+        disabled={!hasSegmentation}
+        size="small"
+        type="primary"
+      >
+        Load Mesh for centered Cell
+      </Button>
+    );
     const getIsosurfacesHeader = () => (
       <React.Fragment>
         Isosurfaces{" "}
@@ -267,6 +311,7 @@ class MeshesView extends React.Component<
           <Icon type="info-circle" />
         </Tooltip>
         {getImportButton()}
+        {getLoadMeshCellButton()}
       </div>
     );
 

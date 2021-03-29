@@ -1547,3 +1547,69 @@ export function getAgglomerateSkeleton(
     ),
   );
 }
+
+export function getMeshfilesForDatasetLayer(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<Array<string>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes?token=${token}`,
+    ),
+  );
+}
+
+export function getMeshfileChunksForSegment(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+  mag: Vector3,
+): Promise<Array<Vector3>> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+          mag,
+        },
+      },
+    ).then(list => list.map(item => item.split("_").map(a => parseInt(a, 10)))),
+  );
+}
+
+export function getMeshfileChunkData(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+  position: Vector3,
+  mag: Vector3,
+): Promise<ArrayBuffer> {
+  return doWithToken(async token => {
+    const data = await Request.sendJSONReceiveArraybufferWithHeaders(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks/data?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+          mag,
+          position,
+        },
+        useWebworkerForArrayBuffer: false,
+      },
+    );
+    return data;
+  });
+}

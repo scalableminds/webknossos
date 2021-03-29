@@ -56,7 +56,7 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
       .toSet
   }
 
-  def listMeshChunksForSegment(organizationName: String, dataSetName: String, dataLayerName: String, listMeshChunksRequest: ListMeshChunksRequest): List[Point3D] = {
+  def listMeshChunksForSegment(organizationName: String, dataSetName: String, dataLayerName: String, listMeshChunksRequest: ListMeshChunksRequest): List[String] = {
     val hdfFile =
       dataBaseDir
         .resolve(organizationName)
@@ -68,7 +68,7 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
     val chunkPositionLiterals = reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/${magLiteral(listMeshChunksRequest.mag)}").asScala.toList
-    chunkPositionLiterals.map(parsePositionLiteral)
+    chunkPositionLiterals
   }
 
   def readMeshChunk(organizationName: String, dataSetName: String, dataLayerName: String, meshChunkDataRequest: MeshChunkDataRequest): Array[Byte] = {

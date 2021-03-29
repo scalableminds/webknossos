@@ -236,6 +236,25 @@ class DataSourceController @Inject()(
     }
   }
 
+  def listMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      Fox.successful(Ok)
+    }
+
+  def listMeshChunksForSegment(organizationName: String,
+                               dataSetName: String,
+                               dataLayerName: String): Action[ListMeshChunksRequest] =
+    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
+      Fox.successful(Ok)
+    }
+
+  def readMeshChunk(organizationName: String,
+                    dataSetName: String,
+                    dataLayerName: String): Action[MeshChunkDataRequest] =
+    Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
+      Fox.successful(Ok)
+    }
+
   def update(organizationName: String, dataSetName: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {

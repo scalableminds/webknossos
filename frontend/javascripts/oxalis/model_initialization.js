@@ -86,6 +86,7 @@ export async function initialize(
   isMappingSupported: boolean,
   maximumTextureCountForLayer: number,
 }> {
+  return new Promise(() => {});
   Store.dispatch(setControlModeAction(initialCommandType.type));
 
   let annotation: APIAnnotation;

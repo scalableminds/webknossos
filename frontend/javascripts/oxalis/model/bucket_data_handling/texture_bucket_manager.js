@@ -50,6 +50,213 @@ function getSomeValue<T>(set: Set<T>): T {
   return value;
 }
 
+const entriesPerKey = 5;
+const tableCount = 2;
+export class CuckooTable {
+  constructor() {
+    this.capacity = 4096;
+    this.table = new Uint16Array(entriesPerKey * this.capacity * tableCount);
+    this.seed1 = 17;
+    this.seed2 = 21;
+  }
+
+  setEntry(key: Vector4, value: number) {
+    const hashedAddress1 = this._hashKey(this.seed1, key, 0);
+    const hashedAddress2 = this._hashKey(this.seed2, key, 1);
+
+    // if (this.hasEntry(key, value, hashedAddress1, hashedAddress2)) {
+    //   return;
+    // }
+
+    let entryToWrite = [key[0], key[1], key[2], key[3], value];
+
+    if (this.isAddressValidForKey(key, hashedAddress1)) {
+      console.log("Writing", entryToWrite, "in table 1:", hashedAddress1);
+      this.writeEntryAtAddress(entryToWrite, hashedAddress1);
+      return;
+    } else {
+      console.log("Table 1 is already occupied at", hashedAddress1);
+    }
+
+    if (this.isAddressValidForKey(key, hashedAddress2)) {
+      console.log("Writing", entryToWrite, "in table 2:", hashedAddress2);
+      this.writeEntryAtAddress(entryToWrite, hashedAddress2);
+      return;
+    } else {
+      console.log("Table 2 is already occupied at", hashedAddress2);
+    }
+
+    let displacedEntry;
+    let currentAddress = hashedAddress1;
+
+    let iterationCounter = 0;
+    const ITERATION_THRESHOLD = 10;
+    while (iterationCounter++ < ITERATION_THRESHOLD) {
+      // x↔T1[h1(key[x])] // tausche x mit Pos. in T1
+      // if x=NIL then return
+      // x↔T2[h2(key[x])] // tausche x mit Pos. in T2
+      // if x=NIL then return
+
+      console.log("Try to evict at", currentAddress, "to make room for", entryToWrite);
+      displacedEntry = this.getEntryAtAddress(currentAddress);
+      console.log("displacedEntry", displacedEntry);
+      console.log("Write", entryToWrite, "at", currentAddress);
+      this.writeEntryAtAddress(entryToWrite, currentAddress);
+      if (
+        displacedEntry[0] === 0 &&
+        displacedEntry[1] === 0 &&
+        displacedEntry[2] === 0 &&
+        displacedEntry[3] === 0
+      ) {
+        console.log("Successfull store after", iterationCounter);
+        return;
+      }
+      entryToWrite = displacedEntry;
+
+      // todo: displacedEntry[0:5]
+      currentAddress = this._hashKey(this.seed2, entryToWrite, 1);
+      console.log("Try to evict at", currentAddress, "to make room for", entryToWrite);
+      displacedEntry = this.getEntryAtAddress(currentAddress);
+      console.log("displacedEntry", displacedEntry);
+      console.log("Write", entryToWrite, "at", currentAddress);
+      this.writeEntryAtAddress(entryToWrite, currentAddress);
+
+      if (
+        displacedEntry[0] === 0 &&
+        displacedEntry[1] === 0 &&
+        displacedEntry[2] === 0 &&
+        displacedEntry[3] === 0
+      ) {
+        console.log("Successfull store after", iterationCounter);
+        return;
+      }
+
+      entryToWrite = displacedEntry;
+      currentAddress = this._hashKey(this.seed1, entryToWrite, 0);
+    }
+
+    throw new Error("couldnt add key. tried", iterationCounter);
+  }
+
+  getValue(key: Vector4): number {
+    const hashedAddress1 = this._hashKey(this.seed1, key, 0);
+    const hashedAddress2 = this._hashKey(this.seed2, key, 1);
+
+    return this.getValueForAddresses(key, hashedAddress1, hashedAddress2);
+  }
+
+  // hasEntry(key: Vector4, value: number, hashedAddress1: number, hashedAddress2: number): boolean {
+  //   return this.isEntry(key, value, hashedAddress1) || this.isEntry(key, value, hashedAddress2);
+  // }
+
+  getEntryAtAddress(hashedAddress: number): Vector4 {
+    const offset = hashedAddress * entriesPerKey;
+    return [
+      this.table[offset + 0],
+      this.table[offset + 1],
+      this.table[offset + 2],
+      this.table[offset + 3],
+      this.table[offset + 4],
+    ];
+  }
+
+  getValueForAddresses(key: Vector4, hashedAddress1: number, hashedAddress2: number) {
+    const value1 = this.getValueAtAddress(key, hashedAddress1);
+    if (value1 !== -1) {
+      return value1;
+    }
+    const value2 = this.getValueAtAddress(key, hashedAddress2);
+    if (value2 !== -1) {
+      return value2;
+    }
+
+    return -1;
+  }
+
+  isAddressValidForKey(key: Vector4, hashedAddress): boolean {
+    const offset = hashedAddress * entriesPerKey;
+    return (
+      (this.table[offset] === 0 &&
+        this.table[offset + 1] === 0 &&
+        this.table[offset + 2] === 0 &&
+        this.table[offset + 3] === 0) ||
+      (this.table[offset] === key[0] &&
+        this.table[offset + 1] === key[1] &&
+        this.table[offset + 2] === key[2] &&
+        this.table[offset + 3] === key[3])
+    );
+  }
+
+  doesAddressContainKey(key: Vector4, hashedAddress): boolean {
+    const offset = hashedAddress * entriesPerKey;
+    return (
+      this.table[offset] === key[0] &&
+      this.table[offset + 1] === key[1] &&
+      this.table[offset + 2] === key[2] &&
+      this.table[offset + 3] === key[3]
+    );
+  }
+
+  getValueAtAddress(key: Vector4, hashedAddress): number {
+    const offset = hashedAddress * entriesPerKey;
+    if (this.doesAddressContainKey(key, hashedAddress)) {
+      return this.table[offset + 4];
+    } else {
+      return -1;
+    }
+  }
+
+  writeEntryAtAddress(keyValue: Vector5, hashedAddress): boolean {
+    const offset = hashedAddress * entriesPerKey;
+    // eslint-disable-next-line prefer-destructuring
+    this.table[offset] = keyValue[0];
+    // eslint-disable-next-line prefer-destructuring
+    this.table[offset + 1] = keyValue[1];
+    // eslint-disable-next-line prefer-destructuring
+    this.table[offset + 2] = keyValue[2];
+    // eslint-disable-next-line prefer-destructuring
+    this.table[offset + 3] = keyValue[3];
+    // eslint-disable-next-line prefer-destructuring
+    this.table[offset + 4] = keyValue[4];
+  }
+
+  // MurmurHash excluding the final mixing steps.
+  _hashCombine(state: number, value: number) {
+    const k1 = 0xcc9e2d51;
+    const k2 = 0x1b873593;
+
+    // eslint-disable-next-line no-param-reassign
+    value >>>= 0;
+    // eslint-disable-next-line no-param-reassign
+    state >>>= 0;
+
+    // eslint-disable-next-line no-param-reassign
+    value = Math.imul(value, k1) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    value = ((value << 15) | (value >>> 17)) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    value = Math.imul(value, k2) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    state = (state ^ value) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    state = ((state << 13) | (state >>> 19)) >>> 0;
+    // eslint-disable-next-line no-param-reassign
+    state = (state * 5 + 0xe6546b64) >>> 0;
+    return state % this.capacity;
+  }
+
+  _hashKey(seed: number, address: Vector4, tableIndex: number): number {
+    let state = this._hashCombine(seed, address[0]);
+    state = this._hashCombine(state, address[1]);
+    state = this._hashCombine(state, address[2]);
+    state = this._hashCombine(state, address[3]);
+
+    return state + tableIndex * this.capacity;
+  }
+}
+
+window.CuckooTable = CuckooTable;
+
 export default class TextureBucketManager {
   dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;

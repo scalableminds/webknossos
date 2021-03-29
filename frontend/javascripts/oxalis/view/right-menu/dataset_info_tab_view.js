@@ -8,6 +8,7 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 import { Link } from "react-router-dom";
+import Plot from "react-plotly.js";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
@@ -26,6 +27,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
+// import Plotly from "plotly.js";
 
 type OwnProps = {|
   // eslint-disable-next-line react/no-unused-prop-types
@@ -126,6 +128,30 @@ export function convertPixelsToNm(
 }
 
 class DatasetInfoTabView extends React.PureComponent<Props> {
+  state = {
+    measurements: [],
+    plot: {
+      layout: { width: 600, height: 600, title: "Data Loading Speed" },
+    },
+    revision: 0,
+  };
+
+  constructor(props) {
+    super(props);
+    setInterval(() => {
+      const newMeasurements = window.measurements || [];
+      if (this.state.measurements !== newMeasurements) {
+        this.setState({
+          measurements: newMeasurements,
+        });
+      }
+
+      if (this.state.revision < newMeasurements.length) {
+        this.setState({ revision: newMeasurements.length });
+      }
+    }, 100);
+  }
+
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
@@ -362,6 +388,80 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     return null;
   }
 
+  renderBenchmark() {
+    const { measurements } = this.state;
+
+    const durations = measurements.map(m => m.duration);
+    const requestedBucketCount = _.sum(measurements.map(m => m.requestedBucketCount));
+    const durationsSum = _.sum(durations);
+    const averageSpeedInMsPerBucket = durationsSum / requestedBucketCount;
+    const averageSpeedInMBits = (requestedBucketCount * 8 * 32 ** 3) / 1024 ** 3;
+
+    return (
+      <div>
+        Average Speed:
+        {averageSpeedInMsPerBucket.toFixed(2)} ms/Bucket Average Speed: <br />
+        {averageSpeedInMBits.toFixed(2)} MBit/s
+        <br />
+        <Plot
+          data={[
+            {
+              x: measurements.map((m, idx) => idx),
+              y: durations,
+              text: measurements.map(m =>
+                m.requestedBuckets
+                  .map(info => `${info.position.join("-")}-${info.zoomStep}`)
+                  .join("\n"),
+              ),
+              type: "scatter",
+              mode: "lines+markers",
+              marker: { color: "#1890ff" },
+              xaxis: {
+                range: [measurements.length - 500, measurements.length],
+              },
+            },
+          ]}
+          revision={this.state.revision}
+          // layout={this.state.plot.layout}
+          // frames={this.state.plot.frames}
+          // config={this.state.plot.config}
+          // onInitialized={figure => this.setState({ plot: figure })}
+          // onUpdate={figure => {
+          //   console.log("onUpdate");
+          //   this.setState({ plot: figure });
+          // }}
+        />
+      </div>
+    );
+
+    // Plotly.plot("chart", [
+    //   {
+    //     y: [getData()],
+    //     type: "line",
+    //   },
+    // ]);
+
+    // let cnt = 0;
+    // setInterval(() => {
+    //   Plotly.extendTraces("chart", { y: [[getData()]] }, [0]);
+    //   cnt++;
+    //   if (cnt > 500) {
+    //     Plotly.relayout("chart", {
+    //       xaxis: {
+    //         range: [cnt - 500, cnt],
+    //       },
+    //     });
+    //   }
+    // }, 15);
+
+    // return (
+    //   <div>
+    //     Benchmark
+    //     <div id="chart" />
+    //   </div>
+    // );
+  }
+
   render() {
     const { dataset, activeResolution } = this.props;
     const isDatasetViewMode =
@@ -450,6 +550,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
+        {this.renderBenchmark()}
       </div>
     );
   }

@@ -150,15 +150,31 @@ export async function requestFromStore(
 
   try {
     return await doWithToken(async token => {
+      const startTime = performance.now();
+      const requestUrl = `${dataUrl}/data?token=${token}`;
       const {
         buffer: responseBuffer,
         headers,
-      } = await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
+      } = await Request.sendJSONReceiveArraybufferWithHeaders(requestUrl, {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
         showErrorToast: false,
       });
+      const endTime = performance.now();
+
       const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
+
+      const duration = endTime - startTime;
+      const measurement = {
+        duration,
+        requestedBucketCount: bucketInfo.length,
+        transferredBucketCount: bucketInfo.length - missingBuckets.length,
+        requestedBuckets: bucketInfo,
+        requestUrl: `${dataUrl}/data?token=${token}`,
+      };
+
+      window.measurements = window.measurements || [];
+      window.measurements.push(measurement);
 
       let resultBuffer = responseBuffer;
       if (fourBit) {

@@ -1,12 +1,13 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 import ch.systemsx.cisd.hdf5.HDF5FactoryProvider
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.storage.{CachedMeshFile, MeshFileCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import org.apache.commons.io.FilenameUtils
@@ -42,6 +43,8 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
   private val meshFileExtension = "hdf5"
   private val defaultLevelOfDetail = 0
 
+  private lazy val meshFileCache = new MeshFileCache(30)
+
   def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
     PathUtils
@@ -58,18 +61,24 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
                                dataSetName: String,
                                dataLayerName: String,
                                listMeshChunksRequest: ListMeshChunksRequest): List[Point3D] = {
-    val hdfFile =
+    val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
         .resolve(dataSetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
-        .toFile
 
-    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    val cachedMeshFile = meshFileCache.withCache(meshFilePath)(initHDFReader)
+
     val chunkPositionLiterals =
-      reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail").asScala.toList
+      cachedMeshFile.reader
+        .`object`()
+        .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
+        .asScala
+        .toList
+
+    cachedMeshFile.finishAccess()
     chunkPositionLiterals.map(parsePositionLiteral)
   }
 
@@ -97,6 +106,11 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
   private def parsePositionLiteral(positionLiteral: String): Point3D = {
     val asInts = positionLiteral.split("_").toList.map(_.toInt)
     Point3D(asInts.head, asInts(1), asInts(2))
+  }
+
+  def initHDFReader(meshFilePath: Path): CachedMeshFile = {
+    val reader = HDF5FactoryProvider.get.openForReading(meshFilePath.toFile)
+    CachedMeshFile(reader)
   }
 
 }

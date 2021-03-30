@@ -1,7 +1,7 @@
 // @flow
 import React, { useState, type Node } from "react";
 import { Dropdown, Menu } from "antd";
-import { ShareAltOutlined } from "@ant-design/icons";
+import { ShareAltOutlined, DownOutlined } from "@ant-design/icons";
 import ButtonComponent from "oxalis/view/components/button_component";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 

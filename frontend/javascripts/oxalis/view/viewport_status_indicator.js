@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { WarningOutlined } from '@ant-design/icons';
+import { WarningOutlined } from "@ant-design/icons";
 
 import { Tooltip } from "antd";
 import { getUnrenderableLayersForCurrentZoom } from "oxalis/model/accessors/dataset_accessor";
@@ -51,7 +51,8 @@ export default function ViewportStatusIndicator() {
     >
       <div style={{ position: "absolute", bottom: "1%", left: "1%", color: "white" }}>
         <WarningOutlined
-          style={{ fontSize: 16, background: "rgba(0, 0, 0, .3)", padding: 4, borderRadius: 2 }} />
+          style={{ fontSize: 16, background: "rgba(0, 0, 0, .3)", padding: 4, borderRadius: 2 }}
+        />
       </div>
     </Tooltip>
   );

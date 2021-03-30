@@ -7,7 +7,6 @@ import { isDatasetNameValid } from "admin/admin_rest_api";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 
 export function CardContainer({
   children,

@@ -47,7 +47,6 @@ import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 const RadioGroup = Radio.Group;
 
 const fullWidth = { width: "100%" };
@@ -460,13 +459,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
                 }
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-              >
-                {this.state.datasets.map((dataset: APIDataset) => (
-                  <Option key={dataset.name} value={dataset.name}>
-                    {dataset.name}
-                  </Option>
-                ))}
-              </Select>,
+                options={this.state.datasets.map((dataset: APIDataset) => ({
+                  label: dataset.name,
+                  value: dataset.name,
+                }))}
+              />,
             )}
           </FormItem>
 
@@ -516,13 +513,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     disabled={isEditingMode}
                     onChange={this.onChangeTaskType}
                     notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  >
-                    {this.state.taskTypes.map((taskType: APITaskType) => (
-                      <Option key={taskType.id} value={taskType.id}>
-                        {taskType.summary}
-                      </Option>
-                    ))}
-                  </Select>,
+                    options={this.state.taskTypes.map((taskType: APITaskType) => ({
+                      value: taskType.id,
+                      label: taskType.summary,
+                    }))}
+                  />,
                 )}
               </FormItem>
 
@@ -569,13 +564,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                     notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  >
-                    {this.state.projects.map((project: APIProject) => (
-                      <Option key={project.id} value={project.name}>
-                        {project.name}
-                      </Option>
-                    ))}
-                  </Select>,
+                    options={this.state.projects.map((project: APIProject) => ({
+                      value: project.name,
+                      label: project.name,
+                    }))}
+                  />,
                 )}
               </FormItem>
 
@@ -589,13 +582,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                     notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  >
-                    {this.state.scripts.map((script: APIScript) => (
-                      <Option key={script.id} value={script.id}>
-                        {script.name}
-                      </Option>
-                    ))}
-                  </Select>,
+                    options={this.state.scripts.map((script: APIScript) => ({
+                      value: script.id,
+                      label: script.name,
+                    }))}
+                  />,
                 )}
               </FormItem>
 

@@ -15,7 +15,6 @@ import {
 } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 
 type OwnProps = {|
   scriptId?: ?string,
@@ -30,7 +29,7 @@ type PropsWithRouter = {|
 |};
 
 function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
-  const [users, setUsers] = useState < Array < APIUser >> [];
+  const [users, setUsers] = useState<Array<APIUser>>([]);
   const [isFetchingData: boolean, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
 
@@ -114,13 +113,11 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
                 optionFilterProp="children"
                 style={{ width: "100%" }}
                 notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
-              >
-                {users.map((user: APIUser) => (
-                  <Option key={user.id} value={user.id}>
-                    {`${user.lastName}, ${user.firstName} (${user.email})`}
-                  </Option>
-                ))}
-              </Select>,
+                options={users.map((user: APIUser) => ({
+                  value: user.id,
+                  label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                }))}
+              />,
             )}
           </FormItem>
 

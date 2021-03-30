@@ -1,6 +1,6 @@
 // @flow
 
-import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Icon, Menu, Modal, Tooltip, Space } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -496,7 +496,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const menu = <Menu>{elements}</Menu>;
     return (
       <div>
-        <Button.Group>
+        <Space>
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
@@ -506,7 +506,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
               <Icon type="down" />
             </ButtonComponent>
           </Dropdown>
-        </Button.Group>
+        </Space>
       </div>
     );
   }

@@ -10,6 +10,7 @@ import {
   Modal,
   Tooltip,
   notification,
+  Space,
 } from "antd";
 import { WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
@@ -91,7 +92,7 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
 
-const ButtonGroup = Button.Group;
+const ButtonGroup = Space;
 const InputGroup = Input.Group;
 
 const treeTabId = "tree-list";

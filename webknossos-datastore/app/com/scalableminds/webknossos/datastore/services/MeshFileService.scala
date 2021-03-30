@@ -19,8 +19,7 @@ trait GenericJsonFormat[T] {
 
 case class ListMeshChunksRequest(
                                   meshFile: String,
-    segmentId: Long,
-    mag: Point3D
+    segmentId: Long
 )
 
 object ListMeshChunksRequest {
@@ -30,8 +29,7 @@ object ListMeshChunksRequest {
 case class MeshChunkDataRequest(
     meshFile: String,
     position: Point3D,
-    segmentId: Long,
-    mag: Point3D
+    segmentId: Long
 )
 
 object MeshChunkDataRequest {
@@ -43,6 +41,7 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
   private val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
   private val meshesDir = "meshes"
   private val meshFileExtension = "hdf5"
+  private val defaultLevelOfDetail = 0
 
   def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -67,7 +66,7 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
         .toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    val chunkPositionLiterals = reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/${magLiteral(listMeshChunksRequest.mag)}").asScala.toList
+    val chunkPositionLiterals = reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail").asScala.toList
     chunkPositionLiterals.map(parsePositionLiteral)
   }
 
@@ -82,14 +81,11 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
         .toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    reader.readAsByteArray(s"/${meshChunkDataRequest.segmentId}/${magLiteral(meshChunkDataRequest.mag)}/${positionLiteral(meshChunkDataRequest.position)}")
+    reader.readAsByteArray(s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}")
   }
 
   private def positionLiteral(position: Point3D) =
     s"${position.x}_${position.y}_${position.z}"
-
-  private def magLiteral(position: Point3D) =
-    s"${position.x}-${position.y}-${position.z}"
 
   private def parsePositionLiteral(positionLiteral: String): Point3D = {
     val asInts = positionLiteral.split("_").toList.map(_.toInt)

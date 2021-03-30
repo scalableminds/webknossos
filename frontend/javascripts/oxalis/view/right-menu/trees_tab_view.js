@@ -6,13 +6,13 @@ import {
   Empty,
   Input,
   Menu,
-  Icon,
   Spin,
   Modal,
   Tooltip,
   notification,
   Space,
 } from "antd";
+import { WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -477,7 +477,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
       okText: "Ok",
       cancelText: "No",
       autoFocusButton: "cancel",
-      iconType: "warning",
+      icon: <WarningOutlined />,
       onCancel: () => {},
       onOk: () => {
         onConfirm();

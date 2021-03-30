@@ -1,7 +1,8 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
+import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
+import { UserOutlined, InfoCircleOutlined, UserAddOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import * as React from "react";
@@ -180,7 +181,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           title="The displayed users are inactive and were created in the past 14 days."
           placement="right"
         >
-          <Icon type="info-circle" />
+          <InfoCircleOutlined />
         </Tooltip>
       </React.Fragment>
     );
@@ -191,7 +192,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
               <a href="#" onClick={() => this.activateUser(user)}>
-                <Icon type="user-add" />
+                <UserAddOutlined />
                 Activate User
               </a>
             </Col>
@@ -205,7 +206,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
         message={newInactiveUsersHeader}
         description={newInactiveUsersList}
         type="info"
-        iconType="user"
+        icon={<UserOutlined />}
         showIcon
         style={{ marginTop: 20 }}
       />

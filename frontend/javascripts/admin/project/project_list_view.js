@@ -6,7 +6,6 @@ import { Table, Spin, Button, Input, Modal, Tooltip } from "antd";
 import {
   DeleteOutlined,
   DownloadOutlined,
-  DownOutlined,
   EditOutlined,
   EyeOutlined,
   PauseCircleOutlined,

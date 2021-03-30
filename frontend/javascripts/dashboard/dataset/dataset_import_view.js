@@ -498,7 +498,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     this.syncDataSourceFields();
     const form = this.formRef.current;
     if (!form) {
-      return {};
+      return;
     }
     form.validateFields(async (err, formValues: FormData) => {
       const { dataset, datasetDefaultConfiguration } = this.state;

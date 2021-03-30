@@ -1,8 +1,7 @@
 // @flow
 import React from "react";
-import { CopyOutlined, SwapOutlined } from '@ant-design/icons';
-import { Form } from '@ant-design/compatible';
-import '@ant-design/compatible/assets/index.css';
+import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
+import { Form } from "@ant-design/compatible";
 import { Input, Button, Col, Row, Spin } from "antd";
 import Clipboard from "clipboard-js";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";

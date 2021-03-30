@@ -46,7 +46,6 @@ type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithFormAndRouter = {|
   ...Props,
   history: RouterHistory,
-  form: Object,
 |};
 
 type State = {

@@ -7,8 +7,6 @@ import type { OxalisState, VolumeTracing } from "oxalis/store";
 
 import api from "oxalis/api/internal_api";
 
-const ButtonGroup = Space;
-
 type Props = {|
   isRefreshingIsosurfaces: boolean,
   volumeTracing: ?VolumeTracing,
@@ -24,7 +22,7 @@ function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
     }
   }
   return (
-    <ButtonGroup id="TDViewControls">
+    <Space size={0} id="TDViewControls">
       <Button size="small" onClick={api.tracing.rotate3DViewToDiagonal}>
         3D
       </Button>
@@ -48,7 +46,7 @@ function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
           onClick={api.data.refreshIsosurfaces}
         />
       </Tooltip>
-    </ButtonGroup>
+    </Space>
   );
 }
 

@@ -98,7 +98,6 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
 
-const ButtonGroup = Space;
 const InputGroup = Input.Group;
 
 const treeTabId = "tree-list";
@@ -697,7 +696,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <ButtonGroup>
+                <Space size={0}>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -735,7 +734,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </ButtonGroup>
+                </Space>
                 <InputGroup compact>
                   <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
                     <i className="fas fa-arrow-left" />

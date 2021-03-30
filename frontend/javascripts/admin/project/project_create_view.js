@@ -130,13 +130,11 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
                   style={fullWidth}
                   disabled={isEditMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                >
-                  {this.state.teams.map((team: APITeam) => (
-                    <Option key={team.id} value={team.id}>
-                      {team.name}
-                    </Option>
-                  ))}
-                </Select>,
+                  options={this.state.teams.map((team: APITeam) => ({
+                    label: team.name,
+                    value: team.id,
+                  }))}
+                />,
               )}
             </FormItem>
 
@@ -151,13 +149,11 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
                   style={fullWidth}
                   disabled={isEditMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                >
-                  {this.state.users.map((user: APIUser) => (
-                    <Option key={user.id} value={user.id}>
-                      {`${user.lastName}, ${user.firstName} (${user.email})`}
-                    </Option>
-                  ))}
-                </Select>,
+                  options={this.state.users.map((user: APIUser) => ({
+                    label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                    value: user.id,
+                  }))}
+                />,
               )}
             </FormItem>
 

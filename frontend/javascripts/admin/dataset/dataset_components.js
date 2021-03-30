@@ -84,13 +84,11 @@ export function DatastoreFormItem({
           placeholder="Select a Datastore"
           optionFilterProp="children"
           style={{ width: "100%" }}
-        >
-          {datastores.map((datastore: APIDataStore) => (
-            <Option key={datastore.name} value={datastore.url}>
-              {`${datastore.name}`}
-            </Option>
-          ))}
-        </Select>,
+          options={datastores.map((datastore: APIDataStore) => ({
+            label: datastore.name,
+            value: datastore.url,
+          }))}
+        />,
       )}
     </FormItem>
   );

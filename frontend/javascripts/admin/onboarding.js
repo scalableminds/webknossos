@@ -1,5 +1,5 @@
 // @flow
-import { Form, Modal, Input, Button, Row, Col, Steps, Card } from "antd";
+import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete } from "antd";
 import {
   CloudUploadOutlined,
   TeamOutlined,
@@ -251,7 +251,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
             })(
               <AutoComplete
                 size="large"
-                dataSource={[]}
+                options={[]}
                 defaultActiveFirstOption={false}
                 placeholder="Your organization name"
               />,

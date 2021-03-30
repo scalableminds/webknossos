@@ -1,7 +1,8 @@
 // @flow
 import React, { useState } from "react";
 import { withRouter } from "react-router-dom";
-import { Form, Icon, Input, Button, Col, Row } from "antd";
+import { Form, Input, Button, Col, Row } from "antd";
+import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -82,7 +83,7 @@ function FinishResetPasswordView(props: Props) {
               ],
             })(
               <Password
-                prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                prefix={<LockOutlined style={{ fontSize: 13 }} />}
                 placeholder="New Password"
               />,
             )}
@@ -105,7 +106,7 @@ function FinishResetPasswordView(props: Props) {
             })(
               <Password
                 onBlur={handleConfirmBlur}
-                prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                prefix={<LockOutlined style={{ fontSize: 13 }} />}
                 placeholder="Confirm New Password"
               />,
             )}

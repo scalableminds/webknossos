@@ -1,5 +1,6 @@
 // @flow
-import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
+import { Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
@@ -188,7 +189,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       <React.Fragment>
         Merge into active annotation{" "}
         <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened annotation. If not, a new explorative annotation will be created in your account.">
-          <Icon type="info-circle-o" style={{ color: "gray" }} />
+          <InfoCircleOutlined style={{ color: "gray" }} />
         </Tooltip>
       </React.Fragment>
     );

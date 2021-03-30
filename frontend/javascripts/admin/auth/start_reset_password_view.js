@@ -1,7 +1,8 @@
 // @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
-import { Form, Icon, Input, Button, Col, Row } from "antd";
+import { Form, Input, Button, Col, Row } from "antd";
+import { MailOutlined } from "@ant-design/icons";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -47,9 +48,7 @@ function StartResetPasswordView({ history }: Props) {
                   message: messages["auth.registration_email_input"],
                 },
               ],
-            })(
-              <Input prefix={<Icon type="mail" style={{ fontSize: 13 }} />} placeholder="Email" />,
-            )}
+            })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
           </FormItem>
           <FormItem>
             <Button type="primary" htmlType="submit" style={{ width: "100%" }}>

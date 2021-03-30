@@ -1,6 +1,30 @@
 // @flow
 
-import { Button, Dropdown, Icon, Menu, Modal, Tooltip, Space } from "antd";
+import { Button, Dropdown, Menu, Modal, Tooltip, Space } from "antd";
+import {
+  BarsOutlined,
+  CameraOutlined,
+  CheckCircleOutlined,
+  CheckOutlined,
+  CodeSandboxOutlined,
+  DeleteOutlined,
+  DisconnectOutlined,
+  DownloadOutlined,
+  DownOutlined,
+  FileAddOutlined,
+  FolderOpenOutlined,
+  InfoCircleOutlined,
+  LayoutOutlined,
+  LinkOutlined,
+  PlusOutlined,
+  RollbackOutlined,
+  SaveOutlined,
+  SettingOutlined,
+  ShareAltOutlined,
+  StopOutlined,
+  VerticalLeftOutlined,
+  VerticalRightOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -106,11 +130,10 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
             {layout}
           </div>
           {isSelectedLayout ? (
-            <Icon type="check" theme="outlined" className="sub-menu-item-icon" />
+            <CheckOutlined className="sub-menu-item-icon" />
           ) : (
             <Tooltip placement="top" title="Remove this layout">
-              <Icon
-                type="delete"
+              <DeleteOutlined
                 className="clickable-icon sub-menu-item-icon"
                 onClick={() => onDeleteLayout(layout)}
               />
@@ -125,10 +148,9 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
       {...others}
       title={
         <span style={{ display: "inline-block", minWidth: 120 }}>
-          <Icon type="layout" /> Layout
+          <LayoutOutlined /> Layout
           <Tooltip placement="top" title={layoutMissingHelpTitle}>
-            <Icon
-              type="info-circle-o"
+            <InfoCircleOutlined
               style={{ color: "gray", marginRight: 36 }}
               className="right-floating-icon"
             />
@@ -141,17 +163,17 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
         onClick={addNewLayout}
         title="Add a new Layout"
       >
-        <Icon type="plus" />
+        <PlusOutlined />
       </Menu.Item>
       <Menu.Item style={{ display: "inline-block" }} onClick={onResetLayout} title="Reset Layout">
-        <Icon type="rollback" />
+        <RollbackOutlined />
       </Menu.Item>
       <Menu.Item
         style={{ display: "inline-block" }}
         onClick={() => setAutoSaveLayouts(!autoSaveLayouts)}
         title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}
       >
-        <Icon type={autoSaveLayouts ? "disconnect" : "link"} />
+        autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />
       </Menu.Item>
       {autoSaveLayouts ? null : (
         <Menu.Item
@@ -159,7 +181,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
           onClick={saveCurrentLayout}
           title="Save current layout"
         >
-          <Icon type="save" />
+          <SaveOutlined />
         </Menu.Item>
       )}
       <Menu.Divider />
@@ -368,7 +390,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
               title="This annotation was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
               key="sandbox-tooltip"
             >
-              <Button disabled type="primary" icon="code-sandbox">
+              <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
                 <span className="hide-on-small-screen">Sandbox</span>
               </Button>
             </Tooltip>
@@ -378,7 +400,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           <ButtonComponent key="read-only-button" type="danger" disabled>
             Read only
           </ButtonComponent>,
-          <AsyncButton key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+          <AsyncButton
+            key="copy-button"
+            icon={<FileAddOutlined />}
+            onClick={this.handleCopyToAccount}
+          >
             Copy To My Account
           </AsyncButton>,
         ];
@@ -387,7 +413,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       restrictions.allowFinish && task ? (
         <ButtonComponent
           key="next-button"
-          icon="verticle-left"
+          icon={<VerticalLeftOutlined />}
           onClick={this.handleFinishAndGetNextTask}
         >
           Finish and Get Next Task
@@ -397,7 +423,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const reopenTaskButton = this.state.isReopenAllowed ? (
       <ButtonComponent
         key="reopen-button"
-        icon="verticle-right"
+        icon={<VerticalRightOutlined />}
         onClick={this.handleReopenTask}
         type="danger"
       >
@@ -410,7 +436,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     if (restrictions.allowFinish) {
       elements.push(
         <Menu.Item key="finish-button" onClick={this.handleFinish}>
-          <Icon type="check-circle-o" />
+          <CheckCircleOutlined />
           {archiveButtonText}
         </Menu.Item>,
       );
@@ -419,14 +445,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     if (restrictions.allowDownload) {
       elements.push(
         <Menu.Item key="download-button" onClick={this.handleDownload}>
-          <Icon type="download" />
+          <DownloadOutlined />
           Download
         </Menu.Item>,
       );
     }
     elements.push(
       <Menu.Item key="share-button" onClick={this.handleShareOpen}>
-        <Icon type="share-alt" />
+        <ShareAltOutlined />
         Share
       </Menu.Item>,
     );
@@ -441,13 +467,13 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     );
     elements.push(
       <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>
-        <Icon type="camera" />
+        <CameraOutlined />
         Screenshot (Q)
       </Menu.Item>,
     );
     elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
-        <Icon type="setting" />
+        <SettingOutlined />
         Add Script
       </Menu.Item>,
     );
@@ -462,7 +488,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     if (isSkeletonMode && activeUser != null) {
       elements.push(
         <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
-          <Icon type="folder-open" />
+          <FolderOpenOutlined />
           Merge Annotation
         </Menu.Item>,
       );
@@ -477,7 +503,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
     elements.push(
       <Menu.Item key="restore-button" onClick={this.handleRestore}>
-        <Icon type="bars" theme="outlined" />
+        <BarsOutlined />
         Restore Older Version
       </Menu.Item>,
     );
@@ -487,7 +513,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     if (restrictions.allowSave && !task) {
       elements.push(
         <Menu.Item key="disable-saving" onClick={this.handleDisableSaving}>
-          <Icon type="stop-o" />
+          <StopOutlined />
           Disable saving
         </Menu.Item>,
       );
@@ -503,7 +529,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {modals}
           <Dropdown overlay={menu} trigger={["click"]}>
             <ButtonComponent className="narrow">
-              <Icon type="down" />
+              <DownOutlined />
             </ButtonComponent>
           </Dropdown>
         </Space>

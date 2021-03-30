@@ -3,7 +3,15 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tooltip, Modal } from "antd";
+import { Col, Collapse, Row, Select, Switch, Tooltip, Modal } from "antd";
+import {
+  EditOutlined,
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
+  ReloadOutlined,
+  ScanOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { useState } from "react";
@@ -159,7 +167,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <AsyncIconButton
-          type="scan"
+          icon={<ScanOutlined />}
           onClick={
             !isDisabled
               ? () => this.handleFindData(layerName, isColorLayer)
@@ -182,7 +190,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <AsyncIconButton
-          type="reload"
+          icon={<ReloadOutlined />}
           onClick={() => this.reloadLayerData(layerName)}
           style={{
             position: "absolute",
@@ -197,8 +205,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getDeleteButton = () => (
     <Tooltip title="Unlink dataset's original segmentation layer">
-      <Icon
-        type="stop"
+      <StopOutlined
         onClick={() => {
           this.removeFallbackLayer();
         }}
@@ -236,8 +243,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       : "Manually set the possible range of the histogram.";
     return (
       <Tooltip title={tooltipText}>
-        <Icon
-          type="edit"
+        <EditOutlined
           onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
           style={{
             position: "absolute",
@@ -366,7 +372,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }
             placement="left"
           >
-            <Icon style={{ marginLeft: 4 }} type="info-circle" />
+            <InfoCircleOutlined style={{ marginLeft: 4 }} />
           </Tooltip>
 
           {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
@@ -562,7 +568,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <span>
         Layers
         <Tooltip title="Not all layers are currently visible.">
-          <Icon type="exclamation-circle-o" style={{ marginLeft: 16, color: "coral" }} />
+          <ExclamationCircleOutlined style={{ marginLeft: 16, color: "coral" }} />
         </Tooltip>
       </span>
     ) : (
@@ -657,7 +663,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <React.Fragment>
                 {settings.gpuMemoryFactor}{" "}
                 <Tooltip title="Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }
@@ -677,7 +683,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <React.Fragment>
                 {settings.loadingStrategy}{" "}
                 <Tooltip title={settings.loadingStrategyDescription}>
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }
@@ -692,7 +698,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <React.Fragment>
                 {settings.fourBit}{" "}
                 <Tooltip title="Decrease size of transferred data by half using lossy compression. Recommended for poor and/or capped Internet connections.">
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }
@@ -711,7 +717,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <React.Fragment>
                 {settings.renderMissingDataBlack}{" "}
                 <Tooltip title="If disabled, missing data will be rendered by using poorer resolutions.">
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }

@@ -2,7 +2,20 @@
 
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Icon, Spin, Button, Input, Modal, Tooltip } from "antd";
+import { Table, Spin, Button, Input, Modal, Tooltip } from "antd";
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  DownOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  PlusSquareOutlined,
+  ScheduleOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
@@ -224,7 +237,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
           <div className="pull-right">
             {this.props.taskTypeId ? null : (
               <Link to="/projects/create">
-                <Button icon="plus" style={marginRight} type="primary">
+                <Button icon={<PlusOutlined />} style={marginRight} type="primary">
                   Add Project
                 </Button>
               </Link>
@@ -330,12 +343,12 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                       to={`/annotations/CompoundProject/${project.id}`}
                       title="View all Finished Annotations"
                     >
-                      <Icon type="eye-o" />
+                      <EyeOutlined />
                       View
                     </Link>
                     <br />
                     <Link to={`/projects/${project.name}/edit`} title="Edit Project">
-                      <Icon type="edit" />
+                      <EditOutlined />
                       Edit
                     </Link>
                     <br />
@@ -345,7 +358,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                           onClick={_.partial(this.pauseResumeProject, project, resumeProject)}
                           title="Resume Project"
                         >
-                          <Icon type="play-circle-o" />
+                          <PlayCircleOutlined />
                           Resume
                         </a>
                         <br />
@@ -356,14 +369,14 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                           onClick={_.partial(this.pauseResumeProject, project, pauseProject)}
                           title="Pause Tasks"
                         >
-                          <Icon type="pause-circle-o" />
+                          <PauseCircleOutlined />
                           Pause
                         </a>
                         <br />
                       </div>
                     )}
                     <Link to={`/projects/${project.name}/tasks`} title="View Tasks">
-                      <Icon type="schedule" />
+                      <ScheduleOutlined />
                       Tasks
                     </Link>
                     <br />
@@ -371,7 +384,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                       onClick={_.partial(this.increaseProjectTaskInstances, project)}
                       title="Increase Task instances"
                     >
-                      <Icon type="plus-square-o" />
+                      <PlusSquareOutlined />
                       Increase Instances
                     </a>
                     <br />
@@ -382,19 +395,19 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                         await downloadNml(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"
+                      icon={<DownloadOutlined />}
                     >
-                      <Icon type="download" />
                       Download
                     </AsyncLink>
                     <br />
                     <a onClick={_.partial(this.showActiveUsersModal, project)}>
-                      <Icon type="team" />
+                      <TeamOutlined />
                       Show active users
                     </a>
                     <br />
                     {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
-                        <Icon type="delete" />
+                        <DeleteOutlined />
                         Delete
                       </a>
                     ) : null}

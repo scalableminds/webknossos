@@ -1,5 +1,6 @@
 // @flow
-import { Form, Input, Button, Col, Row, Upload, Icon } from "antd";
+import { Form, Input, Button, Col, Row, Upload } from "antd";
+import { UnlockOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
@@ -160,7 +161,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
                 beforeUpload={() => false}
               >
                 <p className="ant-upload-drag-icon">
-                  <Icon type="unlock" style={{ margin: 0, fontSize: 35 }} />
+                  <UnlockOutlined style={{ margin: 0, fontSize: 35 }} />
                 </p>
                 <p className="ant-upload-text">
                   Click or Drag your Google Cloud Authentication File to this Area to Upload

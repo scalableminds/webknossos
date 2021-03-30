@@ -1,6 +1,7 @@
 // @flow
 
-import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag, Badge } from "antd";
+import { Modal, Button, Tooltip, Table, InputNumber, Tag, Badge } from "antd";
+import { CloseOutlined, DeleteOutlined, RollbackOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -357,10 +358,9 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                   />
                   {record.changed ? (
                     <Tooltip placement="top" title="Revert Changes">
-                      <Icon
+                      <RollbackOutlined
                         style={{ marginLeft: 15 }}
                         className="clickable-icon"
-                        type="rollback"
                         onClick={() => this.revertChangesOfEntry(index)}
                       />
                     </Tooltip>
@@ -374,8 +374,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             render={record => (
               <span>
                 <Tooltip placement="top" title="Remove Entry">
-                  <Icon
-                    type="delete"
+                  <DeleteOutlined
                     className="clickable-icon"
                     onClick={() => this.removeEntryFromTable(record.domain)}
                   />
@@ -405,7 +404,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                     }));
                   }}
                 >
-                  {domain} <Icon type="close" theme="outlined" />
+                  {domain} <CloseOutlined />
                 </Tag>
               </Tooltip>
             ))}

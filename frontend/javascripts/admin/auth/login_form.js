@@ -1,5 +1,6 @@
 // @flow
-import { Alert, Button, Form, Icon, Input } from "antd";
+import { Alert, Button, Form, Input } from "antd";
+import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import React from "react";
 
@@ -78,19 +79,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
                 message: messages["auth.registration_email_input"],
               },
             ],
-          })(
-            <Input
-              prefix={
-                <Icon
-                  type="mail"
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Email"
-            />,
-          )}
+          })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
         </FormItem>
         <FormItem>
           {getFieldDecorator("password", {
@@ -101,17 +90,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
               },
             ],
           })(
-            <Password
-              prefix={
-                <Icon
-                  type="lock"
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Password"
-            />,
+            <Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />,
           )}
         </FormItem>
         <FormItem>

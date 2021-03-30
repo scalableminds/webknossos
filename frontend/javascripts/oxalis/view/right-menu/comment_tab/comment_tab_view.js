@@ -1,7 +1,15 @@
 // @flow
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
-import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
+import { Input, Menu, Dropdown, Tooltip } from "antd";
+import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+  SearchOutlined,
+  ShrinkOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import Enum from "Enumjs";
 import Maybe from "data.maybe";
@@ -337,7 +345,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
           by name (natural sort)
           <Tooltip title={messages["tracing.natural_sorting"]} placement="bottomLeft">
             {" "}
-            <Icon type="info-circle" />
+            <InfoCircleOutlined />
           </Tooltip>
         </Menu.Item>
       </Menu>
@@ -413,12 +421,12 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     searchKey="content"
                     targetId={commentListId}
                   >
-                    <ButtonComponent icon="search" title="Search through comments" />
+                    <ButtonComponent icon={<SearchOutlined />} title="Search through comments" />
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     title="Jump to previous comment"
                     onClick={this.previousComment}
-                    icon="arrow-left"
+                    icon={<ArrowLeftOutlined />}
                   />
                   <InputComponent
                     value={activeCommentContent}
@@ -432,13 +440,13 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     onClick={() => this.setMarkdownModalVisibility(true)}
                     disabled={activeNodeMaybe.isNothing}
                     type={isMultilineComment ? "primary" : "button"}
-                    icon="edit"
+                    icon={<EditOutlined />}
                     title="Open dialog to edit comment in multi-line mode"
                   />
                   <ButtonComponent
                     title="Jump to next comment"
                     onClick={this.nextComment}
-                    icon="arrow-right"
+                    icon={<ArrowRightOutlined />}
                   />
                   <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
                     <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
@@ -447,7 +455,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   </Dropdown>
                   <ButtonComponent
                     onClick={this.toggleExpandForAllTrees}
-                    icon="shrink"
+                    icon={<ShrinkOutlined />}
                     title="Collapse or expand groups"
                   />
                 </InputGroup>

@@ -1,5 +1,6 @@
 // @flow
-import { Input, Tooltip, Icon } from "antd";
+import { Input, Tooltip } from "antd";
+import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
@@ -108,7 +109,7 @@ class DatasetPositionView extends PureComponent<Props> {
               style={copyPositionStyle}
               className="hide-on-small-screen"
             >
-              <Icon type="pushpin" style={positionIconStyle} />
+              <PushpinOutlined style={positionIconStyle} />
             </ButtonComponent>
           </Tooltip>
           <Vector3Input
@@ -127,7 +128,7 @@ class DatasetPositionView extends PureComponent<Props> {
                 style={{ padding: "0 10px" }}
                 className="hide-on-small-screen"
               >
-                <Icon type="reload" />
+                <ReloadOutlined />
               </ButtonComponent>
             </Tooltip>
             <Vector3Input

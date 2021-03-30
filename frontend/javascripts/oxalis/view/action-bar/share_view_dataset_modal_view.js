@@ -3,6 +3,7 @@ import { Modal, Input, Button, Row, Col } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
 import messages from "messages";
+import { CopyOutlined } from "@ant-design/icons";
 import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
 
 const sharingActiveNode = false;
@@ -33,7 +34,11 @@ export default function ShareViewDatasetModalView(props: Props) {
         <Col span={18}>
           <Input.Group compact>
             <Input style={{ width: "85%" }} value={url} readOnly />
-            <Button style={{ width: "15%" }} onClick={() => copyUrlToClipboard(url)} icon="copy">
+            <Button
+              style={{ width: "15%" }}
+              onClick={() => copyUrlToClipboard(url)}
+              icon={<CopyOutlined />}
+            >
               Copy
             </Button>
           </Input.Group>

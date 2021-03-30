@@ -1,5 +1,6 @@
 // @flow
-import { Icon, Alert, Form, Tooltip, Modal } from "antd";
+import { Alert, Form, Tooltip, Modal } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -30,7 +31,7 @@ export const FormItemWithInfo = ({
       <span>
         {label}{" "}
         <Tooltip title={info}>
-          <Icon type="info-circle-o" style={{ color: "gray" }} />
+          <InfoCircleOutlined style={{ color: "gray" }} />
         </Tooltip>
       </span>
     }

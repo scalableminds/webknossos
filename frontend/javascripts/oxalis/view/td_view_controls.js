@@ -1,5 +1,6 @@
 // @flow
 import { Button, Tooltip, Space } from "antd";
+import { ReloadOutlined } from "@ant-design/icons";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
@@ -42,7 +43,7 @@ function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
       <Tooltip title={refreshIsosurfaceTooltip}>
         <Button
           size="small"
-          icon="reload"
+          icon={<ReloadOutlined />}
           loading={isRefreshingIsosurfaces}
           onClick={api.data.refreshIsosurfaces}
         />

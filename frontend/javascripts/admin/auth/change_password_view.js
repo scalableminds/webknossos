@@ -1,7 +1,8 @@
 // @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
-import { Form, Icon, Input, Button, Col, Row, Alert } from "antd";
+import { Form, Input, Button, Col, Row, Alert } from "antd";
+import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
 import { FormInstance } from "antd/lib/form";
 import messages from "messages";
@@ -115,7 +116,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
                 ],
               })(
                 <Password
-                  prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                  prefix={<LockOutlined style={{ fontSize: 13 }} />}
                   placeholder="New Password"
                 />,
               )}
@@ -138,7 +139,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
               })(
                 <Password
                   onBlur={this.handleConfirmBlur}
-                  prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                  prefix={<LockOutlined style={{ fontSize: 13 }} />}
                   placeholder="Confirm New Password"
                 />,
               )}

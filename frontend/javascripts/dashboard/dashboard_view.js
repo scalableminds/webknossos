@@ -1,6 +1,7 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Tabs, Tooltip, Icon } from "antd";
+import { Spin, Tabs, Tooltip } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
@@ -142,7 +143,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             <div>
               Shared Annotations
               <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the annotation view.">
-                <Icon type="info-circle-o" style={{ color: "gray", marginLeft: 6 }} />
+                <InfoCircleOutlined style={{ color: "gray", marginLeft: 6 }} />
               </Tooltip>
             </div>
           }

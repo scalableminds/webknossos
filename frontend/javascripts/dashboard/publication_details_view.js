@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
-import { Layout, Icon, Spin, Tooltip } from "antd";
+import { Layout, Spin, Tooltip } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 
 import { getDatasets } from "admin/admin_rest_api";
 import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_flow_types";
@@ -56,10 +57,7 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
               <React.Fragment>
                 <Link to="/">
                   <Tooltip title="Back to the frontpage.">
-                    <Icon
-                      type="arrow-left"
-                      style={{ fontSize: 24, color: "#555", marginBottom: 18 }}
-                    />
+                    <ArrowLeftOutlined style={{ fontSize: 24, color: "#555", marginBottom: 18 }} />
                   </Tooltip>
                 </Link>
                 <div style={{ display: "inline-block", verticalAlign: "top" }}>Back</div>

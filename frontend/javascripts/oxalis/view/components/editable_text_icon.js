@@ -1,10 +1,10 @@
 // @flow
 
-import { Input, Icon } from "antd";
-import React from "react";
+import { Input } from "antd";
+import React, { type Node } from "react";
 
 type Props = {
-  icon: string,
+  icon: Node,
   onChange: Function,
 };
 
@@ -24,7 +24,7 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
   };
 
   handleInputSubmit = (event: SyntheticInputEvent<>) => {
-    const value = this.state.value;
+    const { value } = this.state;
 
     if (value !== "") {
       this.props.onChange(this.state.value, event);
@@ -34,7 +34,6 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
 
   render() {
     const iconStyle = { cursor: "pointer" };
-
     if (this.state.isEditing) {
       return (
         <Input
@@ -49,11 +48,9 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
       );
     } else {
       return (
-        <Icon
-          type={this.props.icon}
-          style={iconStyle}
-          onClick={() => this.setState({ isEditing: true })}
-        />
+        <React.Fragment style={iconStyle} onClick={() => this.setState({ isEditing: true })}>
+          {this.props.icon}
+        </React.Fragment>
       );
     }
   }

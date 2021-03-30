@@ -12,7 +12,13 @@ import {
   notification,
   Space,
 } from "antd";
-import { WarningOutlined } from "@ant-design/icons";
+import {
+  DownloadOutlined,
+  DownOutlined,
+  SearchOutlined,
+  UploadOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -609,10 +615,10 @@ class TreesTabView extends React.PureComponent<Props, State> {
           onClick={this.handleNmlDownload}
           title="Download selected trees as NML"
         >
-          <Icon type="download" /> Download Selected Trees
+          <DownloadOutlined /> Download Selected Trees
         </Menu.Item>
         <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
-          <Icon type="upload" /> Import NML
+          <UploadOutlined /> Import NML
         </Menu.Item>
         <Menu.Item
           key="measureAllSkeletons"
@@ -701,7 +707,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                   >
                     <Tooltip title="Open the search via CTRL + Shift + F">
                       <ButtonComponent>
-                        <Icon type="search" />
+                        <SearchOutlined />
                       </ButtonComponent>
                     </Tooltip>
                   </AdvancedSearchPopover>
@@ -726,7 +732,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                   <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent>
                       More
-                      <Icon type="down" />
+                      <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
                 </ButtonGroup>

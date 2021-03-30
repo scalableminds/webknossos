@@ -1,5 +1,6 @@
 // @flow
-import { Form, Input, Button, Row, Col, Icon, Checkbox } from "antd";
+import { Form, Input, Button, Row, Col, Checkbox } from "antd";
+import { LockOutlined, UserOutlined, MailOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 
 import { type APIOrganization } from "types/api_flow_types";
@@ -141,7 +142,7 @@ function RegistrationForm(props: Props) {
               ],
             })(
               <Input
-                prefix={<Icon type="user" style={{ fontSize: 13 }} />}
+                prefix={<UserOutlined style={{ fontSize: 13 }} />}
                 placeholder="First Name"
                 autoFocus
               />,
@@ -159,10 +160,7 @@ function RegistrationForm(props: Props) {
                 },
               ],
             })(
-              <Input
-                prefix={<Icon type="user" style={{ fontSize: 13 }} />}
-                placeholder="Last Name"
-              />,
+              <Input prefix={<UserOutlined style={{ fontSize: 13 }} />} placeholder="Last Name" />,
             )}
           </FormItem>
         </Col>
@@ -179,7 +177,7 @@ function RegistrationForm(props: Props) {
               message: messages["auth.registration_email_input"],
             },
           ],
-        })(<Input prefix={<Icon type="mail" style={{ fontSize: 13 }} />} placeholder="Email" />)}
+        })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
       </FormItem>
       <Row gutter={8}>
         <Col span={12}>
@@ -200,7 +198,7 @@ function RegistrationForm(props: Props) {
               ],
             })(
               <Password
-                prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                prefix={<LockOutlined style={{ fontSize: 13 }} />}
                 placeholder="Password"
               />,
             )}
@@ -225,7 +223,7 @@ function RegistrationForm(props: Props) {
             })(
               <Password
                 onBlur={handleConfirmBlur}
-                prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                prefix={<LockOutlined style={{ fontSize: 13 }} />}
                 placeholder="Confirm Password"
               />,
             )}

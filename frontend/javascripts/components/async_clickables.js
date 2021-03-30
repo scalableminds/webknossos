@@ -1,5 +1,6 @@
 // @flow
-import { Button, Icon } from "antd";
+import { Button } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 import * as React from "react";
 const { useState, useEffect, useRef } = React;
 
@@ -40,10 +41,12 @@ export function AsyncButton(props: Props) {
   return <Button {...props} loading={isLoading} onClick={onClick} />;
 }
 
-export function AsyncIconButton(allProps: Props & { type: string }) {
-  const { type, ...props } = allProps;
+export function AsyncIconButton(allProps: Props & { icon: React.Node }) {
+  const { icon, ...props } = allProps;
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  return <Icon {...props} type={isLoading ? "loading" : type} onClick={onClick} />;
+  return (
+    <React.Fragment onClick={onClick}> {isLoading ? <LoadingOutlined /> : icon}</React.Fragment>
+  );
 }
 
 export function AsyncLink(props: Props & { children: React.Node }) {
@@ -57,7 +60,7 @@ export function AsyncLink(props: Props & { children: React.Node }) {
       }
       return child.type !== "i" && child.type.name !== "Icon";
     });
-    content = [<Icon type="loading" key="loading-icon" />, childrenWithoutIcon];
+    content = [<LoadingOutlined key="loading-icon" />, childrenWithoutIcon];
   } else {
     content = props.children;
   }

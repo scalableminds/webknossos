@@ -1,5 +1,6 @@
 // @flow
-import { Avatar, Form, Button, Icon, Col, Row, Tooltip, Modal, Progress, Alert, List } from "antd";
+import { Avatar, Form, Button, Col, Row, Tooltip, Modal, Progress, Alert, List } from "antd";
+import { FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { useMemo } from "react";
 import moment from "moment";
@@ -241,7 +242,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
         okButtonProps={{ style: { display: "none" } }}
       >
         <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
-          <Icon type="folder" style={{ fontSize: 50 }} />
+          <FolderOutlined style={{ fontSize: 50 }} />
           <br />
           {isRetrying
             ? `Upload of dataset ${form.getFieldValue("name")} froze.`
@@ -601,13 +602,13 @@ function FileUploadArea({ fileList, onChange }) {
             avatar={
               !showSmallFileList && (
                 <Avatar>
-                  <Icon type="file" />
+                  <FileOutlined />
                 </Avatar>
               )
             }
             title={
               <span>
-                {showSmallFileList && <Icon type="file" />}{" "}
+                {showSmallFileList && <FileOutlined />}{" "}
                 <span style={{ color: "darkgrey" }}>{`${item.path
                   .split("/")
                   .slice(0, -1)
@@ -625,7 +626,7 @@ function FileUploadArea({ fileList, onChange }) {
     <div>
       <div {...getRootProps({ style })}>
         <input {...getInputProps()} />
-        <Icon type="inbox" style={{ fontSize: 48, color: "#41a9ff" }} />
+        <InboxOutlined style={{ fontSize: 48, color: "#41a9ff" }} />
         <p style={{ maxWidth: 800, textAlign: "center", marginTop: 8 }}>
           Drag your file(s) to this area to upload them. Either add individual image files, a zip
           archive or a folder. Alternatively, click to select your files via a file picker.{" "}

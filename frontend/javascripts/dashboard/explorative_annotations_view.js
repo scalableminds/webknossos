@@ -1,7 +1,13 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tag, Icon } from "antd";
+import { Spin, Input, Table, Button, Modal, Tag } from "antd";
+import {
+  DownloadOutlined,
+  FolderOpenOutlined,
+  InboxOutlined,
+  PlayCircleOutlined,
+} from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -219,17 +225,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${typ}/${id}`}>
-            <Icon type="play-circle-o" />
+            <PlayCircleOutlined />
             Trace
           </Link>
           <br />
           <AsyncLink href="#" onClick={() => downloadNml(id, typ, hasVolumeTracing)}>
-            <Icon type="download" />
+            <DownloadOutlined />
             Download
           </AsyncLink>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
-            <Icon type="inbox" />
+            <InboxOutlined />
             Archive
           </AsyncLink>
           <br />
@@ -239,7 +245,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
-            <Icon type="folder-open" />
+            <FolderOpenOutlined />
             Reopen
           </AsyncLink>
           <br />

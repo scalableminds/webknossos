@@ -1,5 +1,17 @@
 // @flow
-import { Dropdown, Menu, Icon, Modal } from "antd";
+import { Dropdown, Menu, Modal } from "antd";
+import {
+  EyeOutlined,
+  PlayCircleOutlined,
+  CheckCircleOutlined,
+  TeamOutlined,
+  RollbackOutlined,
+  DeleteOutlined,
+  FolderOpenOutlined,
+  DownloadOutlined,
+  ClockCircleOutlined,
+  DownOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 
@@ -101,12 +113,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
     const label =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
         <React.Fragment>
-          <Icon type="eye-o" />
+          <EyeOutlined />
           View
         </React.Fragment>
       ) : (
         <React.Fragment>
-          <Icon type="play-circle-o" />
+          <PlayCircleOutlined />
           Trace
         </React.Fragment>
       );
@@ -123,7 +135,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })
           }
         >
-          <Icon type="team" />
+          <TeamOutlined />
           Transfer
         </Item>
         <Item key={`${annotation.id}-download`}>
@@ -134,26 +146,26 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
               return downloadNml(annotation.id, "Task", isVolumeIncluded);
             }}
           >
-            <Icon type="download" />
+            <DownloadOutlined />
             Download
           </AsyncLink>
         </Item>
         <Item key={`${annotation.id}-reset`} onClick={() => this.resetAnnotation(annotation)}>
-          <Icon type="rollback" />
+          <RollbackOutlined />
           Reset
         </Item>
         <Item key={`${annotation.id}-delete`} onClick={() => this.deleteAnnotation(annotation)}>
-          <Icon type="delete" />
+          <DeleteOutlined />
           Reset and Cancel
         </Item>
         {annotation.state === "Finished" ? (
           <Item key={`${annotation.id}-reopen`} onClick={() => this.reOpenAnnotation(annotation)}>
-            <Icon type="folder-open" />
+            <FolderOpenOutlined />
             Reopen
           </Item>
         ) : (
           <Item key={`${annotation.id}-finish`} onClick={() => this.finishAnnotation(annotation)}>
-            <Icon type="check-circle-o" />
+            <CheckCircleOutlined />
             Finish
           </Item>
         )}
@@ -183,12 +195,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   </td>
                   <td>
                     <span>
-                      <Icon type="check-circle-o" />
+                      <CheckCircleOutlined />
                       {`${annotation.state === "Finished" ? "Finished" : "In Progress"}`}
                     </span>
                     <br />
                     <span>
-                      <Icon type="clock-circle-o" />
+                      <ClockCircleOutlined />
                       {annotation.tracingTime != null
                         ? formatSeconds(annotation.tracingTime / 1000)
                         : 0}
@@ -197,7 +209,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   <td className="nowrap">
                     <Dropdown overlay={this.getDropdownMenu(annotation)} trigger={["click"]}>
                       <a className="ant-dropdown-link" href="#">
-                        Actions <Icon type="down" />
+                        Actions <DownOutlined />
                       </a>
                     </Dropdown>
                   </td>

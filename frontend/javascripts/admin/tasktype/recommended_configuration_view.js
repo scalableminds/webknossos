@@ -1,5 +1,6 @@
 // @flow
-import { Checkbox, Col, Collapse, Form, Icon, Input, Row, Tooltip, Table, Button } from "antd";
+import { Checkbox, Col, Collapse, Form, Input, Row, Tooltip, Table, Button } from "antd";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -73,7 +74,7 @@ export const settingComments = {
 
 const errorIcon = (
   <Tooltip title="The recommended user settings JSON has errors.">
-    <Icon type="exclamation-circle" style={{ color: "#f5222d", marginLeft: 4 }} />
+    <ExclamationCircleOutlined style={{ color: "#f5222d", marginLeft: 4 }} />
   </Tooltip>
 );
 

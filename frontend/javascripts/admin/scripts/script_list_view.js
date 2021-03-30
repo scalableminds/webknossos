@@ -2,7 +2,8 @@
 
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Spin, Button, Input, Modal } from "antd";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -185,12 +186,12 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 render={(__, script: APIScript) => (
                   <span>
                     <Link to={`/scripts/${script.id}/edit`}>
-                      <Icon type="edit" />
+                      <EditOutlined />
                       Edit
                     </Link>
                     <br />
                     <a href="#" onClick={_.partial(this.deleteScript, script)}>
-                      <Icon type="delete" />
+                      <DeleteOutlined />
                       Delete
                     </a>
                   </span>

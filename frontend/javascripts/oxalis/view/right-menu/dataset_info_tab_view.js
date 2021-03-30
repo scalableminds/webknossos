@@ -3,7 +3,8 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip, Icon } from "antd";
+import { Tooltip } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -319,7 +320,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         <p>
           Annotation Type:{" "}
           <Tooltip title="Skeleton and Volume">
-            Hybrid <Icon type="info-circle-o" />
+            Hybrid <InfoCircleOutlined />
           </Tooltip>
         </p>
       );

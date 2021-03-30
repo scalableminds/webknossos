@@ -1,6 +1,7 @@
 // @flow
 
-import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip, Modal, Input } from "antd";
+import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, Modal, Input } from "antd";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
@@ -619,13 +620,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     const errorIcon = (
       <Tooltip title="Some fields in this tab require your attention.">
-        <Icon type="exclamation-circle" style={{ color: "#f5222d", marginLeft: 4 }} />
+        <ExclamationCircleOutlined style={{ color: "#f5222d", marginLeft: 4 }} />
       </Tooltip>
     );
     const _hasNoAllowedTeams = this.hasNoAllowedTeams();
     const hasNoAllowedTeamsWarning = _hasNoAllowedTeams ? (
       <Tooltip title="Please double-check some fields here.">
-        <Icon type="exclamation-circle" style={{ color: "#faad14", marginLeft: 4 }} />
+        <ExclamationCircleOutlined style={{ color: "#faad14", marginLeft: 4 }} />
       </Tooltip>
     ) : null;
 

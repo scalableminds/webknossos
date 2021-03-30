@@ -1,6 +1,7 @@
 // @flow
-import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
+import { Form, Input, Button, Card, Upload, Spin, Progress, Divider } from "antd";
 import React from "react";
+import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
 
 import type { APITask } from "types/api_flow_types";
@@ -326,7 +327,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                     }}
                   >
                     <p className="ant-upload-drag-icon">
-                      <Icon type="inbox" />
+                      <InboxOutlined />
                     </p>
                     <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
                     <p>

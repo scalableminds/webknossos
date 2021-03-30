@@ -1,5 +1,6 @@
 // @flow
-import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "antd";
+import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
+import { ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { useState, useEffect } from "react";
@@ -204,7 +205,7 @@ export default function ShareModalView(props: Props) {
         </Col>
       </Row>
       <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
-        <Icon type="share-alt" />
+        <ShareAltOutlined />
         Team Sharing
       </Divider>
       <Row>

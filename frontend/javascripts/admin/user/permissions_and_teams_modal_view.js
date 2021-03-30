@@ -1,5 +1,6 @@
 // @flow
-import { Modal, Button, Radio, Col, Row, Checkbox, Divider, Icon } from "antd";
+import { Modal, Button, Radio, Col, Row, Checkbox, Divider } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -237,7 +238,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon type="info-circle" />
+            <InfoCircleOutlined />
           </a>
         </h4>
         {!isUserAdmin && !onlyEditingSingleUser ? (

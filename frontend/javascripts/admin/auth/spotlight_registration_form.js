@@ -1,5 +1,6 @@
 // @flow
-import { Form, Input, Button, Row, Col, Icon, Checkbox } from "antd";
+import { Form, Input, Button, Row, Col, Checkbox } from "antd";
+import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import React, { useRef, memo } from "react";
 
 import { loginUser } from "admin/admin_rest_api";
@@ -72,10 +73,7 @@ function SpotlightRegistrationForm(props: Props) {
                 },
               ],
             })(
-              <Input
-                prefix={<Icon type="user" style={{ fontSize: 13 }} />}
-                placeholder="First Name"
-              />,
+              <Input prefix={<UserOutlined style={{ fontSize: 13 }} />} placeholder="First Name" />,
             )}
           </FormItem>
         </Col>
@@ -90,10 +88,7 @@ function SpotlightRegistrationForm(props: Props) {
                 },
               ],
             })(
-              <Input
-                prefix={<Icon type="user" style={{ fontSize: 13 }} />}
-                placeholder="Last Name"
-              />,
+              <Input prefix={<UserOutlined style={{ fontSize: 13 }} />} placeholder="Last Name" />,
             )}
           </FormItem>
         </Col>
@@ -110,7 +105,7 @@ function SpotlightRegistrationForm(props: Props) {
               message: messages["auth.registration_email_input"],
             },
           ],
-        })(<Input prefix={<Icon type="mail" style={{ fontSize: 13 }} />} placeholder="Email" />)}
+        })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
       </FormItem>
       <FormItem hasFeedback>
         {getFieldDecorator("password.password1", {
@@ -124,12 +119,7 @@ function SpotlightRegistrationForm(props: Props) {
               message: messages["auth.registration_password_length"],
             },
           ],
-        })(
-          <Password
-            prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
-            placeholder="Password"
-          />,
-        )}
+        })(<Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />)}
       </FormItem>
 
       <FormItem>

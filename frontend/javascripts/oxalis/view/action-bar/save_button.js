@@ -9,7 +9,8 @@ import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import window from "libs/window";
-import { Tooltip, Icon } from "antd";
+import { Tooltip } from "antd";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import ErrorHandling from "libs/error_handling";
 
 type OwnProps = {|
@@ -90,7 +91,7 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   render() {
     const { progressFraction } = this.props;
-    const showUnsavedWarning = this.state.showUnsavedWarning;
+    const { showUnsavedWarning } = this.state;
 
     return (
       <ButtonComponent
@@ -114,7 +115,7 @@ class SaveButton extends React.PureComponent<Props, State> {
             )} minutes. Please ensure that your Internet connection works and wait until this warning disappears.`}
             placement="bottom"
           >
-            <Icon type="exclamation-circle" />
+            <ExclamationCircleOutlined />
           </Tooltip>
         ) : null}
       </ButtonComponent>

@@ -2,7 +2,8 @@
 
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
-import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
+import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin } from "antd";
+import { CloudUploadOutlined, RocketOutlined, SettingOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 
 import type { APIUser } from "types/api_flow_types";
@@ -99,7 +100,7 @@ function DatasetView(props: Props) {
     const addSampleDatasetCard = (
       <OptionCard
         header="Add Sample Dataset"
-        icon={<Icon type="rocket" />}
+        icon={<RocketOutlined />}
         action={<Button onClick={renderSampleDatasetsModal}>Add Sample Dataset</Button>}
         height={350}
       >
@@ -111,7 +112,7 @@ function DatasetView(props: Props) {
     const openPublicDatasetCard = (
       <OptionCard
         header="Open Demo Dataset"
-        icon={<Icon type="rocket" />}
+        icon={<RocketOutlined />}
         action={
           <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
             <Button>Open Dataset</Button>
@@ -129,7 +130,7 @@ function DatasetView(props: Props) {
           {features().isDemoInstance ? openPublicDatasetCard : addSampleDatasetCard}
           <OptionCard
             header="Upload Dataset"
-            icon={<Icon type="cloud-upload-o" />}
+            icon={<CloudUploadOutlined />}
             action={
               <Link to="/datasets/upload">
                 <Button>Open Import Dialog</Button>
@@ -216,7 +217,7 @@ function DatasetView(props: Props) {
       <Dropdown overlay={filterMenu} trigger={["click"]}>
         <Button>
           <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
-            <Icon type="setting" />
+            <SettingOutlined />
           </Badge>
         </Button>
       </Dropdown>

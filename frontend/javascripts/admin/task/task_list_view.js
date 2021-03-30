@@ -1,7 +1,17 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
+import { Table, Tag, Spin, Button, Input, Modal, Card } from "antd";
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EyeOutlined,
+  ForkOutlined,
+  PlayCircleOutlined,
+} from "@ant-design/icons";
 import Clipboard from "clipboard-js";
 import React from "react";
 import _ from "lodash";
@@ -274,22 +284,22 @@ class TaskListView extends React.PureComponent<Props, State> {
               render={(status, task: APITask) => (
                 <div className="nowrap">
                   <span title="Open Instances">
-                    <Icon type="play-circle-o" />
+                    <PlayCircleOutlined />
                     {status.open}
                   </span>
                   <br />
                   <span title="Active Instances">
-                    <Icon type="fork" />
+                    <ForkOutlined />
                     {status.active}
                   </span>
                   <br />
                   <span title="Finished Instances">
-                    <Icon type="check-circle-o" />
+                    <CheckCircleOutlined />
                     {status.finished}
                   </span>
                   <br />
                   <span title="Annotation Time">
-                    <Icon type="clock-circle-o" />
+                    <ClockCircleOutlined />
                     {formatSeconds((task.tracingTime || 0) / 1000)}
                   </span>
                 </div>
@@ -307,13 +317,13 @@ class TaskListView extends React.PureComponent<Props, State> {
                       href={`/annotations/CompoundTask/${task.id}`}
                       title="View all Finished Annotations"
                     >
-                      <Icon type="eye-o" />
+                      <EyeOutlined />
                       View
                     </a>
                   ) : null}
                   <br />
                   <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                    <Icon type="edit" />
+                    <EditOutlined />
                     Edit
                   </a>
                   <br />
@@ -326,13 +336,13 @@ class TaskListView extends React.PureComponent<Props, State> {
                       }}
                       title="Download all Finished Annotations"
                     >
-                      <Icon type="download" />
+                      <DownloadOutlined />
                       Download
                     </AsyncLink>
                   ) : null}
                   <br />
                   <a href="#" onClick={_.partial(this.deleteTask, task)}>
-                    <Icon type="delete" />
+                    <DeleteOutlined />
                     Delete
                   </a>
                 </span>

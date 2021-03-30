@@ -1,7 +1,8 @@
 // @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
-import { Form, Icon, Input, Button, Col, Row, Alert } from "antd";
+import { Form, Input, Button, Col, Row, Alert } from "antd";
+import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -44,12 +45,12 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   };
 
   handleConfirmBlur = (e: SyntheticInputEvent<>) => {
-    const value = e.target.value;
+    const { value } = e.target;
     this.setState(prevState => ({ confirmDirty: prevState.confirmDirty || !!value }));
   };
 
   checkConfirm = (rule, value, callback) => {
-    const form = this.props.form;
+    const { form } = this.props;
     if (value && this.state.confirmDirty) {
       form.validateFields(["confirm"], { force: true });
     }
@@ -57,7 +58,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   };
 
   checkPassword = (rule, value, callback) => {
-    const form = this.props.form;
+    const { form } = this.props;
     if (value && value !== form.getFieldValue("password.password1")) {
       callback(messages["auth.registration_password_mismatch"]);
     } else {
@@ -106,7 +107,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
                 ],
               })(
                 <Password
-                  prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                  prefix={<LockOutlined style={{ fontSize: 13 }} />}
                   placeholder="New Password"
                 />,
               )}
@@ -129,7 +130,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
               })(
                 <Password
                   onBlur={this.handleConfirmBlur}
-                  prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                  prefix={<LockOutlined style={{ fontSize: 13 }} />}
                   placeholder="Confirm New Password"
                 />,
               )}

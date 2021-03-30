@@ -1,6 +1,7 @@
 // @flow
 
-import { Input, Icon, Tooltip } from "antd";
+import { Input, Tooltip } from "antd";
+import { CheckOutlined, EditOutlined } from "@ant-design/icons";
 import Markdown from "react-remarkable";
 import * as React from "react";
 
@@ -87,8 +88,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             <React.Fragment>
               <Input {...inputComponentProps} />
               <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
-                <Icon
-                  type="check"
+                <CheckOutlined
                   style={iconStyle}
                   onClick={evt => {
                     evt.stopPropagation();
@@ -123,8 +123,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             )}
           </span>
           <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
-            <Icon
-              type="edit"
+            <EditOutlined
               style={iconStyle}
               onClick={evt => {
                 evt.stopPropagation();

@@ -1,5 +1,6 @@
 // @flow
-import { Button, Icon, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
+import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
+import { InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Dropzone from "react-dropzone";
 import * as React from "react";
@@ -67,7 +68,7 @@ function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
     <div style={{ textAlign: "center", cursor: "pointer" }}>
       {clickInput}
       <div>
-        <Icon type="inbox" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
+        <InboxOutlined style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
       </div>
       {isUpdateAllowed ? (
         <h5>Drop NML files here{clickAllowed ? " or click to select files" : null}...</h5>

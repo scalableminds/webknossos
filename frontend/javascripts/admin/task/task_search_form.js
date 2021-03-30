@@ -1,5 +1,6 @@
 // @flow
-import { Icon, Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
+import { Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
+import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
@@ -243,7 +244,7 @@ class TaskSearchForm extends React.Component<Props, State> {
               overlay={
                 <Menu onClick={() => this.handleSearchFormSubmit(true)}>
                   <Menu.Item key="1">
-                    <Icon type="retweet" />
+                    <RetweetOutlined />
                     Show random subset
                   </Menu.Item>
                 </Menu>
@@ -256,7 +257,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 loading={isLoading}
                 style={{ paddingRight: 3 }}
               >
-                Search <Icon type="down" />
+                Search <DownOutlined />
               </Button>
             </Dropdown>
             <Button style={{ marginLeft: 8 }} onClick={this.handleReset}>
@@ -269,7 +270,7 @@ class TaskSearchForm extends React.Component<Props, State> {
               loading={isLoading}
             >
               Download tasks as CSV
-              <Icon type="download" />
+              <DownloadOutlined />
             </Button>
           </Col>
         </Row>

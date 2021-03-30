@@ -8,10 +8,10 @@ import {
   Radio,
   Select,
   InputNumber,
-  Icon,
   Tooltip,
   Spin,
 } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
@@ -314,7 +314,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                     title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
                     placement="right"
                   >
-                    <Icon type="info-circle" />
+                    <InfoCircleOutlined />
                   </Tooltip>
                 </Checkbox>,
               )}

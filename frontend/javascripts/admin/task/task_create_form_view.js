@@ -11,12 +11,12 @@ import {
   Radio,
   Upload,
   Modal,
-  Icon,
   InputNumber,
   Input,
   Spin,
 } from "antd";
 import React from "react";
+import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
 
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
@@ -356,7 +356,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           })(
             <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false}>
               <p className="ant-upload-drag-icon">
-                <Icon type="inbox" />
+                <InboxOutlined />
               </p>
               <p className="ant-upload-text">Click or Drag Files to This Area to Upload</p>
               <p>

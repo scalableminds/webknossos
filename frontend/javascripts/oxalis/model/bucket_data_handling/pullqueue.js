@@ -63,7 +63,7 @@ class PullQueue {
     const promises = [];
     while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
       const batch = [];
-      while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
+      while (batch.length < (window.BATCH_SIZE || BATCH_SIZE) && this.priorityQueue.length > 0) {
         const address = this.priorityQueue.dequeue().bucket;
         const bucket = this.cube.getOrCreateBucket(address);
 

@@ -119,6 +119,15 @@ export async function requestWithFallback(
   });
 }
 
+let lastTick = performance.now();
+window.tickMeasurements = [];
+setInterval(() => {
+  const elapsedDuration = performance.now() - lastTick;
+  const delay = Math.abs(elapsedDuration - 25);
+  window.tickMeasurements.push({ delay, timestamp: performance.now() });
+  lastTick = performance.now();
+}, 25);
+
 export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
@@ -171,6 +180,9 @@ export async function requestFromStore(
         transferredBucketCount: bucketInfo.length - missingBuckets.length,
         requestedBuckets: bucketInfo,
         requestUrl: `${dataUrl}/data?token=${token}`,
+        startTime,
+        endTime,
+        timestamp: endTime,
       };
 
       window.measurements = window.measurements || [];

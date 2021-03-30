@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip, Icon } from "antd";
+import { Button, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -130,9 +130,6 @@ export function convertPixelsToNm(
 class DatasetInfoTabView extends React.PureComponent<Props> {
   state = {
     measurements: [],
-    plot: {
-      layout: { width: 600, height: 600, title: "Data Loading Speed" },
-    },
     revision: 0,
   };
 
@@ -143,6 +140,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       if (this.state.measurements !== newMeasurements) {
         this.setState({
           measurements: newMeasurements,
+          revision: 0,
         });
       }
 
@@ -388,25 +386,56 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     return null;
   }
 
+  getCurrentMetrics(_measurements) {
+    const requestedBucketCount = _.sum(_measurements.map(m => m.requestedBucketCount));
+    const bucketCountPerRequest = requestedBucketCount / _measurements.length;
+
+    const elapsedDuration =
+      _measurements.length > 0
+        ? _measurements[_measurements.length - 1].endTime - _measurements[0].startTime
+        : 0;
+    const averageSpeedInMsPerBucket = elapsedDuration / requestedBucketCount;
+    const averageSpeedInMBits =
+      (requestedBucketCount * 32 ** 3 * 8) / 1024 ** 2 / (elapsedDuration / 1000);
+
+    return { averageSpeedInMsPerBucket, averageSpeedInMBits, bucketCountPerRequest };
+  }
+
   renderBenchmark() {
     const { measurements } = this.state;
 
+    const now = performance.now();
+    const recentMeasurements = measurements.filter(m => now - m.timestamp < 2000);
+
+    const {
+      averageSpeedInMsPerBucket,
+      averageSpeedInMBits,
+      bucketCountPerRequest,
+    } = this.getCurrentMetrics(recentMeasurements);
+
+    const tickMeasurements = window.tickMeasurements || [];
     const durations = measurements.map(m => m.duration);
-    const requestedBucketCount = _.sum(measurements.map(m => m.requestedBucketCount));
-    const durationsSum = _.sum(durations);
-    const averageSpeedInMsPerBucket = durationsSum / requestedBucketCount;
-    const averageSpeedInMBits = (requestedBucketCount * 8 * 32 ** 3) / 1024 ** 3;
 
     return (
       <div>
-        Average Speed:
+        Average Speed: <br />
         {averageSpeedInMsPerBucket.toFixed(2)} ms/Bucket Average Speed: <br />
         {averageSpeedInMBits.toFixed(2)} MBit/s
+        <br /> Considering last {recentMeasurements.length} requests
+        <br /> {bucketCountPerRequest} Buckets/Request
         <br />
+        <Button
+          onClick={() => {
+            window.measurements = [];
+            this.setState({ measurements: [] });
+          }}
+        >
+          Reset
+        </Button>
         <Plot
           data={[
             {
-              x: measurements.map((m, idx) => idx),
+              x: measurements.map(m => m.timestamp),
               y: durations,
               text: measurements.map(m =>
                 m.requestedBuckets
@@ -417,7 +446,23 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
               mode: "lines+markers",
               marker: { color: "#1890ff" },
               xaxis: {
-                range: [measurements.length - 500, measurements.length],
+                range: [
+                  tickMeasurements.slice(-500)[0].timestamp,
+                  tickMeasurements.slice(-1)[0].timestamp,
+                ],
+              },
+            },
+            {
+              x: tickMeasurements.map(m => m.timestamp),
+              y: tickMeasurements.map(m => m.delay),
+              type: "scatter",
+              mode: "lines",
+              marker: { color: "red" },
+              xaxis: {
+                range: [
+                  tickMeasurements.slice(-500)[0].timestamp,
+                  tickMeasurements.slice(-1)[0].timestamp,
+                ],
               },
             },
           ]}

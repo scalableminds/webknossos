@@ -161,20 +161,23 @@ class Request {
       }),
     );
 
-  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<*> =>
-    this.triggerRequest(
+  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<*> => {
+    const useWebworkerForArrayBuffer =
+      options.useWebworkerForArrayBuffer != null ? options.useWebworkerForArrayBuffer : true;
+    return this.triggerRequest(
       url,
       _.defaultsDeep(options, {
         headers: {
           Accept: "application/octet-stream",
           "Access-Control-Request-Headers": "content-type, missing-buckets",
         },
-        useWebworkerForArrayBuffer: true,
+        useWebworkerForArrayBuffer,
       }),
       // Usually the webworker reads the arrayBuffer, but if no worker should be used
       // the arrayBuffer must still be read from the response
-      options.useWebworkerForArrayBuffer === false ? response => response.arrayBuffer() : null,
+      useWebworkerForArrayBuffer ? response => response.arrayBuffer() : null,
     );
+  };
 
   // IN:  JSON
   // OUT: arraybuffer

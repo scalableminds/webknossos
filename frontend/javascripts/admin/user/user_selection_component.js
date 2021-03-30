@@ -63,7 +63,9 @@ class UserSelectionComponent extends React.PureComponent<Props, State> {
         onChange={this.handleSelectChange}
         optionFilterProp="children"
         style={{ width: "100%" }}
-        filterOption={(input, option) => option.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+        filterOption={(input, option) =>
+          option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
+        }
         options={this.state.users.map(user => ({
           value: user.id,
           label: `${user.lastName}, ${user.firstName} (${user.email})`,

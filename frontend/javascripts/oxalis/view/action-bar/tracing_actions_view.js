@@ -425,7 +425,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         key="reopen-button"
         icon={<VerticalRightOutlined />}
         onClick={this.handleReopenTask}
-        type="danger"
+        danger
       >
         Undo Finish
       </ButtonComponent>

@@ -1582,7 +1582,7 @@ export function getMeshfileChunksForSegment(
           mag,
         },
       },
-    ).then(list => list.map(item => item.split("_").map(a => parseInt(a, 10)))),
+    ),
   );
 }
 

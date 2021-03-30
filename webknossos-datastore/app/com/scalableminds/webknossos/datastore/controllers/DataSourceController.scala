@@ -252,28 +252,28 @@ class DataSourceController @Inject()(
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String): Action[ListMeshChunksRequest] =
-    Action(validateJson[ListMeshChunksRequest]) { implicit request =>
-      //accessTokenService.validateAccessForSyncBlock(
-        //UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-        AllowRemoteOrigin {
-          Ok(
-            Json.toJson(meshFileService
-              .listMeshChunksForSegment(organizationName, dataSetName, dataLayerName, request.body)))
-        }
-      //}
+    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
+      accessTokenService.validateAccessForSyncBlock(
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            Ok(
+              Json.toJson(meshFileService
+                .listMeshChunksForSegment(organizationName, dataSetName, dataLayerName, request.body)))
+          }
+      }
     }
 
   def readMeshChunk(organizationName: String,
                     dataSetName: String,
                     dataLayerName: String): Action[MeshChunkDataRequest] =
-    Action(validateJson[MeshChunkDataRequest]) { implicit request =>
-      //accessTokenService.validateAccessForSyncBlock(
-      //UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-      AllowRemoteOrigin {
-        Ok(meshFileService
-            .readMeshChunk(organizationName, dataSetName, dataLayerName, request.body))
+    Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
+      accessTokenService.validateAccessForSyncBlock(
+      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          Ok(meshFileService
+              .readMeshChunk(organizationName, dataSetName, dataLayerName, request.body))
+        }
       }
-      //}
     }
 
   def update(organizationName: String, dataSetName: String): Action[DataSource] =

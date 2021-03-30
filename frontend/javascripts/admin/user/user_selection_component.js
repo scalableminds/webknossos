@@ -8,8 +8,6 @@ import type { APIUser } from "types/api_flow_types";
 import { getUsers } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 
-const { Option } = Select;
-
 type Props = {
   handleSelection: string => void,
 };
@@ -65,16 +63,12 @@ class UserSelectionComponent extends React.PureComponent<Props, State> {
         onChange={this.handleSelectChange}
         optionFilterProp="children"
         style={{ width: "100%" }}
-        filterOption={(input, option) =>
-          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-        }
-      >
-        {this.state.users.map(user => (
-          <Option key={user.id} value={user.id}>
-            {`${user.lastName}, ${user.firstName} (${user.email})`}
-          </Option>
-        ))}
-      </Select>
+        filterOption={(input, option) => option.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+        options={this.state.users.map(user => ({
+          value: user.id,
+          label: `${user.lastName}, ${user.firstName} (${user.email})`,
+        }))}
+      />
     );
   }
 }

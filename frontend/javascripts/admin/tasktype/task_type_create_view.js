@@ -33,7 +33,6 @@ import Toast from "libs/toast";
 const RadioGroup = Radio.Group;
 
 const FormItem = Form.Item;
-const { Option } = Select;
 const { TextArea } = Input;
 
 type Props = {
@@ -214,13 +213,11 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                >
-                  {this.state.teams.map((team: APITeam) => (
-                    <Option key={team.id} value={team.id}>
-                      {`${team.name}`}
-                    </Option>
-                  ))}
-                </Select>,
+                  options={this.state.teams.map((team: APITeam) => ({
+                    value: team.id,
+                    label: `${team.name}`,
+                  }))}
+                />,
               )}
             </FormItem>
 
@@ -273,22 +270,28 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   placeholder="Select all Allowed Modes"
                   optionFilterProp="children"
                   style={{ width: "100%" }}
-                >
-                  <Option value="orthogonal">Orthogonal</Option>
-                  <Option value="oblique">Oblique</Option>
-                  <Option value="flight">Flight</Option>
-                </Select>,
+                  options={[
+                    { value: "orthogonal", label: "Orthogonal" },
+                    { value: "oblique", label: "Oblique" },
+                    { value: "flight", label: "Flight" },
+                  ]}
+                />,
               )}
             </FormItem>
 
             <FormItem label="Preferred Mode" hasFeedback>
               {getFieldDecorator("settings.preferredMode")(
-                <Select allowClear optionFilterProp="children" style={{ width: "100%" }}>
-                  <Option value={null}>Any</Option>
-                  <Option value="orthogonal">Orthogonal</Option>
-                  <Option value="oblique">Oblique</Option>
-                  <Option value="flight">Flight</Option>
-                </Select>,
+                <Select
+                  allowClear
+                  optionFilterProp="children"
+                  style={{ width: "100%" }}
+                  options={[
+                    { value: null, label: "Any" },
+                    { value: "orthogonal", label: "Orthogonal" },
+                    { value: "oblique", label: "Oblique" },
+                    { value: "flight", label: "Flight" },
+                  ]}
+                />,
               )}
             </FormItem>
 

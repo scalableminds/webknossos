@@ -11,7 +11,6 @@ import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_ap
 import Persistence from "libs/persistence";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 
 export type QueryObject = {
   taskType?: string,
@@ -200,13 +199,11 @@ class TaskSearchForm extends React.Component<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                >
-                  {this.state.taskTypes.map((taskType: APITaskType) => (
-                    <Option key={taskType.id} value={taskType.id}>
-                      {`${taskType.summary}`}
-                    </Option>
-                  ))}
-                </Select>,
+                  options={this.state.taskTypes.map((taskType: APITaskType) => ({
+                    value: taskType.id,
+                    label: `${taskType.summary}`,
+                  }))}
+                />,
               )}
             </FormItem>
           </Col>
@@ -222,13 +219,11 @@ class TaskSearchForm extends React.Component<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                >
-                  {this.state.projects.map((project: APIProject) => (
-                    <Option key={project.id} value={project.name}>
-                      {`${project.name}`}
-                    </Option>
-                  ))}
-                </Select>,
+                  options={this.state.projects.map((project: APIProject) => ({
+                    value: project.name,
+                    label: `${project.name}`,
+                  }))}
+                />,
               )}
             </FormItem>
           </Col>
@@ -242,15 +237,13 @@ class TaskSearchForm extends React.Component<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                >
-                  {this.state.users
+                  options={this.state.users
                     .filter(u => u.isActive)
-                    .map((user: APIUser) => (
-                      <Option key={user.id} value={user.id}>
-                        {`${user.lastName}, ${user.firstName} (${user.email})`}
-                      </Option>
-                    ))}
-                </Select>,
+                    .map((user: APIUser) => ({
+                      value: user.id,
+                      label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                    }))}
+                />,
               )}
             </FormItem>
           </Col>

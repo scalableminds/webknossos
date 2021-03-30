@@ -481,16 +481,12 @@ type DropdownSettingProps = {
   onChange: (value: number) => void,
   label: React.Node | string,
   value: number | string,
-  children?: Array<React.Node>,
+  options: Array<Object>,
 };
 
 export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
-  static defaultProps = {
-    children: undefined,
-  };
-
   render() {
-    const { onChange, label, value, children } = this.props;
+    const { onChange, label, value } = this.props;
     return (
       <Row className="margin-bottom" align="top">
         <Col span={8}>
@@ -503,9 +499,8 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
             defaultValue={value.toString()}
             size="small"
             dropdownMatchSelectWidth={false}
-          >
-            {children}
-          </Select>
+            options={this.props.options}
+          />
         </Col>
       </Row>
     );

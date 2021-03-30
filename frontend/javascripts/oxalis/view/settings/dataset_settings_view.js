@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Row, Select, Switch, Tooltip, Modal } from "antd";
+import { Col, Collapse, Row, Switch, Tooltip, Modal } from "antd";
 import {
   EditOutlined,
   ExclamationCircleOutlined,
@@ -67,7 +67,6 @@ import messages, { settings } from "messages";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
 const { Panel } = Collapse;
-const { Option } = Select;
 
 type DatasetSettingsProps = {|
   userConfiguration: UserConfiguration,
@@ -671,13 +670,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               this.props.userConfiguration.gpuMemoryFactor || constants.DEFAULT_GPU_MEMORY_FACTOR
             ).toString()}
             onChange={this.onChangeGpuFactor}
-          >
-            {getGpuFactorsWithLabels().map(([factor, label]) => (
-              <Option key={label} value={factor.toString()}>
-                {label}
-              </Option>
-            ))}
-          </DropdownSetting>
+            options={getGpuFactorsWithLabels().map(([factor, label]) => ({
+              label,
+              value: factor.toString(),
+            }))}
+          />
           <DropdownSetting
             label={
               <React.Fragment>
@@ -689,10 +686,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }
             value={this.props.datasetConfiguration.loadingStrategy}
             onChange={_.partial(this.props.onChange, "loadingStrategy")}
-          >
-            <Option value="BEST_QUALITY_FIRST">Best quality first</Option>
-            <Option value="PROGRESSIVE_QUALITY">Progressive quality</Option>
-          </DropdownSetting>
+            options={[
+              { value: "BEST_QUALITY_FIRST", label: "Best quality first" },
+              { value: "PROGRESSIVE_QUALITY", label: "Progressive quality" },
+            ]}
+          />
           <SwitchSetting
             label={
               <React.Fragment>

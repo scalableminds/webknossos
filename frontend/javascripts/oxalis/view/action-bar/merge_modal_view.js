@@ -217,13 +217,11 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 style={{ width: 200 }}
                 onChange={this.handleChangeMergeProject}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-              >
-                {this.state.projects.map(project => (
-                  <Select.Option key={project.id} value={project.id}>
-                    {project.label}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={this.state.projects.map(project => ({
+                  value: project.id,
+                  label: project.label,
+                }))}
+              />
             </Form.Item>
 
             <ButtonWithCheckbox

@@ -10,7 +10,11 @@ import parseStlBuffer from "libs/parse_stl_buffer";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
-import { getMeshfileChunksForSegment, getMeshfileChunkData } from "admin/admin_rest_api";
+import {
+  getMeshfileChunksForSegment,
+  getMeshfileChunkData,
+  getMeshfilesForDatasetLayer,
+} from "admin/admin_rest_api";
 import type { OxalisState, IsosurfaceInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
@@ -260,16 +264,26 @@ class MeshesView extends React.Component<
           const id = getIdForPos(pos);
           if (id === 0) {
             Toast.info("No cell found at centered position");
+            return;
           }
           const layerName =
             this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name;
+          const availableMeshFiles = await getMeshfilesForDatasetLayer(
+            this.props.dataset.dataStore.url,
+            this.props.dataset,
+            layerName,
+          );
+          if (availableMeshFiles.length < 1) {
+            Toast.info("No mesh file available.");
+            return;
+          }
+          const meshFile = availableMeshFiles[0];
           const availableChunks = await getMeshfileChunksForSegment(
             this.props.dataset.dataStore.url,
             this.props.dataset,
             layerName,
-            "mesh_4-4-1",
+            meshFile,
             id,
-            [4, 4, 1],
           );
           for (const chunkPos of availableChunks) {
             // eslint-disable-next-line no-await-in-loop
@@ -277,10 +291,9 @@ class MeshesView extends React.Component<
               this.props.dataset.dataStore.url,
               this.props.dataset,
               layerName,
-              "mesh_4-4-1",
+              meshFile,
               id,
               chunkPos,
-              [4, 4, 1],
             );
             const geometry = parseStlBuffer(stlData);
             getSceneController().addIsosurfaceFromGeometry(geometry, id);

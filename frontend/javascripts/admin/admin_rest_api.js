@@ -1568,7 +1568,6 @@ export function getMeshfileChunksForSegment(
   layerName: string,
   meshFile: string,
   segmentId: number,
-  mag: Vector3,
 ): Promise<Array<Vector3>> {
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(
@@ -1579,7 +1578,6 @@ export function getMeshfileChunksForSegment(
         data: {
           meshFile,
           segmentId,
-          mag,
         },
       },
     ),
@@ -1593,7 +1591,6 @@ export function getMeshfileChunkData(
   meshFile: string,
   segmentId: number,
   position: Vector3,
-  mag: Vector3,
 ): Promise<ArrayBuffer> {
   return doWithToken(async token => {
     const data = await Request.sendJSONReceiveArraybufferWithHeaders(
@@ -1604,7 +1601,6 @@ export function getMeshfileChunkData(
         data: {
           meshFile,
           segmentId,
-          mag,
           position,
         },
         useWebworkerForArrayBuffer: false,

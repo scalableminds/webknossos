@@ -8,6 +8,7 @@ import {
   PlayCircleOutlined,
   RollbackOutlined,
   TeamOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -271,8 +272,8 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
                 const isVolumeIncluded = annotation.tracing.volume != null;
                 return downloadNml(annotation.id, "Task", isVolumeIncluded);
               }}
+              icon={<DownloadOutlined />}
             >
-              <DownloadOutlined />
               Download
             </AsyncLink>
             <br />
@@ -492,7 +493,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         <div className="pull-right">
           <AsyncButton
             type="primary"
-            icon="file-add"
+            icon={<UserAddOutlined />}
             onClick={() => this.confirmGetNewTask()}
             disabled={this.props.isAdminView && this.props.userId}
           >

@@ -2,7 +2,7 @@
 import { PropTypes } from "@scalableminds/prop-types";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Table, Spin, Button, Input, Modal, Alert } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -116,7 +116,7 @@ class TeamListView extends React.PureComponent<Props, State> {
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Button
-              icon="plus"
+              icon={<PlusOutlined />}
               style={marginRight}
               type="primary"
               onClick={() => this.setState({ isTeamCreationModalVisible: true })}

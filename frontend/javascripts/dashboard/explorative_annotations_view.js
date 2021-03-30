@@ -7,6 +7,8 @@ import {
   FolderOpenOutlined,
   InboxOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -229,13 +231,19 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             Trace
           </Link>
           <br />
-          <AsyncLink href="#" onClick={() => downloadNml(id, typ, hasVolumeTracing)}>
-            <DownloadOutlined />
+          <AsyncLink
+            href="#"
+            onClick={() => downloadNml(id, typ, hasVolumeTracing)}
+            icon={<DownloadOutlined />}
+          >
             Download
           </AsyncLink>
           <br />
-          <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
-            <InboxOutlined />
+          <AsyncLink
+            href="#"
+            onClick={() => this.finishOrReopenTracing("finish", tracing)}
+            icon={<InboxOutlined />}
+          >
             Archive
           </AsyncLink>
           <br />
@@ -244,8 +252,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     } else {
       return (
         <div>
-          <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
-            <FolderOpenOutlined />
+          <AsyncLink
+            href="#"
+            onClick={() => this.finishOrReopenTracing("reopen", tracing)}
+            icon={<FolderOpenOutlined />}
+          >
             Reopen
           </AsyncLink>
           <br />
@@ -472,9 +483,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   {tag}
                 </Tag>
               ))}
-              {this.state.shouldShowArchivedTracings ? null : (
+              {this.state.shouldShowArchivedTracings && false ? null : (
                 <EditableTextIcon
-                  icon="plus"
+                  icon={<PlusOutlined />}
                   onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
                 />
               )}
@@ -531,7 +542,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         ) : (
           <div className="pull-right">
             <Button
-              icon="upload"
+              icon={<UploadOutlined />}
               style={marginRight}
               onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
             >

@@ -11,6 +11,7 @@ import {
   PaperClipOutlined,
   CodeOutlined,
   CustomerServiceOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
@@ -262,7 +263,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
             <Button
               size="large"
               type="primary"
-              icon="plus"
+              icon={<PlusOutlined />}
               style={{ width: "100%" }}
               htmlType="submit"
               disabled={hasErrors(getFieldsError())}

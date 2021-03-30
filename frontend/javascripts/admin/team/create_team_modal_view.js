@@ -1,8 +1,9 @@
 // @flow
-import { Form } from '@ant-design/compatible';
+import { Form } from "@ant-design/compatible";
 
-import '@ant-design/compatible/assets/index.css';
+import "@ant-design/compatible/assets/index.css";
 import { Modal, Input } from "antd";
+import { TagOutlined } from "@ant-design/icons";
 import * as React from "react";
 
 import { createTeam } from "admin/admin_rest_api";
@@ -53,7 +54,7 @@ class CreateTeamModalForm extends React.PureComponent<Props> {
                   message: "The team name must not contain any special characters.",
                 },
               ],
-            })(<Input icon="tag-o" placeholder="Team Name" autoFocus />)}
+            })(<Input icon={<TagOutlined />} placeholder="Team Name" autoFocus />)}
           </FormItem>
         </Form>
       </Modal>

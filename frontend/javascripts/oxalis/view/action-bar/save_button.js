@@ -10,7 +10,12 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import window from "libs/window";
 import { Tooltip } from "antd";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
+import {
+  CheckOutlined,
+  ExclamationCircleOutlined,
+  HourglassOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 import ErrorHandling from "libs/error_handling";
 
 type OwnProps = {|
@@ -77,11 +82,11 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   getSaveButtonIcon() {
     if (this.state.isStateSaved) {
-      return "check";
+      return <CheckOutlined />;
     } else if (isBusy(this.props.isBusyInfo)) {
-      return "loading";
+      return <LoadingOutlined />;
     } else {
-      return "hourglass";
+      return <HourglassOutlined />;
     }
   }
 

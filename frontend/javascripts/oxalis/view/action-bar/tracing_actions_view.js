@@ -6,10 +6,12 @@ import {
   CameraOutlined,
   CheckCircleOutlined,
   CheckOutlined,
+  CodeSandboxOutlined,
   DeleteOutlined,
   DisconnectOutlined,
   DownloadOutlined,
   DownOutlined,
+  FileAddOutlined,
   FolderOpenOutlined,
   InfoCircleOutlined,
   LayoutOutlined,
@@ -20,6 +22,8 @@ import {
   SettingOutlined,
   ShareAltOutlined,
   StopOutlined,
+  VerticalLeftOutlined,
+  VerticalRightOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -386,7 +390,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
               title="This annotation was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
               key="sandbox-tooltip"
             >
-              <Button disabled type="primary" icon="code-sandbox">
+              <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
                 <span className="hide-on-small-screen">Sandbox</span>
               </Button>
             </Tooltip>
@@ -396,7 +400,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           <ButtonComponent key="read-only-button" type="danger" disabled>
             Read only
           </ButtonComponent>,
-          <AsyncButton key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+          <AsyncButton
+            key="copy-button"
+            icon={<FileAddOutlined />}
+            onClick={this.handleCopyToAccount}
+          >
             Copy To My Account
           </AsyncButton>,
         ];
@@ -405,7 +413,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       restrictions.allowFinish && task ? (
         <ButtonComponent
           key="next-button"
-          icon="verticle-left"
+          icon={<VerticalLeftOutlined />}
           onClick={this.handleFinishAndGetNextTask}
         >
           Finish and Get Next Task
@@ -415,7 +423,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const reopenTaskButton = this.state.isReopenAllowed ? (
       <ButtonComponent
         key="reopen-button"
-        icon="verticle-right"
+        icon={<VerticalRightOutlined />}
         onClick={this.handleReopenTask}
         type="danger"
       >

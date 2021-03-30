@@ -41,30 +41,19 @@ export function AsyncButton(props: Props) {
   return <Button {...props} loading={isLoading} onClick={onClick} />;
 }
 
-export function AsyncIconButton(allProps: Props & { icon: React.Node }) {
-  const { icon, ...props } = allProps;
+export function AsyncIconButton(props: Props & { icon: React.Node }) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   return (
-    <React.Fragment onClick={onClick}> {isLoading ? <LoadingOutlined /> : icon}</React.Fragment>
+    <React.Fragment onClick={onClick}>
+      {isLoading ? <LoadingOutlined /> : props.icon}
+    </React.Fragment>
   );
 }
 
-export function AsyncLink(props: Props & { children: React.Node }) {
+export function AsyncLink(props: Props & { children: React.Node, icon: React.Node }) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  let content;
-  if (isLoading) {
-    const children = React.Children.toArray(props.children);
-    const childrenWithoutIcon = children.filter(child => {
-      if (child.type == null) {
-        return true;
-      }
-      return child.type !== "i" && child.type.name !== "Icon";
-    });
-    content = [<LoadingOutlined key="loading-icon" />, childrenWithoutIcon];
-  } else {
-    content = props.children;
-  }
-
+  const icon = isLoading ? <LoadingOutlined key="loading-icon" /> : props.icon;
+  const content = [icon, props.children];
   return (
     <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : null}>
       {content}

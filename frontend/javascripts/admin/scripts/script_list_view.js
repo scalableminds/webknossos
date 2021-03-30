@@ -3,7 +3,7 @@
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Spin, Button, Input, Modal } from "antd";
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -114,7 +114,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
         <div>
           <div className="pull-right">
             <Link to="/scripts/create">
-              <Button icon="plus" style={marginRight} type="primary">
+              <Button icon={<PlusOutlined />} style={marginRight} type="primary">
                 Add Script
               </Button>
             </Link>

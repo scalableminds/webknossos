@@ -8,6 +8,8 @@ import {
   EditOutlined,
   ExclamationCircleOutlined,
   InfoCircleOutlined,
+  ReloadOutlined,
+  ScanOutlined,
   StopOutlined,
 } from "@ant-design/icons";
 import type { Dispatch } from "redux";
@@ -165,7 +167,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <AsyncIconButton
-          type="scan"
+          icon={<ScanOutlined />}
           onClick={
             !isDisabled
               ? () => this.handleFindData(layerName, isColorLayer)
@@ -188,7 +190,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <AsyncIconButton
-          type="reload"
+          icon={<ReloadOutlined />}
           onClick={() => this.reloadLayerData(layerName)}
           style={{
             position: "absolute",

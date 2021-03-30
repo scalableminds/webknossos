@@ -145,8 +145,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
               const isVolumeIncluded = annotation.tracing.volume != null;
               return downloadNml(annotation.id, "Task", isVolumeIncluded);
             }}
+            icon={<DownloadOutlined />}
           >
-            <DownloadOutlined />
             Download
           </AsyncLink>
         </Item>

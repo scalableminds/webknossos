@@ -11,6 +11,7 @@ import {
   EyeOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
   PlusSquareOutlined,
   ScheduleOutlined,
   TeamOutlined,
@@ -236,7 +237,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
           <div className="pull-right">
             {this.props.taskTypeId ? null : (
               <Link to="/projects/create">
-                <Button icon="plus" style={marginRight} type="primary">
+                <Button icon={<PlusOutlined />} style={marginRight} type="primary">
                   Add Project
                 </Button>
               </Link>
@@ -394,8 +395,8 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                         await downloadNml(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"
+                      icon={<DownloadOutlined />}
                     >
-                      <DownloadOutlined />
                       Download
                     </AsyncLink>
                     <br />

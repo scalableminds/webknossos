@@ -7,6 +7,8 @@ import {
   CloseCircleOutlined,
   CopyOutlined,
   InfoCircleOutlined,
+  TeamOutlined,
+  TrophyOutlined,
   UserAddOutlined,
   UserDeleteOutlined,
   UserOutlined,
@@ -291,7 +293,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           ) : null}
           <Button
             onClick={() => this.setState({ isTeamRoleModalVisible: true })}
-            icon="team"
+            icon={<TeamOutlined />}
             disabled={!hasRowsSelected}
             style={marginRight}
           >
@@ -301,14 +303,14 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             onClick={() => {
               this.setState({ isExperienceModalVisible: true });
             }}
-            icon="trophy"
+            icon={<TrophyOutlined />}
             disabled={!hasRowsSelected}
             style={marginRight}
           >
             Change Experience
           </Button>
           <Button
-            icon="user-add"
+            icon={<UserAddOutlined />}
             style={marginRight}
             onClick={() => this.setState({ isInviteModalVisible: true })}
           >

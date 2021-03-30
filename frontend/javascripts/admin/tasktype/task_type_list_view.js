@@ -18,6 +18,7 @@ import {
   DownloadOutlined,
   EditOutlined,
   EyeOutlined,
+  PlusOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
 
@@ -118,7 +119,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Link to="/taskTypes/create">
-              <Button icon="plus" style={marginRight} type="primary">
+              <Button icon={<PlusOutlined />} style={marginRight} type="primary">
                 Add Task Type
               </Button>
             </Link>
@@ -268,8 +269,8 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                         return downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
                       }}
                       title="Download all Finished Annotations"
+                      icon={<DownloadOutlined />}
                     >
-                      <DownloadOutlined />
                       Download
                     </AsyncLink>
                     <br />

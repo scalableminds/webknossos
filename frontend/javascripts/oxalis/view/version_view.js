@@ -8,6 +8,7 @@ import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Store, { type OxalisState, type Tracing } from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
+import { CloseOutlined } from "@ant-design/icons";
 
 const { TabPane } = Tabs;
 
@@ -63,7 +64,7 @@ class VersionView extends React.Component<Props, State> {
             style={{ float: "right", border: 0 }}
             onClick={this.handleClose}
             shape="circle"
-            icon="close"
+            icon={<CloseOutlined />}
           />
           <div style={{ fontSize: 12, marginBottom: 8, color: "rgba(0, 0, 0, 0.65)" }}>
             <Alert

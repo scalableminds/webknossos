@@ -8,6 +8,7 @@ import {
   RocketOutlined,
   TrophyOutlined,
   QuestionCircleOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
 import { connect } from "react-redux";
@@ -109,11 +110,7 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
       className={collapse ? "hide-on-small-screen" : ""}
       key="adminMenu"
       title={
-        <CollapsibleMenuTitle
-          title="Administration"
-          icon={<TeamOutlined type="team" />}
-          collapse={collapse}
-        />
+        <CollapsibleMenuTitle title="Administration" icon={<TeamOutlined />} collapse={collapse} />
       }
       {...menuProps}
     >
@@ -332,7 +329,11 @@ function AnonymousAvatar() {
       trigger="click"
       style={{ position: "fixed" }}
     >
-      <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
+      <Avatar
+        className="hover-effect-via-opacity"
+        icon={<UserOutlined />}
+        style={{ marginLeft: 8 }}
+      />
     </Popover>
   );
 }

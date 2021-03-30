@@ -3,7 +3,14 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
 import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin } from "antd";
-import { CloudUploadOutlined, RocketOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  CloudUploadOutlined,
+  LoadingOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  RocketOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 
 import type { APIUser } from "types/api_flow_types";
@@ -231,14 +238,14 @@ function DatasetView(props: Props) {
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <React.Fragment>
           <Button
-            icon={context.isLoading ? "loading" : "reload"}
+            icon={context.isLoading ? <LoadingOutlined /> : <ReloadOutlined />}
             style={margin}
             onClick={context.checkDatasets}
           >
             Refresh
           </Button>
           <Link to="/datasets/upload" style={margin}>
-            <Button type="primary" icon="plus">
+            <Button type="primary" icon={<PlusOutlined />}>
               Add Dataset
             </Button>
           </Link>

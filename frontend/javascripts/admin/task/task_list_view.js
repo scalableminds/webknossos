@@ -11,6 +11,7 @@ import {
   EyeOutlined,
   ForkOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import Clipboard from "clipboard-js";
 import React from "react";
@@ -175,7 +176,7 @@ class TaskListView extends React.PureComponent<Props, State> {
       <div className="container">
         <div className="pull-right">
           <Link to="/tasks/create">
-            <Button icon="plus" style={marginRight} type="primary">
+            <Button icon={<PlusOutlined />} style={marginRight} type="primary">
               Add Task
             </Button>
           </Link>
@@ -335,8 +336,8 @@ class TaskListView extends React.PureComponent<Props, State> {
                         return downloadNml(task.id, "CompoundTask", includesVolumeData);
                       }}
                       title="Download all Finished Annotations"
+                      icon={<DownloadOutlined />}
                     >
-                      <DownloadOutlined />
                       Download
                     </AsyncLink>
                   ) : null}

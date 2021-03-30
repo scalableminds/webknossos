@@ -17,6 +17,7 @@ import window from "libs/window";
 
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 
+import { CopyOutlined, RetweetOutlined } from "@ant-design/icons";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
@@ -119,7 +120,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
             style={{ width: "80%" }}
             readOnly
           />
-          <Button onClick={handleCopySharingLink} style={{ width: "10%" }} icon="copy">
+          <Button onClick={handleCopySharingLink} style={{ width: "10%" }} icon={<CopyOutlined />}>
             Copy
           </Button>
           {!form.getFieldValue("dataset.isPublic") && (
@@ -134,7 +135,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
               <AsyncButton
                 onClick={handleRevokeSharingLink}
                 style={{ width: "10%" }}
-                icon="retweet"
+                icon={<RetweetOutlined />}
               >
                 Renew
               </AsyncButton>
@@ -154,7 +155,11 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
               style={{ width: "80%" }}
               readOnly
             />
-            <Button onClick={handleCopyAllowUsageCode} style={{ width: "10%" }} icon="copy">
+            <Button
+              onClick={handleCopyAllowUsageCode}
+              style={{ width: "10%" }}
+              icon={<CopyOutlined />}
+            >
               Copy
             </Button>
           </Input.Group>

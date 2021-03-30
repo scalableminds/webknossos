@@ -16,6 +16,7 @@ import {
   Input,
   Spin,
 } from "antd";
+import { FormInstance } from "antd/lib/form";
 import React from "react";
 import _ from "lodash";
 
@@ -56,7 +57,6 @@ const TASK_CSV_HEADER =
   "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
 type Props = {
-  form: Object,
   taskId: ?string,
   history: RouterHistory,
 };
@@ -225,6 +225,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
 }
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
+  formRef = React.createRef<typeof FormInstance>();
   state = {
     datasets: [],
     taskTypes: [],
@@ -252,6 +253,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   async applyDefaults() {
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
     if (this.props.taskId) {
       const task = await getTask(this.props.taskId);
       const defaultValues = Object.assign({}, task, {
@@ -263,7 +268,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       const validFormValues = _.omitBy(defaultValues, _.isNull);
       // The task type is not needed for the form and leads to antd errors if it contains null values
       const { type, ...neededFormValues } = validFormValues;
-      this.props.form.setFieldsValue(neededFormValues);
+      form.setFieldsValue(neededFormValues);
     }
   }
 
@@ -278,7 +283,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
   handleSubmit = e => {
     e.preventDefault();
-    this.props.form.validateFields(async (err, formValues) => {
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
+    form.validateFields(async (err, formValues) => {
       if (!err) {
         formValues.boundingBox = formValues.boundingBox
           ? this.transformBoundingBox(formValues.boundingBox)
@@ -329,7 +338,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   };
 
   isVolumeTaskType = (taskTypeId?: string): boolean => {
-    const selectedTaskTypeId = taskTypeId || this.props.form.getFieldValue("taskTypeId");
+    const form = this.formRef.current;
+    if (!form && !taskTypeId) {
+      return false;
+    }
+    const selectedTaskTypeId = taskTypeId || form.getFieldValue("taskTypeId");
     const selectedTaskType = this.state.taskTypes.find(
       taskType => taskType.id === selectedTaskTypeId,
     );
@@ -343,7 +356,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   };
 
   renderSpecification() {
-    const { getFieldDecorator } = this.props.form;
+    const form = this.formRef.current;
+    if (!form) {
+      return null;
+    }
+    const { getFieldDecorator } = form;
     const isEditingMode = this.props.taskId != null;
 
     if (this.state.specificationType === SpecificationEnum.Nml) {
@@ -377,7 +394,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   { required: true },
                   {
                     validator: async (rule, value, callback) => {
-                      if (value === "") return callback();
+                      const newestForm = this.formRef.current;
+                      if (!newestForm || value === "") {
+                        return callback();
+                      }
 
                       const annotationResponse =
                         (await tryToAwaitPromise(
@@ -392,7 +412,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                         ));
 
                       if (annotationResponse != null && annotationResponse.dataSetName != null) {
-                        this.props.form.setFieldsValue({
+                        newestForm.setFieldsValue({
                           dataSet: annotationResponse.dataSetName,
                         });
                         return callback();
@@ -407,13 +427,13 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                         taskResponse.dataSet != null &&
                         _.isEqual(taskResponse.status, { open: 0, active: 0, finished: 1 })
                       ) {
-                        this.props.form.setFieldsValue({
+                        newestForm.setFieldsValue({
                           dataSet: taskResponse.dataSet,
                         });
                         return callback();
                       }
 
-                      this.props.form.setFieldsValue({ dataSet: null });
+                      newestForm.setFieldsValue({ dataSet: null });
                       return callback("Invalid base annotation id.");
                     },
                   },
@@ -469,7 +489,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { getFieldDecorator } = this.props.form;
+    const form = this.formRef.current;
+    if (!form) {
+      return null;
+    }
+    const { getFieldDecorator } = form;
     const isEditingMode = this.props.taskId != null;
     const titleLabel = isEditingMode ? `Update Task ${this.props.taskId || ""}` : "Create Task";
     const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
@@ -478,7 +502,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       <div className="container" style={{ paddingTop: 20 }}>
         <Spin spinning={this.state.isUploading}>
           <Card title={<h3>{titleLabel}</h3>}>
-            <Form onSubmit={this.handleSubmit} layout="vertical">
+            <Form onSubmit={this.handleSubmit} layout="vertical" ref={this.formRef}>
               <FormItem label="TaskType" hasFeedback>
                 {getFieldDecorator("taskTypeId", {
                   rules: [{ required: true }],
@@ -620,4 +644,4 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(TaskCreateFormView));
+export default withRouter(TaskCreateFormView);

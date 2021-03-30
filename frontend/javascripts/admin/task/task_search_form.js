@@ -58,6 +58,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class TaskSearchForm extends React.Component<Props, State> {
+  formRef = React.createRef<typeof FormInstance>();
   state = {
     users: [],
     projects: [],
@@ -80,7 +81,11 @@ class TaskSearchForm extends React.Component<Props, State> {
         ? this.props.initialFieldValues
         : this.state.fieldValues;
     if (_.size(fieldValues) > 0) {
-      this.props.form.setFieldsValue(fieldValues);
+      const form = this.formRef.current;
+      if (!form) {
+        return;
+      }
+      form.setFieldsValue(fieldValues);
       this.handleSearchFormSubmit(false);
     }
   }
@@ -108,7 +113,11 @@ class TaskSearchForm extends React.Component<Props, State> {
       event.preventDefault();
     }
 
-    this.props.form.validateFields((err, formValues: TaskFormFieldValues) => {
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
+    form.validateFields((err, formValues: TaskFormFieldValues) => {
       const queryObject: QueryObject = {};
 
       if (formValues.taskId) {
@@ -151,21 +160,29 @@ class TaskSearchForm extends React.Component<Props, State> {
   };
 
   handleReset = () => {
-    this.props.form.resetFields();
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
+    form.resetFields();
     this.setState({ fieldValues: {} });
     this.props.onChange({});
   };
 
   render() {
+    const form = this.formRef.current;
+    if (!form) {
+      return null;
+    }
     const { isLoading } = this.props;
-    const { getFieldDecorator } = this.props.form;
+    const { getFieldDecorator } = form;
     const formItemLayout = {
       labelCol: { span: 5 },
       wrapperCol: { span: 19 },
     };
 
     return (
-      <Form onSubmit={evt => this.handleSearchFormSubmit(false, evt)}>
+      <Form onSubmit={evt => this.handleSearchFormSubmit(false, evt)} ref={this.formRef}>
         <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Task Id">
@@ -278,4 +295,4 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(TaskSearchForm));
+export default withRouter(TaskSearchForm);

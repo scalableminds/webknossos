@@ -13,7 +13,6 @@ const FormItem = Form.Item;
 const { Password } = Input;
 
 type Props = {|
-  form: Object,
   onRegistered: (isUserLoggedIn: true) => void,
 |};
 
@@ -27,12 +26,13 @@ function generateOrganizationName() {
   return output;
 }
 function SpotlightRegistrationForm(props: Props) {
+  const [form] = Form.useForm();
   const organizationName = useRef(generateOrganizationName());
 
   function handleSubmit(event: SyntheticInputEvent<>) {
     event.preventDefault();
 
-    props.form.validateFieldsAndScroll(async (err: ?Object, formValues: Object) => {
+    form.validateFieldsAndScroll(async (err: ?Object, formValues: Object) => {
       if (err) {
         return;
       }
@@ -58,10 +58,11 @@ function SpotlightRegistrationForm(props: Props) {
     });
   }
 
-  const { getFieldDecorator } = props.form;
+  // TODO: migrate this.
+  const { getFieldDecorator } = form;
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onSubmit={handleSubmit} form={form}>
       <Row gutter={8}>
         <Col span={12}>
           <FormItem hasFeedback>
@@ -157,4 +158,4 @@ function SpotlightRegistrationForm(props: Props) {
   );
 }
 
-export default Form.create()(memo(SpotlightRegistrationForm));
+export default memo(SpotlightRegistrationForm);

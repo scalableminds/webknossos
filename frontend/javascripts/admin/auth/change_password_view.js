@@ -4,6 +4,7 @@ import { withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row, Alert } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
+import { FormInstance } from "antd/lib/form";
 import messages from "messages";
 import Toast from "libs/toast";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
@@ -14,7 +15,6 @@ const FormItem = Form.Item;
 const { Password } = Input;
 
 type Props = {
-  form: Object,
   history: RouterHistory,
 };
 
@@ -27,10 +27,15 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
     confirmDirty: false,
   };
 
+  // TODO: consider migrating to hooks as this is recommended for forms by antd.
+  formRef = React.createRef<typeof FormInstance>();
   handleSubmit = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
-
-    this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
+    form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/auth/changePassword", { data: formValues }).then(
           async () => {
@@ -50,15 +55,18 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   };
 
   checkConfirm = (rule, value, callback) => {
-    const { form } = this.props;
-    if (value && this.state.confirmDirty) {
+    const form = this.formRef.current;
+    if (form && value && this.state.confirmDirty) {
       form.validateFields(["confirm"], { force: true });
     }
     callback();
   };
 
   checkPassword = (rule, value, callback) => {
-    const { form } = this.props;
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
     if (value && value !== form.getFieldValue("password.password1")) {
       callback(messages["auth.registration_password_mismatch"]);
     } else {
@@ -67,6 +75,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   };
 
   render() {
+    // TODO: adjust this, no field decorators needed
     const { getFieldDecorator } = this.props.form;
 
     return (
@@ -79,7 +88,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
             showIcon
             style={{ marginBottom: 24 }}
           />
-          <Form onSubmit={this.handleSubmit}>
+          <Form onSubmit={this.handleSubmit} ref={this.formRef}>
             <FormItem>
               {getFieldDecorator("oldPassword", {
                 rules: [
@@ -147,4 +156,4 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(ChangePasswordView));
+export default withRouter(ChangePasswordView);

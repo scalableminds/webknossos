@@ -1,5 +1,5 @@
 // @flow
-import React from "react";
+import React, { useState } from "react";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row } from "antd";
 import { LockOutlined } from "@ant-design/icons";
@@ -12,46 +12,38 @@ const FormItem = Form.Item;
 const { Password } = Input;
 
 type Props = {
-  form: Object,
   history: RouterHistory,
   resetToken: string,
 };
 
-type State = {
-  confirmDirty: boolean,
-};
+function FinishResetPasswordView(props: Props) {
+  const [form] = Form.useForm();
+  const [confirmDirty, setConfirmDirty] = useState<boolean>(false);
 
-class FinishResetPasswordView extends React.PureComponent<Props, State> {
-  state = {
-    confirmDirty: false,
-  };
-
-  handleSubmit = (event: SyntheticInputEvent<>) => {
+  const handleSubmit = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
-
-    this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
+    form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
         const data = formValues;
-        if (this.props.resetToken === "") {
+        if (props.resetToken === "") {
           Toast.error(messages["auth.reset_token_not_supplied"]);
           return;
         }
-        data.token = this.props.resetToken;
+        data.token = props.resetToken;
         Request.sendJSONReceiveJSON("/api/auth/resetPassword", { data }).then(() => {
           Toast.success(messages["auth.reset_pw_confirmation"]);
-          this.props.history.push("/auth/login");
+          props.history.push("/auth/login");
         });
       }
     });
   };
 
-  handleConfirmBlur = (e: SyntheticInputEvent<>) => {
+  const handleConfirmBlur = (e: SyntheticInputEvent<>) => {
     const { value } = e.target;
-    this.setState(prevState => ({ confirmDirty: prevState.confirmDirty || !!value }));
+    setConfirmDirty(confirmDirty || !!value);
   };
 
-  checkPassword = (rule, value, callback) => {
-    const { form } = this.props;
+  const checkPassword = (rule, value, callback) => {
     if (value && value !== form.getFieldValue("password.password1")) {
       callback(messages["auth.registration_password_mismatch"]);
     } else {
@@ -59,77 +51,75 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
     }
   };
 
-  checkConfirm = (rule, value, callback) => {
-    const { form } = this.props;
-    if (value && this.state.confirmDirty) {
+  const checkConfirm = (rule, value, callback) => {
+    if (value && confirmDirty) {
       form.validateFields(["confirm"], { force: true });
     }
     callback();
   };
 
-  render() {
-    const { getFieldDecorator } = this.props.form;
+  // TODO: get rid of this
+  const { getFieldDecorator } = props.form;
 
-    return (
-      <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
-        <Col span={8}>
-          <h3>Reset Password</h3>
-          <Form onSubmit={this.handleSubmit}>
-            <FormItem hasFeedback>
-              {getFieldDecorator("password.password1", {
-                rules: [
-                  {
-                    required: true,
-                    message: messages["auth.reset_new_password"],
-                  },
-                  {
-                    min: 8,
-                    message: messages["auth.registration_password_length"],
-                  },
-                  {
-                    validator: this.checkConfirm,
-                  },
-                ],
-              })(
-                <Password
-                  prefix={<LockOutlined style={{ fontSize: 13 }} />}
-                  placeholder="New Password"
-                />,
-              )}
-            </FormItem>
-            <FormItem hasFeedback>
-              {getFieldDecorator("password.password2", {
-                rules: [
-                  {
-                    required: true,
-                    message: messages["auth.reset_new_password2"],
-                  },
-                  {
-                    min: 8,
-                    message: messages["auth.registration_password_length"],
-                  },
-                  {
-                    validator: this.checkPassword,
-                  },
-                ],
-              })(
-                <Password
-                  onBlur={this.handleConfirmBlur}
-                  prefix={<LockOutlined style={{ fontSize: 13 }} />}
-                  placeholder="Confirm New Password"
-                />,
-              )}
-            </FormItem>
-            <FormItem>
-              <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
-                Reset Password
-              </Button>
-            </FormItem>
-          </Form>
-        </Col>
-      </Row>
-    );
-  }
+  return (
+    <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+      <Col span={8}>
+        <h3>Reset Password</h3>
+        <Form onSubmit={handleSubmit} form={form}>
+          <FormItem hasFeedback>
+            {getFieldDecorator("password.password1", {
+              rules: [
+                {
+                  required: true,
+                  message: messages["auth.reset_new_password"],
+                },
+                {
+                  min: 8,
+                  message: messages["auth.registration_password_length"],
+                },
+                {
+                  validator: checkConfirm,
+                },
+              ],
+            })(
+              <Password
+                prefix={<LockOutlined style={{ fontSize: 13 }} />}
+                placeholder="New Password"
+              />,
+            )}
+          </FormItem>
+          <FormItem hasFeedback>
+            {getFieldDecorator("password.password2", {
+              rules: [
+                {
+                  required: true,
+                  message: messages["auth.reset_new_password2"],
+                },
+                {
+                  min: 8,
+                  message: messages["auth.registration_password_length"],
+                },
+                {
+                  validator: checkPassword,
+                },
+              ],
+            })(
+              <Password
+                onBlur={handleConfirmBlur}
+                prefix={<LockOutlined style={{ fontSize: 13 }} />}
+                placeholder="Confirm New Password"
+              />,
+            )}
+          </FormItem>
+          <FormItem>
+            <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
+              Reset Password
+            </Button>
+          </FormItem>
+        </Form>
+      </Col>
+    </Row>
+  );
 }
 
-export default withRouter(Form.create()(FinishResetPasswordView));
+export default withRouter(FinishResetPasswordView);

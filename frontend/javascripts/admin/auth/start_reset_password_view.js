@@ -11,55 +11,54 @@ import type { RouterHistory } from "react-router-dom";
 const FormItem = Form.Item;
 
 type Props = {
-  form: Object,
   history: RouterHistory,
 };
 
-class StartResetPasswordView extends React.PureComponent<Props> {
-  handleSubmit = (event: SyntheticInputEvent<>) => {
+function StartResetPasswordView({ history }: Props) {
+  const [form] = Form.useForm();
+
+  const handleSubmit = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
 
-    this.props.form.validateFields((err: ?Object, formValues: Object) => {
+    form.validateFields((err: ?Object, formValues: Object) => {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/auth/startResetPassword", { data: formValues }).then(
           () => {
             Toast.success(messages["auth.reset_email_notification"]);
-            this.props.history.push("/");
+            history.push("/");
           },
         );
       }
     });
   };
 
-  render() {
-    const { getFieldDecorator } = this.props.form;
+  const { getFieldDecorator } = form;
 
-    return (
-      <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
-        <Col span={8}>
-          <h3>Reset Password</h3>
-          <Form onSubmit={this.handleSubmit}>
-            <FormItem>
-              {getFieldDecorator("email", {
-                rules: [
-                  {
-                    required: true,
-                    type: "email",
-                    message: messages["auth.registration_email_input"],
-                  },
-                ],
-              })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
-            </FormItem>
-            <FormItem>
-              <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
-                Send Reset Email
-              </Button>
-            </FormItem>
-          </Form>
-        </Col>
-      </Row>
-    );
-  }
+  return (
+    <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+      <Col span={8}>
+        <h3>Reset Password</h3>
+        <Form onSubmit={handleSubmit} form={form}>
+          <FormItem>
+            {getFieldDecorator("email", {
+              rules: [
+                {
+                  required: true,
+                  type: "email",
+                  message: messages["auth.registration_email_input"],
+                },
+              ],
+            })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
+          </FormItem>
+          <FormItem>
+            <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
+              Send Reset Email
+            </Button>
+          </FormItem>
+        </Form>
+      </Col>
+    </Row>
+  );
 }
 
-export default withRouter(Form.create()(StartResetPasswordView));
+export default withRouter(StartResetPasswordView);

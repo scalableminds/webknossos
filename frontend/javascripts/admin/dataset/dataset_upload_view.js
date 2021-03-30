@@ -66,6 +66,8 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     selectedTeams: [],
   };
 
+  formRef = React.createRef<FormInstance>();
+
   static getDerivedStateFromProps(props) {
     if (
       props.datastores.length === 1 &&
@@ -82,8 +84,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
   handleSubmit = evt => {
     evt.preventDefault();
-
-    this.props.form.validateFields(async (err, formValues) => {
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
+    form.validateFields(async (err, formValues) => {
       const { activeUser } = this.props;
 
       if (!err && activeUser != null) {
@@ -134,7 +139,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
         );
 
         resumableUpload.on("complete", () => {
-          const { form } = this.props;
+          const newestForm = this.formRef.current;
+          if (!newestForm) {
+            return;
+          }
 
           const uploadInfo = {
             uploadId,
@@ -184,7 +192,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
               }
               this.setState({ isUploading: false });
               if (maybeError == null) {
-                form.setFieldsValue({ name: null, zipFile: [] });
+                newestForm.setFieldsValue({ name: null, zipFile: [] });
                 this.props.onUploaded(
                   activeUser.organization,
                   formValues.name,
@@ -229,7 +237,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   getUploadModal = () => {
-    const { form } = this.props;
+    const form = this.formRef.current;
+    if (!form) {
+      return null;
+    }
     const { isRetrying, uploadProgress, isUploading } = this.state;
     return (
       <Modal
@@ -269,8 +280,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   validateFiles = files => {
-    const { form } = this.props;
-
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
     if (files.length === 0) {
       return;
     }
@@ -309,9 +322,13 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   handleNeedsConversionInfo = needsConversion => {
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
     this.setState({ needsConversion });
     if (needsConversion && !features().jobsEnabled) {
-      this.props.form.setFieldsValue({ zipFile: [] });
+      form.setFieldsValue({ zipFile: [] });
       Modal.info({
         content: (
           <div>
@@ -336,7 +353,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   maybeSetUploadName = files => {
-    const { form } = this.props;
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
     if (!form.getFieldValue("name") && files.length > 0) {
       const filenameParts = files[0].name.split(".");
       const filename = filenameParts.slice(0, -1).join(".");
@@ -346,7 +366,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   render() {
-    const { form, activeUser, withoutCard, datastores } = this.props;
+    const form = this.formRef.current;
+    if (!form) {
+      return null;
+    }
+    const { activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
     const { needsConversion } = this.state;
@@ -356,7 +380,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
         <CardContainer withoutCard={withoutCard} title="Upload Dataset">
-          <Form onSubmit={this.handleSubmit} layout="vertical">
+          <Form onSubmit={this.handleSubmit} layout="vertical" ref={this.formRef}>
             {features().isDemoInstance && (
               <Alert
                 message={
@@ -650,6 +674,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  withRouter(Form.create()(DatasetUploadView)),
-);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(DatasetUploadView));

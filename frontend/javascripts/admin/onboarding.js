@@ -58,7 +58,7 @@ function StepHeader({
   children: Node,
 }) {
   return (
-    <div style={{}}>
+    <div>
       <div style={{ paddingBottom: 32, textAlign: "center" }}>
         {icon}
         <p style={{ fontSize: 24, margin: "14px 0 0" }}>{header}</p>
@@ -221,7 +221,8 @@ export class InviteUsersModal extends React.Component<
   }
 }
 
-const OrganizationForm = Form.create()(({ form, onComplete }) => {
+const OrganizationForm = ({ onComplete }) => {
+  const [form] = Form.useForm();
   const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
   const handleSubmit = e => {
     e.preventDefault();
@@ -237,7 +238,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
     isFieldTouched("organizationName") && getFieldError("organizationName");
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onSubmit={handleSubmit} form={form}>
       <Row type="flex" justify="center" style={{ padding: "20px 50px" }} align="middle" gutter={8}>
         <Col span={18}>
           <FormItem
@@ -275,7 +276,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
       </Row>
     </Form>
   );
-});
+};
 
 class OnboardingView extends React.PureComponent<Props, State> {
   state = {

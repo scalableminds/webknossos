@@ -20,14 +20,18 @@ type PropsWithoutForm = {|
   style?: Object,
 |};
 
-type Props = {|
-  ...PropsWithoutForm,
-  form: Object,
-|};
+type Props = {| ...PropsWithoutForm |};
 
-function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
+function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
+  const [form] = Form.useForm();
+  // TODO: get rid of getFieldDecorator
   const { getFieldDecorator } = form;
-  const linkStyle = layout === "inline" ? { paddingLeft: 10 } : null;
+  const linkStyle =
+    layout === "inline"
+      ? {
+          paddingLeft: 10,
+        }
+      : null;
 
   const handleSubmit = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
@@ -56,14 +60,16 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
           outside of an iFrame to log in.
         </span>
       }
-      style={{ marginBottom: 12 }}
+      style={{
+        marginBottom: 12,
+      }}
     />
   ) : null;
 
   return (
     <div style={style}>
       {iframeWarning}
-      <Form onSubmit={handleSubmit} layout={layout}>
+      <Form onSubmit={handleSubmit} layout={layout} form={form}>
         <FormItem>
           {getFieldDecorator("email", {
             rules: [
@@ -77,26 +83,56 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
         </FormItem>
         <FormItem>
           {getFieldDecorator("password", {
-            rules: [{ required: true, message: messages["auth.registration_password_input"] }],
+            rules: [
+              {
+                required: true,
+                message: messages["auth.registration_password_input"],
+              },
+            ],
           })(
             <Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />,
           )}
         </FormItem>
         <FormItem>
-          <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            style={{
+              width: "100%",
+            }}
+          >
             Log in
           </Button>
         </FormItem>
         {hideFooter ? null : (
-          <FormItem style={{ marginBottom: 4 }}>
-            <div style={{ display: "flex" }}>
+          <FormItem
+            style={{
+              marginBottom: 4,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+              }}
+            >
               <Link
                 to="/auth/signup"
-                style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
+                style={{
+                  ...linkStyle,
+                  marginRight: 10,
+                  flexGrow: 1,
+                  whiteSpace: "nowrap",
+                }}
               >
                 Register Now
               </Link>
-              <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
+              <Link
+                to="/auth/resetPassword"
+                style={{
+                  ...linkStyle,
+                  whiteSpace: "nowrap",
+                }}
+              >
                 Forgot Password
               </Link>
             </div>
@@ -107,7 +143,4 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
   );
 }
 
-const LoginFormWithForm: React$ComponentType<PropsWithoutForm> = Form.create({
-  fieldNameProp: "name",
-})(LoginForm);
-export default LoginFormWithForm;
+export default LoginForm;

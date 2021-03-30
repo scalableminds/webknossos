@@ -11,6 +11,7 @@ import {
   Tooltip,
   Spin,
 } from "antd";
+import { FormInstance } from "antd/lib/form";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
@@ -37,7 +38,6 @@ const { TextArea } = Input;
 
 type Props = {
   taskTypeId?: ?string,
-  form: Object,
   history: RouterHistory,
 };
 
@@ -79,6 +79,7 @@ function getMagnificationAdaptedSettings(rawSettings) {
 }
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
+  formRef = React.createRef<typeof FormInstance>();
   state = {
     teams: [],
     useRecommendedConfiguration: false,
@@ -121,7 +122,11 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     };
     delete formValues.settings.resolutionRestrictions;
 
-    this.props.form.setFieldsValue(formValues);
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
+    form.setFieldsValue(formValues);
 
     if (taskType != null && taskType.recommendedConfiguration != null) {
       // Only "activate" the recommended configuration checkbox if the existing task type contained one
@@ -137,10 +142,14 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   handleSubmit = e => {
     e.preventDefault();
-    if (!this.state.useRecommendedConfiguration) {
-      this.props.form.setFieldsValue({ recommendedConfiguration: null });
+    const form = this.formRef.current;
+    if (!form) {
+      return;
     }
-    this.props.form.validateFields(async (err, formValues) => {
+    if (!this.state.useRecommendedConfiguration) {
+      form.setFieldsValue({ recommendedConfiguration: null });
+    }
+    form.validateFields(async (err, formValues) => {
       if (err) {
         Toast.error("Please check the form for errors.");
         return;
@@ -171,14 +180,18 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { getFieldDecorator } = this.props.form;
+    const form = this.formRef.current;
+    if (!form) {
+      return null;
+    }
+    const { getFieldDecorator } = form;
     const isEditingMode = this.props.taskTypeId != null;
     const titlePrefix = isEditingMode ? "Update" : "Create";
 
     return (
       <div className="container" style={{ maxWidth: 1600, margin: "0 auto" }}>
         <Card title={<h3>{`${titlePrefix} Task Type`}</h3>}>
-          <Form onSubmit={this.handleSubmit} layout="vertical">
+          <Form onSubmit={this.handleSubmit} layout="vertical" ref={this.formRef}>
             <FormItem label="Summary" hasFeedback>
               {getFieldDecorator("summary", {
                 rules: [
@@ -281,8 +294,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
             <div
               style={{
-                display:
-                  this.props.form.getFieldValue("tracingType") === "volume" ? "none" : "block",
+                display: form.getFieldValue("tracingType") === "volume" ? "none" : "block",
               }}
             >
               <FormItem label="Settings">
@@ -323,9 +335,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             <div
               style={{
                 marginLeft: 24,
-                display: this.props.form.getFieldValue(
-                  "settings.resolutionRestrictionsForm.shouldRestrict",
-                )
+                display: form.getFieldValue("settings.resolutionRestrictionsForm.shouldRestrict")
                   ? "block"
                   : "none",
               }}
@@ -350,7 +360,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
             <FormItem>
               <RecommendedConfigurationView
-                form={this.props.form}
+                form={form}
                 enabled={this.state.useRecommendedConfiguration}
                 onChangeEnabled={this.onChangeUseRecommendedConfiguration}
               />
@@ -368,4 +378,4 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(TaskTypeCreateView));
+export default withRouter(TaskTypeCreateView);

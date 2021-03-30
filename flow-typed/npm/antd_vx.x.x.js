@@ -42,9 +42,7 @@ declare module "antd" {
   }
   declare class FormItem<P> extends React$Component<P> {}
   declare export class Form<P> extends React$Component<P> {
-    static create: (
-      options?: Object,
-    ) => (React$ComponentType<P>) => React$ComponentType<$Diff<P, { form: any }>>;
+    static useForm: () => [Object];
     static Item: typeof FormItem;
   }
   declare class LayoutContent<P> extends React$Component<P> {}

@@ -1,8 +1,5 @@
 // @flow
-import { Form } from "@ant-design/compatible";
-
-import "@ant-design/compatible/assets/index.css";
-import { Modal, Input } from "antd";
+import { Modal, Input, Form } from "antd";
 import { TagOutlined } from "@ant-design/icons";
 import * as React from "react";
 
@@ -14,12 +11,12 @@ type Props = {
   onOk: Function,
   onCancel: Function,
   isVisible: boolean,
-  form: Object,
 };
 
-class CreateTeamModalForm extends React.PureComponent<Props> {
-  onOk = async () => {
-    this.props.form.validateFields(async (err, values) => {
+function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isVisible }: Props) {
+  const [form] = Form.useForm();
+  const onOk = async () => {
+    form.validateFields(async (err, values) => {
       if (err) {
         return;
       }
@@ -29,37 +26,28 @@ class CreateTeamModalForm extends React.PureComponent<Props> {
       };
 
       const team = await createTeam(newTeam);
-
-      this.props.onOk(team);
+      onOkCallback(team);
     });
   };
 
-  render() {
-    const { getFieldDecorator } = this.props.form;
-    return (
-      <Modal
-        visible={this.props.isVisible}
-        title="Add a New Team"
-        okText="Ok"
-        onCancel={this.props.onCancel}
-        onOk={this.onOk}
-      >
-        <Form layout="vertical">
-          <FormItem label="Team Name">
-            {getFieldDecorator("teamName", {
-              rules: [
-                {
-                  required: true,
-                  pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
-                  message: "The team name must not contain any special characters.",
-                },
-              ],
-            })(<Input icon={<TagOutlined />} placeholder="Team Name" autoFocus />)}
-          </FormItem>
-        </Form>
-      </Modal>
-    );
-  }
+  const { getFieldDecorator } = form;
+  return (
+    <Modal visible={isVisible} title="Add a New Team" okText="Ok" onCancel={onCancel} onOk={onOk}>
+      <Form layout="vertical">
+        <FormItem label="Team Name">
+          {getFieldDecorator("teamName", {
+            rules: [
+              {
+                required: true,
+                pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
+                message: "The team name must not contain any special characters.",
+              },
+            ],
+          })(<Input icon={<TagOutlined />} placeholder="Team Name" autoFocus />)}
+        </FormItem>
+      </Form>
+    </Modal>
+  );
 }
-const CreateTeamModalView = Form.create()(CreateTeamModalForm);
+const CreateTeamModalView = CreateTeamModalForm;
 export default CreateTeamModalView;

@@ -1,12 +1,12 @@
 // @flow
-import { Button, Tooltip } from "antd";
+import { Button, Tooltip, Space } from "antd";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
 
 import api from "oxalis/api/internal_api";
 
-const ButtonGroup = Button.Group;
+const ButtonGroup = Space;
 
 type Props = {|
   isRefreshingIsosurfaces: boolean,

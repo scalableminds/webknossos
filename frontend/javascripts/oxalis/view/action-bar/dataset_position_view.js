@@ -114,7 +114,7 @@ class DatasetPositionView extends PureComponent<Props> {
           <Vector3Input
             value={position}
             onChange={this.handleChangePosition}
-            autosize
+            autoSize
             style={positionInputStyle}
             allowDecimals
           />

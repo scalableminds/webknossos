@@ -242,9 +242,7 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccessForSyncBlock(
         UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
-          Ok(
-            Json.toJson(meshFileService
-              .exploreMeshFiles(organizationName, dataSetName, dataLayerName)))
+          Ok(Json.toJson(meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)))
         }
       }
     }
@@ -255,11 +253,11 @@ class DataSourceController @Inject()(
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
         UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            Ok(
-              Json.toJson(meshFileService
-                .listMeshChunksForSegment(organizationName, dataSetName, dataLayerName, request.body)))
-          }
+        AllowRemoteOrigin {
+          Ok(
+            Json.toJson(
+              meshFileService.listMeshChunksForSegment(organizationName, dataSetName, dataLayerName, request.body)))
+        }
       }
     }
 
@@ -268,10 +266,9 @@ class DataSourceController @Inject()(
                     dataLayerName: String): Action[MeshChunkDataRequest] =
     Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
-          Ok(meshFileService
-              .readMeshChunk(organizationName, dataSetName, dataLayerName, request.body))
+          Ok(meshFileService.readMeshChunk(organizationName, dataSetName, dataLayerName, request.body))
         }
       }
     }

@@ -14,11 +14,10 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.JavaConverters._
 
-trait GenericJsonFormat[T] {
-}
+trait GenericJsonFormat[T] {}
 
 case class ListMeshChunksRequest(
-                                  meshFile: String,
+    meshFile: String,
     segmentId: Long
 )
 
@@ -55,7 +54,10 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
       .toSet
   }
 
-  def listMeshChunksForSegment(organizationName: String, dataSetName: String, dataLayerName: String, listMeshChunksRequest: ListMeshChunksRequest): List[Point3D] = {
+  def listMeshChunksForSegment(organizationName: String,
+                               dataSetName: String,
+                               dataLayerName: String,
+                               listMeshChunksRequest: ListMeshChunksRequest): List[Point3D] = {
     val hdfFile =
       dataBaseDir
         .resolve(organizationName)
@@ -66,11 +68,15 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
         .toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    val chunkPositionLiterals = reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail").asScala.toList
+    val chunkPositionLiterals =
+      reader.`object`().getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail").asScala.toList
     chunkPositionLiterals.map(parsePositionLiteral)
   }
 
-  def readMeshChunk(organizationName: String, dataSetName: String, dataLayerName: String, meshChunkDataRequest: MeshChunkDataRequest): Array[Byte] = {
+  def readMeshChunk(organizationName: String,
+                    dataSetName: String,
+                    dataLayerName: String,
+                    meshChunkDataRequest: MeshChunkDataRequest): Array[Byte] = {
     val hdfFile =
       dataBaseDir
         .resolve(organizationName)
@@ -81,7 +87,8 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
         .toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    reader.readAsByteArray(s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}")
+    reader.readAsByteArray(
+      s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}")
   }
 
   private def positionLiteral(position: Point3D) =

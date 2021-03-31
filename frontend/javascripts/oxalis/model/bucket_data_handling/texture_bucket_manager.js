@@ -246,6 +246,7 @@ export class CuckooTable {
   }
 
   _hashKey(seed: number, address: Vector4, tableIndex: number): number {
+    // todo: unroll this for better performance ?
     let state = this._hashCombine(seed, address[0]);
     state = this._hashCombine(state, address[1]);
     state = this._hashCombine(state, address[2]);

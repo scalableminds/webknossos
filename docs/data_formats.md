@@ -174,7 +174,7 @@ It will create the `color` layer.
 You need to supply the `scale` parameter which is the size of one voxel in nanometers.
 
 Read the full documentation at [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber).
-[Please contact us](mailto:hello@scalableminds.com) if you have any issues with converting your dataset.
+[Please contact us](mailto:hello@webknossos.org) or [write a post](https://forum.image.sc/tag/webknossos), if you have any issues with converting your dataset.
 
 ## KNOSSOS Cubes
 

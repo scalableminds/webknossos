@@ -302,6 +302,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class RevertToVersionAction(sourceVersion: Long, actionTimestamp: Option[Long] = None, info: Option[String] = None)
@@ -329,6 +330,7 @@ case class UpdateTreeVisibility(treeId: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
@@ -362,6 +364,7 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
@@ -396,6 +399,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[String] = None)
@@ -406,6 +410,7 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[Str
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 object CreateTreeSkeletonAction {

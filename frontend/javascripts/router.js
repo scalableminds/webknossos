@@ -24,7 +24,6 @@ import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DisableGenericDnd from "components/disable_generic_dnd";
-import FeaturesView from "pages/frontpage/features_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import JobListView from "admin/job/job_list_view";
 import LoginView from "admin/auth/login_view";
@@ -32,7 +31,6 @@ import Navbar from "navbar";
 import Onboarding from "admin/onboarding";
 import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
 import OrganizationEditView from "admin/organization/organization_edit_view";
-import PricingView from "pages/frontpage/pricing_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
@@ -521,8 +519,6 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
               {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
-              <Route path="/features" component={FeaturesView} />
-              <Route path="/pricing" component={PricingView} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

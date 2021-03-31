@@ -415,7 +415,7 @@ export default function VolumeActionsView() {
         <OverwriteModeSwitch isControlPressed={isControlPressed} />
       ) : null}
 
-      <Space style={{ marginLeft: 12 }}>
+      <Space size={0} style={{ marginLeft: 12 }}>
         <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
           <Tooltip
             title={`Create a new Cell ID – The active cell id is ${unmappedActiveCellId}${mappedIdInfo}.`}

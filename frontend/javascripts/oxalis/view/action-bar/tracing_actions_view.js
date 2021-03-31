@@ -425,7 +425,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         key="reopen-button"
         icon={<VerticalRightOutlined />}
         onClick={this.handleReopenTask}
-        type="danger"
+        danger
       >
         Undo Finish
       </ButtonComponent>
@@ -522,7 +522,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const menu = <Menu>{elements}</Menu>;
     return (
       <div>
-        <Space>
+        <Space size={0}>
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}

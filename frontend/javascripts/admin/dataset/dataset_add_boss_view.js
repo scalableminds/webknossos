@@ -120,7 +120,7 @@ function DatasetAddBossView(props: Props) {
                     required: true,
                   },
                 ]}
-                validateFirst:true
+                validateFirst
               >
                 <Input />
               </FormItem>

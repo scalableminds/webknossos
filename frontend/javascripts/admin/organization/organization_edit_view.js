@@ -93,7 +93,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
       <div className="container" style={{ paddingTop: 20 }}>
         <Card
           title={<h3>Edit {this.state.displayName} </h3>}
-          style={{ margin: "auto", maxWidth: "500px" }}
+          style={{ margin: "auto", maxWidth: 800 }}
         >
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Display Name">
@@ -116,7 +116,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 />,
               )}
             </FormItem>{" "}
-            <FormItem label="New User Email">
+            <FormItem label="Notify About New Users Via:">
               {getFieldDecorator("newUserMailingList", {
                 rules: [
                   {
@@ -141,10 +141,10 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 </span>
               </div>
             </FormItem>
-            <Row type="flex" justify="space-between">
-              <FormItem>
+            <Row type="flex" justify="center">
+              <FormItem style={{ marginRight: 20 }}>
                 <Button type="primary" htmlType="submit" disabled={this.state.isFetchingData}>
-                  Submit Changes
+                  Save
                 </Button>
               </FormItem>
               <Button

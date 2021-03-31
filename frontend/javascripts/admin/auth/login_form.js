@@ -24,8 +24,6 @@ type Props = {| ...PropsWithoutForm |};
 
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const [form] = Form.useForm();
-  // TODO: get rid of getFieldDecorator
-  const { getFieldDecorator } = form;
   const linkStyle =
     layout === "inline"
       ? {
@@ -33,18 +31,12 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         }
       : null;
 
-  const handleSubmit = (event: SyntheticInputEvent<>) => {
-    event.preventDefault();
-
-    form.validateFields(async (err: ?Object, formValues: Object) => {
-      if (!err) {
-        const user = await loginUser(formValues);
-        Store.dispatch(setActiveUserAction(user));
-        if (onLoggedIn) {
-          onLoggedIn();
-        }
-      }
-    });
+  const handleSubmit = async formValues => {
+    const user = await loginUser(formValues);
+    Store.dispatch(setActiveUserAction(user));
+    if (onLoggedIn) {
+      onLoggedIn();
+    }
   };
 
   const iframeWarning = getIsInIframe() ? (
@@ -69,29 +61,29 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   return (
     <div style={style}>
       {iframeWarning}
-      <Form onSubmit={handleSubmit} layout={layout} form={form}>
-        <FormItem>
-          {getFieldDecorator("email", {
-            rules: [
-              {
-                required: true,
-                type: "email",
-                message: messages["auth.registration_email_input"],
-              },
-            ],
-          })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
+      <Form onFinish={handleSubmit} layout={layout} form={form}>
+        <FormItem
+          name="email"
+          rules={[
+            {
+              required: true,
+              type: "email",
+              message: messages["auth.registration_email_input"],
+            },
+          ]}
+        >
+          <Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />
         </FormItem>
-        <FormItem>
-          {getFieldDecorator("password", {
-            rules: [
-              {
-                required: true,
-                message: messages["auth.registration_password_input"],
-              },
-            ],
-          })(
-            <Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />,
-          )}
+        <FormItem
+          name="password"
+          rules={[
+            {
+              required: true,
+              message: messages["auth.registration_password_input"],
+            },
+          ]}
+        >
+          <Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />
         </FormItem>
         <FormItem>
           <Button

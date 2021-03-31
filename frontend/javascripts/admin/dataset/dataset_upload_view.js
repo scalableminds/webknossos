@@ -90,18 +90,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     if (!form) {
       return;
     }
+    const pathNameAtSubmit = window.location.pathname;
 
     if (activeUser != null) {
       Toast.info("Uploading dataset");
       this.setState({
         isUploading: true,
       });
-      // TODO: figure out how to get the evt pathname without an event (onFinish only gets the values)
       const beforeUnload = action => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
-        if (action === undefined || evt.pathname !== window.location.pathname) {
+        if (action === undefined || pathNameAtSubmit !== window.location.pathname) {
           const { isUploading } = this.state;
           if (isUploading) {
             window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
@@ -275,6 +275,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   onFilesChange = files => {
+    console.log(files);
     this.maybeSetUploadName(files);
     this.validateFiles(files);
   };
@@ -367,9 +368,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   render() {
     const form = this.formRef.current;
-    if (!form) {
-      return null;
-    }
+
+    console.log("Rendering everything");
     const { activeUser, withoutCard, datastores } = this.props;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
     const { needsConversion } = this.state;
@@ -449,7 +449,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                       }}
                     />
                   </Tooltip>
-                  ,
                 </FormItem>
               </Col>
             </Row>

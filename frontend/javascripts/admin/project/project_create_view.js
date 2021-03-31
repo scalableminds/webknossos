@@ -87,78 +87,80 @@ function ProjectCreateView({ history, activeUser, projectName }: PropsWithRouter
     <div className="row container project-administration">
       <Card title={<h3>{title}</h3>}>
         <Form onSubmit={handleSubmit} layout="vertical" from={form}>
-          <FormItem label="Project Name" hasFeedback>
-            {getFieldDecorator("name", {
-              rules: [
-                {
-                  required: true,
-                  pattern: "^[a-zA-Z0-9_-]*$",
-                  message: "The project name must not contain whitespace or special characters.",
-                },
-                {
-                  min: 3,
-                  required: true,
-                  message: "The project name must be at least 3 characters long.",
-                },
-              ],
-            })(<Input autoFocus disabled={isEditMode} />)}
+          <FormItem
+            name="name"
+            label="Project Name"
+            hasFeedback
+            rules={[
+              {
+                required: true,
+                pattern: "^[a-zA-Z0-9_-]*$",
+                message: "The project name must not contain whitespace or special characters.",
+              },
+              {
+                min: 3,
+                required: true,
+                message: "The project name must be at least 3 characters long.",
+              },
+            ]}
+          >
+            <Input autoFocus disabled={isEditMode} />
           </FormItem>
-          <FormItem label="Team" hasFeedback>
-            {getFieldDecorator("team", {
-              rules: [{ required: true }],
-            })(
-              <Select
-                showSearch
-                placeholder="Select a Team"
-                optionFilterProp="children"
-                style={fullWidth}
-                disabled={isEditMode}
-                notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
-                options={teams.map((team: APITeam) => ({
-                  label: team.name,
-                  value: team.id,
-                }))}
-              />,
-            )}
-          </FormItem>
-
-          <FormItem label="Owner" hasFeedback>
-            {getFieldDecorator("owner", {
-              rules: [{ required: true }],
-            })(
-              <Select
-                showSearch
-                placeholder="Select a User"
-                optionFilterProp="children"
-                style={fullWidth}
-                disabled={isEditMode}
-                notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
-                options={users.map((user: APIUser) => ({
-                  label: `${user.lastName}, ${user.firstName} (${user.email})`,
-                  value: user.id,
-                }))}
-              />,
-            )}
-          </FormItem>
-          <FormItem label="Priority" hasFeedback>
-            {getFieldDecorator("priority", {
-              rules: [{ required: true }, { type: "number" }],
-            })(<InputNumber style={fullWidth} />)}
+          <FormItem name="team" label="Team" hasFeedback rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="Select a Team"
+              optionFilterProp="children"
+              style={fullWidth}
+              disabled={isEditMode}
+              notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
+              options={teams.map((team: APITeam) => ({
+                label: team.name,
+                value: team.id,
+              }))}
+            />
           </FormItem>
 
-          <FormItem label="Time Limit (Minutes)" hasFeedback>
-            {getFieldDecorator("expectedTime", {
-              rules: [{ required: true }, { type: "number", min: 1 }],
-            })(<InputNumber style={fullWidth} />)}
+          <FormItem name="owner" label="Owner" hasFeedback rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder="Select a User"
+              optionFilterProp="children"
+              style={fullWidth}
+              disabled={isEditMode}
+              notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
+              options={users.map((user: APIUser) => ({
+                label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                value: user.id,
+              }))}
+            />
+            ,
+          </FormItem>
+          <FormItem
+            name="priority"
+            label="Priority"
+            hasFeedback
+            rules={[{ required: true }, { type: "number" }]}
+          >
+            <InputNumber style={fullWidth} />
+          </FormItem>
+
+          <FormItem
+            name="expectedTime"
+            label="Time Limit (Minutes)"
+            hasFeedback
+            rules={[{ required: true }, { type: "number", min: 1 }]}
+          >
+            <InputNumber style={fullWidth} />
           </FormItem>
 
           <FormItemWithInfo
+            name="isBlacklistedFromReport"
             label="Visibility in Project Progress View"
             info="If checked, the project will not be listed in the project progress view."
+            valuePropName="checked"
           >
-            {getFieldDecorator("isBlacklistedFromReport", { valuePropName: "checked" })(
-              <Checkbox>Do not show in Project Progress View</Checkbox>,
-            )}
+            <Checkbox>Do not show in Project Progress View</Checkbox>
           </FormItemWithInfo>
 
           <FormItem>

@@ -30,6 +30,7 @@ import { Vector3Input } from "libs/vector_input";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
+import { FormInstance } from "antd/lib/form";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
@@ -56,7 +57,7 @@ type State = {
   selectedTeams: APITeam | Array<APITeam>,
 };
 
-class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, State> {
+class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state = {
     isUploading: false,
     needsConversion: false,
@@ -65,16 +66,18 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     selectedTeams: [],
   };
 
-  formRef = React.createRef<FormInstance>();
+  formRef = React.createRef<typeof FormInstance>();
 
-  static getDerivedStateFromProps(props) {
-    if (
-      props.datastores.length === 1 &&
-      props.form.getFieldValue("datastore") !== props.datastores[0].url
-    ) {
-      props.form.setFieldsValue({ datastore: props.datastores[0].url });
+  shouldComponentUpdate(nextProps) {
+    if (this.formRef.current != null) {
+      if (
+        nextProps.datastores.length === 1 &&
+        this.formRef.current.getFieldValue("datastore") !== nextProps.datastores[0].url
+      ) {
+        this.formRef.current.setFieldsValue({ datastore: nextProps.datastores[0].url });
+      }
     }
-    return null;
+    return true;
   }
 
   isDatasetManagerOrAdmin = () =>
@@ -237,6 +240,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     if (!form) {
       return null;
     }
+
     const { isRetrying, uploadProgress, isUploading } = this.state;
     return (
       <Modal
@@ -276,10 +280,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   validateFiles = files => {
-    const form = this.formRef.current;
-    if (!form) {
-      return;
-    }
     if (files.length === 0) {
       return;
     }
@@ -304,6 +304,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
             Modal.error({
               content: messages["dataset.upload_invalid_zip"],
             });
+            const form = this.formRef.current;
+            if (!form) {
+              return;
+            }
             form.setFieldsValue({ zipFile: [] });
           },
         );
@@ -419,11 +423,12 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                       mode="multiple"
                       value={this.state.selectedTeams}
                       onChange={selectedTeams => {
+                        if (this.formRef.current == null) return;
                         if (!Array.isArray(selectedTeams)) {
                           // Making sure that we always have an array even when only one team is selected.
                           selectedTeams = [selectedTeams];
                         }
-                        form.setFieldsValue({ initialTeams: selectedTeams });
+                        this.formRef.current.setFieldsValue({ initialTeams: selectedTeams });
                         this.setState({ selectedTeams });
                       }}
                       afterFetchedTeams={fetchedTeams => {
@@ -436,10 +441,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                         if (teamOfOrganisation == null) {
                           return;
                         }
-                        this.setState({ selectedTeams: [teamOfOrganisation] });
-                        form.setFieldsValue({
+                        if (this.formRef.current == null) return;
+                        this.formRef.current.setFieldsValue({
                           initialTeams: [teamOfOrganisation],
                         });
+                        this.setState({ selectedTeams: [teamOfOrganisation] });
                       }}
                     />
                   </Tooltip>
@@ -476,7 +482,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                   <Vector3Input
                     style={{ width: 400 }}
                     allowDecimals
-                    onChange={scale => form.setFieldsValue({ scale })}
+                    onChange={scale => {
+                      if (this.formRef.current == null) return;
+                      this.formRef.current.setFieldsValue({ scale });
+                    }}
                   />
                 </FormItemWithInfo>
               </React.Fragment>

@@ -46,7 +46,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]): Action[AnyContent] =
     Action.async { implicit request =>
       log {
-        logTime(slackNotificationService.reportUnusalRequest) {
+        logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.webknossos) {
             AllowRemoteOrigin {
               for {
@@ -81,7 +81,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def initialDataMultiple(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log {
-      logTime(slackNotificationService.reportUnusalRequest) {
+      logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {
@@ -151,7 +151,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
                 maxResolution: Option[Int],
                 downsample: Option[Boolean]): Action[AnyContent] = Action.async { implicit request =>
     log {
-      logTime(slackNotificationService.reportUnusalRequest) {
+      logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {
@@ -174,7 +174,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   def unlinkFallback(tracingId: String): Action[DataSourceLike] = Action.async(validateJson[DataSourceLike]) {
     implicit request =>
       log {
-        logTime(slackNotificationService.reportUnusalRequest) {
+        logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.webknossos) {
             AllowRemoteOrigin {
               for {

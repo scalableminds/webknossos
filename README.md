@@ -7,9 +7,9 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
+[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
 
-[![](	https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
+[![](https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
 [![](https://img.shields.io/github/license/scalableminds/webknossos.svg?colorB=success)](https://github.com/scalableminds/webknossos/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/url/http/webknossos.svg?style=social)](https://twitter.com/webknossos)
@@ -183,7 +183,9 @@ docker-compose run e2e-tests
 
 
 ## Contact and support
-Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
+Ask for help in the [image.sc community forum](https://forum.image.sc/tag/webknossos).
+
+Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
 
 [scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
 

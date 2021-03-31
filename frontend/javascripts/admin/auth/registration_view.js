@@ -56,7 +56,7 @@ function RegistrationViewNotDemo() {
       <Card style={{ marginBottom: 24 }}>
         We could not find a default organization to sign up for.
         <br /> Please check your link or contact{" "}
-        <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on setting up
+        <a href="mailto:hello@webknossos.org">hello@webknossos.org</a> for help on setting up
         webKnossos.
       </Card>
     );

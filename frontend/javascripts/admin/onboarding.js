@@ -223,40 +223,33 @@ export class InviteUsersModal extends React.Component<
 
 const OrganizationForm = ({ onComplete }) => {
   const [form] = Form.useForm();
-  const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
-  const handleSubmit = e => {
-    e.preventDefault();
-    form.validateFields((err, values) => {
-      if (!err) {
-        onComplete(values.organizationName);
-      }
-    });
+  // TODO: check whether this how you check for errors correctly.
+  const hasErrors = (_, fieldErrors) => fieldErrors.length > 0;
+  const onFinish = values => {
+    onComplete(values.organizationName);
   };
-  const { getFieldDecorator, getFieldsError, getFieldError, isFieldTouched } = form;
+  const { getFieldsError, getFieldError, isFieldTouched } = form;
 
   const organizationNameError =
     isFieldTouched("organizationName") && getFieldError("organizationName");
 
   return (
-    <Form onSubmit={handleSubmit} form={form}>
+    <Form onFinish={onFinish} form={form} initialValues={{ organizationName: "" }}>
       <Row type="flex" justify="center" style={{ padding: "20px 50px" }} align="middle" gutter={8}>
         <Col span={18}>
           <FormItem
             validateStatus={organizationNameError ? "error" : ""}
             help={organizationNameError || ""}
             style={{ width: "100%" }}
+            rules={[{ required: true, message: "Please enter an organization name!" }]}
+            name="organizationName"
           >
-            {getFieldDecorator("organizationName", {
-              rules: [{ required: true, message: "Please enter an organization name!" }],
-              initialValue: "",
-            })(
-              <AutoComplete
-                size="large"
-                options={[]}
-                defaultActiveFirstOption={false}
-                placeholder="Your organization name"
-              />,
-            )}
+            <AutoComplete
+              size="large"
+              options={[]}
+              defaultActiveFirstOption={false}
+              placeholder="Your organization name"
+            />
           </FormItem>
         </Col>
         <Col span={6}>

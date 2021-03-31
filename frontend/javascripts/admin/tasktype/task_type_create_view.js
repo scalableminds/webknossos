@@ -92,7 +92,8 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   async applyDefaults() {
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
-    const hasRecommendedConfiguration = taskType.recommendedConfiguration != null;
+    const hasRecommendedConfiguration =
+      taskType != null && taskType.recommendedConfiguration != null;
     const defaultValues = {
       settings: {
         somaClickingAllowed: true,

@@ -41,18 +41,16 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    if (this.props.organizationName) {
-      this.setState({ isFetchingData: true });
-      const { displayName, newUserMailingList, pricingPlan } = await getOrganization(
-        this.props.organizationName,
-      );
-      this.setState({
-        displayName,
-        pricingPlan: Enum.coalesce(PricingPlanEnum, pricingPlan),
-        newUserMailingList,
-        isFetchingData: false,
-      });
-    }
+    this.setState({ isFetchingData: true });
+    const { displayName, newUserMailingList, pricingPlan } = await getOrganization(
+      this.props.organizationName,
+    );
+    this.setState({
+      displayName,
+      pricingPlan: Enum.coalesce(PricingPlanEnum, pricingPlan),
+      newUserMailingList,
+      isFetchingData: false,
+    });
   }
 
   handleSubmit = e => {

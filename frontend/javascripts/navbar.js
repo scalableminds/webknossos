@@ -393,13 +393,13 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 
-    if (isAdminOrTeamManager) {
+    if (isAdminOrTeamManager && activeUser != null) {
       menuItems.push(
         <AdministrationSubMenu
           key="admin"
           collapse={collapseAllNavItems}
           isAdmin={isAdmin}
-          organization={activeUser ? activeUser.organization : ""}
+          organization={activeUser.organization}
         />,
       );
       menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);

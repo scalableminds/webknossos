@@ -1406,7 +1406,7 @@ export async function updateOrganization(
   organizationName: string,
   displayName: string,
   newUserMailingList: string,
-): Promise<void> {
+): Promise<APIOrganization> {
   return Request.sendJSONReceiveJSON(`/api/organizations/${organizationName}`, {
     method: "PATCH",
     data: { displayName, newUserMailingList },

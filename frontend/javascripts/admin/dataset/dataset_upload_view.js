@@ -81,158 +81,155 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
-  handleSubmit = evt => {
-    evt.preventDefault();
+  handleSubmit = async formValues => {
     const form = this.formRef.current;
+    const { activeUser } = this.props;
     if (!form) {
       return;
     }
-    form.validateFields(async (err, formValues) => {
-      const { activeUser } = this.props;
 
-      if (!err && activeUser != null) {
-        Toast.info("Uploading dataset");
-        this.setState({
-          isUploading: true,
-        });
-
-        const beforeUnload = action => {
-          // Only show the prompt if this is a proper beforeUnload event from the browser
-          // or the pathname changed
-          // This check has to be done because history.block triggers this function even if only the url hash changed
-          if (action === undefined || evt.pathname !== window.location.pathname) {
-            const { isUploading } = this.state;
-            if (isUploading) {
-              window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-              window.setTimeout(() => {
-                // restore the event handler in case a user chose to stay on the page
-                window.onbeforeunload = beforeUnload;
-              }, 500);
-              return messages["dataset.leave_during_upload"];
-            }
+    if (activeUser != null) {
+      Toast.info("Uploading dataset");
+      this.setState({
+        isUploading: true,
+      });
+      // TODO: figure out how to get the evt pathname without an event (onFinish only gets the values)
+      const beforeUnload = action => {
+        // Only show the prompt if this is a proper beforeUnload event from the browser
+        // or the pathname changed
+        // This check has to be done because history.block triggers this function even if only the url hash changed
+        if (action === undefined || evt.pathname !== window.location.pathname) {
+          const { isUploading } = this.state;
+          if (isUploading) {
+            window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+            window.setTimeout(() => {
+              // restore the event handler in case a user chose to stay on the page
+              window.onbeforeunload = beforeUnload;
+            }, 500);
+            return messages["dataset.leave_during_upload"];
           }
-          return null;
-        };
+        }
+        return null;
+      };
 
-        this.props.history.block(beforeUnload);
-        window.onbeforeunload = beforeUnload;
+      this.props.history.block(beforeUnload);
+      window.onbeforeunload = beforeUnload;
 
-        const datasetId: APIDatasetId = {
-          name: formValues.name,
-          owningOrganization: activeUser.organization,
-        };
-        const getRandomString = () => {
-          const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
-          return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
-        };
+      const datasetId: APIDatasetId = {
+        name: formValues.name,
+        owningOrganization: activeUser.organization,
+      };
+      const getRandomString = () => {
+        const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
+        return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
+      };
 
-        const uploadId = `${moment(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
-          datasetId.name
-        }__${getRandomString()}`;
+      const uploadId = `${moment(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
+        datasetId.name
+      }__${getRandomString()}`;
 
-        const resumableUpload = await createResumableUpload(
-          datasetId,
-          formValues.datastore,
-          formValues.zipFile.length,
+      const resumableUpload = await createResumableUpload(
+        datasetId,
+        formValues.datastore,
+        formValues.zipFile.length,
+        uploadId,
+      );
+
+      resumableUpload.on("complete", () => {
+        const newestForm = this.formRef.current;
+        if (!newestForm) {
+          return;
+        }
+
+        const uploadInfo = {
           uploadId,
-        );
+          organization: datasetId.owningOrganization,
+          name: datasetId.name,
+          initialTeams: formValues.initialTeams.map(team => team.id),
+          needsConversion: this.state.needsConversion,
+        };
 
-        resumableUpload.on("complete", () => {
-          const newestForm = this.formRef.current;
-          if (!newestForm) {
-            return;
-          }
-
-          const uploadInfo = {
-            uploadId,
-            organization: datasetId.owningOrganization,
-            name: datasetId.name,
-            initialTeams: formValues.initialTeams.map(team => team.id),
-            needsConversion: this.state.needsConversion,
-          };
-
-          finishDatasetUpload(formValues.datastore, uploadInfo).then(
-            async () => {
-              Toast.success(messages["dataset.upload_success"]);
-              trackAction("Upload dataset");
-              await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-              let maybeError;
-              if (this.state.needsConversion) {
-                try {
-                  await startConvertToWkwJob(
-                    formValues.name,
-                    activeUser.organization,
-                    formValues.scale,
-                  );
-                } catch (error) {
-                  maybeError = error;
-                }
-                if (maybeError == null) {
-                  Toast.info(
-                    <React.Fragment>
-                      The conversion for the uploaded dataset was started.
-                      <br />
-                      Click{" "}
-                      <a
-                        target="_blank"
-                        href="https://github.com/scalableminds/webknossos-cuber/"
-                        rel="noopener noreferrer"
-                      >
-                        here
-                      </a>{" "}
-                      to see all running jobs.
-                    </React.Fragment>,
-                  );
-                } else {
-                  Toast.error(
-                    "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
-                  );
-                }
-              }
-              this.setState({ isUploading: false });
-              if (maybeError == null) {
-                newestForm.setFieldsValue({ name: null, zipFile: [] });
-                this.props.onUploaded(
-                  activeUser.organization,
+        finishDatasetUpload(formValues.datastore, uploadInfo).then(
+          async () => {
+            Toast.success(messages["dataset.upload_success"]);
+            trackAction("Upload dataset");
+            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+            let maybeError;
+            if (this.state.needsConversion) {
+              try {
+                await startConvertToWkwJob(
                   formValues.name,
-                  this.state.needsConversion,
+                  activeUser.organization,
+                  formValues.scale,
+                );
+              } catch (error) {
+                maybeError = error;
+              }
+              if (maybeError == null) {
+                Toast.info(
+                  <React.Fragment>
+                    The conversion for the uploaded dataset was started.
+                    <br />
+                    Click{" "}
+                    <a
+                      target="_blank"
+                      href="https://github.com/scalableminds/webknossos-cuber/"
+                      rel="noopener noreferrer"
+                    >
+                      here
+                    </a>{" "}
+                    to see all running jobs.
+                  </React.Fragment>,
+                );
+              } else {
+                Toast.error(
+                  "The conversion for the uploaded dataset could not be started. Please try again or contact us if this issue occurs again.",
                 );
               }
-            },
-            error => {
-              sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
-                dataset_name: datasetId.name,
-              });
-              Toast.error(messages["dataset.upload_failed"]);
-              this.setState({
-                isUploading: false,
-                isRetrying: false,
-                uploadProgress: 0,
-              });
-            },
-          );
-        });
+            }
+            this.setState({ isUploading: false });
+            if (maybeError == null) {
+              newestForm.setFieldsValue({ name: null, zipFile: [] });
+              this.props.onUploaded(
+                activeUser.organization,
+                formValues.name,
+                this.state.needsConversion,
+              );
+            }
+          },
+          error => {
+            sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
+              dataset_name: datasetId.name,
+            });
+            Toast.error(messages["dataset.upload_failed"]);
+            this.setState({
+              isUploading: false,
+              isRetrying: false,
+              uploadProgress: 0,
+            });
+          },
+        );
+      });
 
-        resumableUpload.on("filesAdded", () => {
-          resumableUpload.upload();
-        });
+      resumableUpload.on("filesAdded", () => {
+        resumableUpload.upload();
+      });
 
-        resumableUpload.on("fileError", (file, message) => {
-          Toast.error(message);
-          this.setState({ isUploading: false });
-        });
+      resumableUpload.on("fileError", (file, message) => {
+        Toast.error(message);
+        this.setState({ isUploading: false });
+      });
 
-        resumableUpload.on("progress", () => {
-          this.setState({ isRetrying: false, uploadProgress: resumableUpload.progress() });
-        });
+      resumableUpload.on("progress", () => {
+        this.setState({ isRetrying: false, uploadProgress: resumableUpload.progress() });
+      });
 
-        resumableUpload.on("fileRetry", () => {
-          this.setState({ isRetrying: true });
-        });
+      resumableUpload.on("fileRetry", () => {
+        this.setState({ isRetrying: true });
+      });
 
-        resumableUpload.addFiles(formValues.zipFile);
-      }
-    });
+      resumableUpload.addFiles(formValues.zipFile);
+    }
   };
 
   getUploadModal = () => {
@@ -370,7 +367,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
       return null;
     }
     const { activeUser, withoutCard, datastores } = this.props;
-    const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
     const { needsConversion } = this.state;
     const uploadableDatastores = datastores.filter(datastore => datastore.allowsUpload);
@@ -379,7 +375,12 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
         <CardContainer withoutCard={withoutCard} title="Upload Dataset">
-          <Form onSubmit={this.handleSubmit} layout="vertical" ref={this.formRef}>
+          <Form
+            onFinish={this.handleSubmit}
+            layout="vertical"
+            ref={this.formRef}
+            initialValues={{ initialTeams: [], scale: [0, 0, 0], zipFile: [] }}
+          >
             {features().isDemoInstance && (
               <Alert
                 message={
@@ -400,48 +401,49 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 <DatasetNameFormItem form={form} activeUser={activeUser} />
               </Col>
               <Col span={12}>
-                <FormItem label="Teams allowed to access this dataset" hasFeedback>
-                  {getFieldDecorator("initialTeams", {
-                    rules: [
-                      {
-                        required: !isDatasetManagerOrAdmin,
-                        message: !isDatasetManagerOrAdmin
-                          ? messages["dataset.import.required.initialTeam"]
-                          : null,
-                      },
-                    ],
-                    initialValue: [],
-                  })(
-                    <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
-                      <TeamSelectionComponent
-                        mode="multiple"
-                        value={this.state.selectedTeams}
-                        onChange={selectedTeams => {
-                          if (!Array.isArray(selectedTeams)) {
-                            // Making sure that we always have an array even when only one team is selected.
-                            selectedTeams = [selectedTeams];
-                          }
-                          form.setFieldsValue({ initialTeams: selectedTeams });
-                          this.setState({ selectedTeams });
-                        }}
-                        afterFetchedTeams={fetchedTeams => {
-                          if (!features().isDemoInstance) {
-                            return;
-                          }
-                          const teamOfOrganisation = fetchedTeams.find(
-                            team => team.name === team.organization,
-                          );
-                          if (teamOfOrganisation == null) {
-                            return;
-                          }
-                          this.setState({ selectedTeams: [teamOfOrganisation] });
-                          form.setFieldsValue({
-                            initialTeams: [teamOfOrganisation],
-                          });
-                        }}
-                      />
-                    </Tooltip>,
-                  )}
+                <FormItem
+                  name="initialTeams"
+                  label="Teams allowed to access this dataset"
+                  hasFeedback
+                  rules={[
+                    {
+                      required: !isDatasetManagerOrAdmin,
+                      message: !isDatasetManagerOrAdmin
+                        ? messages["dataset.import.required.initialTeam"]
+                        : null,
+                    },
+                  ]}
+                >
+                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
+                    <TeamSelectionComponent
+                      mode="multiple"
+                      value={this.state.selectedTeams}
+                      onChange={selectedTeams => {
+                        if (!Array.isArray(selectedTeams)) {
+                          // Making sure that we always have an array even when only one team is selected.
+                          selectedTeams = [selectedTeams];
+                        }
+                        form.setFieldsValue({ initialTeams: selectedTeams });
+                        this.setState({ selectedTeams });
+                      }}
+                      afterFetchedTeams={fetchedTeams => {
+                        if (!features().isDemoInstance) {
+                          return;
+                        }
+                        const teamOfOrganisation = fetchedTeams.find(
+                          team => team.name === team.organization,
+                        );
+                        if (teamOfOrganisation == null) {
+                          return;
+                        }
+                        this.setState({ selectedTeams: [teamOfOrganisation] });
+                        form.setFieldsValue({
+                          initialTeams: [teamOfOrganisation],
+                        });
+                      }}
+                    />
+                  </Tooltip>
+                  ,
                 </FormItem>
               </Col>
             </Row>
@@ -453,91 +455,86 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
             {features().jobsEnabled && needsConversion ? (
               <React.Fragment>
                 <FormItemWithInfo
+                  name="scale"
                   label="Voxel Size"
                   info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
                   disabled={this.state.needsConversion}
                   help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                  rules={[
+                    {
+                      required: this.state.needsConversion,
+                      message: "Please provide a scale for the dataset.",
+                    },
+                    {
+                      validator: syncValidator(
+                        value => value && value.every(el => el > 0),
+                        "Each component of the scale must be larger than 0.",
+                      ),
+                    },
+                  ]}
                 >
-                  {getFieldDecorator("scale", {
-                    initialValue: [0, 0, 0],
-                    rules: [
-                      {
-                        required: this.state.needsConversion,
-                        message: "Please provide a scale for the dataset.",
-                      },
-                      {
-                        validator: syncValidator(
-                          value => value && value.every(el => el > 0),
-                          "Each component of the scale must be larger than 0.",
-                        ),
-                      },
-                    ],
-                  })(
-                    <Vector3Input
-                      style={{ width: 400 }}
-                      allowDecimals
-                      onChange={scale => form.setFieldsValue({ scale })}
-                    />,
-                  )}
+                  <Vector3Input
+                    style={{ width: 400 }}
+                    allowDecimals
+                    onChange={scale => form.setFieldsValue({ scale })}
+                  />
                 </FormItemWithInfo>
               </React.Fragment>
             ) : null}
 
-            <FormItem label="Dataset" hasFeedback>
-              {getFieldDecorator("zipFile", {
-                rules: [
-                  { required: true, message: messages["dataset.import.required.zipFile"] },
-                  {
-                    validator: syncValidator(
-                      files =>
-                        files.filter(file => Utils.isFileExtensionEqualTo(file.path, "zip"))
-                          .length <= 1,
-                      "You cannot upload more than one archive.",
-                    ),
-                  },
-                  {
-                    validator: syncValidator(
-                      files =>
-                        files.filter(file =>
-                          Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
-                        ).length === 0,
-                      "Tar and rar archives are not supported currently. Please use zip archives.",
-                    ),
-                  },
-                  {
-                    validator: syncValidator(files => {
-                      const archives = files.filter(file =>
-                        Utils.isFileExtensionEqualTo(file.path, "zip"),
-                      );
-                      // Either there are no archives, or all files are archives
-                      return archives.length === 0 || archives.length === files.length;
-                    }, "Archives cannot be mixed with other files."),
-                  },
-                  {
-                    validator: syncValidator(files => {
-                      const wkwFiles = files.filter(file =>
-                        Utils.isFileExtensionEqualTo(file.path, "wkw"),
-                      );
-                      const imageFiles = files.filter(file =>
-                        Utils.isFileExtensionEqualTo(file.path, [
-                          "tif",
-                          "tiff",
-                          "jpg",
-                          "jpeg",
-                          "png",
-                        ]),
-                      );
-                      return wkwFiles.length === 0 || imageFiles.length === 0;
-                    }, "WKW files should not be mixed with image files."),
-                  },
-                ],
-                valuePropName: "fileList",
-                initialValue: [],
-                onChange: this.onFilesChange,
-              })(
-                // Provide null values to satisfy flow (overwritten by getFieldDecorator)
-                <FileUploadArea onChange={_files => {}} fileList={[]} />,
-              )}
+            <FormItem
+              name="zipFile"
+              label="Dataset"
+              hasFeedback
+              rules={[
+                { required: true, message: messages["dataset.import.required.zipFile"] },
+                {
+                  validator: syncValidator(
+                    files =>
+                      files.filter(file => Utils.isFileExtensionEqualTo(file.path, "zip")).length <=
+                      1,
+                    "You cannot upload more than one archive.",
+                  ),
+                },
+                {
+                  validator: syncValidator(
+                    files =>
+                      files.filter(file => Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]))
+                        .length === 0,
+                    "Tar and rar archives are not supported currently. Please use zip archives.",
+                  ),
+                },
+                {
+                  validator: syncValidator(files => {
+                    const archives = files.filter(file =>
+                      Utils.isFileExtensionEqualTo(file.path, "zip"),
+                    );
+                    // Either there are no archives, or all files are archives
+                    return archives.length === 0 || archives.length === files.length;
+                  }, "Archives cannot be mixed with other files."),
+                },
+                {
+                  validator: syncValidator(files => {
+                    const wkwFiles = files.filter(file =>
+                      Utils.isFileExtensionEqualTo(file.path, "wkw"),
+                    );
+                    const imageFiles = files.filter(file =>
+                      Utils.isFileExtensionEqualTo(file.path, [
+                        "tif",
+                        "tiff",
+                        "jpg",
+                        "jpeg",
+                        "png",
+                      ]),
+                    );
+                    return wkwFiles.length === 0 || imageFiles.length === 0;
+                  }, "WKW files should not be mixed with image files."),
+                },
+              ]}
+              valuePropName="fileList"
+              onChange={this.onFilesChange}
+            >
+              <FileUploadArea onChange={_files => {}} fileList={[]} />
             </FormItem>
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>

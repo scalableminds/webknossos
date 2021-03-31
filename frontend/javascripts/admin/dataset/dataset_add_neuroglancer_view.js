@@ -66,43 +66,37 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     return JSON.parse(jsonString);
   };
 
-  function handleSubmit(evt) {
-    evt.preventDefault();
+  async function handleSubmit(formValues) {
+    if (activeUser == null) return;
 
-    form.validateFields(async (err, formValues) => {
-      if (err || activeUser == null) return;
+    const neuroglancerConfig = validateAndParseUrl(formValues.url);
+    const fullLayers = _.keyBy(neuroglancerConfig.layers, "name");
+    // Remove unnecessary attributes of the layer, the precomputed source prefix needs to be removed as well
+    const layers = _.mapValues(fullLayers, ({ source, type }) => ({
+      type,
+      source: source.replace(/^(precomputed:\/\/)/, ""),
+    }));
+    const credentials =
+      fileList.length > 0 ? await parseCredentials(fileList[0].originFileObj) : null;
 
-      const neuroglancerConfig = validateAndParseUrl(formValues.url);
-      const fullLayers = _.keyBy(neuroglancerConfig.layers, "name");
-      // Remove unnecessary attributes of the layer, the precomputed source prefix needs to be removed as well
-      const layers = _.mapValues(fullLayers, ({ source, type }) => ({
-        type,
-        source: source.replace(/^(precomputed:\/\/)/, ""),
-      }));
-      const credentials =
-        fileList.length > 0 ? await parseCredentials(fileList[0].originFileObj) : null;
-
-      const datasetConfig = {
-        neuroglancer: {
-          [activeUser.organization]: {
-            [formValues.name]: {
-              layers,
-              ...(credentials != null ? { credentials } : {}),
-            },
+    const datasetConfig = {
+      neuroglancer: {
+        [activeUser.organization]: {
+          [formValues.name]: {
+            layers,
+            ...(credentials != null ? { credentials } : {}),
           },
         },
-      };
+      },
+    };
 
-      trackAction("Add Neuroglancer dataset");
-      await addWkConnectDataset(formValues.datastore, datasetConfig);
+    trackAction("Add Neuroglancer dataset");
+    await addWkConnectDataset(formValues.datastore, datasetConfig);
 
-      Toast.success(messages["dataset.add_success"]);
-      await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-      onAdded(activeUser.organization, formValues.name);
-    });
+    Toast.success(messages["dataset.add_success"]);
+    await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+    onAdded(activeUser.organization, formValues.name);
   }
-
-  const { getFieldDecorator } = form;
 
   return (
     <div style={{ padding: 5 }}>
@@ -110,7 +104,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
         Currently we only support Neuroglancer precomputed datasets. Simply set a dataset name,
         select the wk-connect datastore and paste the URL to the Neuroglancer dataset. Optionally, a
         credentials file to a Google Cloud Storage instance can be supplied.
-        <Form style={{ marginTop: 20 }} onSubmit={handleSubmit} layout="vertical">
+        <Form style={{ marginTop: 20 }} onFinish={handleSubmit} layout="vertical">
           <Row gutter={8}>
             <Col span={12}>
               <DatasetNameFormItem form={form} activeUser={activeUser} />
@@ -119,25 +113,29 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
               <DatastoreFormItem form={form} datastores={datastores} />
             </Col>
           </Row>
-          <FormItem label="Dataset URL" hasFeedback>
-            {getFieldDecorator("url", {
-              rules: [
-                { required: true, message: messages["dataset.import.required.url"] },
-                {
-                  validator: async (_rule, value, callback) => {
-                    try {
-                      validateAndParseUrl(value);
-                      callback();
-                    } catch (error) {
-                      callback(error);
-                    }
-                  },
+          <FormItem
+            name="url"
+            label="Dataset URL"
+            hasFeedback
+            rules={[
+              { required: true, message: messages["dataset.import.required.url"] },
+              {
+                validator: async (_rule, value, callback) => {
+                  try {
+                    validateAndParseUrl(value);
+                    callback();
+                  } catch (error) {
+                    callback(error);
+                  }
                 },
-              ],
-              validateFirst: true,
-            })(<Input />)}
+              },
+            ]}
+            validateFirst
+          >
+            <Input />
           </FormItem>
           <FormItem
+            name="authFile"
             label={
               <React.Fragment>
                 Google{" "}
@@ -153,25 +151,23 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
             }
             hasFeedback
           >
-            {getFieldDecorator("authFile")(
-              <Upload.Dragger
-                name="files"
-                fileList={fileList}
-                onChange={handleChange}
-                beforeUpload={() => false}
-              >
-                <p className="ant-upload-drag-icon">
-                  <UnlockOutlined style={{ margin: 0, fontSize: 35 }} />
-                </p>
-                <p className="ant-upload-text">
-                  Click or Drag your Google Cloud Authentication File to this Area to Upload
-                </p>
-                <p className="ant-upload-text-hint">
-                  This is only needed if the dataset is located in a non-public Google Cloud Storage
-                  bucket
-                </p>
-              </Upload.Dragger>,
-            )}
+            <Upload.Dragger
+              name="files"
+              fileList={fileList}
+              onChange={handleChange}
+              beforeUpload={() => false}
+            >
+              <p className="ant-upload-drag-icon">
+                <UnlockOutlined style={{ margin: 0, fontSize: 35 }} />
+              </p>
+              <p className="ant-upload-text">
+                Click or Drag your Google Cloud Authentication File to this Area to Upload
+              </p>
+              <p className="ant-upload-text-hint">
+                This is only needed if the dataset is located in a non-public Google Cloud Storage
+                bucket
+              </p>
+            </Upload.Dragger>
           </FormItem>
           <FormItem style={{ marginBottom: 0 }}>
             <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>

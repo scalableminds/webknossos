@@ -56,10 +56,7 @@ function DatasetAddForeignView({ onAdded }: Props) {
     };
   }
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-
-    const formValues = form.getFieldsValue();
+  const handleSubmit = async formValues => {
     const specification = parseLine(formValues.foreignDatasetText);
 
     if (isValidDataSet(specification)) {
@@ -75,8 +72,6 @@ function DatasetAddForeignView({ onAdded }: Props) {
   };
 
   // TODO: migrate this
-  const { getFieldDecorator } = form;
-
   return (
     <div className="container" style={{ paddingTop: 20 }}>
       <Card title={<h3>Add Dataset</h3>} bordered={false}>
@@ -85,30 +80,31 @@ function DatasetAddForeignView({ onAdded }: Props) {
           <br />
           dataStoreName, url, dataSetName
         </p>
-        <Form onSubmit={handleSubmit} layout="vertical" form={form}>
-          <FormItem label="Add Foreign Dataset Specification" hasFeedback>
-            {getFieldDecorator("foreignDatasetText", {
-              rules: [
-                {
-                  validator: (rule, value, callback) => {
-                    const dataSet = parseLine(form.getFieldsValue().foreignDatasetText);
+        <Form onFinish={handleSubmit} layout="vertical" form={form}>
+          <FormItem
+            name="foreignDatasetText"
+            label="Add Foreign Dataset Specification"
+            hasFeedback
+            rules={[
+              {
+                validator: (rule, value, callback) => {
+                  const dataSet = parseLine(form.getFieldsValue().foreignDatasetText);
 
-                    return _.isString(value) && isValidDataSet(dataSet)
-                      ? callback()
-                      : callback(`${Messages["dataset.import.invalid_fields"]}`);
-                  },
+                  return _.isString(value) && isValidDataSet(dataSet)
+                    ? callback()
+                    : callback(`${Messages["dataset.import.invalid_fields"]}`);
                 },
-              ],
-            })(
-              <TextArea
-                className="input-monospace"
-                placeholder="dataStoreName, url, dataSetName"
-                autoSize={{ minRows: 1 }}
-                style={{
-                  fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-                }}
-              />,
-            )}
+              },
+            ]}
+          >
+            <TextArea
+              className="input-monospace"
+              placeholder="dataStoreName, url, dataSetName"
+              autoSize={{ minRows: 1 }}
+              style={{
+                fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+              }}
+            />
           </FormItem>
           <FormItem>
             <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>

@@ -64,7 +64,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
           formValues.displayName,
           formValues.newUserMailingList,
         );
-        window.location.replace(`${window.location.origin}/dashboard/datasets`);
+        window.location.replace(`${window.location.origin}/dashboard/`);
       }
     });
   };

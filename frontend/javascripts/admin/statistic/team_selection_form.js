@@ -14,26 +14,20 @@ type Props = {
 
 function TeamSelectionForm({ value, onChange }: Props) {
   const [form] = Form.useForm();
-  const handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {
-    if (event) {
-      event.preventDefault();
-    }
-    form.validateFields((err, formValues) => {
-      onChange(formValues.team);
-    });
+  const handleFormSubmit = formValues => {
+    onChange(formValues.team);
   };
 
-  const { getFieldDecorator } = form;
   const formItemLayout = {
     labelCol: { span: 5 },
     wrapperCol: { span: 19 },
   };
   return (
-    <Form onSubmit={handleFormSubmit} form={form}>
+    <Form onFinish={handleFormSubmit} form={form} initialValues={[{ team: value }]}>
       <Row gutter={40}>
         <Col span={12}>
-          <FormItem {...formItemLayout} label="Team" style={{ marginBottom: 0 }}>
-            {getFieldDecorator("team", { initialValue: value })(<TeamSelectionComponent />)}
+          <FormItem name="team" {...formItemLayout} label="Team" style={{ marginBottom: 0 }}>
+            <TeamSelectionComponent />
           </FormItem>
         </Col>
         <Col span={12}>

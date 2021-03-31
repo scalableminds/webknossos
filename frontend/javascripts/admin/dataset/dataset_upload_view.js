@@ -275,9 +275,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   onFilesChange = files => {
-    console.log(files);
-    this.maybeSetUploadName(files);
-    this.validateFiles(files);
+    // TODO: get manual upload of single file to work
+    const filesArray = Array.isArray(files) ? files : [files];
+
+    this.maybeSetUploadName(filesArray);
+    this.validateFiles(filesArray);
   };
 
   validateFiles = files => {
@@ -368,8 +370,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   render() {
     const form = this.formRef.current;
-
-    console.log("Rendering everything");
     const { activeUser, withoutCard, datastores } = this.props;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
     const { needsConversion } = this.state;

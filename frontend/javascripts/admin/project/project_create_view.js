@@ -64,21 +64,15 @@ function ProjectCreateView({ history, activeUser, projectName }: PropsWithRouter
     form.setFieldsValue(defaultFormValues);
   }
 
-  const handleSubmit = e => {
-    e.preventDefault();
-    form.validateFields(async (err, formValues) => {
-      if (!err) {
-        if (projectName) {
-          await updateProject(projectName, formValues);
-        } else {
-          await createProject(formValues);
-        }
-        history.push("/projects");
-      }
-    });
+  const handleSubmit = async formValues => {
+    if (projectName) {
+      await updateProject(projectName, formValues);
+    } else {
+      await createProject(formValues);
+    }
+    history.push("/projects");
   };
 
-  const { getFieldDecorator } = form;
   const isEditMode = projectName != null;
   const title = isEditMode && projectName ? `Update Project ${projectName}` : "Create Project";
   const fullWidth = { width: "100%" };
@@ -86,7 +80,7 @@ function ProjectCreateView({ history, activeUser, projectName }: PropsWithRouter
   return (
     <div className="row container project-administration">
       <Card title={<h3>{title}</h3>}>
-        <Form onSubmit={handleSubmit} layout="vertical" from={form}>
+        <Form onFinish={handleSubmit} layout="vertical" from={form}>
           <FormItem
             name="name"
             label="Project Name"

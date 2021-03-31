@@ -56,69 +56,69 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
     form.setFieldsValue(defaultFormValues);
   }
 
-  const handleSubmit = e => {
-    e.preventDefault();
-    form.validateFields(async (err, formValues) => {
-      if (!err) {
-        if (scriptId) {
-          await updateScript(scriptId, formValues);
-        } else {
-          await createScript(formValues);
-        }
-        history.push("/scripts");
-      }
-    });
+  const handleSubmit = async formValues => {
+    if (scriptId) {
+      await updateScript(scriptId, formValues);
+    } else {
+      await createScript(formValues);
+    }
+    history.push("/scripts");
   };
-
-  const { getFieldDecorator } = form;
   const titlePrefix = scriptId ? "Update" : "Create";
 
   return (
     <div className="container">
       <Card title={<h3>{titlePrefix} Script</h3>}>
-        <Form onSubmit={handleSubmit} layout="vertical" form={form}>
-          <FormItem label="Script Name" hasFeedback>
-            {getFieldDecorator("name", {
-              rules: [
-                {
-                  required: true,
-                },
-                { min: 3 },
-              ],
-            })(<Input autoFocus />)}
+        <Form onFinish={handleSubmit} layout="vertical" form={form}>
+          <FormItem
+            name="name"
+            label="Script Name"
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+              { min: 3 },
+            ]}
+          >
+            <Input autoFocus />
           </FormItem>
 
-          <FormItem label="Gist URL" hasFeedback>
-            {getFieldDecorator("gist", {
-              rules: [
-                {
-                  required: true,
-                },
-                { type: "url" },
-              ],
-            })(<Input />)}
+          <FormItem
+            name="gist"
+            label="Gist URL"
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+              { type: "url" },
+            ]}
+          >
+            <Input />
           </FormItem>
 
-          <FormItem label="Owner" hasFeedback>
-            {getFieldDecorator("owner", {
-              rules: [
-                {
-                  required: true,
-                },
-              ],
-            })(
-              <Select
-                showSearch
-                placeholder="Select a User"
-                optionFilterProp="children"
-                style={{ width: "100%" }}
-                notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
-                options={users.map((user: APIUser) => ({
-                  value: user.id,
-                  label: `${user.lastName}, ${user.firstName} (${user.email})`,
-                }))}
-              />,
-            )}
+          <FormItem
+            name="owner"
+            label="Owner"
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+            ]}
+          >
+            <Select
+              showSearch
+              placeholder="Select a User"
+              optionFilterProp="children"
+              style={{ width: "100%" }}
+              notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
+              options={users.map((user: APIUser) => ({
+                value: user.id,
+                label: `${user.lastName}, ${user.firstName} (${user.email})`,
+              }))}
+            />
           </FormItem>
 
           <FormItem>

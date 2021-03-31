@@ -71,7 +71,6 @@ function DatasetAddForeignView({ onAdded }: Props) {
     }
   };
 
-  // TODO: migrate this
   return (
     <div className="container" style={{ paddingTop: 20 }}>
       <Card title={<h3>Add Dataset</h3>} bordered={false}>

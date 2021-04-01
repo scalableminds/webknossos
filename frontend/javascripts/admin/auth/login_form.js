@@ -31,7 +31,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
         }
       : null;
 
-  const handleSubmit = async formValues => {
+  const onFinish = async formValues => {
     const user = await loginUser(formValues);
     Store.dispatch(setActiveUserAction(user));
     if (onLoggedIn) {
@@ -61,7 +61,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   return (
     <div style={style}>
       {iframeWarning}
-      <Form onFinish={handleSubmit} layout={layout} form={form}>
+      <Form onFinish={onFinish} layout={layout} form={form}>
         <FormItem
           name="email"
           rules={[

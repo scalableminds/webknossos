@@ -37,8 +37,13 @@ function ChangePasswordView({ history }: Props) {
 
   function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
-    if (value && otherFieldValue && value !== otherFieldValue) {
-      return Promise.reject(new Error(messages["auth.registration_password_mismatch"]));
+    if (value && otherFieldValue) {
+      if (value !== otherFieldValue) {
+        return Promise.reject(new Error(messages["auth.registration_password_mismatch"]));
+      } else if (form.getFieldError(otherPasswordFieldKey).length > 0) {
+        // If the other password field still has errors, revalidate it.
+        form.validateFields([otherPasswordFieldKey]);
+      }
     }
     return Promise.resolve();
   }

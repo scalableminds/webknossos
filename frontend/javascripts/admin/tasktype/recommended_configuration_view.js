@@ -1,6 +1,6 @@
 // @flow
-import { Checkbox, Col, Collapse, Form, Input, Row, Tooltip, Table, Button } from "antd";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { Checkbox, Col, Collapse, Form, Input, Row, Table, Button } from "antd";
+import { FormInstance } from "antd/lib/form";
 import * as React from "react";
 import _ from "lodash";
 
@@ -72,12 +72,6 @@ export const settingComments = {
   loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
 };
 
-const errorIcon = (
-  <Tooltip title="The recommended user settings JSON has errors.">
-    <ExclamationCircleOutlined style={{ color: "#f5222d", marginLeft: 4 }} />
-  </Tooltip>
-);
-
 const columns = [
   {
     title: "Display Name",
@@ -116,7 +110,7 @@ export default function RecommendedConfigurationView({
   enabled,
   onChangeEnabled,
 }: {
-  form: Object,
+  form: typeof FormInstance,
   enabled: boolean,
   onChangeEnabled: boolean => void,
 }) {
@@ -130,24 +124,34 @@ export default function RecommendedConfigurationView({
         header={
           <React.Fragment>
             <Checkbox checked={enabled} style={{ marginRight: 10 }} /> Add Recommended User Settings
-            {enabled && form.getFieldError("recommendedConfiguration") && errorIcon}
           </React.Fragment>
         }
         showArrow={false}
       >
         <Row gutter={32}>
           <Col span={12}>
-            <FormItem
-              name="recommendedConfiguration"
-              hasFeedback
-              rules={[{ required: enabled, validator: validateUserSettingsJSON }]}
-            >
+            <div>
               The recommended configuration will be displayed to users when starting to trace a task
               with this task type. The user is able to accept or decline this recommendation.
               <br />
               <br />
-              <Input.TextArea spellCheck={false} autoSize={{ minRows: 20 }} style={jsonEditStyle} />
-            </FormItem>
+              <FormItem
+                name="recommendedConfiguration"
+                hasFeedback
+                rules={[
+                  {
+                    validator: (rule, value, callback) =>
+                      enabled ? validateUserSettingsJSON(rule, value, callback) : Promise.resolve(),
+                  },
+                ]}
+              >
+                <Input.TextArea
+                  spellCheck={false}
+                  autoSize={{ minRows: 20 }}
+                  style={jsonEditStyle}
+                />
+              </FormItem>
+            </div>
             <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
               Remove Orthogonal-only Settings
             </Button>

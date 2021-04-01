@@ -608,11 +608,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     if (!form) {
       return false;
     }
-    const datasetFormValues = form.getFieldValue("dataset");
 
-    return datasetFormValues
-      ? datasetFormValues.allowedTeams == null || datasetFormValues.allowedTeams.length === 0
-      : false;
+    return (
+      form.getFieldValue(["dataset", "allowedTeams"]) == null ||
+      form.getFieldValue(["dataset", "allowedTeams"]).length === 0
+    );
   }
 
   syncDataSourceFields = (_syncTargetTabKey?: "simple" | "advanced"): void => {

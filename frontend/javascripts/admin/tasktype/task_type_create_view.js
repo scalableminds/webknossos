@@ -139,39 +139,26 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     this.setState({ teams: editableTeams, isFetchingData: false });
   }
 
-  handleSubmit = e => {
-    e.preventDefault();
-    const form = this.formRef.current;
-    if (!form) {
+  handleSubmit = async formValues => {
+    const { recommendedConfiguration, settings: rawSettings, ...rest } = formValues;
+
+    const settings = getMagnificationAdaptedSettings(rawSettings);
+    if (!settings) {
       return;
     }
-    if (!this.state.useRecommendedConfiguration) {
-      form.setFieldsValue({ recommendedConfiguration: null });
+
+    const newTaskType = {
+      ...rest,
+      settings,
+      recommendedConfiguration:
+        recommendedConfiguration != null ? JSON.parse(recommendedConfiguration) : null,
+    };
+    if (this.props.taskTypeId) {
+      await updateTaskType(this.props.taskTypeId, newTaskType);
+    } else {
+      await createTaskType(newTaskType);
     }
-    form.validateFields(async (err, formValues) => {
-      if (err) {
-        Toast.error("Please check the form for errors.");
-        return;
-      }
-      const { recommendedConfiguration, settings: rawSettings, ...rest } = formValues;
-
-      const settings = getMagnificationAdaptedSettings(rawSettings);
-      if (!settings) {
-        return;
-      }
-
-      const newTaskType = {
-        ...rest,
-        settings,
-        recommendedConfiguration: JSON.parse(recommendedConfiguration),
-      };
-      if (this.props.taskTypeId) {
-        await updateTaskType(this.props.taskTypeId, newTaskType);
-      } else {
-        await createTaskType(newTaskType);
-      }
-      this.props.history.push("/taskTypes");
-    });
+    this.props.history.push("/taskTypes");
   };
 
   onChangeUseRecommendedConfiguration = (useRecommendedConfiguration: boolean) => {
@@ -180,48 +167,45 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   render() {
     const form = this.formRef.current;
-    if (!form) {
-      return null;
-    }
-    const { getFieldDecorator } = form;
+
     const isEditingMode = this.props.taskTypeId != null;
     const titlePrefix = isEditingMode ? "Update" : "Create";
 
     return (
       <div className="container" style={{ maxWidth: 1600, margin: "0 auto" }}>
         <Card title={<h3>{`${titlePrefix} Task Type`}</h3>}>
-          <Form onSubmit={this.handleSubmit} layout="vertical" ref={this.formRef}>
-            <FormItem label="Summary" hasFeedback>
-              {getFieldDecorator("summary", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                  { min: 3 },
-                ],
-              })(<Input />)}
+          <Form
+            onFinish={this.handleSubmit}
+            layout="vertical"
+            ref={this.formRef}
+            initialValues={{ tracingType: "skeleton" }}
+          >
+            <FormItem
+              name="summary"
+              label="Summary"
+              hasFeedback
+              rules={[{ required: true }, { min: 3 }]}
+            >
+              <Input />
             </FormItem>
 
-            <FormItem label="Team" hasFeedback>
-              {getFieldDecorator("teamId", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder="Select a Team"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.teams.map((team: APITeam) => ({
-                    value: team.id,
-                    label: `${team.name}`,
-                  }))}
-                />,
-              )}
+            <FormItem name="teamId" label="Team" hasFeedback rules={[{ required: true }]}>
+              <Select
+                allowClear
+                showSearch
+                placeholder="Select a Team"
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                options={this.state.teams.map((team: APITeam) => ({
+                  value: team.id,
+                  label: `${team.name}`,
+                }))}
+              />
             </FormItem>
 
             <FormItem
+              name="description"
               label={
                 <span>
                   Description (
@@ -236,127 +220,125 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 </span>
               }
               hasFeedback
+              rules={[{ required: true }]}
             >
-              {getFieldDecorator("description", {
-                rules: [{ required: true }],
-              })(<TextArea rows={10} />)}
+              <TextArea rows={10} />
             </FormItem>
 
-            <FormItem label="Annotation Type">
-              {getFieldDecorator("tracingType", {
-                initialValue: "skeleton",
-              })(
-                <RadioGroup>
-                  <Radio value="skeleton" disabled={isEditingMode}>
-                    Skeleton
-                  </Radio>
-                  <Radio value="volume" disabled={isEditingMode}>
-                    Volume
-                  </Radio>
-                  <Radio value="hybrid" disabled={isEditingMode}>
-                    Skeleton and Volume
-                  </Radio>
-                </RadioGroup>,
-              )}
+            <FormItem name="tracingType" label="Annotation Type">
+              <RadioGroup>
+                <Radio value="skeleton" disabled={isEditingMode}>
+                  Skeleton
+                </Radio>
+                <Radio value="volume" disabled={isEditingMode}>
+                  Volume
+                </Radio>
+                <Radio value="hybrid" disabled={isEditingMode}>
+                  Skeleton and Volume
+                </Radio>
+              </RadioGroup>
             </FormItem>
 
-            <FormItem label="Allowed Modes" hasFeedback>
-              {getFieldDecorator("settings.allowedModes", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  mode="multiple"
-                  allowClear
-                  placeholder="Select all Allowed Modes"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  options={[
-                    { value: "orthogonal", label: "Orthogonal" },
-                    { value: "oblique", label: "Oblique" },
-                    { value: "flight", label: "Flight" },
-                  ]}
-                />,
-              )}
+            <FormItem
+              name={["settings", "allowedModes"]}
+              label="Allowed Modes"
+              hasFeedback
+              rules={[{ required: true }]}
+            >
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="Select all Allowed Modes"
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                options={[
+                  { value: "orthogonal", label: "Orthogonal" },
+                  { value: "oblique", label: "Oblique" },
+                  { value: "flight", label: "Flight" },
+                ]}
+              />
             </FormItem>
 
-            <FormItem label="Preferred Mode" hasFeedback>
-              {getFieldDecorator("settings.preferredMode")(
-                <Select
-                  allowClear
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  options={[
-                    { value: null, label: "Any" },
-                    { value: "orthogonal", label: "Orthogonal" },
-                    { value: "oblique", label: "Oblique" },
-                    { value: "flight", label: "Flight" },
-                  ]}
-                />,
-              )}
+            <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
+              <Select
+                allowClear
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                options={[
+                  { value: null, label: "Any" },
+                  { value: "orthogonal", label: "Orthogonal" },
+                  { value: "oblique", label: "Oblique" },
+                  { value: "flight", label: "Flight" },
+                ]}
+              />
             </FormItem>
 
             <div
               style={{
-                display: form.getFieldValue("tracingType") === "volume" ? "none" : "block",
+                display:
+                  form != null && form.getFieldValue("tracingType") === "volume" ? "none" : "block",
               }}
             >
-              <FormItem label="Settings">
-                {getFieldDecorator("settings.somaClickingAllowed", {
-                  valuePropName: "checked",
-                })(<Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>)}
+              <FormItem
+                name={["settings", "somaClickingAllowed"]}
+                label="Settings"
+                valuePropName="checked"
+              >
+                <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
               </FormItem>
 
-              <FormItem>
-                {getFieldDecorator("settings.branchPointsAllowed", {
-                  valuePropName: "checked",
-                })(<Checkbox>Allow Branchpoints</Checkbox>)}
+              <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
+                <Checkbox>Allow Branchpoints</Checkbox>
               </FormItem>
 
-              <FormItem>
-                {getFieldDecorator("settings.mergerMode", {
-                  valuePropName: "checked",
-                })(<Checkbox>Merger Mode</Checkbox>)}
+              <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
+                <Checkbox>Merger Mode</Checkbox>
               </FormItem>
             </div>
 
-            <FormItem style={{ marginBottom: 6 }}>
-              {getFieldDecorator("settings.resolutionRestrictionsForm.shouldRestrict", {
-                valuePropName: "checked",
-              })(
-                <Checkbox disabled={isEditingMode}>
-                  Restrict Resolutions{" "}
-                  <Tooltip
-                    title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
-                    placement="right"
-                  >
-                    <InfoCircleOutlined />
-                  </Tooltip>
-                </Checkbox>,
-              )}
+            <FormItem
+              name={["settings", "resolutionRestrictionsForm", "shouldRestrict"]}
+              valuePropName="checked"
+              style={{ marginBottom: 6 }}
+            >
+              <Checkbox disabled={isEditingMode}>
+                Restrict Resolutions{" "}
+                <Tooltip
+                  title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
+                  placement="right"
+                >
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </Checkbox>
             </FormItem>
 
             <div
               style={{
                 marginLeft: 24,
-                display: form.getFieldValue("settings.resolutionRestrictionsForm.shouldRestrict")
-                  ? "block"
-                  : "none",
+                display:
+                  form != null &&
+                  form.getFieldValue(["settings", "resolutionRestrictionsForm", "shouldRestrict"])
+                    ? "block"
+                    : "none",
               }}
             >
               <div>
-                <FormItem hasFeedback style={{ marginBottom: 6 }}>
-                  Minimum:{" "}
-                  {getFieldDecorator("settings.resolutionRestrictionsForm.min", {
-                    rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
+                <FormItem
+                  name={["settings", "resolutionRestrictionsForm", "min"]}
+                  hasFeedback
+                  style={{ marginBottom: 6 }}
+                  rules={[{ validator: isValidMagnification }]}
+                >
+                  Minimum: <InputNumber min={1} size="small" disabled={isEditingMode} />
                 </FormItem>
               </div>
               <div>
-                <FormItem hasFeedback>
-                  Maximum:{" "}
-                  {getFieldDecorator("settings.resolutionRestrictionsForm.max", {
-                    rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
+                <FormItem
+                  name={["settings", "resolutionRestrictionsForm", "max"]}
+                  hasFeedback
+                  rules={[{ validator: isValidMagnification }]}
+                >
+                  Maximum: <InputNumber min={1} size="small" disabled={isEditingMode} />
                 </FormItem>
               </div>
             </div>

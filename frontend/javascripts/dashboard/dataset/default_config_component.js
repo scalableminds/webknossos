@@ -14,9 +14,7 @@ import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 
 const FormItem = Form.Item;
 
-export default function DefaultConfigComponent({ form }: { form: Object }) {
-  const { getFieldDecorator } = form;
-
+export default function DefaultConfigComponent() {
   const columns = [
     {
       title: "Name",
@@ -51,53 +49,55 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
       <Row gutter={24}>
         <Col span={6}>
           <FormItemWithInfo
+            name={["defaultConfiguration", "position"]}
             label="Position"
             info="The default position is defined in voxel-coordinates (x, y, z)."
           >
-            {getFieldDecorator("defaultConfiguration.position")(<Vector3Input />)}
+            <Vector3Input />
           </FormItemWithInfo>
         </Col>
         <Col span={6}>
           <FormItemWithInfo
+            name={["defaultConfiguration", "zoom"]}
             label="Zoom"
             info="A zoom of &ldquo;1&rdquo; will display the data in its original resolution."
+            rules={[
+              {
+                validator: syncValidator(
+                  value => value == null || value > 0,
+                  "The zoom value must be greater than 0.",
+                ),
+              },
+            ]}
           >
-            {getFieldDecorator("defaultConfiguration.zoom", {
-              rules: [
-                {
-                  validator: syncValidator(
-                    value => value == null || value > 0,
-                    "The zoom value must be greater than 0.",
-                  ),
-                },
-              ],
-            })(<InputNumber style={{ width: "100%" }} />)}
+            <InputNumber style={{ width: "100%" }} />
           </FormItemWithInfo>
         </Col>
-        <Col span={6}>
-          <FormItem label=" " colon={false}>
-            {getFieldDecorator("defaultConfiguration.interpolation", {
-              valuePropName: "checked",
-            })(
-              <Checkbox>
-                Interpolation{" "}
-                <Tooltip title="If checked, bilinear interpolation will be used when rendering the data.">
-                  <InfoCircleOutlined style={{ color: "gray" }} />
-                </Tooltip>
-              </Checkbox>,
-            )}
+        <Col span={8}>
+          <FormItem
+            name={["defaultConfiguration", "interpolation"]}
+            valuePropName="checked"
+            label=" "
+            colon={false}
+          >
+            <Checkbox>
+              Interpolation{" "}
+              <Tooltip title="If checked, bilinear interpolation will be used when rendering the data.">
+                <InfoCircleOutlined style={{ color: "gray" }} />
+              </Tooltip>
+            </Checkbox>
           </FormItem>
         </Col>
       </Row>
       <Row gutter={32}>
         <Col span={12}>
           <FormItemWithInfo
+            name="defaultConfigurationLayersJson"
             label="Layer Configuration"
             info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
+            rules={[{ validator: validateLayerViewConfigurationObjectJSON }]}
           >
-            {getFieldDecorator("defaultConfigurationLayersJson", {
-              rules: [{ validator: validateLayerViewConfigurationObjectJSON }],
-            })(<Input.TextArea rows="10" style={jsonEditStyle} />)}
+            <Input.TextArea rows="10" style={jsonEditStyle} />
           </FormItemWithInfo>
         </Col>
         <Col span={12}>

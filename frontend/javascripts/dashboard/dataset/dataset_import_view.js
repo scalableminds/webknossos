@@ -227,7 +227,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
       const form = this.formRef.current;
       if (!form) {
-        console.error("Form is not available!");
         return;
       }
       form.setFieldsValue({
@@ -609,9 +608,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     if (!form) {
       return false;
     }
+
     return (
-      form.getFieldValue("dataset.allowedTeams") == null ||
-      form.getFieldValue("dataset.allowedTeams").length === 0
+      form.getFieldValue(["dataset", "allowedTeams"]) == null ||
+      form.getFieldValue(["dataset", "allowedTeams"]).length === 0
     );
   }
 
@@ -621,7 +621,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       _syncTargetTabKey ||
       (this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple");
 
-    const { form } = this.props;
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
+
     const parsedConfig = JSON.parse(form.getFieldValue("dataSourceJson"));
     if (syncTargetTabKey === "advanced") {
       // Copy from simple to advanced: update json
@@ -644,9 +648,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   render() {
     const form = this.formRef.current;
-    if (!form) {
-      return null;
-    }
+
     const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const confirmString =
@@ -669,7 +671,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     ) : null;
 
     return (
-      <Form className="row container dataset-import" onSubmit={this.handleSubmit}>
+      <Form
+        ref={this.formRef}
+        className="row container dataset-import"
+        onSubmit={this.handleSubmit}
+        layout="vertical"
+      >
         <Card
           bordered={false}
           title={

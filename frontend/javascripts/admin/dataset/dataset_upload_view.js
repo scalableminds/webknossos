@@ -274,14 +274,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
   };
 
-  onFilesChange = files => {
-    // TODO: get manual upload of single file to work
-    const filesArray = Array.isArray(files) ? files : [files];
-
-    this.maybeSetUploadName(filesArray);
-    this.validateFiles(filesArray);
-  };
-
   validateFiles = files => {
     if (files.length === 0) {
       return;
@@ -540,9 +532,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
               ]}
               valuePropName="fileList"
-              onChange={this.onFilesChange}
             >
-              <FileUploadArea onChange={_files => {}} fileList={[]} />
+              <FileUploadArea
+                onChange={files => {
+                  this.maybeSetUploadName(files);
+                  this.validateFiles(files);
+                }}
+                fileList={[]}
+              />
             </FormItem>
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>

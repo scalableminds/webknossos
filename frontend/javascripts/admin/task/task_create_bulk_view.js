@@ -167,13 +167,9 @@ function TaskCreateBulkView() {
     });
   }
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-
+  const handleFinish = async formValues => {
     let tasks;
-    const formValues = form.getFieldsValue();
-
-    if (formValues.csvFile) {
+    if (formValues.csvFile && formValues.csvFile.length) {
       // Workaround: Antd replaces file objects in the formValues with a wrapper file
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
@@ -238,8 +234,6 @@ function TaskCreateBulkView() {
     return e && e.fileList;
   };
 
-  const { getFieldDecorator } = form;
-
   return (
     <div className="container" style={{ paddingTop: 20 }}>
       <Spin spinning={isUploading}>
@@ -258,60 +252,67 @@ function TaskCreateBulkView() {
             someValue,,someOtherValue if you want to omit the second value). If you do not want to
             define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
           </p>
-          <Form onSubmit={handleSubmit} layout="vertical" form={form}>
-            <FormItem label="Bulk Task Specification" hasFeedback>
-              {getFieldDecorator("bulkText", {
-                rules: [
-                  {
-                    validator: (rule, value, callback) => {
-                      const tasks = parseText(value);
-                      const invalidTaskIndices = getInvalidTaskIndices(tasks);
+          <Form onFinish={handleFinish} layout="vertical" form={form}>
+            <FormItem
+              name="bulkText"
+              label="Bulk Task Specification"
+              hasFeedback
+              rules={[
+                ({ getFieldValue }) => ({
+                  validator: (rule, value, callback) => {
+                    // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
+                    const csvFile = getFieldValue("csvFile");
+                    if (csvFile && csvFile.length) {
+                      return callback();
+                    }
 
-                      return _.isString(value) && invalidTaskIndices.length === 0
-                        ? callback()
-                        : callback(
-                            `${
-                              Messages["task.bulk_create_invalid"]
-                            } Error in line ${invalidTaskIndices.join(", ")}`,
-                          );
-                    },
+                    const tasks = parseText(value);
+                    const invalidTaskIndices = getInvalidTaskIndices(tasks);
+
+                    return _.isString(value) && invalidTaskIndices.length === 0
+                      ? callback()
+                      : callback(
+                          `${
+                            Messages["task.bulk_create_invalid"]
+                          } Error in line ${invalidTaskIndices.join(", ")}`,
+                        );
                   },
-                ],
-              })(
-                <TextArea
-                  className="input-monospace"
-                  placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
-                  autoSize={{ minRows: 6 }}
-                  style={{
-                    fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-                  }}
-                />,
-              )}
+                }),
+              ]}
+            >
+              <TextArea
+                className="input-monospace"
+                placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+                autoSize={{ minRows: 6 }}
+                style={{
+                  fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                }}
+              />
             </FormItem>
             <Divider>Alternatively Upload a CSV File</Divider>
-            <FormItem hasFeedback>
-              {getFieldDecorator("csvFile", {
-                valuePropName: "fileList",
-                getValueFromEvent: normFile,
-              })(
-                <Upload.Dragger
-                  accept=".csv,.txt"
-                  name="csvFile"
-                  beforeUpload={file => {
-                    form.setFieldsValue({ csvFile: [file] });
-                    return false;
-                  }}
-                >
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined />
-                  </p>
-                  <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
-                  <p>
-                    Upload a CSV file with your task specification in the same format as mentioned
-                    above.
-                  </p>
-                </Upload.Dragger>,
-              )}
+            <FormItem
+              hasFeedback
+              name="csvFile"
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+            >
+              <Upload.Dragger
+                accept=".csv,.txt"
+                name="csvFile"
+                beforeUpload={file => {
+                  form.setFieldsValue({ csvFile: [file] });
+                  return false;
+                }}
+              >
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                <p>
+                  Upload a CSV file with your task specification in the same format as mentioned
+                  above.
+                </p>
+              </Upload.Dragger>
             </FormItem>
             <FormItem>
               {isUploading ? (

@@ -1,5 +1,6 @@
 // @flow
 import { Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
+import { FormInstance } from "antd/lib/form";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { type RouterHistory, withRouter } from "react-router-dom";
@@ -29,7 +30,6 @@ export type TaskFormFieldValues = {
 };
 
 type Props = {
-  form: Object,
   onChange: QueryObject => Promise<void>,
   initialFieldValues: ?TaskFormFieldValues,
   isLoading: boolean,
@@ -104,20 +104,13 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.setState({ users, projects, taskTypes, isFetchingData: false });
   }
 
-  handleFormSubmit = (
-    isRandom: boolean,
-    onFinishCallback: QueryObject => Promise<void>,
-    event: ?SyntheticInputEvent<*>,
-  ) => {
-    if (event) {
-      event.preventDefault();
-    }
-
+  handleFormSubmit = (isRandom: boolean, onFinishCallback: QueryObject => Promise<void>) => {
     const form = this.formRef.current;
     if (!form) {
       return;
     }
-    form.validateFields((err, formValues: TaskFormFieldValues) => {
+
+    form.validateFields().then(formValues => {
       const queryObject: QueryObject = {};
 
       if (formValues.taskId) {
@@ -151,8 +144,8 @@ class TaskSearchForm extends React.Component<Props, State> {
     });
   };
 
-  handleSearchFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
-    this.handleFormSubmit(isRandom, this.props.onChange, event);
+  handleSearchFormSubmit = (isRandom: boolean) => {
+    this.handleFormSubmit(isRandom, this.props.onChange);
   };
 
   handleDownloadAllTasks = () => {
@@ -170,81 +163,70 @@ class TaskSearchForm extends React.Component<Props, State> {
   };
 
   render() {
-    const form = this.formRef.current;
-    if (!form) {
-      return null;
-    }
     const { isLoading } = this.props;
-    const { getFieldDecorator } = form;
     const formItemLayout = {
       labelCol: { span: 5 },
       wrapperCol: { span: 19 },
     };
 
     return (
-      <Form onSubmit={evt => this.handleSearchFormSubmit(false, evt)} ref={this.formRef}>
+      <Form onFinish={() => this.handleSearchFormSubmit(false)} ref={this.formRef}>
         <Row gutter={40}>
           <Col span={12}>
-            <FormItem {...formItemLayout} label="Task Id">
-              {getFieldDecorator("taskId")(<Input placeholder="One or More Task IDs" />)}
+            <FormItem name="taskId" {...formItemLayout} label="Task Id">
+              <Input placeholder="One or More Task IDs" />
             </FormItem>
           </Col>
           <Col span={12}>
-            <FormItem {...formItemLayout} label="Task Type">
-              {getFieldDecorator("taskTypeId")(
-                <Select
-                  showSearch
-                  allowClear
-                  placeholder="Select a Task Type"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.taskTypes.map((taskType: APITaskType) => ({
-                    value: taskType.id,
-                    label: `${taskType.summary}`,
-                  }))}
-                />,
-              )}
+            <FormItem name="taskTypeId" {...formItemLayout} label="Task Type">
+              <Select
+                showSearch
+                allowClear
+                placeholder="Select a Task Type"
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                options={this.state.taskTypes.map((taskType: APITaskType) => ({
+                  value: taskType.id,
+                  label: `${taskType.summary}`,
+                }))}
+              />
             </FormItem>
           </Col>
         </Row>
         <Row gutter={40}>
           <Col span={12}>
-            <FormItem {...formItemLayout} label="Project">
-              {getFieldDecorator("projectName")(
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder="Select a Project"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.projects.map((project: APIProject) => ({
-                    value: project.name,
-                    label: `${project.name}`,
-                  }))}
-                />,
-              )}
+            <FormItem name="projectName" {...formItemLayout} label="Project">
+              <Select
+                allowClear
+                showSearch
+                placeholder="Select a Project"
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                options={this.state.projects.map((project: APIProject) => ({
+                  value: project.name,
+                  label: `${project.name}`,
+                }))}
+              />
             </FormItem>
           </Col>
           <Col span={12}>
-            <FormItem {...formItemLayout} label="User">
-              {getFieldDecorator("userId")(
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder="Select a User"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.users
-                    .filter(u => u.isActive)
-                    .map((user: APIUser) => ({
-                      value: user.id,
-                      label: `${user.lastName}, ${user.firstName} (${user.email})`,
-                    }))}
-                />,
-              )}
+            <FormItem name="userId" {...formItemLayout} label="User">
+              <Select
+                allowClear
+                showSearch
+                placeholder="Select a User"
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                options={this.state.users
+                  .filter(u => u.isActive)
+                  .map((user: APIUser) => ({
+                    value: user.id,
+                    label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                  }))}
+              />
             </FormItem>
           </Col>
         </Row>

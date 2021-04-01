@@ -224,7 +224,7 @@ export class InviteUsersModal extends React.Component<
 const OrganizationForm = ({ onComplete }) => {
   const [form] = Form.useForm();
   // TODO: check whether this how you check for errors correctly.
-  const hasErrors = (_, fieldErrors) => fieldErrors.length > 0;
+  const hasErrors = fieldErrors => fieldErrors.length > 0;
   const onFinish = values => {
     onComplete(values.organizationName);
   };

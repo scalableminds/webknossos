@@ -5,9 +5,11 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.organization.{OrganizationDAO, OrganizationService}
-import models.user.InviteDAO
-import oxalis.security.WkEnv
-import play.api.libs.json.{JsNull, Json}
+import models.user.{InviteDAO, MultiUserDAO, UserDAO}
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
+import play.api.i18n.Messages
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsNull, JsValue, Json, __}
 import play.api.mvc.{Action, AnyContent}
 import utils.WkConf
 
@@ -17,9 +19,14 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                        organizationService: OrganizationService,
                                        inviteDAO: InviteDAO,
                                        conf: WkConf,
+                                       userDAO: UserDAO,
+                                       multiUserDAO: MultiUserDAO,
+                                       wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                        sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
+
+  private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
 
   def organizationsIsEmpty: Action[AnyContent] = Action.async { implicit request =>
     for {
@@ -29,10 +36,10 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def get(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
+  def get(organizationName: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      js <- organizationService.publicWrites(org)
+      js <- organizationService.publicWrites(org, request.identity)
     } yield {
       Ok(Json.toJson(js))
     }
@@ -71,4 +78,36 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   def getOperatorData: Action[AnyContent] = Action {
     Ok(Json.toJson(conf.operatorData))
   }
+
+  def update(organizationName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+    withJsonBodyUsing(organizationUpdateReads) {
+      case (displayName, newUserMailingList) =>
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName) ~> NOT_FOUND
+          _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- organizationDAO.updateFields(organization._id, displayName, newUserMailingList)
+          updated <- organizationDAO.findOne(organization._id)
+          organizationJson <- organizationService.publicWrites(updated)
+        } yield Ok(organizationJson)
+    }
+  }
+
+  def delete(organizationName: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                   organizationName) ~> NOT_FOUND
+      _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
+      _ = logger.info(s"Deleting organizaion ${organization._id}")
+      _ <- organizationDAO.deleteOne(organization._id)
+      _ <- userDAO.deleteAllWithOrganization(organization._id)
+      _ <- multiUserDAO.removeLastLoggedInIdentitiesWithOrga(organization._id)
+      _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
+    } yield Ok
+  }
+
+  private val organizationUpdateReads =
+    ((__ \ 'displayName).read[String] and
+      (__ \ 'newUserMailingList).read[String]).tupled
+
 }

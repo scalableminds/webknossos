@@ -69,14 +69,8 @@ function ChangePasswordView({ history }: Props) {
             hasFeedback
             name={["password", "password1"]}
             rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
+              { required: true, message: messages["auth.reset_new_password"] },
+              { min: 8, message: messages["auth.registration_password_length"] },
               {
                 validator: (_, value) =>
                   checkPasswordsAreMatching(value, ["password", "password2"]),
@@ -92,14 +86,8 @@ function ChangePasswordView({ history }: Props) {
             hasFeedback
             name={["password", "password2"]}
             rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password2"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
+              { required: true, message: messages["auth.reset_new_password2"] },
+              { min: 8, message: messages["auth.registration_password_length"] },
               {
                 validator: (_, value) =>
                   checkPasswordsAreMatching(value, ["password", "password1"]),

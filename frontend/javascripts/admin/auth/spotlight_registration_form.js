@@ -29,125 +29,91 @@ function SpotlightRegistrationForm(props: Props) {
   const [form] = Form.useForm();
   const organizationName = useRef(generateOrganizationName());
 
-  function handleSubmit(event: SyntheticInputEvent<>) {
-    event.preventDefault();
-
-    form.validateFieldsAndScroll(async (err: ?Object, formValues: Object) => {
-      if (err) {
-        return;
-      }
-      await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
-        data: {
-          ...formValues,
-          password: {
-            password1: formValues.password.password1,
-            password2: formValues.password.password1,
-          },
-          organization: organizationName.current,
-          organizationDisplayName: `${formValues.firstName} ${formValues.lastName} Lab`,
+  async function onFinish(formValues: Object) {
+    await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
+      data: {
+        ...formValues,
+        password: {
+          password1: formValues.password.password1,
+          password2: formValues.password.password1,
         },
-      });
-
-      const user = await loginUser({
-        email: formValues.email,
-        password: formValues.password.password1,
-      });
-      Store.dispatch(setActiveUserAction(user));
-
-      props.onRegistered(true);
+        organization: organizationName.current,
+        organizationDisplayName: `${formValues.firstName} ${formValues.lastName} Lab`,
+      },
     });
+
+    const user = await loginUser({
+      email: formValues.email,
+      password: formValues.password.password1,
+    });
+    Store.dispatch(setActiveUserAction(user));
+
+    props.onRegistered(true);
   }
 
-  // TODO: migrate this.
-  const { getFieldDecorator } = form;
-
   return (
-    <Form onSubmit={handleSubmit} form={form}>
+    <Form onFinish={onFinish} form={form}>
       <Row gutter={8}>
         <Col span={12}>
-          <FormItem hasFeedback>
-            {getFieldDecorator("firstName", {
-              rules: [
-                {
-                  required: true,
-                  message: messages["auth.registration_firstName_input"],
-                },
-              ],
-            })(
-              <Input prefix={<UserOutlined style={{ fontSize: 13 }} />} placeholder="First Name" />,
-            )}
+          <FormItem
+            hasFeedback
+            name="firstName"
+            rules={[{ required: true, message: messages["auth.registration_firstName_input"] }]}
+          >
+            <Input prefix={<UserOutlined style={{ fontSize: 13 }} />} placeholder="First Name" />
           </FormItem>
         </Col>
 
         <Col span={12}>
-          <FormItem hasFeedback>
-            {getFieldDecorator("lastName", {
-              rules: [
-                {
-                  required: true,
-                  message: messages["auth.registration_lastName_input"],
-                },
-              ],
-            })(
-              <Input prefix={<UserOutlined style={{ fontSize: 13 }} />} placeholder="Last Name" />,
-            )}
+          <FormItem
+            hasFeedback
+            name="lastName"
+            rules={[{ required: true, message: messages["auth.registration_lastName_input"] }]}
+          >
+            <Input prefix={<UserOutlined style={{ fontSize: 13 }} />} placeholder="Last Name" />
           </FormItem>
         </Col>
       </Row>
-      <FormItem hasFeedback>
-        {getFieldDecorator("email", {
-          rules: [
-            {
-              type: "email",
-              message: messages["auth.registration_email_invalid"],
-            },
-            {
-              required: true,
-              message: messages["auth.registration_email_input"],
-            },
-          ],
-        })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
+      <FormItem
+        hasFeedback
+        name="email"
+        rules={[
+          { type: "email", message: messages["auth.registration_email_invalid"] },
+          { required: true, message: messages["auth.registration_email_input"] },
+        ]}
+      >
+        <Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />
       </FormItem>
-      <FormItem hasFeedback>
-        {getFieldDecorator("password.password1", {
-          rules: [
-            {
-              required: true,
-              message: messages["auth.registration_password_input"],
-            },
-            {
-              min: 8,
-              message: messages["auth.registration_password_length"],
-            },
-          ],
-        })(<Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />)}
+      <FormItem
+        hasFeedback
+        name={["password", "password1"]}
+        rules={[
+          { required: true, message: messages["auth.registration_password_input"] },
+          { min: 8, message: messages["auth.registration_password_length"] },
+        ]}
+      >
+        <Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />
       </FormItem>
 
-      <FormItem>
-        {getFieldDecorator("privacy_check", {
-          valuePropName: "checked",
-          initialValue: false,
-          rules: [
-            {
-              validator: (rule, value, callback) => {
-                if (value) {
-                  callback();
-                } else {
-                  callback(new Error());
-                }
-              },
-              message: messages["auth.privacy_check_required"],
-            },
-          ],
-        })(
-          <Checkbox>
-            I agree to storage and processing of my personal data as described in the{" "}
-            <a target="_blank" href="/privacy" rel="noopener noreferrer">
-              privacy statement
-            </a>
-            .
-          </Checkbox>,
-        )}
+      <FormItem
+        name="privacy_check"
+        valuePropName="checked"
+        rules={[
+          {
+            validator: (_, value) =>
+              value
+                ? Promise.resolve()
+                : Promise.reject(new Error(messages["auth.privacy_check_required"])),
+          },
+        ]}
+      >
+        <Checkbox>
+          I agree to storage and processing of my personal data as described in the{" "}
+          <a target="_blank" href="/privacy" rel="noopener noreferrer">
+            privacy statement
+          </a>
+          .
+        </Checkbox>
       </FormItem>
       <FormItem style={{ marginBottom: 10 }}>
         <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
@@ -157,5 +123,5 @@ function SpotlightRegistrationForm(props: Props) {
     </Form>
   );
 }
-
+// $FlowIgnore[missing-annot]
 export default memo(SpotlightRegistrationForm);

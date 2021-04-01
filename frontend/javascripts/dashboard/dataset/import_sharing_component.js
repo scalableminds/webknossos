@@ -27,11 +27,11 @@ type Props = {
 };
 
 export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTeams }: Props) {
-  const { getFieldDecorator } = form;
   const [sharingToken, setSharingToken] = useState("");
   const [dataSet, setDataSet] = useState<?APIDataset>(null);
   const allowedTeamsComponent = (
     <FormItemWithInfo
+      name={["dataset", "allowedTeams"]}
       label="Teams allowed to access this dataset"
       info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
       validateStatus={hasNoAllowedTeams ? "warning" : "success"}
@@ -41,7 +41,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
           : null
       }
     >
-      {getFieldDecorator("dataset.allowedTeams", {})(<TeamSelectionComponent mode="multiple" />)}
+      <TeamSelectionComponent mode="multiple" />
     </FormItemWithInfo>
   );
 
@@ -77,6 +77,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   }
 
   function getSharingLink() {
+    if (!form) return null;
     const doesNeedToken = !form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${sharingToken}`;
     return `${window.location.origin}/datasets/${datasetId.owningOrganization}/${
@@ -92,15 +93,15 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
     } else return "";
   }
 
-  return (
+  return form ? (
     <div>
       <FormItemWithInfo
+        name={["dataset", "isPublic"]}
         label="Visibility"
         info="Make your dataset public, for anonymous/unregistered users to access your dataset."
+        valuePropName="checked"
       >
-        {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
-          <Checkbox>Make dataset publicly accessible </Checkbox>,
-        )}
+        <Checkbox>Make dataset publicly accessible </Checkbox>
       </FormItemWithInfo>
       {allowedTeamsComponent}
       <FormItemWithInfo
@@ -166,5 +167,5 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
         </FormItemWithInfo>
       )}
     </div>
-  );
+  ) : null;
 }

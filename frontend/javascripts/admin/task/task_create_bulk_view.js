@@ -48,6 +48,13 @@ export type TaskCreationResponseContainer = {
   warnings: Array<string>,
 };
 
+export const normFile = (e: Array<File> | { fileList: Array<File> }) => {
+  if (Array.isArray(e)) {
+    return e;
+  }
+  return e && e.fileList;
+};
+
 function TaskCreateBulkView() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [tasksCount, setTasksCount] = useState<number>(0);
@@ -167,7 +174,7 @@ function TaskCreateBulkView() {
     });
   }
 
-  const handleFinish = async formValues => {
+  const handleSubmit = async formValues => {
     let tasks;
     if (formValues.csvFile && formValues.csvFile.length) {
       // Workaround: Antd replaces file objects in the formValues with a wrapper file
@@ -227,13 +234,6 @@ function TaskCreateBulkView() {
     }
   }
 
-  const normFile = e => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e && e.fileList;
-  };
-
   return (
     <div className="container" style={{ paddingTop: 20 }}>
       <Spin spinning={isUploading}>
@@ -252,7 +252,7 @@ function TaskCreateBulkView() {
             someValue,,someOtherValue if you want to omit the second value). If you do not want to
             define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
           </p>
-          <Form onFinish={handleFinish} layout="vertical" form={form}>
+          <Form onFinish={handleSubmit} layout="vertical" form={form}>
             <FormItem
               name="bulkText"
               label="Bulk Task Specification"

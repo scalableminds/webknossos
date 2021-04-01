@@ -137,24 +137,16 @@ export default function RecommendedConfigurationView({
       >
         <Row gutter={32}>
           <Col span={12}>
-            <FormItem>
+            <FormItem
+              name="recommendedConfiguration"
+              hasFeedback
+              rules={[{ required: enabled, validator: validateUserSettingsJSON }]}
+            >
               The recommended configuration will be displayed to users when starting to trace a task
               with this task type. The user is able to accept or decline this recommendation.
               <br />
               <br />
-              {form.getFieldDecorator("recommendedConfiguration", {
-                rules: [
-                  {
-                    validator: validateUserSettingsJSON,
-                  },
-                ],
-              })(
-                <Input.TextArea
-                  spellCheck={false}
-                  autoSize={{ minRows: 20 }}
-                  style={jsonEditStyle}
-                />,
-              )}
+              <Input.TextArea spellCheck={false} autoSize={{ minRows: 20 }} style={jsonEditStyle} />
             </FormItem>
             <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
               Remove Orthogonal-only Settings

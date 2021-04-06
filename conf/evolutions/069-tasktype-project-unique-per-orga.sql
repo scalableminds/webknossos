@@ -22,6 +22,6 @@ ALTER TABLE webknossos.projects ADD CONSTRAINT projects_name__organization_key U
 CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects WHERE NOT isDeleted;
 CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 68;
+UPDATE webknossos.releaseInformation SET schemaVersion = 69;
 
 COMMIT TRANSACTION;

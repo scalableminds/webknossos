@@ -14,6 +14,6 @@ ALTER TABLE webknossos.taskTypes ADD CONSTRAINT tasktypes_summary_key UNIQUE(sum
 CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects WHERE NOT isDeleted;
 CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 67;
+UPDATE webknossos.releaseInformation SET schemaVersion = 68;
 
 COMMIT TRANSACTION;

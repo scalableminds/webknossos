@@ -47,11 +47,10 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
         />
       );
     } else {
-      return (
-        <React.Fragment style={iconStyle} onClick={() => this.setState({ isEditing: true })}>
-          {this.props.icon}
-        </React.Fragment>
-      );
+      return React.cloneElement(this.props.icon, {
+        style: iconStyle,
+        onClick: () => this.setState({ isEditing: true }),
+      });
     }
   }
 }

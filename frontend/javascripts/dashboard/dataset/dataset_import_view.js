@@ -440,13 +440,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
     const hasErr = hasFormError;
 
-    if (hasErr(err.dataSource) || hasErr(err.dataSourceJson)) {
+    if (hasErr(err, "dataSource") || hasErr(err, "dataSourceJson")) {
       formErrors.data = true;
     }
-    if (hasErr(err.dataset)) {
+    if (hasErr(err, "dataset")) {
       formErrors.general = true;
     }
-    if (hasErr(err.defaultConfiguration) || hasErr(err.defaultConfigurationLayersJson)) {
+    if (hasErr(err, "defaultConfiguration") || hasErr(err, "defaultConfigurationLayersJson")) {
       formErrors.defaultConfig = true;
     }
     return formErrors;
@@ -491,60 +491,73 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     return false;
   }
 
-  handleSubmit = (e: SyntheticEvent<>) => {
-    e.preventDefault();
+  handleValidationFailed = ({ values }: { values: FormData }) => {
+    const { dataset } = this.state;
+    const isOnlyDatasourceIncorrectAndNotEdited = this.isOnlyDatasourceIncorrectAndNotEdited();
+    // Check whether the validation error was introduced or existed before
+    if (!isOnlyDatasourceIncorrectAndNotEdited || !dataset) {
+      this.switchToProblematicTab();
+      Toast.warning(messages["dataset.import.invalid_fields"]);
+    } else {
+      // If the validation error existed before, still attempt to update dataset
+      this.submit(values);
+    }
+  };
+
+  handleSubmit = () => {
     // Ensure that all form fields are in sync
     this.syncDataSourceFields();
     const form = this.formRef.current;
     if (!form) {
       return;
     }
-    form.validateFields(async (err, formValues: FormData) => {
-      const { dataset, datasetDefaultConfiguration } = this.state;
-      const isOnlyDatasourceIncorrectAndNotEdited = this.isOnlyDatasourceIncorrectAndNotEdited();
-      if ((err && !isOnlyDatasourceIncorrectAndNotEdited) || !dataset) {
-        this.switchToProblematicTab();
-        Toast.warning(messages["dataset.import.invalid_fields"]);
-        return;
-      }
-      const datasetChangeValues = { ...formValues.dataset };
-      if (datasetChangeValues.sortingKey != null) {
-        datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
-      }
-      const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
 
-      await updateDataset(this.props.datasetId, Object.assign({}, dataset, datasetChangeValues));
+    // Trigger validation manually, because fields may have been updated
+    form
+      .validateFields()
+      .then(formValues => this.submit(formValues))
+      .catch(errorInfo => this.handleValidationFailed(errorInfo));
+  };
 
-      if (datasetDefaultConfiguration != null) {
-        await updateDatasetDefaultConfiguration(
-          this.props.datasetId,
-          _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
-            layers: JSON.parse(formValues.defaultConfigurationLayersJson),
-          }),
-        );
-      }
-      await updateDatasetTeams(dataset, teamIds);
+  submit = async (formValues: FormData) => {
+    const { dataset, datasetDefaultConfiguration } = this.state;
+    const datasetChangeValues = { ...formValues.dataset };
+    if (datasetChangeValues.sortingKey != null) {
+      datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
+    }
+    const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
 
-      const dataSource = JSON.parse(formValues.dataSourceJson);
-      if (
-        dataset != null &&
-        !dataset.isForeign &&
-        !dataset.dataStore.isConnector &&
-        this.didDatasourceChange(dataSource)
-      ) {
-        await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
-        this.setState({
-          savedDataSourceOnServer: dataSource,
-          differenceBetweenDataSources: {},
-        });
-      }
+    await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });
 
-      const verb = this.props.isEditingMode ? "updated" : "imported";
-      Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
-      datasetCache.clear();
-      trackAction(`Dataset ${verb}`);
-      this.props.onComplete();
-    });
+    if (datasetDefaultConfiguration != null) {
+      await updateDatasetDefaultConfiguration(
+        this.props.datasetId,
+        _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+          layers: JSON.parse(formValues.defaultConfigurationLayersJson),
+        }),
+      );
+    }
+    await updateDatasetTeams(this.props.datasetId, teamIds);
+
+    const dataSource = JSON.parse(formValues.dataSourceJson);
+    if (
+      dataset != null &&
+      !dataset.isForeign &&
+      !dataset.dataStore.isConnector &&
+      this.didDatasourceChange(dataSource)
+    ) {
+      await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
+      this.setState({
+        savedDataSourceOnServer: dataSource,
+        differenceBetweenDataSources: {},
+      });
+    }
+
+    const verb = this.props.isEditingMode ? "updated" : "imported";
+    Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
+    datasetCache.clear();
+    trackAction(`Dataset ${verb}`);
+    this.props.onComplete();
   };
 
   getMessageComponents() {
@@ -674,7 +687,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       <Form
         ref={this.formRef}
         className="row container dataset-import"
-        onSubmit={this.handleSubmit}
+        onFinish={this.handleSubmit}
+        onFinishFailed={this.handleSubmit}
         layout="vertical"
       >
         <Card

@@ -268,6 +268,7 @@ mesh.file.listChunks.failed=Failed to get available mesh chunks for segment
 mesh.file.loadChunk.failed=Failed to load mesh chunk for segment
 mesh.file.open.failed=Failed to open mesh file for reading
 mesh.file.readData.failed=Failed to read data from mesh file
+mesh.file.readEncoding.failed=Failed to read encoding from mesh file
 
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task

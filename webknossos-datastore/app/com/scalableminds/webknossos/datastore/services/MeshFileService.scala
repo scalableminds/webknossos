@@ -73,10 +73,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(meshesDir)
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
-    val cachedMeshFile = meshFileCache.withCache(meshFilePath)(initHDFReader)
-
     for {
-      chunkPositionLiterals <- tryo {
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      chunkPositionLiterals <- tryo { _: Throwable =>
+        cachedMeshFile.finishAccess()
+      } {
         cachedMeshFile.reader
           .`object`()
           .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
@@ -91,19 +92,24 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def readMeshChunk(organizationName: String,
                     dataSetName: String,
                     dataLayerName: String,
-                    meshChunkDataRequest: MeshChunkDataRequest): Fox[Array[Byte]] = {
-    val hdfFilePath = dataBaseDir
+                    meshChunkDataRequest: MeshChunkDataRequest): Fox[(Array[Byte], String)] = {
+    val meshFilePath = dataBaseDir
       .resolve(organizationName)
       .resolve(dataSetName)
       .resolve(dataLayerName)
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
     for {
-      hdfFile <- tryo { hdfFilePath.toFile } ?~> "mesh.file.open.failed"
-      reader <- tryo { HDF5FactoryProvider.get.openForReading(hdfFile) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      encoding <- tryo { _: Throwable =>
+        cachedMeshFile.finishAccess()
+      } { cachedMeshFile.reader.string().getAttr("/", "metadata/encoding") } ?~> "mesh.file.readEncoding.failed"
       key = s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}"
-      data <- tryo { reader.readAsByteArray(key) } ?~> "mesh.file.readData.failed"
-    } yield data
+      data <- tryo { _: Throwable =>
+        cachedMeshFile.finishAccess()
+      } { cachedMeshFile.reader.readAsByteArray(key) } ?~> "mesh.file.readData.failed"
+      _ = cachedMeshFile.finishAccess()
+    } yield (data, encoding)
   }
 
   private def positionLiteral(position: Point3D) =

@@ -270,8 +270,17 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
           for {
-            data <- meshFileService.readMeshChunk(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
-          } yield Ok(data)
+            (data, encoding) <- meshFileService.readMeshChunk(organizationName,
+                                                              dataSetName,
+                                                              dataLayerName,
+                                                              request.body) ?~> "mesh.file.loadChunk.failed"
+          } yield {
+            if (encoding.contains("gzip")) {
+              Ok(data).withHeaders("Content-Encoding" -> "gzip")
+            } else {
+              Ok(data)
+            }
+          }
         }
       }
     }

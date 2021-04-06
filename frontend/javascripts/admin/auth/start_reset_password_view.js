@@ -17,38 +17,29 @@ type Props = {
 function StartResetPasswordView({ history }: Props) {
   const [form] = Form.useForm();
 
-  const handleSubmit = (event: SyntheticInputEvent<>) => {
-    event.preventDefault();
-
-    form.validateFields((err: ?Object, formValues: Object) => {
-      if (!err) {
-        Request.sendJSONReceiveJSON("/api/auth/startResetPassword", { data: formValues }).then(
-          () => {
-            Toast.success(messages["auth.reset_email_notification"]);
-            history.push("/");
-          },
-        );
-      }
+  const onFinish = (formValues: Object) => {
+    Request.sendJSONReceiveJSON("/api/auth/startResetPassword", { data: formValues }).then(() => {
+      Toast.success(messages["auth.reset_email_notification"]);
+      history.push("/");
     });
   };
-
-  const { getFieldDecorator } = form;
 
   return (
     <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
       <Col span={8}>
         <h3>Reset Password</h3>
-        <Form onSubmit={handleSubmit} form={form}>
-          <FormItem>
-            {getFieldDecorator("email", {
-              rules: [
-                {
-                  required: true,
-                  type: "email",
-                  message: messages["auth.registration_email_input"],
-                },
-              ],
-            })(<Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />)}
+        <Form onFinish={onFinish} form={form}>
+          <FormItem
+            name="email"
+            rules={[
+              {
+                required: true,
+                type: "email",
+                message: messages["auth.registration_email_input"],
+              },
+            ]}
+          >
+            <Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />
           </FormItem>
           <FormItem>
             <Button type="primary" htmlType="submit" style={{ width: "100%" }}>

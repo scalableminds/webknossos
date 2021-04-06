@@ -74,12 +74,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
             name="name"
             label="Script Name"
             hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-              { min: 3 },
-            ]}
+            rules={[{ required: true }, { min: 3 }]}
           >
             <Input autoFocus />
           </FormItem>
@@ -88,26 +83,12 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
             name="gist"
             label="Gist URL"
             hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-              { type: "url" },
-            ]}
+            rules={[{ required: true }, { type: "url" }]}
           >
             <Input />
           </FormItem>
 
-          <FormItem
-            name="owner"
-            label="Owner"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
+          <FormItem name="owner" label="Owner" hasFeedback rules={[{ required: true }]}>
             <Select
               showSearch
               placeholder="Select a User"

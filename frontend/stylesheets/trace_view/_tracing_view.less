@@ -213,13 +213,22 @@
     }
   }
 
+  .ant-select-arrow,
+  .ant-badge-dot {
+    // Fix
+    //   - arrow in select-box
+    //   - dot on create-cell button
+    // which disappears on hover otherwise
+    z-index: 1;
+  }
+
   .ant-btn,
   .ant-input,
   .ant-radio-button-wrapper,
-  .ant-select-selector {
+  .ant-select > .ant-select-selector {
     background-color: @dark-bg !important;
     color: @dark-fg !important;
-    border-color: @dark-border !important;
+    border-color: @dark-border;
 
     &:hover {
       border-color: @hover-border !important;

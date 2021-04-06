@@ -120,12 +120,12 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
             rules={[
               { required: true, message: messages["dataset.import.required.url"] },
               {
-                validator: async (_rule, value) => {
+                validator: (_rule, value) => {
                   try {
                     validateAndParseUrl(value);
-                    Promise.resolve();
+                    return Promise.resolve();
                   } catch (error) {
-                    Promise.reject(error);
+                    return Promise.reject(error);
                   }
                 },
               },
@@ -138,15 +138,15 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
             name="authFile"
             label={
               <React.Fragment>
-                Google{" "}
+                Google&nbsp;
                 <a
                   href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   Service Account
-                </a>{" "}
-                Key (Optional)
+                </a>
+                &nbsp;Key (Optional)
               </React.Fragment>
             }
             hasFeedback

@@ -48,9 +48,9 @@ type State = {
 
 function isValidMagnification(rule, value) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
-    Promise.resolve();
+    return Promise.resolve();
   } else {
-    Promise.reject(
+    return Promise.reject(
       new Error("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
     );
   }

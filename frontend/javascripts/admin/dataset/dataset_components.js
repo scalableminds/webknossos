@@ -49,9 +49,9 @@ export function DatasetNameFormItem({ activeUser }: { activeUser: ?APIUser }) {
               owningOrganization: activeUser.organization,
             });
             if (reasons != null) {
-              Promise.reject(reasons);
+              return Promise.reject(reasons);
             } else {
-              Promise.resolve();
+              return Promise.resolve();
             }
           },
         },

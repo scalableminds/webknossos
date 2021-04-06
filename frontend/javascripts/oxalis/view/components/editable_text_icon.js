@@ -1,10 +1,10 @@
 // @flow
 
 import { Input } from "antd";
-import React, { type Node } from "react";
+import React, { type Element } from "react";
 
 type Props = {
-  icon: Node,
+  icon: Element<*>,
   onChange: Function,
 };
 

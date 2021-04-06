@@ -198,6 +198,21 @@
   @primary-border: #1890ff;
   @hover-border: #40a9ff;
 
+  .antd-legacy-group {
+    .ant-btn {
+      border-radius: 0;
+      margin-left: -1px;
+    }
+
+    .ant-btn:first-child {
+      border-radius: 2px 0 0 2px;
+    }
+
+    .ant-btn:last-child {
+      border-radius: 0 2px 2px 0;
+    }
+  }
+
   .ant-btn,
   .ant-input,
   .ant-radio-button-wrapper,
@@ -248,6 +263,10 @@
   .ant-radio-button-wrapper-checked:first-child {
     border-color: @primary-border;
     color: @primary-border;
+
+    &::before {
+      background-color: @primary-border !important;
+    }
   }
 
   .ant-radio-button-wrapper-checked .svg-gray-to-highlighted-blue {

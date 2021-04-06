@@ -1,11 +1,10 @@
 // @flow
 import { Form, Input, Select, Button, Card, InputNumber, Checkbox, Spin } from "antd";
-import { type RouterHistory, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
 import React, { useState, useEffect } from "react";
+import { useHistory } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 import type { APIUser, APITeam } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getUsers,
@@ -22,20 +21,19 @@ const FormItem = Form.Item;
 type OwnProps = {|
   projectName?: ?string,
 |};
-type StateProps = {|
-  activeUser: APIUser,
-|};
+type StateProps = {||};
 type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithRouter = {|
   ...Props,
-  history: RouterHistory,
 |};
 
-function ProjectCreateView({ history, activeUser, projectName }: PropsWithRouter) {
+function ProjectCreateView({ projectName }: PropsWithRouter) {
   const [teams, setTeams] = useState<Array<APITeam>>([]);
   const [users, setUsers] = useState<Array<APIUser>>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
   const [form] = Form.useForm();
+  const history = useHistory();
+  const activeUser = useSelector(state => enforceActiveUser(state.activeUser));
 
   useEffect(() => {
     fetchData();
@@ -80,7 +78,7 @@ function ProjectCreateView({ history, activeUser, projectName }: PropsWithRouter
   return (
     <div className="row container project-administration">
       <Card title={<h3>{title}</h3>}>
-        <Form onFinish={handleSubmit} layout="vertical" from={form}>
+        <Form onFinish={handleSubmit} layout="vertical" form={form}>
           <FormItem
             name="name"
             label="Project Name"
@@ -128,7 +126,6 @@ function ProjectCreateView({ history, activeUser, projectName }: PropsWithRouter
                 value: user.id,
               }))}
             />
-            ,
           </FormItem>
           <FormItem
             name="priority"
@@ -168,8 +165,4 @@ function ProjectCreateView({ history, activeUser, projectName }: PropsWithRouter
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: enforceActiveUser(state.activeUser),
-});
-
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(ProjectCreateView));
+export default ProjectCreateView;

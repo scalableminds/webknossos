@@ -1,6 +1,6 @@
 // @flow
 
-import { Button, Dropdown, Menu, Modal, Tooltip, Space } from "antd";
+import { Button, Dropdown, Menu, Modal, Tooltip } from "antd";
 import {
   BarsOutlined,
   CameraOutlined,

@@ -417,7 +417,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               }
               optionFilterProp="children"
               style={fullWidth}
-              autoFocus
               disabled={
                 isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
               }
@@ -472,7 +471,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   placeholder="Select a TaskType"
                   optionFilterProp="children"
                   style={fullWidth}
-                  autoFocus
                   disabled={isEditingMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   options={this.state.taskTypes.map((taskType: APITaskType) => ({
@@ -526,7 +524,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   placeholder="Select a Project"
                   optionFilterProp="children"
                   style={fullWidth}
-                  autoFocus
                   disabled={isEditingMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   options={this.state.projects.map((project: APIProject) => ({
@@ -542,7 +539,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   placeholder="Select a Script"
                   optionFilterProp="children"
                   style={fullWidth}
-                  autoFocus
                   disabled={isEditingMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   options={this.state.scripts.map((script: APIScript) => ({

@@ -483,7 +483,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   {tag}
                 </Tag>
               ))}
-              {this.state.shouldShowArchivedTracings && false ? null : (
+              {this.state.shouldShowArchivedTracings ? null : (
                 <EditableTextIcon
                   icon={<PlusOutlined />}
                   onChange={_.partial(this.editTagFromAnnotation, annotation, true)}

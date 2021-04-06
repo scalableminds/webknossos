@@ -9,6 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - Instances with long-running jobs only: the `tiff_cubing` job was renamed to `convert_to_wkw`. For old jobs to be listed properly, execute sql `update webknossos.jobs set command = 'convert_to_wkw' where command = 'tiff_cubing';`
 
 ### Postgres Evolutions:
-- [066-publications-foreign-key.sql](conf/evolutions/066-publications-foreign-key.sql)
-- [067-drop-analytics.sql](conf/evolutions/067-drop-analytics.sql)
-- [068-tasktype-project-unique-per-orga.sql](conf/evolutions/068-tasktype-project-unique-per-orga.sql)
+- [068-pricing-plan.sql](conf/evolutions/068-pricing-plan.sql)
+- [069-tasktype-project-unique-per-orga.sql](conf/evolutions/069-tasktype-project-unique-per-orga.sql)

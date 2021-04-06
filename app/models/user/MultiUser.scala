@@ -94,6 +94,15 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
                         where _id = $multiUserId""")
     } yield ()
 
+  def removeLastLoggedInIdentitiesWithOrga(organizationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""
+        update webknossos.multiusers set _lastLoggedInIdentity = null
+        where _lastLoggedInIdentity in
+         (select _id from webknossos.users where _organization = $organizationId)
+        """)
+    } yield ()
+
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =
     for {
       accessQuery <- readAccessQuery

@@ -213,7 +213,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           <Form layout="inline">
             <Form.Item label="Project">
               <Select
-                value={this.state.selectedProject}
+                value={this.state.selectedProject || []}
                 style={{ width: 200 }}
                 onChange={this.handleChangeMergeProject}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}

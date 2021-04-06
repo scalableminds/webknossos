@@ -259,22 +259,24 @@ function TaskCreateBulkView() {
               hasFeedback
               rules={[
                 ({ getFieldValue }) => ({
-                  validator: (rule, value, callback) => {
+                  validator: (rule, value) => {
                     // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
                     const csvFile = getFieldValue("csvFile");
                     if (csvFile && csvFile.length) {
-                      return callback();
+                      return Promise.resolve();
                     }
 
                     const tasks = parseText(value);
                     const invalidTaskIndices = getInvalidTaskIndices(tasks);
 
                     return _.isString(value) && invalidTaskIndices.length === 0
-                      ? callback()
-                      : callback(
-                          `${
-                            Messages["task.bulk_create_invalid"]
-                          } Error in line ${invalidTaskIndices.join(", ")}`,
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            `${
+                              Messages["task.bulk_create_invalid"]
+                            } Error in line ${invalidTaskIndices.join(", ")}`,
+                          ),
                         );
                   },
                 }),

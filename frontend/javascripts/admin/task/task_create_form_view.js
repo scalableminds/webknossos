@@ -366,10 +366,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               rules={[
                 { required: true },
                 {
-                  validator: async (rule, value, callback) => {
+                  validator: async (rule, value) => {
                     const newestForm = this.formRef.current;
                     if (!newestForm || value === "") {
-                      return callback();
+                      return Promise.resolve();
                     }
 
                     const annotationResponse =
@@ -388,7 +388,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       newestForm.setFieldsValue({
                         dataSet: annotationResponse.dataSetName,
                       });
-                      return callback();
+                      return Promise.resolve();
                     }
 
                     const taskResponse = await tryToAwaitPromise(
@@ -403,11 +403,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       newestForm.setFieldsValue({
                         dataSet: taskResponse.dataSet,
                       });
-                      return callback();
+                      return Promise.resolve();
                     }
 
                     newestForm.setFieldsValue({ dataSet: null });
-                    return callback("Invalid base annotation id.");
+                    return Promise.reject(new Error("Invalid base annotation id."));
                   },
                 },
               ]}

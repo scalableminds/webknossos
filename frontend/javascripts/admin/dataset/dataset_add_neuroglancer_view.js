@@ -120,12 +120,12 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
             rules={[
               { required: true, message: messages["dataset.import.required.url"] },
               {
-                validator: async (_rule, value, callback) => {
+                validator: async (_rule, value) => {
                   try {
                     validateAndParseUrl(value);
-                    callback();
+                    Promise.resolve();
                   } catch (error) {
-                    callback(error);
+                    Promise.reject(error);
                   }
                 },
               },

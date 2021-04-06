@@ -197,10 +197,10 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
                 message: "Please provide a largest segment ID for the segmentation layer",
               },
               {
-                validator: (rule, value, callback) =>
+                validator: (rule, value) =>
                   value > 0 && value < 2 ** bitDepth
-                    ? callback()
-                    : callback(
+                    ? Promise.resolve()
+                    : Promise.reject(
                         new Error(
                           `The largest segmentation ID must be larger than 0 and smaller than 2^${bitDepth}`,
                         ),

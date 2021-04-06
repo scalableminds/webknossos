@@ -46,11 +46,13 @@ type State = {
   isFetchingData: boolean,
 };
 
-function isValidMagnification(rule, value, callback) {
+function isValidMagnification(rule, value) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
-    callback();
+    Promise.resolve();
   } else {
-    callback("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)");
+    Promise.reject(
+      new Error("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
+    );
   }
 }
 

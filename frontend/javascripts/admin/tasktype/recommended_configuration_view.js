@@ -140,8 +140,8 @@ export default function RecommendedConfigurationView({
                 hasFeedback
                 rules={[
                   {
-                    validator: (rule, value, callback) =>
-                      enabled ? validateUserSettingsJSON(rule, value, callback) : Promise.resolve(),
+                    validator: (rule, value) =>
+                      enabled ? validateUserSettingsJSON(rule, value) : Promise.resolve(),
                   },
                 ]}
               >

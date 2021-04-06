@@ -43,8 +43,8 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 
-const CHECKBOX_STYLE = { verticalAlign: "middle" };
-const CHECKBOX_PLACEHOLDER_STYLE = { width: 24, display: "inline-block" };
+const CHECKBOX_STYLE = {};
+const CHECKBOX_PLACEHOLDER_STYLE = { width: 16, display: "inline-block" };
 
 type OwnProps = {|
   activeTreeId: ?number,
@@ -345,7 +345,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const displayableName = name.trim() || "<no name>";
     const nameAndDropdown = (
       <span className="ant-dropdown-link">
-        <span data-id={id} onClick={this.onSelectGroup}>
+        <span data-id={id} onClick={this.onSelectGroup} style={{ marginLeft: 9 }}>
           {displayableName}{" "}
         </span>
         <Dropdown overlay={menu} placement="bottomCenter">

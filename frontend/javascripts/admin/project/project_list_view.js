@@ -394,7 +394,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                         await downloadNml(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"
-                      icon={<DownloadOutlined />}
+                      icon={<DownloadOutlined key="download-icon" />}
                     >
                       Download
                     </AsyncLink>

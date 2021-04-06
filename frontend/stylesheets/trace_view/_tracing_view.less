@@ -216,13 +216,13 @@
   .ant-btn,
   .ant-input,
   .ant-radio-button-wrapper,
-  .ant-select-selection {
-    background-color: @dark-bg;
-    color: @dark-fg;
-    border-color: @dark-border;
+  .ant-select-selector {
+    background-color: @dark-bg !important;
+    color: @dark-fg !important;
+    border-color: @dark-border !important;
 
     &:hover {
-      border-color: @hover-border;
+      border-color: @hover-border !important;
       z-index: 1;
     }
 
@@ -233,7 +233,7 @@
     &.ant-btn-disabled,
     &.ant-input-disabled,
     &.ant-radio-button-wrapper-disabled,
-    &.ant-select-selection-disabled {
+    &.ant-select-selector-disabled {
       color: fade(@dark-fg, 50%);
       border-color: @dark-border;
 

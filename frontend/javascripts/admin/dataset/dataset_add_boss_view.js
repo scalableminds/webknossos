@@ -76,10 +76,10 @@ function DatasetAddBossView(props: Props) {
         <Form style={{ marginTop: 20 }} onFinish={handleSubmit} layout="vertical" form={form}>
           <Row gutter={8}>
             <Col span={12}>
-              <DatasetNameFormItem form={form} activeUser={activeUser} />
+              <DatasetNameFormItem activeUser={activeUser} />
             </Col>
             <Col span={12}>
-              <DatastoreFormItem form={form} datastores={datastores} />
+              <DatastoreFormItem datastores={datastores} />
             </Col>
           </Row>
           <Row gutter={8}>

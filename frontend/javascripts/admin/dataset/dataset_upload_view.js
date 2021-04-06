@@ -394,7 +394,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             )}
             <Row gutter={8}>
               <Col span={12}>
-                <DatasetNameFormItem form={form} activeUser={activeUser} />
+                <DatasetNameFormItem activeUser={activeUser} />
               </Col>
               <Col span={12}>
                 <FormItem

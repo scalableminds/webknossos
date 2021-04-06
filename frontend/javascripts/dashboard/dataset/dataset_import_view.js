@@ -785,7 +785,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 ) : null}
               </Tabs>
             </Card>
-            <FormItem>
+            <FormItem style={{ marginTop: 8 }}>
               <Button type="primary" htmlType="submit">
                 {confirmString}
               </Button>

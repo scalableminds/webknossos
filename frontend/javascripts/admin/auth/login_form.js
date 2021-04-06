@@ -13,23 +13,16 @@ import messages from "messages";
 const FormItem = Form.Item;
 const { Password } = Input;
 
-type PropsWithoutForm = {|
+type Props = {|
   layout: "horizontal" | "vertical" | "inline",
   onLoggedIn?: () => mixed,
   hideFooter?: boolean,
   style?: Object,
 |};
 
-type Props = {| ...PropsWithoutForm |};
-
 function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
   const [form] = Form.useForm();
-  const linkStyle =
-    layout === "inline"
-      ? {
-          paddingLeft: 10,
-        }
-      : null;
+  const linkStyle = layout === "inline" ? { paddingLeft: 10 } : null;
 
   const onFinish = async formValues => {
     const user = await loginUser(formValues);
@@ -52,9 +45,7 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
           outside of an iFrame to log in.
         </span>
       }
-      style={{
-        marginBottom: 12,
-      }}
+      style={{ marginBottom: 12 }}
     />
   ) : null;
 
@@ -86,45 +77,20 @@ function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
           <Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />
         </FormItem>
         <FormItem>
-          <Button
-            type="primary"
-            htmlType="submit"
-            style={{
-              width: "100%",
-            }}
-          >
+          <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
             Log in
           </Button>
         </FormItem>
         {hideFooter ? null : (
-          <FormItem
-            style={{
-              marginBottom: 4,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-              }}
-            >
+          <FormItem style={{ marginBottom: 4 }}>
+            <div style={{ display: "flex" }}>
               <Link
                 to="/auth/signup"
-                style={{
-                  ...linkStyle,
-                  marginRight: 10,
-                  flexGrow: 1,
-                  whiteSpace: "nowrap",
-                }}
+                style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
               >
                 Register Now
               </Link>
-              <Link
-                to="/auth/resetPassword"
-                style={{
-                  ...linkStyle,
-                  whiteSpace: "nowrap",
-                }}
-              >
+              <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
                 Forgot Password
               </Link>
             </div>

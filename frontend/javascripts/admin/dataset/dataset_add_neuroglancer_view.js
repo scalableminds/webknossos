@@ -104,13 +104,13 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
         Currently we only support Neuroglancer precomputed datasets. Simply set a dataset name,
         select the wk-connect datastore and paste the URL to the Neuroglancer dataset. Optionally, a
         credentials file to a Google Cloud Storage instance can be supplied.
-        <Form style={{ marginTop: 20 }} onFinish={handleSubmit} layout="vertical">
+        <Form style={{ marginTop: 20 }} onFinish={handleSubmit} layout="vertical" form={form}>
           <Row gutter={8}>
             <Col span={12}>
-              <DatasetNameFormItem form={form} activeUser={activeUser} />
+              <DatasetNameFormItem activeUser={activeUser} />
             </Col>
             <Col span={12}>
-              <DatastoreFormItem form={form} datastores={datastores} />
+              <DatastoreFormItem datastores={datastores} />
             </Col>
           </Row>
           <FormItem

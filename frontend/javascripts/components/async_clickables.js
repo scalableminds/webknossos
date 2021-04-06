@@ -43,11 +43,7 @@ export function AsyncButton(props: Props) {
 
 export function AsyncIconButton(props: Props & { icon: React.Node }) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  return (
-    <React.Fragment onClick={onClick}>
-      {isLoading ? <LoadingOutlined /> : props.icon}
-    </React.Fragment>
-  );
+  return React.cloneElement(isLoading ? <LoadingOutlined /> : props.icon, { onClick });
 }
 
 export function AsyncLink(props: Props & { children: React.Node, icon: React.Node }) {

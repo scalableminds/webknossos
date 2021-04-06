@@ -79,7 +79,7 @@ class VersionView extends React.Component<Props, State> {
             />
           </div>
         </div>
-        <div style={{ flex: "1 1 auto", overflowY: "auto" }}>
+        <div style={{ flex: "1 1 auto", overflowY: "auto", paddingLeft: 2 }}>
           <Tabs onChange={this.onChangeTab} activeKey={this.state.activeTracingType}>
             {this.props.tracing.skeleton != null ? (
               <TabPane tab="Skeleton" key="skeleton">

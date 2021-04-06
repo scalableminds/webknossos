@@ -20,7 +20,7 @@ export default function ShareViewDatasetModalView(props: Props) {
   const url = getUrl(sharingToken, !dataset.isPublic);
   return (
     <Modal
-      title="Share this Tracing"
+      title="Share this Dataset"
       visible={isVisible}
       width={800}
       okText="Ok"

@@ -58,9 +58,9 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
                 <Link to="/">
                   <Tooltip title="Back to the frontpage.">
                     <ArrowLeftOutlined style={{ fontSize: 24, color: "#555", marginBottom: 18 }} />
+                    <div style={{ display: "inline-block", verticalAlign: "top" }}>Back</div>
                   </Tooltip>
                 </Link>
-                <div style={{ display: "inline-block", verticalAlign: "top" }}>Back</div>
                 <PublicationCard
                   className="dataset-panel"
                   datasets={datasetsOfPublication}

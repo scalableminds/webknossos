@@ -16,10 +16,7 @@ type Props = {
 function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isVisible }: Props) {
   const [form] = Form.useForm();
   const onOk = async () => {
-    form.validateFields(async (err, values) => {
-      if (err) {
-        return;
-      }
+    form.validateFields().then(async values => {
       const newTeam = {
         name: values.teamName,
         roles: [{ name: "admin" }, { name: "user" }],
@@ -30,20 +27,21 @@ function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isVisible }: Props)
     });
   };
 
-  const { getFieldDecorator } = form;
   return (
     <Modal visible={isVisible} title="Add a New Team" okText="Ok" onCancel={onCancel} onOk={onOk}>
-      <Form layout="vertical">
-        <FormItem label="Team Name">
-          {getFieldDecorator("teamName", {
-            rules: [
-              {
-                required: true,
-                pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
-                message: "The team name must not contain any special characters.",
-              },
-            ],
-          })(<Input icon={<TagOutlined />} placeholder="Team Name" autoFocus />)}
+      <Form layout="vertical" form={form}>
+        <FormItem
+          name="teamName"
+          label="Team Name"
+          rules={[
+            {
+              required: true,
+              pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
+              message: "The team name must not contain any special characters.",
+            },
+          ]}
+        >
+          <Input icon={<TagOutlined />} placeholder="Team Name" autoFocus />
         </FormItem>
       </Form>
     </Modal>

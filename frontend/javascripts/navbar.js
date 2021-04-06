@@ -104,7 +104,7 @@ function CollapsibleMenuTitle({ title, collapse, icon }) {
   }
 }
 
-function AdministrationSubMenu({ collapse, ...menuProps }) {
+function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
@@ -137,6 +137,11 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
       <Menu.Item key="/scripts">
         <Link to="/scripts">Scripts</Link>
       </Menu.Item>
+      {isAdmin && (
+        <Menu.Item key="/organization">
+          <Link to={`/organizations/${organization}/edit`}>Organization</Link>
+        </Menu.Item>
+      )}
     </SubMenu>
   );
 }
@@ -372,6 +377,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   };
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
+  const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
   const isAdminOrTeamManager =
     activeUser != null ? Utils.isUserAdminOrTeamManager(activeUser) : false;
 
@@ -386,8 +392,15 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 
-    if (isAdminOrTeamManager) {
-      menuItems.push(<AdministrationSubMenu key="admin" collapse={collapseAllNavItems} />);
+    if (isAdminOrTeamManager && activeUser != null) {
+      menuItems.push(
+        <AdministrationSubMenu
+          key="admin"
+          collapse={collapseAllNavItems}
+          isAdmin={isAdmin}
+          organization={activeUser.organization}
+        />,
+      );
       menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);
     } else {
       // JSX can not be used here directly as it adds a item between the menu and the actual menu item and this leads to a bug.

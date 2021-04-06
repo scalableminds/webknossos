@@ -140,6 +140,10 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 
   handleSubmit = async formValues => {
+    if (!this.state.useRecommendedConfiguration) {
+      formValues.recommendedConfiguration = null;
+    }
+
     const { recommendedConfiguration, settings: rawSettings, ...rest } = formValues;
 
     const settings = getMagnificationAdaptedSettings(rawSettings);
@@ -167,7 +171,6 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   render() {
     const form = this.formRef.current;
-
     const isEditingMode = this.props.taskTypeId != null;
     const titlePrefix = isEditingMode ? "Update" : "Create";
 
@@ -225,7 +228,11 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               <TextArea rows={10} />
             </FormItem>
 
-            <FormItem name="tracingType" label="Annotation Type">
+            <FormItem
+              name="tracingType"
+              label="Annotation Type"
+              onChange={() => this.forceUpdate()}
+            >
               <RadioGroup>
                 <Radio value="skeleton" disabled={isEditingMode}>
                   Skeleton
@@ -273,28 +280,34 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               />
             </FormItem>
 
-            <div
-              style={{
-                display:
-                  form != null && form.getFieldValue("tracingType") === "volume" ? "none" : "block",
-              }}
+            <FormItem
+              noStyle
+              shouldUpdate={(prevValues, curValues) =>
+                prevValues.tracingType !== curValues.tracingType
+              }
             >
-              <FormItem
-                name={["settings", "somaClickingAllowed"]}
-                label="Settings"
-                valuePropName="checked"
-              >
-                <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
-              </FormItem>
+              {({ getFieldValue }) =>
+                getFieldValue(["tracingType"]) !== "volume" ? (
+                  <React.Fragment>
+                    <FormItem
+                      name={["settings", "somaClickingAllowed"]}
+                      label="Settings"
+                      valuePropName="checked"
+                    >
+                      <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
+                    </FormItem>
 
-              <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
-                <Checkbox>Allow Branchpoints</Checkbox>
-              </FormItem>
+                    <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
+                      <Checkbox>Allow Branchpoints</Checkbox>
+                    </FormItem>
 
-              <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
-                <Checkbox>Merger Mode</Checkbox>
-              </FormItem>
-            </div>
+                    <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
+                      <Checkbox>Merger Mode</Checkbox>
+                    </FormItem>
+                  </React.Fragment>
+                ) : null
+              }
+            </FormItem>
 
             <FormItem
               name={["settings", "resolutionRestrictionsForm", "shouldRestrict"]}
@@ -312,36 +325,38 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               </Checkbox>
             </FormItem>
 
-            <div
-              style={{
-                marginLeft: 24,
-                display:
-                  form != null &&
-                  form.getFieldValue(["settings", "resolutionRestrictionsForm", "shouldRestrict"])
-                    ? "block"
-                    : "none",
-              }}
+            <FormItem
+              noStyle
+              shouldUpdate={(prevValues, curValues) =>
+                !prevValues.settings ||
+                prevValues.settings.resolutionRestrictionsForm.shouldRestrict !==
+                  curValues.settings.resolutionRestrictionsForm.shouldRestrict
+              }
             >
-              <div>
-                <FormItem
-                  name={["settings", "resolutionRestrictionsForm", "min"]}
-                  hasFeedback
-                  style={{ marginBottom: 6 }}
-                  rules={[{ validator: isValidMagnification }]}
-                >
-                  Minimum: <InputNumber min={1} size="small" disabled={isEditingMode} />
-                </FormItem>
-              </div>
-              <div>
-                <FormItem
-                  name={["settings", "resolutionRestrictionsForm", "max"]}
-                  hasFeedback
-                  rules={[{ validator: isValidMagnification }]}
-                >
-                  Maximum: <InputNumber min={1} size="small" disabled={isEditingMode} />
-                </FormItem>
-              </div>
-            </div>
+              {({ getFieldValue }) =>
+                getFieldValue(["settings", "resolutionRestrictionsForm", "shouldRestrict"]) ? (
+                  <div style={{ marginLeft: 24 }}>
+                    <FormItem
+                      name={["settings", "resolutionRestrictionsForm", "min"]}
+                      hasFeedback
+                      label="Minimum"
+                      style={{ marginBottom: 6 }}
+                      rules={[{ validator: isValidMagnification }]}
+                    >
+                      <InputNumber min={1} size="small" disabled={isEditingMode} />
+                    </FormItem>
+                    <FormItem
+                      name={["settings", "resolutionRestrictionsForm", "max"]}
+                      hasFeedback
+                      label="Maximum"
+                      rules={[{ validator: isValidMagnification }]}
+                    >
+                      <InputNumber min={1} size="small" disabled={isEditingMode} />
+                    </FormItem>
+                  </div>
+                ) : null
+              }
+            </FormItem>
 
             <FormItem>
               <RecommendedConfigurationView

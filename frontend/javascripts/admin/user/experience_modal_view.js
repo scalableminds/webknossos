@@ -253,7 +253,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         footer={
           <div>
             <Button type="primary" onClick={this.updateAllUsers}>
-              Submit Changes
+              Save
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>
           </div>

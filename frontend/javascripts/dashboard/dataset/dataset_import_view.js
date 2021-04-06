@@ -91,6 +91,7 @@ type State = {
   savedDataSourceOnServer: ?APIDataSource,
   inferredDataSource: ?APIDataSource,
   differenceBetweenDataSources: Object,
+  hasNoAllowedTeams: boolean,
   dataSourceSettingsStatus: DataSourceSettingsStatus,
 };
 
@@ -155,6 +156,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     savedDataSourceOnServer: null,
     inferredDataSource: null,
     differenceBetweenDataSources: {},
+    hasNoAllowedTeams: false,
     dataSourceSettingsStatus: {
       appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
       isJSONFormatValid: IsJSONFormatValidEnum.Yes,
@@ -261,6 +263,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       this.setState({
         datasetDefaultConfiguration,
         dataset,
+        hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
       handleGenericError(error);
@@ -659,6 +662,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   };
 
+  onValuesChange = (changedValues, allValues) => {
+    const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
+    this.setState({ hasNoAllowedTeams });
+  };
+
   render() {
     const form = this.formRef.current;
 
@@ -676,8 +684,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         <ExclamationCircleOutlined style={{ color: "#f5222d", marginLeft: 4 }} />
       </Tooltip>
     );
-    const _hasNoAllowedTeams = this.hasNoAllowedTeams();
-    const hasNoAllowedTeamsWarning = _hasNoAllowedTeams ? (
+    const { hasNoAllowedTeams } = this.state;
+    const hasNoAllowedTeamsWarning = hasNoAllowedTeams ? (
       <Tooltip title="Please double-check some fields here.">
         <ExclamationCircleOutlined style={{ color: "#faad14", marginLeft: 4 }} />
       </Tooltip>
@@ -689,6 +697,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         className="row container dataset-import"
         onFinish={this.handleSubmit}
         onFinishFailed={this.handleSubmit}
+        onValuesChange={this.onValuesChange}
         layout="vertical"
       >
         <Card
@@ -753,7 +762,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     <ImportSharingComponent
                       form={form}
                       datasetId={this.props.datasetId}
-                      hasNoAllowedTeams={_hasNoAllowedTeams}
+                      hasNoAllowedTeams={hasNoAllowedTeams}
                     />
                   </Hideable>
                 </TabPane>

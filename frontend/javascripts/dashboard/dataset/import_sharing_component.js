@@ -37,7 +37,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
       validateStatus={hasNoAllowedTeams ? "warning" : "success"}
       help={
         hasNoAllowedTeams
-          ? "If this field is empty, only administrators and dataset managers will be able to view this dataset."
+          ? "If this field is empty, only administrators, dataset managers and users with a valid sharing link (see below) will be able to view this dataset."
           : null
       }
     >

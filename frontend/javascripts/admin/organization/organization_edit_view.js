@@ -1,6 +1,7 @@
 // @flow
 import { withRouter } from "react-router-dom";
-import { Form, Button, Card, Input, Icon, Row } from "antd";
+import { Form, Button, Card, Input, Row } from "antd";
+import { MailOutlined, TagOutlined } from "@ant-design/icons";
 import React from "react";
 
 import { confirmAsync } from "dashboard/dataset/helper_components";
@@ -17,7 +18,7 @@ export const PricingPlanEnum = Enum.make({
 });
 type PricingPlan = $Keys<typeof PricingPlanEnum>;
 
-type Props = { organizationName: string, form: Object };
+type Props = { organizationName: string };
 
 type State = {
   displayName: string,
@@ -53,18 +54,13 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     });
   }
 
-  handleSubmit = e => {
-    e.preventDefault();
-    this.props.form.validateFields(async (err, formValues) => {
-      if (!err) {
-        await updateOrganization(
-          this.props.organizationName,
-          formValues.displayName,
-          formValues.newUserMailingList,
-        );
-        window.location.replace(`${window.location.origin}/dashboard/`);
-      }
-    });
+  onFinish = async formValues => {
+    await updateOrganization(
+      this.props.organizationName,
+      formValues.displayName,
+      formValues.newUserMailingList,
+    );
+    window.location.replace(`${window.location.origin}/dashboard/`);
   };
 
   handleDeleteButtonClicked = async (): Promise<void> => {
@@ -87,51 +83,54 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { getFieldDecorator } = this.props.form;
-
     return (
       <div className="container" style={{ paddingTop: 20 }}>
         <Card
           title={<h3>Edit {this.state.displayName} </h3>}
           style={{ margin: "auto", maxWidth: 800 }}
         >
-          <Form onSubmit={this.handleSubmit} layout="vertical">
-            <FormItem label="Display Name">
-              {getFieldDecorator("displayName", {
-                rules: [
-                  {
-                    required: true,
-                    pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
-                    message:
-                      "The organization name must not contain any special characters and can not be empty.",
-                  },
-                ],
-                initialValue: this.state.displayName,
-              })(
-                <Input
-                  icon="tag-o"
-                  autoFocus
-                  disabled={this.state.isFetchingData}
-                  placeholder="Display Name"
-                />,
-              )}
+          <Form
+            onFinish={this.onFinish}
+            layout="vertical"
+            initialValues={{
+              displayName: this.state.displayName,
+              newUserMailingList: this.state.newUserMailingList,
+            }}
+          >
+            <FormItem
+              label="Display Name"
+              name="displayName"
+              rules={[
+                {
+                  required: true,
+                  pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
+                  message:
+                    "The organization name must not contain any special characters and can not be empty.",
+                },
+              ]}
+            >
+              <Input
+                prefix={<TagOutlined />}
+                autoFocus
+                disabled={this.state.isFetchingData}
+                placeholder="Display Name"
+              />
             </FormItem>{" "}
-            <FormItem label="Notify About New Users Via:">
-              {getFieldDecorator("newUserMailingList", {
-                rules: [
-                  {
-                    required: false,
-                    type: "email",
-                  },
-                ],
-                initialValue: this.state.newUserMailingList,
-              })(
-                <Input
-                  prefix={<Icon type="mail" style={{ fontSize: 13 }} />}
-                  disabled={this.state.isFetchingData}
-                  placeholder="mail@example.com"
-                />,
-              )}
+            <FormItem
+              label="Notify About New Users Via:"
+              name="newUserMailingList"
+              rules={[
+                {
+                  required: false,
+                  type: "email",
+                },
+              ]}
+            >
+              <Input
+                prefix={<MailOutlined style={{ fontSize: 13 }} />}
+                disabled={this.state.isFetchingData}
+                placeholder="mail@example.com"
+              />
             </FormItem>
             <FormItem>
               <div className="ant-form-item-label" style={{ paddingTop: 5 }}>
@@ -163,4 +162,4 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(OrganizationEditView));
+export default withRouter(OrganizationEditView);

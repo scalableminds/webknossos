@@ -41,7 +41,7 @@ function CreateTeamModalForm({ onOk: onOkCallback, onCancel, isVisible }: Props)
             },
           ]}
         >
-          <Input icon={<TagOutlined />} placeholder="Team Name" autoFocus />
+          <Input prefix={<TagOutlined />} placeholder="Team Name" autoFocus />
         </FormItem>
       </Form>
     </Modal>

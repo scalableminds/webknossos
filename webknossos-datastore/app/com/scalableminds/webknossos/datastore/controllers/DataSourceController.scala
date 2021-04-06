@@ -251,12 +251,14 @@ class DataSourceController @Inject()(
                                dataSetName: String,
                                dataLayerName: String): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
-          Ok(
-            Json.toJson(
-              meshFileService.listMeshChunksForSegment(organizationName, dataSetName, dataLayerName, request.body)))
+          for {
+            positions <- meshFileService.listMeshChunksForSegment(organizationName,
+                                                                  dataSetName,
+                                                                  dataLayerName,
+                                                                  request.body) ?~> "mesh.listChunks.failed"
+          } yield Ok(Json.toJson(positions))
         }
       }
     }
@@ -265,10 +267,11 @@ class DataSourceController @Inject()(
                     dataSetName: String,
                     dataLayerName: String): Action[MeshChunkDataRequest] =
     Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
-          Ok(meshFileService.readMeshChunk(organizationName, dataSetName, dataLayerName, request.body))
+          for {
+            data <- meshFileService.readMeshChunk(organizationName, dataSetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
+          } yield Ok(data)
         }
       }
     }

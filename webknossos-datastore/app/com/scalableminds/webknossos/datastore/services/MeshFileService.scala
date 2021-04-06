@@ -5,15 +5,17 @@ import java.nio.file.{Path, Paths}
 import ch.systemsx.cisd.hdf5.HDF5FactoryProvider
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{CachedMeshFile, MeshFileCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
 
 trait GenericJsonFormat[T] {}
 
@@ -36,7 +38,9 @@ object MeshChunkDataRequest {
   implicit val jsonFormat: OFormat[MeshChunkDataRequest] = Json.format[MeshChunkDataRequest]
 }
 
-class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
 
   private val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
   private val meshesDir = "meshes"
@@ -60,7 +64,7 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String,
-                               listMeshChunksRequest: ListMeshChunksRequest): List[Point3D] = {
+                               listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Point3D]] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
@@ -71,41 +75,46 @@ class MeshFileService @Inject()(config: DataStoreConfig) extends FoxImplicits wi
 
     val cachedMeshFile = meshFileCache.withCache(meshFilePath)(initHDFReader)
 
-    val chunkPositionLiterals =
-      cachedMeshFile.reader
-        .`object`()
-        .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
-        .asScala
-        .toList
-
-    cachedMeshFile.finishAccess()
-    chunkPositionLiterals.map(parsePositionLiteral)
+    for {
+      chunkPositionLiterals <- tryo {
+        cachedMeshFile.reader
+          .`object`()
+          .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
+          .asScala
+          .toList
+      }.toFox
+      _ = cachedMeshFile.finishAccess()
+      positions <- Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
+    } yield positions
   }
 
   def readMeshChunk(organizationName: String,
                     dataSetName: String,
                     dataLayerName: String,
-                    meshChunkDataRequest: MeshChunkDataRequest): Array[Byte] = {
-    val hdfFile =
-      dataBaseDir
-        .resolve(organizationName)
-        .resolve(dataSetName)
-        .resolve(dataLayerName)
-        .resolve(meshesDir)
-        .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
-        .toFile
-
-    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    reader.readAsByteArray(
-      s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}")
+                    meshChunkDataRequest: MeshChunkDataRequest): Fox[Array[Byte]] = {
+    val hdfFilePath = dataBaseDir
+      .resolve(organizationName)
+      .resolve(dataSetName)
+      .resolve(dataLayerName)
+      .resolve(meshesDir)
+      .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
+    for {
+      hdfFile <- tryo { hdfFilePath.toFile } ?~> "mesh.file.open.failed"
+      reader <- tryo { HDF5FactoryProvider.get.openForReading(hdfFile) } ?~> "mesh.file.open.failed"
+      key = s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}"
+      data <- tryo { reader.readAsByteArray(key) } ?~> "mesh.file.readData.failed"
+    } yield data
   }
 
   private def positionLiteral(position: Point3D) =
     s"${position.x}_${position.y}_${position.z}"
 
-  private def parsePositionLiteral(positionLiteral: String): Point3D = {
-    val asInts = positionLiteral.split("_").toList.map(_.toInt)
-    Point3D(asInts.head, asInts(1), asInts(2))
+  private def parsePositionLiteral(positionLiteral: String): Fox[Point3D] = {
+    val split = positionLiteral.split("_").toList
+    for {
+      _ <- bool2Fox(split.length == 3)
+      asInts <- tryo { split.map(_.toInt) }
+    } yield Point3D(asInts.head, asInts(1), asInts(2))
   }
 
   def initHDFReader(meshFilePath: Path): CachedMeshFile = {

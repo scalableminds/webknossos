@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import controllers.InitialDataService
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO}
-import models.team.{Team, TeamDAO}
+import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
@@ -23,7 +23,13 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  def publicWrites(organization: Organization): Fox[JsObject] =
+  def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
+    val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
+      Json.obj(
+        "newUserMailingList" -> organization.newUserMailingList,
+        "pricingPlan" -> organization.pricingPlan
+      )
+    } else Json.obj()
     Fox.successful(
       Json.obj(
         "id" -> organization._id.toString,
@@ -31,7 +37,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
         "displayName" -> organization.displayName
-      ))
+      ) ++ adminOnlyInfo
+    )
+  }
 
   def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
       implicit ctx: DBAccessContext): Fox[Organization] =
@@ -68,7 +76,13 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
-      organization = Organization(ObjectId.generate, organizationName, "", "", organizationDisplayName)
+      initialPricingPlan = if (conf.Features.isDemoInstance) PricingPlan.Basic else PricingPlan.Custom
+      organization = Organization(ObjectId.generate,
+                                  organizationName,
+                                  "",
+                                  "",
+                                  organizationDisplayName,
+                                  initialPricingPlan)
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)

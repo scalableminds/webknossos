@@ -30,6 +30,7 @@ import LoginView from "admin/auth/login_view";
 import Navbar from "navbar";
 import Onboarding from "admin/onboarding";
 import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import OrganizationEditView from "admin/organization/organization_edit_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
@@ -387,6 +388,13 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/jobs"
                 render={() => <JobListView />}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/organizations/:organizationName/edit"
+                render={({ match }) => (
+                  <OrganizationEditView organizationName={match.params.organizationName || ""} />
+                )}
               />
               <Route
                 path="/help/keyboardshortcuts"

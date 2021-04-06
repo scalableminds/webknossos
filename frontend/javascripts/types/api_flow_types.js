@@ -488,7 +488,9 @@ export type APIOrganization = {
   +name: string,
   +additionalInformation: string,
   +displayName: string,
+  +pricingPlan: string,
   +enableAutoVerify: boolean,
+  +newUserMailingList: string,
 };
 
 export type APIBuildInfo = {

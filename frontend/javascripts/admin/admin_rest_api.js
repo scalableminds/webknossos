@@ -1410,6 +1410,23 @@ export async function checkAnyOrganizationExists(): Promise<boolean> {
   return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
+export async function deleteOrganization(organizationName: string): Promise<void> {
+  return Request.triggerRequest(`/api/organizations/${organizationName}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateOrganization(
+  organizationName: string,
+  displayName: string,
+  newUserMailingList: string,
+): Promise<APIOrganization> {
+  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationName}`, {
+    method: "PATCH",
+    data: { displayName, newUserMailingList },
+  });
+}
+
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
   return Request.receiveJSON("/api/buildinfo", { doNotInvestigate: true });

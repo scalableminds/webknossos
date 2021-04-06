@@ -215,7 +215,7 @@ function RegistrationForm(props: Props) {
         </FormItem>
       )}
       <FormItem>
-        <Button size="large" type="primary" hmlType="submit" style={{ width: "100%" }}>
+        <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
           {props.confirmLabel || "Register"}
         </Button>
       </FormItem>

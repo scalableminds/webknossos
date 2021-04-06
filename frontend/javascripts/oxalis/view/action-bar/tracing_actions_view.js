@@ -173,7 +173,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
         onClick={() => setAutoSaveLayouts(!autoSaveLayouts)}
         title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}
       >
-        autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />
+        {autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />}
       </Menu.Item>
       {autoSaveLayouts ? null : (
         <Menu.Item

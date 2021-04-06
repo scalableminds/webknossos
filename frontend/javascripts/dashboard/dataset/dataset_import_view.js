@@ -229,7 +229,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
       const form = this.formRef.current;
       if (!form) {
-        return;
+        throw new Error("Form couldn't be initialized.");
       }
       form.setFieldsValue({
         dataSourceJson: jsonStringify(dataSource),

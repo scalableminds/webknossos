@@ -1,5 +1,5 @@
 // @flow
-import React, { useState } from "react";
+import React from "react";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Button, Col, Row, Alert } from "antd";
 import { LockOutlined } from "@ant-design/icons";
@@ -18,7 +18,6 @@ type Props = {
 };
 
 function ChangePasswordView({ history }: Props) {
-  const [confirmDirty, setConfirmDirty] = useState<boolean>(false);
   const [form] = Form.useForm();
 
   function onFinish(formValues: Object) {
@@ -28,11 +27,6 @@ function ChangePasswordView({ history }: Props) {
       history.push("/auth/login");
       Store.dispatch(logoutUserAction());
     });
-  }
-
-  function handleConfirmBlur(e: SyntheticInputEvent<>) {
-    const { value } = e.target;
-    setConfirmDirty(confirmDirty || !!value);
   }
 
   function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
@@ -95,7 +89,6 @@ function ChangePasswordView({ history }: Props) {
             ]}
           >
             <Password
-              onBlur={handleConfirmBlur}
               prefix={<LockOutlined style={{ fontSize: 13 }} />}
               placeholder="Confirm New Password"
             />

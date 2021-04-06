@@ -71,20 +71,9 @@ function DatasetAddBossView(props: Props) {
   const { activeUser, datastores } = props;
 
   return (
-    <div
-      style={{
-        padding: 5,
-      }}
-    >
+    <div style={{ padding: 5 }}>
       <CardContainer title="Add BossDB Dataset">
-        <Form
-          style={{
-            marginTop: 20,
-          }}
-          onFinish={handleSubmit}
-          layout="vertical"
-          form={form}
-        >
+        <Form style={{ marginTop: 20 }} onFinish={handleSubmit} layout="vertical" form={form}>
           <Row gutter={8}>
             <Col span={12}>
               <DatasetNameFormItem form={form} activeUser={activeUser} />
@@ -99,11 +88,7 @@ function DatasetAddBossView(props: Props) {
                 name="domain"
                 label="Domain"
                 hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
+                rules={[{ required: true }]}
                 validateFirst
               >
                 <Input />
@@ -112,14 +97,10 @@ function DatasetAddBossView(props: Props) {
             <Slash />
             <Col span={5}>
               <FormItem
-                name="collect"
+                name="collection"
                 label="Collection"
                 hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
+                rules={[{ required: true }]}
                 validateFirst
               >
                 <Input />
@@ -131,11 +112,7 @@ function DatasetAddBossView(props: Props) {
                 name="experiment"
                 label="Experiment"
                 hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
+                rules={[{ required: true }]}
                 validateFirst
               >
                 <Input />
@@ -148,11 +125,7 @@ function DatasetAddBossView(props: Props) {
                 name="username"
                 label="Username"
                 hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
+                rules={[{ required: true }]}
                 validateFirst
               >
                 <Input />
@@ -163,30 +136,15 @@ function DatasetAddBossView(props: Props) {
                 name="password"
                 label="Password"
                 hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
+                rules={[{ required: true }]}
                 validateFirst
               >
                 <Password />
               </FormItem>
             </Col>
           </Row>
-          <FormItem
-            style={{
-              marginBottom: 0,
-            }}
-          >
-            <Button
-              size="large"
-              type="primary"
-              htmlType="submit"
-              style={{
-                width: "100%",
-              }}
-            >
+          <FormItem style={{ marginBottom: 0 }}>
+            <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
               Add
             </Button>
           </FormItem>

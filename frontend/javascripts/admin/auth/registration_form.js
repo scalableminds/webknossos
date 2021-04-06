@@ -1,7 +1,7 @@
 // @flow
 import { Form, Input, Button, Row, Col, Checkbox } from "antd";
 import { LockOutlined, UserOutlined, MailOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import React from "react";
 
 import { type APIOrganization } from "types/api_flow_types";
 import { loginUser } from "admin/admin_rest_api";
@@ -25,7 +25,6 @@ type Props = {|
 |};
 
 function RegistrationForm(props: Props) {
-  const [confirmDirty, setConfirmDirty] = useState<boolean>(false);
   const [form] = Form.useForm();
 
   const onFinish = async (formValues: Object) => {
@@ -50,11 +49,6 @@ function RegistrationForm(props: Props) {
       Store.dispatch(setActiveUserAction(user));
     }
     props.onRegistered(tryAutoLogin);
-  };
-
-  const handleConfirmBlur = (e: SyntheticInputEvent<>) => {
-    const { value } = e.target;
-    setConfirmDirty(confirmDirty || !!value);
   };
 
   function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
@@ -185,7 +179,6 @@ function RegistrationForm(props: Props) {
             ]}
           >
             <Password
-              onBlur={handleConfirmBlur}
               prefix={<LockOutlined style={{ fontSize: 13 }} />}
               placeholder="Confirm Password"
             />

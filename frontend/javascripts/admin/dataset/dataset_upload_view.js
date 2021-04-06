@@ -68,16 +68,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   formRef = React.createRef<typeof FormInstance>();
 
-  shouldComponentUpdate(nextProps) {
+  componentDidUpdate(prevProps: PropsWithFormAndRouter) {
     if (this.formRef.current != null) {
       if (
-        nextProps.datastores.length === 1 &&
-        this.formRef.current.getFieldValue("datastore") !== nextProps.datastores[0].url
+        prevProps.datastores.length === 0 &&
+        this.props.datastores.length > 0 &&
+        this.formRef.current.getFieldValue("datastore") !== this.props.datastores[0].url
       ) {
-        this.formRef.current.setFieldsValue({ datastore: nextProps.datastores[0].url });
+        this.formRef.current.setFieldsValue({ datastore: this.props.datastores[0].url });
       }
     }
-    return true;
   }
 
   isDatasetManagerOrAdmin = () =>

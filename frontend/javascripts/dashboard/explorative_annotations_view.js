@@ -234,7 +234,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => downloadNml(id, typ, hasVolumeTracing)}
-            icon={<DownloadOutlined />}
+            icon={<DownloadOutlined key="download" />}
           >
             Download
           </AsyncLink>
@@ -242,7 +242,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => this.finishOrReopenTracing("finish", tracing)}
-            icon={<InboxOutlined />}
+            icon={<InboxOutlined key="inbox" />}
           >
             Archive
           </AsyncLink>
@@ -255,7 +255,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => this.finishOrReopenTracing("reopen", tracing)}
-            icon={<FolderOpenOutlined />}
+            icon={<FolderOpenOutlined key="folder" />}
           >
             Reopen
           </AsyncLink>

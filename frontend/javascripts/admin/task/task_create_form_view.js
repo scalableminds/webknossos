@@ -319,17 +319,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     }
   };
 
-  isVolumeTaskType = (taskTypeId: string): boolean => {
-    const selectedTaskType = this.state.taskTypes.find(taskType => taskType.id === taskTypeId);
-    return selectedTaskType != null ? selectedTaskType.tracingType === "volume" : false;
-  };
-
-  onChangeTaskType = (taskTypeId: string) => {
-    if (this.isVolumeTaskType(taskTypeId)) {
-      this.setState({ specificationType: SpecificationEnum.Manual });
-    }
-  };
-
   renderSpecification() {
     const isEditingMode = this.props.taskId != null;
 
@@ -483,7 +472,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   style={fullWidth}
                   autoFocus
                   disabled={isEditingMode}
-                  onChange={this.onChangeTaskType}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   options={this.state.taskTypes.map((taskType: APITaskType) => ({
                     value: taskType.id,

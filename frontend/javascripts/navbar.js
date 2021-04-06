@@ -365,6 +365,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const navbarStyle: Object = {
     padding: 0,
     overflowX: "auto",
+    overflowY: "hidden",
     position: "fixed",
     width: "100%",
     zIndex: 1000,

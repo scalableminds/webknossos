@@ -118,6 +118,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     if (this.props.activeUser) {
       const validTabKeys = this.getValidTabKeys();
 
+      const optionalMyPrefix = this.props.isAdminView ? "" : "My ";
+
       return [
         validTabKeys.publications ? (
           <TabPane tab="Featured Publications" key="publications">
@@ -125,14 +127,14 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
           </TabPane>
         ) : null,
         validTabKeys.datasets ? (
-          <TabPane tab="My Datasets" key="datasets">
+          <TabPane tab={`${optionalMyPrefix}Datasets`} key="datasets">
             <DatasetView user={user} />
           </TabPane>
         ) : null,
-        <TabPane tab="My Tasks" key="tasks">
+        <TabPane tab={`${optionalMyPrefix}Tasks`} key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,
-        <TabPane tab="My Annotations" key="explorativeAnnotations">
+        <TabPane tab={`${optionalMyPrefix} Annotations`} key="explorativeAnnotations">
           <ExplorativeAnnotationsView
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}

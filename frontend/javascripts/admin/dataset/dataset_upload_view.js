@@ -85,11 +85,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
   handleSubmit = async formValues => {
-    const form = this.formRef.current;
     const { activeUser } = this.props;
-    if (!form) {
-      return;
-    }
     const pathNameAtSubmit = window.location.pathname;
 
     if (activeUser != null) {
@@ -141,7 +137,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload.on("complete", () => {
         const newestForm = this.formRef.current;
         if (!newestForm) {
-          return;
+          throw new Error("Form couldn't be initialized.");
         }
 
         const uploadInfo = {

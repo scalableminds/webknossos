@@ -3,6 +3,7 @@ import { withRouter } from "react-router-dom";
 import { Form, Button, Card, Input, Row } from "antd";
 import { MailOutlined, TagOutlined } from "@ant-design/icons";
 import React from "react";
+import { FormInstance } from "antd/lib/form";
 
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
@@ -37,8 +38,31 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     isDeleting: false,
   };
 
+  formRef = React.createRef<typeof FormInstance>();
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentDidUpdate(_prevProps: Props, prevState: State) {
+    if (this.formRef.current != null) {
+      // initialValues only works on the first render. Afterwards, values need to be updated
+      // using setFieldsValue
+      if (
+        prevState.displayName.length === 0 &&
+        this.state.displayName.length > 0 &&
+        this.formRef.current.getFieldValue("displayName") !== this.state.displayName
+      ) {
+        this.formRef.current.setFieldsValue({ displayName: this.state.displayName });
+      }
+      if (
+        prevState.newUserMailingList.length === 0 &&
+        this.state.newUserMailingList.length > 0 &&
+        this.formRef.current.getFieldValue("newUserMailingList") !== this.state.newUserMailingList
+      ) {
+        this.formRef.current.setFieldsValue({ newUserMailingList: this.state.newUserMailingList });
+      }
+    }
   }
 
   async fetchData() {
@@ -92,6 +116,7 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
           <Form
             onFinish={this.onFinish}
             layout="vertical"
+            ref={this.formRef}
             initialValues={{
               displayName: this.state.displayName,
               newUserMailingList: this.state.newUserMailingList,

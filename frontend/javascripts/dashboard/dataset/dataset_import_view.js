@@ -662,7 +662,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   };
 
-  onValuesChange = (changedValues, allValues) => {
+  onValuesChange = (changedValues: FormData, allValues: FormData) => {
     const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
     this.setState({ hasNoAllowedTeams });
   };

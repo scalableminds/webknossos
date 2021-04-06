@@ -162,8 +162,8 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
         <FormItemWithInfo
           name={
             layer.dataFormat === "knossos"
-              ? ["dataSource", `dataLayers[${index}]`, "sections[0]", "boundingBox"]
-              : ["dataSource", `dataLayers[${index}]`, "boundingBox"]
+              ? ["dataSource", "dataLayers", index, "sections", 0, "boundingBox"]
+              : ["dataSource", "dataLayers", index, "boundingBox"]
           }
           label="Bounding box"
           style={{ marginBottom: 2 }}
@@ -187,7 +187,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
 
         {isSegmentation ? (
           <FormItemWithInfo
-            name={["dataSource", `dataLayers[${index}]`, "largestSegmentId"]}
+            name={["dataSource", "dataLayers", index, "largestSegmentId"]}
             label="Largest segment ID"
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
             initialValue={layer.largestSegmentId}

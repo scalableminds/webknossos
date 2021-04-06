@@ -223,23 +223,15 @@ export class InviteUsersModal extends React.Component<
 
 const OrganizationForm = ({ onComplete }) => {
   const [form] = Form.useForm();
-  // TODO: check whether this how you check for errors correctly.
-  const hasErrors = fieldErrors => fieldErrors.length > 0;
   const onFinish = values => {
     onComplete(values.organizationName);
   };
-  const { getFieldsError, getFieldError, isFieldTouched } = form;
-
-  const organizationNameError =
-    isFieldTouched("organizationName") && getFieldError("organizationName");
 
   return (
     <Form onFinish={onFinish} form={form} initialValues={{ organizationName: "" }}>
       <Row type="flex" justify="center" style={{ padding: "20px 50px" }} align="middle" gutter={8}>
         <Col span={18}>
           <FormItem
-            validateStatus={organizationNameError ? "error" : ""}
-            help={organizationNameError || ""}
             style={{ width: "100%" }}
             rules={[{ required: true, message: "Please enter an organization name!" }]}
             name="organizationName"
@@ -260,7 +252,6 @@ const OrganizationForm = ({ onComplete }) => {
               icon={<PlusOutlined />}
               style={{ width: "100%" }}
               htmlType="submit"
-              disabled={hasErrors(getFieldsError())}
             >
               Create
             </Button>

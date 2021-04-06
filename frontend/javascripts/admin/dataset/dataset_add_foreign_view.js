@@ -86,12 +86,12 @@ function DatasetAddForeignView({ onAdded }: Props) {
             hasFeedback
             rules={[
               {
-                validator: (rule, value, callback) => {
+                validator: (rule, value) => {
                   const dataSet = parseLine(form.getFieldsValue().foreignDatasetText);
 
                   return _.isString(value) && isValidDataSet(dataSet)
-                    ? callback()
-                    : callback(`${Messages["dataset.import.invalid_fields"]}`);
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(`${Messages["dataset.import.invalid_fields"]}`));
                 },
               },
             ]}

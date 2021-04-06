@@ -319,17 +319,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     }
   };
 
-  isVolumeTaskType = (taskTypeId: string): boolean => {
-    const selectedTaskType = this.state.taskTypes.find(taskType => taskType.id === taskTypeId);
-    return selectedTaskType != null ? selectedTaskType.tracingType === "volume" : false;
-  };
-
-  onChangeTaskType = (taskTypeId: string) => {
-    if (this.isVolumeTaskType(taskTypeId)) {
-      this.setState({ specificationType: SpecificationEnum.Manual });
-    }
-  };
-
   renderSpecification() {
     const isEditingMode = this.props.taskId != null;
 
@@ -366,10 +355,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               rules={[
                 { required: true },
                 {
-                  validator: async (rule, value, callback) => {
+                  validator: async (rule, value) => {
                     const newestForm = this.formRef.current;
                     if (!newestForm || value === "") {
-                      return callback();
+                      return Promise.resolve();
                     }
 
                     const annotationResponse =
@@ -388,7 +377,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       newestForm.setFieldsValue({
                         dataSet: annotationResponse.dataSetName,
                       });
-                      return callback();
+                      return Promise.resolve();
                     }
 
                     const taskResponse = await tryToAwaitPromise(
@@ -403,11 +392,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       newestForm.setFieldsValue({
                         dataSet: taskResponse.dataSet,
                       });
-                      return callback();
+                      return Promise.resolve();
                     }
 
                     newestForm.setFieldsValue({ dataSet: null });
-                    return callback("Invalid base annotation id.");
+                    return Promise.reject(new Error("Invalid base annotation id."));
                   },
                 },
               ]}
@@ -483,7 +472,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   style={fullWidth}
                   autoFocus
                   disabled={isEditingMode}
-                  onChange={this.onChangeTaskType}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   options={this.state.taskTypes.map((taskType: APITaskType) => ({
                     value: taskType.id,

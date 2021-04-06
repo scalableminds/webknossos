@@ -42,16 +42,16 @@ export function DatasetNameFormItem({ activeUser }: { activeUser: ?APIUser }) {
         { min: 3 },
         { pattern: /[0-9a-zA-Z_-]+$/ },
         {
-          validator: async (_rule, value, callback) => {
+          validator: async (_rule, value) => {
             if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
             const reasons = await isDatasetNameValid({
               name: value,
               owningOrganization: activeUser.organization,
             });
             if (reasons != null) {
-              callback(reasons);
+              Promise.reject(reasons);
             } else {
-              callback();
+              Promise.resolve();
             }
           },
         },

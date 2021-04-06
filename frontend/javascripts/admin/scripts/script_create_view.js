@@ -56,7 +56,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
     form.setFieldsValue(defaultFormValues);
   }
 
-  const handleSubmit = async formValues => {
+  const onFinish = async formValues => {
     if (scriptId) {
       await updateScript(scriptId, formValues);
     } else {
@@ -69,7 +69,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
   return (
     <div className="container">
       <Card title={<h3>{titlePrefix} Script</h3>}>
-        <Form onFinish={handleSubmit} layout="vertical" form={form}>
+        <Form onFinish={onFinish} layout="vertical" form={form}>
           <FormItem
             name="name"
             label="Script Name"

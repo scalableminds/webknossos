@@ -349,4 +349,5 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The project report page could not be refreshed. Please try to reload the page.",
   planned_maintenance:
     "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
+  "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
 };

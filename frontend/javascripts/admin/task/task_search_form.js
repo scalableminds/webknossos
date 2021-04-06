@@ -7,6 +7,8 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 
+import messages from "messages";
+import Toast from "libs/toast";
 import type { APIUser, APIProject, APITaskType } from "types/api_flow_types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
@@ -83,10 +85,11 @@ class TaskSearchForm extends React.Component<Props, State> {
     if (_.size(fieldValues) > 0) {
       const form = this.formRef.current;
       if (!form) {
+        Toast.info(messages["ui.no_form_active"]);
         return;
       }
       form.setFieldsValue(fieldValues);
-      this.handleSearchFormSubmit(false);
+      this.handleSearchFormFinish(false);
     }
   }
 
@@ -104,52 +107,67 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.setState({ users, projects, taskTypes, isFetchingData: false });
   }
 
-  handleFormSubmit = (isRandom: boolean, onFinishCallback: QueryObject => Promise<void>) => {
-    const form = this.formRef.current;
-    if (!form) {
-      return;
+  handleFormFinish = (
+    isRandom: boolean,
+    onFinishCallback: QueryObject => Promise<void>,
+    formValues: Object,
+  ) => {
+    const queryObject: QueryObject = {};
+
+    if (formValues.taskId) {
+      const taskIds = formValues.taskId
+        .trim()
+        .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
+        .split(",")
+        .filter((taskId: string) => taskId.length > 0);
+
+      queryObject.ids = taskIds;
     }
 
-    form.validateFields().then(formValues => {
-      const queryObject: QueryObject = {};
+    if (formValues.taskTypeId) {
+      queryObject.taskType = formValues.taskTypeId;
+    }
 
-      if (formValues.taskId) {
-        const taskIds = formValues.taskId
-          .trim()
-          .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
-          .split(",")
-          .filter((taskId: string) => taskId.length > 0);
+    if (formValues.userId) {
+      queryObject.user = formValues.userId;
+    }
 
-        queryObject.ids = taskIds;
-      }
+    if (formValues.projectName) {
+      queryObject.project = formValues.projectName;
+    }
 
-      if (formValues.taskTypeId) {
-        queryObject.taskType = formValues.taskTypeId;
-      }
+    if (isRandom) {
+      queryObject.random = isRandom;
+    }
 
-      if (formValues.userId) {
-        queryObject.user = formValues.userId;
-      }
+    this.setState({ fieldValues: formValues });
+    onFinishCallback(queryObject);
+  };
 
-      if (formValues.projectName) {
-        queryObject.project = formValues.projectName;
-      }
+  handleSearchFormFinish = (isRandom: boolean, formValues?: Object) => {
+    if (formValues) {
+      this.handleFormFinish(isRandom, this.props.onChange, formValues);
+    }
 
-      if (isRandom) {
-        queryObject.random = isRandom;
-      }
-
-      this.setState({ fieldValues: formValues });
-      onFinishCallback(queryObject);
+    const form = this.formRef.current;
+    if (!form) {
+      Toast.info(messages["ui.no_form_active"]);
+      return;
+    }
+    form.validateFields().then(validFormValues => {
+      this.handleFormFinish(isRandom, this.props.onChange, validFormValues);
     });
   };
 
-  handleSearchFormSubmit = (isRandom: boolean) => {
-    this.handleFormSubmit(isRandom, this.props.onChange);
-  };
-
   handleDownloadAllTasks = () => {
-    this.handleFormSubmit(false, this.props.onDownloadAllTasks);
+    const form = this.formRef.current;
+    if (!form) {
+      Toast.info(messages["ui.no_form_active"]);
+      return;
+    }
+    form
+      .validateFields()
+      .then(formValues => this.handleFormFinish(false, this.props.onDownloadAllTasks, formValues));
   };
 
   handleReset = () => {
@@ -170,7 +188,10 @@ class TaskSearchForm extends React.Component<Props, State> {
     };
 
     return (
-      <Form onFinish={() => this.handleSearchFormSubmit(false)} ref={this.formRef}>
+      <Form
+        onFinish={formValues => this.handleSearchFormFinish(false, formValues)}
+        ref={this.formRef}
+      >
         <Row gutter={40}>
           <Col span={12}>
             <FormItem name="taskId" {...formItemLayout} label="Task Id">
@@ -234,7 +255,7 @@ class TaskSearchForm extends React.Component<Props, State> {
           <Col span={24} style={{ textAlign: "right" }}>
             <Dropdown
               overlay={
-                <Menu onClick={() => this.handleSearchFormSubmit(true)}>
+                <Menu onClick={() => this.handleSearchFormFinish(true)}>
                   <Menu.Item key="1">
                     <RetweetOutlined />
                     Show random subset

@@ -16,6 +16,7 @@ import {
   Spin,
 } from "antd";
 import { FormInstance } from "antd/lib/form";
+import Toast from "libs/toast";
 import React from "react";
 import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
@@ -255,6 +256,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   async applyDefaults() {
     const form = this.formRef.current;
     if (!form) {
+      Toast.info(messages["ui.no_form_active"]);
       return;
     }
     if (this.props.taskId) {
@@ -281,7 +283,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     };
   }
 
-  handleSubmit = async formValues => {
+  onFinish = async formValues => {
     formValues.boundingBox = formValues.boundingBox
       ? this.transformBoundingBox(formValues.boundingBox)
       : null;
@@ -458,7 +460,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         <Spin spinning={this.state.isUploading}>
           <Card title={<h3>{titleLabel}</h3>}>
             <Form
-              onFinish={this.handleSubmit}
+              onFinish={this.onFinish}
               layout="vertical"
               ref={this.formRef}
               initialValues={{ editPosition: [0, 0, 0], editRotation: [0, 0, 0] }}

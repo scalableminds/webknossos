@@ -9,7 +9,6 @@ type Props = {
 
 type State = {
   expandedColumns: Array<string>,
-  ignoreNextUpdate: boolean,
 };
 
 /** This is a wrapper for large tables that have fixed columns and support expanded rows.
@@ -20,7 +19,6 @@ type State = {
 export default class FixedExpandableTable extends React.PureComponent<Props, State> {
   state = {
     expandedColumns: [],
-    ignoreNextUpdate: false,
   };
 
   render() {
@@ -42,17 +40,9 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
         scroll={{ x: "max-content" }}
         className="large-table"
         onExpandedRowsChange={(selectedRows: Array<string>) => {
-          // Disabling the fixed feature of a table causes antd to automatically collapse all expanded rows.
-          // We need to ignore this update to keep the rows expanded.
-          // This case always occurs when the user expands a row when there were previously no expanded rows.
-          if (this.state.ignoreNextUpdate) {
-            this.setState({ ignoreNextUpdate: false });
-            return;
-          }
-          this.setState(prevState => ({
+          this.setState({
             expandedColumns: selectedRows,
-            ignoreNextUpdate: prevState.expandedColumns.length === 0 && selectedRows.length > 0,
-          }));
+          });
         }}
       >
         {columnsWithAdjustedFixedProp}

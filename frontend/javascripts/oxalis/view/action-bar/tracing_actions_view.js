@@ -522,7 +522,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const menu = <Menu>{elements}</Menu>;
     return (
       <div>
-        <Space size={0}>
+        <div className="antd-legacy-group">
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
@@ -532,7 +532,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
               <DownOutlined />
             </ButtonComponent>
           </Dropdown>
-        </Space>
+        </div>
       </div>
     );
   }

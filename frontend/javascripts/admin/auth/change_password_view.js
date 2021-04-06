@@ -37,8 +37,13 @@ function ChangePasswordView({ history }: Props) {
 
   function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
-    if (value && otherFieldValue && value !== otherFieldValue) {
-      return Promise.reject(new Error(messages["auth.registration_password_mismatch"]));
+    if (value && otherFieldValue) {
+      if (value !== otherFieldValue) {
+        return Promise.reject(new Error(messages["auth.registration_password_mismatch"]));
+      } else if (form.getFieldError(otherPasswordFieldKey).length > 0) {
+        // If the other password field still has errors, revalidate it.
+        form.validateFields([otherPasswordFieldKey]);
+      }
     }
     return Promise.resolve();
   }
@@ -64,14 +69,8 @@ function ChangePasswordView({ history }: Props) {
             hasFeedback
             name={["password", "password1"]}
             rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
+              { required: true, message: messages["auth.reset_new_password"] },
+              { min: 8, message: messages["auth.registration_password_length"] },
               {
                 validator: (_, value) =>
                   checkPasswordsAreMatching(value, ["password", "password2"]),
@@ -87,14 +86,8 @@ function ChangePasswordView({ history }: Props) {
             hasFeedback
             name={["password", "password2"]}
             rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password2"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
+              { required: true, message: messages["auth.reset_new_password2"] },
+              { min: 8, message: messages["auth.registration_password_length"] },
               {
                 validator: (_, value) =>
                   checkPasswordsAreMatching(value, ["password", "password1"]),

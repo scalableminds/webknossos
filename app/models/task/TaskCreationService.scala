@@ -2,7 +2,7 @@ package models.task
 
 import java.io.File
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
@@ -21,7 +21,7 @@ import models.annotation.{
   TracingStoreRpcClient,
   TracingStoreService
 }
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO}
 import models.user.{User, UserExperiencesDAO, UserService, UserTeamRolesDAO}
@@ -47,6 +47,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     userExperiencesDAO: UserExperiencesDAO,
                                     scriptDAO: ScriptDAO,
                                     dataSetDAO: DataSetDAO,
+                                    dataSetService: DataSetService,
                                     tracingStoreService: TracingStoreService,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -211,6 +212,27 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                             boxContainer.fileName,
                                             boxContainer.description)
     }
+
+  // Used in createFromFiles. For all volume tracings that have an empty bounding box, reset it to the dataset bounding box
+  def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer],
+                                     organizationId: ObjectId): Fox[List[TracingBoxContainer]] =
+    Fox.serialCombined(tracingBoxes) { tracingBox: TracingBoxContainer =>
+      tracingBox.volume match {
+        case Full(v) =>
+          for { volumeAdapted <- addVolumeFallbackBoundingBox(v._1, organizationId) } yield
+            tracingBox.copy(volume = Full(volumeAdapted, v._2))
+        case _ => Fox.successful(tracingBox)
+      }
+    }
+
+  // Used in createFromFiles. Called once per requested task if volume tracing is passed
+  private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
+    if (volume.boundingBox.isEmpty) {
+      for {
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(volume.dataSetName, organizationId)(GlobalAccessContext)
+        dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+      } yield volume.copy(boundingBox = dataSource.boundingBox)
+    } else Fox.successful(volume)
 
   // Used in createFromFiles. Called once per requested task
   private def buildFullParamsFromFilesForSingleTask(

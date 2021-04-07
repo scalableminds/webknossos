@@ -1,6 +1,7 @@
 // @flow
-import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
-import React from "react";
+import { Form, Input, Button, Card, Upload, Spin, Progress, Divider } from "antd";
+import React, { useState } from "react";
+import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
 
 import type { APITask } from "types/api_flow_types";
@@ -15,16 +16,6 @@ const FormItem = Form.Item;
 const { TextArea } = Input;
 
 const NUM_TASKS_PER_BATCH = 100;
-
-type Props = {
-  form: Object,
-};
-
-type State = {
-  isUploading: boolean,
-  tasksCount: number,
-  tasksProcessed: number,
-};
 
 export type NewTask = {|
   +boundingBox: ?BoundingBoxObject,
@@ -57,19 +48,20 @@ export type TaskCreationResponseContainer = {
   warnings: Array<string>,
 };
 
-class TaskCreateBulkView extends React.PureComponent<Props, State> {
-  state = {
-    isUploading: false,
-    tasksCount: 0,
-    tasksProcessed: 0,
-  };
-
-  isValidData(bulkText): boolean {
-    const tasks = this.parseText(bulkText);
-    return tasks.every(this.isValidTask);
+export const normFile = (e: Array<File> | { fileList: Array<File> }) => {
+  if (Array.isArray(e)) {
+    return e;
   }
+  return e && e.fileList;
+};
 
-  isValidTask(task: NewTask): boolean {
+function TaskCreateBulkView() {
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [tasksCount, setTasksCount] = useState<number>(0);
+  const [tasksProcessed, setTasksProcessed] = useState<number>(0);
+  const [form] = Form.useForm();
+
+  function isValidTask(task: NewTask): boolean {
     const { boundingBox } = task;
 
     if (
@@ -98,26 +90,25 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     ) {
       return false;
     }
-
     return true;
   }
 
-  splitToLines(string: string): Array<string> {
+  function splitToLines(string: string): Array<string> {
     return string.trim().split("\n");
   }
 
-  splitToWords(string: string): Array<string> {
+  function splitToWords(string: string): Array<string> {
     return string.split(",").map(word => word.trim());
   }
 
-  parseText(bulkText: string): Array<NewTask> {
-    return this.splitToLines(bulkText)
-      .map(line => this.parseLine(line))
+  function parseText(bulkText: string): Array<NewTask> {
+    return splitToLines(bulkText)
+      .map(line => parseLine(line))
       .filter(task => task !== null);
   }
 
-  parseLine(line: string): NewTask {
-    const words = this.splitToWords(line);
+  function parseLine(line: string): NewTask {
+    const words = splitToWords(line);
 
     const dataSet = words[0];
     const taskTypeId = words[1];
@@ -173,46 +164,42 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     };
   }
 
-  async readCSVFile(csvFile: File): Promise<Array<NewTask>> {
+  async function readCSVFile(csvFile: File): Promise<Array<NewTask>> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       // $FlowIssue[incompatible-call] reader.result is wrongfully typed as ArrayBuffer
-      reader.onload = () => resolve(this.parseText(reader.result));
+      reader.onload = () => resolve(parseText(reader.result));
       reader.onerror = reject;
       reader.readAsText(csvFile);
     });
   }
 
-  handleSubmit = async e => {
-    e.preventDefault();
-
+  const handleSubmit = async formValues => {
     let tasks;
-    const formValues = this.props.form.getFieldsValue();
-
-    if (formValues.csvFile) {
+    if (formValues.csvFile && formValues.csvFile.length) {
       // Workaround: Antd replaces file objects in the formValues with a wrapper file
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
       formValues.csvFile = formValues.csvFile.map(wrapperFile => wrapperFile.originFileObj);
 
-      tasks = await this.readCSVFile(formValues.csvFile[0]);
+      tasks = await readCSVFile(formValues.csvFile[0]);
     } else {
-      tasks = this.parseText(formValues.bulkText);
+      tasks = parseText(formValues.bulkText);
     }
-    if (tasks.every(this.isValidTask)) {
-      this.batchUpload(tasks);
+    if (tasks.every(isValidTask)) {
+      batchUpload(tasks);
     } else {
-      const invalidTaskIndices = this.getInvalidTaskIndices(tasks);
+      const invalidTaskIndices = getInvalidTaskIndices(tasks);
       Toast.error(
         `${Messages["task.bulk_create_invalid"]} Error in line ${invalidTaskIndices.join(", ")}`,
       );
     }
   };
 
-  getInvalidTaskIndices(tasks: Array<NewTask>): Array<number> {
+  function getInvalidTaskIndices(tasks: Array<NewTask>): Array<number> {
     // returns the index / line number of an invalidly parsed task
     // returned indicies start at 1 for easier matching by non-CS people
-    const isValidTasks = tasks.map(this.isValidTask);
+    const isValidTasks = tasks.map(isValidTask);
     const invalidTasks: Array<number> = [];
     return isValidTasks.reduce((result, isValid: boolean, i: number) => {
       if (!isValid) {
@@ -222,13 +209,11 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     }, invalidTasks);
   }
 
-  async batchUpload(tasks: Array<NewTask>) {
+  async function batchUpload(tasks: Array<NewTask>) {
     // upload the tasks in batches to save the server from dying
-    this.setState({
-      isUploading: true,
-      tasksCount: tasks.length,
-      tasksProcessed: 0,
-    });
+    setIsUploading(true);
+    setTasksCount(tasks.length);
+    setTasksProcessed(0);
 
     try {
       let taskResponses = [];
@@ -240,121 +225,115 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
         const response = await createTasks(subArray);
         taskResponses = taskResponses.concat(response.tasks);
         warnings = warnings.concat(response.warnings);
-        this.setState({
-          tasksProcessed: i + NUM_TASKS_PER_BATCH,
-        });
+        setTasksProcessed(i + NUM_TASKS_PER_BATCH);
       }
 
       handleTaskCreationResponse({ tasks: taskResponses, warnings: _.uniq(warnings) });
     } finally {
-      this.setState({
-        isUploading: false,
-      });
+      setIsUploading(false);
     }
   }
 
-  normFile = e => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e && e.fileList;
-  };
+  return (
+    <div className="container" style={{ paddingTop: 20 }}>
+      <Spin spinning={isUploading}>
+        <Card title={<h3>Bulk Create Tasks</h3>}>
+          <p>
+            Specify each new task on a separate line as comma seperated values (CSV) in the
+            following format:
+            <br />
+            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
+            minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
+            depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
+            baseAnnotationId]
+            <br />
+            If you want to define some (but not all) of the optional values, please list all
+            optional values and use an empty value for the ones you do not want to set (e.g.,
+            someValue,,someOtherValue if you want to omit the second value). If you do not want to
+            define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
+          </p>
+          <Form onFinish={handleSubmit} layout="vertical" form={form}>
+            <FormItem
+              name="bulkText"
+              label="Bulk Task Specification"
+              hasFeedback
+              rules={[
+                ({ getFieldValue }) => ({
+                  validator: (rule, value) => {
+                    // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
+                    const csvFile = getFieldValue("csvFile");
+                    if (csvFile && csvFile.length) {
+                      return Promise.resolve();
+                    }
 
-  render() {
-    const { getFieldDecorator } = this.props.form;
+                    const tasks = parseText(value);
+                    const invalidTaskIndices = getInvalidTaskIndices(tasks);
 
-    return (
-      <div className="container" style={{ paddingTop: 20 }}>
-        <Spin spinning={this.state.isUploading}>
-          <Card title={<h3>Bulk Create Tasks</h3>}>
-            <p>
-              Specify each new task on a separate line as comma seperated values (CSV) in the
-              following format:
-              <br />
-              <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
-              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,{" "}
-              minZ, width, height, depth, <a href="/projects">project</a> [,{" "}
-              <a href="/scripts">scriptId</a>, baseAnnotationId]
-              <br />
-              If you want to define some (but not all) of the optional values, please list all
-              optional values and use an empty value for the ones you do not want to set (e.g.,
-              someValue,,someOtherValue if you want to omit the second value). If you do not want to
-              define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
-            </p>
-            <Form onSubmit={this.handleSubmit} layout="vertical">
-              <FormItem label="Bulk Task Specification" hasFeedback>
-                {getFieldDecorator("bulkText", {
-                  rules: [
-                    {
-                      validator: (rule, value, callback) => {
-                        const tasks = this.parseText(value);
-                        const invalidTaskIndices = this.getInvalidTaskIndices(tasks);
+                    return _.isString(value) && invalidTaskIndices.length === 0
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            `${
+                              Messages["task.bulk_create_invalid"]
+                            } Error in line ${invalidTaskIndices.join(", ")}`,
+                          ),
+                        );
+                  },
+                }),
+              ]}
+            >
+              <TextArea
+                className="input-monospace"
+                placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+                autoSize={{ minRows: 6 }}
+                style={{
+                  fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                }}
+              />
+            </FormItem>
+            <Divider>Alternatively Upload a CSV File</Divider>
+            <FormItem
+              hasFeedback
+              name="csvFile"
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+            >
+              <Upload.Dragger
+                accept=".csv,.txt"
+                name="csvFile"
+                beforeUpload={file => {
+                  form.setFieldsValue({ csvFile: [file] });
+                  return false;
+                }}
+              >
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                <p>
+                  Upload a CSV file with your task specification in the same format as mentioned
+                  above.
+                </p>
+              </Upload.Dragger>
+            </FormItem>
+            <FormItem>
+              {isUploading ? (
+                <Progress
+                  percent={parseInt((tasksProcessed / tasksCount) * 100)}
+                  showInfo
+                  status="active"
+                />
+              ) : null}
 
-                        return _.isString(value) && invalidTaskIndices.length === 0
-                          ? callback()
-                          : callback(
-                              `${
-                                Messages["task.bulk_create_invalid"]
-                              } Error in line ${invalidTaskIndices.join(", ")}`,
-                            );
-                      },
-                    },
-                  ],
-                })(
-                  <TextArea
-                    className="input-monospace"
-                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
-                    autoSize={{ minRows: 6 }}
-                    style={{
-                      fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-                    }}
-                  />,
-                )}
-              </FormItem>
-              <Divider>Alternatively Upload a CSV File</Divider>
-              <FormItem hasFeedback>
-                {getFieldDecorator("csvFile", {
-                  valuePropName: "fileList",
-                  getValueFromEvent: this.normFile,
-                })(
-                  <Upload.Dragger
-                    accept=".csv,.txt"
-                    name="csvFile"
-                    beforeUpload={file => {
-                      this.props.form.setFieldsValue({ csvFile: [file] });
-                      return false;
-                    }}
-                  >
-                    <p className="ant-upload-drag-icon">
-                      <Icon type="inbox" />
-                    </p>
-                    <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
-                    <p>
-                      Upload a CSV file with your task specification in the same format as mentioned
-                      above.
-                    </p>
-                  </Upload.Dragger>,
-                )}
-              </FormItem>
-              <FormItem>
-                {this.state.isUploading ? (
-                  <Progress
-                    percent={parseInt((this.state.tasksProcessed / this.state.tasksCount) * 100)}
-                    showInfo
-                    status="active"
-                  />
-                ) : null}
-
-                <Button type="primary" htmlType="submit">
-                  Create Task
-                </Button>
-              </FormItem>
-            </Form>
-          </Card>
-        </Spin>
-      </div>
-    );
-  }
+              <Button type="primary" htmlType="submit">
+                Create Task
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
+      </Spin>
+    </div>
+  );
 }
 
-export default Form.create()(TaskCreateBulkView);
+export default TaskCreateBulkView;

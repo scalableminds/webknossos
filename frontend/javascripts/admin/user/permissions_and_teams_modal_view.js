@@ -1,5 +1,6 @@
 // @flow
-import { Modal, Button, Radio, Col, Row, Checkbox, Divider, Icon } from "antd";
+import { Modal, Button, Radio, Col, Row, Checkbox, Divider } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -237,7 +238,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon type="info-circle" />
+            <InfoCircleOutlined />
           </a>
         </h4>
         {!isUserAdmin && !onlyEditingSingleUser ? (
@@ -251,49 +252,24 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
             onChange={this.handlePermissionChanged}
             disabled={!isUserAdmin}
           >
-            <table>
-              <tbody>
-                <tr>
-                  <td>
-                    <Radio value={PERMISSIONS.admin} />
-                  </td>
-                  <td style={roleStyle}>Admin</td>
-                </tr>
-                <tr>
-                  <td />
-                  <td style={explanationStyle}>
-                    Full administration capabilities. View and edit all datasets.
-                  </td>
-                </tr>
-                <tr />
-                <tr>
-                  <td>
-                    <Radio value={PERMISSIONS.datasetManager} />
-                  </td>
-                  <td style={roleStyle}>Dataset Manager</td>
-                </tr>
-                <tr>
-                  <td />
-                  <td style={explanationStyle}>
-                    No administration capabilities. View and edit all datasets.
-                  </td>
-                </tr>
-                <tr />
-                <tr>
-                  <td>
-                    <Radio value={PERMISSIONS.member} />
-                  </td>
-                  <td style={roleStyle}>Member</td>
-                </tr>
-                <tr>
-                  <td />
-                  <td style={explanationStyle}>
-                    No special permissions. Dataset access based on team memberships.
-                  </td>
-                </tr>
-                <tr />
-              </tbody>
-            </table>
+            <Radio value={PERMISSIONS.admin}>
+              <div style={roleStyle}>Admin</div>
+              <div style={explanationStyle}>
+                Full administration capabilities. View and edit all datasets.
+              </div>
+            </Radio>
+            <Radio value={PERMISSIONS.datasetManager}>
+              <div style={roleStyle}>Dataset Manager</div>
+              <div style={explanationStyle}>
+                No administration capabilities. View and edit all datasets.
+              </div>
+            </Radio>
+            <Radio value={PERMISSIONS.member}>
+              <div style={roleStyle}>Member</div>
+              <div style={explanationStyle}>
+                No special permissions. Dataset access based on team memberships.
+              </div>
+            </Radio>
           </Radio.Group>
         ) : (
           <p>{messages["users.multiple_selected_users"]}</p>

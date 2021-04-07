@@ -1,5 +1,6 @@
 // @flow
-import { Icon, Alert, Form, Tooltip, Modal } from "antd";
+import { Alert, Form, Tooltip, Modal } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -30,7 +31,7 @@ export const FormItemWithInfo = ({
       <span>
         {label}{" "}
         <Tooltip title={info}>
-          <Icon type="info-circle-o" style={{ color: "gray" }} />
+          <InfoCircleOutlined style={{ color: "gray" }} />
         </Tooltip>
       </span>
     }
@@ -88,21 +89,11 @@ export const confirmAsync = (opts: Object): Promise<boolean> =>
     });
   });
 
-const gatherErrors = obj => {
-  const gatherErrorsRecursive = any => {
-    if (Array.isArray(any)) {
-      return any.map(gatherErrorsRecursive);
-    } else if (any instanceof Error) {
-      return any;
-    } else if (typeof any === "string") {
-      return any;
-    } else if (any instanceof Object) {
-      return Object.keys(any).map(key => gatherErrorsRecursive(any[key]));
-    } else {
-      return null;
-    }
-  };
-  return _.compact(_.flattenDeep([gatherErrorsRecursive(obj)]));
+type FormErrors = Array<{ name: Array<string>, errors: Array<string> }>;
+export const hasFormError = (formErrors: FormErrors, key: string): boolean => {
+  // Find the number of errors for form fields whose path starts with key
+  const errorsForKey = formErrors.map(errorObj =>
+    errorObj.name[0] === key ? errorObj.errors.length : 0,
+  );
+  return _.sum(errorsForKey) > 0;
 };
-
-export const hasFormError = (obj: Object) => obj && !_.isEmpty(gatherErrors(obj));

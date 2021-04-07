@@ -64,7 +64,7 @@ const ImportDeleteComponent = ({ datasetId, history }: Props) => {
       <p>Deleting a dataset on disk cannot be undone. Please be certain.</p>
       <p>Note that annotations for the dataset stay downloadable and the name stays reserved.</p>
       <p>Only admins are allowed to delete datasets.</p>
-      <Button type="danger" loading={isDeleting} onClick={handleDeleteButtonClicked}>
+      <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
         Delete Dataset on Disk
       </Button>
     </div>

@@ -1,5 +1,6 @@
 // @flow
-import { Tabs, Icon } from "antd";
+import { BarsOutlined, ScheduleOutlined } from "@ant-design/icons";
+import { Tabs } from "antd";
 import React from "react";
 
 import TaskCreateBulkView from "admin/task/task_create_bulk_view";
@@ -12,7 +13,7 @@ const TaskCreateView = () => (
     <TabPane
       tab={
         <span>
-          <Icon type="schedule" />
+          <ScheduleOutlined />
           Create Task
         </span>
       }
@@ -23,7 +24,7 @@ const TaskCreateView = () => (
     <TabPane
       tab={
         <span>
-          <Icon type="bars" />
+          <BarsOutlined />
           Bulk Creation
         </span>
       }

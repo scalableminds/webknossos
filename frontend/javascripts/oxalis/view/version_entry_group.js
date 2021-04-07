@@ -6,6 +6,7 @@ import _ from "lodash";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import VersionEntry from "oxalis/view/version_entry";
+import { CaretDownOutlined, CaretRightOutlined } from "@ant-design/icons";
 
 type Props = {
   batches: Array<APIUpdateActionBatch>,
@@ -60,7 +61,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
             <Avatar
               size="small"
               style={{ backgroundColor: "transparent", color: "rgba(0, 0, 0, 0.65)" }}
-              icon={this.state.expanded ? "caret-down" : "caret-right"}
+              icon={this.state.expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
             />
           }
         />

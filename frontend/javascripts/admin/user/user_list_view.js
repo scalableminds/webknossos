@@ -353,7 +353,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             style={{ marginTop: 30, marginBotton: 30 }}
             onChange={(pagination, filters) =>
               this.setState({
-                activationFilter: filters.isActive,
+                activationFilter: filters.isActive != null ? filters.isActive : [],
               })
             }
             onRow={user => ({ onClick: () => this.onSelectUserRow(user.id) })}

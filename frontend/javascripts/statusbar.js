@@ -1,5 +1,5 @@
 // @flow
-import { Layout, Col, Tooltip } from "antd";
+import { Col, Row, Tooltip } from "antd";
 import _ from "lodash";
 import { connect } from "react-redux";
 import React from "react";
@@ -13,11 +13,9 @@ import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
-const { Footer } = Layout;
 
 type OwnProps = {||};
 type StateProps = {|
-  isInAnnotationView: boolean,
   activeResolution: Vector3,
   activeViewport: OrthoView,
   mousePosition: ?Vector2,
@@ -27,24 +25,13 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 type State = {||};
 
-export const statusbarHeight = 18;
+const borderToggleButtonMargin = 35;
 
 const statusbarStyle: Object = {
-  padding: 0,
-  overflowX: "auto",
-  position: "fixed",
-  bottom: 0,
-  width: "100%",
-  zIndex: 1000,
-  fontSize: 10,
-  height: statusbarHeight,
-  display: "flex",
-  alignItems: "center",
-  color: "rgba(255, 255, 255, 0.67)",
-  background: "#001529",
-  whiteSpace: "nowrap",
-  paddingLeft: 5,
+  marginLeft: borderToggleButtonMargin,
+  marginRight: borderToggleButtonMargin,
 };
+
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
 class Statusbar extends React.PureComponent<Props, State> {
@@ -101,6 +88,8 @@ class Statusbar extends React.PureComponent<Props, State> {
       globalMousePosition = calculateGlobalPos({ x, y });
     }
 
+    const spaceBetweenItems = 20;
+
     const segmentationLayerName = this.getSegmentationLayer().name;
     const cube = this.getSegmentationCube();
 
@@ -112,11 +101,10 @@ class Statusbar extends React.PureComponent<Props, State> {
     const getIdForPos = (pos, usableZoomStep) =>
       pos && cube.getDataValue(pos, null, usableZoomStep);
 
-    const collapseAllNavItems = this.props.isInAnnotationView;
     const getPosString = pos => V3.floor(pos).join(",");
     return (
-      <Footer style={statusbarStyle} className={collapseAllNavItems ? "collapsed-nav-footer" : ""}>
-        <Col span={6}>
+      <Row style={statusbarStyle}>
+        <Col span={10} style={{ textAlign: "left" }}>
           <Tooltip
             title={
               <div>
@@ -134,17 +122,17 @@ class Statusbar extends React.PureComponent<Props, State> {
               {activeResolution.join("-")}{" "}
             </span>
           </Tooltip>
-          <span style={{ paddingLeft: 30 }}>
+          <span style={{ marginLeft: spaceBetweenItems }}>
             Cell:{" "}
             {globalMousePosition
               ? getIdForPos(globalMousePosition, renderedZoomStepForMousePosition)
               : "-"}
           </span>
-          <span style={{ paddingLeft: 30 }}>
+          <span style={{ marginLeft: spaceBetweenItems }}>
             Pos: [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
           </span>
         </Col>
-        <Col span={12}>
+        <Col span={14} style={{ textAlign: "right" }}>
           <span>
             <img
               key="move-1"
@@ -155,7 +143,7 @@ class Statusbar extends React.PureComponent<Props, State> {
             />
             Move
           </span>
-          <span style={{ paddingLeft: 30 }}>
+          <span style={{ marginLeft: spaceBetweenItems }}>
             <img
               key="move-1"
               className="keyboard-mouse-icon"
@@ -165,8 +153,20 @@ class Statusbar extends React.PureComponent<Props, State> {
             />
             Move along 3rd axis
           </span>
+          <span
+            key="zoom"
+            className="keyboard-key-icon-small"
+            style={{ marginLeft: spaceBetweenItems }}
+          >
+            I
+          </span>{" "}
+          /{" "}
+          <span key="zoom" className="keyboard-key-icon-small">
+            O
+          </span>{" "}
+          Zoom in/out
           {activeViewport === OrthoViews.TDView && (
-            <span style={{ paddingLeft: 30 }}>
+            <span style={{ marginLeft: spaceBetweenItems }}>
               <img
                 key="move-1"
                 className="keyboard-mouse-icon"
@@ -177,18 +177,13 @@ class Statusbar extends React.PureComponent<Props, State> {
               Rotate 3D View
             </span>
           )}
-          <span key="zoom" className="bordered" style={{ paddingLeft: 30 }}>
-            I/O
-          </span>{" "}
-          Zoom in/out
         </Col>
-      </Footer>
+      </Row>
     );
   }
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  isInAnnotationView: state.uiInformation.isInAnnotationView,
   activeResolution: getCurrentResolution(state),
   mousePosition: state.temporaryConfiguration.mousePosition,
   activeViewport: state.viewModeData.plane.activeViewport,

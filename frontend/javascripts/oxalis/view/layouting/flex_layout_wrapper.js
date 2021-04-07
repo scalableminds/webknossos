@@ -3,7 +3,7 @@ import * as React from "react";
 import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import Store, { type OxalisState, type AnnotationType, type BorderOpenStatus } from "oxalis/store";
+import Store, { type OxalisState, type BorderOpenStatus } from "oxalis/store";
 import { Layout } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
@@ -23,6 +23,7 @@ import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
+import Statusbar from "statusbar";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
 import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
@@ -41,11 +42,6 @@ const MIN_BORDER_WIDTH = 300;
 type StateProps = {|
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
-  datasetName: string,
-  organization: string,
-  annotationType: AnnotationType,
-  name: string,
-  taskId: ?string,
 |};
 
 type OwnProps = {|
@@ -375,10 +371,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { datasetName, organization, annotationType, name, taskId } = this.props;
-    const tracingName = name || "[untitled]";
-    let footerText = `${datasetName} | ${organization} | `;
-    footerText += taskId != null ? `${annotationType} : ${taskId}` : tracingName;
     const { model } = this.state;
     return (
       <React.Fragment>
@@ -395,7 +387,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         <Footer className="footer">
           <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
           <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
-          {footerText}
+          <Statusbar />
         </Footer>
       </React.Fragment>
     );
@@ -406,11 +398,6 @@ function mapStateToProps(state: OxalisState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
-    datasetName: state.dataset.name,
-    organization: state.dataset.owningOrganization,
-    annotationType: state.tracing.annotationType,
-    name: state.tracing.name,
-    taskId: state.task != null ? state.task.id : null,
   };
 }
 function mapDispatchToProps(dispatch: Dispatch<*>) {

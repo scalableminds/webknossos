@@ -10,7 +10,6 @@ import _ from "lodash";
 
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
-import { statusbarHeight } from "statusbar";
 import Constants, {
   type ControlMode,
   ControlModeEnum,
@@ -65,7 +64,7 @@ export const getGroundTruthLayoutRect = () => {
   }
   // The -1s are a workaround, since otherwise scrollbars
   // would appear from time to time
-  return { width: width - 1, height: height - 1 - statusbarHeight };
+  return { width: width - 1, height: height - 1 };
 };
 
 function Tab(name: string, id: string, component: string): TabNode {

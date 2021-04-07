@@ -40,7 +40,6 @@ import {
   getLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
-import Statusbar from "statusbar";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
@@ -363,7 +362,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 </Sider>
               ) : null}
             </Layout>
-            <Statusbar />
           </Layout>
         </NmlUploadZoneContainer>
       </React.Fragment>

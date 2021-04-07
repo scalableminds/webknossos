@@ -58,10 +58,10 @@ body {
 .ant-layout-header {
   .logo {
     background: url(/assets/images/oxalis.svg) 15px center no-repeat;
-    padding-left: 43px;
-    height: 40px;
+    padding-left: 46px;
+    height: 48px;
     float: left;
-    margin-top: 6px;
+    margin-top: 1px;
     background-size: 20px 20px;
     filter: invert(1);
   }
@@ -197,6 +197,7 @@ td.nowrap * {
 }
 
 // make sure text and icons have space between them
+.anticon,
 i {
   margin-right: 5px;
 }
@@ -209,7 +210,9 @@ button.narrow {
 }
 
 .withoutIconMargin i,
-i.withoutIconMargin {
+i.withoutIconMargin,
+.withoutIconMargin .anticon,
+.anticon.withoutIconMargin {
   // Allow to undo the above margin-right of 5px
   margin-right: 0 !important;
 }
@@ -436,7 +439,7 @@ img.img-50 {
   }
 }
 
-.highlight-togglable-button {
+.highlight-togglable-button.ant-btn {
   background-color: #2373c1 !important;
   &:not(:hover) {
     border-color: #2098de !important;

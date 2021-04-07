@@ -1,6 +1,7 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Tabs, Icon, Modal, Button } from "antd";
+import { Tabs, Modal, Button } from "antd";
+import { BarsOutlined, DatabaseOutlined, GoogleOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
@@ -113,7 +114,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
         <TabPane
           tab={
             <span>
-              <Icon type="upload" />
+              <UploadOutlined />
               Upload Dataset
             </span>
           }
@@ -125,7 +126,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           <TabPane
             tab={
               <span>
-                <Icon type="google" />
+                <GoogleOutlined />
                 Add Neuroglancer Dataset
               </span>
             }
@@ -141,7 +142,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           <TabPane
             tab={
               <span>
-                <Icon type="database" />
+                <DatabaseOutlined />
                 Add BossDB Dataset
               </span>
             }
@@ -154,7 +155,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           <TabPane
             tab={
               <span>
-                <Icon type="bars" />
+                <BarsOutlined />
                 Add Foreign Dataset
               </span>
             }

@@ -35,6 +35,7 @@
   "rules": {
     "array-callback-return": "warn",
     "class-methods-use-this": "off",
+    "no-constant-condition": "error",
     "eslint-comments/disable-enable-pair": ["error", { "allowWholeFile": true }],
     "eslint-comments/no-unused-disable": "error",
     "flowtype/no-types-missing-file-annotation": "off",

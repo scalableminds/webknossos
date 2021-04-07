@@ -1,5 +1,6 @@
 // @flow
-import { Alert, Button, Form, Icon, Input } from "antd";
+import { Alert, Button, Form, Input } from "antd";
+import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import React from "react";
 
@@ -12,34 +13,23 @@ import messages from "messages";
 const FormItem = Form.Item;
 const { Password } = Input;
 
-type PropsWithoutForm = {|
+type Props = {|
   layout: "horizontal" | "vertical" | "inline",
   onLoggedIn?: () => mixed,
   hideFooter?: boolean,
   style?: Object,
 |};
 
-type Props = {|
-  ...PropsWithoutForm,
-  form: Object,
-|};
-
-function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
-  const { getFieldDecorator } = form;
+function LoginForm({ layout, onLoggedIn, hideFooter, style }: Props) {
+  const [form] = Form.useForm();
   const linkStyle = layout === "inline" ? { paddingLeft: 10 } : null;
 
-  const handleSubmit = (event: SyntheticInputEvent<>) => {
-    event.preventDefault();
-
-    form.validateFields(async (err: ?Object, formValues: Object) => {
-      if (!err) {
-        const user = await loginUser(formValues);
-        Store.dispatch(setActiveUserAction(user));
-        if (onLoggedIn) {
-          onLoggedIn();
-        }
-      }
-    });
+  const onFinish = async formValues => {
+    const user = await loginUser(formValues);
+    Store.dispatch(setActiveUserAction(user));
+    if (onLoggedIn) {
+      onLoggedIn();
+    }
   };
 
   const iframeWarning = getIsInIframe() ? (
@@ -62,27 +52,29 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
   return (
     <div style={style}>
       {iframeWarning}
-      <Form onSubmit={handleSubmit} layout={layout}>
-        <FormItem>
-          {getFieldDecorator("email", {
-            rules: [
-              {
-                required: true,
-                type: "email",
-                message: messages["auth.registration_email_input"],
-              },
-            ],
-          })(<Input prefix={<Icon type="mail" style={{ fontSize: 13 }} />} placeholder="Email" />)}
+      <Form onFinish={onFinish} layout={layout} form={form}>
+        <FormItem
+          name="email"
+          rules={[
+            {
+              required: true,
+              type: "email",
+              message: messages["auth.registration_email_input"],
+            },
+          ]}
+        >
+          <Input prefix={<MailOutlined style={{ fontSize: 13 }} />} placeholder="Email" />
         </FormItem>
-        <FormItem>
-          {getFieldDecorator("password", {
-            rules: [{ required: true, message: messages["auth.registration_password_input"] }],
-          })(
-            <Password
-              prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
-              placeholder="Password"
-            />,
-          )}
+        <FormItem
+          name="password"
+          rules={[
+            {
+              required: true,
+              message: messages["auth.registration_password_input"],
+            },
+          ]}
+        >
+          <Password prefix={<LockOutlined style={{ fontSize: 13 }} />} placeholder="Password" />
         </FormItem>
         <FormItem>
           <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
@@ -109,7 +101,4 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
   );
 }
 
-const LoginFormWithForm: React$ComponentType<PropsWithoutForm> = Form.create({
-  fieldNameProp: "name",
-})(LoginForm);
-export default LoginFormWithForm;
+export default LoginForm;

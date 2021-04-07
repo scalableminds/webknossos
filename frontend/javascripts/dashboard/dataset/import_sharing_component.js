@@ -17,6 +17,7 @@ import window from "libs/window";
 
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 
+import { CopyOutlined, RetweetOutlined } from "@ant-design/icons";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
@@ -26,21 +27,21 @@ type Props = {
 };
 
 export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTeams }: Props) {
-  const { getFieldDecorator } = form;
   const [sharingToken, setSharingToken] = useState("");
   const [dataSet, setDataSet] = useState<?APIDataset>(null);
   const allowedTeamsComponent = (
     <FormItemWithInfo
+      name={["dataset", "allowedTeams"]}
       label="Teams allowed to access this dataset"
       info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
       validateStatus={hasNoAllowedTeams ? "warning" : "success"}
       help={
         hasNoAllowedTeams
-          ? "If this field is empty, only administrators and dataset managers will be able to view this dataset."
+          ? "If this field is empty, only administrators, dataset managers and users with a valid sharing link (see below) will be able to view this dataset."
           : null
       }
     >
-      {getFieldDecorator("dataset.allowedTeams", {})(<TeamSelectionComponent mode="multiple" />)}
+      <TeamSelectionComponent mode="multiple" />
     </FormItemWithInfo>
   );
 
@@ -76,6 +77,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   }
 
   function getSharingLink() {
+    if (!form) return null;
     const doesNeedToken = !form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${sharingToken}`;
     return `${window.location.origin}/datasets/${datasetId.owningOrganization}/${
@@ -91,15 +93,15 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
     } else return "";
   }
 
-  return (
+  return form ? (
     <div>
       <FormItemWithInfo
+        name={["dataset", "isPublic"]}
         label="Visibility"
         info="Make your dataset public, for anonymous/unregistered users to access your dataset."
+        valuePropName="checked"
       >
-        {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
-          <Checkbox>Make dataset publicly accessible </Checkbox>,
-        )}
+        <Checkbox>Make dataset publicly accessible </Checkbox>
       </FormItemWithInfo>
       {allowedTeamsComponent}
       <FormItemWithInfo
@@ -119,7 +121,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
             style={{ width: "80%" }}
             readOnly
           />
-          <Button onClick={handleCopySharingLink} style={{ width: "10%" }} icon="copy">
+          <Button onClick={handleCopySharingLink} style={{ width: "10%" }} icon={<CopyOutlined />}>
             Copy
           </Button>
           {!form.getFieldValue("dataset.isPublic") && (
@@ -134,7 +136,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
               <AsyncButton
                 onClick={handleRevokeSharingLink}
                 style={{ width: "10%" }}
-                icon="retweet"
+                icon={<RetweetOutlined />}
               >
                 Renew
               </AsyncButton>
@@ -154,12 +156,16 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
               style={{ width: "80%" }}
               readOnly
             />
-            <Button onClick={handleCopyAllowUsageCode} style={{ width: "10%" }} icon="copy">
+            <Button
+              onClick={handleCopyAllowUsageCode}
+              style={{ width: "10%" }}
+              icon={<CopyOutlined />}
+            >
               Copy
             </Button>
           </Input.Group>
         </FormItemWithInfo>
       )}
     </div>
-  );
+  ) : null;
 }

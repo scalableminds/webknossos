@@ -22,6 +22,7 @@ Store.subscribe(() => {
 });
 
 async function go() {
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     await waitForUpdate.promise();
     await Utils.animationFrame(MAXIMUM_STORE_UPDATE_DELAY);

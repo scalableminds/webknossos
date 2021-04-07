@@ -11,23 +11,23 @@ validator.addSchema(DatasourceSchema, "/");
 validator.addSchema(UserSettingsSchema, "/");
 validator.addSchema(ViewConfigurationSchema, "/");
 
-const validateWithSchema = (type: string) => (rule: Object, value: string, callback: Function) => {
+const validateWithSchema = (type: string) => (rule: Object, value: string) => {
   try {
     const json = JSON.parse(value);
     const result = validator.validate(json, {
       $ref: `#/definitions/${type}`,
     });
     if (result.valid) {
-      callback();
+      return Promise.resolve();
     } else {
-      callback(
+      return Promise.reject(
         new Error(
           `Invalid schema: ${result.errors.map(e => `${e.property} ${e.message}`).join("; ")}`,
         ),
       );
     }
   } catch (e) {
-    callback(new Error(`Invalid JSON: ${e.message}`));
+    return Promise.reject(new Error(`Invalid JSON: ${e.message}`));
   }
 };
 
@@ -62,6 +62,6 @@ export const isValidJSON = (json: string) => {
 };
 
 export function syncValidator<T>(validateValueFn: T => boolean, errMessage: string) {
-  return (rule: Object, value: T, callback: Function) =>
-    validateValueFn(value) ? callback() : callback(new Error(errMessage));
+  return (rule: Object, value: T) =>
+    validateValueFn(value) ? Promise.resolve() : Promise.reject(new Error(errMessage));
 }

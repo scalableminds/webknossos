@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
-import { Menu, notification, Icon, Divider, Tooltip } from "antd";
+import { Menu, notification, Divider, Tooltip } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
 import type { Vector3, OrthoView } from "oxalis/constants";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
@@ -52,8 +53,7 @@ type NoNodeContextMenuProps = {| ...Props |};
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
     <Tooltip title={title}>
-      <Icon
-        type="copy"
+      <CopyOutlined
         style={{ margin: "0 0 0 5px" }}
         onClick={async () => {
           await Clipboard.copy(value);

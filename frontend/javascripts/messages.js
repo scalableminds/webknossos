@@ -63,7 +63,7 @@ export default {
   offline:
     "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
     "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
@@ -349,4 +349,5 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The project report page could not be refreshed. Please try to reload the page.",
   planned_maintenance:
     "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
+  "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
 };

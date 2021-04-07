@@ -1,5 +1,5 @@
 // @flow
-import { Button, Radio, Tooltip, Badge } from "antd";
+import { Radio, Tooltip, Badge, Space } from "antd";
 import { useSelector } from "react-redux";
 import React, { useEffect } from "react";
 
@@ -415,7 +415,7 @@ export default function VolumeActionsView() {
         <OverwriteModeSwitch isControlPressed={isControlPressed} />
       ) : null}
 
-      <Button.Group style={{ marginLeft: 12 }}>
+      <Space size={0} style={{ marginLeft: 12 }}>
         <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
           <Tooltip
             title={`Create a new Cell ID – The active cell id is ${unmappedActiveCellId}${mappedIdInfo}.`}
@@ -425,7 +425,7 @@ export default function VolumeActionsView() {
             </ButtonComponent>
           </Tooltip>
         </Badge>
-      </Button.Group>
+      </Space>
     </div>
   );
 }

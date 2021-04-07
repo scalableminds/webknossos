@@ -827,17 +827,17 @@ export async function getJobs(): Promise<Array<APIJob>> {
   }));
 }
 
-export async function startCubingJob(
+export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,
   scale: Vector3,
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
-    `/api/jobs/run/cubing/${organizationName}/${datasetName}?scale=${scale.toString()}`,
+    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}`,
   );
 }
 
-export async function startTiffExportJob(
+export async function startExportTiffJob(
   datasetName: string,
   organizationName: string,
   bbox: Vector6,
@@ -849,7 +849,7 @@ export async function startTiffExportJob(
   const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
   const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
   return Request.receiveJSON(
-    `/api/jobs/run/tiffExport/${organizationName}/${datasetName}?bbox=${bbox.join(
+    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
     )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}`,
   );
@@ -1394,6 +1394,23 @@ export function getOrganization(organizationName: string): Promise<APIOrganizati
 
 export async function checkAnyOrganizationExists(): Promise<boolean> {
   return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
+}
+
+export async function deleteOrganization(organizationName: string): Promise<void> {
+  return Request.triggerRequest(`/api/organizations/${organizationName}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateOrganization(
+  organizationName: string,
+  displayName: string,
+  newUserMailingList: string,
+): Promise<APIOrganization> {
+  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationName}`, {
+    method: "PATCH",
+    data: { displayName, newUserMailingList },
+  });
 }
 
 // ### BuildInfo webknossos

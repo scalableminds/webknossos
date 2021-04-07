@@ -178,12 +178,14 @@ GET           /statistics/webknossos                                           c
 GET           /statistics/users                                                controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 #Organizations
-GET           /organizations                                                   controllers.OrganizationController.list
-GET           /organizations/byInvite/:inviteToken                             controllers.OrganizationController.getByInvite(inviteToken: String)
-GET           /organizations/default                                           controllers.OrganizationController.getDefault
-GET           /organizationsIsEmpty                                            controllers.OrganizationController.organizationsIsEmpty
-GET           /organizations/:organizationName                                 controllers.OrganizationController.get(organizationName: String)
-GET           /operatorData                                                    controllers.OrganizationController.getOperatorData
+GET           /organizations                                                    controllers.OrganizationController.list
+GET           /organizations/byInvite/:inviteToken                              controllers.OrganizationController.getByInvite(inviteToken: String)
+GET           /organizations/default                                            controllers.OrganizationController.getDefault
+GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
+GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)
+PATCH         /organizations/:organizationName                                  controllers.OrganizationController.update(organizationName: String)
+DELETE        /organizations/:organizationName                                  controllers.OrganizationController.delete(organizationName: String)
+GET           /operatorData                                                     controllers.OrganizationController.getOperatorData
 
 #Timelogging
 GET           /time/allusers/:year/:month                                      controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
@@ -194,5 +196,5 @@ GET           /time/user/:userId                                               c
 GET           /jobs                                                            controllers.JobsController.list
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
-GET           /jobs/run/cubing/:organizationName/:dataSetName                  controllers.JobsController.runCubingJob(organizationName: String, dataSetName: String, scale: String)
-GET           /jobs/run/tiffExport/:organizationName/:dataSetName              controllers.JobsController.runTiffExportJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String])
+GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String)
+GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String])

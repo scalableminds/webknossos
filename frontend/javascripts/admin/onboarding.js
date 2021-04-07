@@ -1,6 +1,18 @@
 // @flow
-
-import { Form, Modal, Input, Button, Row, Col, Steps, Icon, Card, AutoComplete } from "antd";
+import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete } from "antd";
+import {
+  CloudUploadOutlined,
+  TeamOutlined,
+  UserOutlined,
+  FileAddOutlined,
+  RocketOutlined,
+  ClockCircleOutlined,
+  PlayCircleOutlined,
+  PaperClipOutlined,
+  CodeOutlined,
+  CustomerServiceOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React, { type Node } from "react";
@@ -46,7 +58,7 @@ function StepHeader({
   children: Node,
 }) {
   return (
-    <div style={{}}>
+    <div>
       <div style={{ paddingBottom: 32, textAlign: "center" }}>
         {icon}
         <p style={{ fontSize: 24, margin: "14px 0 0" }}>{header}</p>
@@ -209,41 +221,27 @@ export class InviteUsersModal extends React.Component<
   }
 }
 
-const OrganizationForm = Form.create()(({ form, onComplete }) => {
-  const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
-  const handleSubmit = e => {
-    e.preventDefault();
-    form.validateFields((err, values) => {
-      if (!err) {
-        onComplete(values.organizationName);
-      }
-    });
+const OrganizationForm = ({ onComplete }) => {
+  const [form] = Form.useForm();
+  const onFinish = values => {
+    onComplete(values.organizationName);
   };
-  const { getFieldDecorator, getFieldsError, getFieldError, isFieldTouched } = form;
-
-  const organizationNameError =
-    isFieldTouched("organizationName") && getFieldError("organizationName");
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onFinish={onFinish} form={form} initialValues={{ organizationName: "" }}>
       <Row type="flex" justify="center" style={{ padding: "20px 50px" }} align="middle" gutter={8}>
         <Col span={18}>
           <FormItem
-            validateStatus={organizationNameError ? "error" : ""}
-            help={organizationNameError || ""}
             style={{ width: "100%" }}
+            rules={[{ required: true, message: "Please enter an organization name!" }]}
+            name="organizationName"
           >
-            {getFieldDecorator("organizationName", {
-              rules: [{ required: true, message: "Please enter an organization name!" }],
-              initialValue: "",
-            })(
-              <AutoComplete
-                size="large"
-                dataSource={[]}
-                defaultActiveFirstOption={false}
-                placeholder="Your organization name"
-              />,
-            )}
+            <AutoComplete
+              size="large"
+              options={[]}
+              defaultActiveFirstOption={false}
+              placeholder="Your organization name"
+            />
           </FormItem>
         </Col>
         <Col span={6}>
@@ -251,10 +249,9 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
             <Button
               size="large"
               type="primary"
-              icon="plus"
+              icon={<PlusOutlined />}
               style={{ width: "100%" }}
               htmlType="submit"
-              disabled={hasErrors(getFieldsError())}
             >
               Create
             </Button>
@@ -263,7 +260,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
       </Row>
     </Form>
   );
-});
+};
 
 class OnboardingView extends React.PureComponent<Props, State> {
   state = {
@@ -337,7 +334,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           more.
         </React.Fragment>
       }
-      icon={<Icon type="user" className="icon-big" />}
+      icon={<UserOutlined className="icon-big" />}
     >
       <RegistrationForm
         hidePrivacyStatement
@@ -368,7 +365,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           Upload your dataset via drag and drop or add one of our sample datasets.
         </React.Fragment>
       }
-      icon={<Icon type="file-add" className="icon-big" />}
+      icon={<FileAddOutlined className="icon-big" />}
     >
       {this.state.isDatasetUploadModalVisible && (
         <Modal
@@ -414,7 +411,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <Row type="flex" gutter={16} justify="center" align="bottom">
         <OptionCard
           header="Upload Dataset"
-          icon={<Icon type="cloud-upload-o" />}
+          icon={<CloudUploadOutlined />}
           action={
             <Button onClick={() => this.setState({ isDatasetUploadModalVisible: true })}>
               Upload your dataset
@@ -429,7 +426,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         </OptionCard>
         <OptionCard
           header="Add Sample Dataset"
-          icon={<Icon type="rocket" />}
+          icon={<RocketOutlined />}
           action={
             <Button type="primary" onClick={this.renderSampleDatasetsModal}>
               Add Sample Dataset
@@ -442,7 +439,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         </OptionCard>
         <OptionCard
           header="Skip"
-          icon={<Icon type="clock-circle-o" />}
+          icon={<ClockCircleOutlined />}
           action={
             <a href="#" onClick={this.advanceStep}>
               Skip this step
@@ -467,19 +464,19 @@ class OnboardingView extends React.PureComponent<Props, State> {
           the features and concepts of webKnossos.
         </React.Fragment>
       }
-      icon={<Icon type="rocket" className="icon-big" />}
+      icon={<RocketOutlined className="icon-big" />}
     >
       <Row type="flex" gutter={50}>
-        <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
+        <FeatureCard header="Data Annotation" icon={<PlayCircleOutlined />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
           <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
         </FeatureCard>
-        <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
+        <FeatureCard header="More Datasets" icon={<CloudUploadOutlined />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
           <a href="https://docs.webknossos.org/reference/data_formats">Learn more</a> about the
           formats and upload processes webKnossos supports.
         </FeatureCard>
-        <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
+        <FeatureCard header="User & Team Management" icon={<TeamOutlined />}>
           <a onClick={() => this.setState({ isInviteModalVisible: true })} href="#">
             Invite users
           </a>{" "}
@@ -490,19 +487,22 @@ class OnboardingView extends React.PureComponent<Props, State> {
           and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
           permissions and task assignments.
         </FeatureCard>
-        <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
+        <FeatureCard header="Project Management" icon={<PaperClipOutlined />}>
           Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
           accomplish your research goals.{" "}
           <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
         </FeatureCard>
-        <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
+        <FeatureCard header="Scripting" icon={<CodeOutlined />}>
           Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
           <a href="/scripts">scriptable workflows</a>.{" "}
           <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
         </FeatureCard>
-        <FeatureCard header="Contact Us" icon={<Icon type="customer-service" />}>
-          <a href="mailto:hello@scalableminds.com">Get in touch</a>, if you have any further
-          questions or need help getting started.
+        <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
+          <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}
+          <a href="https://forum.image.sc/tag/webknossos" target="_blank" rel="noopener noreferrer">
+            write a post in the forum
+          </a>
+          , if you have any further questions or need help getting started.
         </FeatureCard>
       </Row>
     </StepHeader>

@@ -1,7 +1,18 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
+import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CopyOutlined,
+  InfoCircleOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+  UserAddOutlined,
+  UserDeleteOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import * as React from "react";
@@ -180,7 +191,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           title="The displayed users are inactive and were created in the past 14 days."
           placement="right"
         >
-          <Icon type="info-circle" />
+          <InfoCircleOutlined />
         </Tooltip>
       </React.Fragment>
     );
@@ -191,7 +202,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
               <a href="#" onClick={() => this.activateUser(user)}>
-                <Icon type="user-add" />
+                <UserAddOutlined />
                 Activate User
               </a>
             </Col>
@@ -205,7 +216,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
         message={newInactiveUsersHeader}
         description={newInactiveUsersList}
         type="info"
-        iconType="user"
+        icon={<UserOutlined />}
         showIcon
         style={{ marginTop: 20 }}
       />
@@ -282,7 +293,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           ) : null}
           <Button
             onClick={() => this.setState({ isTeamRoleModalVisible: true })}
-            icon="team"
+            icon={<TeamOutlined />}
             disabled={!hasRowsSelected}
             style={marginRight}
           >
@@ -292,14 +303,14 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             onClick={() => {
               this.setState({ isExperienceModalVisible: true });
             }}
-            icon="trophy"
+            icon={<TrophyOutlined />}
             disabled={!hasRowsSelected}
             style={marginRight}
           >
             Change Experience
           </Button>
           <Button
-            icon="user-add"
+            icon={<UserAddOutlined />}
             style={marginRight}
             onClick={() => this.setState({ isInviteModalVisible: true })}
           >
@@ -342,7 +353,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             style={{ marginTop: 30, marginBotton: 30 }}
             onChange={(pagination, filters) =>
               this.setState({
-                activationFilter: filters.isActive,
+                activationFilter: filters.isActive != null ? filters.isActive : [],
               })
             }
             onRow={user => ({ onClick: () => this.onSelectUserRow(user.id) })}
@@ -417,8 +428,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                     >
                       {domain} : {value}
                     </span>
-                    <Icon
-                      type="copy"
+                    <CopyOutlined
                       style={{ margin: "0 0 0 5px" }}
                       onClick={async () => {
                         await Clipboard.copy(domain);
@@ -477,10 +487,13 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               filtered
               filteredValue={this.state.activationFilter}
               onFilter={(value: boolean, user: APIUser) => user.isActive.toString() === value}
-              render={isActive => {
-                const icon = isActive ? "check-circle-o" : "close-circle-o";
-                return <Icon type={icon} style={{ fontSize: 20 }} />;
-              }}
+              render={isActive =>
+                isActive ? (
+                  <CheckCircleOutlined style={{ fontSize: 20 }} />
+                ) : (
+                  <CloseCircleOutlined style={{ fontSize: 20 }} />
+                )
+              }
             />
             <Column
               title="Actions"
@@ -490,7 +503,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               render={(__, user: APIUser) => (
                 <span>
                   <Link to={`/users/${user.id}/details`}>
-                    <Icon type="user" />
+                    <UserOutlined />
                     Show Annotations
                   </Link>
                   <br />
@@ -498,13 +511,13 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                   user.isActive ? (
                     this.props.activeUser.isAdmin ? (
                       <a href="#" onClick={() => this.deactivateUser(user)}>
-                        <Icon type="user-delete" />
+                        <UserDeleteOutlined />
                         Deactivate User
                       </a>
                     ) : null
                   ) : (
                     <a href="#" onClick={() => this.activateUser(user)}>
-                      <Icon type="user-add" />
+                      <UserAddOutlined />
                       Activate User
                     </a>
                   )}

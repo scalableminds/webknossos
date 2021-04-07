@@ -1,5 +1,18 @@
 // @flow
 import { Avatar, Button, List } from "antd";
+import {
+  ArrowsAltOutlined,
+  BackwardOutlined,
+  CodepenOutlined,
+  CodeSandboxOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PictureOutlined,
+  PlusOutlined,
+  RocketOutlined,
+  ShrinkOutlined,
+} from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import classNames from "classnames";
@@ -20,7 +33,7 @@ import type {
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
-type Description = { description: string, type: string };
+type Description = { description: string, icon: React.Node };
 
 // The order in which the update actions are added to this object,
 // determines the order in which update actions are checked
@@ -29,83 +42,83 @@ type Description = { description: string, type: string };
 const descriptionFns = {
   importVolumeTracing: (): Description => ({
     description: "Imported a volume tracing.",
-    type: "plus",
+    icon: <PlusOutlined />,
   }),
   createTracing: (): Description => ({
     description: "Created the annotation.",
-    type: "rocket",
+    icon: <RocketOutlined />,
   }),
   updateUserBoundingBoxes: (): Description => ({
     description: "Updated a user bounding box.",
-    type: "codepen",
+    icon: <CodepenOutlined />,
   }),
   removeFallbackLayer: (): Description => ({
     description: "Removed the segmentation fallback layer.",
-    type: "delete",
+    icon: <DeleteOutlined />,
   }),
   deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({
     description:
       count > 1 ? `Deleted ${count} trees.` : `Deleted the tree with id ${action.value.id}.`,
-    type: "delete",
+    icon: <DeleteOutlined />,
   }),
   deleteNode: (action: DeleteNodeUpdateAction, count: number): Description => ({
     description:
       count > 1 ? `Deleted ${count} nodes.` : `Deleted the node with id ${action.value.nodeId}.`,
-    type: "delete",
+    icon: <DeleteOutlined />,
   }),
   revertToVersion: (action: RevertToVersionUpdateAction): Description => ({
     description: `Reverted to version ${action.value.sourceVersion}.`,
-    type: "backward",
+    icon: <BackwardOutlined />,
   }),
   createNode: (action: CreateNodeUpdateAction): Description => ({
     description: `Created the node with id ${action.value.id}.`,
-    type: "plus",
+    icon: <PlusOutlined />,
   }),
   createTree: (action: UpdateTreeUpdateAction): Description => ({
     description: `Created the tree with id ${action.value.id}.`,
-    type: "plus",
+    icon: <PlusOutlined />,
   }),
   updateTreeGroups: (): Description => ({
     description: "Updated the tree groups.",
-    type: "edit",
+    icon: <EditOutlined />,
   }),
   updateTree: (action: UpdateTreeUpdateAction): Description => ({
     description: `Updated the tree with id ${action.value.id}.`,
-    type: "edit",
+    icon: <EditOutlined />,
   }),
   updateBucket: (): Description => ({
     description: "Updated the segmentation.",
-    type: "picture",
+    icon: <PictureOutlined />,
   }),
   updateNode: (action: UpdateNodeUpdateAction): Description => ({
     description: `Updated the node with id ${action.value.id}.`,
-    type: "edit",
+    icon: <EditOutlined />,
   }),
   updateTreeVisibility: (action: UpdateTreeVisibilityUpdateAction): Description => ({
     description: `Updated the visibility of the tree with id ${action.value.treeId}.`,
-    type: "eye",
+    icon: <EyeOutlined />,
   }),
   updateTreeGroupVisibility: (action: UpdateTreeGroupVisibilityUpdateAction): Description => ({
     description: `Updated the visibility of the group with id ${
       action.value.treeGroupId != null ? action.value.treeGroupId : MISSING_GROUP_ID
     }.`,
-    type: "eye",
+    icon: <EyeOutlined />,
   }),
   createEdge: (action: CreateEdgeUpdateAction): Description => ({
     description: `Created the edge between node ${action.value.source} and node ${
       action.value.target
     }.`,
-    type: "plus",
+    icon: <PlusOutlined />,
   }),
   deleteEdge: (action: DeleteEdgeUpdateAction): Description => ({
     description: `Deleted the edge between node ${action.value.source} and node ${
       action.value.target
     }.`,
-    type: "delete",
+    icon: <DeleteOutlined />,
   }),
   updateTdCamera: (): Description => ({
     description: "Updated the 3D view.",
-    type: "code-sandbox",
+    icon: <CodeSandboxOutlined />,
   }),
 };
 
@@ -145,12 +158,12 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
         description: `Split off a tree with ${
           firstMoveTreeComponentUA.value.nodeIds.length
         } nodes.`,
-        type: "arrows-alt",
+        icon: <ArrowsAltOutlined />,
       };
     } else if (groupedUpdateActions.deleteTree != null) {
       return {
         description: `Merged a tree with ${firstMoveTreeComponentUA.value.nodeIds.length} nodes.`,
-        type: "shrink",
+        icon: <ShrinkOutlined />,
       };
     }
   }
@@ -166,13 +179,13 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
         description: `Added ${createTreeUAs.length} tree${pluralS} and ${
           createNodeUAs.length
         } nodes.`,
-        type: "plus",
+        icon: <PlusOutlined />,
       };
     }
 
     return {
       description: `Added ${createNodeUAs.length} nodes.`,
-      type: "plus",
+      icon: <PlusOutlined />,
     };
   }
 
@@ -186,7 +199,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   // Catch-all for other update actions, currently updateTracing.
   return {
     description: "Modified the annotation.",
-    type: "edit",
+    icon: <EditOutlined />,
   };
 }
 
@@ -226,7 +239,7 @@ export default function VersionEntry({
       {allowUpdate ? "Restore" : "Download"}
     </Button>
   );
-  const { description, type } = getDescriptionForBatch(actions);
+  const { description, icon } = getDescriptionForBatch(actions);
   return (
     <React.Fragment>
       <List.Item
@@ -241,7 +254,7 @@ export default function VersionEntry({
             </React.Fragment>
           }
           onClick={() => onPreviewVersion(version)}
-          avatar={<Avatar size="small" icon={type} />}
+          avatar={<Avatar size="small" icon={icon} />}
           description={
             <React.Fragment>
               {isNewest ? (

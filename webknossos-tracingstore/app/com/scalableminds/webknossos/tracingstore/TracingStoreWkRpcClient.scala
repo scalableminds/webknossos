@@ -13,8 +13,18 @@ import com.scalableminds.webknossos.datastore.services.{
 import com.typesafe.scalalogging.LazyLogging
 import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.libs.ws.WSResponse
+
+case class TracingUpdatesReport(tracingId: String,
+                                timestamps: List[Long],
+                                statistics: Option[JsObject],
+                                significantChangesCount: Int,
+                                viewChangesCount: Int,
+                                userToken: Option[String])
+object TracingUpdatesReport {
+  implicit val jsonFormat: OFormat[TracingUpdatesReport] = Json.format[TracingUpdatesReport]
+}
 
 class TracingStoreWkRpcClient @Inject()(
     rpc: RPC,
@@ -28,17 +38,10 @@ class TracingStoreWkRpcClient @Inject()(
 
   private val webKnossosUrl: String = config.Tracingstore.WebKnossos.uri
 
-  def reportTracingUpdates(tracingId: String,
-                           timestamps: List[Long],
-                           statistics: Option[JsObject],
-                           userToken: Option[String]): Fox[WSResponse] =
+  def reportTracingUpdates(tracingUpdatesReport: TracingUpdatesReport): Fox[WSResponse] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> tracingStoreKey)
-      .post(
-        Json.obj("timestamps" -> timestamps,
-                 "statistics" -> statistics,
-                 "tracingId" -> tracingId,
-                 "userToken" -> userToken))
+      .post(Json.toJson(tracingUpdatesReport))
 
   def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/reportIsosurfaceRequest")

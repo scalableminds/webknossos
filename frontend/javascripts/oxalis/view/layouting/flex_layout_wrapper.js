@@ -37,7 +37,6 @@ import {
 const { Footer } = Layout;
 type Model = typeof FlexLayout.Model;
 type Action = typeof FlexLayout.Action;
-const MIN_BORDER_WIDTH = 300;
 
 type StateProps = {|
   displayScalebars: boolean,

@@ -1,6 +1,7 @@
 // @flow
 
-import { Icon, Select, Switch, Table, Tooltip } from "antd";
+import { Select, Switch, Table, Tooltip } from "antd";
+import { InfoCircleOutlined, WarningOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -202,7 +203,7 @@ class MappingInfoView extends React.Component<Props, State> {
               }
               placement="bottomLeft"
             >
-              <Icon type="info-circle" />
+              <InfoCircleOutlined />
             </Tooltip>
           </span>
         ),
@@ -250,7 +251,7 @@ class MappingInfoView extends React.Component<Props, State> {
         <React.Fragment>
           {title}{" "}
           <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
-            <Icon type="warning" style={{ color: "rgb(255, 155, 85)" }} />
+            <WarningOutlined style={{ color: "rgb(255, 155, 85)" }} />
           </Tooltip>
         </React.Fragment>
       ) : (

@@ -145,10 +145,17 @@ label.ant-checkbox-wrapper {
 
 .collapsed-nav-header {
   .ant-menu-item,
-  .ant-menu-submenu-title {
-    padding: 0 6px;
+  .ant-menu-submenu-title,
+  li.ant-menu-submenu {
+    padding: 0 4px !important;
   }
 
+  .anticon {
+    margin-right: 0;
+  }
+}
+
+.ant-steps-icon {
   .anticon {
     margin-right: 0;
   }
@@ -163,4 +170,30 @@ label.ant-checkbox-wrapper {
 // Make settings background plain white
 .ant-collapse-borderless {
   background-color: white;
+}
+
+// The rules below are needed to have the row expand icon for tables of antd version 3.
+// The icon in version 4 does not work correctly in firefox.
+// See: https://github.com/ant-design/ant-design/issues/29303#issue-804593263
+.ant-table-row-expand-icon::after {
+  display: none;
+}
+.ant-table-row-expand-icon-expanded::before {
+  content: "-";
+}
+.ant-table-row-expand-icon-collapsed::before {
+  content: "+";
+}
+.ant-table-row-expand-icon::before {
+  position: unset;
+  transform: none;
+  background: inherit;
+  height: 100%;
+}
+
+.ant-table-row-expand-icon {
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  line-height: 13px;
 }

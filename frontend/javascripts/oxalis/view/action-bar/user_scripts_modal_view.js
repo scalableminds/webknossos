@@ -11,7 +11,7 @@ import { handleGenericError } from "libs/error_handling";
 import Request from "libs/request";
 import messages from "messages";
 
-const TextArea = Input.TextArea;
+const { TextArea } = Input;
 
 type UserScriptsModalViewProps = {
   onOK: Function,
@@ -113,13 +113,8 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
             style={{ width: 200, marginBottom: 10 }}
             onChange={this.handleScriptChange}
             placeholder="Select an existing user script"
-          >
-            {this.state.scripts.map(script => (
-              <Select.Option key={script.id} value={script.id}>
-                {script.name}
-              </Select.Option>
-            ))}
-          </Select>
+            options={this.state.scripts.map(script => ({ value: script.id, label: script.name }))}
+          />
           <TextArea rows={15} onChange={this.handleCodeChange} value={this.state.code} />
         </Spin>
       </Modal>

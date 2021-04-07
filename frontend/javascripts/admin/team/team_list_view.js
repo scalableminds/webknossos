@@ -1,7 +1,8 @@
 // @flow
 import { PropTypes } from "@scalableminds/prop-types";
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Table, Icon, Spin, Button, Input, Modal, Alert } from "antd";
+import { Table, Spin, Button, Input, Modal, Alert } from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -115,7 +116,7 @@ class TeamListView extends React.PureComponent<Props, State> {
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Button
-              icon="plus"
+              icon={<PlusOutlined />}
               style={marginRight}
               type="primary"
               onClick={() => this.setState({ isTeamCreationModalVisible: true })}
@@ -157,7 +158,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 key="actions"
                 render={(__, script: APITeam) => (
                   <a href="#" onClick={_.partial(this.deleteTeam, script)}>
-                    <Icon type="delete" />
+                    <DeleteOutlined />
                     Delete
                   </a>
                 )}

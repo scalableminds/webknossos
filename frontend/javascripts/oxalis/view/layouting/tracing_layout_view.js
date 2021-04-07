@@ -3,7 +3,8 @@
  * @flow
  */
 
-import { Alert, Icon, Layout, Tooltip } from "antd";
+import { Alert, Layout, Tooltip } from "antd";
+import { SettingOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
@@ -301,8 +302,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                     onClick={this.handleSettingsCollapse}
                     shape="circle"
                   >
-                    <Icon
-                      type="setting"
+                    <SettingOutlined
                       className="withoutIconMargin"
                       style={{
                         display: "flex",
@@ -338,7 +338,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                         message={
                           <span>
                             Dataset is on tmpscratch!{" "}
-                            <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
+                            <WarningFilled style={{ margin: "0 0 0 6px" }} />
                           </span>
                         }
                         type="error"

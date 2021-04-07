@@ -3,7 +3,8 @@ import _ from "lodash";
 
 import { PropTypes } from "@scalableminds/prop-types";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Table, Spin, Input, Icon, Tooltip } from "antd";
+import { Table, Spin, Input, Tooltip } from "antd";
+import { DownOutlined, EyeOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -110,7 +111,7 @@ class JobListView extends React.PureComponent<Props, State> {
               to={`/datasets/${this.props.activeUser.organization}/${job.datasetName}/view`}
               title="View Dataset"
             >
-              <Icon type="eye-o" />
+              <EyeOutlined />
               View
             </Link>
           )}
@@ -121,7 +122,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
             <a href={`/api/jobs/${job.id}/downloadExport/${job.exportFileName}`} title="Download">
-              <Icon type="download" />
+              <DownOutlined />
               Download
             </a>
           )}

@@ -17,6 +17,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 
+import messages from "messages";
 import type { APITeam } from "types/api_flow_types";
 import {
   getEditableTeams,
@@ -125,6 +126,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
     const form = this.formRef.current;
     if (!form) {
+      Toast.info(messages["ui.no_form_active"]);
       return;
     }
     form.setFieldsValue(formValues);
@@ -141,7 +143,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     this.setState({ teams: editableTeams, isFetchingData: false });
   }
 
-  handleSubmit = async formValues => {
+  onFinish = async formValues => {
     if (!this.state.useRecommendedConfiguration) {
       formValues.recommendedConfiguration = null;
     }
@@ -180,7 +182,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       <div className="container" style={{ maxWidth: 1600, margin: "0 auto" }}>
         <Card title={<h3>{`${titlePrefix} Task Type`}</h3>}>
           <Form
-            onFinish={this.handleSubmit}
+            onFinish={this.onFinish}
             layout="vertical"
             ref={this.formRef}
             initialValues={{ tracingType: "skeleton" }}

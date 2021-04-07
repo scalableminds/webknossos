@@ -172,6 +172,8 @@ label.ant-checkbox-wrapper {
   background-color: white;
 }
 
+// The rules below are needed to have the row expand icon for tables of antd version 3.
+// The icon in version 4 does not work correctly in firefox.
 .ant-table-row-expand-icon::after {
   display: none;
 }

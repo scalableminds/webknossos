@@ -83,8 +83,11 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
         onSelect={onSelect}
         onChange={onChange}
         onSearch={this.onSearch}
-        options={options.map(domain => ({ value: domain, label: domain }))}
-      />
+      >
+        {options.map(domain => (
+          <Select.Option key={domain}>{domain}</Select.Option>
+        ))}
+      </Select>
     );
   }
 }

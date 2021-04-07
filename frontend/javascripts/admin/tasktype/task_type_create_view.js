@@ -232,11 +232,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               <TextArea rows={10} />
             </FormItem>
 
-            <FormItem
-              name="tracingType"
-              label="Annotation Type"
-              onChange={() => this.forceUpdate()}
-            >
+            <FormItem name="tracingType" label="Annotation Type">
               <RadioGroup>
                 <Radio value="skeleton" disabled={isEditingMode}>
                   Skeleton

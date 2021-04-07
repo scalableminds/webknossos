@@ -1,5 +1,6 @@
 // @flow
-import { Icon, Input, Tooltip, Popover } from "antd";
+import { Input, Tooltip, Popover } from "antd";
+import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
 import memoizeOne from "memoize-one";
 
@@ -148,7 +149,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                       onClick={this.selectPreviousOption}
                       disabled={!hasMultipleResults}
                     >
-                      <Icon type="up" />
+                      <UpOutlined />
                     </ButtonComponent>
                   </Tooltip>
                   <Tooltip title="Next (enter)">
@@ -157,7 +158,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                       onClick={this.selectNextOption}
                       disabled={!hasMultipleResults}
                     >
-                      <Icon type="down" />
+                      <DownOutlined />
                     </ButtonComponent>
                   </Tooltip>
                 </InputGroup>

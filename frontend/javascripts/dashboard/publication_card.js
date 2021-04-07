@@ -1,5 +1,6 @@
 // @flow
-import { Card, Button, Tooltip, Icon } from "antd";
+import { Card, Button, Tooltip } from "antd";
+import { LinkOutlined } from "@ant-design/icons";
 import Markdown from "react-remarkable";
 import React, { useState } from "react";
 import classNames from "classnames";
@@ -166,8 +167,7 @@ function PublicationCard({ datasets, showDetailedLink }: Props) {
             {showDetailedLink ? (
               <Link to={`/publication/${publication.id}`}>
                 <Tooltip title="Open permalink">
-                  <Icon
-                    type="link"
+                  <LinkOutlined
                     style={{
                       fontSize: 16,
                       color: "#555",

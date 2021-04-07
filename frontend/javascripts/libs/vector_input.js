@@ -121,7 +121,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
   };
 
   render() {
-    const { style, autosize, ...props } = _.omit(this.props, [
+    const { style, autoSize, ...props } = _.omit(this.props, [
       "onChange",
       "value",
       "changeOnlyOnBlur",
@@ -135,7 +135,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
         onBlur={this.handleBlur}
         value={this.state.text}
         style={
-          autosize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
+          autoSize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
         }
         {...props}
       />

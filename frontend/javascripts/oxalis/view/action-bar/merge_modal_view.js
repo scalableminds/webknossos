@@ -210,7 +210,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             message="If you would like to import NML files, please drag and drop them into the annotation view."
           />
 
-          <Form layout="inline">
+          <Form layout="inline" style={{ marginBottom: 8 }}>
             <Form.Item label="Project">
               <Select
                 value={this.state.selectedProject || []}

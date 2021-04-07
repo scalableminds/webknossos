@@ -138,6 +138,14 @@ class ErrorHandling {
       console.error(error);
       this.notify(error);
 
+      if (error.toString() === "Script error.") {
+        // Safari and the newest antd version don't play well together. Often, "ResizeObserver loop completed with undelivered notifications." is triggered
+        // but that message is lost. Instead, a "Script error." is thrown. Since that error is benign and can be frequent, we will
+        // ignore it here to not annoy the user. The message wasn't added to BLACKLISTED_ERROR_MESSAGES so that the error can still be seen via airbrake.
+        // Unfortunately, this workaround can mean that we won't show error toasts about other "real" errors.
+        // Follow-up: https://github.com/scalableminds/webknossos/issues/5372
+        return;
+      }
       Toast.error(
         `An unknown error occurred. Please consider refreshing this page to avoid an inconsistent state. Error message: ${error.toString()}`,
       );

@@ -1,5 +1,6 @@
 // @flow
-import { Badge, Icon, Spin, Table, Card } from "antd";
+import { Badge, Spin, Table, Card } from "antd";
+import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
 import * as React from "react";
 
 import type { APIProjectProgressReport, APITeam } from "types/api_flow_types";
@@ -83,8 +84,8 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
           {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
-          <Icon type="setting" onClick={this.handleOpenSettings} />
-          <Icon type="reload" onClick={this.handleReload} />
+          <SettingOutlined onClick={this.handleOpenSettings} />
+          <ReloadOutlined onClick={this.handleReload} />
         </div>
         <h3>Project Progress</h3>
         {this.state.areSettingsVisible ? (
@@ -111,7 +112,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               sorter={Utils.localeCompareBy(typeHint, project => project.projectName)}
               render={(text, item) => (
                 <span>
-                  {item.paused ? <Icon type="pause-circle-o" /> : null} {text}
+                  {item.paused ? <PauseCircleOutlined /> : null} {text}
                 </span>
               )}
             />

@@ -61,7 +61,8 @@
 
   .ant-btn {
     width: 60px;
-    line-height: 26px;
+    line-height: 23px;
+    vertical-align: baseline;
     & > .colored-dot {
       display: inline-block;
       width: 10px;
@@ -190,6 +191,21 @@
   line-height: normal;
 }
 
+.antd-legacy-group {
+  .ant-btn {
+    border-radius: 0;
+    margin-left: -1px;
+  }
+
+  .ant-btn:first-child {
+    border-radius: 2px 0 0 2px;
+  }
+
+  .ant-btn:last-child {
+    border-radius: 0 2px 2px 0;
+  }
+}
+
 // Dark mode for UI within navbar and footer
 @dark-bg: #383d48;
 @dark-fg: #f1f1f1;
@@ -204,16 +220,25 @@
   color: rgba(255, 255, 255, 0.67) !important;
   background: #001529 !important;
 
+  .ant-select-arrow,
+  .ant-badge-dot {
+    // Fix
+    //   - arrow in select-box
+    //   - dot on create-cell button
+    // which disappears on hover otherwise
+    z-index: 1;
+  }
+
   .ant-btn,
   .ant-input,
   .ant-radio-button-wrapper,
-  .ant-select-selection {
+  .ant-select > .ant-select-selector {
     background-color: @dark-bg;
-    color: @dark-fg;
+    color: @dark-fg !important;
     border-color: @dark-border;
 
     &:hover {
-      border-color: @hover-border;
+      border-color: @hover-border !important;
       z-index: 1;
     }
 
@@ -224,7 +249,7 @@
     &.ant-btn-disabled,
     &.ant-input-disabled,
     &.ant-radio-button-wrapper-disabled,
-    &.ant-select-selection-disabled {
+    &.ant-select-selector-disabled {
       color: fade(@dark-fg, 50%);
       border-color: @dark-border;
 
@@ -239,7 +264,7 @@
   }
 
   .ant-btn-primary {
-    background-color: #2174c1;
+    background-color: #2174c1 !important;
   }
 
   // Radio button
@@ -254,6 +279,10 @@
   .ant-radio-button-wrapper-checked:first-child {
     border-color: @primary-border;
     color: @primary-border;
+
+    &::before {
+      background-color: @primary-border !important;
+    }
   }
 
   .ant-radio-button-wrapper-checked .svg-gray-to-highlighted-blue {

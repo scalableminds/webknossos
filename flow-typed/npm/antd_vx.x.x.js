@@ -42,9 +42,7 @@ declare module "antd" {
   }
   declare class FormItem<P> extends React$Component<P> {}
   declare export class Form<P> extends React$Component<P> {
-    static create: (
-      options?: Object,
-    ) => (React$ComponentType<P>) => React$ComponentType<$Diff<P, { form: any }>>;
+    static useForm: () => [Object];
     static Item: typeof FormItem;
   }
   declare class LayoutContent<P> extends React$Component<P> {}
@@ -124,6 +122,7 @@ declare module "antd" {
     static TreeNode: typeof TreeTreeNode;
   }
   declare export class Tooltip<P> extends React$Component<P> {}
+  declare export class Space<P> extends React$Component<P> {}
   declare class StepsStep<P> extends React$Component<P> {}
   declare export class Steps<P> extends React$Component<P> {
     static Step: typeof StepsStep;

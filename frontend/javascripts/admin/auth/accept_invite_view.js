@@ -1,6 +1,7 @@
 // @flow
 
-import { Button, Icon, Result, Layout, Spin } from "antd";
+import { Button, Result, Layout, Spin } from "antd";
+import { GiftTwoTone } from "@ant-design/icons";
 import { useHistory } from "react-router-dom";
 import { AsyncButton } from "components/async_clickables";
 import React, { useState } from "react";
@@ -103,7 +104,7 @@ export default function AcceptInviteView({
       />
       <Spin spinning={targetOrganization == null}>
         <Result
-          icon={<Icon type="gift" theme="twoTone" />}
+          icon={<GiftTwoTone />}
           title={
             <div>
               You have been invited to the organization &ldquo;{targetOrganizationName}&rdquo;!

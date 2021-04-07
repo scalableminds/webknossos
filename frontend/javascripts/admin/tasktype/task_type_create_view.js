@@ -8,14 +8,16 @@ import {
   Radio,
   Select,
   InputNumber,
-  Icon,
   Tooltip,
   Spin,
 } from "antd";
+import { FormInstance } from "antd/lib/form";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 
+import messages from "messages";
 import type { APITeam } from "types/api_flow_types";
 import {
   getEditableTeams,
@@ -32,12 +34,10 @@ import Toast from "libs/toast";
 const RadioGroup = Radio.Group;
 
 const FormItem = Form.Item;
-const { Option } = Select;
 const { TextArea } = Input;
 
 type Props = {
   taskTypeId?: ?string,
-  form: Object,
   history: RouterHistory,
 };
 
@@ -47,11 +47,13 @@ type State = {
   isFetchingData: boolean,
 };
 
-function isValidMagnification(rule, value, callback) {
+function isValidMagnification(rule, value) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
-    callback();
+    return Promise.resolve();
   } else {
-    callback("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)");
+    return Promise.reject(
+      new Error("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)"),
+    );
   }
 }
 
@@ -79,6 +81,7 @@ function getMagnificationAdaptedSettings(rawSettings) {
 }
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
+  formRef = React.createRef<typeof FormInstance>();
   state = {
     teams: [],
     useRecommendedConfiguration: false,
@@ -121,7 +124,12 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     };
     delete formValues.settings.resolutionRestrictions;
 
-    this.props.form.setFieldsValue(formValues);
+    const form = this.formRef.current;
+    if (!form) {
+      Toast.info(messages["ui.no_form_active"]);
+      return;
+    }
+    form.setFieldsValue(formValues);
 
     if (taskType != null && taskType.recommendedConfiguration != null) {
       // Only "activate" the recommended configuration checkbox if the existing task type contained one
@@ -135,35 +143,30 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     this.setState({ teams: editableTeams, isFetchingData: false });
   }
 
-  handleSubmit = e => {
-    e.preventDefault();
+  onFinish = async formValues => {
     if (!this.state.useRecommendedConfiguration) {
-      this.props.form.setFieldsValue({ recommendedConfiguration: null });
+      formValues.recommendedConfiguration = null;
     }
-    this.props.form.validateFields(async (err, formValues) => {
-      if (err) {
-        Toast.error("Please check the form for errors.");
-        return;
-      }
-      const { recommendedConfiguration, settings: rawSettings, ...rest } = formValues;
 
-      const settings = getMagnificationAdaptedSettings(rawSettings);
-      if (!settings) {
-        return;
-      }
+    const { recommendedConfiguration, settings: rawSettings, ...rest } = formValues;
 
-      const newTaskType = {
-        ...rest,
-        settings,
-        recommendedConfiguration: JSON.parse(recommendedConfiguration),
-      };
-      if (this.props.taskTypeId) {
-        await updateTaskType(this.props.taskTypeId, newTaskType);
-      } else {
-        await createTaskType(newTaskType);
-      }
-      this.props.history.push("/taskTypes");
-    });
+    const settings = getMagnificationAdaptedSettings(rawSettings);
+    if (!settings) {
+      return;
+    }
+
+    const newTaskType = {
+      ...rest,
+      settings,
+      recommendedConfiguration:
+        recommendedConfiguration != null ? JSON.parse(recommendedConfiguration) : null,
+    };
+    if (this.props.taskTypeId) {
+      await updateTaskType(this.props.taskTypeId, newTaskType);
+    } else {
+      await createTaskType(newTaskType);
+    }
+    this.props.history.push("/taskTypes");
   };
 
   onChangeUseRecommendedConfiguration = (useRecommendedConfiguration: boolean) => {
@@ -171,47 +174,45 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { getFieldDecorator } = this.props.form;
+    const form = this.formRef.current;
     const isEditingMode = this.props.taskTypeId != null;
     const titlePrefix = isEditingMode ? "Update" : "Create";
 
     return (
       <div className="container" style={{ maxWidth: 1600, margin: "0 auto" }}>
         <Card title={<h3>{`${titlePrefix} Task Type`}</h3>}>
-          <Form onSubmit={this.handleSubmit} layout="vertical">
-            <FormItem label="Summary" hasFeedback>
-              {getFieldDecorator("summary", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                  { min: 3 },
-                ],
-              })(<Input />)}
+          <Form
+            onFinish={this.onFinish}
+            layout="vertical"
+            ref={this.formRef}
+            initialValues={{ tracingType: "skeleton" }}
+          >
+            <FormItem
+              name="summary"
+              label="Summary"
+              hasFeedback
+              rules={[{ required: true }, { min: 3 }]}
+            >
+              <Input />
             </FormItem>
 
-            <FormItem label="Team" hasFeedback>
-              {getFieldDecorator("teamId", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder="Select a Team"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                >
-                  {this.state.teams.map((team: APITeam) => (
-                    <Option key={team.id} value={team.id}>
-                      {`${team.name}`}
-                    </Option>
-                  ))}
-                </Select>,
-              )}
+            <FormItem name="teamId" label="Team" hasFeedback rules={[{ required: true }]}>
+              <Select
+                allowClear
+                showSearch
+                placeholder="Select a Team"
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                options={this.state.teams.map((team: APITeam) => ({
+                  value: team.id,
+                  label: `${team.name}`,
+                }))}
+              />
             </FormItem>
 
             <FormItem
+              name="description"
               label={
                 <span>
                   Description (
@@ -226,131 +227,140 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 </span>
               }
               hasFeedback
+              rules={[{ required: true }]}
             >
-              {getFieldDecorator("description", {
-                rules: [{ required: true }],
-              })(<TextArea rows={10} />)}
+              <TextArea rows={10} />
             </FormItem>
 
-            <FormItem label="Annotation Type">
-              {getFieldDecorator("tracingType", {
-                initialValue: "skeleton",
-              })(
-                <RadioGroup>
-                  <Radio value="skeleton" disabled={isEditingMode}>
-                    Skeleton
-                  </Radio>
-                  <Radio value="volume" disabled={isEditingMode}>
-                    Volume
-                  </Radio>
-                  <Radio value="hybrid" disabled={isEditingMode}>
-                    Skeleton and Volume
-                  </Radio>
-                </RadioGroup>,
-              )}
+            <FormItem name="tracingType" label="Annotation Type">
+              <RadioGroup>
+                <Radio value="skeleton" disabled={isEditingMode}>
+                  Skeleton
+                </Radio>
+                <Radio value="volume" disabled={isEditingMode}>
+                  Volume
+                </Radio>
+                <Radio value="hybrid" disabled={isEditingMode}>
+                  Skeleton and Volume
+                </Radio>
+              </RadioGroup>
             </FormItem>
 
-            <FormItem label="Allowed Modes" hasFeedback>
-              {getFieldDecorator("settings.allowedModes", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  mode="multiple"
-                  allowClear
-                  placeholder="Select all Allowed Modes"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
+            <FormItem
+              name={["settings", "allowedModes"]}
+              label="Allowed Modes"
+              hasFeedback
+              rules={[{ required: true }]}
+            >
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="Select all Allowed Modes"
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                options={[
+                  { value: "orthogonal", label: "Orthogonal" },
+                  { value: "oblique", label: "Oblique" },
+                  { value: "flight", label: "Flight" },
+                ]}
+              />
+            </FormItem>
+
+            <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
+              <Select
+                allowClear
+                optionFilterProp="children"
+                style={{ width: "100%" }}
+                options={[
+                  { value: null, label: "Any" },
+                  { value: "orthogonal", label: "Orthogonal" },
+                  { value: "oblique", label: "Oblique" },
+                  { value: "flight", label: "Flight" },
+                ]}
+              />
+            </FormItem>
+
+            <FormItem
+              noStyle
+              shouldUpdate={(prevValues, curValues) =>
+                prevValues.tracingType !== curValues.tracingType
+              }
+            >
+              {({ getFieldValue }) =>
+                getFieldValue(["tracingType"]) !== "volume" ? (
+                  <React.Fragment>
+                    <FormItem
+                      name={["settings", "somaClickingAllowed"]}
+                      label="Settings"
+                      valuePropName="checked"
+                    >
+                      <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
+                    </FormItem>
+
+                    <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
+                      <Checkbox>Allow Branchpoints</Checkbox>
+                    </FormItem>
+
+                    <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
+                      <Checkbox>Merger Mode</Checkbox>
+                    </FormItem>
+                  </React.Fragment>
+                ) : null
+              }
+            </FormItem>
+
+            <FormItem
+              name={["settings", "resolutionRestrictionsForm", "shouldRestrict"]}
+              valuePropName="checked"
+              style={{ marginBottom: 6 }}
+            >
+              <Checkbox disabled={isEditingMode}>
+                Restrict Resolutions{" "}
+                <Tooltip
+                  title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
+                  placement="right"
                 >
-                  <Option value="orthogonal">Orthogonal</Option>
-                  <Option value="oblique">Oblique</Option>
-                  <Option value="flight">Flight</Option>
-                </Select>,
-              )}
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </Checkbox>
             </FormItem>
 
-            <FormItem label="Preferred Mode" hasFeedback>
-              {getFieldDecorator("settings.preferredMode")(
-                <Select allowClear optionFilterProp="children" style={{ width: "100%" }}>
-                  <Option value={null}>Any</Option>
-                  <Option value="orthogonal">Orthogonal</Option>
-                  <Option value="oblique">Oblique</Option>
-                  <Option value="flight">Flight</Option>
-                </Select>,
-              )}
-            </FormItem>
-
-            <div
-              style={{
-                display:
-                  this.props.form.getFieldValue("tracingType") === "volume" ? "none" : "block",
-              }}
+            <FormItem
+              noStyle
+              shouldUpdate={(prevValues, curValues) =>
+                !prevValues.settings ||
+                prevValues.settings.resolutionRestrictionsForm.shouldRestrict !==
+                  curValues.settings.resolutionRestrictionsForm.shouldRestrict
+              }
             >
-              <FormItem label="Settings">
-                {getFieldDecorator("settings.somaClickingAllowed", {
-                  valuePropName: "checked",
-                })(<Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>)}
-              </FormItem>
-
-              <FormItem>
-                {getFieldDecorator("settings.branchPointsAllowed", {
-                  valuePropName: "checked",
-                })(<Checkbox>Allow Branchpoints</Checkbox>)}
-              </FormItem>
-
-              <FormItem>
-                {getFieldDecorator("settings.mergerMode", {
-                  valuePropName: "checked",
-                })(<Checkbox>Merger Mode</Checkbox>)}
-              </FormItem>
-            </div>
-
-            <FormItem style={{ marginBottom: 6 }}>
-              {getFieldDecorator("settings.resolutionRestrictionsForm.shouldRestrict", {
-                valuePropName: "checked",
-              })(
-                <Checkbox disabled={isEditingMode}>
-                  Restrict Resolutions{" "}
-                  <Tooltip
-                    title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
-                    placement="right"
-                  >
-                    <Icon type="info-circle" />
-                  </Tooltip>
-                </Checkbox>,
-              )}
+              {({ getFieldValue }) =>
+                getFieldValue(["settings", "resolutionRestrictionsForm", "shouldRestrict"]) ? (
+                  <div style={{ marginLeft: 24 }}>
+                    <FormItem
+                      name={["settings", "resolutionRestrictionsForm", "min"]}
+                      hasFeedback
+                      label="Minimum"
+                      style={{ marginBottom: 6 }}
+                      rules={[{ validator: isValidMagnification }]}
+                    >
+                      <InputNumber min={1} size="small" disabled={isEditingMode} />
+                    </FormItem>
+                    <FormItem
+                      name={["settings", "resolutionRestrictionsForm", "max"]}
+                      hasFeedback
+                      label="Maximum"
+                      rules={[{ validator: isValidMagnification }]}
+                    >
+                      <InputNumber min={1} size="small" disabled={isEditingMode} />
+                    </FormItem>
+                  </div>
+                ) : null
+              }
             </FormItem>
-
-            <div
-              style={{
-                marginLeft: 24,
-                display: this.props.form.getFieldValue(
-                  "settings.resolutionRestrictionsForm.shouldRestrict",
-                )
-                  ? "block"
-                  : "none",
-              }}
-            >
-              <div>
-                <FormItem hasFeedback style={{ marginBottom: 6 }}>
-                  Minimum:{" "}
-                  {getFieldDecorator("settings.resolutionRestrictionsForm.min", {
-                    rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
-                </FormItem>
-              </div>
-              <div>
-                <FormItem hasFeedback>
-                  Maximum:{" "}
-                  {getFieldDecorator("settings.resolutionRestrictionsForm.max", {
-                    rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
-                </FormItem>
-              </div>
-            </div>
 
             <FormItem>
               <RecommendedConfigurationView
-                form={this.props.form}
+                form={form}
                 enabled={this.state.useRecommendedConfiguration}
                 onChangeEnabled={this.onChangeUseRecommendedConfiguration}
               />
@@ -368,4 +378,4 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(TaskTypeCreateView));
+export default withRouter(TaskTypeCreateView);

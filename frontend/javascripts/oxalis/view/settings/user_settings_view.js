@@ -4,7 +4,8 @@
  */
 
 import features from "features";
-import { Collapse, Tooltip, Icon } from "antd";
+import { Collapse, Tooltip } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -463,8 +464,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           ))}
           <div style={{ display: "inline-block", width: "100%" }}>
             <Tooltip title="Click to add another bounding box.">
-              <Icon
-                type="plus"
+              <PlusOutlined
                 onClick={this.handleAddNewUserBoundingBox}
                 style={{
                   float: "right",

@@ -21,7 +21,6 @@ import TimeTrackingChart, {
 } from "./time_line_chart_view";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const dayFormat = "dd, MMM, YYYY";
@@ -280,15 +279,13 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     style={{ width: "100%" }}
                     onChange={this.handleUserChange}
                     notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
-                  >
-                    {this.state.users
+                    options={this.state.users
                       .filter(u => u.isActive)
-                      .map((user: APIUser) => (
-                        <Option key={user.id} value={user.id}>
-                          {`${user.lastName}, ${user.firstName} (${user.email})`}
-                        </Option>
-                      ))}
-                  </Select>
+                      .map((user: APIUser) => ({
+                        value: user.id,
+                        label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                      }))}
+                  />
                 ) : (
                   <table style={{ width: "100%", fontSize: 16 }}>
                     <tbody>

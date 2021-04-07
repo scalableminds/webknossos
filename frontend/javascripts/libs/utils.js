@@ -778,22 +778,12 @@ export function convertBufferToImage(
     imageData.data.set(buffer);
     ctx.putImageData(imageData, 0, 0);
 
-    let resultCanvas = canvas;
     if (flipHorizontally) {
-      // Create a new canvas when flipping as otherwise pixels of the unflipped
-      // image would "shine through" for pixels which are not opaque when flipping the
-      // image in-place
-      resultCanvas = document.createElement("canvas");
-      const resultCtx = resultCanvas.getContext("2d");
-
-      resultCanvas.width = width;
-      resultCanvas.height = height;
-
-      resultCtx.transform(1, 0, 0, -1, 0, height);
-      resultCtx.drawImage(canvas, 0, 0);
+      ctx.transform(1, 0, 0, -1, 0, height);
+      ctx.drawImage(canvas, 0, 0);
     }
 
-    resultCanvas.toBlob(blob => resolve(blob));
+    canvas.toBlob(blob => resolve(blob));
   });
 }
 

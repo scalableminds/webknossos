@@ -80,7 +80,9 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       extractedFiles = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
                                                    useZipName = false,
                                                    isTaskUpload = true)
-      extractedTracingBoxes: List[TracingBoxContainer] = extractedFiles.toBoxes
+      extractedTracingBoxesRaw: List[TracingBoxContainer] = extractedFiles.toBoxes
+      extractedTracingBoxes: List[TracingBoxContainer] <- taskCreationService
+        .addVolumeFallbackBoundingBoxes(extractedTracingBoxesRaw, request.identity._organization)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
       (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(extractedTracingBoxes.map(_.skeleton),
@@ -93,7 +95,6 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       result <- taskCreationService.createTasks(fullParamsWithTracings, request.identity)
     } yield Ok(Json.toJson(result))
   }
-
   def update(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
     implicit request =>
       val params = request.body

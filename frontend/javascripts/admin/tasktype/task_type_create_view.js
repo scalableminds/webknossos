@@ -94,6 +94,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 
   async applyDefaults() {
+    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
+    const hasRecommendedConfiguration =
+      taskType != null && taskType.recommendedConfiguration != null;
     const defaultValues = {
       settings: {
         somaClickingAllowed: true,
@@ -102,12 +105,13 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         preferredMode: null,
         resolutionRestrictions: {},
       },
-      recommendedConfiguration: DEFAULT_RECOMMENDED_CONFIGURATION,
+      recommendedConfiguration: hasRecommendedConfiguration
+        ? {}
+        : DEFAULT_RECOMMENDED_CONFIGURATION,
     };
-    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
     // Use merge which is deep _.extend
     const formValues = _.merge({}, defaultValues, taskType);
-    if (formValues.recommendedConfiguration == null) {
+    if (!hasRecommendedConfiguration) {
       // A recommended configuration of null overrides the default configuration when using _.merge
       // If the task type has no recommended configuration, suggest the default one
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;

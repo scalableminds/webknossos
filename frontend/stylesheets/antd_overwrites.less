@@ -171,3 +171,26 @@ label.ant-checkbox-wrapper {
 .ant-collapse-borderless {
   background-color: white;
 }
+
+.ant-table-row-expand-icon::after {
+  display: none;
+}
+.ant-table-row-expand-icon-expanded::before {
+  content: "-";
+}
+.ant-table-row-expand-icon-collapsed::before {
+  content: "+";
+}
+.ant-table-row-expand-icon::before {
+  position: unset;
+  transform: none;
+  background: inherit;
+  height: 100%;
+}
+
+.ant-table-row-expand-icon {
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  line-height: 13px;
+}

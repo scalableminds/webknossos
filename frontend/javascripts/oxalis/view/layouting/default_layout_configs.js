@@ -33,7 +33,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 9;
+export const currentLayoutVersion = 10;
 export const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
@@ -43,7 +43,7 @@ export const defaultSplitterSize = 4;
 // As we want a flexible layout in the border, we use only on tab containing a sub-layout that is more flexible.
 // Additionally, we want to avoid the borderBar. As the borderBars width will be automatically calculated
 // when it is set to 0, we use a value near value to make it almost not visible.
-export const borderBarSize = 0.01;
+export const borderBarSize = 1;
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");

@@ -27,7 +27,7 @@ function BorderToggleButton(props: Props) {
   }`;
 
   return (
-    <Tooltip title={tooltipTitle} placement={placement} key={`${side}-border-toggle-button`}>
+    <Tooltip title={tooltipTitle} placement={placement}>
       <Button
         className={className}
         onClick={event => {

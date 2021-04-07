@@ -341,7 +341,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
     if (isTopMost && isRightMost) {
       renderValues.buttons.push(
-        <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} />,
+        <BorderToggleButton
+          side="right"
+          onClick={() => this.toggleBorder("right")}
+          key="right-border-toggle-button-top"
+        />,
       );
     }
   };

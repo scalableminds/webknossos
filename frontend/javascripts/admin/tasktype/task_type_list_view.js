@@ -10,6 +10,7 @@ import { AsyncLink } from "components/async_clickables";
 import type { APITaskType } from "types/api_flow_types";
 import { getTaskTypes, deleteTaskType, downloadNml } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -274,10 +275,10 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                       Download
                     </AsyncLink>
                     <br />
-                    <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
+                    <LinkButton onClick={_.partial(this.deleteTaskType, taskType)}>
                       <DeleteOutlined />
                       Delete
-                    </a>
+                    </LinkButton>
                   </span>
                 )}
               />

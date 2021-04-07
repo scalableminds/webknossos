@@ -23,6 +23,7 @@ import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_t
 import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import LinkButton from "components/link_button";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import { stringToColor } from "libs/format_utils";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
@@ -201,10 +202,10 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           <Row key={user.id} gutter={16}>
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
-              <a href="#" onClick={() => this.activateUser(user)}>
+              <LinkButton onClick={() => this.activateUser(user)}>
                 <UserAddOutlined />
                 Activate User
-              </a>
+              </LinkButton>
             </Col>
           </Row>
         ))}
@@ -510,16 +511,16 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                   {// eslint-disable-next-line no-nested-ternary
                   user.isActive ? (
                     this.props.activeUser.isAdmin ? (
-                      <a href="#" onClick={() => this.deactivateUser(user)}>
+                      <LinkButton onClick={() => this.deactivateUser(user)}>
                         <UserDeleteOutlined />
                         Deactivate User
-                      </a>
+                      </LinkButton>
                     ) : null
                   ) : (
-                    <a href="#" onClick={() => this.activateUser(user)}>
+                    <LinkButton onClick={() => this.activateUser(user)}>
                       <UserAddOutlined />
                       Activate User
-                    </a>
+                    </LinkButton>
                   )}
                 </span>
               )}

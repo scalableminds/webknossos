@@ -1,5 +1,5 @@
 // @flow
-import { Col, Row, Tooltip } from "antd";
+import { Col, Row } from "antd";
 import _ from "lodash";
 import { connect } from "react-redux";
 import React from "react";
@@ -25,7 +25,7 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 type State = {||};
 
-const borderToggleButtonMargin = 35;
+const borderToggleButtonMargin = 40;
 
 const statusbarStyle: Object = {
   marginLeft: borderToggleButtonMargin,
@@ -105,31 +105,22 @@ class Statusbar extends React.PureComponent<Props, State> {
     return (
       <Row style={statusbarStyle}>
         <Col span={10} style={{ textAlign: "left" }}>
-          <Tooltip
-            title={
-              <div>
-                Currently rendered resolution {activeResolution.join("-")}.<br />
-              </div>
-            }
-            placement="top"
-          >
-            <span>
-              <img
-                src="/assets/images/icon-downsampling.svg"
-                style={{ width: 15, height: 15 }}
-                alt="Resolution"
-              />
-              {activeResolution.join("-")}{" "}
-            </span>
-          </Tooltip>
+          <span>
+            <img
+              src="/assets/images/icon-downsampling.svg"
+              style={{ width: 15, height: 15 }}
+              alt="Resolution"
+            />
+            {activeResolution.join("-")}{" "}
+          </span>
+          <span style={{ marginLeft: spaceBetweenItems }}>
+            Pos: [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
+          </span>
           <span style={{ marginLeft: spaceBetweenItems }}>
             Cell:{" "}
             {globalMousePosition
               ? getIdForPos(globalMousePosition, renderedZoomStepForMousePosition)
               : "-"}
-          </span>
-          <span style={{ marginLeft: spaceBetweenItems }}>
-            Pos: [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
           </span>
         </Col>
         <Col span={14} style={{ textAlign: "right" }}>
@@ -156,17 +147,27 @@ class Statusbar extends React.PureComponent<Props, State> {
           <span
             key="zoom"
             className="keyboard-key-icon-small"
-            style={{ marginLeft: spaceBetweenItems }}
+            style={{ marginLeft: spaceBetweenItems, borderColor: "rgba(255, 255, 255, 0.67)" }}
           >
             I
           </span>{" "}
           /{" "}
-          <span key="zoom" className="keyboard-key-icon-small">
+          <span
+            key="zoom"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: "rgba(255, 255, 255, 0.67)",
+            }}
+          >
             O
           </span>{" "}
           Zoom in/out
           {activeViewport === OrthoViews.TDView && (
-            <span style={{ marginLeft: spaceBetweenItems }}>
+            <span
+              style={{
+                marginLeft: spaceBetweenItems,
+              }}
+            >
               <img
                 key="move-1"
                 className="keyboard-mouse-icon"

@@ -59,7 +59,8 @@
 
   .ant-btn {
     width: 60px;
-    line-height: 26px;
+    line-height: 23px;
+    vertical-align: baseline;
     & > .colored-dot {
       display: inline-block;
       width: 10px;
@@ -190,6 +191,21 @@
   line-height: normal;
 }
 
+.antd-legacy-group {
+  .ant-btn {
+    border-radius: 0;
+    margin-left: -1px;
+  }
+
+  .ant-btn:first-child {
+    border-radius: 2px 0 0 2px;
+  }
+
+  .ant-btn:last-child {
+    border-radius: 0 2px 2px 0;
+  }
+}
+
 // Dark mode for UI within navbar
 .ant-layout-header {
   @dark-bg: #383d48;
@@ -197,21 +213,6 @@
   @dark-border: #585868;
   @primary-border: #1890ff;
   @hover-border: #40a9ff;
-
-  .antd-legacy-group {
-    .ant-btn {
-      border-radius: 0;
-      margin-left: -1px;
-    }
-
-    .ant-btn:first-child {
-      border-radius: 2px 0 0 2px;
-    }
-
-    .ant-btn:last-child {
-      border-radius: 0 2px 2px 0;
-    }
-  }
 
   .ant-select-arrow,
   .ant-badge-dot {

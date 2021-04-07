@@ -1,5 +1,5 @@
 // @flow
-import { Button, Tooltip, Space } from "antd";
+import { Button, Tooltip } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import * as React from "react";
 import { connect } from "react-redux";
@@ -22,7 +22,7 @@ function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
     }
   }
   return (
-    <Space size={0} id="TDViewControls">
+    <div id="TDViewControls" className="antd-legacy-group">
       <Button size="small" onClick={api.tracing.rotate3DViewToDiagonal}>
         3D
       </Button>
@@ -46,7 +46,7 @@ function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
           onClick={api.data.refreshIsosurfaces}
         />
       </Tooltip>
-    </Space>
+    </div>
   );
 }
 

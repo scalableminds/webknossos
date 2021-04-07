@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
-import { Button, Tooltip, Icon } from "antd";
+import { Button, Tooltip } from "antd";
+import { LeftSquareOutlined, RightSquareOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import type { OxalisState, BorderOpenStatus } from "oxalis/store";
 
@@ -40,7 +41,11 @@ function BorderToggleButton(props: Props) {
         onMouseDown={evt => evt.stopPropagation()}
         onTouchStart={evt => evt.preventDefault()}
       >
-        <Icon className="center-item-using-flex" style={iconStyle} type={`${side}-square`} />
+        {side === "right" ? (
+          <RightSquareOutlined className="center-item-using-flex" style={iconStyle} />
+        ) : (
+          <LeftSquareOutlined className="center-item-using-flex" style={iconStyle} />
+        )}
       </Button>
     </Tooltip>
   );

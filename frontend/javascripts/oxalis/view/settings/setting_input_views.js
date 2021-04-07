@@ -132,7 +132,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row type="flex" align="top">
+      <Row type="flex" align="middle">
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>

@@ -6,8 +6,8 @@ import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxali
 const defaultViewportRect = {
   top: 0,
   left: 0,
-  width: Constants.VIEWPORT_WIDTH,
-  height: Constants.VIEWPORT_WIDTH,
+  width: 0,
+  height: 0,
 };
 
 const initialAnnotationInfo = {
@@ -204,6 +204,7 @@ const defaultState: OxalisState = {
     isInAnnotationView: false,
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
+    borderOpenStatus: { right: false, left: false },
   },
   isosurfaces: {},
 };

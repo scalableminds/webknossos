@@ -4,7 +4,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 
-import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
+import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
@@ -219,7 +219,7 @@ class PlaneView {
   }, Constants.RESIZE_THROTTLE_TIME);
 
   resize = (): void => {
-    const { width, height } = getDesiredLayoutRect();
+    const { width, height } = getGroundTruthLayoutRect();
     getSceneController().renderer.setSize(width, height);
     this.draw();
   };

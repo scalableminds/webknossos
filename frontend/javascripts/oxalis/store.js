@@ -444,6 +444,11 @@ export type ViewModeData = {
   +arbitrary: ArbitraryModeData,
 };
 
+export type BorderOpenStatus = {
+  left: boolean,
+  right: boolean,
+};
+
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
@@ -452,6 +457,7 @@ type UiInformation = {
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
   +isRefreshingIsosurfaces: boolean,
+  +borderOpenStatus: BorderOpenStatus,
 };
 
 export type IsosurfaceInformation = {|

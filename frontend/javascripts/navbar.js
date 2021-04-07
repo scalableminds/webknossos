@@ -54,7 +54,7 @@ function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "flex" }}>
       <Avatar
         className="hover-effect-via-opacity"
         style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
@@ -362,13 +362,9 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     padding: 0,
     overflowX: "auto",
     position: "fixed",
-    width: "100%",
-    zIndex: 1000,
     height: navbarHeight,
     display: "flex",
     alignItems: "center",
-    color: "rgba(255, 255, 255, 0.67)",
-    background: "#001529",
     whiteSpace: "nowrap",
   };
 

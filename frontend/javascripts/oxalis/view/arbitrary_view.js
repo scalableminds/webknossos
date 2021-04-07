@@ -7,11 +7,13 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 
-import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
+import {
+  getGroundTruthLayoutRect,
+  show3DViewportInArbitrary,
+} from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { show3DViewportInArbitrary } from "oxalis/view/layouting/default_layout_configs";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Constants, { ArbitraryViewport, type OrthoViewMap, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
@@ -280,7 +282,7 @@ class ArbitraryView {
 
   resizeImpl = (): void => {
     // Call this after the canvas was resized to fix the viewport
-    const { width, height } = getDesiredLayoutRect();
+    const { width, height } = getGroundTruthLayoutRect();
     getSceneController().renderer.setSize(width, height);
     this.draw();
   };

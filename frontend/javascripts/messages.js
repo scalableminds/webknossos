@@ -177,7 +177,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "webgl.context_loss":
     "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "webgl.too_many_active_layers": _.template(
-    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the sidebar settings.",
+    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now annotating a new task with the following description",
@@ -349,4 +349,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The project report page could not be refreshed. Please try to reload the page.",
   planned_maintenance:
     "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
+  "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
+  "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
 };

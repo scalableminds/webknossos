@@ -12,6 +12,7 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
+import setViewportRectsToNoneZeroExtent from "../test_helpers";
 
 const {
   createTreeMapFromTreeArray,
@@ -28,8 +29,8 @@ test.beforeEach(async t => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
+  setViewportRectsToNoneZeroExtent();
   await __setupOxalis(t, "task");
-
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });

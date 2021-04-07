@@ -1,8 +1,9 @@
 // @flow
 
-import { Button, Checkbox, Input, List, Modal, Spin, Tooltip, Upload } from "antd";
+import { Button, Checkbox, Input, List, Modal, Spin, Tooltip, Upload, Dropdown, Menu } from "antd";
 import {
   DeleteOutlined,
+  DownOutlined,
   EditOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
@@ -168,11 +169,12 @@ const getCheckboxStyle = isLoaded =>
 
 class MeshesView extends React.Component<
   Props,
-  { currentlyEditedMesh: ?MeshMetaData, hoveredListItem: ?number },
+  { currentlyEditedMesh: ?MeshMetaData, hoveredListItem: ?number, meshFiles: Array<string> },
 > {
   state = {
     currentlyEditedMesh: null,
     hoveredListItem: null,
+    meshFiles: [],
   };
 
   render() {
@@ -255,7 +257,7 @@ class MeshesView extends React.Component<
         </Upload>
       </React.Fragment>
     );
-    const getLoadIsosurfaceCellButton = () => (
+    const getLoadMeshCellButton = () => (
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
@@ -267,11 +269,43 @@ class MeshesView extends React.Component<
         }}
         disabled={!hasSegmentation}
         size="small"
-        type="primary"
       >
-        Load Isosurface for centered Cell
+        Mesh for centered Cell
       </Button>
     );
+
+    const handleMeshSelected = mesh => {
+      console.log(mesh);
+    };
+
+    const updateMeshFileList = async () => {
+      const layerName =
+        this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name;
+      const availableMeshFiles = await getMeshfilesForDatasetLayer(
+        this.props.dataset.dataStore.url,
+        this.props.dataset,
+        layerName,
+      );
+      this.setState({ meshFiles: availableMeshFiles });
+    };
+
+    const getMeshesDropdown = () => (
+      <Menu onClick={handleMeshSelected}>
+        {this.state.meshFiles.map(meshFile => (
+          <Menu.Item key={meshFile}>{meshFile}</Menu.Item>
+        ))}
+      </Menu>
+    );
+    const getMeshesButton = () => (
+      <Dropdown overlay={getMeshesDropdown} trigger="hover">
+        <Tooltip title="Click to refresh.">
+          <Button size="small" onClick={updateMeshFileList}>
+            Meshes <DownOutlined />
+          </Button>
+        </Tooltip>
+      </Dropdown>
+    );
+    /* 
     const getLoadMeshCellButton = () => (
       <Button
         onClick={async () => {
@@ -316,31 +350,22 @@ class MeshesView extends React.Component<
         }}
         disabled={!hasSegmentation}
         size="small"
-        type="primary"
       >
         Load Mesh for centered Cell
       </Button>
-    );
-    const getIsosurfacesHeader = () => (
-      <React.Fragment>
-        Isosurfaces{" "}
-        <Tooltip title="Isosurfaces are the 3D representation of a cell. They are computed ad-hoc by webKnossos.">
-          <InfoCircleOutlined />
-        </Tooltip>
-        {getImportButton()}
-        {getLoadIsosurfaceCellButton()}
-        <br />
-      </React.Fragment>
-    );
+    ); */
     const getMeshesHeader = () => (
-      <div style={{ marginTop: 10 }}>
+      <React.Fragment>
         Meshes{" "}
-        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They are imported from STL files.">
+        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They are imported from STL or hdf5 files. They can also be computed.">
           <InfoCircleOutlined />
         </Tooltip>
         {getImportButton()}
-        {getLoadMeshCellButton()}
-      </div>
+        <div className="antd-legacy-group">
+          {getLoadMeshCellButton()}
+          {getMeshesButton()}
+        </div>
+      </React.Fragment>
     );
 
     const renderIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
@@ -426,7 +451,7 @@ class MeshesView extends React.Component<
 
     return (
       <div className="padded-tab-content">
-        {getIsosurfacesHeader()}
+        {getMeshesHeader()}
         <List
           dataSource={Object.values(this.props.isosurfaces)}
           size="small"
@@ -434,9 +459,9 @@ class MeshesView extends React.Component<
           style={{ marginTop: 12 }}
           renderItem={renderIsosurfaceListItem}
           locale={{
-            emptyText: `There are no Isosurfaces.${
+            emptyText: `There are no Meshes.${
               this.props.allowUpdate
-                ? " You can render an isosurface for the currently centered cell by clicking the button above."
+                ? " You can render a mesh for the currently centered cell by clicking the button above."
                 : ""
             }`,
           }}
@@ -451,7 +476,7 @@ class MeshesView extends React.Component<
             onCancel={() => this.setState({ currentlyEditedMesh: null })}
           />
         ) : null}
-        {getMeshesHeader()}
+        {/* 
         <List
           dataSource={this.props.meshes}
           size="small"
@@ -462,7 +487,7 @@ class MeshesView extends React.Component<
               this.props.allowUpdate ? " You can import an STL file to change this." : ""
             } `,
           }}
-        />
+        /> */}
       </div>
     );
   }

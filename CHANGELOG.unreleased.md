@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a bug where some values in the project list were displayed incorrectly after pausing/unpausing the project. [#5339](https://github.com/scalableminds/webknossos/pull/5339)
+- Fixed that editing a task type would always re-add the default values to the recommended configuration (if enabled). [#5341](https://github.com/scalableminds/webknossos/pull/5341)
 
 ### Removed
 -

@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Table, Tag, Icon } from "antd";
+import { Spin, Table, Tag } from "antd";
 import * as React from "react";
 import type { APIAnnotationCompact } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
@@ -10,6 +10,7 @@ import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import Persistence from "libs/persistence";
 import TextWithDescription from "components/text_with_description";
+import { EyeOutlined } from "@ant-design/icons";
 
 const { Column } = Table;
 
@@ -154,7 +155,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
             const { typ, id } = tracing;
             return (
               <Link to={`/annotations/${typ}/${id}`}>
-                <Icon type="eye-o" />
+                <EyeOutlined />
                 View
               </Link>
             );

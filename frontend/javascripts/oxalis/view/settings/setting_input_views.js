@@ -1,5 +1,6 @@
 // @flow
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Icon, Select } from "antd";
+import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
+import { DeleteOutlined, DownloadOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -347,7 +348,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const exportColumn = features().jobsEnabled ? (
       <Col span={2}>
         <Tooltip title="Export data from this bouding box.">
-          <Icon type="download" onClick={onExport} style={iconStyle} />
+          <DownloadOutlined onClick={onExport} style={iconStyle} />
         </Tooltip>
       </Col>
     ) : null;
@@ -366,7 +367,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           {exportColumn}
           <Col span={2}>
             <Tooltip title="Delete this bounding box.">
-              <Icon type="delete" onClick={onDelete} style={iconStyle} />
+              <DeleteOutlined onClick={onDelete} style={iconStyle} />
             </Tooltip>
           </Col>
         </Row>
@@ -480,16 +481,12 @@ type DropdownSettingProps = {
   onChange: (value: number) => void,
   label: React.Node | string,
   value: number | string,
-  children?: Array<React.Node>,
+  options: Array<Object>,
 };
 
 export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
-  static defaultProps = {
-    children: undefined,
-  };
-
   render() {
-    const { onChange, label, value, children } = this.props;
+    const { onChange, label, value } = this.props;
     return (
       <Row className="margin-bottom" align="top">
         <Col span={8}>
@@ -502,9 +499,8 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
             defaultValue={value.toString()}
             size="small"
             dropdownMatchSelectWidth={false}
-          >
-            {children}
-          </Select>
+            options={this.props.options}
+          />
         </Col>
       </Row>
     );

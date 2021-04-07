@@ -1,13 +1,12 @@
 // @flow
 import * as React from "react";
-import { Button, Tooltip, Icon } from "antd";
+import { Button, Tooltip } from "antd";
 import { connect } from "react-redux";
 import type { OxalisState, BorderOpenStatus } from "oxalis/store";
 
 type OwnProps = {|
   onClick: () => void,
   side: "left" | "right",
-  style?: Object,
   inFooter?: boolean,
 |};
 type StateProps = {|
@@ -16,17 +15,19 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 
 function BorderToggleButton(props: Props) {
-  const { onClick, side, style, borderOpenStatus, inFooter } = props;
-  const mirrorIconStyle = { transform: "scale(-1, 1)" };
+  const { onClick, side, borderOpenStatus, inFooter } = props;
   const placement = side === "left" ? "right" : "left";
-  const iconStyle = borderOpenStatus[side] === false ? mirrorIconStyle : null;
+  const iconKind = borderOpenStatus[side] ? "hide" : "show";
   const tooltipTitle = `${borderOpenStatus[side] === false ? "Open" : "Hide"} ${side} sidebar`;
   const className = `${side}-border-button no-hover-highlighting ${
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;
+  const imageSrc = `/assets/images/icon-sidebar-${iconKind}-${side}-${
+    inFooter ? "dark" : "bright"
+  }.svg`;
 
   return (
-    <Tooltip title={tooltipTitle} placement={placement} key={`${side}-border-toggle-button`}>
+    <Tooltip title={tooltipTitle} placement={placement}>
       <Button
         className={className}
         onClick={event => {
@@ -36,11 +37,10 @@ function BorderToggleButton(props: Props) {
           onClick();
         }}
         size="small"
-        style={style}
         onMouseDown={evt => evt.stopPropagation()}
         onTouchStart={evt => evt.preventDefault()}
       >
-        <Icon className="center-item-using-flex" style={iconStyle} type={`${side}-square`} />
+        <img className="center-item-using-flex" src={imageSrc} alt="Border Toggle Button" />
       </Button>
     </Tooltip>
   );

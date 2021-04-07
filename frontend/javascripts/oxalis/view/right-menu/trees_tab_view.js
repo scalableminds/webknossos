@@ -6,12 +6,19 @@ import {
   Empty,
   Input,
   Menu,
-  Icon,
   Spin,
   Modal,
   Tooltip,
   notification,
+  Space,
 } from "antd";
+import {
+  DownloadOutlined,
+  DownOutlined,
+  SearchOutlined,
+  UploadOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -91,7 +98,6 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
 
-const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
 const treeTabId = "tree-list";
@@ -472,7 +478,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
       okText: "Ok",
       cancelText: "No",
       autoFocusButton: "cancel",
-      iconType: "warning",
+      icon: <WarningOutlined />,
       onCancel: () => {},
       onOk: () => {
         onConfirm();
@@ -604,10 +610,10 @@ class TreesTabView extends React.PureComponent<Props, State> {
           onClick={this.handleNmlDownload}
           title="Download selected trees as NML"
         >
-          <Icon type="download" /> Download Selected Trees
+          <DownloadOutlined /> Download Selected Trees
         </Menu.Item>
         <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
-          <Icon type="upload" /> Import NML
+          <UploadOutlined /> Import NML
         </Menu.Item>
         <Menu.Item
           key="measureAllSkeletons"
@@ -686,7 +692,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <ButtonGroup>
+                <Space size={0}>
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -696,7 +702,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                   >
                     <Tooltip title="Open the search via CTRL + Shift + F">
                       <ButtonComponent>
-                        <Icon type="search" />
+                        <SearchOutlined />
                       </ButtonComponent>
                     </Tooltip>
                   </AdvancedSearchPopover>
@@ -721,10 +727,10 @@ class TreesTabView extends React.PureComponent<Props, State> {
                   <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent>
                       More
-                      <Icon type="down" />
+                      <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </ButtonGroup>
+                </Space>
                 <InputGroup compact>
                   <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
                     <i className="fas fa-arrow-left" />

@@ -1,6 +1,15 @@
 // @flow
 
-import { Button, Checkbox, Icon, Input, List, Modal, Spin, Tooltip, Upload } from "antd";
+import { Button, Checkbox, Input, List, Modal, Spin, Tooltip, Upload } from "antd";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+  LoadingOutlined,
+  PlusSquareOutlined,
+  ReloadOutlined,
+  VerticalAlignBottomOutlined,
+} from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
@@ -171,29 +180,35 @@ class MeshesView extends React.Component<
 
     const getDownloadButton = (segmentId: number) => (
       <Tooltip title="Download Isosurface">
-        <Icon
+        <VerticalAlignBottomOutlined
           key="download-button"
-          type="vertical-align-bottom"
           onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segmentId))}
         />
       </Tooltip>
     );
     const getRefreshButton = (segmentId: number, isLoading: boolean) => (
       <Tooltip title="Refresh Isosurface">
-        <Icon
-          key="refresh-button"
-          type={isLoading ? "loading" : "reload"}
-          onClick={() => {
-            Store.dispatch(refreshIsosurfaceAction(segmentId));
-          }}
-        />
+        {isLoading ? (
+          <LoadingOutlined
+            key="refresh-button"
+            onClick={() => {
+              Store.dispatch(refreshIsosurfaceAction(segmentId));
+            }}
+          />
+        ) : (
+          <ReloadOutlined
+            key="refresh-button"
+            onClick={() => {
+              Store.dispatch(refreshIsosurfaceAction(segmentId));
+            }}
+          />
+        )}
       </Tooltip>
     );
     const getDeleteButton = (segmentId: number) => (
       <Tooltip title="Delete Isosurface">
-        <Icon
+        <DeleteOutlined
           key="delete-button"
-          type="delete"
           onClick={() => {
             // does not work properly for imported isosurfaces
             Store.dispatch(removeIsosurfaceAction(segmentId));
@@ -223,7 +238,7 @@ class MeshesView extends React.Component<
           <Tooltip
             title={this.props.isImporting ? "The import is still in progress." : "Import STL"}
           >
-            <Icon type={this.props.isImporting ? "loading" : "plus-square"} />
+            {this.props.isImporting ? <LoadingOutlined /> : <PlusSquareOutlined />}
           </Tooltip>
         </Upload>
       </React.Fragment>
@@ -249,7 +264,7 @@ class MeshesView extends React.Component<
       <React.Fragment>
         Isosurfaces{" "}
         <Tooltip title="Isosurfaces are the 3D representation of a cell. They are computed ad-hoc by webKnossos.">
-          <Icon type="info-circle" />
+          <InfoCircleOutlined />
         </Tooltip>
         {getImportButton()}
         {getLoadIsosurfaceCellButton()}
@@ -260,7 +275,7 @@ class MeshesView extends React.Component<
       <div style={{ marginTop: 10 }}>
         Meshes{" "}
         <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They are imported from STL files.">
-          <Icon type="info-circle" />
+          <InfoCircleOutlined />
         </Tooltip>
         {getImportButton()}
       </div>
@@ -332,13 +347,11 @@ class MeshesView extends React.Component<
           </Checkbox>
           {mesh.isLoaded ? (
             <React.Fragment>
-              <Icon
-                type="edit"
+              <EditOutlined
                 onClick={() => this.setState({ currentlyEditedMesh: mesh })}
                 style={{ cursor: "pointer" }}
               />
-              <Icon
-                type="delete"
+              <DeleteOutlined
                 onClick={() => this.props.deleteMesh(mesh.id)}
                 style={{ cursor: "pointer" }}
               />

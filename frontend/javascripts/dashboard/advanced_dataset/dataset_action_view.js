@@ -1,5 +1,15 @@
 // @flow
-import { Dropdown, Menu, Icon, Tooltip } from "antd";
+import { Dropdown, Menu, Tooltip } from "antd";
+import {
+  DownOutlined,
+  EyeOutlined,
+  InfoCircleOutlined,
+  LoadingOutlined,
+  PlusCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
@@ -95,7 +105,7 @@ function NewAnnotationLink({ dataset, isReloading }) {
             title="New Annotation (Skeleton + Volume)"
             disabled={isReloading}
           >
-            <Icon type="plus" />
+            <PlusOutlined />
             New Annotation
           </LinkWithDisabled>
           <span
@@ -109,7 +119,7 @@ function NewAnnotationLink({ dataset, isReloading }) {
           </span>
           <Dropdown overlay={newTracingMenu}>
             <a className="ant-dropdown-link" onClick={e => e.preventDefault()}>
-              <Icon type="down" style={{ color: "#56a1e7" }} />
+              <DownOutlined style={{ color: "#56a1e7" }} />
             </a>
           </Dropdown>
         </div>
@@ -179,7 +189,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         style={disabledWhenReloadingStyle}
         type="link"
       >
-        {isReloading ? <Icon type="loading" /> : <Icon type="reload" />}
+        {isReloading ? <LoadingOutlined /> : <ReloadOutlined />}
         Reload
       </a>
     ) : null;
@@ -190,7 +200,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
           className="import-dataset"
         >
-          <Icon type="plus-circle-o" />
+          <PlusCircleOutlined />
           Import
         </Link>
         {reloadLink}
@@ -209,7 +219,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               <p style={disabledWhenReloadingStyle}>
                 New Annotation &nbsp;
                 <Tooltip title="Cannot create annotations for read-only datasets">
-                  <Icon type="info-circle-o" style={{ color: "gray" }} />
+                  <InfoCircleOutlined style={{ color: "gray" }} />
                 </Tooltip>
               </p>
             )}
@@ -218,7 +228,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               title="View Dataset"
               disabled={isReloading}
             >
-              <Icon type="eye-o" />
+              <EyeOutlined />
               View
             </LinkWithDisabled>
             {dataset.isEditable ? (
@@ -228,7 +238,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   title="Open Dataset Settings"
                   disabled={isReloading}
                 >
-                  <Icon type="setting" />
+                  <SettingOutlined />
                   Settings
                 </LinkWithDisabled>
                 {reloadLink}

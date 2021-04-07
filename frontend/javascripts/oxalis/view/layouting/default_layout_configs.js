@@ -32,17 +32,17 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 9;
-export const layoutHeaderHeight = 20;
+export const currentLayoutVersion = 10;
+const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
-export const defaultSplitterSize = 4;
+export const defaultSplitterSize = 3;
 // The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
 // The borderBar is (vertical) bar the the borders of the screen that contains a button for each tab of in the border to toggle.
 // As we want a flexible layout in the border, we use only on tab containing a sub-layout that is more flexible.
 // Additionally, we want to avoid the borderBar. As the borderBars width will be automatically calculated
 // when it is set to 0, we use a value near value to make it almost not visible.
-export const borderBarSize = 0.01;
+export const borderBarSize = 1;
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
@@ -126,13 +126,15 @@ const globalLayoutSettings: GlobalConfig = {
   splitterSize: defaultSplitterSize,
   tabEnableRename: false,
   tabEnableClose: false,
-  tabSetHeaderHeight: 20,
-  tabSetTabStripHeight: 20,
+  tabSetHeaderHeight: layoutHeaderHeight,
+  tabSetTabStripHeight: layoutHeaderHeight,
 };
 
 const subLayoutGlobalSettings: GlobalConfig = {
   ...globalLayoutSettings,
   tabSetEnableDivide: false,
+  tabSetHeaderHeight: layoutHeaderHeight + 6,
+  tabSetTabStripHeight: layoutHeaderHeight + 6,
 };
 
 function buildTabsets(

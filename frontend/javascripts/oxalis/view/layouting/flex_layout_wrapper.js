@@ -305,7 +305,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   onAction = (action: Action) => {
     const { type, data } = action;
-    const nodeId = data.node;
     if (type === "FlexLayout_MaximizeToggle") {
       if (data.node === this.maximizedItemId) {
         this.maximizedItemId = null;
@@ -313,16 +312,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         this.maximizedItemId = data.node;
       }
       this.onMaximizeToggle();
-    }
-    if (type === "FlexLayout_AdjustBorderSplit") {
-      const side = nodeId === "border_left" ? "left" : "right";
-      const width = data.pos;
-      if (width < MIN_BORDER_WIDTH) {
-        this.toggleBorder(side);
-        return undefined;
-      } else {
-        this.setState({ [`${side}BorderButtonPosition`]: width });
-      }
     }
     return action;
   };
@@ -348,7 +337,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
     if (isTopMost && isRightMost) {
       renderValues.buttons.push(
-        <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} />,
+        <BorderToggleButton
+          side="right"
+          onClick={() => this.toggleBorder("right")}
+          key="right-border-toggle-button-top"
+        />,
       );
     }
   };

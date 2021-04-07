@@ -63,7 +63,7 @@ export default {
   offline:
     "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
     "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
@@ -351,4 +351,5 @@ instead. Only enable this option if you understand its effect. All layers will n
     "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
   "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
+  "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
 };

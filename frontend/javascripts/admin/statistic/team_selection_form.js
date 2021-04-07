@@ -8,46 +8,36 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 const FormItem = Form.Item;
 
 type Props = {
-  form: Object,
   value?: ?APITeam,
   onChange: (team: APITeam) => Promise<*> | void,
 };
 
-class TeamSelectionForm extends React.PureComponent<Props> {
-  handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {
-    if (event) {
-      event.preventDefault();
-    }
-    this.props.form.validateFields((err, formValues) => {
-      this.props.onChange(formValues.team);
-    });
+function TeamSelectionForm({ value, onChange }: Props) {
+  const [form] = Form.useForm();
+  const handleFormSubmit = formValues => {
+    onChange(formValues.team);
   };
 
-  render() {
-    const { getFieldDecorator } = this.props.form;
-    const formItemLayout = {
-      labelCol: { span: 5 },
-      wrapperCol: { span: 19 },
-    };
-    return (
-      <Form onSubmit={this.handleFormSubmit}>
-        <Row gutter={40}>
-          <Col span={12}>
-            <FormItem {...formItemLayout} label="Team" style={{ marginBottom: 0 }}>
-              {getFieldDecorator("team", { initialValue: this.props.value })(
-                <TeamSelectionComponent />,
-              )}
-            </FormItem>
-          </Col>
-          <Col span={12}>
-            <Button type="primary" htmlType="submit">
-              Search
-            </Button>
-          </Col>
-        </Row>
-      </Form>
-    );
-  }
+  const formItemLayout = {
+    labelCol: { span: 5 },
+    wrapperCol: { span: 19 },
+  };
+  return (
+    <Form onFinish={handleFormSubmit} form={form} initialValues={[{ team: value }]}>
+      <Row gutter={40}>
+        <Col span={12}>
+          <FormItem name="team" {...formItemLayout} label="Team" style={{ marginBottom: 0 }}>
+            <TeamSelectionComponent />
+          </FormItem>
+        </Col>
+        <Col span={12}>
+          <Button type="primary" htmlType="submit">
+            Search
+          </Button>
+        </Col>
+      </Row>
+    </Form>
+  );
 }
 
-export default Form.create()(TeamSelectionForm);
+export default TeamSelectionForm;

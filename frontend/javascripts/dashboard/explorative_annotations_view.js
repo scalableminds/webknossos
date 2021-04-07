@@ -1,7 +1,15 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tag, Icon } from "antd";
+import { Spin, Input, Table, Button, Modal, Tag } from "antd";
+import {
+  DownloadOutlined,
+  FolderOpenOutlined,
+  InboxOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -219,17 +227,23 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${typ}/${id}`}>
-            <Icon type="play-circle-o" />
+            <PlayCircleOutlined />
             Trace
           </Link>
           <br />
-          <AsyncLink href="#" onClick={() => downloadNml(id, typ, hasVolumeTracing)}>
-            <Icon type="download" />
+          <AsyncLink
+            href="#"
+            onClick={() => downloadNml(id, typ, hasVolumeTracing)}
+            icon={<DownloadOutlined key="download" />}
+          >
             Download
           </AsyncLink>
           <br />
-          <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
-            <Icon type="inbox" />
+          <AsyncLink
+            href="#"
+            onClick={() => this.finishOrReopenTracing("finish", tracing)}
+            icon={<InboxOutlined key="inbox" />}
+          >
             Archive
           </AsyncLink>
           <br />
@@ -238,8 +252,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     } else {
       return (
         <div>
-          <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
-            <Icon type="folder-open" />
+          <AsyncLink
+            href="#"
+            onClick={() => this.finishOrReopenTracing("reopen", tracing)}
+            icon={<FolderOpenOutlined key="folder" />}
+          >
             Reopen
           </AsyncLink>
           <br />
@@ -468,7 +485,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               ))}
               {this.state.shouldShowArchivedTracings ? null : (
                 <EditableTextIcon
-                  icon="plus"
+                  icon={<PlusOutlined />}
                   onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
                 />
               )}
@@ -525,7 +542,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         ) : (
           <div className="pull-right">
             <Button
-              icon="upload"
+              icon={<UploadOutlined />}
               style={marginRight}
               onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
             >

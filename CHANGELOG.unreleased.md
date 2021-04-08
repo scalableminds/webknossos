@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - The names of Task Types and Projects no longer need to be globally unique, instead only within their respective organization.  [#5334](https://github.com/scalableminds/webknossos/pull/5334)
 - Upgraded UI library antd to version 4, creating a slightly more modern look and behavior of many UI elements. [#5350](https://github.com/scalableminds/webknossos/pull/5350)
+- Tiff export jobs of volume annotations now show the link back to the annotation in the jobs list. [#5378](https://github.com/scalableminds/webknossos/pull/5378)
 
 ### Changed
 - webKnossos is now part of the [image.sc support community](https://forum.image.sc/tag/webknossos). [#5332](https://github.com/scalableminds/webknossos/pull/5332)

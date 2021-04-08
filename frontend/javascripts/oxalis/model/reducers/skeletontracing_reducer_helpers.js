@@ -131,6 +131,11 @@ export function createNode(
   const { allowUpdate } = restrictions;
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
 
+  if (activeNodeMaybe.isNothing && tree.nodes.size() !== 0) {
+    console.error("Couldn't create a node in non-empty tree, because there is no active node.");
+    return Maybe.Nothing();
+  }
+
   if (allowUpdate) {
     // Use the same radius as current active node or revert to default value
     const radius = activeNodeMaybe

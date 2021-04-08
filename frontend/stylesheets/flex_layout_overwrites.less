@@ -84,3 +84,14 @@
 .flexlayout__tab_toolbar {
   flex-direction: row-reverse;
 }
+
+// Here we select the first vertical border splitter which is al
+.hide_first_splitter_border {
+  //display: none;
+  pointer-events: none;
+}
+
+.hide_first_splitter_border ~ .hide_first_splitter_border {
+  //display: block;
+  pointer-events: all;
+}

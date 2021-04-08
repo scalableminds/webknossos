@@ -209,7 +209,7 @@ const _getDefaultLayouts = () => {
   const leftBorder = buildBorder(
     "left",
     [((Object.values(settingsTabs): any): Array<TabNode>)],
-    defaultBorderWidth,
+    365,
     borderIsOpenByDefault,
     1,
   );

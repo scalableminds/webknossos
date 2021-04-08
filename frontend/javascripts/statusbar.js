@@ -1,5 +1,5 @@
 // @flow
-import { Col, Row } from "antd";
+import { Col, Row, Space } from "antd";
 import _ from "lodash";
 import { connect } from "react-redux";
 import React from "react";
@@ -34,23 +34,6 @@ const statusbarStyle: Object = {
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
 class Statusbar extends React.PureComponent<Props, State> {
-  isMounted: boolean = false;
-  componentDidMount() {
-    this.isMounted = true;
-  }
-
-  componentWillUnmount() {
-    this.isMounted = false;
-  }
-
-  // eslint-disable-next-line react/sort-comp
-  _forceUpdate = _.throttle(() => {
-    if (!this.isMounted) {
-      return;
-    }
-    this.forceUpdate();
-  }, 100);
-
   getSegmentationCube(): Cube {
     const segmentationLayer = Model.getSegmentationLayer();
     return segmentationLayer.cube;
@@ -67,7 +50,6 @@ class Statusbar extends React.PureComponent<Props, State> {
           key="zoom-i"
           className="keyboard-key-icon-small"
           style={{
-            marginLeft: spaceBetweenItems,
             borderColor: "rgba(255, 255, 255, 0.67)",
           }}
         >
@@ -91,7 +73,7 @@ class Statusbar extends React.PureComponent<Props, State> {
   getShortcuts() {
     const { activeViewport } = this.props;
     return (
-      <Col span={14} style={{ textAlign: "right" }}>
+      <Space size={spaceBetweenItems} style={{ textAlign: "right" }}>
         <span>
           <img
             className="keyboard-mouse-icon"
@@ -101,7 +83,7 @@ class Statusbar extends React.PureComponent<Props, State> {
           />
           Move
         </span>
-        <span style={{ marginLeft: spaceBetweenItems }}>
+        <span>
           <img
             className="keyboard-mouse-icon"
             src="/assets/images/icon-mousewheel.svg"
@@ -112,11 +94,7 @@ class Statusbar extends React.PureComponent<Props, State> {
         </span>
         {this.getZoomShortcut()}
         {activeViewport === OrthoViews.TDView && (
-          <span
-            style={{
-              marginLeft: spaceBetweenItems,
-            }}
-          >
+          <span>
             <img
               className="keyboard-mouse-icon"
               src="/assets/images/icon-mouse-right.svg"
@@ -126,7 +104,7 @@ class Statusbar extends React.PureComponent<Props, State> {
             Rotate 3D View
           </span>
         )}
-      </Col>
+      </Space>
     );
   }
 
@@ -141,7 +119,7 @@ class Statusbar extends React.PureComponent<Props, State> {
       pos && cube.getDataValue(pos, null, usableZoomStep);
 
     return (
-      <span style={{ marginLeft: spaceBetweenItems }}>
+      <span>
         Cell:{" "}
         {globalMousePosition
           ? getIdForPos(globalMousePosition, renderedZoomStepForMousePosition)
@@ -159,7 +137,7 @@ class Statusbar extends React.PureComponent<Props, State> {
     }
 
     return (
-      <Col span={10} style={{ textAlign: "left" }}>
+      <Space size={spaceBetweenItems}>
         <span>
           <img
             src="/assets/images/icon-downsampling.svg"
@@ -168,19 +146,23 @@ class Statusbar extends React.PureComponent<Props, State> {
           />
           {activeResolution.join("-")}{" "}
         </span>
-        <span style={{ marginLeft: spaceBetweenItems }}>
-          Pos: [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
-        </span>
+        <span>Pos: [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]</span>
         {hasSegmentation() && this.getCellInfo(globalMousePosition)}
-      </Col>
+      </Space>
     );
   }
 
   render() {
+    const { activeViewport } = this.props;
+    const isInTDView = activeViewport === OrthoViews.TDView;
     return (
       <Row style={statusbarStyle}>
-        {this.getInfos()}
-        {this.getShortcuts()}
+        <Col span={isInTDView ? 6 : 10} style={{ textAlign: "left" }}>
+          {this.getInfos()}
+        </Col>
+        <Col span={isInTDView ? 18 : 14} style={{ textAlign: "right" }}>
+          {this.getShortcuts()}
+        </Col>
       </Row>
     );
   }

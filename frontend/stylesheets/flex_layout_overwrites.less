@@ -80,18 +80,18 @@
   border-color: rgba(24, 144, 255, 0.85) !important;
 }
 
-// We reverse the direction of the buttons in the tabset bar to be able to position elements on the right.
+// Reverse the direction of the buttons in the tabset bar to be able to position elements on the right.
 .flexlayout__tab_toolbar {
   flex-direction: row-reverse;
 }
 
-// Here we select the first vertical border splitter which is al
+// Select the first vertical border splitter and ignore all its pointer events to disable resizing of the border.
+// This is only active when the left border is open and therefore only disables the splitter of the left border.
+// More info about this css trick: https://stackoverflow.com/questions/2717480/css-selector-for-first-element-with-class.
 .hide_first_splitter_border {
-  //display: none;
   pointer-events: none;
 }
-
+// This re-enables all pointer event for all other border splitters that are not the first (left most).
 .hide_first_splitter_border ~ .hide_first_splitter_border {
-  //display: block;
   pointer-events: all;
 }

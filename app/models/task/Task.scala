@@ -76,10 +76,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasksRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      r <- run(sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasksRow])
+      parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
@@ -164,21 +162,19 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task")
       )
-      rList <- run(findTaskOfInsertedAnnotationQ)
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      r <- run(findTaskOfInsertedAnnotationQ)
+      parsed <- parseFirst(r, "task assignment query")
     } yield (parsed, annotationId)
   }
 
   def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false): Fox[Task] =
     for {
-      rList <- run(sql"#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}".as[TasksRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      r <- run(sql"#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}".as[TasksRow])
+      parsed <- parseFirst(r, "task peek query")
     } yield parsed
 
   def findAllByProjectAndTaskTypeAndIdsAndUser(
-      projectNameOpt: Option[String],
+      projectIdOpt: Option[ObjectId],
       taskTypeIdOpt: Option[ObjectId],
       taskIdsOpt: Option[List[ObjectId]],
       userIdOpt: Option[ObjectId],
@@ -192,10 +188,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       case Some(true) => "ORDER BY random()"
       case _          => ""
     }
-    val projectFilterFox = projectNameOpt match {
-      case Some(pName) => for { project <- projectDAO.findOneByName(pName) } yield s"(t._project = '${project._id}')"
-      case _           => Fox.successful("true")
-    }
+    val projectFilter = projectIdOpt.map(pId => s"(t._project = '$pId')").getOrElse("true")
     val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '$ttId')").getOrElse("true")
     val taskIdsFilter = taskIdsOpt
       .map(tIds => if (tIds.isEmpty) "false" else s"(t._id in ${writeStructTupleWithQuotes(tIds.map(_.toString))})")
@@ -209,7 +202,6 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       .getOrElse("true")
 
     for {
-      projectFilter <- projectFilterFox
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       q = sql"""select #${columnsWithPrefix("t.")}
                 from webknossos.tasks_ t

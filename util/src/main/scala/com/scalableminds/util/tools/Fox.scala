@@ -250,10 +250,10 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   /**
     * If the box is Empty this will create a Full. If The box is Full it will get emptied. Failures are passed through.
     */
-  def reverse: Fox[Boolean] =
+  def reverse: Fox[Unit] =
     new Fox(futureBox.map {
       case Full(_)    => Empty
-      case Empty      => Full(true)
+      case Empty      => Full(())
       case f: Failure => f
     })
 

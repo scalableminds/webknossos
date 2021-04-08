@@ -123,17 +123,16 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[DatasetsRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[DatasetsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def isEmpty: Fox[Boolean] =
@@ -159,20 +158,19 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where name = $name and _organization = $organizationId and #$accessQuery"
           .as[DatasetsRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
 
   def findAllByNamesAndOrganization(names: List[String], organizationId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      rows <- run(sql"select #$columns from #$existingCollectionName where name in #${writeStructTupleWithQuotes(
+      r <- run(sql"select #$columns from #$existingCollectionName where name in #${writeStructTupleWithQuotes(
         names.map(sanitize))} and _organization = $organizationId and #$accessQuery".as[DatasetsRow]).map(_.toList)
-      parsed <- Fox.combined(rows.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
@@ -336,9 +334,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executi
         DatasetResolutions.filter(r => r._Dataset === dataSetId.id && r.datalayername === dataLayerName).result)
         .map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse resolution row"
-    } yield {
-      rowsParsed
-    }
+    } yield rowsParsed
 
   def updateResolutions(_dataSet: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.dataSet_resolutions where _dataSet = ${_dataSet.id}"
@@ -420,9 +416,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId, skipResolutions)))
-    } yield {
-      rowsParsed
-    }
+    } yield rowsParsed
 
   def findOneByNameForDataSet(dataLayerName: String, dataSetId: ObjectId): Fox[DataLayer] =
     for {
@@ -430,9 +424,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
         .map(_.toList)
       firstRow <- rows.headOption.toFox ?~> ("Could not find data layer " + dataLayerName)
       parsed <- parseRow(firstRow, dataSetId)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   private def insertLayerQuery(_dataSet: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =
     layer match {

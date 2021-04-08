@@ -155,8 +155,8 @@ test("project_user_B", async t => {
   await setCurrToken(tokenUserE);
   t.plan(1);
 
-  const projectId = "58135bfd2faeb3190181c057";
-  await api.deleteProject(projectId).catch(err => {
-    t.is(err.messages[0].error, "Project couldn’t be found");
+  const projectName = "Test_Project";
+  await api.deleteProject(projectName).catch(err => {
+    t.is(err.messages[0].error, "Project Test_Project couldn’t be found");
   });
 });

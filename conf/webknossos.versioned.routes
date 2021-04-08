@@ -2,17 +2,6 @@
 
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
 
-->       /v4/                                                                 webknossos.latest.Routes
-
-POST     /v3/tasks/list                                                       controllers.LegacyApiController.taskListTasks
-GET      /v3/projects/:name                                                   controllers.LegacyApiController.projectRead(name: String)
-DELETE   /v3/projects/:name                                                   controllers.LegacyApiController.projectDelete(name: String)
-PUT      /v3/projects/:name                                                   controllers.LegacyApiController.projectUpdate(name: String)
-GET      /v3/projects/:name/tasks                                             controllers.LegacyApiController.projectTasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-PATCH    /v3/projects/:name/incrementEachTasksInstances                       controllers.LegacyApiController.projectIncrementEachTasksInstances(name: String, delta: Option[Long])
-PATCH    /v3/projects/:name/pause                                             controllers.LegacyApiController.projectPause(name: String)
-PATCH    /v3/projects/:name/resume                                            controllers.LegacyApiController.projectResume(name: String)
-
 ->       /v3/                                                                 webknossos.latest.Routes
 
 PATCH    /v2/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinishV2(typ: String, id: String)

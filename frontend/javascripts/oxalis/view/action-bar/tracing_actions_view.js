@@ -3,7 +3,6 @@
 import { Button, Dropdown, Menu, Modal, Tooltip } from "antd";
 import {
   BarsOutlined,
-  CameraOutlined,
   CheckCircleOutlined,
   CheckOutlined,
   CodeSandboxOutlined,
@@ -53,7 +52,7 @@ import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
-import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 
@@ -465,12 +464,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         annotationId={annotationId}
       />,
     );
-    elements.push(
-      <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>
-        <CameraOutlined />
-        Screenshot (Q)
-      </Menu.Item>,
-    );
+    elements.push(screenshotMenuItem);
     elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
         <SettingOutlined />

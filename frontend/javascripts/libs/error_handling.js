@@ -132,13 +132,13 @@ class ErrorHandling {
         return;
       }
       if (error == null) {
-        // older browsers don't deliver the error parameter
+        // Older browsers (and apparently Safari) don't deliver the error parameter
         error = new Error(message);
       }
       console.error(error);
       this.notify(error);
 
-      if (error.toString() === "Script error.") {
+      if (error.toString() === "Error: Script error.") {
         // Safari and the newest antd version don't play well together. Often, "ResizeObserver loop completed with undelivered notifications." is triggered
         // but that message is lost. Instead, a "Script error." is thrown. Since that error is benign and can be frequent, we will
         // ignore it here to not annoy the user. The message wasn't added to BLACKLISTED_ERROR_MESSAGES so that the error can still be seen via airbrake.

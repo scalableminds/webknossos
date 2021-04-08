@@ -32,11 +32,11 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 10;
+export const currentLayoutVersion = 11;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
-export const defaultSplitterSize = 3;
+export const defaultSplitterSize = 1;
 // The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
 // The borderBar is (vertical) bar the the borders of the screen that contains a button for each tab of in the border to toggle.
 // As we want a flexible layout in the border, we use only on tab containing a sub-layout that is more flexible.

@@ -26,7 +26,7 @@ export type QueryObject = {
 export type TaskFormFieldValues = {
   taskId?: string,
   taskTypeId?: string,
-  projectName?: string,
+  projectId?: string,
   userId?: string,
   random?: boolean,
 };
@@ -52,7 +52,7 @@ const persistence: Persistence<State> = new Persistence(
     fieldValues: PropTypes.shape({
       taskId: PropTypes.string,
       taskTypeId: PropTypes.string,
-      projectName: PropTypes.string,
+      projectId: PropTypes.string,
       userId: PropTypes.string,
     }),
   },
@@ -132,8 +132,8 @@ class TaskSearchForm extends React.Component<Props, State> {
       queryObject.user = formValues.userId;
     }
 
-    if (formValues.projectName) {
-      queryObject.project = formValues.projectName;
+    if (formValues.projectId) {
+      queryObject.project = formValues.projectId;
     }
 
     if (isRandom) {
@@ -217,7 +217,7 @@ class TaskSearchForm extends React.Component<Props, State> {
         </Row>
         <Row gutter={40}>
           <Col span={12}>
-            <FormItem name="projectName" {...formItemLayout} label="Project">
+            <FormItem name="projectId" {...formItemLayout} label="Project">
               <Select
                 allowClear
                 showSearch
@@ -226,7 +226,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 style={{ width: "100%" }}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.projects.map((project: APIProject) => ({
-                  value: project.name,
+                  value: project.id,
                   label: `${project.name}`,
                 }))}
               />

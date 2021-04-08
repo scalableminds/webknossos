@@ -65,16 +65,17 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[OrganizationsRow])
-      parsed <- parseAll(r)
+      rList <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[OrganizationsRow])
+      parsed <- Fox.serialCombined(rList.toList)(r => parse(r))
     } yield parsed
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
+      rList <- run(
         sql"select #$columns from #$existingCollectionName where name = $name and #$accessQuery".as[OrganizationsRow])
-      parsed <- parseFirst(r, name)
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
     } yield parsed
 
   def insertOne(o: Organization): Fox[Unit] =

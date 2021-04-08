@@ -163,15 +163,15 @@ DELETE        /scripts/:id                                                     c
 GET           /projects                                                        controllers.ProjectController.list
 GET           /projects/assignments                                            controllers.ProjectController.listWithStatus
 POST          /projects                                                        controllers.ProjectController.create
-GET           /projects/:id                                                    controllers.ProjectController.read(id: String)
-DELETE        /projects/:id                                                    controllers.ProjectController.delete(id: String)
-PUT           /projects/:id                                                    controllers.ProjectController.update(id: String)
-GET           /projects/:id/tasks                                              controllers.ProjectController.tasksForProject(id: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-PATCH         /projects/:id/incrementEachTasksInstances                        controllers.ProjectController.incrementEachTasksInstances(id: String, delta: Option[Long])
-PATCH         /projects/:id/pause                                              controllers.ProjectController.pause(id: String)
-PATCH         /projects/:id/resume                                             controllers.ProjectController.resume(id: String)
-GET           /projects/:id/usersWithActiveTasks                               controllers.ProjectController.usersWithActiveTasks(id:String)
-POST          /projects/:id/transferActiveTasks                                controllers.ProjectController.transferActiveTasks(id:String)
+GET           /projects/:name                                                  controllers.ProjectController.read(name: String)
+DELETE        /projects/:name                                                  controllers.ProjectController.delete(name: String)
+PUT           /projects/:name                                                  controllers.ProjectController.update(name: String)
+GET           /projects/:name/tasks                                            controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+PATCH         /projects/:name/incrementEachTasksInstances                      controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
+PATCH         /projects/:name/pause                                            controllers.ProjectController.pause(name: String)
+PATCH         /projects/:name/resume                                           controllers.ProjectController.resume(name: String)
+GET           /projects/:name/usersWithActiveTasks                             controllers.ProjectController.usersWithActiveTasks(name:String)
+POST          /projects/:name/transferActiveTasks                              controllers.ProjectController.transferActiveTasks(name:String)
 
 # Statistics
 GET           /statistics/webknossos                                           controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])

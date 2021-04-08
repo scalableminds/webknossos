@@ -89,8 +89,8 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       accessQuery <- readAccessQuery
       rList <- run(
         sql"select #$infoColumns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[InfoTuple])
-      r <- rList.headOption.toFox
-      parsed <- parseInfo(r)
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parseInfo(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
   def findAllWithAnnotation(_annotation: ObjectId)(implicit ctx: DBAccessContext): Fox[List[MeshInfo]] =
@@ -123,7 +123,7 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select data from webknossos.meshes where _id = $id and #$accessQuery".as[Option[String]])
-      r <- rList.headOption.flatten.toFox
+      r <- rList.headOption.flatten.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       binary = BaseEncoding.base64().decode(r)
     } yield binary
 

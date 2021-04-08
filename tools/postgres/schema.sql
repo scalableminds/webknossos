@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(69);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(68);
 COMMIT TRANSACTION;
 
 
@@ -166,7 +166,6 @@ CREATE TABLE webknossos.tracingStores(
 
 CREATE TABLE webknossos.projects(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organization CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   _owner CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'),
@@ -175,8 +174,7 @@ CREATE TABLE webknossos.projects(
   expectedTime BIGINT,
   isBlacklistedFromReport BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _organization)
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.scripts(
@@ -193,9 +191,8 @@ CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique'
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organization CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
-  summary VARCHAR(256) NOT NULL,
+  summary VARCHAR(256) NOT NULL UNIQUE,
   description TEXT NOT NULL,
   settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
@@ -208,8 +205,7 @@ CREATE TABLE webknossos.taskTypes(
   tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object'),
-  UNIQUE (summary, _organization)
+  CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object')
 );
 
 CREATE TABLE webknossos.tasks(

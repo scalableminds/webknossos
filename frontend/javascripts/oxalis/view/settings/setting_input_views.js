@@ -169,16 +169,18 @@ type SwitchSettingProps = {
   label: string | React.Node,
   disabled: boolean,
   tooltipText: ?string,
+  loading: boolean,
 };
 
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
     disabled: false,
     tooltipText: null,
+    loading: false,
   };
 
   render() {
-    const { label, onChange, value, disabled, tooltipText } = this.props;
+    const { label, onChange, value, disabled, tooltipText, loading } = this.props;
     return (
       <Row className="margin-bottom" type="flex" align="top">
         <Col span={9}>
@@ -193,6 +195,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 checked={value}
                 defaultChecked={value}
                 disabled={disabled}
+                loading={loading}
               />
             </div>
           </Tooltip>

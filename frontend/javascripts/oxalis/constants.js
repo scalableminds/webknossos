@@ -114,6 +114,7 @@ export const SettingsTabs = {
     name: "Annotation",
   },
   DatasetSettingsTab: { id: "DatasetSettingsView", name: "Dataset" },
+  LayerSettingsTab: { id: "LayerSettingsView", name: "Layers" },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;

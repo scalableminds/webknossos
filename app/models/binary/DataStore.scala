@@ -114,22 +114,26 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from webknossos.datastores_ where name = $name and #$accessQuery".as[DatastoresRow])
-      parsed <- parseFirst(r, name)
+      rList <- run(
+        sql"select #$columns from webknossos.datastores_ where name = $name and #$accessQuery".as[DatastoresRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from webknossos.datastores_ where url = $url and #$accessQuery".as[DatastoresRow])
-      parsed <- parseFirst(r, url)
+      rList <- run(
+        sql"select #$columns from webknossos.datastores_ where url = $url and #$accessQuery".as[DatastoresRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from webknossos.datastores_ where #$accessQuery order by name".as[DatastoresRow])
-      parsed <- parseAll(r)
+      parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def updateUrlByName(name: String, url: String): Fox[Unit] = {

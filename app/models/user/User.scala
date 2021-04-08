@@ -96,8 +96,9 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[UsersRow])
-      parsed <- parseFirst(r, id)
+      rList <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[UsersRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
@@ -105,7 +106,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       accessQuery <- readAccessQuery
       r <- run(
         sql"select #$columns from #$existingCollectionName where isUnlisted = false and #$accessQuery".as[UsersRow])
-      parsed <- parseAll(r)
+      parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(

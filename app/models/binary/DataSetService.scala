@@ -48,7 +48,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
-  def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
+  def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Boolean] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[ObjectId] = {

@@ -222,18 +222,6 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
 
   def parse(row: X#TableElementType): Fox[C]
 
-  def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: ObjectId): Fox[C] =
-    parseFirst(rowSeq, queryLabel.toString)
-
-  def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
-    for {
-      firstRow <- rowSeq.headOption.toFox // No error chain here, as this should stay Fox.Empty
-      parsed <- parse(firstRow) ?~> s"Parsing failed for row in ${collectionName} queried by $queryLabel"
-    } yield parsed
-
-  def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =
-    Fox.combined(rowSeq.toList.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
-
   @silent // suppress warning about unused implicit ctx, as it is used in subclasses
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
     run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {

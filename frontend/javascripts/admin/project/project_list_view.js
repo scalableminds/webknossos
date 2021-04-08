@@ -140,7 +140,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
         });
 
         try {
-          await deleteProject(project.id);
+          await deleteProject(project.name);
           this.setState(prevState => ({
             projects: prevState.projects.filter(p => p.id !== project.id),
           }));
@@ -164,7 +164,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     project: APIProjectWithAssignments,
     APICall: string => Promise<APIProject>,
   ) => {
-    const updatedProject = await APICall(project.id);
+    const updatedProject = await APICall(project.name);
     this.setState(prevState => ({
       projects: prevState.projects.map(p =>
         p.id === project.id ? this.mergeProjectWithUpdated(p, updatedProject) : p,
@@ -180,7 +180,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
           this.setState({
             isLoading: true,
           });
-          const updatedProject = await increaseProjectTaskInstances(project.id);
+          const updatedProject = await increaseProjectTaskInstances(project.name);
           this.setState(prevState => ({
             projects: prevState.projects.map(p => (p.id === project.id ? updatedProject : p)),
           }));
@@ -200,9 +200,9 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     });
   };
 
-  maybeShowNoFallbackDataInfo = async (projectId: string) => {
+  maybeShowNoFallbackDataInfo = async (projectName: string) => {
     const tasks = await getTasks({
-      project: projectId,
+      project: projectName,
     });
     if (tasks.some(task => task.type.tracingType !== "skeleton")) {
       Toast.info(messages["project.no_fallback_data_included"], {
@@ -346,7 +346,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                       View
                     </Link>
                     <br />
-                    <Link to={`/projects/${project.id}/edit`} title="Edit Project">
+                    <Link to={`/projects/${project.name}/edit`} title="Edit Project">
                       <EditOutlined />
                       Edit
                     </Link>
@@ -374,7 +374,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                         <br />
                       </div>
                     )}
-                    <Link to={`/projects/${project.id}/tasks`} title="View Tasks">
+                    <Link to={`/projects/${project.name}/tasks`} title="View Tasks">
                       <ScheduleOutlined />
                       Tasks
                     </Link>
@@ -390,7 +390,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     <AsyncLink
                       href="#"
                       onClick={async () => {
-                        this.maybeShowNoFallbackDataInfo(project.id);
+                        this.maybeShowNoFallbackDataInfo(project.name);
                         await downloadNml(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"

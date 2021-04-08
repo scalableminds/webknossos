@@ -19,7 +19,7 @@ import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 const FormItem = Form.Item;
 
 type OwnProps = {|
-  projectId?: ?string,
+  projectName?: ?string,
 |};
 type StateProps = {||};
 type Props = {| ...OwnProps, ...StateProps |};
@@ -27,7 +27,7 @@ type PropsWithRouter = {|
   ...Props,
 |};
 
-function ProjectCreateView({ projectId }: PropsWithRouter) {
+function ProjectCreateView({ projectName }: PropsWithRouter) {
   const [teams, setTeams] = useState<Array<APITeam>>([]);
   const [users, setUsers] = useState<Array<APIUser>>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
@@ -49,7 +49,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   }
 
   async function applyDefaults() {
-    const project = projectId ? await getProject(projectId) : null;
+    const project = projectName ? await getProject(projectName) : null;
     const defaultValues = {
       priority: 100,
       expectedTime: 90,
@@ -63,18 +63,16 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
   }
 
   const handleSubmit = async formValues => {
-    if (projectId) {
-      await updateProject(projectId, formValues);
+    if (projectName) {
+      await updateProject(projectName, formValues);
     } else {
       await createProject(formValues);
     }
     history.push("/projects");
   };
 
-  const isEditMode = projectId != null;
-  const projectName = form.getFieldValue("name");
-  const title =
-    isEditMode && projectId ? `Update Project ${projectName || projectId}` : "Create Project";
+  const isEditMode = projectName != null;
+  const title = isEditMode && projectName ? `Update Project ${projectName}` : "Create Project";
   const fullWidth = { width: "100%" };
 
   return (

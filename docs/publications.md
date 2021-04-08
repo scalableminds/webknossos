@@ -78,7 +78,7 @@ cortex.
 ## 2017
 * Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and     Helmstaedter.    
   webKnossos: efficient online 3D data annotation for connectomics.  
-  [Nature Methods (2017) DOI:10.1038/NMETH.4331.[(https://www.nature.com/articles/nmeth.4331)
+  [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
 * Helene Schmidt, Anjali Gour, Jakob Straehle, Kevin M. Boergens, Michael Brecht & Moritz Helmstaedter.  
   Axonal synapse sorting in medial entorhinal cortex.  

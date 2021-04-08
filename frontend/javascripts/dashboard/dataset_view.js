@@ -48,6 +48,12 @@ const persistence: Persistence<PersistenceState> = new Persistence(
   "datasetList",
 );
 
+function filterDatasetsForUsersOrganization(datasets, user) {
+  return features().isDemoInstance
+    ? datasets.filter(d => d.owningOrganization === user.organization)
+    : datasets;
+}
+
 function DatasetView(props: Props) {
   const { user } = props;
   const history = useHistory();
@@ -166,9 +172,8 @@ function DatasetView(props: Props) {
   }
 
   function renderTable() {
-    const filteredDatasets = features().isDemoInstance
-      ? context.datasets.filter(d => d.owningOrganization === user.organization)
-      : context.datasets;
+    const filteredDatasets = filterDatasetsForUsersOrganization(context.datasets, user);
+
     return (
       <DatasetTable
         datasets={filteredDatasets}
@@ -257,7 +262,8 @@ function DatasetView(props: Props) {
     </div>
   );
 
-  const isEmpty = context.datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
+  const datasets = filterDatasetsForUsersOrganization(context.datasets, user);
+  const isEmpty = datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
   const content = isEmpty ? renderPlaceholder() : renderTable();
 
   return (
@@ -265,7 +271,7 @@ function DatasetView(props: Props) {
       {adminHeader}
       <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-      <Spin size="large" spinning={context.datasets.length === 0 && context.isLoading}>
+      <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
         {content}
       </Spin>
     </div>

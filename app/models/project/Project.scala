@@ -76,11 +76,8 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       ))
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(
-        (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
-        or _owner = '${requestingUserId.id}'
-        or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
-        )"""
+    s"""((_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _owner = '${requestingUserId.id}'
+      or (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin) = (select _organization from webknossos.users_ where _id = _owner))"""
   override def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
 
   // read operations
@@ -88,15 +85,17 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[ProjectsRow])
-      parsed <- parseFirst(r, id)
+      rList <- run(
+        sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[ProjectsRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery order by created".as[ProjectsRow])
-      parsed <- parseAll(r)
+      parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
@@ -110,20 +109,20 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               where tt._id = $taskTypeId
            """.as[ProjectsRow]
       )
-      parsed <- parseAll(r)
+      parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Project] =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #$columns from #$existingCollectionName where name = '#${sanitize(name)}' and _organization = $organizationId and #$accessQuery"
+      rList <- run(
+        sql"select #$columns from #$existingCollectionName where name = '#${sanitize(name)}' and #$accessQuery"
           .as[ProjectsRow])
-      parsed <- parseFirst(r, s"$organizationId/$name")
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
     } yield parsed
 
-  def findUsersWithActiveTasks(projectId: ObjectId): Fox[List[(String, String, String, Int)]] =
+  def findUsersWithActiveTasks(name: String): Fox[List[(String, String, String, Int)]] =
     for {
       rSeq <- run(sql"""select m.email, u.firstName, u.lastName, count(a._id)
                          from
@@ -132,7 +131,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                          join webknossos.projects_ p on t._project = p._id
                          join webknossos.users_ u on a._user = u._id
                          join webknossos.multiusers_ m on u._multiUser = m._id
-                         where p._id = $projectId
+                         where p.name = $name
                          and a.state = '#${AnnotationState.Active.toString}'
                          and a.typ = '#${AnnotationType.Task}'
                          group by m.email, u.firstName, u.lastName
@@ -141,18 +140,16 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   // write operations
 
-  def insertOne(p: Project, organizationId: ObjectId): Fox[Unit] =
+  def insertOne(p: Project): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.projects(
-                                     _id, _organization, _team, _owner, name, priority,
-                                     paused, expectedTime, isblacklistedfromreport, created, isDeleted)
-                         values(${p._id}, $organizationId, ${p._team}, ${p._owner}, ${p.name}, ${p.priority},
-                         ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport},
-                         ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
+      _ <- run(
+        sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, isblacklistedfromreport, created, isDeleted)
+                         values(${p._id}, ${p._team}, ${p._owner}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(
+          p.created)}, ${p.isDeleted})""")
     } yield ()
 
   def updateOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for { // note that p.created is immutable, hence skipped here
+    for { //note that p.created is skipped
       _ <- assertUpdateAccess(p._id)
       _ <- run(sqlu"""update webknossos.projects
                           set

@@ -31,10 +31,10 @@ test.serial("getProjectsWithOpenAssignments()", async t => {
   t.snapshot(projects, { id: "projects-getProjectsWithOpenAssignments()" });
 });
 
-test.serial("getProject(projectId: string)", async t => {
-  const projectId = _.sortBy(await api.getProjects(), p => p.name)[0].id;
-  const project = await api.getProject(projectId);
-  t.snapshot(project, { id: "projects-getProject(projectId: string)" });
+test.serial("getProject(projectName: string)", async t => {
+  const projectName = _.sortBy(await api.getProjects(), p => p.name)[0].name;
+  const project = await api.getProject(projectName);
+  t.snapshot(project, { id: "projects-getProject(projectName: string)" });
 });
 
 test.serial("createProject and deleteProject", async t => {
@@ -58,8 +58,8 @@ test.serial("createProject and deleteProject", async t => {
   const createdProjectWithFixedId = Object.assign({}, createdProject, { id: "fixed-project-id" });
   t.snapshot(createdProjectWithFixedId, { id: "projects-createProject(project: APIProjectType)" });
 
-  const response = await api.deleteProject(createdProject.id);
-  t.snapshot(response, { id: "projects-deleteProject(projectId: string)" });
+  const response = await api.deleteProject(projectName);
+  t.snapshot(response, { id: "projects-deleteProject(projectName: string)" });
 });
 
 function convertProjectToProjectUpdater(project: APIProject): APIProjectUpdater {
@@ -69,9 +69,9 @@ function convertProjectToProjectUpdater(project: APIProject): APIProjectUpdater 
   });
 }
 
-test.serial("updateProject(projectId: string, project: APIProjectType)", async t => {
+test.serial("updateProject(projectName: string, project: APIProjectType)", async t => {
   const project = (await api.getProjects())[0];
-  const projectId = project.id;
+  const projectName = project.name;
 
   const projectWithOwnerId = convertProjectToProjectUpdater(project);
 
@@ -79,12 +79,12 @@ test.serial("updateProject(projectId: string, project: APIProjectType)", async t
     priority: 1337,
   });
 
-  const updatedProject = await api.updateProject(projectId, projectWithNewPriority);
+  const updatedProject = await api.updateProject(projectName, projectWithNewPriority);
   t.snapshot(updatedProject, {
-    id: "projects-updateProject(projectId: string, project: APIProjectType)",
+    id: "projects-updateProject(projectName: string, project: APIProjectType)",
   });
 
-  const revertedProject = await api.updateProject(projectId, projectWithOwnerId);
+  const revertedProject = await api.updateProject(projectName, projectWithOwnerId);
   t.snapshot(revertedProject, {
     id: "projects-revertedProject",
   });
@@ -92,20 +92,20 @@ test.serial("updateProject(projectId: string, project: APIProjectType)", async t
 
 test.serial("increaseProjectTaskInstances", async t => {
   await setCurrToken(tokenUserD);
-  const projectId = (await api.getProjects())[0].id;
+  const projectName = (await api.getProjects())[0].name;
 
-  const updatedProject = await api.increaseProjectTaskInstances(projectId, 10);
+  const updatedProject = await api.increaseProjectTaskInstances(projectName, 10);
   t.snapshot(updatedProject, {
-    id: "projects-increaseProjectTaskInstances(projectId: string, delta?: number)",
+    id: "projects-increaseProjectTaskInstances(projectName: string, delta?: number)",
   });
 });
 
 test.serial("pauseProject and resumeProject", async t => {
-  const projectId = (await api.getProjects())[0].id;
+  const projectName = (await api.getProjects())[0].name;
 
-  const pausedProject = await api.pauseProject(projectId);
-  t.snapshot(pausedProject, { id: "projects-pauseProject(projectId: string)" });
+  const pausedProject = await api.pauseProject(projectName);
+  t.snapshot(pausedProject, { id: "projects-pauseProject(projectName: string)" });
 
-  const resumedProject = await api.resumeProject(projectId);
-  t.snapshot(resumedProject, { id: "projects-resumeProject(projectId: string)" });
+  const resumedProject = await api.resumeProject(projectName);
+  t.snapshot(resumedProject, { id: "projects-resumeProject(projectName: string)" });
 });

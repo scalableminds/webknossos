@@ -14,9 +14,7 @@ The API is subject to frequent changes. However, older versions will be supporte
 
 New versions will be documented here, detailing the changes. Note, however, that some changes are not considered to be breaking the API and will not lead to new versions. Such changes include new optional parameters as well as new fields in the responses. The same goes for error message wording.
 
-### Current api version is `v4`
-
-* New in v4: /projects routes no longer expect `name` but now `id`. The same goes for `POST /tasks/list` when filtering by project.
+### Current api version is `v3`
 
 * New in v3: the info and finish requests of annotations now expect an additional `timestamp` GET parameter that should be set to the time the request is sent (e.g. Date.now()).
 
@@ -518,7 +516,7 @@ List tasks matching search criteria
 #### Expects
  - JSON object with four optional fields:
    - `"user"` `[STRING]` show only tasks on which the user with this id has worked
-   - `"project"` `[STRING]` show only tasks of the project with this id
+   - `"project"` `[STRING]` show only tasks of the project with this name
    - `"ids"` `[JSON LIST OF STRINGS]` show only tasks with these ids
    - `"tasktype"` `[STRING]` show only tasks matching the task type with this id
    - `"random"` `[BOOLEAN]` if true, return randomized subset of the results, rather than the first 1000 matches in the database
@@ -526,9 +524,6 @@ List tasks matching search criteria
 #### Returns
  - JSON list of objects containing task information
  - Note that a maximum of 1000 results is returned
-
-#### Changes Introduced in `v4`
- - The `"project"` field in the JSON object is no longer its name but instead its id.
 
 
 ---
@@ -626,33 +621,27 @@ JSON object containing project information about the newly created project, incl
 
 
 ---
-### `GET /projects/:id`
+### `GET /projects/:name`
 
 #### Expects
- - In the url: `:id` id of a project
+ - In the url: `:name` name of a project
 
 #### Returns
  - JSON object containing project information about the selected project
 
-#### Changes Introduced in `v4`
- - The request no longer expects `name` in the url, but instead `id`
-
 
 ---
-### `DELETE /projects/:id`
+### `DELETE /projects/:name`
 
 Delete a project and all its tasks and annotations
 
 #### Expects
- - In the url: `:id` id of a project
-
-#### Changes Introduced in `v4`
- - The request no longer expects `name` in the url, but instead `id`
+ - In the url: `:name` name of a project
 
 
 
 ---
-### `PUT /projects/:id`
+### `PUT /projects/:name`
 
 Update a project
 
@@ -662,18 +651,15 @@ Update a project
 #### Returns
  - JSON object containing project information about the updated project
 
-#### Changes Introduced in `v4`
- - The request no longer expects `name` in the url, but instead `id`
-
 
 
 ---
-### `GET /projects/:id/tasks`
+### `GET /projects/:name/tasks`
 
 List all tasks of a project
 
 #### Expects
- - In the url: `:id` id of a project
+ - In the url: `:name` name of a project
  - Optional GET parameter `limit=[INT]`
    - return only the first x results (defaults to infinity)
  - Optional GET parameter `pageNumber=[INT]`
@@ -688,52 +674,42 @@ List all tasks of a project
 #### Note
  - For smoother backwards compatibility, the limit defaults to infinity. However, to ease server load and improve response time, we suggest using a limit of 1000
 
-#### Changes Introduced in `v4`
- - The request no longer expects `name` in the url, but instead `id`
-
 
 ---
-### `PATCH /projects/:id/incrementEachTasksInstances`
+### `PATCH /projects/:name/incrementEachTasksInstances`
 
 Increment the open instances for each task of a project.
 
 #### Expects
- - In the url: `id` `[STRING]` id of a project
+ - In the url: `name` `[STRING]` name of a project
  - Optional GET parameter `delta=[INT]` number of additional instances for each task (defaults to 1)
 
 #### Returns
  - JSON object containing project information about the updated project, with additional field `numberOfOpenAssignments`
 
-#### Changes Introduced in `v4`
- - The request no longer expects `name` in the url, but instead `id`
-
 
 
 ---
-### `PATCH /projects/:id/pause`
+### `PATCH /projects/:name/pause`
 
 Pause a project (no tasks will be assigned until resumed)
 
 #### Expects
- - In the url: `:id` `[STRING]` id of a project
+ - In the url: `:name` `[STRING]` name of a project
 
 #### Returns
  - JSON object containing project information about the updated project
 
-#### Changes Introduced in `v4`
- - The request no longer expects `name` in the url, but instead `id`
 
 
 ---
-### `PATCH /projects/:id/resume`
+### `PATCH /projects/:name/resume`
 
 Resume a paused project
 
 #### Expects
- - In the url: `:id` `[STRING]` id of a project
+ - In the url: `:name` `[STRING]` name of a project
 
 #### Returns
  - JSON object containing project information about the updated project
 
-#### Changes Introduced in `v4`
- - The request no longer expects `name` in the url, but instead `id`

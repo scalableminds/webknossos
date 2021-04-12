@@ -77,18 +77,18 @@ class Statusbar extends React.PureComponent<Props, State> {
         <span>
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-mouse-left-drag.svg"
+            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
             alt="Mouse Left Drag"
-            style={{ height: 12 }}
+            style={{ height: 14 }}
           />
           Move
         </span>
         <span>
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-mousewheel.svg"
+            src="/assets/images/icon-statusbar-mouse-wheel.svg"
             alt="Mouse Wheel"
-            style={{ height: 12 }}
+            style={{ height: 14 }}
           />
           Move along 3rd axis
         </span>
@@ -97,9 +97,9 @@ class Statusbar extends React.PureComponent<Props, State> {
           <span>
             <img
               className="keyboard-mouse-icon"
-              src="/assets/images/icon-mouse-right.svg"
+              src="/assets/images/icon-statusbar-mouse-right.svg"
               alt="Mouse Right"
-              style={{ height: 12 }}
+              style={{ height: 14 }}
             />
             Rotate 3D View
           </span>
@@ -140,8 +140,8 @@ class Statusbar extends React.PureComponent<Props, State> {
       <Space size={spaceBetweenItems}>
         <span>
           <img
-            src="/assets/images/icon-downsampling.svg"
-            style={{ width: 15, height: 15 }}
+            src="/assets/images/icon-statusbar-downsampling.svg"
+            style={{ width: 12, height: 12 }}
             alt="Resolution"
           />
           {activeResolution.join("-")}{" "}

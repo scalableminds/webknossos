@@ -247,10 +247,7 @@ function NodeContextMenu(props: Props) {
       : "";
   return (
     <React.Fragment>
-      <div
-        style={{ width: "100%", height: "100%", position: "absolute", zIndex: 99 }}
-        onClick={hideNodeContextMenu}
-      />
+      <div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />
       <div
         style={{
           position: "absolute",

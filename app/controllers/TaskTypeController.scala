@@ -37,7 +37,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- taskTypeDAO.insertOne(taskType, request.identity._organization)
+        _ <- taskTypeDAO.insertOne(taskType)
         js <- taskTypeService.publicWrites(taskType)
       } yield Ok(js)
     }

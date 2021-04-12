@@ -18,6 +18,7 @@ import type {
 } from "types/api_flow_types";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
+import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
@@ -353,21 +354,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         <div>
           The current datasource-properties.json on the server seems to have invalid or missing
           properties. <br />
-          <a
-            href="#"
+          <LinkButton
             onClick={() =>
               showJSONModal("Suggested datasource-properties.json", inferredDataSource)
             }
           >
             Here
-          </a>{" "}
+          </LinkButton>{" "}
           are suggested settings from webKnossos. But be aware that properties like the voxel size
           or the largest segment id cannot be detected correctly. <br />
           If you want to apply those settings, click{" "}
-          <a href="#" onClick={applySuggestedSettings}>
-            here
-          </a>
-          .
+          <LinkButton onClick={applySuggestedSettings}>here</LinkButton>.
         </div>
       );
     } else if (
@@ -392,8 +389,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           additional information about the dataset that could be inferred. The original
           datasource-properties.json settings can be seen below in the advanced version. The
           JSON-encoded difference between the current and the suggested version can be inspected{" "}
-          <a
-            href="#"
+          <LinkButton
             onClick={() =>
               showJSONModal(
                 "Difference to suggested datasource-properties.json",
@@ -402,22 +398,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             }
           >
             here
-          </a>
+          </LinkButton>
           .<br />
-          Click{" "}
-          <a href="#" onClick={applySuggestedSettings}>
-            here
-          </a>{" "}
-          to set the suggested JSON settings. This will replace the current settings in the form
-          with{" "}
-          <a
-            href="#"
+          Click <LinkButton onClick={applySuggestedSettings}>here</LinkButton> to set the suggested
+          JSON settings. This will replace the current settings in the form with{" "}
+          <LinkButton
             onClick={() =>
               showJSONModal("Suggested datasource-properties.json", inferredDataSource)
             }
           >
             these settings
-          </a>
+          </LinkButton>
           .
         </div>
       );

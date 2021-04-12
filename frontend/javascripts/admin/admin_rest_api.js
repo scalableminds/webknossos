@@ -363,24 +363,24 @@ export async function getProjectsForTaskType(
   return responses.map(transformProject);
 }
 
-export async function getProject(projectId: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectId}`);
+export async function getProject(projectName: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}`);
   return transformProject(project);
 }
 
 export async function increaseProjectTaskInstances(
-  projectId: string,
+  projectName: string,
   delta?: number = 1,
 ): Promise<APIProjectWithAssignments> {
   const project = await Request.receiveJSON(
-    `/api/projects/${projectId}/incrementEachTasksInstances?delta=${delta}`,
+    `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
     { method: "PATCH" },
   );
   return transformProject(project);
 }
 
-export function deleteProject(projectId: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectId}`, {
+export function deleteProject(projectName: string): Promise<void> {
+  return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",
   });
 }
@@ -395,26 +395,29 @@ export function createProject(project: APIProjectCreator): Promise<APIProject> {
   });
 }
 
-export function updateProject(projectId: string, project: APIProjectUpdater): Promise<APIProject> {
+export function updateProject(
+  projectName: string,
+  project: APIProjectUpdater,
+): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
 
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}`, {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}`, {
     method: "PUT",
     data: transformedProject,
   });
 }
 
-export async function pauseProject(projectId: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectId}/pause`, {
+export async function pauseProject(projectName: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/pause`, {
     method: "PATCH",
   });
   return transformProject(project);
 }
 
-export async function resumeProject(projectId: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectId}/resume`, {
+export async function resumeProject(projectName: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/resume`, {
     method: "PATCH",
   });
   return transformProject(project);

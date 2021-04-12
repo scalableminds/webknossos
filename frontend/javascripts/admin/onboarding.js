@@ -19,6 +19,7 @@ import React, { type Node } from "react";
 
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
+import LinkButton from "components/link_button";
 import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -440,11 +441,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <OptionCard
           header="Skip"
           icon={<ClockCircleOutlined />}
-          action={
-            <a href="#" onClick={this.advanceStep}>
-              Skip this step
-            </a>
-          }
+          action={<LinkButton onClick={this.advanceStep}>Skip this step</LinkButton>}
           height={170}
         >
           You can always do this later!
@@ -477,9 +474,9 @@ class OnboardingView extends React.PureComponent<Props, State> {
           formats and upload processes webKnossos supports.
         </FeatureCard>
         <FeatureCard header="User & Team Management" icon={<TeamOutlined />}>
-          <a onClick={() => this.setState({ isInviteModalVisible: true })} href="#">
+          <LinkButton onClick={() => this.setState({ isInviteModalVisible: true })}>
             Invite users
-          </a>{" "}
+          </LinkButton>{" "}
           <InviteUsersModal
             visible={this.state.isInviteModalVisible}
             handleVisibleChange={isInviteModalVisible => this.setState({ isInviteModalVisible })}

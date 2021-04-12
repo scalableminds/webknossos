@@ -30,6 +30,7 @@ import {
 } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
@@ -257,10 +258,10 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         <br />
         {isAdmin || this.props.isAdminView ? (
           <div>
-            <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
+            <LinkButton onClick={() => this.openTransferModal(annotation.id)}>
               <TeamOutlined />
               Transfer
-            </a>
+            </LinkButton>
             <br />
           </div>
         ) : null}
@@ -277,23 +278,23 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
               Download
             </AsyncLink>
             <br />
-            <a href="#" onClick={() => this.resetTask(annotation)}>
+            <LinkButton onClick={() => this.resetTask(annotation)}>
               <RollbackOutlined />
               Reset
-            </a>
+            </LinkButton>
             <br />
-            <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
+            <LinkButton onClick={() => this.cancelAnnotation(annotation)}>
               <DeleteOutlined />
               Reset and Cancel
-            </a>
+            </LinkButton>
             <br />
           </div>
         ) : null}
         {this.props.isAdminView ? null : (
-          <a href="#" onClick={() => this.confirmFinish(task)}>
+          <LinkButton onClick={() => this.confirmFinish(task)}>
             <CheckCircleOutlined />
             Finish
-          </a>
+          </LinkButton>
         )}
       </div>
     );

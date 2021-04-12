@@ -58,6 +58,7 @@ import Store, {
   type Tracing,
   type Task,
 } from "oxalis/store";
+import LinkButton from "components/link_button";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
@@ -612,7 +613,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Tooltip title="Open Dialog to Downsample Volume Data">
-        <a href="#" onClick={this.showDownsampleVolumeModal}>
+        <LinkButton onClick={this.showDownsampleVolumeModal}>
           <img
             src="/assets/images/icon-downsampling.svg"
             style={{
@@ -625,7 +626,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
             alt="Resolution Icon"
           />
-        </a>
+        </LinkButton>
       </Tooltip>
     );
   };

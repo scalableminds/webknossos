@@ -169,7 +169,7 @@ CREATE TABLE webknossos.projects(
   _organization CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   _owner CHAR(24) NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'), # Unique among non-deleted, enforced in scala
+  name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'), -- Unique among non-deleted, enforced in scala
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
   expectedTime BIGINT,

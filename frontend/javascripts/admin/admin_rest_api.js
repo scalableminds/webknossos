@@ -822,6 +822,8 @@ export async function getJobs(): Promise<Array<APIJob>> {
     boundingBox: job.commandArgs.kwargs.bbox,
     exportFileName: job.commandArgs.kwargs.export_file_name,
     tracingId: job.commandArgs.kwargs.volume_tracing_id,
+    annotationId: job.commandArgs.kwargs.annotation_id,
+    annotationType: job.commandArgs.kwargs.annotation_type,
     state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
@@ -843,15 +845,19 @@ export async function startExportTiffJob(
   bbox: Vector6,
   layerName: ?string,
   tracingId: ?string,
+  annotationId: ?string,
+  annotationType: ?APIAnnotationType,
   tracingVersion: ?number = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
   const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
+  const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
+  const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
   const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}`,
+    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}`,
   );
 }
 

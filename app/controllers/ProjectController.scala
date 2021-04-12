@@ -88,7 +88,7 @@ class ProjectController @Inject()(projectService: ProjectService,
         _ <- Fox
           .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
         _ <- projectDAO
-          .updateOne(updateRequest.copy(_id = project._id, paused = project.paused)) ?~> "project.update.failed"
+          .updateOne(updateRequest.copy(name = project.name, _id = project._id, paused = project.paused)) ?~> "project.update.failed"
         updated <- projectDAO.findOne(projectIdValidated)
         js <- projectService.publicWrites(updated)
       } yield Ok(js)

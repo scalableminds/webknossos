@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where tasks created from existing volume annotations that did not have a specified bounding box were broken. [#5362](https://github.com/scalableminds/webknossos/pull/5361)
 - Fixed a bug in Safari which could cause an error message (which is safe to ignore). [#5373](https://github.com/scalableminds/webknossos/pull/5373)
 - Fixed artifacts in screenshots near the dataset border. [#5324](https://github.com/scalableminds/webknossos/pull/5324)
+- Fixed a bug where the page would scroll up unexpectedly when showing various confirm modals. [#5371](https://github.com/scalableminds/webknossos/pull/5371)
 
 ### Removed
 -

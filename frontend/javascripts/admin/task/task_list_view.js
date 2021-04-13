@@ -190,7 +190,7 @@ class TaskListView extends React.PureComponent<Props, State> {
         <h3>Tasks</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-        <Card title="Search for TaskSearchForm">
+        <Card title="Search for Tasks">
           <TaskSearchForm
             onChange={queryObject => this.fetchData(queryObject)}
             initialFieldValues={this.props.initialFieldValues}

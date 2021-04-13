@@ -553,6 +553,8 @@ export type APIJob = {
   +exportFileName: ?string,
   +layerName: ?string,
   +tracingId: ?string,
+  +annotationId: ?string,
+  +annotationType: ?string,
   +organizationName: ?string,
   +boundingBox: ?string,
   +type: string,

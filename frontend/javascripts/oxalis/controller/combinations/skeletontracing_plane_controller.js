@@ -420,8 +420,10 @@ export function setWaypoint(
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
   // Only create a branchpoint if CTRL is pressed. Unless newNodeNewTree is activated (branchpoints make no sense then)
   const branchpoint = ctrlIsPressed && !state.userConfiguration.newNodeNewTree;
-  // Always activate the new node unless CTRL is pressed
-  const activate = !ctrlIsPressed;
+  // Always activate the new node unless CTRL is pressed. If there is no current node,
+  // the new one is still activated regardless of CTRL (otherwise, using CTRL+click in an empty tree multiple times would
+  // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
+  const activate = !ctrlIsPressed || activeNodeMaybe.isNothing;
 
   addNode(position, rotation, createNewTree, center, branchpoint, activate);
 }

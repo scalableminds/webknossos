@@ -9,6 +9,7 @@ import _ from "lodash";
 import type { APITeam } from "types/api_flow_types";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import CreateTeamModal from "admin/team/create_team_modal_view";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
@@ -157,10 +158,10 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Action"
                 key="actions"
                 render={(__, script: APITeam) => (
-                  <a href="#" onClick={_.partial(this.deleteTeam, script)}>
+                  <LinkButton onClick={_.partial(this.deleteTeam, script)}>
                     <DeleteOutlined />
                     Delete
-                  </a>
+                  </LinkButton>
                 )}
               />
             </Table>

@@ -111,10 +111,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     const newUserPromises = this.state.users.map(user => {
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, { isActive });
-        return updateUser(newUser).then(
-          serverUser => Promise.resolve(serverUser),
-          () => Promise.reject(user),
-        );
+        return updateUser(newUser);
       }
       return Promise.resolve(user);
     });
@@ -139,10 +136,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     const newUserPromises = this.state.users.map(user => {
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, { email: newEmail });
-        return updateUser(newUser).then(
-          serverUser => Promise.resolve(serverUser),
-          () => Promise.reject(user),
-        );
+        return updateUser(newUser);
       }
       return Promise.resolve(user);
     });

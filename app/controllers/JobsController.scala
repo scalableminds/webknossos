@@ -251,7 +251,9 @@ class JobsController @Inject()(jobDAO: JobDAO,
                        bbox: String,
                        layerName: Option[String],
                        tracingId: Option[String],
-                       tracingVersion: Option[String]): Action[AnyContent] =
+                       tracingVersion: Option[String],
+                       annotationId: Option[String],
+                       annotationType: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
@@ -268,7 +270,9 @@ class JobsController @Inject()(jobDAO: JobDAO,
           "export_file_name" -> exportFileName,
           "layer_name" -> layerName,
           "volume_tracing_id" -> tracingId,
-          "volume_tracing_version" -> tracingVersion
+          "volume_tracing_version" -> tracingVersion,
+          "annotation_id" -> annotationId,
+          "annotation_type" -> annotationType
         )
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
         js <- jobService.publicWrites(job)

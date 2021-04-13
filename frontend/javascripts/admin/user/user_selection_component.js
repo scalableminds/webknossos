@@ -61,7 +61,7 @@ class UserSelectionComponent extends React.PureComponent<Props, State> {
         placeholder="Select a New User"
         value={this.state.currentUserIdValue}
         onChange={this.handleSelectChange}
-        optionFilterProp="children"
+        optionFilterProp="label"
         style={{ width: "100%" }}
         filterOption={(input, option) =>
           option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0

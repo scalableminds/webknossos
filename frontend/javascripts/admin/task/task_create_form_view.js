@@ -415,7 +415,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   ? "The dataset is inferred from the base annotation."
                   : "Select a Dataset"
               }
-              optionFilterProp="children"
+              optionFilterProp="label"
               style={fullWidth}
               disabled={
                 isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
@@ -469,7 +469,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <Select
                   showSearch
                   placeholder="Select a TaskType"
-                  optionFilterProp="children"
+                  optionFilterProp="label"
                   style={fullWidth}
                   disabled={isEditingMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
@@ -522,7 +522,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <Select
                   showSearch
                   placeholder="Select a Project"
-                  optionFilterProp="children"
+                  optionFilterProp="label"
                   style={fullWidth}
                   disabled={isEditingMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
@@ -537,7 +537,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <Select
                   showSearch
                   placeholder="Select a Script"
-                  optionFilterProp="children"
+                  optionFilterProp="label"
                   style={fullWidth}
                   disabled={isEditingMode}
                   notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}

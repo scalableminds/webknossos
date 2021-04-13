@@ -4,7 +4,6 @@ DROP VIEW webknossos.taskTypes_;
 DROP VIEW webknossos.projects_;
 
 ALTER TABLE webknossos.taskTypes DROP CONSTRAINT tasktypes_summary__organization_key;
-ALTER TABLE webknossos.projects DROP CONSTRAINT projects_name__organization_key;
 
 ALTER TABLE webknossos.projects DROP COLUMN _organization;
 ALTER TABLE webknossos.tasktypes DROP COLUMN _organization;

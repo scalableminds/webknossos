@@ -3,7 +3,7 @@ import { Radio, Tooltip, Badge, Space } from "antd";
 import { useSelector } from "react-redux";
 import React, { useEffect } from "react";
 
-import {
+import Constants, {
   ToolsWithOverwriteCapabilities,
   type AnnotationTool,
   AnnotationToolEnum,
@@ -286,19 +286,43 @@ function useDisabledInfoForTools(
   };
 }
 
-export default function VolumeActionsView() {
-  const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
-  const activeTool = useSelector(state => state.tracing.activeTool);
+function CreateCellButton() {
   const unmappedActiveCellId = useSelector(
     state => enforceVolumeTracing(state.tracing).activeCellId,
+  );
+
+  const mappingColors = useSelector(
+    state => state.temporaryConfiguration.activeMapping.mappingColors,
   );
   const isMappingEnabled = useSelector(
     state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
   );
-  const isInMergerMode = useSelector(state => state.temporaryConfiguration.isMergerModeEnabled);
-  const mappingColors = useSelector(
-    state => state.temporaryConfiguration.activeMapping.mappingColors,
+  const customColors = isMappingEnabled ? mappingColors : null;
+  const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;
+  const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
+  const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
+
+  return (
+    <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
+      <Tooltip
+        title={`Create a new Cell ID – The active cell id is ${unmappedActiveCellId}${mappedIdInfo}.`}
+      >
+        <ButtonComponent onClick={handleCreateCell} style={{ width: 36, paddingLeft: 10 }}>
+          <img src="/assets/images/new-cell.svg" alt="New Cell Icon" />
+        </ButtonComponent>
+      </Tooltip>
+    </Badge>
   );
+}
+
+export default function ToolbarView() {
+  const hasVolume = useSelector(state => state.tracing.volume != null);
+  const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
+  const viewMode = useSelector(state => state.temporaryConfiguration.viewMode);
+  const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
+
+  const activeTool = useSelector(state => state.tracing.activeTool);
+  const isInMergerMode = useSelector(state => state.temporaryConfiguration.isMergerModeEnabled);
 
   const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentation);
   const labeledResolution =
@@ -336,11 +360,6 @@ export default function VolumeActionsView() {
   const isControlPressed = useKeyPress("Control");
   const isAltPressed = useKeyPress("Alt");
 
-  const customColors = isMappingEnabled ? mappingColors : null;
-  const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;
-  const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
-  const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
-
   const adaptedActiveTool = adaptActiveToolToShortcuts(
     activeTool,
     isShiftPressed,
@@ -354,7 +373,7 @@ export default function VolumeActionsView() {
   const previousSkeletonToolHint = usePrevious(skeletonToolHint);
 
   const moveToolDescription =
-    "Pointer – Use left-click to move around and right-click to open a contextmenu.";
+    "Move – Use left-click to move around and right-click to open a contextmenu.";
   const skeletonToolDescription =
     "Skeleton – Use left-click to move around and right-click to create new skeleton nodes";
 
@@ -375,93 +394,99 @@ export default function VolumeActionsView() {
           <i style={{ paddingLeft: 4 }} className="fas fa-arrows-alt" />
         </RadioButtonWithTooltip>
 
-        <RadioButtonWithTooltip
-          title={skeletonToolDescription}
-          disabledTitle=""
-          disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
-          style={narrowButtonStyle}
-          value={AnnotationToolEnum.SKELETON}
-        >
-          {/*
-            When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
-            will be null, too, which means the tooltip text would immediately change to an empty string.
-            To avoid this, we fallback to previousSkeletonToolHint.
-          */}
-          <Tooltip
-            title={skeletonToolHint || previousSkeletonToolHint}
-            visible={skeletonToolHint != null}
+        {hasSkeleton ? (
+          <RadioButtonWithTooltip
+            title={skeletonToolDescription}
+            disabledTitle=""
+            disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
+            style={narrowButtonStyle}
+            value={AnnotationToolEnum.SKELETON}
           >
-            <i
-              style={{
-                paddingLeft: 4,
-                opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
-              }}
-              className="fas fa-project-diagram"
-            />
-          </Tooltip>
-        </RadioButtonWithTooltip>
+            {/*
+                    When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
+                    will be null, too, which means the tooltip text would immediately change to an empty string.
+                    To avoid this, we fallback to previousSkeletonToolHint.
+                  */}
+            <Tooltip
+              title={skeletonToolHint || previousSkeletonToolHint}
+              visible={skeletonToolHint != null}
+            >
+              <i
+                style={{
+                  paddingLeft: 4,
+                  opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
+                }}
+                className="fas fa-project-diagram"
+              />
+            </Tooltip>
+          </RadioButtonWithTooltip>
+        ) : null}
 
-        <RadioButtonWithTooltip
-          title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
-          style={narrowButtonStyle}
-          value={AnnotationToolEnum.BRUSH}
-        >
-          <i
-            className="fas fa-paint-brush"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled ? 0.5 : 1,
-            }}
-          />
-          {adaptedActiveTool === "BRUSH" ? multiSliceAnnotationInfoIcon : null}
-        </RadioButtonWithTooltip>
-        <RadioButtonWithTooltip
-          title="Trace – Draw outlines around the voxel you would like to label."
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
-          style={narrowButtonStyle}
-          value={AnnotationToolEnum.TRACE}
-        >
-          <img
-            src="/assets/images/lasso.svg"
-            alt="Trace Tool Icon"
-            className="svg-gray-to-highlighted-blue"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
-            }}
-          />
-          {adaptedActiveTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
-        </RadioButtonWithTooltip>
-        <RadioButtonWithTooltip
-          title="Fill Tool – Flood-fill the clicked region."
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
-          style={narrowButtonStyle}
-          value={AnnotationToolEnum.FILL_CELL}
-        >
-          <i
-            className="fas fa-fill-drip"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
-            }}
-          />
-          {adaptedActiveTool === "FILL_CELL" ? multiSliceAnnotationInfoIcon : null}
-        </RadioButtonWithTooltip>
-        <RadioButtonWithTooltip
-          title="Cell Picker – Click on a voxel to make its cell id the active cell id."
-          disabledTitle={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
-          disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
-          style={narrowButtonStyle}
-          value={AnnotationToolEnum.PICK_CELL}
-        >
-          <i
-            className="fas fa-eye-dropper"
-            style={{
-              opacity: disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
-            }}
-          />
-        </RadioButtonWithTooltip>
+        {isVolumeSupported ? (
+          <React.Fragment>
+            <RadioButtonWithTooltip
+              title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+              disabledTitle={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
+              disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
+              style={narrowButtonStyle}
+              value={AnnotationToolEnum.BRUSH}
+            >
+              <i
+                className="fas fa-paint-brush"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled ? 0.5 : 1,
+                }}
+              />
+              {adaptedActiveTool === "BRUSH" ? multiSliceAnnotationInfoIcon : null}
+            </RadioButtonWithTooltip>
+            <RadioButtonWithTooltip
+              title="Trace – Draw outlines around the voxel you would like to label."
+              disabledTitle={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
+              disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
+              style={narrowButtonStyle}
+              value={AnnotationToolEnum.TRACE}
+            >
+              <img
+                src="/assets/images/lasso.svg"
+                alt="Trace Tool Icon"
+                className="svg-gray-to-highlighted-blue"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
+                }}
+              />
+              {adaptedActiveTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
+            </RadioButtonWithTooltip>
+            <RadioButtonWithTooltip
+              title="Fill Tool – Flood-fill the clicked region."
+              disabledTitle={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
+              disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
+              style={narrowButtonStyle}
+              value={AnnotationToolEnum.FILL_CELL}
+            >
+              <i
+                className="fas fa-fill-drip"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
+                }}
+              />
+              {adaptedActiveTool === "FILL_CELL" ? multiSliceAnnotationInfoIcon : null}
+            </RadioButtonWithTooltip>
+            <RadioButtonWithTooltip
+              title="Cell Picker – Click on a voxel to make its cell id the active cell id."
+              disabledTitle={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
+              disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
+              style={narrowButtonStyle}
+              value={AnnotationToolEnum.PICK_CELL}
+            >
+              <i
+                className="fas fa-eye-dropper"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
+                }}
+              />
+            </RadioButtonWithTooltip>
+          </React.Fragment>
+        ) : null}
       </Radio.Group>
 
       {ToolsWithOverwriteCapabilities.includes(adaptedActiveTool) ? (
@@ -469,15 +494,7 @@ export default function VolumeActionsView() {
       ) : null}
 
       <Space size={0} style={{ marginLeft: 12 }}>
-        <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
-          <Tooltip
-            title={`Create a new Cell ID – The active cell id is ${unmappedActiveCellId}${mappedIdInfo}.`}
-          >
-            <ButtonComponent onClick={handleCreateCell} style={{ width: 36, paddingLeft: 10 }}>
-              <img src="/assets/images/new-cell.svg" alt="New Cell Icon" />
-            </ButtonComponent>
-          </Tooltip>
-        </Badge>
+        {isVolumeSupported ? <CreateCellButton /> : null}
       </Space>
     </div>
   );

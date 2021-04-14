@@ -10,7 +10,6 @@ import {
   Modal,
   Tooltip,
   notification,
-  Space,
 } from "antd";
 import {
   DownloadOutlined,
@@ -696,7 +695,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <Space size={0}>
+                <div className="antd-legacy-group">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -734,7 +733,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </Space>
+                </div>
                 <InputGroup compact>
                   <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
                     <i className="fas fa-arrow-left" />

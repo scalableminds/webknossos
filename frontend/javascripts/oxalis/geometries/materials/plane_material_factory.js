@@ -8,7 +8,7 @@ import {
   OrthoViewValues,
   OrthoViews,
   type Vector3,
-  volumeToolEnumToIndex,
+  annotationToolEnumToIndex,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
@@ -176,7 +176,7 @@ class PlaneMaterialFactory {
         type: "b",
         value: false,
       },
-      activeVolumeToolIndex: {
+      activeAnnotationToolIndex: {
         type: "f",
         value: 0,
       },
@@ -565,9 +565,9 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => volumeToolEnumToIndex(storeState.tracing.activeTool),
-          volumeTool => {
-            this.uniforms.activeVolumeToolIndex.value = volumeTool;
+          storeState => annotationToolEnumToIndex(storeState.tracing.activeTool),
+          annotationTool => {
+            this.uniforms.activeAnnotationToolIndex.value = annotationTool;
           },
           true,
         ),

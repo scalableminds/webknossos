@@ -1,5 +1,5 @@
 // @noflow
-import { VolumeToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum } from "oxalis/constants";
 import { __setupOxalis } from "test/helpers/apiHelpers";
 import test from "ava";
 import window from "libs/window";
@@ -20,24 +20,24 @@ test("setActiveCell should set the active cell id", t => {
   t.is(api.tracing.getActiveCellId(), 27);
 });
 
-test("getVolumeTool should get the current tool", t => {
+test("getAnnotationTool should get the current tool", t => {
   const api = t.context.api;
-  t.is(api.tracing.getVolumeTool(), VolumeToolEnum.MOVE);
+  t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.MOVE);
 });
 
-test("setVolumeTool should set the current tool", t => {
+test("setAnnotationTool should set the current tool", t => {
   const api = t.context.api;
-  api.tracing.setVolumeTool(VolumeToolEnum.TRACE);
-  t.is(api.tracing.getVolumeTool(), VolumeToolEnum.TRACE);
-  api.tracing.setVolumeTool(VolumeToolEnum.BRUSH);
-  t.is(api.tracing.getVolumeTool(), VolumeToolEnum.BRUSH);
+  api.tracing.setAnnotationTool(AnnotationToolEnum.TRACE);
+  t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.TRACE);
+  api.tracing.setAnnotationTool(AnnotationToolEnum.BRUSH);
+  t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.BRUSH);
 });
 
-test("setVolumeTool should throw an error for an invalid tool", t => {
+test("setAnnotationTool should throw an error for an invalid tool", t => {
   const api = t.context.api;
-  t.throws(() => api.tracing.setVolumeTool(67));
-  t.throws(() => api.tracing.setVolumeTool("myTool"));
-  t.throws(() => api.tracing.setVolumeTool());
+  t.throws(() => api.tracing.setAnnotationTool(67));
+  t.throws(() => api.tracing.setAnnotationTool("myTool"));
+  t.throws(() => api.tracing.setAnnotationTool());
 });
 
 test("Data API: labelVoxels should label a list of voxels", t => {

@@ -5,8 +5,8 @@ import React, { useEffect } from "react";
 
 import {
   ToolsWithOverwriteCapabilities,
-  type VolumeTool,
-  VolumeToolEnum,
+  type AnnotationTool,
+  AnnotationToolEnum,
   type OverwriteMode,
   OverwriteModeEnum,
 } from "oxalis/constants";
@@ -35,7 +35,7 @@ const zoomInToUseToolMessage =
 const isZoomStepTooHighFor = tool => isVolumeAnnotationDisallowedForZoom(tool, Store.getState());
 
 function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
-  if (activeTool !== VolumeToolEnum.SKELETON) {
+  if (activeTool !== AnnotationToolEnum.SKELETON) {
     return null;
   }
 
@@ -67,39 +67,39 @@ function adaptActiveToolToShortcuts(
   isShiftPressed,
   isControlPressed,
   isAltPressed,
-): VolumeTool {
+): AnnotationTool {
   if (!isShiftPressed && !isControlPressed && !isAltPressed) {
     // No modifier is pressed
     return activeTool;
   }
 
-  if (activeTool === VolumeToolEnum.MOVE) {
+  if (activeTool === AnnotationToolEnum.MOVE) {
     // The move tool does not have any modifier-related behavior currently.
     return activeTool;
   }
 
-  if (activeTool === VolumeToolEnum.SKELETON) {
+  if (activeTool === AnnotationToolEnum.SKELETON) {
     // The "skeleton" tool is not changed right now (since actions such as moving a node
     // don't have a dedicated tool). The only exception is "Alt" which switches to the move tool.
     if (isAltPressed) {
-      return VolumeToolEnum.MOVE;
+      return AnnotationToolEnum.MOVE;
     }
     return activeTool;
   }
 
   if (isShiftPressed && !isControlPressed && !isAltPressed) {
     // Only shift is pressed. Switch to the picker
-    return VolumeToolEnum.PICK_CELL;
+    return AnnotationToolEnum.PICK_CELL;
   }
 
   if (isControlPressed && isShiftPressed && !isAltPressed) {
     // Control and shift invoke the fill cell tool
-    return VolumeToolEnum.FILL_CELL;
+    return AnnotationToolEnum.FILL_CELL;
   }
 
   if (isAltPressed) {
     // Alt switches to the move tool
-    return VolumeToolEnum.MOVE;
+    return AnnotationToolEnum.MOVE;
   }
 
   return activeTool;
@@ -118,7 +118,7 @@ const narrowButtonStyle = {
   paddingRight: 8,
 };
 
-const handleSetTool = (event: { target: { value: VolumeTool } }) => {
+const handleSetTool = (event: { target: { value: AnnotationTool } }) => {
   Store.dispatch(setToolAction(event.target.value));
 };
 
@@ -239,47 +239,47 @@ function useDisabledInfoForTools(
       explanation: genericDisabledExplanation,
     };
     return {
-      [VolumeToolEnum.MOVE]: {
+      [AnnotationToolEnum.MOVE]: {
         isDisabled: false,
         explanation: "",
       },
-      [VolumeToolEnum.SKELETON]: {
+      [AnnotationToolEnum.SKELETON]: {
         isDisabled: !hasSkeleton,
         explanation: disabledSkeletonExplanation,
       },
-      [VolumeToolEnum.BRUSH]: disabledInfo,
-      [VolumeToolEnum.TRACE]: disabledInfo,
-      [VolumeToolEnum.FILL_CELL]: disabledInfo,
-      [VolumeToolEnum.PICK_CELL]: disabledInfo,
+      [AnnotationToolEnum.BRUSH]: disabledInfo,
+      [AnnotationToolEnum.TRACE]: disabledInfo,
+      [AnnotationToolEnum.FILL_CELL]: disabledInfo,
+      [AnnotationToolEnum.PICK_CELL]: disabledInfo,
     };
   }
 
-  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(VolumeToolEnum.BRUSH);
-  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(VolumeToolEnum.TRACE);
-  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(VolumeToolEnum.FILL_CELL);
+  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(AnnotationToolEnum.BRUSH);
+  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(AnnotationToolEnum.TRACE);
+  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(AnnotationToolEnum.FILL_CELL);
 
   return {
-    [VolumeToolEnum.MOVE]: {
+    [AnnotationToolEnum.MOVE]: {
       isDisabled: false,
       explanation: "",
     },
-    [VolumeToolEnum.SKELETON]: {
+    [AnnotationToolEnum.SKELETON]: {
       isDisabled: !hasSkeleton,
       explanation: disabledSkeletonExplanation,
     },
-    [VolumeToolEnum.BRUSH]: {
+    [AnnotationToolEnum.BRUSH]: {
       isDisabled: isZoomStepTooHighForBrushing,
       explanation: zoomInToUseToolMessage,
     },
-    [VolumeToolEnum.TRACE]: {
+    [AnnotationToolEnum.TRACE]: {
       isDisabled: isZoomStepTooHighForTracing,
       explanation: zoomInToUseToolMessage,
     },
-    [VolumeToolEnum.FILL_CELL]: {
+    [AnnotationToolEnum.FILL_CELL]: {
       isDisabled: isZoomStepTooHighForFilling,
       explanation: zoomInToUseToolMessage,
     },
-    [VolumeToolEnum.PICK_CELL]: {
+    [AnnotationToolEnum.PICK_CELL]: {
       isDisabled: false,
       explanation: genericDisabledExplanation,
     },
@@ -328,7 +328,7 @@ export default function VolumeActionsView() {
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
-      Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
+      Store.dispatch(setToolAction(AnnotationToolEnum.MOVE));
     }
   }, [activeTool, disabledInfoForCurrentTool]);
 
@@ -370,17 +370,17 @@ export default function VolumeActionsView() {
           disabledTitle=""
           disabled={false}
           style={narrowButtonStyle}
-          value={VolumeToolEnum.MOVE}
+          value={AnnotationToolEnum.MOVE}
         >
-          <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
+          <i style={{ paddingLeft: 4 }} className="fas fa-arrows-alt" />
         </RadioButtonWithTooltip>
 
         <RadioButtonWithTooltip
           title={skeletonToolDescription}
           disabledTitle=""
-          disabled={disabledInfosForTools[VolumeToolEnum.SKELETON].isDisabled}
+          disabled={disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled}
           style={narrowButtonStyle}
-          value={VolumeToolEnum.SKELETON}
+          value={AnnotationToolEnum.SKELETON}
         >
           {/*
             When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
@@ -394,7 +394,7 @@ export default function VolumeActionsView() {
             <i
               style={{
                 paddingLeft: 4,
-                opacity: disabledInfosForTools[VolumeToolEnum.SKELETON].isDisabled ? 0.5 : 1,
+                opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
               }}
               className="fas fa-project-diagram"
             />
@@ -403,60 +403,62 @@ export default function VolumeActionsView() {
 
         <RadioButtonWithTooltip
           title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-          disabledTitle={disabledInfosForTools[VolumeToolEnum.BRUSH].explanation}
-          disabled={disabledInfosForTools[VolumeToolEnum.BRUSH].isDisabled}
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.BRUSH].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled}
           style={narrowButtonStyle}
-          value={VolumeToolEnum.BRUSH}
+          value={AnnotationToolEnum.BRUSH}
         >
           <i
             className="fas fa-paint-brush"
             style={{
-              opacity: disabledInfosForTools[VolumeToolEnum.BRUSH].isDisabled ? 0.5 : 1,
+              opacity: disabledInfosForTools[AnnotationToolEnum.BRUSH].isDisabled ? 0.5 : 1,
             }}
           />
           {adaptedActiveTool === "BRUSH" ? multiSliceAnnotationInfoIcon : null}
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Trace – Draw outlines around the voxel you would like to label."
-          disabledTitle={disabledInfosForTools[VolumeToolEnum.TRACE].explanation}
-          disabled={disabledInfosForTools[VolumeToolEnum.TRACE].isDisabled}
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
           style={narrowButtonStyle}
-          value={VolumeToolEnum.TRACE}
+          value={AnnotationToolEnum.TRACE}
         >
           <img
             src="/assets/images/lasso.svg"
             alt="Trace Tool Icon"
             className="svg-gray-to-highlighted-blue"
-            style={{ opacity: disabledInfosForTools[VolumeToolEnum.TRACE].isDisabled ? 0.5 : 1 }}
+            style={{
+              opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
+            }}
           />
           {adaptedActiveTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Fill Tool – Flood-fill the clicked region."
-          disabledTitle={disabledInfosForTools[VolumeToolEnum.FILL_CELL].explanation}
-          disabled={disabledInfosForTools[VolumeToolEnum.FILL_CELL].isDisabled}
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}
           style={narrowButtonStyle}
-          value={VolumeToolEnum.FILL_CELL}
+          value={AnnotationToolEnum.FILL_CELL}
         >
           <i
             className="fas fa-fill-drip"
             style={{
-              opacity: disabledInfosForTools[VolumeToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
+              opacity: disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
             }}
           />
           {adaptedActiveTool === "FILL_CELL" ? multiSliceAnnotationInfoIcon : null}
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Cell Picker – Click on a voxel to make its cell id the active cell id."
-          disabledTitle={disabledInfosForTools[VolumeToolEnum.PICK_CELL].explanation}
-          disabled={disabledInfosForTools[VolumeToolEnum.PICK_CELL].isDisabled}
+          disabledTitle={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
+          disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
           style={narrowButtonStyle}
-          value={VolumeToolEnum.PICK_CELL}
+          value={AnnotationToolEnum.PICK_CELL}
         >
           <i
             className="fas fa-eye-dropper"
             style={{
-              opacity: disabledInfosForTools[VolumeToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
+              opacity: disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
             }}
           />
         </RadioButtonWithTooltip>

@@ -10,8 +10,8 @@ import constants, {
   OrthoViewIndices,
   OrthoViews,
   type Vector3,
-  VolumeToolEnum,
-  volumeToolEnumToIndex,
+  AnnotationToolEnum,
+  annotationToolEnumToIndex,
 } from "oxalis/constants";
 
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
@@ -70,7 +70,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% if (hasSegmentation) { %>
   uniform vec4 activeCellId;
   uniform bool isMouseInActiveViewport;
-  uniform float activeVolumeToolIndex;
+  uniform float activeAnnotationToolIndex;
   uniform float segmentationPatternOpacity;
 
   <% if (isMappingSupported) { %>
@@ -243,7 +243,7 @@ void main() {
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
-    brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
+    brushToolIndex: formatNumberAsGLSLFloat(annotationToolEnumToIndex(AnnotationToolEnum.BRUSH)),
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
   });
 }

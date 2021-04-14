@@ -5,7 +5,7 @@
 import update from "immutability-helper";
 
 import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
+import { AnnotationToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
@@ -71,7 +71,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           if (!state.tracing.restrictions.allowUpdate) {
             return state;
           }
-          const tools = Object.keys(VolumeToolEnum);
+          const tools = Object.keys(AnnotationToolEnum);
           const currentToolIndex = tools.indexOf(state.tracing.activeTool);
           const newTool = tools[(currentToolIndex + 1) % tools.length];
 

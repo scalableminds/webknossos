@@ -43,7 +43,7 @@ import constants, {
   OrthoViews,
   type Point2,
   type Vector3,
-  VolumeToolEnum,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
@@ -471,7 +471,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   changeBrushSizeIfBrushIsActiveBy(factor: number) {
-    const isBrushActive = this.props.tracing.activeTool === VolumeToolEnum.BRUSH;
+    const isBrushActive = this.props.tracing.activeTool === AnnotationToolEnum.BRUSH;
     if (isBrushActive) {
       const currentBrushSize = Store.getState().userConfiguration.brushSize;
       const newBrushSize =
@@ -494,7 +494,7 @@ class PlaneController extends React.PureComponent<Props> {
         break;
       }
       case "shift": {
-        const isBrushActive = this.props.tracing.activeTool === VolumeToolEnum.BRUSH;
+        const isBrushActive = this.props.tracing.activeTool === AnnotationToolEnum.BRUSH;
         if (isBrushActive) {
           // Different browsers send different deltas, this way the behavior is comparable
           if (delta > 0) {
@@ -537,7 +537,7 @@ class PlaneController extends React.PureComponent<Props> {
       if (skeletonHandler && volumeHandler) {
         // Deal with both modes
         const tool = this.props.tracing.activeTool;
-        if (tool === VolumeToolEnum.MOVE || tool === VolumeToolEnum.SKELETON) {
+        if (tool === AnnotationToolEnum.MOVE || tool === AnnotationToolEnum.SKELETON) {
           skeletonHandler(...args);
         } else {
           volumeHandler(...args);

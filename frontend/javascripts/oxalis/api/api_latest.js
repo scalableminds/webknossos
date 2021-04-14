@@ -14,8 +14,8 @@ import Constants, {
   OrthoViews,
   type Vector3,
   type Vector4,
-  type VolumeTool,
-  VolumeToolEnum,
+  type AnnotationTool,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
@@ -835,7 +835,7 @@ class TracingApi {
    * Returns the active volume tool which is either
    * "MOVE", "TRACE" or "BRUSH".
    */
-  getVolumeTool(): VolumeTool {
+  getAnnotationTool(): AnnotationTool {
     return Store.getState().tracing.activeTool;
   }
 
@@ -844,12 +844,12 @@ class TracingApi {
    * "MOVE", "TRACE" or "BRUSH".
    * _Volume tracing only!_
    */
-  setVolumeTool(tool: VolumeTool) {
+  setAnnotationTool(tool: AnnotationTool) {
     assertVolume(Store.getState().tracing);
     assertExists(tool, "Volume tool is missing.");
-    if (VolumeToolEnum[tool] == null) {
+    if (AnnotationToolEnum[tool] == null) {
       throw new Error(
-        `Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`,
+        `Volume tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
     Store.dispatch(setToolAction(tool));

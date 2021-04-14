@@ -157,7 +157,7 @@ export const getBrushOverlay: ShaderModule = {
   code: `
     vec4 getBrushOverlay(vec3 worldCoordUVW) {
       vec4 brushOverlayColor = vec4(0.0);
-      bool isBrushModeActive = activeVolumeToolIndex == <%= brushToolIndex %>;
+      bool isBrushModeActive = activeAnnotationToolIndex == <%= brushToolIndex %>;
 
       if (!isMouseInCanvas || !isMouseInActiveViewport || !isBrushModeActive) {
         return brushOverlayColor;

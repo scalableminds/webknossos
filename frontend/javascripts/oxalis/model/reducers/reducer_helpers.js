@@ -14,7 +14,7 @@ import type {
 } from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import type { BoundingBoxType } from "oxalis/constants";
-import { VolumeToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 
@@ -128,6 +128,6 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     meshes,
     user,
     // todop: activeTool needs to be stored in annotation (on server)
-    activeTool: VolumeToolEnum.MOVE,
+    activeTool: AnnotationToolEnum.MOVE,
   };
 }

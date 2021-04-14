@@ -9,7 +9,7 @@ import {
   OrthoViews,
   type Point2,
   type Vector3,
-  VolumeToolEnum,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { movePlane, calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -377,7 +377,7 @@ function onRightClick(
   }
 
   const { activeTool } = state.tracing;
-  if (activeTool === VolumeToolEnum.SKELETON) {
+  if (activeTool === AnnotationToolEnum.SKELETON) {
     // We avoid creating nodes when in brushing mode.
     const nodeId = event.shiftKey
       ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)

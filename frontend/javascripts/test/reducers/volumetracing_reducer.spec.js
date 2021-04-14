@@ -3,7 +3,7 @@ import Maybe from "data.maybe";
 import update from "immutability-helper";
 
 import type { Tracing, VolumeTracing } from "oxalis/store";
-import { VolumeToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum } from "oxalis/constants";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -17,7 +17,7 @@ const volumeTracing = {
   type: "volume",
   activeCellId: 0,
   cells: [],
-  activeTool: VolumeToolEnum.MOVE,
+  activeTool: AnnotationToolEnum.MOVE,
   maxCellId: 0,
   contourList: [],
   lastCentroid: null,
@@ -190,17 +190,17 @@ test("VolumeTracing should create cells and only update the maxCellId after a vo
 });
 
 test("VolumeTracing should set trace/view tool", t => {
-  const setToolAction = VolumeTracingActions.setToolAction(VolumeToolEnum.TRACE);
+  const setToolAction = VolumeTracingActions.setToolAction(AnnotationToolEnum.TRACE);
 
   // Change tool to Trace
   const newState = VolumeTracingReducer(initialState, setToolAction);
 
   t.not(newState, initialState);
-  t.is(newState.tracing.activeTool, VolumeToolEnum.TRACE);
+  t.is(newState.tracing.activeTool, AnnotationToolEnum.TRACE);
 });
 
 test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(zoomStep) is > 1", t => {
-  const setToolAction = VolumeTracingActions.setToolAction(VolumeToolEnum.TRACE);
+  const setToolAction = VolumeTracingActions.setToolAction(AnnotationToolEnum.TRACE);
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: { $set: 3 },
@@ -215,7 +215,7 @@ test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(
   t.is(alteredState, newState);
 
   // Tool should not have changed
-  t.is(newState.tracing.activeTool, VolumeToolEnum.MOVE);
+  t.is(newState.tracing.activeTool, AnnotationToolEnum.MOVE);
 });
 
 test("VolumeTracing should cycle trace/view/brush tool", t => {
@@ -224,25 +224,25 @@ test("VolumeTracing should cycle trace/view/brush tool", t => {
   // Cycle tool to Brush
   let newState = VolumeTracingReducer(initialState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, VolumeToolEnum.BRUSH);
+  t.is(newState.tracing.activeTool, AnnotationToolEnum.BRUSH);
 
   // Cycle tool to Trace
   newState = VolumeTracingReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, VolumeToolEnum.TRACE);
+  t.is(newState.tracing.activeTool, AnnotationToolEnum.TRACE);
 
   newState = VolumeTracingReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, VolumeToolEnum.FILL_CELL);
+  t.is(newState.tracing.activeTool, AnnotationToolEnum.FILL_CELL);
 
   newState = VolumeTracingReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, VolumeToolEnum.PICK_CELL);
+  t.is(newState.tracing.activeTool, AnnotationToolEnum.PICK_CELL);
 
   // Cycle tool back to MOVE
   newState = VolumeTracingReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, VolumeToolEnum.MOVE);
+  t.is(newState.tracing.activeTool, AnnotationToolEnum.MOVE);
 });
 
 test("VolumeTracing should update its lastCentroid", t => {

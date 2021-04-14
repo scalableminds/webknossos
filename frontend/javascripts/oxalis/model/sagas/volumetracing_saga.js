@@ -54,10 +54,10 @@ import Constants, {
   ContourModeEnum,
   OverwriteModeEnum,
   type OrthoView,
-  type VolumeTool,
+  type AnnotationTool,
   type Vector2,
   type Vector3,
-  VolumeToolEnum,
+  AnnotationToolEnum,
   type LabeledVoxelsMap,
 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -139,7 +139,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     );
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-    if (activeTool === VolumeToolEnum.BRUSH) {
+    if (activeTool === AnnotationToolEnum.BRUSH) {
       yield* call(
         labelWithVoxelBuffer2D,
         currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
@@ -167,12 +167,12 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         continue;
       }
       if (
-        activeTool === VolumeToolEnum.TRACE ||
-        (activeTool === VolumeToolEnum.BRUSH && isDrawing)
+        activeTool === AnnotationToolEnum.TRACE ||
+        (activeTool === AnnotationToolEnum.BRUSH && isDrawing)
       ) {
         currentLayer.addContour(addToLayerAction.position);
       }
-      if (activeTool === VolumeToolEnum.BRUSH) {
+      if (activeTool === AnnotationToolEnum.BRUSH) {
         // Disable continuous drawing for performance reasons
         const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
           lastPosition,
@@ -361,7 +361,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   // This restriction should be soften'ed when https://github.com/scalableminds/webknossos/issues/4639
   // is solved.
   const isResolutionTooLow = yield* select(state =>
-    isVolumeAnnotationDisallowedForZoom(VolumeToolEnum.TRACE, state),
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
   );
   if (isResolutionTooLow) {
     Toast.warning(
@@ -617,7 +617,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
 
 export function* finishLayer(
   layer: VolumeLayer,
-  activeTool: VolumeTool,
+  activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
@@ -626,7 +626,7 @@ export function* finishLayer(
     return;
   }
 
-  if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
+  if (activeTool === AnnotationToolEnum.TRACE || activeTool === AnnotationToolEnum.BRUSH) {
     yield* call(
       labelWithVoxelBuffer2D,
       layer.getFillingVoxelBuffer2D(activeTool),
@@ -648,7 +648,7 @@ export function* ensureToolIsAllowedInResolution(): Saga<*> {
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
     if (isResolutionTooLow) {
-      yield* put(setToolAction(VolumeToolEnum.MOVE));
+      yield* put(setToolAction(AnnotationToolEnum.MOVE));
     }
   }
 }

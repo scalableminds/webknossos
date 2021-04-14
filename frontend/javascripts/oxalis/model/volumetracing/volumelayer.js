@@ -16,8 +16,8 @@ import Constants, {
   type Vector2,
   type Vector3,
   Vector3Indicies,
-  VolumeToolEnum,
-  type VolumeTool,
+  AnnotationToolEnum,
+  type AnnotationTool,
   Vector2Indicies,
 } from "oxalis/constants";
 import { V2, V3 } from "libs/mjs";
@@ -170,7 +170,7 @@ class VolumeLayer {
     return this.getContourList(true).length === 0;
   }
 
-  getFillingVoxelBuffer2D(mode: VolumeTool): VoxelBuffer2D {
+  getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {
     if (this.isEmpty() || this.minCoord == null) {
       return VoxelBuffer2D.empty();
     }
@@ -181,7 +181,7 @@ class VolumeLayer {
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
-    if (mode === VolumeToolEnum.BRUSH) {
+    if (mode === AnnotationToolEnum.BRUSH) {
       // If the brush is used, only perform the "filling" operation
       // when start- and end coordinate are close enough to each other
       const globalContourList = this.getContourList(true);

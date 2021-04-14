@@ -5,7 +5,7 @@
 import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
-import { AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import type { AnnotationTool, ContourMode } from "oxalis/constants";
 import type { HybridServerTracing, ServerVolumeTracing } from "types/api_flow_types";
 
@@ -45,6 +45,11 @@ const MAG_THRESHOLDS_FOR_ZOOM: { [AnnotationTool]: number } = {
   [AnnotationToolEnum.BRUSH]: 3,
   [AnnotationToolEnum.FILL_CELL]: 1,
 };
+
+export function isVolumeTool(tool: AnnotationTool): boolean {
+  return VolumeTools.indexOf(tool) > -1;
+}
+
 export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: OxalisState) {
   if (state.tracing.volume == null) {
     return true;

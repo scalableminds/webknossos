@@ -100,6 +100,12 @@ export const AnnotationToolEnum = {
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
 };
+export const VolumeTools = [
+  AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.FILL_CELL,
+  AnnotationToolEnum.PICK_CELL,
+];
 export const ToolsWithOverwriteCapabilities = [AnnotationToolEnum.TRACE, AnnotationToolEnum.BRUSH];
 export type AnnotationTool = $Keys<typeof AnnotationToolEnum>;
 

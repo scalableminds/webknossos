@@ -25,14 +25,17 @@ class ContourGeometry {
       let lastContourList = initialTracing.contourList;
 
       Store.subscribe(() => {
-        getVolumeTracing(Store.getState().tracing).map(tracing => {
+        const { tracing } = Store.getState();
+        getVolumeTracing(tracing).map(volumeTracing => {
           if (tracing.activeTool === VolumeToolEnum.TRACE) {
-            const contourList = tracing.contourList;
+            const contourList = volumeTracing.contourList;
             if (contourList && lastContourList.length !== contourList.length) {
               // Update meshes according to the new contourList
               this.reset();
               this.color =
-                tracing.contourTracingMode === ContourModeEnum.DELETE ? COLOR_DELETE : COLOR_NORMAL;
+                volumeTracing.contourTracingMode === ContourModeEnum.DELETE
+                  ? COLOR_DELETE
+                  : COLOR_NORMAL;
               contourList.forEach(p => this.addEdgePoint(p));
             }
             lastContourList = contourList;

@@ -376,8 +376,8 @@ function onRightClick(
     return;
   }
 
-  const { volume } = state.tracing;
-  if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
+  const { activeTool } = state.tracing;
+  if (activeTool === VolumeToolEnum.SKELETON) {
     // We avoid creating nodes when in brushing mode.
     const nodeId = event.shiftKey
       ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)

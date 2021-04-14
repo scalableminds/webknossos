@@ -19,7 +19,6 @@ import {
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
-import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   movePlaneFlycamOrthoAction,
@@ -472,9 +471,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   changeBrushSizeIfBrushIsActiveBy(factor: number) {
-    const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
-      .map(tool => tool === VolumeToolEnum.BRUSH)
-      .getOrElse(false);
+    const isBrushActive = this.props.tracing.activeTool === VolumeToolEnum.BRUSH;
     if (isBrushActive) {
       const currentBrushSize = Store.getState().userConfiguration.brushSize;
       const newBrushSize =
@@ -497,9 +494,7 @@ class PlaneController extends React.PureComponent<Props> {
         break;
       }
       case "shift": {
-        const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
-          .map(tool => tool === VolumeToolEnum.BRUSH)
-          .getOrElse(false);
+        const isBrushActive = this.props.tracing.activeTool === VolumeToolEnum.BRUSH;
         if (isBrushActive) {
           // Different browsers send different deltas, this way the behavior is comparable
           if (delta > 0) {
@@ -541,8 +536,8 @@ class PlaneController extends React.PureComponent<Props> {
     return (...args) => {
       if (skeletonHandler && volumeHandler) {
         // Deal with both modes
-        const tool = Utils.enforce(getVolumeTool)(this.props.tracing.volume);
-        if (tool === VolumeToolEnum.MOVE) {
+        const tool = this.props.tracing.activeTool;
+        if (tool === VolumeToolEnum.MOVE || tool === VolumeToolEnum.SKELETON) {
           skeletonHandler(...args);
         } else {
           volumeHandler(...args);

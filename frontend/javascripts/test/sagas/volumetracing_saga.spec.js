@@ -33,7 +33,6 @@ const volumeTracing: VolumeTracing = {
   createdTimestamp: 0,
   tracingId: "tracingId",
   version: 0,
-  activeTool: VolumeToolEnum.TRACE,
   activeCellId: 0,
   cells: {},
   maxCellId: 0,

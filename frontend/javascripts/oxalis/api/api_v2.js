@@ -29,7 +29,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeTool, ControlMode } from "oxalis/constants";
 import type {
   Node,
@@ -494,9 +494,8 @@ class TracingApi {
    * "MOVE", "TRACE" or "BRUSH".
    * _Volume tracing only!_
    */
-  getVolumeTool(): ?VolumeTool {
-    const tracing = assertVolume(Store.getState().tracing);
-    return getVolumeTool(tracing);
+  getVolumeTool(): VolumeTool {
+    return Store.getState().tracing.activeTool;
   }
 
   /**

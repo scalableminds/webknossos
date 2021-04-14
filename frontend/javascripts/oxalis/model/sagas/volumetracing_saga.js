@@ -111,7 +111,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const overwriteMode = yield* select(state => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
-    const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
+    const activeTool = yield* select(state => state.tracing.activeTool);
     // Depending on the tool, annotation in higher zoom steps might be disallowed.
     const isZoomStepTooHighForAnnotating = yield* select(state =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
@@ -644,7 +644,7 @@ export function* ensureToolIsAllowedInResolution(): Saga<*> {
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
     const isResolutionTooLow = yield* select(state => {
-      const { activeTool } = enforceVolumeTracing(state.tracing);
+      const { activeTool } = state.tracing;
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
     if (isResolutionTooLow) {

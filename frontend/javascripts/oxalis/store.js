@@ -186,6 +186,7 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +annotationType: AnnotationType,
+  +activeTool: VolumeTool,
   +meshes: Array<MeshMetaData>,
   +user: ?APIUserBase,
 |};
@@ -219,7 +220,6 @@ export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
   +maxCellId: number,
-  +activeTool: VolumeTool,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,

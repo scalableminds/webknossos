@@ -42,7 +42,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         contourList: [],
         maxCellId,
         cells: {},
-        activeTool: VolumeToolEnum.MOVE,
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
@@ -67,12 +66,13 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           return setToolReducer(state, volumeTracing, action.tool);
         }
 
+        // todop: move to other reducer
         case "CYCLE_TOOL": {
           if (!state.tracing.restrictions.allowUpdate) {
             return state;
           }
           const tools = Object.keys(VolumeToolEnum);
-          const currentToolIndex = tools.indexOf(volumeTracing.activeTool);
+          const currentToolIndex = tools.indexOf(state.tracing.activeTool);
           const newTool = tools[(currentToolIndex + 1) % tools.length];
 
           return setToolReducer(hideBrushReducer(state), volumeTracing, newTool);

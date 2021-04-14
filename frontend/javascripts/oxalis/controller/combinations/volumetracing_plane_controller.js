@@ -31,7 +31,6 @@ import {
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutionInfoOfSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getVolumeTool,
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -76,10 +75,10 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     leftDownMove: (delta: Point2, pos: Point2) => {
       const { tracing, viewModeData } = Store.getState();
       const volumeTracing = enforceVolumeTracing(tracing);
-      const tool = getVolumeTool(volumeTracing);
+      const tool = tracing.activeTool;
       const contourTracingMode = getContourTracingMode(volumeTracing);
 
-      if (tool === VolumeToolEnum.MOVE) {
+      if (tool === VolumeToolEnum.MOVE || tool === VolumeToolEnum.SKELETON) {
         const { activeViewport } = viewModeData.plane;
         const v = [-delta.x, -delta.y, 0];
         Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
@@ -94,7 +93,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     },
 
     leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Store.getState().tracing.activeTool;
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         if (event.ctrlKey && isAutomaticBrushEnabled()) {
@@ -106,7 +105,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     },
 
     leftMouseUp: () => {
-      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Store.getState().tracing.activeTool;
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
         Store.dispatch(resetContourAction());
@@ -116,7 +115,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     rightDownMove: (delta: Point2, pos: Point2) => {
       const { tracing } = Store.getState();
       const volumeTracing = enforceVolumeTracing(tracing);
-      const tool = getVolumeTool(volumeTracing);
+      const tool = tracing.activeTool;
       const contourTracingMode = getContourTracingMode(volumeTracing);
 
       if (
@@ -128,7 +127,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     },
 
     rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Store.getState().tracing.activeTool;
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
@@ -137,7 +136,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     },
 
     rightMouseUp: () => {
-      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Store.getState().tracing.activeTool;
 
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
@@ -146,7 +145,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     },
 
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Store.getState().tracing.activeTool;
 
       const shouldPickCell =
         tool === VolumeToolEnum.PICK_CELL || (event.shiftKey && !event.ctrlKey);

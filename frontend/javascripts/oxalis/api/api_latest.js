@@ -45,7 +45,7 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
   getLayerByName,
@@ -834,11 +834,9 @@ class TracingApi {
   /**
    * Returns the active volume tool which is either
    * "MOVE", "TRACE" or "BRUSH".
-   * _Volume tracing only!_
    */
-  getVolumeTool(): ?VolumeTool {
-    const tracing = assertVolume(Store.getState().tracing);
-    return getVolumeTool(tracing);
+  getVolumeTool(): VolumeTool {
+    return Store.getState().tracing.activeTool;
   }
 
   /**

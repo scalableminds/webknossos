@@ -35,11 +35,6 @@ export function getActiveCellId(volumeTracing: VolumeTracing): number {
   return activeCellId;
 }
 
-export function getVolumeTool(volumeTracing: VolumeTracing): VolumeTool {
-  const { activeTool } = volumeTracing;
-  return activeTool;
-}
-
 export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode {
   const { contourTracingMode } = volumeTracing;
   return contourTracingMode;

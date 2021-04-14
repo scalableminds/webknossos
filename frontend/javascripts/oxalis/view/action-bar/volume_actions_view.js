@@ -34,8 +34,8 @@ const zoomInToUseToolMessage =
 
 const isZoomStepTooHighFor = tool => isVolumeAnnotationDisallowedForZoom(tool, Store.getState());
 
-function getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
-  if (activeTool !== VolumeToolEnum.MOVE) {
+function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
+  if (activeTool !== VolumeToolEnum.SKELETON) {
     return null;
   }
 
@@ -74,8 +74,16 @@ function adaptActiveToolToShortcuts(
   }
 
   if (activeTool === VolumeToolEnum.MOVE) {
+    // The move tool does not have any modifier-related behavior currently.
+    return activeTool;
+  }
+
+  if (activeTool === VolumeToolEnum.SKELETON) {
     // The "skeleton" tool is not changed right now (since actions such as moving a node
-    // don't have a dedicated tool)
+    // don't have a dedicated tool). The only exception is "Alt" which switches to the move tool.
+    if (isAltPressed) {
+      return VolumeToolEnum.MOVE;
+    }
     return activeTool;
   }
 
@@ -200,6 +208,7 @@ function useDisabledInfoForTools(
   isZoomInvalidForTracing,
   isSegmentationVisibleForMag,
 ) {
+  const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
   const isSegmentationActivated = useSelector(state => {
     const segmentationLayer = getSegmentationLayer(state.dataset);
     if (segmentationLayer == null) {
@@ -220,6 +229,9 @@ function useDisabledInfoForTools(
     isZoomInvalidForTracing,
   );
 
+  const disabledSkeletonExplanation =
+    "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
+
   if (!isSegmentationActivated || !isSegmentationVisibleForMag || isInMergerMode) {
     // All segmentation-related tools are disabled.
     const disabledInfo = {
@@ -230,6 +242,10 @@ function useDisabledInfoForTools(
       [VolumeToolEnum.MOVE]: {
         isDisabled: false,
         explanation: "",
+      },
+      [VolumeToolEnum.SKELETON]: {
+        isDisabled: !hasSkeleton,
+        explanation: disabledSkeletonExplanation,
       },
       [VolumeToolEnum.BRUSH]: disabledInfo,
       [VolumeToolEnum.TRACE]: disabledInfo,
@@ -246,6 +262,10 @@ function useDisabledInfoForTools(
     [VolumeToolEnum.MOVE]: {
       isDisabled: false,
       explanation: "",
+    },
+    [VolumeToolEnum.SKELETON]: {
+      isDisabled: !hasSkeleton,
+      explanation: disabledSkeletonExplanation,
     },
     [VolumeToolEnum.BRUSH]: {
       isDisabled: isZoomStepTooHighForBrushing,
@@ -268,7 +288,7 @@ function useDisabledInfoForTools(
 
 export default function VolumeActionsView() {
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
-  const activeTool = useSelector(state => enforceVolumeTracing(state.tracing).activeTool);
+  const activeTool = useSelector(state => state.tracing.activeTool);
   const unmappedActiveCellId = useSelector(
     state => enforceVolumeTracing(state.tracing).activeCellId,
   );
@@ -328,14 +348,15 @@ export default function VolumeActionsView() {
     isAltPressed,
   );
 
-  const moveToolHint = hasSkeleton
-    ? getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
+  const skeletonToolHint = hasSkeleton
+    ? getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
     : null;
-  const previousMoveToolHint = usePrevious(moveToolHint);
+  const previousSkeletonToolHint = usePrevious(skeletonToolHint);
 
-  const moveToolDescription = `Pointer – Use left-click to move around${
-    hasSkeleton ? " and right-click to create new skeleton nodes" : ""
-  }.`;
+  const moveToolDescription =
+    "Pointer – Use left-click to move around and right-click to open a contextmenu.";
+  const skeletonToolDescription =
+    "Skeleton – Use left-click to move around and right-click to create new skeleton nodes";
 
   return (
     <div
@@ -351,15 +372,35 @@ export default function VolumeActionsView() {
           style={narrowButtonStyle}
           value={VolumeToolEnum.MOVE}
         >
+          <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
+        </RadioButtonWithTooltip>
+
+        <RadioButtonWithTooltip
+          title={skeletonToolDescription}
+          disabledTitle=""
+          disabled={disabledInfosForTools[VolumeToolEnum.SKELETON].isDisabled}
+          style={narrowButtonStyle}
+          value={VolumeToolEnum.SKELETON}
+        >
           {/*
-            When visible changes to false, the tooltip fades out in an animation. However, moveToolHint
+            When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
             will be null, too, which means the tooltip text would immediately change to an empty string.
-            To avoid this, we fallback to previousMoveToolHint.
+            To avoid this, we fallback to previousSkeletonToolHint.
           */}
-          <Tooltip title={moveToolHint || previousMoveToolHint} visible={moveToolHint != null}>
-            <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
+          <Tooltip
+            title={skeletonToolHint || previousSkeletonToolHint}
+            visible={skeletonToolHint != null}
+          >
+            <i
+              style={{
+                paddingLeft: 4,
+                opacity: disabledInfosForTools[VolumeToolEnum.SKELETON].isDisabled ? 0.5 : 1,
+              }}
+              className="fas fa-project-diagram"
+            />
           </Tooltip>
         </RadioButtonWithTooltip>
+
         <RadioButtonWithTooltip
           title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
           disabledTitle={disabledInfosForTools[VolumeToolEnum.BRUSH].explanation}
@@ -367,7 +408,12 @@ export default function VolumeActionsView() {
           style={narrowButtonStyle}
           value={VolumeToolEnum.BRUSH}
         >
-          <i className="fas fa-paint-brush" />
+          <i
+            className="fas fa-paint-brush"
+            style={{
+              opacity: disabledInfosForTools[VolumeToolEnum.BRUSH].isDisabled ? 0.5 : 1,
+            }}
+          />
           {adaptedActiveTool === "BRUSH" ? multiSliceAnnotationInfoIcon : null}
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
@@ -407,7 +453,12 @@ export default function VolumeActionsView() {
           style={narrowButtonStyle}
           value={VolumeToolEnum.PICK_CELL}
         >
-          <i className="fas fa-eye-dropper" />
+          <i
+            className="fas fa-eye-dropper"
+            style={{
+              opacity: disabledInfosForTools[VolumeToolEnum.PICK_CELL].isDisabled ? 0.5 : 1,
+            }}
+          />
         </RadioButtonWithTooltip>
       </Radio.Group>
 

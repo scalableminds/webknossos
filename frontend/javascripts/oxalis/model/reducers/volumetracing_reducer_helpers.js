@@ -14,7 +14,7 @@ import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volu
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 
 export function setToolReducer(state: OxalisState, volumeTracing: VolumeTracing, tool: VolumeTool) {
-  if (tool === volumeTracing.activeTool) {
+  if (tool === state.tracing.activeTool) {
     return state;
   }
   if (isVolumeAnnotationDisallowedForZoom(tool, state)) {
@@ -23,9 +23,7 @@ export function setToolReducer(state: OxalisState, volumeTracing: VolumeTracing,
 
   return update(state, {
     tracing: {
-      volume: {
-        activeTool: { $set: tool },
-      },
+      activeTool: { $set: tool },
     },
   });
 }
@@ -109,8 +107,8 @@ export function addToLayerReducer(
   volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
-  const { allowUpdate } = state.tracing.restrictions;
-  const { activeTool } = volumeTracing;
+  const { activeTool, restrictions } = state.tracing;
+  const { allowUpdate } = restrictions;
   if (!allowUpdate || isVolumeAnnotationDisallowedForZoom(activeTool, state)) {
     return state;
   }

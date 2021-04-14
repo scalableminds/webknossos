@@ -11,7 +11,7 @@ import {
   volumeToolEnumToIndex,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
   getLookupBufferSize,
@@ -565,10 +565,7 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState =>
-            volumeToolEnumToIndex(
-              Utils.toNullable(Utils.maybe(getVolumeTool)(storeState.tracing.volume)),
-            ),
+          storeState => volumeToolEnumToIndex(storeState.tracing.activeTool),
           volumeTool => {
             this.uniforms.activeVolumeToolIndex.value = volumeTool;
           },

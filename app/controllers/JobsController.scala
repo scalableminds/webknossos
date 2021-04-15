@@ -66,10 +66,10 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     if (celeryJobIds.isEmpty) Fox.successful(List())
     else {
       for {
-        rList <- run(
+        r <- run(
           sql"select #$columns from #$existingCollectionName where celeryJobId in #${writeStructTupleWithQuotes(celeryJobIds)}"
             .as[JobsRow])
-        parsed <- Fox.combined(rList.toList.map(parse))
+        parsed <- parseAll(r)
       } yield parsed
     }
 

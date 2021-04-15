@@ -521,6 +521,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         "jpg",
                         "jpeg",
                         "png",
+                        "czi",
+                        "dm3",
+                        "dm4",
+                        "nifti",
+                        "raw"
                       ]),
                     );
                     return wkwFiles.length === 0 || imageFiles.length === 0;
@@ -528,6 +533,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
               ]}
               valuePropName="fileList"
+              help={ this.state.needsConversion ?
+                <>
+                  The following file formats are supported: czi, dm3, dm4, jpg, nifti, png, raw, tif. <br />
+                  To ensure correct conversion, arrange the image files in a similar pattern to this example: <br />
+                  dataset/ <br />
+                  ├── layer_1 <br />
+                  │   ├── image_file_1 <br />
+                  │   ├── image_file_2 <br /> 
+                  │   └── ... <br />
+                  └── layer_2 <br /><br />
+                </> : ""
+                }
             >
               <FileUploadArea
                 onChange={files => {

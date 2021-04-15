@@ -110,10 +110,9 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[AnnotationsRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      parsed <- parseFirst(r, id)
     } yield parsed
 
   private def getStateQuery(isFinished: Option[Boolean]) =
@@ -134,7 +133,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       r <- run(sql"""select #$columns from #$existingCollectionName
                      where _user = ${userId.id} and typ = '#${annotationType.toString}' and #$stateQuery and #$accessQuery
                      order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
   }
 
@@ -165,7 +164,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                      join webknossos.tasks_ t on a._task = t._id
                      where t._project = ${projectId.id} and a.typ = '#${AnnotationType.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'"""
           .as[AnnotationsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
@@ -189,20 +188,17 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         sql"""select #$columns from #$existingCollectionName
                      where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #$accessQuery"""
           .as[AnnotationsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where (skeletonTracingId = $tracingId or volumeTracingId = $tracingId) and #$accessQuery"
           .as[AnnotationsRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
-    } yield {
-      parsed
-    }
+      parsed <- parseFirst(r, s"tracingId=$tracingId")
+    } yield parsed
 
   // count operations
 

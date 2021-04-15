@@ -107,48 +107,51 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     });
   }
 
-  activateUser = (selectedUser: APIUser, isActive: boolean = true): void => {
-    this.setState(prevState => {
-      const newUsers = prevState.users.map(user => {
-        if (selectedUser.id === user.id) {
-          const newUser = Object.assign({}, user, { isActive });
-          updateUser(newUser);
-          return newUser;
-        }
-        return user;
-      });
-
-      return {
-        users: newUsers,
-        selectedUserIds: [selectedUser.id],
-        isTeamRoleModalVisible: isActive,
-      };
+  activateUser = async (selectedUser: APIUser, isActive: boolean = true) => {
+    const newUserPromises = this.state.users.map(user => {
+      if (selectedUser.id === user.id) {
+        const newUser = Object.assign({}, user, { isActive });
+        return updateUser(newUser);
+      }
+      return Promise.resolve(user);
     });
+
+    Promise.all(newUserPromises).then(
+      newUsers => {
+        this.setState({
+          users: newUsers,
+          selectedUserIds: [selectedUser.id],
+          isTeamRoleModalVisible: isActive,
+        });
+      },
+      () => {}, // Do nothing, change did not succeed
+    );
   };
 
   deactivateUser = (user: APIUser): void => {
     this.activateUser(user, false);
   };
 
-  changeEmail = (selectedUser: APIUser, newEmail: string): void => {
-    this.setState(prevState => {
-      const newUsers = prevState.users.map(user => {
-        if (selectedUser.id === user.id) {
-          const newUser = Object.assign({}, user, { email: newEmail });
-          updateUser(newUser);
-          return newUser;
-        }
-        return user;
-      });
-
-      return {
-        users: newUsers,
-        selectedUserIds: [selectedUser.id],
-      };
+  changeEmail = async (selectedUser: APIUser, newEmail: string) => {
+    const newUserPromises = this.state.users.map(user => {
+      if (selectedUser.id === user.id) {
+        const newUser = Object.assign({}, user, { email: newEmail });
+        return updateUser(newUser);
+      }
+      return Promise.resolve(user);
     });
-    Toast.success(messages["users.change_email_confirmation"]);
 
-    if (this.props.activeUser.email === selectedUser.email) Store.dispatch(logoutUserAction());
+    Promise.all(newUserPromises).then(
+      newUsers => {
+        this.setState({
+          users: newUsers,
+          selectedUserIds: [selectedUser.id],
+        });
+        Toast.success(messages["users.change_email_confirmation"]);
+        if (this.props.activeUser.email === selectedUser.email) Store.dispatch(logoutUserAction());
+      },
+      () => {}, // Do nothing, change did not succeed
+    );
   };
 
   handleUsersChange = (updatedUsers: Array<APIUser>): void => {

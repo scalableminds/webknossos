@@ -92,7 +92,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
             <Select
               showSearch
               placeholder="Select a User"
-              optionFilterProp="children"
+              optionFilterProp="label"
               style={{ width: "100%" }}
               notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
               options={users.map((user: APIUser) => ({

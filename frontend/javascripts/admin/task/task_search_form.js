@@ -204,7 +204,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 showSearch
                 allowClear
                 placeholder="Select a Task Type"
-                optionFilterProp="children"
+                optionFilterProp="label"
                 style={{ width: "100%" }}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.taskTypes.map((taskType: APITaskType) => ({
@@ -222,7 +222,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 allowClear
                 showSearch
                 placeholder="Select a Project"
-                optionFilterProp="children"
+                optionFilterProp="label"
                 style={{ width: "100%" }}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.projects.map((project: APIProject) => ({
@@ -238,7 +238,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 allowClear
                 showSearch
                 placeholder="Select a User"
-                optionFilterProp="children"
+                optionFilterProp="label"
                 style={{ width: "100%" }}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.users

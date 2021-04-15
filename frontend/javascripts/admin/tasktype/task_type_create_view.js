@@ -205,7 +205,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 allowClear
                 showSearch
                 placeholder="Select a Team"
-                optionFilterProp="children"
+                optionFilterProp="label"
                 style={{ width: "100%" }}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 options={this.state.teams.map((team: APITeam) => ({
@@ -260,7 +260,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 mode="multiple"
                 allowClear
                 placeholder="Select all Allowed Modes"
-                optionFilterProp="children"
+                optionFilterProp="label"
                 style={{ width: "100%" }}
                 options={[
                   { value: "orthogonal", label: "Orthogonal" },
@@ -273,7 +273,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
               <Select
                 allowClear
-                optionFilterProp="children"
+                optionFilterProp="label"
                 style={{ width: "100%" }}
                 options={[
                   { value: null, label: "Any" },

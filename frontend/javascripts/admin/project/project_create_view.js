@@ -104,7 +104,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
             <Select
               showSearch
               placeholder="Select a Team"
-              optionFilterProp="children"
+              optionFilterProp="label"
               style={fullWidth}
               disabled={isEditMode}
               notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
@@ -119,7 +119,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
             <Select
               showSearch
               placeholder="Select a User"
-              optionFilterProp="children"
+              optionFilterProp="label"
               style={fullWidth}
               disabled={isEditMode}
               notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}

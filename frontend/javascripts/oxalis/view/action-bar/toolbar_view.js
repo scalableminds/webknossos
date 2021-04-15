@@ -449,7 +449,6 @@ export default function ToolbarView() {
               <img
                 src="/assets/images/lasso.svg"
                 alt="Trace Tool Icon"
-                className="svg-gray-to-highlighted-blue"
                 style={{
                   opacity: disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled ? 0.5 : 1,
                 }}

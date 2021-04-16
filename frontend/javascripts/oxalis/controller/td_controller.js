@@ -31,8 +31,8 @@ import PlaneView from "oxalis/view/plane_view";
 import Store, { type CameraData, type Flycam, type OxalisState, type Tracing } from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
-import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 
 export function threeCameraToCameraData(camera: typeof THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
@@ -53,7 +53,7 @@ export function threeCameraToCameraData(camera: typeof THREE.OrthographicCamera)
 function getTDViewMouseControlsSkeleton(planeView: PlaneView): Object {
   return {
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      skeletonController.onClick(
+      SkeletonTool.onClick(
         planeView,
         pos,
         event.shiftKey,

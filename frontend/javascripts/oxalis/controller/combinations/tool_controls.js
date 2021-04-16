@@ -69,11 +69,6 @@ import {
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 
-// TODO: Build proper UI for this
-window.isAutomaticBrushEnabled = false;
-const isAutomaticBrushEnabled = () =>
-  window.isAutomaticBrushEnabled || Store.getState().temporaryConfiguration.isAutoBrushEnabled;
-
 class Tool {}
 
 export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
@@ -122,6 +117,54 @@ export class MoveTool extends Tool {
 }
 
 export class SkeletonTool extends Tool {
+  static onClick(
+    planeView: PlaneView,
+    position: Point2,
+    shiftPressed: boolean,
+    altPressed: boolean,
+    ctrlPressed: boolean,
+    plane: OrthoView,
+    isTouch: boolean,
+    event?: MouseEvent,
+  ): void {
+    if (!shiftPressed && !isTouch && !(ctrlPressed && event != null)) {
+      // do nothing
+      return;
+    }
+
+    if (altPressed) {
+      skeletonController.handleMergeTrees(
+        planeView,
+        position,
+        shiftPressed,
+        altPressed,
+        ctrlPressed,
+        plane,
+        isTouch,
+      );
+    } else if (ctrlPressed) {
+      skeletonController.handleDeleteEdge(
+        planeView,
+        position,
+        shiftPressed,
+        altPressed,
+        ctrlPressed,
+        plane,
+        isTouch,
+      );
+    } else {
+      skeletonController.handleSelectNode(
+        planeView,
+        position,
+        shiftPressed,
+        altPressed,
+        ctrlPressed,
+        plane,
+        isTouch,
+      );
+    }
+  }
+
   static getMouseControls(
     planeView: PlaneView,
     showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
@@ -136,7 +179,7 @@ export class SkeletonTool extends Tool {
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-        skeletonController.onClick(
+        this.onClick(
           planeView,
           pos,
           event.shiftKey,
@@ -187,22 +230,6 @@ export class SkeletonTool extends Tool {
   }
 }
 
-function pickCell(pos: Point2) {
-  const segmentation = Model.getSegmentationLayer();
-  if (!segmentation) {
-    return;
-  }
-  const storeState = Store.getState();
-  const logZoomStep = getRequestLogZoomStep(storeState);
-  const resolutionInfo = getResolutionInfoOfSegmentationLayer(storeState.dataset);
-  const existingZoomStep = resolutionInfo.getClosestExistingIndex(logZoomStep);
-
-  const cellId = segmentation.cube.getMappedDataValue(calculateGlobalPos(pos), existingZoomStep);
-  if (cellId > 0) {
-    Store.dispatch(setActiveCellAction(cellId));
-  }
-}
-
 export class VolumeTool extends Tool {
   static getPlaneMouseControls(_planeId: OrthoView): * {
     return {
@@ -227,7 +254,7 @@ export class VolumeTool extends Tool {
           !event.shiftKey &&
           (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)
         ) {
-          if (event.ctrlKey && isAutomaticBrushEnabled()) {
+          if (event.ctrlKey && volumeController.isAutomaticBrushEnabled()) {
             return;
           }
           Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
@@ -288,13 +315,11 @@ export class VolumeTool extends Tool {
           tool === AnnotationToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
 
         if (shouldPickCell) {
-          pickCell(pos);
+          volumeController.handlePickCell(pos);
         } else if (shouldFillCell) {
-          Store.dispatch(floodFillAction(calculateGlobalPos(pos), plane));
+          volumeController.handleFloodFill(pos, plane);
         } else if (event.metaKey) {
-          if (isAutomaticBrushEnabled()) {
-            Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
-          }
+          volumeController.handleAutoBrush(pos);
         }
       },
 

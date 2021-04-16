@@ -39,6 +39,14 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 
+// TODO: Build proper UI for this
+window.isAutomaticBrushEnabled = false;
+export function isAutomaticBrushEnabled() {
+  return (
+    window.isAutomaticBrushEnabled || Store.getState().temporaryConfiguration.isAutoBrushEnabled
+  );
+}
+
 export function getKeyboardControls() {
   return {
     c: () => Store.dispatch(createCellAction()),
@@ -55,4 +63,31 @@ export function getKeyboardControls() {
       Store.dispatch(copySegmentationLayerAction(true));
     },
   };
+}
+
+export function handlePickCell(pos: Point2) {
+  const segmentation = Model.getSegmentationLayer();
+  if (!segmentation) {
+    return;
+  }
+  const storeState = Store.getState();
+  const logZoomStep = getRequestLogZoomStep(storeState);
+  const resolutionInfo = getResolutionInfoOfSegmentationLayer(storeState.dataset);
+  const existingZoomStep = resolutionInfo.getClosestExistingIndex(logZoomStep);
+
+  const cellId = segmentation.cube.getMappedDataValue(calculateGlobalPos(pos), existingZoomStep);
+  if (cellId > 0) {
+    Store.dispatch(setActiveCellAction(cellId));
+  }
+}
+
+export function handleFloodFill(pos: Point2, plane: OrthoView) {
+  Store.dispatch(floodFillAction(calculateGlobalPos(pos), plane));
+}
+
+export function handleAutoBrush(pos: Point2) {
+  if (!isAutomaticBrushEnabled()) {
+    return;
+  }
+  Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
 }

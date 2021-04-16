@@ -60,7 +60,7 @@ const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.TDView]: 3,
 };
 
-export function onClick(
+export function handleMergeTrees(
   planeView: PlaneView,
   position: Point2,
   shiftPressed: boolean,
@@ -68,28 +68,50 @@ export function onClick(
   ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
-  event?: MouseEvent,
-): void {
-  if (!shiftPressed && !isTouch && !(ctrlPressed && event != null)) {
-    // do nothing
-    return;
-  }
+) {
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
 
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    if (altPressed) {
-      getActiveNode(skeletonTracing).map(activeNode =>
-        Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
-      );
-    } else if (ctrlPressed) {
-      getActiveNode(skeletonTracing).map(activeNode =>
-        Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
-      );
-    } else {
-      Store.dispatch(setActiveNodeAction(nodeId));
-    }
+    getActiveNode(skeletonTracing).map(activeNode =>
+      Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
+    );
+  }
+}
+export function handleDeleteEdge(
+  planeView: PlaneView,
+  position: Point2,
+  shiftPressed: boolean,
+  altPressed: boolean,
+  ctrlPressed: boolean,
+  plane: OrthoView,
+  isTouch: boolean,
+) {
+  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  // otherwise we have hit the background and do nothing
+  if (nodeId != null && nodeId > 0) {
+    getActiveNode(skeletonTracing).map(activeNode =>
+      Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
+    );
+  }
+}
+export function handleSelectNode(
+  planeView: PlaneView,
+  position: Point2,
+  shiftPressed: boolean,
+  altPressed: boolean,
+  ctrlPressed: boolean,
+  plane: OrthoView,
+  isTouch: boolean,
+) {
+  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+
+  // otherwise we have hit the background and do nothing
+  if (nodeId != null && nodeId > 0) {
+    Store.dispatch(setActiveNodeAction(nodeId));
   }
 }
 

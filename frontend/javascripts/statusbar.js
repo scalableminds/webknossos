@@ -32,8 +32,9 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {||};
 
 const borderToggleButtonMargin = 40;
-const spaceBetweenItems = 20;
 const fontSize = 14;
+const spaceBetweenItems = 25;
+const lineColor = "rgba(255, 255, 255, 0.67)";
 
 const statusbarStyle: Object = {
   marginLeft: borderToggleButtonMargin,
@@ -42,9 +43,10 @@ const statusbarStyle: Object = {
   display: "flex",
   flexWrap: "wrap",
   overflow: "hidden",
+  alignItems: "center",
 };
-const defaultIconStyle = { height: fontSize };
-const defaultInfoStyle = { display: "inline-block", minWidth: 150 };
+const defaultIconStyle = { height: fontSize - 1, marginTop: 2 };
+const defaultInfoStyle = { display: "inline-block", minWidth: 150, textAlign: "left" };
 const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
@@ -62,18 +64,14 @@ class Statusbar extends React.PureComponent<Props, State> {
   getZoomShortcut() {
     return (
       <span key="zoom" style={defaultShortcutStyle}>
-        <span
-          key="zoom-i"
-          className="keyboard-key-icon-small"
-          style={{ borderColor: "rgba(255, 255, 255, 0.67)" }}
-        >
+        <span key="zoom-i" className="keyboard-key-icon-small" style={{ borderColor: lineColor }}>
           {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
           <span style={{ position: "relative", top: -2 }}>Alt</span>
         </span>{" "}
         +
         <img
           className="keyboard-mouse-icon"
-          src="/assets/images/icon-mousewheel.svg"
+          src="/assets/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
           style={defaultIconStyle}
         />
@@ -89,7 +87,7 @@ class Statusbar extends React.PureComponent<Props, State> {
           <span style={{ marginLeft: "auto" }}>
             <img
               className="keyboard-mouse-icon"
-              src="/assets/images/icon-mouse-left.svg"
+              src="/assets/images/icon-statusbar-mouse-left.svg"
               alt="Mouse Left"
               style={defaultIconStyle}
             />
@@ -101,7 +99,7 @@ class Statusbar extends React.PureComponent<Props, State> {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-left-drag.svg"
             alt="Mouse Left Drag"
-            style={{ height: 14 }}
+            style={defaultIconStyle}
           />
           {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
         </span>
@@ -117,14 +115,21 @@ class Statusbar extends React.PureComponent<Props, State> {
         <span style={defaultShortcutStyle}>
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-right.svg"
+            src="/assets/images/icon-statusbar-mouse-right-drag.svg"
             alt="Mouse Right"
             style={defaultIconStyle}
           />
           Rotate 3D View
         </span>
-        {this.getZoomShortcut()}
-        <MoreOutlined rotate={90} style={defaultShortcutStyle} />
+        {this.getZoomShortcut()}{" "}
+        <a
+          target="_blank"
+          href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+          rel="noopener noreferrer"
+          style={{ marginLeft: 10 }}
+        >
+          <MoreOutlined rotate={90} style={{ height: 14, color: lineColor }} />
+        </a>
       </React.Fragment>
     );
   }
@@ -162,13 +167,13 @@ class Statusbar extends React.PureComponent<Props, State> {
         <span>
           <img
             src="/assets/images/icon-statusbar-downsampling.svg"
-            style={{ width: 12, height: 12 }}
+            style={{ height: 14, marginTop: -2 }}
             alt="Resolution"
-          />
+          />{" "}
           {activeResolution.join("-")}{" "}
         </span>
         <span style={defaultInfoStyle}>
-          Pos: [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
+          Pos [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
         </span>
         {hasSegmentation() && this.getCellInfo(globalMousePosition)}
       </Space>
@@ -177,10 +182,12 @@ class Statusbar extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <span style={statusbarStyle}>
-        {this.getInfos()}
-        {this.getShortcuts()}
-      </span>
+      <React.Fragment>
+        <span style={statusbarStyle}>
+          {this.getInfos()}
+          {this.getShortcuts()}
+        </span>
+      </React.Fragment>
     );
   }
 }

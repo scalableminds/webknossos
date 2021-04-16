@@ -294,7 +294,6 @@ export type UserConfiguration = {|
   +hideTreeRemovalWarning: boolean,
   +highlightCommentedNodes: boolean,
   +keyboardDelay: number,
-  +layoutScaleValue: number,
   +mouseRotateValue: number,
   +moveValue3d: number,
   +moveValue: number,

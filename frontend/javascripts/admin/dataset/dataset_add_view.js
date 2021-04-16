@@ -14,6 +14,7 @@ import DatasetAddNeuroglancerView from "admin/dataset/dataset_add_neuroglancer_v
 import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
+import LinkButton from "components/link_button";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
@@ -168,9 +169,9 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
       <div style={{ textAlign: "center" }}>
         <p>or</p>
         <p>
-          <a href="#" onClick={() => renderSampleDatasetsModal(activeUser, history)}>
+          <LinkButton onClick={() => renderSampleDatasetsModal(activeUser, history)}>
             Add a Sample Dataset
-          </a>
+          </LinkButton>
         </p>
       </div>
       <Modal

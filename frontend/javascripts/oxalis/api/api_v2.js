@@ -721,7 +721,6 @@ class UserApi {
     - moveValue3d
     - rotateValue
     - crosshairSize
-    - layoutScaleValue
     - mouseRotateValue
     - clippingDistance
     - clippingDistanceArbitrary

@@ -363,24 +363,24 @@ export async function getProjectsForTaskType(
   return responses.map(transformProject);
 }
 
-export async function getProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}`);
+export async function getProject(projectId: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectId}`);
   return transformProject(project);
 }
 
 export async function increaseProjectTaskInstances(
-  projectName: string,
+  projectId: string,
   delta?: number = 1,
 ): Promise<APIProjectWithAssignments> {
   const project = await Request.receiveJSON(
-    `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
+    `/api/projects/${projectId}/incrementEachTasksInstances?delta=${delta}`,
     { method: "PATCH" },
   );
   return transformProject(project);
 }
 
-export function deleteProject(projectName: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectName}`, {
+export function deleteProject(projectId: string): Promise<void> {
+  return Request.receiveJSON(`/api/projects/${projectId}`, {
     method: "DELETE",
   });
 }
@@ -395,29 +395,26 @@ export function createProject(project: APIProjectCreator): Promise<APIProject> {
   });
 }
 
-export function updateProject(
-  projectName: string,
-  project: APIProjectUpdater,
-): Promise<APIProject> {
+export function updateProject(projectId: string, project: APIProjectUpdater): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
 
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}`, {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}`, {
     method: "PUT",
     data: transformedProject,
   });
 }
 
-export async function pauseProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}/pause`, {
+export async function pauseProject(projectId: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectId}/pause`, {
     method: "PATCH",
   });
   return transformProject(project);
 }
 
-export async function resumeProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}/resume`, {
+export async function resumeProject(projectId: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectId}/resume`, {
     method: "PATCH",
   });
   return transformProject(project);
@@ -822,6 +819,8 @@ export async function getJobs(): Promise<Array<APIJob>> {
     boundingBox: job.commandArgs.kwargs.bbox,
     exportFileName: job.commandArgs.kwargs.export_file_name,
     tracingId: job.commandArgs.kwargs.volume_tracing_id,
+    annotationId: job.commandArgs.kwargs.annotation_id,
+    annotationType: job.commandArgs.kwargs.annotation_type,
     state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
@@ -843,15 +842,19 @@ export async function startExportTiffJob(
   bbox: Vector6,
   layerName: ?string,
   tracingId: ?string,
+  annotationId: ?string,
+  annotationType: ?APIAnnotationType,
   tracingVersion: ?number = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
   const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
+  const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
+  const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
   const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}`,
+    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}`,
   );
 }
 

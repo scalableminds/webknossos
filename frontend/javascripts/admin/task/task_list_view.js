@@ -25,6 +25,7 @@ import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
 import TaskAnnotationView from "admin/task/task_annotation_view";
+import LinkButton from "components/link_button";
 import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import TaskSearchForm, {
   type QueryObject,
@@ -342,10 +343,10 @@ class TaskListView extends React.PureComponent<Props, State> {
                     </AsyncLink>
                   ) : null}
                   <br />
-                  <a href="#" onClick={_.partial(this.deleteTask, task)}>
+                  <LinkButton onClick={_.partial(this.deleteTask, task)}>
                     <DeleteOutlined />
                     Delete
-                  </a>
+                  </LinkButton>
                 </span>
               )}
             />

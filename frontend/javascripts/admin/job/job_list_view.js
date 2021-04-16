@@ -87,7 +87,15 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.type === "convert_to_wkw" && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
     } else if (job.type === "export_tiff" && job.organizationName && job.datasetName) {
-      const layerLabel = job.tracingId != null ? "volume annotation" : job.layerName || "a";
+      const volumeAnnotationLabel =
+        job.annotationId != null ? (
+          <Link to={`/annotations/${job.annotationType || "Explorational"}/${job.annotationId}`}>
+            volume annotation
+          </Link>
+        ) : (
+          "volume annotation"
+        );
+      const layerLabel = job.tracingId != null ? volumeAnnotationLabel : job.layerName || "a";
       return (
         <span>
           Tiff export from {layerLabel} layer of{" "}

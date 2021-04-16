@@ -57,7 +57,6 @@ const defaultState: OxalisState = {
     hideTreeRemovalWarning: false,
     highlightCommentedNodes: false,
     keyboardDelay: 200,
-    layoutScaleValue: 1,
     mouseRotateValue: 0.004,
     moveValue3d: 300,
     moveValue: 300,

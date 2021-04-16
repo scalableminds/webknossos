@@ -97,10 +97,9 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from webknossos.tracingstores_ where url = $url and #$accessQuery".as[TracingstoresRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
+      parsed <- parseFirst(r, url)
     } yield parsed
 
   def findFirst(implicit ctx: DBAccessContext): Fox[TracingStore] =

@@ -19,7 +19,7 @@ import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 const FormItem = Form.Item;
 
 type OwnProps = {|
-  projectName?: ?string,
+  projectId?: ?string,
 |};
 type StateProps = {||};
 type Props = {| ...OwnProps, ...StateProps |};
@@ -27,7 +27,7 @@ type PropsWithRouter = {|
   ...Props,
 |};
 
-function ProjectCreateView({ projectName }: PropsWithRouter) {
+function ProjectCreateView({ projectId }: PropsWithRouter) {
   const [teams, setTeams] = useState<Array<APITeam>>([]);
   const [users, setUsers] = useState<Array<APIUser>>([]);
   const [isFetchingData, setIsFetchingData] = useState<boolean>(false);
@@ -49,7 +49,7 @@ function ProjectCreateView({ projectName }: PropsWithRouter) {
   }
 
   async function applyDefaults() {
-    const project = projectName ? await getProject(projectName) : null;
+    const project = projectId ? await getProject(projectId) : null;
     const defaultValues = {
       priority: 100,
       expectedTime: 90,
@@ -63,16 +63,18 @@ function ProjectCreateView({ projectName }: PropsWithRouter) {
   }
 
   const handleSubmit = async formValues => {
-    if (projectName) {
-      await updateProject(projectName, formValues);
+    if (projectId) {
+      await updateProject(projectId, formValues);
     } else {
       await createProject(formValues);
     }
     history.push("/projects");
   };
 
-  const isEditMode = projectName != null;
-  const title = isEditMode && projectName ? `Update Project ${projectName}` : "Create Project";
+  const isEditMode = projectId != null;
+  const projectName = form.getFieldValue("name");
+  const title =
+    isEditMode && projectId ? `Update Project ${projectName || projectId}` : "Create Project";
   const fullWidth = { width: "100%" };
 
   return (
@@ -102,7 +104,7 @@ function ProjectCreateView({ projectName }: PropsWithRouter) {
             <Select
               showSearch
               placeholder="Select a Team"
-              optionFilterProp="children"
+              optionFilterProp="label"
               style={fullWidth}
               disabled={isEditMode}
               notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
@@ -117,7 +119,7 @@ function ProjectCreateView({ projectName }: PropsWithRouter) {
             <Select
               showSearch
               placeholder="Select a User"
-              optionFilterProp="children"
+              optionFilterProp="label"
               style={fullWidth}
               disabled={isEditMode}
               notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}

@@ -188,7 +188,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
     const { label, onChange, value, disabled, tooltipText, loading, labelSpan } = this.props;
     const switchSpan = MAX_COL_SPAN - labelSpan;
     return (
-      <Row className="margin-bottom" type="flex" align="top" gutter={rowGutter}>
+      <Row className="margin-bottom" type="flex" align="middle" gutter={rowGutter}>
         <Col span={labelSpan}>
           <label className="setting-label">{label}</label>
         </Col>

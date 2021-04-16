@@ -380,7 +380,7 @@ class LayerSettingsView extends React.PureComponent<LayerSettingsViewProps, Stat
                 onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
               />
             )}
-            {isColorLayer ? (
+            {isColorLayer && (
               <Row className="margin-bottom" style={{ marginTop: 6 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>
@@ -427,12 +427,6 @@ class LayerSettingsView extends React.PureComponent<LayerSettingsViewProps, Stat
                   </Tooltip>
                 </Col>
               </Row>
-            ) : (
-              <SwitchSetting
-                label={settings.highlightHoveredCellId}
-                value={this.props.datasetConfiguration.highlightHoveredCellId}
-                onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
-              />
             )}
           </div>
         )}
@@ -582,19 +576,21 @@ class LayerSettingsView extends React.PureComponent<LayerSettingsViewProps, Stat
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
       ) != null;
     return (
-      <Collapse bordered={false} defaultActiveKey={["1", "2"]} className="tracing-settings-menu">
-        <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
-          {layerSettings}
-        </Panel>
-        <Panel header="Mapping Settings" key="2">
-          <MappingSettingsView />
-        </Panel>
+      <React.Fragment>
+        <Collapse bordered={false} defaultActiveKey={["1", "2"]} className="tracing-settings-menu">
+          <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
+            {layerSettings}
+          </Panel>
+          <Panel header="Mapping Settings" key="2">
+            <MappingSettingsView />
+          </Panel>
+        </Collapse>
         <DownsampleVolumeModal
           visible={this.state.isDownsampleVolumeModalVisible}
           hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
           magsToDownsample={this.getVolumeMagsToDownsample()}
         />
-      </Collapse>
+      </React.Fragment>
     );
   }
 }

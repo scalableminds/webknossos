@@ -21,6 +21,7 @@ import MeshesView from "oxalis/view/right-menu/meshes_view";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 import LayerSettingsView from "oxalis/view/settings/layer_settings_view";
+import GeneralSettingsView from "oxalis/view/settings/general_settings_view";
 import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
@@ -211,6 +212,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
       case "LayerSettingsView": {
         return <LayerSettingsView />;
+      }
+      case "GeneralSettingsView": {
+        return <GeneralSettingsView />;
       }
       default: {
         console.error(`The settings tab with id ${id} is unknown.`);

@@ -115,6 +115,7 @@ export const SettingsTabs = {
   },
   DatasetSettingsTab: { id: "DatasetSettingsView", name: "Dataset" },
   LayerSettingsTab: { id: "LayerSettingsView", name: "Layers" },
+  GeneralSettingsTab: { id: "GeneralSettingsView", name: "General" },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;

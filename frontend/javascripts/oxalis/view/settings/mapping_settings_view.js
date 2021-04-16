@@ -1,6 +1,6 @@
 // @flow
 
-import { Select, Switch, Tooltip } from "antd";
+import { Select, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";

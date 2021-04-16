@@ -35,7 +35,6 @@ const borderToggleButtonMargin = 40;
 const spaceBetweenItems = 20;
 const fontSize = 14;
 
-// TODO: float non-infos right
 const statusbarStyle: Object = {
   marginLeft: borderToggleButtonMargin,
   marginRight: borderToggleButtonMargin,
@@ -46,7 +45,7 @@ const statusbarStyle: Object = {
 };
 const defaultIconStyle = { height: fontSize };
 const defaultInfoStyle = { display: "inline-block", minWidth: 150 };
-const defaultShortcutStyle = { alignSelf: "right", marginLeft: spaceBetweenItems };
+const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -87,7 +86,7 @@ class Statusbar extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         {this.props.isSkeletonAnnotation && (
-          <span style={defaultShortcutStyle}>
+          <span style={{ marginLeft: "auto" }}>
             <img
               className="keyboard-mouse-icon"
               src="/assets/images/icon-mouse-left.svg"

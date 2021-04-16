@@ -34,7 +34,6 @@ const recommendedConfigByCategory = {
     fourBit: false,
     interpolation: true,
     segmentationOpacity: 0,
-    highlightHoveredCellId: false,
     segmentationPatternOpacity: 40,
     zoom: 0.8,
     renderMissingDataBlack: false,

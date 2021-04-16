@@ -427,7 +427,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
               />
             )}
-            {isColorLayer ? (
+            {isColorLayer && (
               <Row className="margin-bottom" style={{ marginTop: 6 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>
@@ -474,12 +474,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   </Tooltip>
                 </Col>
               </Row>
-            ) : (
-              <SwitchSetting
-                label={settings.highlightHoveredCellId}
-                value={this.props.datasetConfiguration.highlightHoveredCellId}
-                onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
-              />
             )}
           </div>
         )}

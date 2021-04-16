@@ -682,7 +682,6 @@ class DataApi {
      - interpolation
      - layers
      - quality
-     - highlightHoveredCellId
      - segmentationPatternOpacity
      - renderMissingDataBlack
    *

@@ -112,10 +112,6 @@ class PlaneMaterialFactory {
       Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
     this.uniforms = {
-      highlightHoveredCellId: {
-        type: "b",
-        value: true,
-      },
       sphericalCapRadius: {
         type: "f",
         value: 140,
@@ -412,16 +408,6 @@ class PlaneMaterialFactory {
         storeState => storeState.viewModeData.plane.activeViewport === this.planeID,
         isMouseInActiveViewport => {
           this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        storeState => storeState.datasetConfiguration.highlightHoveredCellId,
-        highlightHoveredCellId => {
-          this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
         },
         true,
       ),

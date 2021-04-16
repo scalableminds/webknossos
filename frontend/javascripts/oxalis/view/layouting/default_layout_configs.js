@@ -173,6 +173,7 @@ function buildBorder(
           model: {
             global: subLayoutGlobalSettings,
             layout: Row([Row(tabsets)]),
+            borders: [],
           },
         },
       },

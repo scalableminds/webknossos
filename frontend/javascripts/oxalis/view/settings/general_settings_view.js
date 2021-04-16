@@ -273,13 +273,6 @@ class GeneralSettingsView extends PureComponent<GeneralSettingsViewProps> {
               value={this.props.userConfiguration.sphericalCapRadius}
               onChange={this.onChangeUser.sphericalCapRadius}
             />
-            <NumberSliderSetting
-              label={settingsLabels.clippingDistanceArbitrary}
-              min={userSettings.clippingDistanceArbitrary.minimum}
-              max={userSettings.clippingDistanceArbitrary.maximum}
-              value={this.props.userConfiguration.clippingDistanceArbitrary}
-              onChange={this.onChangeUser.clippingDistanceArbitrary}
-            />
             <SwitchSetting
               label={settingsLabels.displayCrosshair}
               value={this.props.userConfiguration.displayCrosshair}

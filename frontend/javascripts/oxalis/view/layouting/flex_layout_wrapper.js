@@ -18,6 +18,7 @@ import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher from "oxalis/view/input_catcher";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import MeshesView from "oxalis/view/right-menu/meshes_view";
+import SkeletonTabView from "oxalis/view/right-menu/skeleton_tab_view";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 import LayerSettingsView from "oxalis/view/settings/layer_settings_view";
@@ -194,6 +195,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
       case "MeshesView": {
         return <MeshesView />;
+      }
+      case "SkeletonTabView": {
+        return <SkeletonTabView />;
       }
       default: {
         console.error(`The tab with id ${id} is unknown.`);

@@ -222,7 +222,12 @@ const _getDefaultLayouts = () => {
   const rightBorderWithSkeleton = buildBorder(
     "right",
     [
-      [infoTabs.DatasetInfoTabView, infoTabs.TreesTabView, infoTabs.CommentTabView],
+      [
+        infoTabs.DatasetInfoTabView,
+        infoTabs.TreesTabView,
+        infoTabs.CommentTabView,
+        infoTabs.SkeletonTabView,
+      ],
       [infoTabs.MappingInfoView, infoTabs.MeshesView, infoTabs.AbstractTreeTabView],
     ],
     defaultBorderWidth,

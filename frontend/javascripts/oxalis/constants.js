@@ -102,6 +102,7 @@ export const TracingTabs = {
   CommentTabView: { id: "CommentTabView", name: "Comments" },
   MappingInfoView: { id: "MappingInfoView", name: "Volume" },
   MeshesView: { id: "MeshesView", name: "Meshes" },
+  SkeletonTabView: { id: "SkeletonTabView", name: "Skeleton" },
   AbstractTreeTabView: {
     id: "AbstractTreeTabView",
     name: "Abstract Tree",

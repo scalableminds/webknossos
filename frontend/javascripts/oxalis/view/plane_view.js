@@ -6,7 +6,6 @@ import _ from "lodash";
 
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
   OrthoViewColors,
@@ -39,7 +38,6 @@ class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   listenTo: Function;
-  unbindChangedScaleListener: () => void;
 
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: ([number, number]) => ?typeof THREE.Vector3;
@@ -235,7 +233,6 @@ class PlaneView {
       getSceneController().scene.remove(this.cameras[plane]);
     }
     window.removeEventListener("resize", this.resizeThrottled);
-    this.unbindChangedScaleListener();
   }
 
   start(): void {
@@ -244,10 +241,6 @@ class PlaneView {
     this.animate();
 
     window.addEventListener("resize", this.resizeThrottled);
-    this.unbindChangedScaleListener = listenToStoreProperty(
-      store => store.userConfiguration.layoutScaleValue,
-      this.resizeThrottled,
-    );
   }
 }
 

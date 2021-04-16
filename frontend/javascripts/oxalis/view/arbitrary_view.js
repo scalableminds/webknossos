@@ -13,7 +13,6 @@ import {
 } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Constants, { ArbitraryViewport, type OrthoViewMap, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
@@ -25,7 +24,6 @@ import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rende
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
-  unbindChangedScaleListener: () => void;
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
   plane: ArbitraryPlane;
 
@@ -112,11 +110,6 @@ class ArbitraryView {
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
       window.addEventListener("resize", this.resizeThrottled);
-      this.unbindChangedScaleListener = listenToStoreProperty(
-        store => store.userConfiguration.layoutScaleValue,
-        this.resizeThrottled,
-        true,
-      );
     }
   }
 
@@ -131,7 +124,6 @@ class ArbitraryView {
       getSceneController().rootGroup.remove(this.group);
 
       window.removeEventListener("resize", this.resizeThrottled);
-      this.unbindChangedScaleListener();
     }
   }
 

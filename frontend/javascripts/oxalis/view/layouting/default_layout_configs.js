@@ -32,7 +32,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 11;
+export const currentLayoutVersion = 12;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
@@ -130,11 +130,13 @@ const globalLayoutSettings: GlobalConfig = {
   tabSetTabStripHeight: layoutHeaderHeight,
 };
 
+const additionalHeaderHeightForBorderTabSets = 6;
+
 const subLayoutGlobalSettings: GlobalConfig = {
   ...globalLayoutSettings,
   tabSetEnableDivide: false,
-  tabSetHeaderHeight: layoutHeaderHeight + 6,
-  tabSetTabStripHeight: layoutHeaderHeight + 6,
+  tabSetHeaderHeight: layoutHeaderHeight + additionalHeaderHeightForBorderTabSets,
+  tabSetTabStripHeight: layoutHeaderHeight + additionalHeaderHeightForBorderTabSets,
 };
 
 function buildTabsets(
@@ -199,6 +201,10 @@ function buildLayout(settings, borders, mainLayout): ModelConfig {
   };
 }
 
+// As long as the content of the left border is not responsive, this border needs a fixed width.
+// As soon as the content is responsive the normal DEFAULT_BORDER_WIDTH should be used.
+const leftBorderWidth = 365;
+
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
   const defaultBorderWidth = isInIframe
@@ -208,7 +214,7 @@ const _getDefaultLayouts = () => {
   const leftBorder = buildBorder(
     "left",
     [((Object.values(settingsTabs): any): Array<TabNode>)],
-    defaultBorderWidth,
+    leftBorderWidth,
     borderIsOpenByDefault,
     1,
   );

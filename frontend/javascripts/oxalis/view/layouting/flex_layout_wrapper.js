@@ -362,6 +362,15 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     }
   };
 
+  classNameMapper = (className: string) => {
+    const isLeftSidebarOpen = getBorderOpenStatus(this.state.model).left;
+    if (isLeftSidebarOpen && className === "flexlayout__splitter_border") {
+      // Add an additional class to the border splitters to disable the pointer events (dragging) of the first splitter using css.
+      return `${className} hide_first_splitter_border`;
+    }
+    return className;
+  };
+
   render() {
     const { model } = this.state;
     return (
@@ -374,6 +383,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             onAction={this.onAction}
             onRenderTabSet={this.onRenderTabSet}
             onRenderTab={this.onRenderTab}
+            classNameMapper={this.classNameMapper}
           />
         </div>
         <Footer className="footer">

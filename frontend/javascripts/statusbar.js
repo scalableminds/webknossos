@@ -1,40 +1,52 @@
 // @flow
-import { Col, Row, Space } from "antd";
+import { Space } from "antd";
 import _ from "lodash";
 import { connect } from "react-redux";
 import React from "react";
 
 import type { OxalisState } from "oxalis/store";
-import { type Vector2, type Vector3, type OrthoView, OrthoViews } from "oxalis/constants";
+import {
+  type Vector2,
+  type Vector3,
+  type OrthoView,
+  OrthoViews,
+  type VolumeTool,
+} from "oxalis/constants";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import api from "oxalis/api/internal_api";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
+import { MoreOutlined } from "@ant-design/icons";
 
 type OwnProps = {||};
 type StateProps = {|
   activeResolution: Vector3,
   activeViewport: OrthoView,
   mousePosition: ?Vector2,
+  isSkeletonAnnotation: boolean,
+  activeTool: ?VolumeTool,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 type State = {||};
 
 const borderToggleButtonMargin = 40;
 const spaceBetweenItems = 20;
+const fontSize = 14;
 
+// TODO: float non-infos right
 const statusbarStyle: Object = {
   marginLeft: borderToggleButtonMargin,
   marginRight: borderToggleButtonMargin,
-  justifyContent: "space-between",
-  verticalAlign: "middle",
-  fontSize: 14,
+  fontSize,
   display: "flex",
+  flexWrap: "wrap",
   overflow: "hidden",
 };
-const defaultIconStyle = { height: 12, borderColor: "white" };
+const defaultIconStyle = { height: fontSize };
+const defaultInfoStyle = { display: "inline-block", minWidth: 150 };
+const defaultShortcutStyle = { alignSelf: "right", marginLeft: spaceBetweenItems };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -50,12 +62,13 @@ class Statusbar extends React.PureComponent<Props, State> {
 
   getZoomShortcut() {
     return (
-      <span key="zoom" style={{}}>
+      <span key="zoom" style={defaultShortcutStyle}>
         <span
           key="zoom-i"
           className="keyboard-key-icon-small"
           style={{ borderColor: "rgba(255, 255, 255, 0.67)" }}
         >
+          {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
           <span style={{ position: "relative", top: -2 }}>Alt</span>
         </span>{" "}
         +
@@ -71,19 +84,29 @@ class Statusbar extends React.PureComponent<Props, State> {
   }
 
   getShortcuts() {
-    const { activeViewport } = this.props;
     return (
-      <Space size={spaceBetweenItems}>
-        <span>
+      <React.Fragment>
+        {this.props.isSkeletonAnnotation && (
+          <span style={defaultShortcutStyle}>
+            <img
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-mouse-left.svg"
+              alt="Mouse Left"
+              style={defaultIconStyle}
+            />
+            Set Node
+          </span>
+        )}
+        <span style={{ textTransform: "capitalize", ...defaultShortcutStyle }}>
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-mouse-left-drag.svg"
-            alt="Mouse Left Drag"
+            src="/assets/images/icon-mouse-left.svg"
+            alt="Mouse Left"
             style={defaultIconStyle}
           />
-          Move
+          {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
         </span>
-        <span>
+        <span style={defaultShortcutStyle}>
           <img
             className="keyboard-mouse-icon"
             src="/assets/images/icon-mousewheel.svg"
@@ -92,19 +115,18 @@ class Statusbar extends React.PureComponent<Props, State> {
           />
           Move along 3rd axis
         </span>
+        <span style={defaultShortcutStyle}>
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-mouse-right.svg"
+            alt="Mouse Right"
+            style={defaultIconStyle}
+          />
+          Rotate 3D View
+        </span>
         {this.getZoomShortcut()}
-        {activeViewport === OrthoViews.TDView && (
-          <span>
-            <img
-              className="keyboard-mouse-icon"
-              src="/assets/images/icon-mouse-right.svg"
-              alt="Mouse Right"
-              style={defaultIconStyle}
-            />
-            Rotate 3D View
-          </span>
-        )}
-      </Space>
+        <MoreOutlined rotate={90} style={defaultShortcutStyle} />
+      </React.Fragment>
     );
   }
 
@@ -119,7 +141,7 @@ class Statusbar extends React.PureComponent<Props, State> {
       pos && cube.getDataValue(pos, null, usableZoomStep);
 
     return (
-      <span>
+      <span style={defaultInfoStyle}>
         Segment{" "}
         {globalMousePosition
           ? getIdForPos(globalMousePosition, renderedZoomStepForMousePosition)
@@ -137,7 +159,7 @@ class Statusbar extends React.PureComponent<Props, State> {
     }
 
     return (
-      <Space size={spaceBetweenItems}>
+      <Space size={spaceBetweenItems} style={{ display: "flex", flexWrap: "wrap" }}>
         <span>
           <img
             src="/assets/images/icon-downsampling.svg"
@@ -146,7 +168,9 @@ class Statusbar extends React.PureComponent<Props, State> {
           />
           {activeResolution.join("-")}{" "}
         </span>
-        <span>Pos: [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]</span>
+        <span style={defaultInfoStyle}>
+          Pos: [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
+        </span>
         {hasSegmentation() && this.getCellInfo(globalMousePosition)}
       </Space>
     );
@@ -155,8 +179,8 @@ class Statusbar extends React.PureComponent<Props, State> {
   render() {
     return (
       <span style={statusbarStyle}>
-        <span style={{ textAlign: "left" }}>{this.getInfos()}</span>
-        <span style={{ textAlign: "right" }}>{this.getShortcuts()}</span>
+        {this.getInfos()}
+        {this.getShortcuts()}
       </span>
     );
   }
@@ -166,6 +190,8 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeResolution: getCurrentResolution(state),
   mousePosition: state.temporaryConfiguration.mousePosition,
   activeViewport: state.viewModeData.plane.activeViewport,
+  isSkeletonAnnotation: state.tracing.skeleton != null,
+  activeTool: state.tracing.volume ? state.tracing.volume.activeTool : null,
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Statusbar);

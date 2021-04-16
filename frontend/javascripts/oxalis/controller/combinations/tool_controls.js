@@ -12,7 +12,6 @@ import {
   OrthoViews,
   type Point2,
   type Vector3,
-  AnnotationToolEnum,
   ContourModeEnum,
   type ShowContextMenuFunction,
 } from "oxalis/constants";
@@ -155,12 +154,13 @@ export class DrawTool {
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        if (!event.shiftKey) {
-          if (event.ctrlKey && volumeController.isAutomaticBrushEnabled()) {
-            return;
-          }
-          volumeController.handleDrawStart(pos, plane);
+        if (event.shiftKey) {
+          return;
         }
+        if (event.ctrlKey && volumeController.isAutomaticBrushEnabled()) {
+          return;
+        }
+        volumeController.handleDrawStart(pos, plane);
       },
 
       leftMouseUp: () => {
@@ -227,20 +227,15 @@ export class FillCellTool {
   static getPlaneMouseControls(_planeId: OrthoView): * {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const tool = Store.getState().tracing.activeTool;
-
-        const shouldPickCell =
-          tool === AnnotationToolEnum.PICK_CELL || (event.shiftKey && !event.ctrlKey);
-
-        const shouldFillCell =
-          tool === AnnotationToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
+        const shouldPickCell = event.shiftKey && !event.ctrlKey;
+        const shouldAutoBrush = event.metaKey && volumeController.isAutomaticBrushEnabled();
 
         if (shouldPickCell) {
           volumeController.handlePickCell(pos);
-        } else if (shouldFillCell) {
-          volumeController.handleFloodFill(pos, plane);
-        } else if (event.metaKey) {
+        } else if (shouldAutoBrush) {
           volumeController.handleAutoBrush(pos);
+        } else {
+          volumeController.handleFloodFill(pos, plane);
         }
       },
     };

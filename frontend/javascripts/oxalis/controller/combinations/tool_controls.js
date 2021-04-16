@@ -1,75 +1,28 @@
-import { connect } from "react-redux";
-import BackboneEvents from "backbone-events-standalone";
-import Clipboard from "clipboard-js";
-import * as React from "react";
-import _ from "lodash";
-
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
-import { document } from "libs/window";
-import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+// @flow
+import { movePlaneFlycamOrthoAction } from "oxalis/model/actions/flycam_actions";
 import {
-  getPosition,
-  getRequestLogZoomStep,
-  getPlaneScalingFactor,
-} from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import {
-  movePlaneFlycamOrthoAction,
-  moveFlycamOrthoAction,
-  zoomByDeltaAction,
-  setPositionAction,
-} from "oxalis/model/actions/flycam_actions";
-import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
-import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import Dimensions from "oxalis/model/dimensions";
-import Model from "oxalis/model";
+  setMousePositionAction,
+  hideBrushAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import PlaneView from "oxalis/view/plane_view";
-import Store, { type OxalisState, type Tracing } from "oxalis/store";
-import TDController from "oxalis/controller/td_controller";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
-import constants, {
+import Store from "oxalis/store";
+import {
   type OrthoView,
-  type OrthoViewMap,
-  OrthoViewValuesWithoutTDView,
   OrthoViews,
   type Point2,
   type Vector3,
   AnnotationToolEnum,
   ContourModeEnum,
+  type ShowContextMenuFunction,
 } from "oxalis/constants";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
-import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_plane_controller";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import {
-  createCellAction,
-  setToolAction,
-  startEditingAction,
-  floodFillAction,
-  addToLayerAction,
-  finishEditingAction,
-  hideBrushAction,
-  setContourTracingModeAction,
-  cycleToolAction,
-  copySegmentationLayerAction,
-  inferSegmentationInViewportAction,
-  setActiveCellAction,
-  resetContourAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfoOfSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
-
-class Tool {}
 
 export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
@@ -78,8 +31,11 @@ export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => 
 
 const handleMovePlane = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
 
-export class MoveTool extends Tool {
-  static createRightClickHandler(planeView, showNodeContextMenuAt) {
+export class MoveTool {
+  static createRightClickHandler(
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ) {
     return (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       skeletonController.openContextMenu(
         planeView,
@@ -91,7 +47,12 @@ export class MoveTool extends Tool {
       );
   }
 
-  static getMouseControls(planeId: OrthoView, planeView, showNodeContextMenuAt, helpers): Object {
+  static getMouseControls(
+    planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+    helpers: { zoom: Function, scrollPlanes: Function },
+  ): Object {
     const { zoom, scrollPlanes } = helpers;
 
     return {
@@ -116,7 +77,7 @@ export class MoveTool extends Tool {
   }
 }
 
-export class SkeletonTool extends Tool {
+export class SkeletonTool {
   static onClick(
     planeView: PlaneView,
     position: Point2,
@@ -125,50 +86,22 @@ export class SkeletonTool extends Tool {
     ctrlPressed: boolean,
     plane: OrthoView,
     isTouch: boolean,
-    event?: MouseEvent,
   ): void {
-    if (!shiftPressed && !isTouch && !(ctrlPressed && event != null)) {
+    if (!shiftPressed && !isTouch && !ctrlPressed) {
       // do nothing
       return;
     }
 
     if (altPressed) {
-      skeletonController.handleMergeTrees(
-        planeView,
-        position,
-        shiftPressed,
-        altPressed,
-        ctrlPressed,
-        plane,
-        isTouch,
-      );
+      skeletonController.handleMergeTrees(planeView, position, plane, isTouch);
     } else if (ctrlPressed) {
-      skeletonController.handleDeleteEdge(
-        planeView,
-        position,
-        shiftPressed,
-        altPressed,
-        ctrlPressed,
-        plane,
-        isTouch,
-      );
+      skeletonController.handleDeleteEdge(planeView, position, plane, isTouch);
     } else {
-      skeletonController.handleSelectNode(
-        planeView,
-        position,
-        shiftPressed,
-        altPressed,
-        ctrlPressed,
-        plane,
-        isTouch,
-      );
+      skeletonController.handleSelectNode(planeView, position, plane, isTouch);
     }
   }
 
-  static getMouseControls(
-    planeView: PlaneView,
-    showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
-  ) {
+  static getMouseControls(planeView: PlaneView, showNodeContextMenuAt: ShowContextMenuFunction) {
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
         const { tracing } = Store.getState();
@@ -179,21 +112,8 @@ export class SkeletonTool extends Tool {
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-        this.onClick(
-          planeView,
-          pos,
-          event.shiftKey,
-          event.altKey,
-          event.ctrlKey,
-          plane,
-          isTouch,
-          event,
-        ),
+        this.onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const shiftPressed = event.shiftKey;
-        const altPressed = event.altKey;
-        const ctrlPressed = event.ctrlKey;
-
         const { activeViewport } = Store.getState().viewModeData.plane;
         if (activeViewport === OrthoViews.TDView) {
           return;
@@ -203,22 +123,13 @@ export class SkeletonTool extends Tool {
           skeletonController.handleOpenContextMenu(
             planeView,
             position,
-            shiftPressed,
-            altPressed,
-            ctrlPressed,
             plane,
             isTouch,
             event,
             showNodeContextMenuAt,
           );
         } else {
-          skeletonController.handleCreateNode(
-            planeView,
-            position,
-            shiftPressed,
-            altPressed,
-            ctrlPressed,
-          );
+          skeletonController.handleCreateNode(planeView, position, event.ctrlKey);
         }
       },
       middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -230,30 +141,21 @@ export class SkeletonTool extends Tool {
   }
 }
 
-export class VolumeTool extends Tool {
+export class DrawTool {
   static getPlaneMouseControls(_planeId: OrthoView): * {
     return {
       leftDownMove: (delta: Point2, pos: Point2) => {
         const { tracing } = Store.getState();
         const volumeTracing = enforceVolumeTracing(tracing);
-        const tool = tracing.activeTool;
         const contourTracingMode = getContourTracingMode(volumeTracing);
 
-        if (
-          (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) &&
-          contourTracingMode === ContourModeEnum.DRAW
-        ) {
+        if (contourTracingMode === ContourModeEnum.DRAW) {
           volumeController.handleDrawDeleteMove(pos);
         }
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const tool = Store.getState().tracing.activeTool;
-
-        if (
-          !event.shiftKey &&
-          (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)
-        ) {
+        if (!event.shiftKey) {
           if (event.ctrlKey && volumeController.isAutomaticBrushEnabled()) {
             return;
           }
@@ -262,54 +164,32 @@ export class VolumeTool extends Tool {
       },
 
       leftMouseUp: () => {
-        const tool = Store.getState().tracing.activeTool;
-
-        if (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) {
-          volumeController.handleDrawEraseEnd();
-        }
+        volumeController.handleDrawEraseEnd();
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
         const { tracing } = Store.getState();
         const volumeTracing = enforceVolumeTracing(tracing);
-        const tool = tracing.activeTool;
         const contourTracingMode = getContourTracingMode(volumeTracing);
 
-        if (
-          (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) &&
-          contourTracingMode === ContourModeEnum.DELETE
-        ) {
+        if (contourTracingMode === ContourModeEnum.DELETE) {
           volumeController.handleDrawDeleteMove(pos);
         }
       },
 
       rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const tool = Store.getState().tracing.activeTool;
-
-        if (
-          !event.shiftKey &&
-          (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)
-        ) {
+        if (!event.shiftKey) {
           volumeController.handleEraseStart(pos, plane);
         }
       },
 
       rightMouseUp: () => {
-        const tool = Store.getState().tracing.activeTool;
-
-        if (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) {
-          volumeController.handleDrawEraseEnd();
-        }
+        volumeController.handleDrawEraseEnd();
       },
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const tool = Store.getState().tracing.activeTool;
-
-        const shouldPickCell =
-          tool === AnnotationToolEnum.PICK_CELL || (event.shiftKey && !event.ctrlKey);
-
-        const shouldFillCell =
-          tool === AnnotationToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
+        const shouldPickCell = event.shiftKey && !event.ctrlKey;
+        const shouldFillCell = event.shiftKey && event.ctrlKey;
 
         if (shouldPickCell) {
           volumeController.handlePickCell(pos);
@@ -328,6 +208,40 @@ export class VolumeTool extends Tool {
 
       out: () => {
         Store.dispatch(hideBrushAction());
+      },
+    };
+  }
+}
+
+export class PickCellTool {
+  static getPlaneMouseControls(_planeId: OrthoView): * {
+    return {
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        volumeController.handlePickCell(pos);
+      },
+    };
+  }
+}
+
+export class FillCellTool {
+  static getPlaneMouseControls(_planeId: OrthoView): * {
+    return {
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        const tool = Store.getState().tracing.activeTool;
+
+        const shouldPickCell =
+          tool === AnnotationToolEnum.PICK_CELL || (event.shiftKey && !event.ctrlKey);
+
+        const shouldFillCell =
+          tool === AnnotationToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
+
+        if (shouldPickCell) {
+          volumeController.handlePickCell(pos);
+        } else if (shouldFillCell) {
+          volumeController.handleFloodFill(pos, plane);
+        } else if (event.metaKey) {
+          volumeController.handleAutoBrush(pos);
+        }
       },
     };
   }

@@ -1,6 +1,5 @@
 // @flow
 import * as THREE from "three";
-import _ from "lodash";
 
 import {
   OUTER_CSS_BORDER,
@@ -9,7 +8,7 @@ import {
   OrthoViews,
   type Point2,
   type Vector3,
-  AnnotationToolEnum,
+  type ShowContextMenuFunction,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -63,9 +62,6 @@ const OrthoViewToNumber: OrthoViewMap<number> = {
 export function handleMergeTrees(
   planeView: PlaneView,
   position: Point2,
-  shiftPressed: boolean,
-  altPressed: boolean,
-  ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
 ) {
@@ -82,9 +78,6 @@ export function handleMergeTrees(
 export function handleDeleteEdge(
   planeView: PlaneView,
   position: Point2,
-  shiftPressed: boolean,
-  altPressed: boolean,
-  ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
 ) {
@@ -101,9 +94,6 @@ export function handleDeleteEdge(
 export function handleSelectNode(
   planeView: PlaneView,
   position: Point2,
-  shiftPressed: boolean,
-  altPressed: boolean,
-  ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
 ) {
@@ -115,13 +105,7 @@ export function handleSelectNode(
   }
 }
 
-export function handleCreateNode(
-  planeView: PlaneView,
-  position: Point2,
-  shiftPressed: boolean,
-  altPressed: boolean,
-  ctrlPressed: boolean,
-) {
+export function handleCreateNode(planeView: PlaneView, position: Point2, ctrlPressed: boolean) {
   const state = Store.getState();
   if (isMagRestrictionViolated(state)) {
     // The current zoom value violates the specified magnification-restriction in the
@@ -146,13 +130,10 @@ export function handleCreateNode(
 export function handleOpenContextMenu(
   planeView: PlaneView,
   position: Point2,
-  shiftPressed: boolean,
-  altPressed: boolean,
-  ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
   event: MouseEvent,
-  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
+  showNodeContextMenuAt: ShowContextMenuFunction,
 ) {
   const { activeViewport } = Store.getState().viewModeData.plane;
   if (activeViewport === OrthoViews.TDView) {
@@ -232,7 +213,7 @@ export function openContextMenu(
   plane: OrthoView,
   isTouch: boolean,
   event: MouseEvent,
-  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
+  showNodeContextMenuAt: ShowContextMenuFunction,
 ) {
   const { activeViewport } = Store.getState().viewModeData.plane;
   if (activeViewport === OrthoViews.TDView) {

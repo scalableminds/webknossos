@@ -20,12 +20,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import {
-  movePlaneFlycamOrthoAction,
-  moveFlycamOrthoAction,
-  zoomByDeltaAction,
-} from "oxalis/model/actions/flycam_actions";
-import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import { moveFlycamOrthoAction, zoomByDeltaAction } from "oxalis/model/actions/flycam_actions";
 import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Dimensions from "oxalis/model/dimensions";
@@ -39,16 +34,20 @@ import api from "oxalis/api/internal_api";
 import {
   MoveTool,
   SkeletonTool,
-  VolumeTool,
+  DrawTool,
+  PickCellTool,
+  FillCellTool,
   movePlane,
 } from "oxalis/controller/combinations/tool_controls";
 import constants, {
+  type ShowContextMenuFunction,
   type OrthoView,
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
   OrthoViews,
   type Point2,
   type Vector3,
+  type AnnotationTool,
   AnnotationToolEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -73,7 +72,7 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
   }
 }
 
-type OwnProps = {| showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void |};
+type OwnProps = {| showNodeContextMenuAt: ShowContextMenuFunction |};
 
 type StateProps = {|
   tracing: Tracing,
@@ -169,21 +168,28 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.showNodeContextMenuAt,
     );
 
-    const volumeControls = VolumeTool.getPlaneMouseControls(planeId);
+    const drawControls = DrawTool.getPlaneMouseControls(planeId);
+    const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
+    const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
 
     const allControlKeys = _.union(
       Object.keys(moveControls),
       Object.keys(skeletonControls),
-      Object.keys(volumeControls),
+      Object.keys(drawControls),
+      Object.keys(fillCellControls),
+      Object.keys(pickCellControls),
     );
     const controls = {};
 
     for (const controlKey of allControlKeys) {
-      controls[controlKey] = this.createToolDependentHandler(
-        skeletonControls[controlKey],
-        volumeControls[controlKey],
-        moveControls[controlKey],
-      );
+      controls[controlKey] = this.createToolDependentMouseHandler({
+        [AnnotationToolEnum.MOVE]: moveControls[controlKey],
+        [AnnotationToolEnum.SKELETON]: skeletonControls[controlKey],
+        [AnnotationToolEnum.BRUSH]: drawControls[controlKey],
+        [AnnotationToolEnum.TRACE]: drawControls[controlKey],
+        [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
+        [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
+      });
     }
 
     return controls;
@@ -309,8 +315,8 @@ class PlaneController extends React.PureComponent<Props> {
       ...skeletonControls,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
-      c: this.createToolDependentHandler(skeletonCHandler, volumeCHandler),
-      "1": this.createToolDependentHandler(skeletonOneHandler, volumeOneHandler),
+      c: this.createToolDependentKeyboardHandler(skeletonCHandler, volumeCHandler),
+      "1": this.createToolDependentKeyboardHandler(skeletonOneHandler, volumeOneHandler),
     };
   }
 
@@ -512,7 +518,7 @@ class PlaneController extends React.PureComponent<Props> {
     this.unsubscribeStoreListeners();
   }
 
-  createToolDependentHandler(
+  createToolDependentKeyboardHandler(
     skeletonHandler: ?Function,
     volumeHandler: ?Function,
     viewHandler?: ?Function,
@@ -538,6 +544,19 @@ class PlaneController extends React.PureComponent<Props> {
         } else if (viewHandler != null) {
           viewHandler(...args);
         }
+      }
+    };
+  }
+
+  createToolDependentMouseHandler(toolToHandlerMap: { [key: AnnotationTool]: Function }): Function {
+    return (...args) => {
+      const tool = this.props.tracing.activeTool;
+      const handler = toolToHandlerMap[tool];
+      const fallbackHandler = toolToHandlerMap[AnnotationToolEnum.MOVE];
+      if (handler != null) {
+        handler(...args);
+      } else if (fallbackHandler != null) {
+        fallbackHandler(...args);
       }
     };
   }

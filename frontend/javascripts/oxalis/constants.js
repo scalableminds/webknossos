@@ -147,6 +147,8 @@ export const Unicode = {
 // id the voxels should be changed to is not encoded).
 export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
 
+export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoView) => void;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 

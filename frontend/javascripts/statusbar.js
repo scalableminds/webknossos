@@ -99,16 +99,16 @@ class Statusbar extends React.PureComponent<Props, State> {
         <span style={{ textTransform: "capitalize", ...defaultShortcutStyle }}>
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-mouse-left.svg"
-            alt="Mouse Left"
-            style={defaultIconStyle}
+            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+            alt="Mouse Left Drag"
+            style={{ height: 14 }}
           />
           {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
         </span>
         <span style={defaultShortcutStyle}>
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-mousewheel.svg"
+            src="/assets/images/icon-statusbar-mouse-wheel.svg"
             alt="Mouse Wheel"
             style={defaultIconStyle}
           />
@@ -117,7 +117,7 @@ class Statusbar extends React.PureComponent<Props, State> {
         <span style={defaultShortcutStyle}>
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-mouse-right.svg"
+            src="/assets/images/icon-statusbar-mouse-right.svg"
             alt="Mouse Right"
             style={defaultIconStyle}
           />
@@ -161,8 +161,8 @@ class Statusbar extends React.PureComponent<Props, State> {
       <Space size={spaceBetweenItems} style={{ display: "flex", flexWrap: "wrap" }}>
         <span>
           <img
-            src="/assets/images/icon-downsampling.svg"
-            style={{ width: 15, height: 15 }}
+            src="/assets/images/icon-statusbar-downsampling.svg"
+            style={{ width: 12, height: 12 }}
             alt="Resolution"
           />
           {activeResolution.join("-")}{" "}

@@ -23,7 +23,7 @@ import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
-import Statusbar from "statusbar";
+import Statusbar from "oxalis/view/statusbar";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
 import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";

@@ -46,7 +46,7 @@ const statusbarStyle: Object = {
   overflow: "hidden",
 };
 const defaultIconStyle = { height: fontSize - 1, marginTop: 2 };
-const defaultInfoStyle = { display: "inline-block", minWidth: 150, textAlign: "left" };
+const defaultInfoStyle = { display: "inline-block", textAlign: "left" };
 const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
@@ -151,22 +151,25 @@ class Statusbar extends React.PureComponent<Props, State> {
   }
 
   getCellInfo(globalMousePosition: ?Vector3) {
+    if (!hasSegmentation()) return null;
     const segmentationLayerName = Model.getSegmentationLayer().name;
     const cube = this.getSegmentationCube();
     const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
       segmentationLayerName,
       globalMousePosition,
     );
-    const getIdForPos = (pos, usableZoomStep) =>
-      pos && cube.getDataValue(pos, null, usableZoomStep);
+    const getIdForPos = (pos, usableZoomStep) => {
+      const id = cube.getDataValue(pos, null, usableZoomStep);
+      return cube.mapId(id);
+    };
+    const getSegmentIdString = () => {
+      if (!globalMousePosition) return "-";
+      const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
+      return cube.isMappingEnabled() ? `${id} (mapped)` : id;
+    };
 
     return (
-      <span style={defaultInfoStyle}>
-        Segment{" "}
-        {globalMousePosition
-          ? getIdForPos(globalMousePosition, renderedZoomStepForMousePosition)
-          : "-"}
-      </span>
+      <span style={{ minWidth: 180, ...defaultInfoStyle }}>Segment {getSegmentIdString()}</span>
     );
   }
 
@@ -188,10 +191,10 @@ class Statusbar extends React.PureComponent<Props, State> {
           />{" "}
           {activeResolution.join("-")}{" "}
         </span>
-        <span style={defaultInfoStyle}>
+        <span style={{ minWidth: 140, ...defaultInfoStyle }}>
           Pos [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
         </span>
-        {hasSegmentation() && this.getCellInfo(globalMousePosition)}
+        {this.getCellInfo(globalMousePosition)}
       </Space>
     );
   }

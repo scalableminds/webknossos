@@ -11,6 +11,7 @@ import {
   type OrthoView,
   OrthoViews,
   type VolumeTool,
+  VolumeToolEnum,
 } from "oxalis/constants";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import api from "oxalis/api/internal_api";
@@ -86,8 +87,27 @@ class Statusbar extends React.PureComponent<Props, State> {
   getShortcuts() {
     return (
       <React.Fragment>
+        <span
+          style={{
+            marginLeft: "auto",
+            textTransform: "capitalize",
+          }}
+        >
+          <img
+            className="keyboard-mouse-icon"
+            src={
+              this.props.activeTool === VolumeToolEnum.PICK_CELL ||
+              this.props.activeTool === VolumeToolEnum.FILL_CELL
+                ? "/assets/images/icon-statusbar-mouse-left.svg"
+                : "/assets/images/icon-statusbar-mouse-left-drag.svg"
+            }
+            alt="Mouse Left Drag"
+            style={defaultIconStyle}
+          />
+          {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
+        </span>
         {this.props.isSkeletonAnnotation && (
-          <span style={{ marginLeft: "auto" }}>
+          <span style={defaultShortcutStyle}>
             <img
               className="keyboard-mouse-icon"
               src="/assets/images/icon-statusbar-mouse-right.svg"
@@ -97,20 +117,6 @@ class Statusbar extends React.PureComponent<Props, State> {
             Place Node
           </span>
         )}
-        <span
-          style={{
-            marginLeft: this.props.isSkeletonAnnotation ? spaceBetweenItems : "auto",
-            textTransform: "capitalize",
-          }}
-        >
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-            alt="Mouse Left Drag"
-            style={defaultIconStyle}
-          />
-          {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
-        </span>
         <span style={defaultShortcutStyle}>
           <img
             className="keyboard-mouse-icon"

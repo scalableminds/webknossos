@@ -1,5 +1,5 @@
 // @flow
-import { Space } from "antd";
+import { Space, Tooltip } from "antd";
 import _ from "lodash";
 import { connect } from "react-redux";
 import React from "react";
@@ -43,7 +43,6 @@ const statusbarStyle: Object = {
   display: "flex",
   flexWrap: "wrap",
   overflow: "hidden",
-  alignItems: "center",
 };
 const defaultIconStyle = { height: fontSize - 1, marginTop: 2 };
 const defaultInfoStyle = { display: "inline-block", minWidth: 150, textAlign: "left" };
@@ -64,7 +63,11 @@ class Statusbar extends React.PureComponent<Props, State> {
   getZoomShortcut() {
     return (
       <span key="zoom" style={defaultShortcutStyle}>
-        <span key="zoom-i" className="keyboard-key-icon-small" style={{ borderColor: lineColor }}>
+        <span
+          key="zoom-i"
+          className="keyboard-key-icon-small"
+          style={{ borderColor: lineColor, marginTop: -1 }}
+        >
           {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
           <span style={{ position: "relative", top: -2 }}>Alt</span>
         </span>{" "}
@@ -87,14 +90,19 @@ class Statusbar extends React.PureComponent<Props, State> {
           <span style={{ marginLeft: "auto" }}>
             <img
               className="keyboard-mouse-icon"
-              src="/assets/images/icon-statusbar-mouse-left.svg"
+              src="/assets/images/icon-statusbar-mouse-right.svg"
               alt="Mouse Left"
               style={defaultIconStyle}
             />
-            Set Node
+            Place Node
           </span>
         )}
-        <span style={{ textTransform: "capitalize", ...defaultShortcutStyle }}>
+        <span
+          style={{
+            marginLeft: this.props.isSkeletonAnnotation ? spaceBetweenItems : "auto",
+            textTransform: "capitalize",
+          }}
+        >
           <img
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-left-drag.svg"
@@ -121,14 +129,16 @@ class Statusbar extends React.PureComponent<Props, State> {
           />
           Rotate 3D View
         </span>
-        {this.getZoomShortcut()}{" "}
+        {this.getZoomShortcut()}
         <a
           target="_blank"
           href="https://docs.webknossos.org/reference/keyboard_shortcuts"
           rel="noopener noreferrer"
           style={{ marginLeft: 10 }}
         >
-          <MoreOutlined rotate={90} style={{ height: 14, color: lineColor }} />
+          <Tooltip title="More Shortcuts">
+            <MoreOutlined rotate={90} style={{ height: 14, color: lineColor }} />
+          </Tooltip>
         </a>
       </React.Fragment>
     );
@@ -182,12 +192,10 @@ class Statusbar extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <React.Fragment>
-        <span style={statusbarStyle}>
-          {this.getInfos()}
-          {this.getShortcuts()}
-        </span>
-      </React.Fragment>
+      <span style={statusbarStyle}>
+        {this.getInfos()}
+        {this.getShortcuts()}
+      </span>
     );
   }
 }

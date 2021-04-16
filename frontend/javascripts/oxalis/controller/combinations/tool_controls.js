@@ -46,7 +46,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { agglomerateSkeletonMiddleClick } from "oxalis/controller/combinations/segmentation_plane_controller";
+import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import {
   createCellAction,
@@ -76,7 +76,7 @@ export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => 
   Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
 };
 
-const defaultDragHandler = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
+const handleMovePlane = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
 
 export class MoveTool extends Tool {
   static createRightClickHandler(planeView, showNodeContextMenuAt) {
@@ -102,15 +102,15 @@ export class MoveTool extends Tool {
       pinch: delta => zoom(delta, true),
       mouseMove: (delta: Point2, position: Point2, id, event) => {
         if (event.altKey && !event.shiftKey) {
-          movePlane([-delta.x, -delta.y, 0]);
+          handleMovePlane(delta);
         } else {
           Store.dispatch(setMousePositionAction([position.x, position.y]));
         }
       },
       leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
-        movePlane([-delta.x, -delta.y, 0]);
+        handleMovePlane(delta);
       },
-      middleDownMove: defaultDragHandler,
+      middleDownMove: handleMovePlane,
       rightClick: MoveTool.createRightClickHandler(planeView, showNodeContextMenuAt),
     };
   }
@@ -175,7 +175,7 @@ export class SkeletonTool extends Tool {
         if (tracing.skeleton != null && event.ctrlKey) {
           skeletonController.moveNode(delta.x, delta.y);
         } else {
-          movePlane([-delta.x, -delta.y, 0]);
+          handleMovePlane(delta);
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
@@ -223,7 +223,7 @@ export class SkeletonTool extends Tool {
       },
       middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
-          agglomerateSkeletonMiddleClick(pos);
+          handleAgglomerateSkeletonAtClick(pos);
         }
       },
     };
@@ -243,7 +243,7 @@ export class VolumeTool extends Tool {
           (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) &&
           contourTracingMode === ContourModeEnum.DRAW
         ) {
-          Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
+          volumeController.handleDrawDeleteMove(pos);
         }
       },
 
@@ -257,16 +257,15 @@ export class VolumeTool extends Tool {
           if (event.ctrlKey && volumeController.isAutomaticBrushEnabled()) {
             return;
           }
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-          Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
+          volumeController.handleDrawStart(pos, plane);
         }
       },
 
       leftMouseUp: () => {
         const tool = Store.getState().tracing.activeTool;
+
         if (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) {
-          Store.dispatch(finishEditingAction());
-          Store.dispatch(resetContourAction());
+          volumeController.handleDrawEraseEnd();
         }
       },
 
@@ -280,7 +279,7 @@ export class VolumeTool extends Tool {
           (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) &&
           contourTracingMode === ContourModeEnum.DELETE
         ) {
-          Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
+          volumeController.handleDrawDeleteMove(pos);
         }
       },
 
@@ -291,8 +290,7 @@ export class VolumeTool extends Tool {
           !event.shiftKey &&
           (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)
         ) {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
-          Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
+          volumeController.handleEraseStart(pos, plane);
         }
       },
 
@@ -300,8 +298,7 @@ export class VolumeTool extends Tool {
         const tool = Store.getState().tracing.activeTool;
 
         if (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH) {
-          Store.dispatch(finishEditingAction());
-          Store.dispatch(resetContourAction());
+          volumeController.handleDrawEraseEnd();
         }
       },
 

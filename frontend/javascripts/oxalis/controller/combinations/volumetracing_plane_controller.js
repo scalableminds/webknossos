@@ -64,6 +64,25 @@ export function getKeyboardControls() {
     },
   };
 }
+export function handleDrawStart(pos: Point2, plane: OrthoView) {
+  Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
+  Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
+}
+
+export function handleEraseStart(pos: Point2, plane: OrthoView) {
+  Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+  Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
+}
+
+export function handleDrawDeleteMove(pos: Point2) {
+  Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
+  Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
+}
+
+export function handleDrawEraseEnd() {
+  Store.dispatch(finishEditingAction());
+  Store.dispatch(resetContourAction());
+}
 
 export function handlePickCell(pos: Point2) {
   const segmentation = Model.getSegmentationLayer();

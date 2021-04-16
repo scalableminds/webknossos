@@ -50,6 +50,21 @@ export function threeCameraToCameraData(camera: typeof THREE.OrthographicCamera)
   };
 }
 
+function getTDViewMouseControlsSkeleton(planeView: PlaneView): Object {
+  return {
+    leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
+      skeletonController.onClick(
+        planeView,
+        pos,
+        event.shiftKey,
+        event.altKey,
+        event.ctrlKey,
+        OrthoViews.TDView,
+        isTouch,
+      ),
+  };
+}
+
 const INVALID_ACTIVE_NODE_ID = -1;
 
 type OwnProps = {|
@@ -155,7 +170,7 @@ class TDController extends React.PureComponent<Props> {
       this.props.tracing != null &&
       this.props.tracing.skeleton != null &&
       this.props.planeView != null
-        ? skeletonController.getTDViewMouseControls(this.props.planeView)
+        ? getTDViewMouseControlsSkeleton(this.props.planeView)
         : null;
 
     const controls = {

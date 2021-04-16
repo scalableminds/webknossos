@@ -36,6 +36,12 @@ import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
+import {
+  MoveTool,
+  SkeletonTool,
+  VolumeTool,
+  movePlane,
+} from "oxalis/controller/combinations/tool_controls";
 import constants, {
   type OrthoView,
   type OrthoViewMap,
@@ -78,11 +84,6 @@ type Props = {|
   ...StateProps,
   ...OwnProps,
 |};
-
-export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
-  const { activeViewport } = Store.getState().viewModeData.plane;
-  Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
-};
 
 class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -153,74 +154,39 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getPlaneMouseControls(planeId: OrthoView): Object {
-    const defaultDragHandler = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
-    const rightClickHandler = (
-      pos: Point2,
-      plane: OrthoView,
-      event: MouseEvent,
-      isTouch: boolean,
-    ) => {
-      console.log("skeletonController.onContextMenu");
-      skeletonController.onContextMenu(
-        this.planeView,
-        pos,
-        plane,
-        isTouch,
-        event,
-        this.props.showNodeContextMenuAt,
+    const moveControls = MoveTool.getMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showNodeContextMenuAt,
+      {
+        zoom: this.zoom,
+        scrollPlanes: this.scrollPlanes,
+      },
+    );
+
+    const skeletonControls = SkeletonTool.getMouseControls(
+      this.planeView,
+      this.props.showNodeContextMenuAt,
+    );
+
+    const volumeControls = VolumeTool.getPlaneMouseControls(planeId);
+
+    const allControlKeys = _.union(
+      Object.keys(moveControls),
+      Object.keys(skeletonControls),
+      Object.keys(volumeControls),
+    );
+    const controls = {};
+
+    for (const controlKey of allControlKeys) {
+      controls[controlKey] = this.createToolDependentHandler(
+        skeletonControls[controlKey],
+        volumeControls[controlKey],
+        moveControls[controlKey],
       );
-    };
-    const baseControls = {
-      scroll: this.scrollPlanes.bind(this),
-      over: () => {
-        Store.dispatch(setViewportAction(planeId));
-      },
-      pinch: delta => this.zoom(delta, true),
-      mouseMove: (delta: Point2, position: Point2, id, event) => {
-        if (event.altKey && !event.shiftKey) {
-          movePlane([-delta.x, -delta.y, 0]);
-        } else {
-          Store.dispatch(setMousePositionAction([position.x, position.y]));
-        }
-      },
-      middleDownMove: defaultDragHandler,
-    };
-    // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = { leftClick: null, leftDownMove: null, rightClick: null };
-    const {
-      leftClick: maybeSkeletonLeftClick,
-      rightClick: maybeSkeletonRightClick,
-      leftDownMove: maybeSkeletonLeftDownMove,
-      ...skeletonControls
-    } =
-      this.props.tracing.skeleton != null
-        ? skeletonController.getPlaneMouseControls(this.planeView, this.props.showNodeContextMenuAt)
-        : emptyDefaultHandler;
+    }
 
-    const {
-      leftClick: maybeVolumeLeftClick,
-      leftDownMove: maybeVolumeLeftDownMove,
-      ...volumeControls
-    } =
-      this.props.tracing.volume != null
-        ? volumeController.getPlaneMouseControls(planeId)
-        : emptyDefaultHandler;
-
-    ensureNonConflictingHandlers(skeletonControls, volumeControls);
-
-    return {
-      ...baseControls,
-      ...skeletonControls,
-      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
-      ...volumeControls,
-      leftClick: this.createToolDependentHandler(maybeSkeletonLeftClick, maybeVolumeLeftClick),
-      leftDownMove: this.createToolDependentHandler(
-        maybeSkeletonLeftDownMove,
-        maybeVolumeLeftDownMove,
-        defaultDragHandler,
-      ),
-      rightClick: this.createToolDependentHandler(maybeSkeletonRightClick, null, rightClickHandler),
-    };
+    return controls;
   }
 
   initKeyboard(): void {
@@ -427,16 +393,16 @@ class PlaneController extends React.PureComponent<Props> {
     }
   };
 
-  zoom(value: number, zoomToMouse: boolean): void {
+  zoom = (value: number, zoomToMouse: boolean) => {
     const { activeViewport } = Store.getState().viewModeData.plane;
     if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
       this.zoomTDView(value);
     }
-  }
+  };
 
-  zoomPlanes(value: number, zoomToMouse: boolean): void {
+  zoomPlanes = (value: number, zoomToMouse: boolean) => {
     if (zoomToMouse) {
       this.zoomPos = this.getMousePosition();
     }
@@ -446,7 +412,7 @@ class PlaneController extends React.PureComponent<Props> {
     if (zoomToMouse) {
       this.finishZoom();
     }
-  }
+  };
 
   zoomTDView(value: number): void {
     const zoomToPosition = null;
@@ -500,7 +466,7 @@ class PlaneController extends React.PureComponent<Props> {
     }
   }
 
-  scrollPlanes(delta: number, type: ?ModifierKeys): void {
+  scrollPlanes = (delta: number, type: ?ModifierKeys) => {
     switch (type) {
       case null: {
         this.moveZ(delta, true);
@@ -528,7 +494,7 @@ class PlaneController extends React.PureComponent<Props> {
       }
       default: // ignore other cases
     }
-  }
+  };
 
   unsubscribeStoreListeners() {
     this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
@@ -562,11 +528,15 @@ class PlaneController extends React.PureComponent<Props> {
       } else if (tool === AnnotationToolEnum.SKELETON) {
         if (skeletonHandler != null) {
           skeletonHandler(...args);
+        } else if (viewHandler != null) {
+          viewHandler(...args);
         }
       } else {
         // eslint-disable-next-line no-lonely-if
         if (volumeHandler != null) {
           volumeHandler(...args);
+        } else if (viewHandler != null) {
+          viewHandler(...args);
         }
       }
     };

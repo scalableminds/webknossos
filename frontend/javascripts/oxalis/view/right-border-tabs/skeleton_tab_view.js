@@ -5,7 +5,7 @@
 
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
-import React, { PureComponent } from "react";
+import React, { useMemo } from "react";
 import _ from "lodash";
 
 import type { APIDataset } from "types/api_flow_types";
@@ -14,7 +14,7 @@ import {
   NumberInputSetting,
   NumberSliderSetting,
   SwitchSetting,
-} from "oxalis/view/settings/setting_input_views";
+} from "oxalis/view/components/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
 import {
   enforceSkeletonTracing,
@@ -47,113 +47,110 @@ type SkeletonTabViewProps = {
   dataset: APIDataset,
 };
 
-class SkeletonTabView extends PureComponent<SkeletonTabViewProps> {
-  onChangeUser: { [$Keys<UserConfiguration>]: Function };
+function SkeletonTabView(props: SkeletonTabViewProps) {
+  const onChangeUser: { [$Keys<UserConfiguration>]: Function } = useMemo(
+    () =>
+      _.mapValues(props.userConfiguration, (__, propertyName) =>
+        _.partial(props.onChangeUser, propertyName),
+      ),
+    [props.userConfiguration],
+  );
 
-  componentWillMount() {
-    // cache onChange handler
-    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
-      _.partial(this.props.onChangeUser, propertyName),
-    );
+  const isPublicViewMode = props.controlMode === ControlModeEnum.VIEW;
+
+  if (isPublicViewMode || props.tracing.skeleton == null) {
+    return null;
   }
 
-  render() {
-    const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
+  const skeletonTracing = enforceSkeletonTracing(props.tracing);
+  const activeNodeId = skeletonTracing.activeNodeId != null ? skeletonTracing.activeNodeId : "";
+  const activeTreeId = skeletonTracing.activeTreeId != null ? skeletonTracing.activeTreeId : "";
+  const activeNodeRadius = getActiveNode(skeletonTracing)
+    .map(activeNode => activeNode.radius)
+    .getOrElse(0);
+  const isMergerModeSupported = hasSegmentation(props.dataset);
 
-    if (isPublicViewMode || this.props.tracing.skeleton == null) {
-      return null;
-    }
-
-    const skeletonTracing = enforceSkeletonTracing(this.props.tracing);
-    const activeNodeId = skeletonTracing.activeNodeId != null ? skeletonTracing.activeNodeId : "";
-    const activeTreeId = skeletonTracing.activeTreeId != null ? skeletonTracing.activeTreeId : "";
-    const activeNodeRadius = getActiveNode(skeletonTracing)
-      .map(activeNode => activeNode.radius)
-      .getOrElse(0);
-    const isMergerModeSupported = hasSegmentation(this.props.dataset);
-
-    return (
-      <div className="padded-tab-content" style={{ minWidth: 200 }}>
-        <NumberInputSetting
-          labelSpan={12}
-          label="Active Node ID"
-          value={activeNodeId}
-          onChange={this.props.onChangeActiveNodeId}
-        />
-        <NumberInputSetting
-          labelSpan={12}
-          label="Active Tree ID"
-          value={activeTreeId}
-          onChange={this.props.onChangeActiveTreeId}
-        />
-        <LogSliderSetting
-          label={settingsLabels.nodeRadius}
-          min={userSettings.nodeRadius.minimum}
-          max={userSettings.nodeRadius.maximum}
-          roundTo={0}
-          value={activeNodeRadius}
-          onChange={this.props.onChangeRadius}
-          disabled={this.props.userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
-        />
-        <NumberSliderSetting
-          label={
-            this.props.userConfiguration.overrideNodeRadius
-              ? settingsLabels.particleSize
-              : `Min. ${settingsLabels.particleSize}`
-          }
-          min={userSettings.particleSize.minimum}
-          max={userSettings.particleSize.maximum}
-          step={0.1}
-          roundTo={1}
-          value={this.props.userConfiguration.particleSize}
-          onChange={this.onChangeUser.particleSize}
-        />
-        <NumberSliderSetting
-          label={settingsLabels.clippingDistanceArbitrary}
-          min={userSettings.clippingDistanceArbitrary.minimum}
-          max={userSettings.clippingDistanceArbitrary.maximum}
-          value={this.props.userConfiguration.clippingDistanceArbitrary}
-          onChange={this.onChangeUser.clippingDistanceArbitrary}
-        />
-        <SwitchSetting
-          labelSpan={12}
-          label={settingsLabels.overrideNodeRadius}
-          value={this.props.userConfiguration.overrideNodeRadius}
-          onChange={this.onChangeUser.overrideNodeRadius}
-        />
-        <SwitchSetting
-          labelSpan={12}
-          label={settingsLabels.newNodeNewTree}
-          value={this.props.userConfiguration.newNodeNewTree}
-          onChange={this.onChangeUser.newNodeNewTree}
-        />
-        <SwitchSetting
-          labelSpan={12}
-          label={settingsLabels.centerNewNode}
-          value={this.props.userConfiguration.centerNewNode}
-          onChange={this.onChangeUser.centerNewNode}
-        />
-        <SwitchSetting
-          labelSpan={12}
-          label={settingsLabels.highlightCommentedNodes}
-          value={this.props.userConfiguration.highlightCommentedNodes}
-          onChange={this.onChangeUser.highlightCommentedNodes}
-        />
-        <SwitchSetting
-          labelSpan={12}
-          label={settingsLabels.mergerMode}
-          value={this.props.isMergerModeEnabled}
-          onChange={this.props.onChangeEnableMergerMode}
-          disabled={!isMergerModeSupported || this.props.isMergerModeTask}
-          tooltipText={
-            !isMergerModeSupported
-              ? "The merger mode is only available for datasets with a segmentation layer."
-              : null
-          }
-        />
-      </div>
-    );
-  }
+  return (
+    <div className="padded-tab-content" style={{ minWidth: 200 }}>
+      <NumberInputSetting
+        labelSpan={12}
+        label="Active Node ID"
+        value={activeNodeId}
+        onChange={props.onChangeActiveNodeId}
+      />
+      <NumberInputSetting
+        labelSpan={12}
+        label="Active Tree ID"
+        value={activeTreeId}
+        onChange={props.onChangeActiveTreeId}
+      />
+      <LogSliderSetting
+        label={settingsLabels.nodeRadius}
+        min={userSettings.nodeRadius.minimum}
+        max={userSettings.nodeRadius.maximum}
+        roundTo={0}
+        value={activeNodeRadius}
+        onChange={props.onChangeRadius}
+        disabled={props.userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
+      />
+      <NumberSliderSetting
+        label={
+          props.userConfiguration.overrideNodeRadius
+            ? settingsLabels.particleSize
+            : `Min. ${settingsLabels.particleSize}`
+        }
+        min={userSettings.particleSize.minimum}
+        max={userSettings.particleSize.maximum}
+        step={0.1}
+        roundTo={1}
+        value={props.userConfiguration.particleSize}
+        onChange={onChangeUser.particleSize}
+      />
+      <NumberSliderSetting
+        label={settingsLabels.clippingDistanceArbitrary}
+        min={userSettings.clippingDistanceArbitrary.minimum}
+        max={userSettings.clippingDistanceArbitrary.maximum}
+        value={props.userConfiguration.clippingDistanceArbitrary}
+        onChange={onChangeUser.clippingDistanceArbitrary}
+      />
+      <SwitchSetting
+        labelSpan={12}
+        label={settingsLabels.overrideNodeRadius}
+        value={props.userConfiguration.overrideNodeRadius}
+        onChange={onChangeUser.overrideNodeRadius}
+      />
+      <SwitchSetting
+        labelSpan={12}
+        label={settingsLabels.newNodeNewTree}
+        value={props.userConfiguration.newNodeNewTree}
+        onChange={onChangeUser.newNodeNewTree}
+      />
+      <SwitchSetting
+        labelSpan={12}
+        label={settingsLabels.centerNewNode}
+        value={props.userConfiguration.centerNewNode}
+        onChange={onChangeUser.centerNewNode}
+      />
+      <SwitchSetting
+        labelSpan={12}
+        label={settingsLabels.highlightCommentedNodes}
+        value={props.userConfiguration.highlightCommentedNodes}
+        onChange={onChangeUser.highlightCommentedNodes}
+      />
+      <SwitchSetting
+        labelSpan={12}
+        label={settingsLabels.mergerMode}
+        value={props.isMergerModeEnabled}
+        onChange={props.onChangeEnableMergerMode}
+        disabled={!isMergerModeSupported || props.isMergerModeTask}
+        tooltipText={
+          !isMergerModeSupported
+            ? "The merger mode is only available for datasets with a segmentation layer."
+            : null
+        }
+      />
+    </div>
+  );
 }
 
 // Reuse last range if it's equal to the current one to avoid unnecessary

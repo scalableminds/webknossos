@@ -56,6 +56,8 @@ module.exports = function(env = {}) {
   return {
     entry: {
       main: "main.js",
+      light: "style_light.js",
+      dark: "style_dark.js",
     },
     mode: env.production ? "production" : "development",
     output: {

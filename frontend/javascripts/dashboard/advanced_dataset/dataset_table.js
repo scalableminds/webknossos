@@ -179,7 +179,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
               <Link
                 to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
                 title="View Dataset"
-                style={{ color: "rgba(0, 0, 0, 0.65)" }}
               >
                 {dataset.name}
               </Link>

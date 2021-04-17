@@ -316,6 +316,19 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item key="token">
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>
+        <Menu.Item
+          key="theme"
+          onClick={() => {
+            const styleEl = document.getElementById("primary-stylesheet");
+            if (styleEl.href.includes("light")) {
+              styleEl.href = styleEl.href.replace("light", "dark");
+            } else {
+              styleEl.href = styleEl.href.replace("dark", "light");
+            }
+          }}
+        >
+          Toggle Theme
+        </Menu.Item>
         <Menu.Item key="logout">
           <a href="/" onClick={handleLogout}>
             Logout

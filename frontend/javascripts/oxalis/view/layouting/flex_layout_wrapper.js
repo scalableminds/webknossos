@@ -266,7 +266,17 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       <FlexLayout.Layout
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
-        onModelChange={() => this.onLayoutChange()}
+        onModelChange={() => {
+          // Update / inform parent layout about the changes.
+          // This will trigger the parents onModelChange and this will then save the model changes.
+          this.state.model.doAction(
+            FlexLayout.Actions.updateNodeAttributes(node.getId(), {
+              config: {
+                model: node.getExtraData().model.toJson(),
+              },
+            }),
+          );
+        }}
       />
     );
   }

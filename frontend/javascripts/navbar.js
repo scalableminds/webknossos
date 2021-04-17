@@ -386,7 +386,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     display: "flex",
     alignItems: "center",
     color: "rgba(255, 255, 255, 0.67)",
-    background: "#001529",
     whiteSpace: "nowrap",
   };
 

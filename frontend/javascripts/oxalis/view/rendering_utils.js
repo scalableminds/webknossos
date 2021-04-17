@@ -28,7 +28,7 @@ export const setupRenderArea = (
   renderer.setViewport(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
   renderer.setScissor(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
   renderer.setScissorTest(true);
-  renderer.setClearColor(color, 1);
+  renderer.setClearColor(color, 0);
 };
 
 export const clearCanvas = (renderer: typeof THREE.WebGLRenderer) => {
@@ -55,7 +55,7 @@ export function renderToTexture(
 
   renderer.setViewport(0, 0 + height, width, height);
   renderer.setScissorTest(false);
-  renderer.setClearColor(clearColor, 1);
+  renderer.setClearColor(clearColor, 0);
 
   const renderTarget = new THREE.WebGLRenderTarget(width, height);
   const buffer = new Uint8Array(width * height * 4);

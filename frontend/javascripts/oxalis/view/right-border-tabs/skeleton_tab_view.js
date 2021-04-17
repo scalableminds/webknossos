@@ -20,7 +20,6 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import {
   setActiveNodeAction,
@@ -153,31 +152,12 @@ function SkeletonTabView(props: SkeletonTabViewProps) {
   );
 }
 
-// Reuse last range if it's equal to the current one to avoid unnecessary
-// render() executions
-let lastValidZoomRange = null;
-function _getValidZoomRangeForUser(state) {
-  const newRange = getValidZoomRangeForUser(state);
-
-  if (
-    !lastValidZoomRange ||
-    newRange[0] !== lastValidZoomRange[0] ||
-    newRange[1] !== lastValidZoomRange[1]
-  ) {
-    lastValidZoomRange = newRange;
-  }
-  return lastValidZoomRange;
-}
-
 const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
-  zoomStep: state.flycam.zoomStep,
-  validZoomRange: _getValidZoomRangeForUser(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
-  isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
   dataset: state.dataset,
   isMergerModeTask: state.tracing.restrictions.mergerMode || false,
 });

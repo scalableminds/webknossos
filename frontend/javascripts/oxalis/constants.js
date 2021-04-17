@@ -100,7 +100,6 @@ export const BorderTabs = {
   DatasetInfoTabView: { id: "DatasetInfoTabView", name: "Info" },
   TreesTabView: { id: "TreesTabView", name: "Trees" },
   CommentTabView: { id: "CommentTabView", name: "Comments" },
-  MappingInfoView: { id: "MappingInfoView", name: "Volume" },
   MeshesView: { id: "MeshesView", name: "Meshes" },
   SkeletonTabView: { id: "SkeletonTabView", name: "Skeleton" },
   VolumeTabView: { id: "VolumeTabView", name: "Volume" },

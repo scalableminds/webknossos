@@ -16,7 +16,6 @@ import AbstractTreeTabView from "oxalis/view/right-border-tabs/abstract_tree_tab
 import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import InputCatcher from "oxalis/view/input_catcher";
-import MappingInfoView from "oxalis/view/right-border-tabs/mapping_info_view";
 import MeshesView from "oxalis/view/right-border-tabs/meshes_view";
 import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import VolumeTabView from "oxalis/view/right-border-tabs/volume_tab_view";
@@ -190,9 +189,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
       case "AbstractTreeTabView": {
         return <AbstractTreeTabView />;
-      }
-      case "MappingInfoView": {
-        return <MappingInfoView />;
       }
       case "MeshesView": {
         return <MeshesView />;

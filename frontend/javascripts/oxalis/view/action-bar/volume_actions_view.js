@@ -10,7 +10,7 @@ import {
   type OverwriteMode,
   OverwriteModeEnum,
 } from "oxalis/constants";
-import { convertCellIdToCSS } from "oxalis/view/right-border-tabs/mapping_info_view";
+import { convertCellIdToCSS } from "oxalis/view/right-border-tabs/volume_tab_view";
 import { document } from "libs/window";
 import {
   enforceVolumeTracing,

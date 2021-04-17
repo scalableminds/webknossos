@@ -230,14 +230,26 @@ const _getDefaultLayouts = () => {
         borderTabs.CommentTabView,
         borderTabs.SkeletonTabView,
       ],
-      [borderTabs.VolumeTabView, borderTabs.MeshesView, borderTabs.AbstractTreeTabView],
+      [
+        borderTabs.VolumeTabView,
+        borderTabs.MeshesView,
+        borderTabs.BoundingBoxTabView,
+        borderTabs.AbstractTreeTabView,
+      ],
     ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
     "right",
-    [[borderTabs.DatasetInfoTabView, borderTabs.VolumeTabView, borderTabs.MeshesView]],
+    [
+      [
+        borderTabs.DatasetInfoTabView,
+        borderTabs.VolumeTabView,
+        borderTabs.BoundingBoxTabView,
+        borderTabs.MeshesView,
+      ],
+    ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );

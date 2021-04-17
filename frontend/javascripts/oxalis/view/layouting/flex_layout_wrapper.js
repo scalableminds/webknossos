@@ -19,6 +19,7 @@ import InputCatcher from "oxalis/view/input_catcher";
 import MeshesView from "oxalis/view/right-border-tabs/meshes_view";
 import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import VolumeTabView from "oxalis/view/right-border-tabs/volume_tab_view";
+import BoundingBoxTabView from "oxalis/view/right-border-tabs/bounding_box_tab_view";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import DatasetSettingsView from "oxalis/view/left-border-tabs/dataset_settings_view";
 import LayerSettingsView from "oxalis/view/left-border-tabs/layer_settings_view";
@@ -198,6 +199,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
       case "VolumeTabView": {
         return <VolumeTabView />;
+      }
+      case "BoundingBoxTabView": {
+        return <BoundingBoxTabView />;
       }
       case "UserSettingsView": {
         return <UserSettingsView />;

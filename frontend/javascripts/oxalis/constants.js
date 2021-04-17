@@ -108,6 +108,7 @@ export const BorderTabs = {
   DatasetSettingsTab: { id: "DatasetSettingsView", name: "Dataset" },
   LayerSettingsTab: { id: "LayerSettingsView", name: "Layers" },
   GeneralSettingsTab: { id: "GeneralSettingsView", name: "General" },
+  BoundingBoxTabView: { id: "BoundingBoxTabView", name: "Bounding Boxes" },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;

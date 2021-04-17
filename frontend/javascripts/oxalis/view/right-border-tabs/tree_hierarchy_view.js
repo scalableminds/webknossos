@@ -25,7 +25,7 @@ import {
   forEachTreeNode,
   findTreeNode,
   anySatisfyDeep,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {

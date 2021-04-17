@@ -12,20 +12,21 @@ import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { InputKeyboardNoLoop } from "libs/input";
 
 import { OrthoViews, ArbitraryViews } from "oxalis/constants";
-import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
-import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
-import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
+import AbstractTreeTabView from "oxalis/view/right-border-tabs/abstract_tree_tab_view";
+import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
+import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import InputCatcher from "oxalis/view/input_catcher";
-import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
-import MeshesView from "oxalis/view/right-menu/meshes_view";
-import SkeletonTabView from "oxalis/view/right-menu/skeleton_tab_view";
+import MappingInfoView from "oxalis/view/right-border-tabs/mapping_info_view";
+import MeshesView from "oxalis/view/right-border-tabs/meshes_view";
+import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import VolumeTabView from "oxalis/view/right-border-tabs/volume_tab_view";
 import RecordingSwitch from "oxalis/view/recording_switch";
-import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
-import LayerSettingsView from "oxalis/view/settings/layer_settings_view";
-import GeneralSettingsView from "oxalis/view/settings/general_settings_view";
-import UserSettingsView from "oxalis/view/settings/user_settings_view";
+import DatasetSettingsView from "oxalis/view/left-border-tabs/dataset_settings_view";
+import LayerSettingsView from "oxalis/view/left-border-tabs/layer_settings_view";
+import GeneralSettingsView from "oxalis/view/left-border-tabs/general_settings_view";
+import UserSettingsView from "oxalis/view/left-border-tabs/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
-import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
+import TreesTabView from "oxalis/view/right-border-tabs/trees_tab_view";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
 import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
@@ -176,7 +177,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return true;
   }
 
-  renderRightBorderTab(id: string): ?React.Node {
+  renderBorderTab(id: string): ?React.Node {
     switch (id) {
       case "DatasetInfoTabView": {
         return <DatasetInfoTabView />;
@@ -199,15 +200,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       case "SkeletonTabView": {
         return <SkeletonTabView />;
       }
-      default: {
-        console.error(`The tab with id ${id} is unknown.`);
-        return null;
+      case "VolumeTabView": {
+        return <VolumeTabView />;
       }
-    }
-  }
-
-  renderSettingsTab(id: string): ?React.Node {
-    switch (id) {
       case "UserSettingsView": {
         return <UserSettingsView />;
       }
@@ -221,7 +216,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return <GeneralSettingsView />;
       }
       default: {
-        console.error(`The settings tab with id ${id} is unknown.`);
+        console.error(`The tab with id ${id} is unknown.`);
         return null;
       }
     }
@@ -285,17 +280,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const component = node.getComponent();
     const id = node.getId();
     switch (component) {
-      case "right-border-tab": {
-        return this.renderRightBorderTab(id);
-      }
-      case "settings-tab": {
-        const activeNodeOfTabset = node.getParent().getSelectedNode();
-        if (activeNodeOfTabset.getId() === id) {
-          return this.renderSettingsTab(id);
-        } else {
-          // If the current settings tab is not selected, we do no render its contents so save performance.
-          return null;
-        }
+      case "border-tab": {
+        return this.renderBorderTab(id);
       }
       case "viewport": {
         return this.renderViewport(id);

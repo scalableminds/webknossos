@@ -24,7 +24,7 @@ import {
   getConstructorForElementClass,
 } from "oxalis/model/bucket_data_handling/bucket";
 import type { Versions } from "oxalis/view/version_view";
-import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {

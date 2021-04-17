@@ -20,7 +20,7 @@ import {
   setHideUnmappedIdsAction,
 } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
-import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
+import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import DataLayer from "oxalis/model/data_layer";

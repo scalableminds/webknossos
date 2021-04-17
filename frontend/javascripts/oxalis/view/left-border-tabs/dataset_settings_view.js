@@ -24,7 +24,7 @@ import {
   NumberSliderSetting,
   DropdownSetting,
   ColorSetting,
-} from "oxalis/view/settings/setting_input_views";
+} from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
 import {
   findDataPositionForLayer,

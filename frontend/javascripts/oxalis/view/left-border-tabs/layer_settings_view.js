@@ -18,11 +18,7 @@ import _ from "lodash";
 
 import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
-import {
-  SwitchSetting,
-  NumberSliderSetting,
-  ColorSetting,
-} from "oxalis/view/settings/setting_input_views";
+import { NumberSliderSetting, ColorSetting } from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
 import {
   findDataPositionForLayer,

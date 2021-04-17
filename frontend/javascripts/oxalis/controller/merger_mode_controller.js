@@ -7,7 +7,7 @@ import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 
-import MergerModeModalView from "oxalis/view/settings/merger_mode_modal_view";
+import MergerModeModalView from "oxalis/view/left-border-tabs/merger_mode_modal_view";
 
 type MergerModeControllerProps = {
   isMergerModeEnabled: boolean,

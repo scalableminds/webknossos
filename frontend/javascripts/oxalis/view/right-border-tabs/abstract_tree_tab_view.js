@@ -12,7 +12,7 @@ import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer, {
   type NodeListItem,
-} from "oxalis/view/right-menu/abstract_tree_renderer";
+} from "oxalis/view/right-border-tabs/abstract_tree_renderer";
 import window from "libs/window";
 
 type StateProps = {|

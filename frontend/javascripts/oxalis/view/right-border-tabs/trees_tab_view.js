@@ -30,7 +30,7 @@ import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import Model from "oxalis/model";
 import {
   getActiveTree,
@@ -87,7 +87,7 @@ import Store, {
   type UserConfiguration,
 } from "oxalis/store";
 import Toast from "libs/toast";
-import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";

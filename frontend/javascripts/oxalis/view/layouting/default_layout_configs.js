@@ -16,8 +16,7 @@ import Constants, {
   type ViewMode,
   OrthoViews,
   OrthoViewsToName,
-  TracingTabs,
-  SettingsTabs,
+  BorderTabs,
   ArbitraryViews,
   ArbitraryViewsToName,
 } from "oxalis/constants";
@@ -33,7 +32,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 12;
+export const currentLayoutVersion = 13;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
@@ -100,15 +99,10 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
   };
 }
 
-const infoTabs = {};
+const borderTabs = {};
 // Flow does not understand that the values must have a name and an id.
-Object.entries(TracingTabs).forEach(([tabKey, { name, id }]: any) => {
-  infoTabs[tabKey] = Tab(name, id, "right-border-tab");
-});
-
-const settingsTabs = {};
-Object.entries(SettingsTabs).forEach(([tabKey, { name, id }]: any) => {
-  settingsTabs[tabKey] = Tab(name, id, "settings-tab");
+Object.entries(BorderTabs).forEach(([tabKey, { name, id }]: any) => {
+  borderTabs[tabKey] = Tab(name, id, "border-tab");
 });
 
 const OrthoViewports = {};
@@ -215,7 +209,14 @@ const _getDefaultLayouts = () => {
   const borderIsOpenByDefault = !isInIframe;
   const leftBorder = buildBorder(
     "left",
-    [((Object.values(settingsTabs): any): Array<TabNode>)],
+    [
+      [
+        borderTabs.UserSettingsTab,
+        borderTabs.DatasetSettingsTab,
+        borderTabs.LayerSettingsTab,
+        borderTabs.GeneralSettingsTab,
+      ],
+    ],
     leftBorderWidth,
     borderIsOpenByDefault,
     1,
@@ -224,19 +225,31 @@ const _getDefaultLayouts = () => {
     "right",
     [
       [
-        infoTabs.DatasetInfoTabView,
-        infoTabs.TreesTabView,
-        infoTabs.CommentTabView,
-        infoTabs.SkeletonTabView,
+        borderTabs.DatasetInfoTabView,
+        borderTabs.TreesTabView,
+        borderTabs.CommentTabView,
+        borderTabs.SkeletonTabView,
       ],
-      [infoTabs.MappingInfoView, infoTabs.MeshesView, infoTabs.AbstractTreeTabView],
+      [
+        borderTabs.MappingInfoView,
+        borderTabs.MeshesView,
+        borderTabs.VolumeTabView,
+        borderTabs.AbstractTreeTabView,
+      ],
     ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
     "right",
-    [[infoTabs.DatasetInfoTabView, infoTabs.MappingInfoView, infoTabs.MeshesView]],
+    [
+      [
+        borderTabs.DatasetInfoTabView,
+        borderTabs.MappingInfoView,
+        borderTabs.MeshesView,
+        borderTabs.VolumeTabView,
+      ],
+    ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );

@@ -91,7 +91,7 @@ function BoundingBoxTabView(props: BoundingBoxTabViewProps) {
   }
 
   return (
-    <div className="padded-tab-content" style={{ minWidth: 200 }}>
+    <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {userBoundingBoxes.length > 0 ? (
         userBoundingBoxes.map(bb => (
           <UserBoundingBoxInput
@@ -110,7 +110,7 @@ function BoundingBoxTabView(props: BoundingBoxTabViewProps) {
         <div>No Bounding Boxes created yet.</div>
       )}
       <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
-        <Tooltip title="Click to add another bounding box." mouseLeaveDelay={0}>
+        <Tooltip title="Click to add another bounding box.">
           <PlusOutlined
             onClick={handleAddNewUserBoundingBox}
             style={{

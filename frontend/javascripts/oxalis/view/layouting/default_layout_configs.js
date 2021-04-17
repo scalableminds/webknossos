@@ -209,14 +209,7 @@ const _getDefaultLayouts = () => {
   const borderIsOpenByDefault = !isInIframe;
   const leftBorder = buildBorder(
     "left",
-    [
-      [
-        borderTabs.UserSettingsTab,
-        borderTabs.DatasetSettingsTab,
-        borderTabs.LayerSettingsTab,
-        borderTabs.GeneralSettingsTab,
-      ],
-    ],
+    [[borderTabs.GeneralSettingsTab, borderTabs.LayerSettingsTab]],
     leftBorderWidth,
     borderIsOpenByDefault,
     1,

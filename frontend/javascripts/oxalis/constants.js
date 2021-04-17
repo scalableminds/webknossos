@@ -104,8 +104,6 @@ export const BorderTabs = {
   SkeletonTabView: { id: "SkeletonTabView", name: "Skeleton" },
   VolumeTabView: { id: "VolumeTabView", name: "Volume" },
   AbstractTreeTabView: { id: "AbstractTreeTabView", name: "Abstract Tree" },
-  UserSettingsTab: { id: "UserSettingsView", name: "Annotation" },
-  DatasetSettingsTab: { id: "DatasetSettingsView", name: "Dataset" },
   LayerSettingsTab: { id: "LayerSettingsView", name: "Layers" },
   GeneralSettingsTab: { id: "GeneralSettingsView", name: "General" },
   BoundingBoxTabView: { id: "BoundingBoxTabView", name: "Bounding Boxes" },

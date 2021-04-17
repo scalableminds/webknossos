@@ -21,10 +21,8 @@ import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import VolumeTabView from "oxalis/view/right-border-tabs/volume_tab_view";
 import BoundingBoxTabView from "oxalis/view/right-border-tabs/bounding_box_tab_view";
 import RecordingSwitch from "oxalis/view/recording_switch";
-import DatasetSettingsView from "oxalis/view/left-border-tabs/dataset_settings_view";
 import LayerSettingsView from "oxalis/view/left-border-tabs/layer_settings_view";
 import GeneralSettingsView from "oxalis/view/left-border-tabs/general_settings_view";
-import UserSettingsView from "oxalis/view/left-border-tabs/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-border-tabs/trees_tab_view";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
@@ -202,12 +200,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
       case "BoundingBoxTabView": {
         return <BoundingBoxTabView />;
-      }
-      case "UserSettingsView": {
-        return <UserSettingsView />;
-      }
-      case "DatasetSettingsView": {
-        return <DatasetSettingsView />;
       }
       case "LayerSettingsView": {
         return <LayerSettingsView />;

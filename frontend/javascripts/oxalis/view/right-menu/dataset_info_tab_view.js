@@ -392,8 +392,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           <tr>
             <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
               <img
+                className="info-tab-icon"
                 src="/assets/images/icon-downsampling.svg"
-                style={{ width: 24, height: 24 }}
                 alt="Resolution"
               />
             </td>
@@ -420,8 +420,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-voxelsize.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Voxel size"
                     />
                   </td>
@@ -432,8 +432,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-extent.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Dataset extent"
                     />
                   </td>

@@ -108,7 +108,7 @@
   height: 100%;
   padding: 24px;
   overflow-y: auto;
-  background-color: white;
+  background-color: @component-background;
   z-index: 1;
 
   @media @smartphones {
@@ -156,7 +156,7 @@
   transform: translateZ(0);
 
   &:hover {
-    box-shadow: 0 4px 6px hsla(0, 0%, 0%, 0.22), 0 5px 15px hsla(0, 0%, 0%, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.22), 0 5px 15px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px) translateZ(0);
 
     .dataset-thumbnail-image {

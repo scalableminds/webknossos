@@ -200,6 +200,11 @@
     margin-bottom: 0px;
   }
   margin-bottom: 12px;
+
+  .info-tab-icon {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 #portal-navbarTracingSlot {
@@ -227,6 +232,7 @@
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
+  @primary-bg: #2174c1;
   @primary-border: #1890ff;
   @hover-border: #40a9ff;
 
@@ -274,7 +280,7 @@
   }
 
   .ant-btn-primary {
-    background-color: #2174c1 !important;
+    background-color: @primary-bg !important;
   }
 
   // Radio button
@@ -307,6 +313,10 @@
     background-color: @dark-border;
   }
 
+  .ant-radio-button-wrapper-checked:not([class*=" ant-radio-button-wrapper-disabled"]).ant-radio-button-wrapper:first-child {
+    border-right-color: @primary-border;
+  }
+
   // Primary button in button group
   .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
     border-right-color: @dark-border;
@@ -319,6 +329,14 @@
     &:hover {
       background: @error-color;
       color: white;
+    }
+  }
+
+  // Settings icon
+  .highlight-togglable-button.ant-btn {
+    background-color: @primary-bg !important;
+    &:not(:hover) {
+      border-color: @primary-border !important;
     }
   }
 }

@@ -34,12 +34,7 @@ const WelcomeHeader = ({ history }) => (
       backgroundSize: "cover",
     }}
   >
-    <div
-      style={{
-        backgroundColor: "rgba(88, 88, 88, 0.4)",
-        backgroundImage: "linear-gradient(0deg, #222222 0%, rgba(23, 103, 139, 0.73) 70%)",
-      }}
-    >
+    <div className="welcome-header-wrapper">
       <div className="welcome-header-content">
         <Row type="flex" align="middle" style={{ color: "white" }}>
           <Col xs={{ span: 0 }} xl={{ span: 4 }}>

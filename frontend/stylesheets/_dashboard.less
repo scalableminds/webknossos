@@ -27,6 +27,10 @@
   }
 }
 
+.welcome-header-wrapper {
+  background-color: @component-background;
+  background-image: linear-gradient(0deg, @body-background 0%, @blue-1 70%);
+}
 .welcome-header-content {
   max-width: 1600px;
   margin: auto;
@@ -48,6 +52,23 @@
     max-width: 1000px;
     margin: auto;
     display: inline-block;
+
+    h1 {
+      color: @text-color;
+      margin-left: 56px;
+      font-weight: 200;
+      font-size: 64px;
+      line-height: 150%;
+      margin-bottom: 0;
+    }
+
+    .subtitle {
+      margin: 0 20px 0px 60px;
+      font-weight: 300;
+      font-size: 20px;
+      line-height: 150%;
+      color: @text-color-secondary;
+    }
 
     .whats-next-actions-grid {
       display: flex;
@@ -75,17 +96,17 @@
           margin-left: 12px;
         }
 
-        h1 {
+        h2 {
           font-size: 16px;
           line-height: 18px;
-          color: #0d232d;
+          color: @text-color;
           margin-bottom: 4px;
         }
 
         p {
           font-size: 14px;
           line-height: 18px;
-          color: #6b7280;
+          color: @text-color;
           margin: 0;
         }
 
@@ -95,26 +116,26 @@
           margin: 8px;
         }
 
-        background: #ffffff;
-        box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+        background: @component-background;
+        box-shadow: @box-shadow-base;
         border-radius: 3px;
       }
 
       a:hover {
-        background: #3b82f6;
+        background: @blue-7;
 
         .chevron,
         .action-icon {
-          color: #eff6ff;
+          color: @blue-1;
         }
 
-        h1 {
-          color: #eff6ff;
-        }
+        // h1 {
+        //   color: @blue-1;
+        // }
 
-        p {
-          color: #bfdbfe;
-        }
+        // p {
+        //   color: @blue-2;
+        // }
       }
     }
   }

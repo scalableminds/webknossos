@@ -65,12 +65,7 @@ type WhatsNextHeaderProps = {
 
 export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps) => (
   <div>
-    <div
-      className="welcome-header-wrapper"
-      style={{
-        position: "relative",
-      }}
-    >
+    <div className="welcome-header-wrapper" style={{ position: "relative" }}>
       <div style={{ position: "absolute", right: 0, top: 0, margin: 8 }}>
         <Tooltip title="Don't show this again" placement="left">
           <CloseOutlined onClick={onDismiss} />

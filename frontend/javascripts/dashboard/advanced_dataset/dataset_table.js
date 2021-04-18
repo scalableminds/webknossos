@@ -233,17 +233,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
           render={(isActive: boolean) =>
             isActive ? (
-              <CheckCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
+              <CheckCircleOutlined style={{ fontSize: 20 }} />
             ) : (
-              <CloseCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
+              <CloseCircleOutlined style={{ fontSize: 20 }} />
             )
           }
         />

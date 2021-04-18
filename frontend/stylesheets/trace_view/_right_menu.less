@@ -5,6 +5,8 @@
   flex-grow: 1;
   min-height: 600px;
   width: 100%;
+  // No dark mode
+  background-color: white;
 }
 
 .flex-center {
@@ -13,6 +15,18 @@
   align-items: center;
   flex-direction: column;
   height: 100%;
+}
+
+.isosurface-list-item {
+  padding-left: 5px;
+  padding-right: 5px;
+  border-radius: 2px;
+  &.is-centered-cell {
+    background-color: @blue-3;
+  }
+  &:hover {
+    background-color: @blue-1;
+  }
 }
 
 #tree-list {
@@ -55,8 +69,7 @@
     }
   }
   .rst__rowSearchMatch .rst__rowLabel {
-    // TODO
-    background-color: rgb(135, 213, 255);
+    background-color: @blue-3;
   }
 }
 

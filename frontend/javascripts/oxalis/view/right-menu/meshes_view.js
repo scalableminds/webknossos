@@ -44,6 +44,7 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+import classNames from "classnames";
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -305,13 +306,9 @@ class MeshesView extends React.Component<
         >
           <div style={{ display: "flex" }}>
             <div
-              className="isosurface-list-item"
-              style={{
-                paddingLeft: 5,
-                paddingRight: 5,
-                backgroundColor: segmentId === isCenteredCell ? "#91d5ff" : "white",
-                borderRadius: 2,
-              }}
+              className={classNames("isosurface-list-item", {
+                "is-centered-cell": segmentId === isCenteredCell,
+              })}
               onClick={() => {
                 this.props.changeActiveIsosurfaceId(segmentId);
                 moveTo(seedPosition);

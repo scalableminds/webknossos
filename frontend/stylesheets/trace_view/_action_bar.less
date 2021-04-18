@@ -66,5 +66,13 @@
 
 .selected-layout-item {
   font-weight: bold;
-  background-color: rgb(230, 247, 255);
+  background-color: @layout-body-background;
+}
+
+.highlight-togglable-button.ant-btn {
+  // TODO
+  background-color: #2373c1 !important;
+  &:not(:hover) {
+    border-color: #2098de !important;
+  }
 }

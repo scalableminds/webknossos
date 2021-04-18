@@ -15,6 +15,7 @@
 @import "_variables.less";
 @import "_general.less";
 @import "_dashboard.less";
+@import "_spotlight.less";
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_user_settings_view.less";
 @import "trace_view/_action_bar.less";
@@ -45,7 +46,7 @@ body {
 .save-error {
   .ant-layout-header,
   .ant-menu {
-    background-color: #c00 !important;
+    background-color: @error-color !important;
   }
 }
 
@@ -111,65 +112,11 @@ td.nowrap * {
   }
 }
 
-#oxalis-header {
-  margin-bottom: 20px;
-  margin-top: 20px;
-  text-align: center;
-  height: 100px;
-  vertical-align: middle;
-  display: inline-block;
-  font-size: 80px;
-  font-size: 80px;
-  line-height: normal;
-  color: #000;
-  margin-left: 30px;
-
-  img {
-    height: 100px;
-    width: 100px;
-  }
-
-  @media @smartphones {
-    font-size: 2rem;
-
-    img {
-      height: 60px;
-      width: 60px;
-    }
-  }
-}
-
 .centered-content {
   padding: 50px;
   width: 100%;
   max-width: 1500px;
   margin: auto;
-}
-
-.container-with-hidden-icon {
-  .hidden-icon {
-    visibility: hidden;
-  }
-  &:hover {
-    .hidden-icon {
-      visibility: visible;
-    }
-  }
-}
-
-#spotlight-footnote {
-  text-align: center;
-  margin: 30px 0;
-}
-
-.spotlight-registration-form {
-  background-color: white;
-  padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.38);
-
-  @media (max-width: 992px) {
-    margin: 12px;
-  }
 }
 
 #impressum {
@@ -180,10 +127,6 @@ td.nowrap * {
 
 .pull-right {
   float: right !important;
-}
-
-.pull-left {
-  float: left !important;
 }
 
 // Fixing font awesome
@@ -227,10 +170,6 @@ i.withoutIconMargin,
   flex-grow: 1;
 }
 
-.flex-column-for-ant-tabs-container > div.ant-tabs-content {
-  flex-grow: 1;
-}
-
 .flex-overflow {
   overflow-y: auto;
   flex-grow: 1;
@@ -243,10 +182,6 @@ i.withoutIconMargin,
   font-family: monospace;
   font-size: 14px;
   width: 135px;
-}
-
-img.img-50 {
-  width: 47%;
 }
 
 @media (min-width: 1200px) {
@@ -287,24 +222,9 @@ img.img-50 {
   padding-right: 15px;
 }
 
-.text {
-  padding: 2em 0;
-  ul {
-    padding: 1.5em;
-    list-style: square;
-    li {
-      padding-bottom: 10px;
-    }
-  }
-}
-
 .icon-big {
   font-size: 180px;
   color: rgb(58, 144, 255);
-}
-
-.errorChainCollapse .ant-collapse-header {
-  padding: 12px 0 0 32px !important;
 }
 
 @keyframes highlight-background {
@@ -315,95 +235,47 @@ img.img-50 {
   }
 }
 
-.nice-scrollbar {
-  // These only work in chrome
-  &::-webkit-scrollbar-button {
-    display: block;
-    height: 5px;
-    border-radius: 0px;
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar-button:hover {
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: #ccc;
-    border-radius: 5px;
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background-color: #9c9c9c;
-    border-radius: 5px;
-  }
-  &::-webkit-scrollbar-track {
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar-track:hover {
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  // This is for firefox, to avoid showing a white line next to the scrollbar
-  scrollbar-width: thin;
-}
-
-#retoggle-mount-root > div {
-  top: 500px !important;
-}
-
-.cover-whole-screen {
+// Brain loading spinner
+.brain-loading {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgb(252, 252, 252);
+  background: @body-background;
   z-index: 300;
 }
 
-// Flex helper
-
-.Aligner {
+.brain-loading-container {
   display: flex;
   align-items: center;
   min-height: 24em;
   justify-content: center;
+  height: 80%;
 }
 
-.Aligner-item {
+.brain-loading-content {
   flex: 1;
-}
-
-.Aligner-item--top {
-  align-self: flex-start;
-}
-
-.Aligner-item--bottom {
-  align-self: flex-end;
-}
-
-.Aligner-item--fixed {
   flex: none;
   max-width: 50%;
+  width: 375px;
 }
 
-// Minimalistic progress bar
-.loader {
+.brain-loading-bar {
   height: 2px;
   width: 100%;
   position: relative;
   overflow: hidden;
-  background-color: #ddd;
+  background-color: @slider-track-background-color;
 }
-.loader:before {
+.brain-loading-bar:before {
   display: block;
   position: absolute;
   content: "";
   left: -200px;
   width: 200px;
   height: 2px;
-  background-color: #9f9f9f; // gray
+  background-color: @slider-rail-background-color; // gray
   animation: loading 1.5s ease infinite;
 }
 
@@ -437,27 +309,12 @@ img.img-50 {
   }
 }
 
-.highlight-togglable-button.ant-btn {
-  background-color: #2373c1 !important;
-  &:not(:hover) {
-    border-color: #2098de !important;
-  }
-}
-
-.feature-highlight-row {
-  flex-direction: row-reverse;
-}
-
-@smartphones .feature-highlight-row {
-  flex-direction: row;
-  float: none;
-}
-
 .link-in-progress {
   cursor: wait;
 }
 
 .keyboard-key-icon {
+  // TODO
   border: 2px solid #888;
   border-radius: 2px;
   min-width: 26px;

@@ -319,7 +319,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item
           key="theme"
           onClick={() => {
-            const styleEl = document.getElementById("primary-stylesheet");
+            const styleEl = ((document.getElementById("primary-stylesheet"): any): HTMLLinkElement);
             if (styleEl.href.includes("light")) {
               styleEl.href = styleEl.href.replace("light", "dark");
             } else {

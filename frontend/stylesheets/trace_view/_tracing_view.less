@@ -136,14 +136,17 @@
 .node-context-menu {
   z-index: 100;
   border-radius: 6px;
-  color: rgba(0, 0, 0, 0.65);
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: @text-color;
+  background: @component-background;
+  box-shadow: @box-shadow-base;
   .node-context-menu-item {
     font-size: 12px;
     height: 30px;
     line-height: 30px;
     padding: 0px 10px;
+  }
+  .ant-menu {
+    border-right: none;
   }
 }
 .node-context-menu-overlay {
@@ -154,8 +157,8 @@
 }
 
 #version-restore-sider {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-left: 1px solid #e8e8e8;
+  box-shadow: @box-shadow-base;
+  border-left: 1px solid @border-color-base;
   padding-top: 15px;
   position: fixed;
   right: 0;
@@ -189,6 +192,7 @@
 }
 
 .isosurface-list-item:hover {
+  // TODO
   background-color: #e6f7ff !important;
 }
 
@@ -304,10 +308,10 @@
   }
 
   .ant-btn-danger {
-    background: #ea7d09;
+    background: @error-color;
 
     &:hover {
-      background: #ea7d09;
+      background: @error-color;
       color: white;
     }
   }

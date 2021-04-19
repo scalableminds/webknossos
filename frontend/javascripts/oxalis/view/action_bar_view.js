@@ -22,7 +22,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import AuthenticationModal from "admin/auth/authentication_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { type ControlMode, ControlModeEnum } from "oxalis/constants";
+import constants, { type ViewMode, type ControlMode, ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import Store, { type OxalisState } from "oxalis/store";
 import TracingActionsView, {
@@ -54,6 +54,7 @@ type StateProps = {|
   showVersionRestore: boolean,
   isReadOnly: boolean,
   is2d: boolean,
+  viewMode: ViewMode,
 |};
 type OwnProps = {|
   layoutProps: LayoutProps,
@@ -166,7 +167,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly ? <ToolbarView /> : null}
+          {!isReadOnly && this.props.viewMode === constants.MODE_PLANE_TRACING ? (
+            <ToolbarView />
+          ) : null}
           {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
@@ -197,6 +200,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
+  viewMode: state.temporaryConfiguration.viewMode,
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);

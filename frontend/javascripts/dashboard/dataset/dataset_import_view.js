@@ -312,6 +312,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       if (!form) {
         return;
       }
+      console.log('setting to inferred', inferredDataSource);
       form.setFieldsValue({
         dataSourceJson: jsonStringify(inferredDataSource),
       });

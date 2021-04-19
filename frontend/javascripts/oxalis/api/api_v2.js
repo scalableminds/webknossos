@@ -513,6 +513,24 @@ class TracingApi {
     }
     Store.dispatch(setToolAction(tool));
   }
+
+  /**
+   * Returns the active tool which is either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use getAnnotationTool instead.
+   */
+  getVolumeTool(): AnnotationTool {
+    return this.getAnnotationTool();
+  }
+
+  /**
+   * Sets the active tool which should be either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use setAnnotationTool instead.
+   */
+  setVolumeTool(tool: AnnotationTool) {
+    this.setAnnotationTool(tool);
+  }
 }
 
 /**

@@ -832,27 +832,44 @@ class TracingApi {
   }
 
   /**
-   * Returns the active volume tool which is either
-   * "MOVE", "TRACE" or "BRUSH".
+   * Returns the active tool which is either
+   * "MOVE", "SKELETON", TRACE", "BRUSH",  FILL_CELL or PICK_CELL
    */
   getAnnotationTool(): AnnotationTool {
     return Store.getState().tracing.activeTool;
   }
 
   /**
-   * Sets the active volume tool which should be either
-   * "MOVE", "TRACE" or "BRUSH".
+   * Sets the active tool which should be either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
    * _Volume tracing only!_
    */
   setAnnotationTool(tool: AnnotationTool) {
     assertVolume(Store.getState().tracing);
-    assertExists(tool, "Volume tool is missing.");
     if (AnnotationToolEnum[tool] == null) {
       throw new Error(
-        `Volume tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
+        `Annotation tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
     Store.dispatch(setToolAction(tool));
+  }
+
+  /**
+   * Returns the active tool which is either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use getAnnotationTool instead.
+   */
+  getVolumeTool(): AnnotationTool {
+    return this.getAnnotationTool();
+  }
+
+  /**
+   * Sets the active tool which should be either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use setAnnotationTool instead.
+   */
+  setVolumeTool(tool: AnnotationTool) {
+    this.setAnnotationTool(tool);
   }
 
   /**

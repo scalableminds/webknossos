@@ -48,7 +48,6 @@ import constants, {
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
   OrthoViews,
-  type Vector3,
   type AnnotationTool,
   AnnotationToolEnum,
 } from "oxalis/constants";
@@ -418,21 +417,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   onPlaneViewRender(): void {
     getSceneController().update();
-  }
-
-  getMousePosition(): Vector3 {
-    const state = Store.getState();
-    const { activeViewport } = state.viewModeData.plane;
-    const pos = this.input.mouseControllers[activeViewport].position;
-    if (pos != null) {
-      return calculateGlobalPos(state, pos);
-    }
-    return [0, 0, 0];
-  }
-
-  isMouseOver(): boolean {
-    return this.input.mouseControllers[Store.getState().viewModeData.plane.activeViewport]
-      .isMouseOver;
   }
 
   changeMoveValue(delta: number): void {

@@ -106,8 +106,7 @@ function finishZoom(oldMousePosition: Vector3): void {
   // Move the plane so that the mouse is at the same position as
   // before the zoom
   const { activeViewport } = Store.getState().viewModeData.plane;
-  const isMouseOver = true;
-  if (isMouseOver && activeViewport !== OrthoViews.TDView) {
+  if (activeViewport !== OrthoViews.TDView) {
     const mousePos = getMousePosition();
     if (mousePos == null) {
       return;

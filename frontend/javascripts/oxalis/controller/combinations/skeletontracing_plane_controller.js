@@ -11,7 +11,6 @@ import {
   type ShowContextMenuFunction,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 
 import { enforce } from "libs/utils";
 import {
@@ -21,7 +20,7 @@ import {
   getNodeAndTree,
   getNodeAndTreeOrNull,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { getInputCatcherRect, calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
   getRotationOrtho,
@@ -123,7 +122,7 @@ export function handleCreateNode(planeView: PlaneView, position: Point2, ctrlPre
     return;
   }
 
-  const globalPosition = calculateGlobalPos(position);
+  const globalPosition = calculateGlobalPos(state, position);
   setWaypoint(globalPosition, activeViewport, ctrlPressed);
 }
 
@@ -142,7 +141,8 @@ export function handleOpenContextMenu(
   const nodeId = event.shiftKey
     ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)
     : null;
-  const globalPosition = calculateGlobalPos(position);
+  const state = Store.getState();
+  const globalPosition = calculateGlobalPos(state, position);
   showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
 }
 
@@ -215,13 +215,14 @@ export function openContextMenu(
   event: MouseEvent,
   showNodeContextMenuAt: ShowContextMenuFunction,
 ) {
-  const { activeViewport } = Store.getState().viewModeData.plane;
+  const state = Store.getState();
+  const { activeViewport } = state.viewModeData.plane;
   if (activeViewport === OrthoViews.TDView) {
     return;
   }
 
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
-  const globalPosition = calculateGlobalPos(position);
+  const globalPosition = calculateGlobalPos(state, position);
   showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
 }
 

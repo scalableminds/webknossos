@@ -1,36 +1,93 @@
 // @flow
-import { movePlaneFlycamOrthoAction } from "oxalis/model/actions/flycam_actions";
-import {
-  setMousePositionAction,
-  hideBrushAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import {
   type OrthoView,
   OrthoViews,
+  AnnotationToolEnum,
   type Point2,
-  type Vector3,
   ContourModeEnum,
   type ShowContextMenuFunction,
 } from "oxalis/constants";
+import { type ModifierKeys } from "libs/input";
+import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 import {
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 
-export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
-  const { activeViewport } = Store.getState().viewModeData.plane;
-  Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
-};
+/*
+  This module contains classes for the different tools, such as MoveTool, SkeletonTool, DrawTool etc.
+  Each tool class defines getMouseControls which declares how mouse bindings are mapped (depending on
+  modifiers) to actions. For the actions, code from oxalis/controller/combinations is called.
 
-const handleMovePlane = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
+  If a tool does not define a specific mouse binding, the bindings of the MoveTool are used as a fallback.
+  See `createToolDependentMouseHandler` in plane_controller.js
+*/
 
 export class MoveTool {
+  static getMouseControls(
+    planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): Object {
+    return {
+      scroll: (delta: number, type: ?ModifierKeys) => {
+        switch (type) {
+          case null: {
+            MoveHandlers.moveZ(delta, true);
+            break;
+          }
+          case "alt":
+          case "ctrl": {
+            MoveHandlers.zoomPlanes(Utils.clamp(-1, delta, 1), true);
+            break;
+          }
+          case "shift": {
+            const { tracing } = Store.getState();
+            const isBrushActive = tracing.activeTool === AnnotationToolEnum.BRUSH;
+            if (isBrushActive) {
+              // Different browsers send different deltas, this way the behavior is comparable
+              if (delta > 0) {
+                volumeController.changeBrushSizeIfBrushIsActiveBy(1);
+              } else {
+                volumeController.changeBrushSizeIfBrushIsActiveBy(-1);
+              }
+            } else if (tracing.skeleton) {
+              // Different browsers send different deltas, this way the behavior is comparable
+              api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
+            }
+            break;
+          }
+          default: // ignore other cases
+        }
+      },
+      over: () => {
+        MoveHandlers.handleOverViewport(planeId);
+      },
+      pinch: delta => MoveHandlers.zoom(delta, true),
+      mouseMove: (delta: Point2, position: Point2, id, event) => {
+        // Always set the correct mouse position. Otherwise, using alt + mouse move and
+        // alt + scroll won't result in the correct zoomToMouse behavior.
+        MoveHandlers.setMousePosition(position);
+        if (event.altKey && !event.shiftKey) {
+          MoveHandlers.handleMovePlane(delta);
+        }
+      },
+      leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
+        MoveHandlers.handleMovePlane(delta);
+      },
+      middleDownMove: MoveHandlers.handleMovePlane,
+      rightClick: MoveTool.createRightClickHandler(planeView, showNodeContextMenuAt),
+    };
+  }
+
   static createRightClickHandler(
     planeView: PlaneView,
     showNodeContextMenuAt: ShowContextMenuFunction,
@@ -45,61 +102,9 @@ export class MoveTool {
         showNodeContextMenuAt,
       );
   }
-
-  static getMouseControls(
-    planeId: OrthoView,
-    planeView: PlaneView,
-    showNodeContextMenuAt: ShowContextMenuFunction,
-    helpers: { zoom: Function, scrollPlanes: Function },
-  ): Object {
-    const { zoom, scrollPlanes } = helpers;
-
-    return {
-      scroll: scrollPlanes,
-      over: () => {
-        Store.dispatch(setViewportAction(planeId));
-      },
-      pinch: delta => zoom(delta, true),
-      mouseMove: (delta: Point2, position: Point2, id, event) => {
-        if (event.altKey && !event.shiftKey) {
-          handleMovePlane(delta);
-        } else {
-          Store.dispatch(setMousePositionAction([position.x, position.y]));
-        }
-      },
-      leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
-        handleMovePlane(delta);
-      },
-      middleDownMove: handleMovePlane,
-      rightClick: MoveTool.createRightClickHandler(planeView, showNodeContextMenuAt),
-    };
-  }
 }
 
 export class SkeletonTool {
-  static onClick(
-    planeView: PlaneView,
-    position: Point2,
-    shiftPressed: boolean,
-    altPressed: boolean,
-    ctrlPressed: boolean,
-    plane: OrthoView,
-    isTouch: boolean,
-  ): void {
-    if (!shiftPressed && !isTouch && !ctrlPressed) {
-      // do nothing
-      return;
-    }
-
-    if (altPressed) {
-      skeletonController.handleMergeTrees(planeView, position, plane, isTouch);
-    } else if (ctrlPressed) {
-      skeletonController.handleDeleteEdge(planeView, position, plane, isTouch);
-    } else {
-      skeletonController.handleSelectNode(planeView, position, plane, isTouch);
-    }
-  }
-
   static getMouseControls(planeView: PlaneView, showNodeContextMenuAt: ShowContextMenuFunction) {
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
@@ -107,7 +112,7 @@ export class SkeletonTool {
         if (tracing.skeleton != null && event.ctrlKey) {
           skeletonController.moveNode(delta.x, delta.y);
         } else {
-          handleMovePlane(delta);
+          MoveHandlers.handleMovePlane(delta);
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
@@ -137,6 +142,29 @@ export class SkeletonTool {
         }
       },
     };
+  }
+
+  static onClick(
+    planeView: PlaneView,
+    position: Point2,
+    shiftPressed: boolean,
+    altPressed: boolean,
+    ctrlPressed: boolean,
+    plane: OrthoView,
+    isTouch: boolean,
+  ): void {
+    if (!shiftPressed && !isTouch && !ctrlPressed) {
+      // do nothing
+      return;
+    }
+
+    if (altPressed) {
+      skeletonController.handleMergeTrees(planeView, position, plane, isTouch);
+    } else if (ctrlPressed) {
+      skeletonController.handleDeleteEdge(planeView, position, plane, isTouch);
+    } else {
+      skeletonController.handleSelectNode(planeView, position, plane, isTouch);
+    }
   }
 }
 

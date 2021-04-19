@@ -10,7 +10,7 @@ import {
   type Vector3,
   annotationToolEnumToIndex,
 } from "oxalis/constants";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
@@ -484,11 +484,12 @@ class PlaneMaterialFactory {
               this.uniforms.isMouseInCanvas.value = false;
               return;
             }
-            if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+            const state = Store.getState();
+            if (state.viewModeData.plane.activeViewport === OrthoViews.TDView) {
               return;
             }
 
-            const [x, y, z] = calculateGlobalPos({
+            const [x, y, z] = calculateGlobalPos(state, {
               x: globalMousePosition[0],
               y: globalMousePosition[1],
             });

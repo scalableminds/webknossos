@@ -10,8 +10,8 @@ import debounceRender from "react-debounce-render";
 import createProgressCallback from "libs/progress_callback";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
-import type { OxalisState, Mapping, MappingType } from "oxalis/store";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import Store, { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -154,7 +154,7 @@ class MappingInfoView extends React.Component<Props, State> {
     let globalMousePosition;
     if (mousePosition && activeViewport !== OrthoViews.TDView) {
       const [x, y] = mousePosition;
-      globalMousePosition = calculateGlobalPos({ x, y });
+      globalMousePosition = calculateGlobalPos(Store.getState(), { x, y });
     }
 
     const flycamPosition = position;

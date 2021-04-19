@@ -9,35 +9,25 @@ import Clipboard from "clipboard-js";
 import * as React from "react";
 import _ from "lodash";
 
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import { document } from "libs/window";
-import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  getPosition,
-  getRequestLogZoomStep,
-  getPlaneScalingFactor,
-} from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { moveFlycamOrthoAction, zoomByDeltaAction } from "oxalis/model/actions/flycam_actions";
-import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import PlaneView from "oxalis/view/plane_view";
 import Store, { type OxalisState, type Tracing } from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
 import {
   MoveTool,
   SkeletonTool,
   DrawTool,
   PickCellTool,
   FillCellTool,
-  movePlane,
 } from "oxalis/controller/combinations/tool_controls";
 import constants, {
   type ShowContextMenuFunction,
@@ -45,18 +35,16 @@ import constants, {
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
   OrthoViews,
-  type Point2,
   type Vector3,
   type AnnotationTool,
   AnnotationToolEnum,
 } from "oxalis/constants";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-
-const MAX_BRUSH_CHANGE_VALUE = 5;
-const BRUSH_CHANGING_CONSTANT = 0.02;
 
 function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
   const conflictingHandlers = _.intersection(
@@ -76,7 +64,6 @@ type OwnProps = {| showNodeContextMenuAt: ShowContextMenuFunction |};
 
 type StateProps = {|
   tracing: Tracing,
-  is2d: boolean,
 |};
 
 type Props = {|
@@ -99,7 +86,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
-  zoomPos: Vector3;
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
@@ -157,10 +143,6 @@ class PlaneController extends React.PureComponent<Props> {
       planeId,
       this.planeView,
       this.props.showNodeContextMenuAt,
-      {
-        zoom: this.zoom,
-        scrollPlanes: this.scrollPlanes,
-      },
     );
 
     const skeletonControls = SkeletonTool.getMouseControls(
@@ -217,10 +199,10 @@ class PlaneController extends React.PureComponent<Props> {
 
     this.input.keyboard = new InputKeyboard({
       // Move
-      left: timeFactor => this.moveX(-getMoveValue(timeFactor)),
-      right: timeFactor => this.moveX(getMoveValue(timeFactor)),
-      up: timeFactor => this.moveY(-getMoveValue(timeFactor)),
-      down: timeFactor => this.moveY(getMoveValue(timeFactor)),
+      left: timeFactor => MoveHandlers.moveX(-getMoveValue(timeFactor)),
+      right: timeFactor => MoveHandlers.moveX(getMoveValue(timeFactor)),
+      up: timeFactor => MoveHandlers.moveY(-getMoveValue(timeFactor)),
+      down: timeFactor => MoveHandlers.moveY(getMoveValue(timeFactor)),
     });
 
     const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
@@ -230,21 +212,23 @@ class PlaneController extends React.PureComponent<Props> {
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         // KeyboardJS is sensitive to ordering (complex combos first)
-        "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
-        "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
+        "shift + f": (timeFactor, first) => MoveHandlers.moveZ(getMoveValue(timeFactor) * 5, first),
+        "shift + d": (timeFactor, first) =>
+          MoveHandlers.moveZ(-getMoveValue(timeFactor) * 5, first),
 
-        "shift + i": () => this.changeBrushSizeIfBrushIsActiveBy(-1),
-        "shift + o": () => this.changeBrushSizeIfBrushIsActiveBy(1),
+        "shift + i": () => volumeController.changeBrushSizeIfBrushIsActiveBy(-1),
+        "shift + o": () => volumeController.changeBrushSizeIfBrushIsActiveBy(1),
 
-        "shift + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
-        "ctrl + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
-        space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
-        f: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
-        d: (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
+        "shift + space": (timeFactor, first) =>
+          MoveHandlers.moveZ(-getMoveValue(timeFactor), first),
+        "ctrl + space": (timeFactor, first) => MoveHandlers.moveZ(-getMoveValue(timeFactor), first),
+        space: (timeFactor, first) => MoveHandlers.moveZ(getMoveValue(timeFactor), first),
+        f: (timeFactor, first) => MoveHandlers.moveZ(getMoveValue(timeFactor), first),
+        d: (timeFactor, first) => MoveHandlers.moveZ(-getMoveValue(timeFactor), first),
 
         // Zoom in/out
-        i: () => this.zoom(1, false),
-        o: () => this.zoom(-1, false),
+        i: () => MoveHandlers.zoom(1, false),
+        o: () => MoveHandlers.zoom(-1, false),
 
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
@@ -278,7 +262,7 @@ class PlaneController extends React.PureComponent<Props> {
         const { mousePosition } = Store.getState().temporaryConfiguration;
         if (mousePosition) {
           const [x, y] = mousePosition;
-          const globalMousePosition = calculateGlobalPos({ x, y });
+          const globalMousePosition = calculateGlobalPos(Store.getState(), { x, y });
           const { cube } = segmentationLayer;
           const mapping = event.altKey ? cube.getMapping() : null;
           const hoveredId = cube.getDataValue(
@@ -365,87 +349,12 @@ class PlaneController extends React.PureComponent<Props> {
     getSceneController().update();
   }
 
-  moveX = (x: number): void => {
-    movePlane([x, 0, 0]);
-  };
-
-  moveY = (y: number): void => {
-    movePlane([0, y, 0]);
-  };
-
-  moveZ = (z: number, oneSlide: boolean): void => {
-    if (this.props.is2d) {
-      return;
-    }
-    const { activeViewport } = Store.getState().viewModeData.plane;
-    if (activeViewport === OrthoViews.TDView) {
-      return;
-    }
-
-    if (oneSlide) {
-      const logZoomStep = getRequestLogZoomStep(Store.getState());
-      const w = Dimensions.getIndices(activeViewport)[2];
-      const zStep = getResolutions(Store.getState().dataset)[logZoomStep][w];
-
-      Store.dispatch(
-        moveFlycamOrthoAction(
-          Dimensions.transDim([0, 0, (z < 0 ? -1 : 1) * Math.max(1, zStep)], activeViewport),
-          activeViewport,
-          true,
-        ),
-      );
-    } else {
-      movePlane([0, 0, z], false);
-    }
-  };
-
-  zoom = (value: number, zoomToMouse: boolean) => {
-    const { activeViewport } = Store.getState().viewModeData.plane;
-    if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {
-      this.zoomPlanes(value, zoomToMouse);
-    } else {
-      this.zoomTDView(value);
-    }
-  };
-
-  zoomPlanes = (value: number, zoomToMouse: boolean) => {
-    if (zoomToMouse) {
-      this.zoomPos = this.getMousePosition();
-    }
-
-    Store.dispatch(zoomByDeltaAction(value));
-
-    if (zoomToMouse) {
-      this.finishZoom();
-    }
-  };
-
-  zoomTDView(value: number): void {
-    const zoomToPosition = null;
-    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
-  }
-
-  finishZoom = (): void => {
-    // Move the plane so that the mouse is at the same position as
-    // before the zoom
-    const { activeViewport } = Store.getState().viewModeData.plane;
-    if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
-      const mousePos = this.getMousePosition();
-      const moveVector = [
-        this.zoomPos[0] - mousePos[0],
-        this.zoomPos[1] - mousePos[1],
-        this.zoomPos[2] - mousePos[2],
-      ];
-      Store.dispatch(moveFlycamOrthoAction(moveVector, activeViewport));
-    }
-  };
-
   getMousePosition(): Vector3 {
-    const { activeViewport } = Store.getState().viewModeData.plane;
+    const state = Store.getState();
+    const { activeViewport } = state.viewModeData.plane;
     const pos = this.input.mouseControllers[activeViewport].position;
     if (pos != null) {
-      return calculateGlobalPos(pos);
+      return calculateGlobalPos(state, pos);
     }
     return [0, 0, 0];
   }
@@ -459,48 +368,6 @@ class PlaneController extends React.PureComponent<Props> {
     const moveValue = Store.getState().userConfiguration.moveValue + delta;
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
   }
-
-  changeBrushSizeIfBrushIsActiveBy(factor: number) {
-    const isBrushActive = this.props.tracing.activeTool === AnnotationToolEnum.BRUSH;
-    if (isBrushActive) {
-      const currentBrushSize = Store.getState().userConfiguration.brushSize;
-      const newBrushSize =
-        Math.min(Math.ceil(currentBrushSize * BRUSH_CHANGING_CONSTANT), MAX_BRUSH_CHANGE_VALUE) *
-          factor +
-        currentBrushSize;
-      Store.dispatch(updateUserSettingAction("brushSize", newBrushSize));
-    }
-  }
-
-  scrollPlanes = (delta: number, type: ?ModifierKeys) => {
-    switch (type) {
-      case null: {
-        this.moveZ(delta, true);
-        break;
-      }
-      case "alt":
-      case "ctrl": {
-        this.zoomPlanes(Utils.clamp(-1, delta, 1), true);
-        break;
-      }
-      case "shift": {
-        const isBrushActive = this.props.tracing.activeTool === AnnotationToolEnum.BRUSH;
-        if (isBrushActive) {
-          // Different browsers send different deltas, this way the behavior is comparable
-          if (delta > 0) {
-            this.changeBrushSizeIfBrushIsActiveBy(1);
-          } else {
-            this.changeBrushSizeIfBrushIsActiveBy(-1);
-          }
-        } else if (this.props.tracing.skeleton) {
-          // Different browsers send different deltas, this way the behavior is comparable
-          api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
-        }
-        break;
-      }
-      default: // ignore other cases
-    }
-  };
 
   unsubscribeStoreListeners() {
     this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
@@ -576,55 +443,9 @@ class PlaneController extends React.PureComponent<Props> {
   }
 }
 
-export function calculateGlobalPos(clickPos: Point2): Vector3 {
-  let position;
-  const state = Store.getState();
-  const { activeViewport } = state.viewModeData.plane;
-  const curGlobalPos = getPosition(state.flycam);
-  const zoomFactors = getPlaneScalingFactor(state, state.flycam, activeViewport);
-  const viewportScale = getViewportScale(state, activeViewport);
-  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
-
-  const center = [0, 1].map(dim => (constants.VIEWPORT_WIDTH * viewportScale[dim]) / 2);
-  const diffX = ((center[0] - clickPos.x) / viewportScale[0]) * zoomFactors[0];
-  const diffY = ((center[1] - clickPos.y) / viewportScale[1]) * zoomFactors[1];
-
-  switch (activeViewport) {
-    case OrthoViews.PLANE_XY:
-      position = [
-        curGlobalPos[0] - diffX * planeRatio[0],
-        curGlobalPos[1] - diffY * planeRatio[1],
-        curGlobalPos[2],
-      ];
-      break;
-    case OrthoViews.PLANE_YZ:
-      position = [
-        curGlobalPos[0],
-        curGlobalPos[1] - diffY * planeRatio[1],
-        curGlobalPos[2] - diffX * planeRatio[2],
-      ];
-      break;
-    case OrthoViews.PLANE_XZ:
-      position = [
-        curGlobalPos[0] - diffX * planeRatio[0],
-        curGlobalPos[1],
-        curGlobalPos[2] - diffY * planeRatio[2],
-      ];
-      break;
-    default:
-      console.error(
-        `Trying to calculate the global position, but no viewport is active: ${activeViewport}`,
-      );
-      return [0, 0, 0];
-  }
-
-  return position;
-}
-
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
     tracing: state.tracing,
-    is2d: is2dDataset(state.dataset),
   };
 }
 

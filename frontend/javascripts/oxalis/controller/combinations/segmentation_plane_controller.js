@@ -1,7 +1,7 @@
 // @flow
 import type { Point2, Vector3 } from "oxalis/constants";
 import Model from "oxalis/model";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { getAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -13,7 +13,8 @@ import messages from "messages";
 import api from "oxalis/api/internal_api";
 
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
-  const globalPosition = calculateGlobalPos(clickPosition);
+  const state = Store.getState();
+  const globalPosition = calculateGlobalPos(state, clickPosition);
   loadAgglomerateSkeletonAtPosition(globalPosition);
 }
 

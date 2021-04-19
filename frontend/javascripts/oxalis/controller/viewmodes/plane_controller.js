@@ -8,7 +8,15 @@ import BackboneEvents from "backbone-events-standalone";
 import Clipboard from "clipboard-js";
 import * as React from "react";
 import _ from "lodash";
-
+import api from "oxalis/api/internal_api";
+import {
+  deleteActiveNodeAsUserAction,
+  createTreeAction,
+  createBranchPointAction,
+  requestDeleteBranchPointAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import { document } from "libs/window";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -22,6 +30,11 @@ import Store, { type OxalisState, type Tracing } from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import {
+  createCellAction,
+  cycleToolAction,
+  copySegmentationLayerAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   MoveTool,
   SkeletonTool,
@@ -70,6 +83,64 @@ type Props = {|
   ...StateProps,
   ...OwnProps,
 |};
+
+class SkeletonKeybindings {
+  static getKeyboardControls() {
+    return {
+      "1": () => Store.dispatch(toggleAllTreesAction()),
+      "2": () => Store.dispatch(toggleInactiveTreesAction()),
+
+      // Delete active node
+      delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
+      c: () => Store.dispatch(createTreeAction()),
+
+      e: () => SkeletonHandlers.moveAlongDirection(),
+      r: () => SkeletonHandlers.moveAlongDirection(true),
+
+      // Branches
+      b: () => Store.dispatch(createBranchPointAction()),
+      j: () => Store.dispatch(requestDeleteBranchPointAction()),
+
+      s: () => {
+        api.tracing.centerNode();
+        api.tracing.centerTDView();
+      },
+
+      // navigate nodes
+      "ctrl + ,": () => SkeletonHandlers.toPrecedingNode(),
+      "ctrl + .": () => SkeletonHandlers.toSubsequentNode(),
+    };
+  }
+
+  static getLoopedKeyboardControls() {
+    return {
+      "ctrl + left": () => SkeletonHandlers.moveNode(-1, 0),
+      "ctrl + right": () => SkeletonHandlers.moveNode(1, 0),
+      "ctrl + up": () => SkeletonHandlers.moveNode(0, -1),
+      "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
+    };
+  }
+}
+
+class VolumeKeybindings {
+  static getKeyboardControls() {
+    return {
+      c: () => Store.dispatch(createCellAction()),
+      w: () => {
+        Store.dispatch(cycleToolAction());
+      },
+      "1": () => {
+        Store.dispatch(cycleToolAction());
+      },
+      v: () => {
+        Store.dispatch(copySegmentationLayerAction());
+      },
+      "shift + v": () => {
+        Store.dispatch(copySegmentationLayerAction(true));
+      },
+    };
+  }
+}
 
 class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -284,12 +355,12 @@ class PlaneController extends React.PureComponent<Props> {
     const emptyDefaultHandler = { c: null, "1": null };
     const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
       this.props.tracing.skeleton != null
-        ? SkeletonHandlers.getKeyboardControls()
+        ? SkeletonKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
 
     const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
       this.props.tracing.volume != null
-        ? VolumeHandlers.getKeyboardControls()
+        ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
@@ -307,7 +378,9 @@ class PlaneController extends React.PureComponent<Props> {
   getLoopedKeyboardControls() {
     // Note that this code needs to be adapted in case the VolumeHandlers also starts to expose
     // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
-    return this.props.tracing.skeleton != null ? SkeletonHandlers.getLoopedKeyboardControls() : {};
+    return this.props.tracing.skeleton != null
+      ? SkeletonKeybindings.getLoopedKeyboardControls()
+      : {};
   }
 
   init(): void {

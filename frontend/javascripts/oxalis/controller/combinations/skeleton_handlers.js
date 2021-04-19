@@ -29,15 +29,11 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   setActiveNodeAction,
-  deleteActiveNodeAsUserAction,
   deleteEdgeAction,
   createTreeAction,
   createNodeAction,
   createBranchPointAction,
-  requestDeleteBranchPointAction,
   mergeTreesAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
   setNodePositionAction,
   updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
@@ -172,41 +168,6 @@ export function moveNode(dx: number, dy: number) {
   );
 }
 
-export function getKeyboardControls() {
-  return {
-    "1": () => Store.dispatch(toggleAllTreesAction()),
-    "2": () => Store.dispatch(toggleInactiveTreesAction()),
-
-    // Delete active node
-    delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
-    c: () => Store.dispatch(createTreeAction()),
-
-    e: () => moveAlongDirection(),
-    r: () => moveAlongDirection(true),
-
-    // Branches
-    b: () => Store.dispatch(createBranchPointAction()),
-    j: () => Store.dispatch(requestDeleteBranchPointAction()),
-
-    s: () => {
-      api.tracing.centerNode();
-      api.tracing.centerTDView();
-    },
-
-    // navigate nodes
-    "ctrl + ,": () => toPrecedingNode(),
-    "ctrl + .": () => toSubsequentNode(),
-  };
-}
-export function getLoopedKeyboardControls() {
-  return {
-    "ctrl + left": () => moveNode(-1, 0),
-    "ctrl + right": () => moveNode(1, 0),
-    "ctrl + up": () => moveNode(0, -1),
-    "ctrl + down": () => moveNode(0, 1),
-  };
-}
-
 export function openContextMenu(
   planeView: PlaneView,
   position: Point2,
@@ -301,7 +262,7 @@ function addNode(
   }
 }
 
-function moveAlongDirection(reverse: boolean = false): void {
+export function moveAlongDirection(reverse: boolean = false): void {
   const directionInverter = reverse ? -1 : 1;
   const { flycam } = Store.getState();
   const newPosition = V3.add(getPosition(flycam), V3.scale(flycam.direction, directionInverter));
@@ -368,7 +329,7 @@ function getPrecedingNodeFromTree(tree: Tree, node: Node, excludedId: ?number): 
   return prev;
 }
 
-function toSubsequentNode(): void {
+export function toSubsequentNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
   if (activeNodeId == null) return;
@@ -404,7 +365,7 @@ function toSubsequentNode(): void {
   }
 }
 
-function toPrecedingNode(): void {
+export function toPrecedingNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
 

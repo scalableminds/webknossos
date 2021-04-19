@@ -6,14 +6,11 @@
 import { ContourModeEnum, type OrthoView, type Point2 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
-  createCellAction,
   startEditingAction,
   floodFillAction,
   addToLayerAction,
   finishEditingAction,
   setContourTracingModeAction,
-  cycleToolAction,
-  copySegmentationLayerAction,
   inferSegmentationInViewportAction,
   setActiveCellAction,
   resetContourAction,
@@ -30,24 +27,6 @@ export function isAutomaticBrushEnabled() {
   return (
     window.isAutomaticBrushEnabled || Store.getState().temporaryConfiguration.isAutoBrushEnabled
   );
-}
-
-export function getKeyboardControls() {
-  return {
-    c: () => Store.dispatch(createCellAction()),
-    w: () => {
-      Store.dispatch(cycleToolAction());
-    },
-    "1": () => {
-      Store.dispatch(cycleToolAction());
-    },
-    v: () => {
-      Store.dispatch(copySegmentationLayerAction());
-    },
-    "shift + v": () => {
-      Store.dispatch(copySegmentationLayerAction(true));
-    },
-  };
 }
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {

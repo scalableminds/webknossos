@@ -24,13 +24,27 @@
       media="screen"
       href="/assets/bundle/vendors~dark~light.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
-    <link
-      id="primary-stylesheet"
-      rel="stylesheet"
-      type="text/css"
-      media="screen"
-      href="/assets/bundle/dark.css?nocache=@(webknossos.BuildInfo.commitHash)"
-    />
+    <script>
+      let initialTheme = "@(selectedTheme)";
+      if (initialTheme === "auto") {
+        initialTheme = 
+          window.matchMedia('(prefers-color-scheme: dark)').media !== "not all" && 
+          window.matchMedia('(prefers-color-scheme: dark)').matches ? 
+            "dark" : 
+            "light";
+      }
+      document.documentElement.style.display = 'none';
+      document.head.insertAdjacentHTML(
+        'beforeend',
+        '<link ' +
+          'id="primary-stylesheet" ' +
+          'rel="stylesheet" ' +
+          'type="text/css" ' +
+          'media="screen" ' +
+          'href="/assets/bundle/' + initialTheme + '.css?nocache=@(webknossos.BuildInfo.commitHash)" ' +
+          'onload="document.documentElement.style.display = \'\'" ' + 
+        '/>');
+    </script>
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"

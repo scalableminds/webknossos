@@ -13,10 +13,10 @@ import {
 import { type ModifierKeys } from "libs/input";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
-import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
+import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_plane_controller";
+import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_handlers";
 import {
   getContourTracingMode,
   enforceVolumeTracing,
@@ -55,9 +55,9 @@ export class MoveTool {
             if (isBrushActive) {
               // Different browsers send different deltas, this way the behavior is comparable
               if (delta > 0) {
-                volumeController.changeBrushSizeIfBrushIsActiveBy(1);
+                VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1);
               } else {
-                volumeController.changeBrushSizeIfBrushIsActiveBy(-1);
+                VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1);
               }
             } else if (tracing.skeleton) {
               // Different browsers send different deltas, this way the behavior is comparable
@@ -93,7 +93,7 @@ export class MoveTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ) {
     return (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      skeletonController.openContextMenu(
+      SkeletonHandlers.openContextMenu(
         planeView,
         pos,
         plane,
@@ -110,7 +110,7 @@ export class SkeletonTool {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
         const { tracing } = Store.getState();
         if (tracing.skeleton != null && event.ctrlKey) {
-          skeletonController.moveNode(delta.x, delta.y);
+          SkeletonHandlers.moveNode(delta.x, delta.y);
         } else {
           MoveHandlers.handleMovePlane(delta);
         }
@@ -124,7 +124,7 @@ export class SkeletonTool {
         }
 
         if (event.shiftKey) {
-          skeletonController.handleOpenContextMenu(
+          SkeletonHandlers.handleOpenContextMenu(
             planeView,
             position,
             plane,
@@ -133,7 +133,7 @@ export class SkeletonTool {
             showNodeContextMenuAt,
           );
         } else {
-          skeletonController.handleCreateNode(planeView, position, event.ctrlKey);
+          SkeletonHandlers.handleCreateNode(planeView, position, event.ctrlKey);
         }
       },
       middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -159,11 +159,11 @@ export class SkeletonTool {
     }
 
     if (altPressed) {
-      skeletonController.handleMergeTrees(planeView, position, plane, isTouch);
+      SkeletonHandlers.handleMergeTrees(planeView, position, plane, isTouch);
     } else if (ctrlPressed) {
-      skeletonController.handleDeleteEdge(planeView, position, plane, isTouch);
+      SkeletonHandlers.handleDeleteEdge(planeView, position, plane, isTouch);
     } else {
-      skeletonController.handleSelectNode(planeView, position, plane, isTouch);
+      SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
     }
   }
 }
@@ -177,7 +177,7 @@ export class DrawTool {
         const contourTracingMode = getContourTracingMode(volumeTracing);
 
         if (contourTracingMode === ContourModeEnum.DRAW) {
-          volumeController.handleDrawDeleteMove(pos);
+          VolumeHandlers.handleDrawDeleteMove(pos);
         }
       },
 
@@ -185,14 +185,14 @@ export class DrawTool {
         if (event.shiftKey) {
           return;
         }
-        if (event.ctrlKey && volumeController.isAutomaticBrushEnabled()) {
+        if (event.ctrlKey && VolumeHandlers.isAutomaticBrushEnabled()) {
           return;
         }
-        volumeController.handleDrawStart(pos, plane);
+        VolumeHandlers.handleDrawStart(pos, plane);
       },
 
       leftMouseUp: () => {
-        volumeController.handleDrawEraseEnd();
+        VolumeHandlers.handleDrawEraseEnd();
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
@@ -201,18 +201,18 @@ export class DrawTool {
         const contourTracingMode = getContourTracingMode(volumeTracing);
 
         if (contourTracingMode === ContourModeEnum.DELETE) {
-          volumeController.handleDrawDeleteMove(pos);
+          VolumeHandlers.handleDrawDeleteMove(pos);
         }
       },
 
       rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         if (!event.shiftKey) {
-          volumeController.handleEraseStart(pos, plane);
+          VolumeHandlers.handleEraseStart(pos, plane);
         }
       },
 
       rightMouseUp: () => {
-        volumeController.handleDrawEraseEnd();
+        VolumeHandlers.handleDrawEraseEnd();
       },
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -220,11 +220,11 @@ export class DrawTool {
         const shouldFillCell = event.shiftKey && event.ctrlKey;
 
         if (shouldPickCell) {
-          volumeController.handlePickCell(pos);
+          VolumeHandlers.handlePickCell(pos);
         } else if (shouldFillCell) {
-          volumeController.handleFloodFill(pos, plane);
+          VolumeHandlers.handleFloodFill(pos, plane);
         } else if (event.metaKey) {
-          volumeController.handleAutoBrush(pos);
+          VolumeHandlers.handleAutoBrush(pos);
         }
       },
 
@@ -245,7 +245,7 @@ export class PickCellTool {
   static getPlaneMouseControls(_planeId: OrthoView): * {
     return {
       leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        volumeController.handlePickCell(pos);
+        VolumeHandlers.handlePickCell(pos);
       },
     };
   }
@@ -256,14 +256,14 @@ export class FillCellTool {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         const shouldPickCell = event.shiftKey && !event.ctrlKey;
-        const shouldAutoBrush = event.metaKey && volumeController.isAutomaticBrushEnabled();
+        const shouldAutoBrush = event.metaKey && VolumeHandlers.isAutomaticBrushEnabled();
 
         if (shouldPickCell) {
-          volumeController.handlePickCell(pos);
+          VolumeHandlers.handlePickCell(pos);
         } else if (shouldAutoBrush) {
-          volumeController.handleAutoBrush(pos);
+          VolumeHandlers.handleAutoBrush(pos);
         } else {
-          volumeController.handleFloodFill(pos, plane);
+          VolumeHandlers.handleFloodFill(pos, plane);
         }
       },
     };

@@ -41,8 +41,8 @@ import constants, {
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
-import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
+import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
@@ -216,8 +216,8 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + d": (timeFactor, first) =>
           MoveHandlers.moveZ(-getMoveValue(timeFactor) * 5, first),
 
-        "shift + i": () => volumeController.changeBrushSizeIfBrushIsActiveBy(-1),
-        "shift + o": () => volumeController.changeBrushSizeIfBrushIsActiveBy(1),
+        "shift + i": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
+        "shift + o": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
 
         "shift + space": (timeFactor, first) =>
           MoveHandlers.moveZ(-getMoveValue(timeFactor), first),
@@ -284,12 +284,12 @@ class PlaneController extends React.PureComponent<Props> {
     const emptyDefaultHandler = { c: null, "1": null };
     const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
       this.props.tracing.skeleton != null
-        ? skeletonController.getKeyboardControls()
+        ? SkeletonHandlers.getKeyboardControls()
         : emptyDefaultHandler;
 
     const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
       this.props.tracing.volume != null
-        ? volumeController.getKeyboardControls()
+        ? VolumeHandlers.getKeyboardControls()
         : emptyDefaultHandler;
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
@@ -305,11 +305,9 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getLoopedKeyboardControls() {
-    // Note that this code needs to be adapted in case the volumeController also starts to expose
+    // Note that this code needs to be adapted in case the VolumeHandlers also starts to expose
     // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
-    return this.props.tracing.skeleton != null
-      ? skeletonController.getLoopedKeyboardControls()
-      : {};
+    return this.props.tracing.skeleton != null ? SkeletonHandlers.getLoopedKeyboardControls() : {};
   }
 
   init(): void {

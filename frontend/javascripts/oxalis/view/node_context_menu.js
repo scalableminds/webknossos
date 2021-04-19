@@ -15,7 +15,7 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setWaypoint } from "oxalis/controller/combinations/skeletontracing_plane_controller";
+import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import Clipboard from "clipboard-js";

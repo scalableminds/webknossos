@@ -32,7 +32,7 @@ import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import DataLayer from "oxalis/model/data_layer";
 import api from "oxalis/api/internal_api";
 import { AsyncButton } from "components/async_clickables";
-import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_plane_controller";
+import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
 
 const { Option, OptGroup } = Select;
 

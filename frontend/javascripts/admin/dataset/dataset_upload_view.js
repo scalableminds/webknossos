@@ -533,25 +533,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
               ]}
               valuePropName="fileList"
-              help={
-                this.state.needsConversion ? (
-                  <>
-                    The following file formats are supported: czi, dm3, dm4, jpg, nifti, png, raw,
-                    tif. <br />
-                    To ensure correct conversion, arrange the image files in a similar pattern to
-                    this example: <br />
-                    dataset/ <br />
-                    ├── layer_1 <br />
-                    │ ├── image_file_1 <br />
-                    │ ├── image_file_2 <br />
-                    │ └── ... <br />
-                    └── layer_2 <br />
-                    <br />
-                  </>
-                ) : (
-                  ""
-                )
-              }
             >
               <FileUploadArea
                 onChange={files => {
@@ -674,10 +655,27 @@ function FileUploadArea({ fileList, onChange }) {
         <InboxOutlined style={{ fontSize: 48, color: "#41a9ff" }} />
         <p style={{ maxWidth: 800, textAlign: "center", marginTop: 8 }}>
           Drag your file(s) to this area to upload them. Either add individual image files, a zip
-          archive or a folder. Alternatively, click to select your files via a file picker.{" "}
-          {features().jobsEnabled
-            ? "Your data is automatically converted to WKW after upload if necessary."
-            : null}
+          archive or a folder.{" "}
+          {features().jobsEnabled ? (
+            <>
+              <br />
+              <br />
+              The following file formats are supported: wkw, tif, png, raw, jpg, KNOSSOS, nifti,
+              czi, dm3 and dm4. <br />
+              If you have multiple image stacks and want to convert each stack to one layer, we
+              recommend a folder structure like this:
+              <br />
+              <pre className="dataset-import-folder-structure-hint">
+                dataset_name/ <br />
+                ├── layer_X <br />
+                │ ├── image_1.tif <br />
+                │ ├── image_2.tif <br />
+                │ └── ... <br />
+                ├── layer_Y <br />
+                │ └── ... <br />
+              </pre>
+            </>
+          ) : null}
         </p>
       </div>
 

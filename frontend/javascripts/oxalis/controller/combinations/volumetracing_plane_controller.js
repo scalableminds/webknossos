@@ -95,7 +95,10 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const tool = Store.getState().tracing.activeTool;
 
-      if (!event.shiftKey && (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)) {
+      if (
+        !event.shiftKey &&
+        (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)
+      ) {
         if (event.ctrlKey && isAutomaticBrushEnabled()) {
           return;
         }
@@ -129,7 +132,10 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const tool = Store.getState().tracing.activeTool;
 
-      if (!event.shiftKey && (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)) {
+      if (
+        !event.shiftKey &&
+        (tool === AnnotationToolEnum.TRACE || tool === AnnotationToolEnum.BRUSH)
+      ) {
         Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
         Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }
@@ -150,7 +156,8 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
       const shouldPickCell =
         tool === AnnotationToolEnum.PICK_CELL || (event.shiftKey && !event.ctrlKey);
 
-      const shouldFillCell = tool === AnnotationToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
+      const shouldFillCell =
+        tool === AnnotationToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
 
       if (shouldPickCell) {
         const segmentation = Model.getSegmentationLayer();

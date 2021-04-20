@@ -4,7 +4,12 @@ import "test/sagas/volumetracing_saga.mock.js";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
 
-import { OrthoViews, AnnotationToolEnum, ContourModeEnum, OverwriteModeEnum } from "oxalis/constants";
+import {
+  OrthoViews,
+  AnnotationToolEnum,
+  ContourModeEnum,
+  OverwriteModeEnum,
+} from "oxalis/constants";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";

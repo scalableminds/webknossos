@@ -34,7 +34,7 @@ test("setAnnotationTool should set the current tool", t => {
   t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.TRACE);
   api.tracing.setAnnotationTool(AnnotationToolEnum.BRUSH);
   t.is(api.tracing.getAnnotationTool(), AnnotationToolEnum.BRUSH);
-
+})
 
 test("setAnnotationTool should throw an error for an invalid tool", t => {
   const {api} = t.context;

@@ -21,7 +21,6 @@ import Constants, {
   ArbitraryViews,
   ArbitraryViewsToName,
 } from "oxalis/constants";
-
 import type {
   RowOrTabsetNode,
   RowNode,

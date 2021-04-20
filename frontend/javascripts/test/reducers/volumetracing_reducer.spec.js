@@ -7,6 +7,7 @@ import { AnnotationToolEnum } from "oxalis/constants";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import mockRequire from "mock-require";
 import test from "ava";
 import defaultState from "oxalis/default_state";
@@ -41,6 +42,7 @@ const initialState = update(defaultState, {
         allowFinish: true,
         allowAccess: true,
         allowDownload: true,
+        resolutionRestrictions: { min: null, max: null },
       },
     },
     volume: { $set: volumeTracing },
@@ -53,8 +55,24 @@ const initialState = update(defaultState, {
             // We need to have some resolutions. Otherwise,
             // getRequestLogZoomStep will always return 0
             resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
+            category: "segmentation",
+            name: "segmentation",
           },
         ],
+      },
+    },
+  },
+  datasetConfiguration: {
+    layers: {
+      segmentation: {
+        $set: {
+          color: [0, 0, 0],
+          alpha: 100,
+          intensityRange: [0, 255],
+          isDisabled: false,
+          isInverted: false,
+          isInEditMode: false,
+        },
       },
     },
   },
@@ -193,7 +211,7 @@ test("VolumeTracing should set trace/view tool", t => {
   const setToolAction = VolumeTracingActions.setToolAction(AnnotationToolEnum.TRACE);
 
   // Change tool to Trace
-  const newState = VolumeTracingReducer(initialState, setToolAction);
+  const newState = AnnotationReducer(initialState, setToolAction);
 
   t.not(newState, initialState);
   t.is(newState.tracing.activeTool, AnnotationToolEnum.TRACE);
@@ -210,7 +228,7 @@ test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(
   t.true(getRequestLogZoomStep(alteredState) > 1);
 
   // Try to change tool to Trace
-  const newState = VolumeTracingReducer(alteredState, setToolAction);
+  const newState = AnnotationReducer(alteredState, setToolAction);
 
   t.is(alteredState, newState);
 
@@ -222,25 +240,25 @@ test("VolumeTracing should cycle trace/view/brush tool", t => {
   const cycleToolAction = VolumeTracingActions.cycleToolAction();
 
   // Cycle tool to Brush
-  let newState = VolumeTracingReducer(initialState, cycleToolAction);
+  let newState = AnnotationReducer(initialState, cycleToolAction);
 
   t.is(newState.tracing.activeTool, AnnotationToolEnum.BRUSH);
 
   // Cycle tool to Trace
-  newState = VolumeTracingReducer(newState, cycleToolAction);
+  newState = AnnotationReducer(newState, cycleToolAction);
 
   t.is(newState.tracing.activeTool, AnnotationToolEnum.TRACE);
 
-  newState = VolumeTracingReducer(newState, cycleToolAction);
+  newState = AnnotationReducer(newState, cycleToolAction);
 
   t.is(newState.tracing.activeTool, AnnotationToolEnum.FILL_CELL);
 
-  newState = VolumeTracingReducer(newState, cycleToolAction);
+  newState = AnnotationReducer(newState, cycleToolAction);
 
   t.is(newState.tracing.activeTool, AnnotationToolEnum.PICK_CELL);
 
   // Cycle tool back to MOVE
-  newState = VolumeTracingReducer(newState, cycleToolAction);
+  newState = AnnotationReducer(newState, cycleToolAction);
 
   t.is(newState.tracing.activeTool, AnnotationToolEnum.MOVE);
 });

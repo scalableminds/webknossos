@@ -12,52 +12,52 @@ import test from "ava";
 test.beforeEach(t => __setupOxalis(t, "skeleton"));
 
 test("getActiveNodeId should get the active node id", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.is(api.tracing.getActiveNodeId(), 3);
 });
 
 test("setActiveNode should set the active node id", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   api.tracing.setActiveNode(1);
   t.is(api.tracing.getActiveNodeId(), 1);
 });
 
 test("getActiveTree should get the active tree id", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   api.tracing.setActiveNode(3);
   t.is(api.tracing.getActiveTreeId(), 2);
 });
 
 test("getActiveGroupId should get the active group id", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.is(api.tracing.getActiveGroupId(), null);
 });
 
 test("setActiveGroupId should set the active group id", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   api.tracing.setActiveGroup(3);
   t.is(api.tracing.getActiveGroupId(), 3);
 });
 
 test("getAllNodes should get a list of all nodes", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const nodes = api.tracing.getAllNodes();
   t.is(nodes.length, 3);
 });
 
 test("getCommentForNode should get the comment of a node", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const comment = api.tracing.getCommentForNode(3);
   t.is(comment, "Test");
 });
 
 test("getCommentForNode should throw an error if the supplied treeId doesn't exist", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.throws(() => api.tracing.getCommentForNode(3, 3));
 });
 
 test("setCommentForNode should set the comment of a node", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const COMMENT = "a comment";
   api.tracing.setCommentForNode(COMMENT, 2);
   const comment = api.tracing.getCommentForNode(2);
@@ -65,32 +65,32 @@ test("setCommentForNode should set the comment of a node", t => {
 });
 
 test("setCommentForNode should throw an error if the supplied nodeId doesn't exist", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.throws(() => api.tracing.setCommentForNode("another comment", 4));
 });
 
 test("getCameraPosition should return the current camera position", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const cameraPosition = api.tracing.getCameraPosition();
   t.deepEqual(cameraPosition, [1, 2, 3]);
 });
 
 test("setCameraPosition should set the current camera position", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   api.tracing.setCameraPosition([7, 8, 9]);
   const cameraPosition = api.tracing.getCameraPosition();
   t.deepEqual(cameraPosition, [7, 8, 9]);
 });
 
 test("Data Api: getLayerNames should get an array of all layer names", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.is(api.data.getLayerNames().length, 2);
   t.true(api.data.getLayerNames().includes("segmentation"));
   t.true(api.data.getLayerNames().includes("color"));
 });
 
 test("Data Api: setMapping should throw an error if the layer name is not valid", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.throws(() => api.data.setMapping("nonExistingLayer", [1, 3]));
 });
 
@@ -107,19 +107,19 @@ test("Data Api: setMapping should set a mapping of a layer", t => {
 });
 
 test("Data Api: getBoundingBox should throw an error if the layer name is not valid", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.throws(() => api.data.getBoundingBox("nonExistingLayer"));
 });
 
 test("Data Api: getBoundingBox should get the bounding box of a layer", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const correctBoundingBox = [[0, 0, 0], [1024, 1024, 1024]];
   const boundingBox = api.data.getBoundingBox("color");
   t.deepEqual(boundingBox, correctBoundingBox);
 });
 
 test("Data Api: getDataValue should throw an error if the layer name is not valid", async t => {
-  const api = t.context.api;
+  const { api } = t.context;
   await t.throwsAsync(() => api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
 });
 
@@ -145,21 +145,21 @@ test("Data Api: getDataValue should get the data value for a layer, position and
 });
 
 test("User Api: setConfiguration should set and get a user configuration value", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const MOVE_VALUE = 100;
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), MOVE_VALUE);
 });
 
 test("User Api: setConfiguration should clamp a user configuration value if it is outside of the valid range", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const MOVE_VALUE = 10;
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), userSettings.moveValue.minimum);
 });
 
 test.serial.cb("Utils Api: sleep should sleep", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   let bool = false;
   api.utils.sleep(200).then(() => {
     bool = true;
@@ -172,7 +172,7 @@ test.serial.cb("Utils Api: sleep should sleep", t => {
 });
 
 test("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
   sinon.spy(KeyboardJS, "bind");
   sinon.spy(KeyboardJS, "unbind");
@@ -183,7 +183,7 @@ test("Utils Api: registerKeyHandler should register a key handler and return a h
 });
 
 test("Utils Api: registerOverwrite should overwrite an existing function", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   let bool = false;
   api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
     bool = true;
@@ -197,30 +197,25 @@ test("Utils Api: registerOverwrite should overwrite an existing function", t => 
   t.is(api.tracing.getActiveNodeId(), 2);
 });
 
-test("Calling a volume api function in a skeleton tracing should throw an error", t => {
-  const api = t.context.api;
-  t.throws(() => api.tracing.getAnnotationTool());
-});
-
 test("getTreeName should get the name of a tree", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const name = api.tracing.getTreeName(2);
   t.is(name, "explorative_2017-08-09_SCM_Boy_002");
 });
 
 test("getTreeName should get the name of the active tree if no treeId is specified", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const name = api.tracing.getTreeName();
   t.is(name, "explorative_2017-08-09_SCM_Boy_001");
 });
 
 test("getTreeName should throw an error if the supplied treeId doesn't exist", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.throws(() => api.tracing.getTreeName(5));
 });
 
 test("setTreeName should set the name of a tree", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const NAME = "a tree";
   api.tracing.setTreeName(NAME, 2);
   const name = api.tracing.getTreeName(2);
@@ -228,7 +223,7 @@ test("setTreeName should set the name of a tree", t => {
 });
 
 test("setTreeName should set the name of the active tree if no treeId is specified", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   const NAME = "a tree";
   api.tracing.setTreeName(NAME);
   const name = api.tracing.getTreeName(1);
@@ -236,7 +231,7 @@ test("setTreeName should set the name of the active tree if no treeId is specifi
 });
 
 test.serial("getTreeGroups should get all tree groups and set a tree group", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   Store.dispatch(
     setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
   );
@@ -255,7 +250,7 @@ test.serial("getTreeGroups should get all tree groups and set a tree group", t =
 });
 
 test.serial("renameGroup should rename a tree group", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   Store.dispatch(
     setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
   );
@@ -265,7 +260,7 @@ test.serial("renameGroup should rename a tree group", t => {
 });
 
 test("setTreeGroup should set the visibility of a tree", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   api.tracing.setTreeVisibility(2, false);
   t.false(Store.getState().tracing.skeleton.trees[2].isVisible);
   api.tracing.setTreeVisibility(2, true);

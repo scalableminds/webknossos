@@ -35,6 +35,7 @@ const getExplanationForDisabledVolume = (
   return "Volume annotation is currently disabled.";
 };
 
+// eslint-disable-next-line import/prefer-default-export
 export function getDisabledInfoForTools(state: OxalisState) {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
@@ -121,5 +122,3 @@ export function getDisabledInfoForTools(state: OxalisState) {
     },
   };
 }
-
-export function dummy() {}

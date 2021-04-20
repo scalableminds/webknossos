@@ -162,7 +162,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
       const tools = Object.keys(AnnotationToolEnum);
       const currentToolIndex = tools.indexOf(state.tracing.activeTool);
-      let newTool;
 
       // Search for the next tool which is not disabled.
       for (
@@ -170,7 +169,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         newToolIndex < currentToolIndex + tools.length;
         newToolIndex++
       ) {
-        newTool = tools[newToolIndex % tools.length];
+        const newTool = tools[newToolIndex % tools.length];
         if (!disabledToolInfo[newTool].isDisabled) {
           return setToolReducer(hideBrushReducer(state), newTool);
         }

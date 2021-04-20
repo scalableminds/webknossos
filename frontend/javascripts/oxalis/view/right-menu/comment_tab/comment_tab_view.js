@@ -85,17 +85,13 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparato
       );
 }
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   skeletonTracing: ?SkeletonTracing,
   setActiveNode: (nodeId: number) => void,
   deleteComment: () => void,
   createComment: (text: string) => void,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 type PropsWithSkeleton = {| ...Props, skeletonTracing: SkeletonTracing |};
 
 type CommentTabState = {
@@ -505,7 +501,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(makeSkeletonTracingGuard(CommentTabView));

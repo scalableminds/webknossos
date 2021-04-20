@@ -138,17 +138,13 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   meshes: Array<MeshMetaData>,
   isImporting: boolean,
 |};
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
-type Props = {| ...OwnProps, ...DispatchProps, ...StateProps |};
+type Props = {| ...DispatchProps, ...StateProps |};
 
 const getCheckboxStyle = isLoaded =>
   isLoaded
@@ -410,7 +406,7 @@ class MeshesView extends React.Component<
   }
 }
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(MeshesView);

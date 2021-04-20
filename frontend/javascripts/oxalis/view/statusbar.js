@@ -84,6 +84,37 @@ class Statusbar extends React.PureComponent<Props, State> {
     );
   }
 
+  getLeftClickShortcut() {
+    const leftClickToLabel = {
+      MOVE: "Move",
+      SKELETON: "Move",
+      BRUSH: "Brush",
+      TRACE: "Trace",
+      FILL_CELL: "Fill Cell",
+      PICK_CELL: "Pick Cell",
+    };
+    return (
+      <span
+        style={{
+          marginLeft: "auto",
+        }}
+      >
+        <img
+          className="keyboard-mouse-icon"
+          src={
+            this.props.activeTool === AnnotationToolEnum.PICK_CELL ||
+            this.props.activeTool === AnnotationToolEnum.FILL_CELL
+              ? "/assets/images/icon-statusbar-mouse-left.svg"
+              : "/assets/images/icon-statusbar-mouse-left-drag.svg"
+          }
+          alt="Mouse Left Drag"
+          style={defaultIconStyle}
+        />
+        {leftClickToLabel[this.props.activeTool]}
+      </span>
+    );
+  }
+
   getRightClickShortcut() {
     const rightClickToLabel = {
       MOVE: "Context Menu",
@@ -157,25 +188,7 @@ class Statusbar extends React.PureComponent<Props, State> {
 
     return (
       <React.Fragment>
-        <span
-          style={{
-            marginLeft: "auto",
-            textTransform: "capitalize",
-          }}
-        >
-          <img
-            className="keyboard-mouse-icon"
-            src={
-              this.props.activeTool === AnnotationToolEnum.PICK_CELL ||
-              this.props.activeTool === AnnotationToolEnum.FILL_CELL
-                ? "/assets/images/icon-statusbar-mouse-left.svg"
-                : "/assets/images/icon-statusbar-mouse-left-drag.svg"
-            }
-            alt="Mouse Left Drag"
-            style={defaultIconStyle}
-          />
-          {this.props.activeTool.replace("_", " ").toLowerCase()}
-        </span>
+        {this.getLeftClickShortcut()}
         {this.getRightClickShortcut()}
         <span style={defaultShortcutStyle}>
           <img

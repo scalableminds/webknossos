@@ -12,27 +12,15 @@ import Constants, {
 } from "oxalis/constants";
 import { convertCellIdToCSS } from "oxalis/view/right-menu/mapping_info_view";
 import { document } from "libs/window";
-import {
-  enforceVolumeTracing,
-  isVolumeAnnotationDisallowedForZoom,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  isLayerVisible,
-  getRenderableResolutionForSegmentation,
-  getSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getRenderableResolutionForSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-
-const zoomInToUseToolMessage =
-  "Your zoom is too low to use this tool. Please zoom in further to use it.";
-
-const isZoomStepTooHighFor = tool => isVolumeAnnotationDisallowedForZoom(tool, Store.getState());
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 
 function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
@@ -182,110 +170,6 @@ const mapId = id => {
   return cube.mapId(id);
 };
 
-const getExplanationForDisabledVolume = (
-  isSegmentationActivated,
-  isInMergerMode,
-  isSegmentationVisibleForMag,
-  isZoomInvalidForTracing,
-) => {
-  if (!isSegmentationActivated) {
-    return "Volume annotation is disabled since the segmentation layer is invisible. Enable it in the settings sidebar.";
-  }
-  if (isZoomInvalidForTracing) {
-    return "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.";
-  }
-  if (isInMergerMode) {
-    return "Volume annotation is disabled while the merger mode is active.";
-  }
-  if (!isSegmentationVisibleForMag) {
-    return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
-  }
-  return "Volume annotation is currently disabled.";
-};
-
-function useDisabledInfoForTools(
-  isInMergerMode,
-  isZoomInvalidForTracing,
-  isSegmentationVisibleForMag,
-) {
-  const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
-  const isSegmentationActivated = useSelector(state => {
-    const segmentationLayer = getSegmentationLayer(state.dataset);
-    if (segmentationLayer == null) {
-      return false;
-    }
-    return isLayerVisible(
-      state.dataset,
-      segmentationLayer.name,
-      state.datasetConfiguration,
-      state.temporaryConfiguration.viewMode,
-    );
-  });
-
-  const genericDisabledExplanation = getExplanationForDisabledVolume(
-    isSegmentationActivated,
-    isInMergerMode,
-    isSegmentationVisibleForMag,
-    isZoomInvalidForTracing,
-  );
-
-  const disabledSkeletonExplanation =
-    "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
-
-  if (!isSegmentationActivated || !isSegmentationVisibleForMag || isInMergerMode) {
-    // All segmentation-related tools are disabled.
-    const disabledInfo = {
-      isDisabled: true,
-      explanation: genericDisabledExplanation,
-    };
-    return {
-      [AnnotationToolEnum.MOVE]: {
-        isDisabled: false,
-        explanation: "",
-      },
-      [AnnotationToolEnum.SKELETON]: {
-        isDisabled: !hasSkeleton,
-        explanation: disabledSkeletonExplanation,
-      },
-      [AnnotationToolEnum.BRUSH]: disabledInfo,
-      [AnnotationToolEnum.TRACE]: disabledInfo,
-      [AnnotationToolEnum.FILL_CELL]: disabledInfo,
-      [AnnotationToolEnum.PICK_CELL]: disabledInfo,
-    };
-  }
-
-  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(AnnotationToolEnum.BRUSH);
-  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(AnnotationToolEnum.TRACE);
-  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(AnnotationToolEnum.FILL_CELL);
-
-  return {
-    [AnnotationToolEnum.MOVE]: {
-      isDisabled: false,
-      explanation: "",
-    },
-    [AnnotationToolEnum.SKELETON]: {
-      isDisabled: !hasSkeleton,
-      explanation: disabledSkeletonExplanation,
-    },
-    [AnnotationToolEnum.BRUSH]: {
-      isDisabled: isZoomStepTooHighForBrushing,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationToolEnum.TRACE]: {
-      isDisabled: isZoomStepTooHighForTracing,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationToolEnum.FILL_CELL]: {
-      isDisabled: isZoomStepTooHighForFilling,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationToolEnum.PICK_CELL]: {
-      isDisabled: false,
-      explanation: genericDisabledExplanation,
-    },
-  };
-}
-
 function CreateCellButton() {
   const unmappedActiveCellId = useSelector(
     state => enforceVolumeTracing(state.tracing).activeCellId,
@@ -322,14 +206,10 @@ export default function ToolbarView() {
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
 
   const activeTool = useSelector(state => state.tracing.activeTool);
-  const isInMergerMode = useSelector(state => state.temporaryConfiguration.isMergerModeEnabled);
 
   const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentation);
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
-  const isSegmentationVisibleForMag = labeledResolution != null;
-
-  const isZoomInvalidForTracing = useSelector(isMagRestrictionViolated);
 
   const hasResolutionWithHigherDimension = (labeledResolution || []).some(val => val > 1);
 
@@ -339,11 +219,7 @@ export default function ToolbarView() {
     </Tooltip>
   ) : null;
 
-  const disabledInfosForTools = useDisabledInfoForTools(
-    isInMergerMode,
-    isZoomInvalidForTracing,
-    isSegmentationVisibleForMag,
-  );
+  const disabledInfosForTools = useSelector(getDisabledInfoForTools);
 
   // Ensure that no volume-tool is selected when being in merger mode.
   // Even though, the volume toolbar is disabled, the user can still cycle through

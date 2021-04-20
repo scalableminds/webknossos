@@ -125,9 +125,6 @@ class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(createCellAction()),
-      w: () => {
-        Store.dispatch(cycleToolAction());
-      },
       "1": () => {
         Store.dispatch(cycleToolAction());
       },
@@ -302,6 +299,10 @@ class PlaneController extends React.PureComponent<Props> {
 
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
+
+        w: () => {
+          Store.dispatch(cycleToolAction());
+        },
         ...loopedKeyboardControls,
       },
       { delay: Store.getState().userConfiguration.keyboardDelay },

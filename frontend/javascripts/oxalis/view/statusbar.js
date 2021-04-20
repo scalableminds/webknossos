@@ -14,6 +14,7 @@ import {
   VolumeToolEnum,
 } from "oxalis/constants";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
+import { isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import api from "oxalis/api/internal_api";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
@@ -28,6 +29,7 @@ type StateProps = {|
   mousePosition: ?Vector2,
   isSkeletonAnnotation: boolean,
   activeTool: ?VolumeTool,
+  isPlaneMode: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 type State = {||};
@@ -111,6 +113,51 @@ class Statusbar extends React.PureComponent<Props, State> {
   }
 
   getShortcuts() {
+    const moreShortcutsLink = (
+      <a
+        target="_blank"
+        href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+        rel="noopener noreferrer"
+        style={{ marginLeft: 10 }}
+      >
+        <Tooltip title="More Shortcuts">
+          <MoreOutlined rotate={90} style={{ height: 14, color: lineColor }} />
+        </Tooltip>
+      </a>
+    );
+    if (!this.props.isPlaneMode) {
+      return (
+        <React.Fragment>
+          <span
+            style={{
+              marginLeft: "auto",
+              textTransform: "capitalize",
+            }}
+          >
+            <img
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+              alt="Mouse Left Drag"
+              style={defaultIconStyle}
+            />
+            Move
+          </span>
+          <span key="zoom" style={defaultShortcutStyle}>
+            <span
+              key="zoom-i"
+              className="keyboard-key-icon-small"
+              style={{ borderColor: lineColor, marginTop: -1 }}
+            >
+              {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+              <span style={{ position: "relative", top: -2 }}>Space</span>
+            </span>{" "}
+            Trace forward
+          </span>
+          {moreShortcutsLink}
+        </React.Fragment>
+      );
+    }
+
     return (
       <React.Fragment>
         <span
@@ -152,16 +199,7 @@ class Statusbar extends React.PureComponent<Props, State> {
           Rotate 3D View
         </span>
         {this.getZoomShortcut()}
-        <a
-          target="_blank"
-          href="https://docs.webknossos.org/reference/keyboard_shortcuts"
-          rel="noopener noreferrer"
-          style={{ marginLeft: 10 }}
-        >
-          <Tooltip title="More Shortcuts">
-            <MoreOutlined rotate={90} style={{ height: 14, color: lineColor }} />
-          </Tooltip>
-        </a>
+        {moreShortcutsLink}
       </React.Fragment>
     );
   }
@@ -207,10 +245,12 @@ class Statusbar extends React.PureComponent<Props, State> {
           />{" "}
           {activeResolution.join("-")}{" "}
         </span>
-        <span style={{ minWidth: 140, ...defaultInfoStyle }}>
-          Pos [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
-        </span>
-        {this.getCellInfo(globalMousePosition)}
+        {this.props.isPlaneMode ? (
+          <span style={{ minWidth: 140, ...defaultInfoStyle }}>
+            Pos [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
+          </span>
+        ) : null}
+        {this.props.isPlaneMode ? this.getCellInfo(globalMousePosition) : null}
       </Space>
     );
   }
@@ -231,6 +271,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeViewport: state.viewModeData.plane.activeViewport,
   isSkeletonAnnotation: state.tracing.skeleton != null,
   activeTool: state.tracing.volume ? state.tracing.volume.activeTool : null,
+  isPlaneMode: isPlaneMode(state),
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Statusbar);

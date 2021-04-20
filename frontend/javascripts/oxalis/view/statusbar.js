@@ -45,7 +45,7 @@ const statusbarStyle: Object = {
   flexWrap: "wrap",
   overflow: "hidden",
 };
-const defaultIconStyle = { height: fontSize - 1, marginTop: 2 };
+const defaultIconStyle = { height: fontSize, marginTop: 2 };
 const defaultInfoStyle = { display: "inline-block", textAlign: "left" };
 const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
 
@@ -84,6 +84,32 @@ class Statusbar extends React.PureComponent<Props, State> {
     );
   }
 
+  getRightClickShortcut() {
+    const rightClickToLabel = {
+      MOVE: this.props.isSkeletonAnnotation ? "Place Node" : null,
+      BRUSH: "Erase",
+      TRACE: "Erase",
+      FILL_CELL: null,
+      PICK_CELL: null,
+    };
+    const label = this.props.activeTool
+      ? rightClickToLabel[this.props.activeTool]
+      : rightClickToLabel[VolumeToolEnum.MOVE];
+    return (
+      label && (
+        <span style={defaultShortcutStyle}>
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-right.svg"
+            alt="Mouse Left"
+            style={defaultIconStyle}
+          />
+          {label}
+        </span>
+      )
+    );
+  }
+
   getShortcuts() {
     return (
       <React.Fragment>
@@ -106,17 +132,7 @@ class Statusbar extends React.PureComponent<Props, State> {
           />
           {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
         </span>
-        {this.props.isSkeletonAnnotation && (
-          <span style={defaultShortcutStyle}>
-            <img
-              className="keyboard-mouse-icon"
-              src="/assets/images/icon-statusbar-mouse-right.svg"
-              alt="Mouse Left"
-              style={defaultIconStyle}
-            />
-            Place Node
-          </span>
-        )}
+        {this.getRightClickShortcut()}
         <span style={defaultShortcutStyle}>
           <img
             className="keyboard-mouse-icon"

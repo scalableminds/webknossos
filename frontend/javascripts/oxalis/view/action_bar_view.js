@@ -18,13 +18,12 @@ import {
   addNewLayout,
 } from "oxalis/view/layouting/layout_persistence";
 import { trackAction } from "oxalis/model/helpers/analytics";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import AuthenticationModal from "admin/auth/authentication_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
 import constants, { type ViewMode, type ControlMode, ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
-import Store, { type OxalisState } from "oxalis/store";
+import { type OxalisState } from "oxalis/store";
 import TracingActionsView, {
   LayoutMenu,
   type LayoutProps,
@@ -73,7 +72,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
   };
 
   handleResetLayout = () => {
-    Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
     layoutEmitter.emit(
       "resetLayout",
       this.props.layoutProps.layoutKey,

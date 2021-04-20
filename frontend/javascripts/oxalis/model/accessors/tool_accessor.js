@@ -21,7 +21,7 @@ const getExplanationForDisabledVolume = (
   isZoomInvalidForTracing,
 ) => {
   if (!isSegmentationActivated) {
-    return "Volume annotation is disabled since the segmentation layer is invisible. Enable it in the settings sidebar.";
+    return "Volume annotation is disabled since the segmentation layer is invisible. Enable it in the left settings sidebar.";
   }
   if (isZoomInvalidForTracing) {
     return "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.";

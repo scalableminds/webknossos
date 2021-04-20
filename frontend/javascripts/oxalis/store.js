@@ -295,7 +295,6 @@ export type UserConfiguration = {|
   +hideTreeRemovalWarning: boolean,
   +highlightCommentedNodes: boolean,
   +keyboardDelay: number,
-  +layoutScaleValue: number,
   +mouseRotateValue: number,
   +moveValue3d: number,
   +moveValue: number,
@@ -444,6 +443,11 @@ export type ViewModeData = {
   +arbitrary: ArbitraryModeData,
 };
 
+export type BorderOpenStatus = {
+  left: boolean,
+  right: boolean,
+};
+
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
@@ -452,6 +456,7 @@ type UiInformation = {
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
   +isRefreshingIsosurfaces: boolean,
+  +borderOpenStatus: BorderOpenStatus,
 };
 
 export type IsosurfaceInformation = {|

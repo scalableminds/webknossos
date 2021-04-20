@@ -31,12 +31,18 @@ export const Vector3Indicies = [0, 1, 2];
 export const Vector4Indicies = [0, 1, 2, 3];
 export const Vector5Indicies = [0, 1, 2, 3, 4];
 export const Vector6Indicies = [0, 1, 2, 3, 4, 5];
-
 export const OrthoViews = {
   PLANE_XY: "PLANE_XY",
   PLANE_YZ: "PLANE_YZ",
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
+};
+
+export const OrthoViewsToName = {
+  PLANE_XY: "XY",
+  PLANE_YZ: "YZ",
+  PLANE_XZ: "XZ",
+  TDView: "3D",
 };
 export type OrthoView = $Keys<typeof OrthoViews>;
 export type OrthoViewMap<T> = { [key: OrthoView]: T };
@@ -48,10 +54,16 @@ export const ArbitraryViews = {
   arbitraryViewport: "arbitraryViewport",
   TDView: "TDView",
 };
+
+export const ArbitraryViewsToName = {
+  arbitraryViewport: "Arbitrary View",
+  TDView: "3D",
+};
 export type ArbitraryView = $Keys<typeof ArbitraryViews>;
 export type ArbitraryViewMap<T> = { [key: ArbitraryView]: T };
 
 export type Viewport = OrthoView | typeof ArbitraryViewport;
+export const allViewports: Array<Viewport> = Object.keys(OrthoViews).concat([ArbitraryViewport]);
 
 export type ViewportMap<T> = { [key: Viewport]: T };
 export type ViewportExtents = $ReadOnly<ViewportMap<Vector2>>;
@@ -82,6 +94,26 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
   [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
   [OrthoViews.TDView]: [0x000000, 0x000000],
+};
+
+export const TracingTabs = {
+  DatasetInfoTabView: { id: "DatasetInfoTabView", name: "Info" },
+  TreesTabView: { id: "TreesTabView", name: "Trees" },
+  CommentTabView: { id: "CommentTabView", name: "Comments" },
+  MappingInfoView: { id: "MappingInfoView", name: "Volume" },
+  MeshesView: { id: "MeshesView", name: "Meshes" },
+  AbstractTreeTabView: {
+    id: "AbstractTreeTabView",
+    name: "Abstract Tree",
+  },
+};
+
+export const SettingsTabs = {
+  UserSettingsTab: {
+    id: "UserSettingsView",
+    name: "Annotation",
+  },
+  DatasetSettingsTab: { id: "DatasetSettingsView", name: "Dataset" },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;
@@ -151,6 +183,8 @@ export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoVi
 
 const Constants = {
   ARBITRARY_VIEW: 4,
+  DEFAULT_BORDER_WIDTH: 400,
+  DEFAULT_BORDER_WIDTH_IN_IFRAME: 200,
 
   MODE_PLANE_TRACING: "orthogonal",
   MODE_ARBITRARY: "flight",
@@ -183,7 +217,7 @@ const Constants = {
 
   DEFAULT_SPHERICAL_CAP_RADIUS: 140,
 
-  RESIZE_THROTTLE_TIME: 250,
+  RESIZE_THROTTLE_TIME: 50,
 
   MIN_TREE_ID: 1,
   MIN_NODE_ID: 1,

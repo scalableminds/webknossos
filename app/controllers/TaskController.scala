@@ -75,7 +75,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       project <- projectDAO
-        .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
+        .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       extractedFiles = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
                                                    useZipName = false,
@@ -132,12 +132,12 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def listTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
-      projectNameOpt = (request.body \ "project").asOpt[String]
+      projectIdOpt <- Fox.runOptional((request.body \ "project").asOpt[String])(ObjectId.parse)
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids =>
         Fox.serialCombined(ids)(ObjectId.parse))
       taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse)
       randomizeOpt = (request.body \ "random").asOpt[Boolean]
-      tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt,
+      tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectIdOpt,
                                                                 taskTypeIdOpt,
                                                                 taskIdsOpt,
                                                                 userIdOpt,

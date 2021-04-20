@@ -12,6 +12,7 @@ import constants, {
   OrthoViews,
   type Point2,
   type Vector3,
+  type ViewMode,
 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
@@ -137,6 +138,15 @@ export function calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector
   }
 
   return position;
+}
+
+export function getViewMode(state: OxalisState): ViewMode {
+  return state.temporaryConfiguration.viewMode;
+}
+
+export function isPlaneMode(state: OxalisState): boolean {
+  const viewMode = getViewMode(state);
+  return constants.MODES_PLANE.includes(viewMode);
 }
 
 export default {};

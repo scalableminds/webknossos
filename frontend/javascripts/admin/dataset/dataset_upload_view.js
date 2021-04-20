@@ -660,20 +660,22 @@ function FileUploadArea({ fileList, onChange }) {
             <>
               <br />
               <br />
-              The following file formats are supported: wkw, tif, png, raw, jpg, KNOSSOS, nifti,
-              czi, dm3 and dm4. <br />
-              If you have multiple image stacks and want to convert each stack to one layer, we
-              recommend a folder structure like this:
-              <br />
-              <pre className="dataset-import-folder-structure-hint">
-                dataset_name/ <br />
-                ├── layer_X <br />
-                │ ├── image_1.tif <br />
-                │ ├── image_2.tif <br />
-                │ └── ... <br />
-                ├── layer_Y <br />
-                │ └── ... <br />
-              </pre>
+              <div style={{ textAlign: "left", display: "inline-block" }}>
+                The following file formats are supported:
+                <ul>
+                  <li>
+                    <a href="https://docs.webknossos.org/reference/data_formats#wkw-datasets">
+                      WKW dataset
+                    </a>
+                  </li>
+                  <li>Image file sequence in one folder (tif, jpg, png, dm3, dm4)</li>
+                  <li>Single-file images (tif, czi, nifti, raw)</li>
+                  <li>KNOSSOS file hierarchy </li>
+                </ul>
+                Have a look at{" "}
+                <a href="https://docs.webknossos.org/reference/data_formats">our documentation</a>{" "}
+                to learn more.
+              </div>
             </>
           ) : null}
         </p>

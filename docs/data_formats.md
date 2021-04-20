@@ -1,6 +1,9 @@
 # Supported Data Formats
 
-webKnossos supports two data formats (WKW and KNOSSOS) for voxel datasets and NML for skeleton annotations.
+webKnossos uses the WKW format for voxel datasets and NML for skeleton annotations.
+If your image data isn't available as WKW, yet, you can either:
+- convert it automatically on webknossos.org or
+- manually convert it using [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber)
 
 ### Container format
 * [webknossos-wrap (WKW)](https://github.com/scalableminds/webknossos-wrap). Optimized format for large datasets of 3D voxel imagery. Supports compression, efficient cutouts, multi-channel and several base datatypes (e.g., `uint8`, `uint16`).

@@ -5605,6 +5605,11 @@ flatted@^2.0.0:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-2.0.2.tgz#4575b21e2bcee7434aa9be662f4b7b5f9c2b5138"
   integrity sha512-r5wGx7YeOwNWNlCA0wQ86zKyDLMQr+/RB8xy74M4hTphfmjlijTSSXGuH8rnvKZnfT9i+75zmd8jcKdMR4O6jA==
 
+flexlayout-react@^0.5.5:
+  version "0.5.5"
+  resolved "https://registry.yarnpkg.com/flexlayout-react/-/flexlayout-react-0.5.5.tgz#e96dbb61bd29868836aff5139d558fb13abf1287"
+  integrity sha512-y8fQQ1nfBdSmBELoD/nEplEIxRZfDtHT1Lg50M4iXkvlF9blnkQktmngiYR2tO/wr6fy2+2cV+tX0HXoeHY8cQ==
+
 flow-annotation-check@^1.8.1:
   version "1.11.4"
   resolved "https://registry.yarnpkg.com/flow-annotation-check/-/flow-annotation-check-1.11.4.tgz#8339db0667ec8a8e4230c5d0f68c5011dcfebdaf"
@@ -6108,13 +6113,6 @@ glsl-tokenizer@^2.0.2:
   integrity sha512-XSZEJ/i4dmz3Pmbnpsy3cKh7cotvFlBiZnDOwnj/05EwNp2XrhQ4XKJxT7/pDt4kp4YcpRSKz8eTV7S+mwV6MA==
   dependencies:
     through2 "^0.6.3"
-
-golden-layout@^1.5.9:
-  version "1.5.9"
-  resolved "https://registry.yarnpkg.com/golden-layout/-/golden-layout-1.5.9.tgz#a39bc1f6a67e6f886b797c016dd924e9426ba77f"
-  integrity sha1-o5vB9qZ+b4hreXwBbdkk6UJrp38=
-  dependencies:
-    jquery "*"
 
 got@^9.6.0:
   version "9.6.0"
@@ -7454,11 +7452,6 @@ jpeg-js@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/jpeg-js/-/jpeg-js-0.2.0.tgz#53e448ec9d263e683266467e9442d2c5a2ef5482"
   integrity sha1-U+RI7J0mPmgyZkZ+lELSxaLvVII=
-
-jquery@*:
-  version "3.5.1"
-  resolved "https://registry.yarnpkg.com/jquery/-/jquery-3.5.1.tgz#d7b4d08e1bfdb86ad2f1a3d039ea17304717abb5"
-  integrity sha512-XwIBPqcMn57FxfT+Go5pzySnm4KWkT1Tv7gjrpT1srtf8Weynl6R273VJ5GjkRb51IzMp5nbaPjJXMWeju2MKg==
 
 js-priority-queue@^0.1.5:
   version "0.1.5"

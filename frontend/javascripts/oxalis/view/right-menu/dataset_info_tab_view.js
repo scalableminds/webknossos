@@ -401,7 +401,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       ) : null;
 
     return (
-      <div className="flex-overflow padded-tab-content" style={{ padding: 8, paddingLeft: 20 }}>
+      <div className="flex-overflow padded-tab-content">
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
           {this.getTracingType(isDatasetViewMode)}

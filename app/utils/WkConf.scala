@@ -41,6 +41,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       object User {
         val email: String = get[String]("webKnossos.sampleOrganization.user.email")
         val password: String = get[String]("webKnossos.sampleOrganization.user.password")
+        val token: String = get[String]("webKnossos.sampleOrganization.user.token")
         val isSuperUser: Boolean = get[Boolean]("webKnossos.sampleOrganization.user.isSuperUser")
       }
       val children = List(User)
@@ -55,6 +56,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets: Boolean = get[Boolean]("features.allowDeleteDatasets")
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
+    val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
+    val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
   }
 
   object Datastore {
@@ -138,6 +141,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object SlackNotifications {
     val url: String = get[String]("slackNotifications.url")
+    val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
 
   object BackendAnalytics {

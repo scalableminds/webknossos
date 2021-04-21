@@ -27,10 +27,12 @@
 @import "flex_layout_overwrites.less";
 
 // ----------------------- MAIN STYLES
+@font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+  sans-serif;
+
 body {
-  font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
+  font-family: @font-family;
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
@@ -103,44 +105,28 @@ td.nowrap * {
 }
 
 #credits {
-  max-width: 600px;
-  img {
-    margin-right: 10px;
-    width: 25%;
-    max-width: 100px;
-  }
-}
-
-<<<<<<< HEAD
-=======
-#oxalis-header {
-  margin-bottom: 20px;
-  margin-top: 20px;
-  text-align: center;
-  height: 100px;
-  vertical-align: middle;
-  display: inline-block;
-  font-size: 80px;
-  line-height: normal;
-  color: #000;
-  margin-left: 30px;
-
-  img {
-    height: 100px;
-    width: 100px;
-  }
-
-  @media @smartphones {
-    font-size: 2rem;
-
+  background-color: @layout-footer-background;
+  & > div {
+    max-width: 600px;
     img {
-      height: 60px;
-      width: 60px;
+      margin-right: 10px;
+      width: 25%;
+      max-width: 100px;
     }
   }
 }
 
->>>>>>> origin/master
+.onboarding {
+  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 50px;
+
+  .onboarding-option-card-header {
+    color: @geekblue-8;
+  }
+}
+
 .centered-content {
   padding: 50px;
   width: 100%;

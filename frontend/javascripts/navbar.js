@@ -5,12 +5,11 @@ import {
   TeamOutlined,
   BarChartOutlined,
   HomeOutlined,
-  RocketOutlined,
-  TrophyOutlined,
   QuestionCircleOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
+import classnames from "classnames";
 import { connect } from "react-redux";
 import React from "react";
 
@@ -426,21 +425,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     );
   }
 
-  if (!_isAuthenticated && features().isDemoInstance && !Utils.getIsInIframe()) {
-    menuItems.push(
-      <Menu.Item key="features">
-        <Link to="/features" style={{ fontWeight: 400 }}>
-          <RocketOutlined /> Features
-        </Link>
-      </Menu.Item>,
-      <Menu.Item key="pricing">
-        <Link to="/pricing" style={{ fontWeight: 400 }}>
-          <TrophyOutlined /> Pricing
-        </Link>
-      </Menu.Item>,
-    );
-  }
-
   if (!(_isAuthenticated || hideNavbarLogin)) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
@@ -457,14 +441,13 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
-  const separator = (
-    <div
-      style={{ height: "100%", marginLeft: 2, marginRight: 10, borderLeft: "1px #666879 solid" }}
-    />
-  );
+  const separator = <div className="navbar-separator" />;
 
   return (
-    <Header style={navbarStyle} className={collapseAllNavItems ? "collapsed-nav-header" : ""}>
+    <Header
+      style={navbarStyle}
+      className={classnames("navbar-header", { "collapsed-nav-header": collapseAllNavItems })}
+    >
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}

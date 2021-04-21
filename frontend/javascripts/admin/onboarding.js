@@ -24,6 +24,7 @@ import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api"
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
+import CreditsFooter from "components/credits_footer";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import Toast from "libs/toast";
 import features from "features";
@@ -136,6 +137,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           {icon}
         </div>
         <h1
+          className="onboarding-option-card-header"
           style={{
             fontSize: 20,
             lineHeight: "22px",
@@ -527,33 +529,29 @@ class OnboardingView extends React.PureComponent<Props, State> {
     const currentStepContent = availableSteps[this.state.currentStep].component();
 
     return (
-      <div
-        style={{
-          minHeight: "calc(100vh - 48px)",
-          display: "flex",
-          flexDirection: "column",
-          paddingBottom: 50,
-        }}
-      >
-        <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
-          <Col span={18}>
-            <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
-              {availableSteps.map(({ title }) => (
-                <Step title={title} key={title} />
-              ))}
-            </Steps>
-          </Col>
-        </Row>
-        <div style={{ flex: "1 1 auto", display: "flex" }}>
-          <Row type="flex" justify="center" style={{ flex: "1 1 auto" }} align="middle">
+      <>
+        <div className="onboarding">
+          <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
             <Col span={18}>
-              <Row type="flex" justify="center" align="middle">
-                <Col span={24}>{currentStepContent}</Col>
-              </Row>
+              <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
+                {availableSteps.map(({ title }) => (
+                  <Step title={title} key={title} />
+                ))}
+              </Steps>
             </Col>
           </Row>
+          <div style={{ flex: "1 1 auto", display: "flex" }}>
+            <Row type="flex" justify="center" style={{ flex: "1 1 auto" }} align="middle">
+              <Col span={18}>
+                <Row type="flex" justify="center" align="middle">
+                  <Col span={24}>{currentStepContent}</Col>
+                </Row>
+              </Col>
+            </Row>
+          </div>
         </div>
-      </div>
+        <CreditsFooter />
+      </>
     );
   };
 }

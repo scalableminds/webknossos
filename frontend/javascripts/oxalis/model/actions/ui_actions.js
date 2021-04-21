@@ -1,5 +1,7 @@
 // @flow
 
+import { type BorderOpenStatus } from "oxalis/store";
+
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",
   visible: boolean,
@@ -13,6 +15,11 @@ type SetVersionRestoreVisibilityAction = {
 type SetStoredLayoutsAction = {
   type: "SET_STORED_LAYOUTS",
   storedLayouts: Object,
+};
+
+type SetBorderOpenStatusAction = {
+  type: "SET_BORDER_OPEN_STATUS",
+  borderOpenStatus: BorderOpenStatus,
 };
 
 type SetImportingMeshStateAction = {
@@ -34,6 +41,7 @@ export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
   | SetImportingMeshStateAction
+  | SetBorderOpenStatusAction
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
   | SetHasOrganizationsAction;
@@ -55,6 +63,13 @@ export const setVersionRestoreVisibilityAction = (
 export const setStoredLayoutsAction = (storedLayouts: Object): SetStoredLayoutsAction => ({
   type: "SET_STORED_LAYOUTS",
   storedLayouts,
+});
+
+export const setBorderOpenStatusAction = (
+  borderOpenStatus: BorderOpenStatus,
+): SetBorderOpenStatusAction => ({
+  type: "SET_BORDER_OPEN_STATUS",
+  borderOpenStatus,
 });
 
 export const setImportingMeshStateAction = (isImporting: boolean): SetImportingMeshStateAction => ({

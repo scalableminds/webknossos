@@ -24,15 +24,6 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-    // new HardSourceWebpackPlugin(),
-    // GoldenLayout requires these libraries to be available in
-    // the global scope
-    new webpack.ProvidePlugin({
-      React: "react",
-      ReactDOM: "react-dom",
-      $: "jquery",
-      jQuery: "jquery",
-    }),
     new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
       dot: true,
     }),
@@ -149,7 +140,7 @@ module.exports = function(env = {}) {
     devServer: {
       contentBase: `${__dirname}/public`,
       publicPath: "/assets/bundle/",
-      port: env.PORT ? env.PORT : 9002,
+      port: env.PORT != null ? env.PORT : 9002,
       hot: false,
       inline: false,
     },

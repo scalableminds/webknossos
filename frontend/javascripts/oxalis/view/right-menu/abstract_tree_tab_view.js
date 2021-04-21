@@ -15,15 +15,11 @@ import AbstractTreeRenderer, {
 } from "oxalis/view/right-menu/abstract_tree_renderer";
 import window from "libs/window";
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   dispatch: Dispatch<*>,
   skeletonTracing: ?SkeletonTracing,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 type State = {
   visible: boolean,
@@ -116,4 +112,4 @@ function mapStateToProps(state: OxalisState): $Shape<Props> {
   return { skeletonTracing: state.tracing.skeleton };
 }
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(AbstractTreeView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(AbstractTreeView);

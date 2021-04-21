@@ -8,10 +8,9 @@ import Messages from "messages";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
-const TextArea = Input.TextArea;
+const { TextArea } = Input;
 
 type Props = {
-  form: Object,
   onAdded: () => void,
 };
 
@@ -21,8 +20,10 @@ export type ForeignDataSetSpecification = {
   +dataSetName: string,
 };
 
-class DatasetAddForeignView extends React.PureComponent<Props> {
-  isValidDataSet(specification: ForeignDataSetSpecification): boolean {
+function DatasetAddForeignView({ onAdded }: Props) {
+  const [form] = Form.useForm();
+
+  function isValidDataSet(specification: ForeignDataSetSpecification): boolean {
     if (
       !_.isString(specification.dataStoreName) ||
       !_.isString(specification.url) ||
@@ -35,15 +36,15 @@ class DatasetAddForeignView extends React.PureComponent<Props> {
     return true;
   }
 
-  splitToWords(string: string): Array<string> {
+  function splitToWords(string: string): Array<string> {
     return string
       .split(",")
       .map(word => word.trim())
       .filter(word => word !== "");
   }
 
-  parseLine(specification: string): ForeignDataSetSpecification {
-    const words = this.splitToWords(specification);
+  function parseLine(specification: string): ForeignDataSetSpecification {
+    const words = splitToWords(specification);
     const dataStoreName = words[0];
     const url = words[1];
     const dataSetName = words[2];
@@ -55,72 +56,64 @@ class DatasetAddForeignView extends React.PureComponent<Props> {
     };
   }
 
-  handleSubmit = async e => {
-    e.preventDefault();
+  const handleSubmit = async formValues => {
+    const specification = parseLine(formValues.foreignDatasetText);
 
-    const formValues = this.props.form.getFieldsValue();
-    const specification = this.parseLine(formValues.foreignDatasetText);
-
-    if (this.isValidDataSet(specification)) {
+    if (isValidDataSet(specification)) {
       await addForeignDataSet(
         specification.dataStoreName,
         specification.url,
         specification.dataSetName,
       );
-      this.props.onAdded();
+      onAdded();
     } else {
       Toast.error(`${Messages["dataset.import.invalid_fields"]}`);
     }
   };
 
-  render() {
-    const { getFieldDecorator } = this.props.form;
+  return (
+    <div className="container" style={{ paddingTop: 20 }}>
+      <Card title={<h3>Add Dataset</h3>} bordered={false}>
+        <p>
+          Specify the Dataset in the following format:
+          <br />
+          dataStoreName, url, dataSetName
+        </p>
+        <Form onFinish={handleSubmit} layout="vertical" form={form}>
+          <FormItem
+            name="foreignDatasetText"
+            label="Add Foreign Dataset Specification"
+            hasFeedback
+            rules={[
+              {
+                validator: (rule, value) => {
+                  const dataSet = parseLine(form.getFieldsValue().foreignDatasetText);
 
-    return (
-      <div className="container" style={{ paddingTop: 20 }}>
-        <Card title={<h3>Add Dataset</h3>} bordered={false}>
-          <p>
-            Specify the Dataset in the following format:
-            <br />
-            dataStoreName, url, dataSetName
-          </p>
-          <Form onSubmit={this.handleSubmit} layout="vertical">
-            <FormItem label="Add Foreign Dataset Specification" hasFeedback>
-              {getFieldDecorator("foreignDatasetText", {
-                rules: [
-                  {
-                    validator: (rule, value, callback) => {
-                      const dataSet = this.parseLine(
-                        this.props.form.getFieldsValue().foreignDatasetText,
-                      );
-
-                      return _.isString(value) && this.isValidDataSet(dataSet)
-                        ? callback()
-                        : callback(`${Messages["dataset.import.invalid_fields"]}`);
-                    },
-                  },
-                ],
-              })(
-                <TextArea
-                  className="input-monospace"
-                  placeholder="dataStoreName, url, dataSetName"
-                  autoSize={{ minRows: 1 }}
-                  style={{
-                    fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-                  }}
-                />,
-              )}
-            </FormItem>
-            <FormItem>
-              <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
-                Add Dataset
-              </Button>
-            </FormItem>
-          </Form>
-        </Card>
-      </div>
-    );
-  }
+                  return _.isString(value) && isValidDataSet(dataSet)
+                    ? Promise.resolve()
+                    : Promise.reject(new Error(`${Messages["dataset.import.invalid_fields"]}`));
+                },
+              },
+            ]}
+          >
+            <TextArea
+              className="input-monospace"
+              placeholder="dataStoreName, url, dataSetName"
+              autoSize={{ minRows: 1 }}
+              style={{
+                fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+              }}
+            />
+          </FormItem>
+          <FormItem>
+            <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
+              Add Dataset
+            </Button>
+          </FormItem>
+        </Form>
+      </Card>
+    </div>
+  );
 }
 
-export default Form.create()(DatasetAddForeignView);
+export default DatasetAddForeignView;

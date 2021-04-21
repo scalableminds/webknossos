@@ -1,5 +1,15 @@
 // @flow
-import { Avatar, Icon, Layout, Menu, Popover } from "antd";
+import { Avatar, Layout, Menu, Popover } from "antd";
+import {
+  SwapOutlined,
+  TeamOutlined,
+  BarChartOutlined,
+  HomeOutlined,
+  RocketOutlined,
+  TrophyOutlined,
+  QuestionCircleOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
@@ -54,7 +64,7 @@ function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "flex" }}>
       <Avatar
         className="hover-effect-via-opacity"
         style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
@@ -62,7 +72,7 @@ function UserInitials({ activeUser, isMultiMember }) {
         {initialOf(firstName) + initialOf(lastName)}
       </Avatar>
       {isMultiMember ? (
-        <Icon
+        <SwapOutlined
           style={{
             position: "absolute",
             top: 2,
@@ -74,7 +84,6 @@ function UserInitials({ activeUser, isMultiMember }) {
             fontSize: 12,
             color: "#75df4a",
           }}
-          type="swap"
           title="You are member of multiple organizations. Click the avatar to switch between them."
         />
       ) : null}
@@ -101,11 +110,7 @@ function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }
       className={collapse ? "hide-on-small-screen" : ""}
       key="adminMenu"
       title={
-        <CollapsibleMenuTitle
-          title="Administration"
-          icon={<Icon type="team" />}
-          collapse={collapse}
-        />
+        <CollapsibleMenuTitle title="Administration" icon={<TeamOutlined />} collapse={collapse} />
       }
       {...menuProps}
     >
@@ -147,11 +152,7 @@ function StatisticsSubMenu({ collapse, ...menuProps }) {
       className={collapse ? "hide-on-small-screen" : ""}
       key="statisticMenu"
       title={
-        <CollapsibleMenuTitle
-          title="Statistics"
-          icon={<Icon type="bar-chart" />}
-          collapse={collapse}
-        />
+        <CollapsibleMenuTitle title="Statistics" icon={<BarChartOutlined />} collapse={collapse} />
       }
       {...menuProps}
     >
@@ -177,7 +178,7 @@ function getTimeTrackingMenu({ collapse }) {
       <Link to="/reports/timetracking" style={{ fontWeight: 400 }}>
         <CollapsibleMenuTitle
           title="Time Tracking"
-          icon={<Icon type="bar-chart" />}
+          icon={<BarChartOutlined />}
           collapse={collapse}
         />
       </Link>
@@ -189,11 +190,7 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
   return (
     <SubMenu
       title={
-        <CollapsibleMenuTitle
-          title="Help"
-          icon={<Icon type="question-circle" />}
-          collapse={collapse}
-        />
+        <CollapsibleMenuTitle title="Help" icon={<QuestionCircleOutlined />} collapse={collapse} />
       }
       {...other}
     >
@@ -251,9 +248,7 @@ function DashboardSubMenu({ collapse, ...other }) {
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
       key="dashboardMenu"
-      title={
-        <CollapsibleMenuTitle title="Dashboard" icon={<Icon type="home" />} collapse={collapse} />
-      }
+      title={<CollapsibleMenuTitle title="Dashboard" icon={<HomeOutlined />} collapse={collapse} />}
       {...other}
     >
       <Menu.Item key="/dashboard/datasets">
@@ -339,7 +334,11 @@ function AnonymousAvatar() {
       trigger="click"
       style={{ position: "fixed" }}
     >
-      <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
+      <Avatar
+        className="hover-effect-via-opacity"
+        icon={<UserOutlined />}
+        style={{ marginLeft: 8 }}
+      />
     </Popover>
   );
 }
@@ -366,14 +365,11 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const navbarStyle: Object = {
     padding: 0,
     overflowX: "auto",
+    overflowY: "hidden",
     position: "fixed",
-    width: "100%",
-    zIndex: 1000,
     height: navbarHeight,
     display: "flex",
     alignItems: "center",
-    color: "rgba(255, 255, 255, 0.67)",
-    background: "#001529",
     whiteSpace: "nowrap",
   };
 
@@ -421,12 +417,12 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     menuItems.push(
       <Menu.Item key="features">
         <Link to="/features" style={{ fontWeight: 400 }}>
-          <Icon type="rocket" /> Features
+          <RocketOutlined /> Features
         </Link>
       </Menu.Item>,
       <Menu.Item key="pricing">
         <Link to="/pricing" style={{ fontWeight: 400 }}>
-          <Icon type="trophy" /> Pricing
+          <TrophyOutlined /> Pricing
         </Link>
       </Menu.Item>,
     );

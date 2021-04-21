@@ -6,8 +6,6 @@ import * as React from "react";
 import type { ExperienceDomainList } from "types/api_flow_types";
 import { getExistingExperienceDomains } from "admin/admin_rest_api";
 
-const { Option } = Select;
-
 type Props = {
   value?: string | Array<string>,
   width: number,
@@ -87,7 +85,7 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
         onSearch={this.onSearch}
       >
         {options.map(domain => (
-          <Option key={domain}>{domain}</Option>
+          <Select.Option key={domain}>{domain}</Select.Option>
         ))}
       </Select>
     );

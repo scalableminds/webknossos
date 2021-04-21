@@ -1,7 +1,7 @@
 /*
  * This file defines:
- *  - the main panes which can be arranged in WK Core
- *  - the different layout types which specify which panes exist in which layout and what their default arrangement is
+ *  - the main tabs which can be arranged in WK Core
+ *  - the different layout types which specify which tabs exist in which layout and what their default arrangement is
  *  - a `determineLayout` function which decides which layout type has to be chosen
  */
 
@@ -10,65 +10,39 @@ import _ from "lodash";
 
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
-import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
-
-import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
+import Constants, {
+  type ControlMode,
+  ControlModeEnum,
+  type ViewMode,
+  OrthoViews,
+  OrthoViewsToName,
+  TracingTabs,
+  SettingsTabs,
+  ArbitraryViews,
+  ArbitraryViewsToName,
+} from "oxalis/constants";
+import type {
+  RowOrTabsetNode,
+  RowNode,
+  TabsetNode,
+  TabNode,
+  GlobalConfig,
+  Border,
+  ModelConfig,
+} from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 8;
-export const layoutHeaderHeight = 20;
+export const currentLayoutVersion = 12;
+const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
-
-const LayoutSettings = {
-  showPopoutIcon: false,
-  showCloseIcon: false,
-  showMaximiseIcon: true,
-};
-
-// While the first parameter to `Pane` is the title of the pane, the second one is an id
-// which is used to match the children provided to GoldenLayoutAdapter (in tracing_layout_view)
-// with the panes in the layout config.
-const Panes = {
-  xy: Pane("XY", "xy"),
-  xz: Pane("XZ", "xz"),
-  yz: Pane("YZ", "yz"),
-  td: Pane("3D", "td"),
-  DatasetInfoTabView: Pane("Info", "DatasetInfoTabView"),
-  TreesTabView: Pane("Trees", "TreesTabView"),
-  CommentTabView: Pane("Comments", "CommentTabView"),
-  AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
-  arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
-  Mappings: Pane("Segmentation", "MappingInfoView"),
-  Meshes: Pane("Meshes", "MeshesView"),
-};
-
-function setGlContainerWidth(container: Object, width: number) {
-  container.width = width;
-  return container;
-}
-
-const createLayout = (...content: Array<*>) => ({
-  settings: LayoutSettings,
-  dimensions: {
-    headerHeight: layoutHeaderHeight,
-    borderWidth: 1,
-  },
-  content,
-});
-
-const SkeletonRightHandColumnItems = [
-  Panes.DatasetInfoTabView,
-  Panes.TreesTabView,
-  Panes.CommentTabView,
-  Panes.AbstractTreeTabView,
-  Panes.Mappings,
-  Panes.Meshes,
-];
-const SkeletonRightHandColumn = Stack(...SkeletonRightHandColumnItems);
-
-const NonSkeletonRightHandColumnItems = [Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes];
-const NonSkeletonRightHandColumn = Stack(...NonSkeletonRightHandColumnItems);
+export const defaultSplitterSize = 1;
+// The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
+// The borderBar is (vertical) bar the the borders of the screen that contains a button for each tab of in the border to toggle.
+// As we want a flexible layout in the border, we use only on tab containing a sub-layout that is more flexible.
+// Additionally, we want to avoid the borderBar. As the borderBars width will be automatically calculated
+// when it is set to 0, we use a value near value to make it almost not visible.
+export const borderBarSize = 1;
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
@@ -93,66 +67,218 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
+function Tab(name: string, id: string, component: string): TabNode {
+  return {
+    type: "tab",
+    name,
+    component,
+    id,
+  };
+}
+
+function Tabset(
+  children: Array<TabNode>,
+  weight?: number,
+  defaultSelectedIndex?: number,
+): TabsetNode {
+  weight = weight != null ? weight : 100;
+  return {
+    type: "tabset",
+    weight,
+    selected: defaultSelectedIndex || 0,
+    children,
+  };
+}
+
+function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
+  weight = weight != null ? weight : 100;
+  return {
+    type: "row",
+    weight,
+    children,
+  };
+}
+
+const infoTabs = {};
+// Flow does not understand that the values must have a name and an id.
+Object.entries(TracingTabs).forEach(([tabKey, { name, id }]: any) => {
+  infoTabs[tabKey] = Tab(name, id, "right-border-tab");
+});
+
+const settingsTabs = {};
+Object.entries(SettingsTabs).forEach(([tabKey, { name, id }]: any) => {
+  settingsTabs[tabKey] = Tab(name, id, "settings-tab");
+});
+
+const OrthoViewports = {};
+Object.keys(OrthoViews).forEach(viewportId => {
+  const name = OrthoViewsToName[viewportId];
+  OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
+});
+
+const ArbitraryViewports = {};
+Object.keys(ArbitraryViews).forEach(viewportId => {
+  const name = ArbitraryViewsToName[viewportId];
+  ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
+});
+
+const globalLayoutSettings: GlobalConfig = {
+  splitterSize: defaultSplitterSize,
+  tabEnableRename: false,
+  tabEnableClose: false,
+  tabSetHeaderHeight: layoutHeaderHeight,
+  tabSetTabStripHeight: layoutHeaderHeight,
+};
+
+const additionalHeaderHeightForBorderTabSets = 6;
+
+const subLayoutGlobalSettings: GlobalConfig = {
+  ...globalLayoutSettings,
+  tabSetEnableDivide: false,
+  tabSetHeaderHeight: layoutHeaderHeight + additionalHeaderHeightForBorderTabSets,
+  tabSetTabStripHeight: layoutHeaderHeight + additionalHeaderHeightForBorderTabSets,
+};
+
+function buildTabsets(
+  setsOfTabs: Array<Array<TabNode>>,
+  defaultSelectedIndex?: number,
+): Array<TabsetNode> {
+  const tabsetWeight = 100 / setsOfTabs.length;
+  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight, defaultSelectedIndex));
+  return tabsets;
+}
+
+function buildBorder(
+  side,
+  setsOfTabs: Array<Array<TabNode>>,
+  width: number,
+  isBorderOpen: boolean,
+  defaultSelectedIndex?: number,
+): Border {
+  const tabsets = buildTabsets(setsOfTabs, defaultSelectedIndex);
+  const border: Border = {
+    type: "border",
+    location: side,
+    id: `${side}-border`,
+    barSize: borderBarSize,
+    size: width,
+    children: [
+      {
+        type: "tab",
+        name: "container",
+        id: `${side}-border-tab-container`,
+        component: "sub",
+        config: {
+          model: {
+            global: subLayoutGlobalSettings,
+            layout: Row([Row(tabsets)]),
+            borders: [],
+          },
+        },
+      },
+    ],
+  };
+  if (isBorderOpen) {
+    border.selected = 0;
+  }
+  return border;
+}
+
+function buildMainLayout(rowsOfSetOfTabs: Array<Array<Array<TabNode>>>): RowNode {
+  const rowWeight = 100 / rowsOfSetOfTabs.length;
+  const rows = rowsOfSetOfTabs.map(setsOfTabs => {
+    const tabsets = buildTabsets(setsOfTabs);
+    return Row(tabsets, rowWeight);
+  });
+  const mainLayout = Row(rows);
+  return mainLayout;
+}
+
+function buildLayout(settings, borders, mainLayout): ModelConfig {
+  return {
+    global: settings,
+    borders,
+    layout: mainLayout,
+  };
+}
+
+// As long as the content of the left border is not responsive, this border needs a fixed width.
+// As soon as the content is responsive the normal DEFAULT_BORDER_WIDTH should be used.
+const leftBorderWidth = 365;
+
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
-  const defaultViewportWidthInPercent = 33;
-  const defaultViewport2dWidthInPercent = 66;
-
-  let OrthoLayout;
-  let OrthoLayoutView;
-  let VolumeTracingView;
-  let OrthoLayout2d;
-  let OrthoLayoutView2d;
-  let VolumeTracingView2d;
-
-  if (isInIframe) {
-    const getGridWithExtraTabs = tabs => [
-      Column(Panes.xy, Panes.xz),
-      Column(Panes.yz, Stack(Panes.td, ...tabs)),
-    ];
-    const getGridWithExtraTabs2d = tabs => [
-      Column(Panes.xy, Stack(Panes.xz, Panes.yz, Panes.td, ...tabs)),
-    ];
-
-    OrthoLayout = createLayout(Row(...getGridWithExtraTabs(SkeletonRightHandColumnItems)));
-    OrthoLayoutView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
-    VolumeTracingView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
-    OrthoLayout2d = createLayout(Row(...getGridWithExtraTabs2d(SkeletonRightHandColumnItems)));
-    OrthoLayoutView2d = createLayout(
-      Row(...getGridWithExtraTabs2d(NonSkeletonRightHandColumnItems)),
-    );
-    VolumeTracingView2d = createLayout(
-      Row(...getGridWithExtraTabs2d(NonSkeletonRightHandColumnItems)),
-    );
-  } else {
-    const OrthoViewsGrid = [
-      setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
-      setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
-    ];
-    const OrthoViewsGrid2d = [
-      setGlContainerWidth(
-        Column(Stack(Panes.xy, Panes.xz, Panes.yz, Panes.td)),
-        defaultViewport2dWidthInPercent,
-      ),
-    ];
-
-    OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-    OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-    VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-    OrthoLayout2d = createLayout(Row(...OrthoViewsGrid2d, SkeletonRightHandColumn));
-    OrthoLayoutView2d = createLayout(Row(...OrthoViewsGrid2d, NonSkeletonRightHandColumn));
-    VolumeTracingView2d = createLayout(Row(...OrthoViewsGrid2d, NonSkeletonRightHandColumn));
-  }
-
-  const eventual3DViewportForArbitrary = show3DViewportInArbitrary ? [Panes.td] : [];
-  const arbitraryPanes = [Panes.arbitraryViewport, NonSkeletonRightHandColumn].concat(
-    eventual3DViewportForArbitrary,
+  const defaultBorderWidth = isInIframe
+    ? Constants.DEFAULT_BORDER_WIDTH_IN_IFRAME
+    : Constants.DEFAULT_BORDER_WIDTH;
+  const borderIsOpenByDefault = !isInIframe;
+  const leftBorder = buildBorder(
+    "left",
+    [((Object.values(settingsTabs): any): Array<TabNode>)],
+    leftBorderWidth,
+    borderIsOpenByDefault,
+    1,
   );
-  const ArbitraryLayoutView = createLayout(Row(...arbitraryPanes));
-  const arbitraryPanesWithSkeleton = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
-    eventual3DViewportForArbitrary,
+  const rightBorderWithSkeleton = buildBorder(
+    "right",
+    [
+      [infoTabs.DatasetInfoTabView, infoTabs.TreesTabView, infoTabs.CommentTabView],
+      [infoTabs.MappingInfoView, infoTabs.MeshesView, infoTabs.AbstractTreeTabView],
+    ],
+    defaultBorderWidth,
+    borderIsOpenByDefault,
   );
-  const ArbitraryLayout = createLayout(Row(...arbitraryPanesWithSkeleton));
+  const rightBorderWithoutSkeleton = buildBorder(
+    "right",
+    [[infoTabs.DatasetInfoTabView, infoTabs.MappingInfoView, infoTabs.MeshesView]],
+    defaultBorderWidth,
+    borderIsOpenByDefault,
+  );
+  const OrthoMainLayout = buildMainLayout([
+    [[OrthoViewports.PLANE_XY], [OrthoViewports.PLANE_XZ]],
+    [[OrthoViewports.PLANE_YZ], [OrthoViewports.TDView]],
+  ]);
+  const OrthoMainLayout2d = buildMainLayout([
+    [
+      [
+        OrthoViewports.PLANE_XY,
+        OrthoViewports.PLANE_YZ,
+        OrthoViewports.PLANE_XZ,
+        OrthoViewports.TDView,
+      ],
+    ],
+  ]);
+
+  const buildOrthoLayout = (withSkeleton: boolean, is2D: boolean) =>
+    buildLayout(
+      globalLayoutSettings,
+      [leftBorder, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
+      is2D ? OrthoMainLayout2d : OrthoMainLayout,
+    );
+
+  const OrthoLayout = buildOrthoLayout(true, false);
+  const OrthoLayoutView = buildOrthoLayout(false, false);
+  const VolumeTracingView = buildOrthoLayout(false, false);
+  const OrthoLayout2d = buildOrthoLayout(true, true);
+  const OrthoLayoutView2d = buildOrthoLayout(false, true);
+  const VolumeTracingView2d = buildOrthoLayout(false, true);
+
+  const eventual3DViewportForArbitrary = show3DViewportInArbitrary
+    ? [[[OrthoViewports.TDView]]]
+    : [];
+  const ArbitraryMainLayout = buildMainLayout([
+    [[ArbitraryViewports.arbitraryViewport]],
+    ...eventual3DViewportForArbitrary,
+  ]);
+  const buildArbitraryLayout = (withSkeleton: boolean) =>
+    buildLayout(
+      globalLayoutSettings,
+      [leftBorder, withSkeleton ? rightBorderWithSkeleton : rightBorderWithoutSkeleton],
+      ArbitraryMainLayout,
+    );
+
+  const ArbitraryLayoutView = buildArbitraryLayout(false);
+  const ArbitraryLayout = buildArbitraryLayout(true);
   return {
     OrthoLayout,
     OrthoLayoutView,
@@ -244,7 +370,7 @@ export const mapLayoutKeysToLanguage = {
   OrthoLayoutView: "Orthogonal Mode - View Only",
   ArbitraryLayoutView: "Arbitrary Mode - View Only",
   VolumeTracingView: "Volume Mode",
-  ArbitraryLayout: "Arbitray Mode",
+  ArbitraryLayout: "Arbitrary Mode",
   OrthoLayout: "Orthogonal Mode",
   OrthoLayoutView2d: "Orthogonal Mode 2D - View Only",
   VolumeTracingView2d: "Volume Mode 2D",

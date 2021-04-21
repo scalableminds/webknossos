@@ -7,6 +7,7 @@ import messages from "messages";
 import features from "features";
 
 import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
+import LinkButton from "components/link_button";
 import RegistrationForm from "./registration_form";
 import LoginForm from "./login_form";
 
@@ -53,16 +54,14 @@ export default function AuthenticationModal({
       {step === "Register" ? (
         <React.Fragment>
           {registrationForm}
-          <a href="#" onClick={showLogin}>
-            Already have an account? Login instead.
-          </a>
+          <LinkButton onClick={showLogin}>Already have an account? Login instead.</LinkButton>
         </React.Fragment>
       ) : (
         <React.Fragment>
           <LoginForm layout="vertical" onLoggedIn={() => onLoggedIn(false)} hideFooter />
-          <a href="#" onClick={showRegister}>
+          <LinkButton onClick={showRegister}>
             Don&apos;t have an account yet? Register here.
-          </a>
+          </LinkButton>
         </React.Fragment>
       )}
     </Modal>

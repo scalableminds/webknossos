@@ -445,6 +445,7 @@ export function busyWaitDevHelper(time: number) {
   const start = new Date();
   let now;
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     now = new Date();
     if (now - start >= time) {

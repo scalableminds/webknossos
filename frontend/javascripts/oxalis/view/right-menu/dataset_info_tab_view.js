@@ -3,7 +3,8 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip, Icon } from "antd";
+import { Tooltip } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -27,10 +28,6 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
@@ -43,7 +40,7 @@ type DispatchProps = {|
   setAnnotationDescription: string => void,
 |};
 
-type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
+type Props = {| ...StateProps, ...DispatchProps |};
 
 const shortcuts = [
   {
@@ -291,7 +288,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     }
 
     return (
-      <div className="flex-overflow">
+      <div>
         <div>{annotationTypeLabel}</div>
         <div>{descriptionEditField}</div>
       </div>
@@ -319,7 +316,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         <p>
           Annotation Type:{" "}
           <Tooltip title="Skeleton and Volume">
-            Hybrid <Icon type="info-circle-o" />
+            Hybrid <InfoCircleOutlined />
           </Tooltip>
         </p>
       );
@@ -404,7 +401,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       ) : null;
 
     return (
-      <div className="flex-overflow padded-tab-content" style={{ padding: 8, paddingLeft: 20 }}>
+      <div className="flex-overflow padded-tab-content">
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
           {this.getTracingType(isDatasetViewMode)}
@@ -472,7 +469,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(DatasetInfoTabView);

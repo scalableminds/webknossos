@@ -2,7 +2,7 @@
 import { Button, Modal, Alert } from "antd";
 import React, { useState } from "react";
 import type { BoundingBoxType } from "oxalis/constants";
-import type { VolumeTracing } from "oxalis/store";
+import type { Tracing, AnnotationType } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import { startExportTiffJob } from "admin/admin_rest_api";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -12,21 +12,35 @@ import * as Utils from "libs/utils";
 
 type Props = {
   destroy: () => void,
-  volumeTracing: ?VolumeTracing,
+  tracing: ?Tracing,
   dataset: APIDataset,
   boundingBox: BoundingBoxType,
 };
 
-const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }: Props) => {
+type LayerInfos = {
+  displayName: string,
+  layerName: ?string,
+  tracingId: ?string,
+  annotationId: ?string,
+  annotationType: ?AnnotationType,
+  tracingVersion: ?number,
+  hasMag1: boolean,
+};
+
+const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Props) => {
   const [startedExports, setStartedExports] = useState([]);
+  const volumeTracing = tracing != null ? tracing.volume : null;
+  const annotationId = tracing != null ? tracing.annotationId : null;
+  const annotationType = tracing != null ? tracing.annotationType : null;
 
   const handleClose = () => {
     destroy();
   };
 
-  const exportKey = layerInfos => (layerInfos.layerName || "") + (layerInfos.tracingId || "");
+  const exportKey = (layerInfos: LayerInfos) =>
+    (layerInfos.layerName || "") + (layerInfos.tracingId || "");
 
-  const handleStartExport = async layerInfos => {
+  const handleStartExport = async (layerInfos: LayerInfos) => {
     setStartedExports(startedExports.concat(exportKey(layerInfos)));
     if (layerInfos.tracingId) {
       await Model.ensureSavedState();
@@ -37,6 +51,8 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }
       Utils.computeArrayFromBoundingBox(boundingBox),
       layerInfos.layerName,
       layerInfos.tracingId,
+      layerInfos.annotationId,
+      layerInfos.annotationType,
     );
   };
 
@@ -48,6 +64,8 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }
         displayName: layer.name,
         layerName: layer.name,
         tracingId: null,
+        annotationId: null,
+        annotationType: null,
         tracingVersion: null,
         hasMag1: hasMag1(layer),
       };
@@ -56,6 +74,8 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }
         displayName: "Volume annotation with fallback segmentation",
         layerName: layer.fallbackLayerInfo.name,
         tracingId: volumeTracing.tracingId,
+        annotationId,
+        annotationType,
         tracingVersion: volumeTracing.version,
         hasMag1: hasMag1(layer),
       };
@@ -63,6 +83,8 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, volumeTracing }
       displayName: "Volume annotation",
       layerName: null,
       tracingId: volumeTracing.tracingId,
+      annotationId,
+      annotationType,
       tracingVersion: volumeTracing.version,
       hasMag1: hasMag1(layer),
     };

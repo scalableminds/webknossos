@@ -1,5 +1,6 @@
 // @flow
-import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
+import { Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
@@ -188,7 +189,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       <React.Fragment>
         Merge into active annotation{" "}
         <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened annotation. If not, a new explorative annotation will be created in your account.">
-          <Icon type="info-circle-o" style={{ color: "gray" }} />
+          <InfoCircleOutlined style={{ color: "gray" }} />
         </Tooltip>
       </React.Fragment>
     );
@@ -209,20 +210,18 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             message="If you would like to import NML files, please drag and drop them into the annotation view."
           />
 
-          <Form layout="inline">
+          <Form layout="inline" style={{ marginBottom: 8 }}>
             <Form.Item label="Project">
               <Select
-                value={this.state.selectedProject}
+                value={this.state.selectedProject || []}
                 style={{ width: 200 }}
                 onChange={this.handleChangeMergeProject}
                 notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-              >
-                {this.state.projects.map(project => (
-                  <Select.Option key={project.id} value={project.id}>
-                    {project.label}
-                  </Select.Option>
-                ))}
-              </Select>
+                options={this.state.projects.map(project => ({
+                  value: project.id,
+                  label: project.label,
+                }))}
+              />
             </Form.Item>
 
             <ButtonWithCheckbox

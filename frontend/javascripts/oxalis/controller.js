@@ -11,16 +11,12 @@ import _ from "lodash";
 import { Button, Col, Row } from "antd";
 
 import { HANDLED_ERROR } from "oxalis/model_initialization";
-import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
+import { InputKeyboardNoLoop } from "libs/input";
 import { fetchGistContent } from "libs/gist";
 import { initializeSceneController } from "oxalis/controller/scene_controller";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
-import {
-  setViewModeAction,
-  updateUserSettingAction,
-  updateLayerSettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import LoginForm from "admin/auth/login_form";
 import ApiLoader from "oxalis/api/api_loader";
@@ -68,7 +64,6 @@ type State = {
 };
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
-  keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   isMounted: boolean;
   state = {
@@ -195,11 +190,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     }
   }
 
-  setLayoutScale(multiplier: number): void {
-    const scale = Store.getState().userConfiguration.layoutScaleValue + 0.05 * multiplier;
-    Store.dispatch(updateUserSettingAction("layoutScaleValue", scale));
-  }
-
   isWebGlSupported() {
     return (
       window.WebGLRenderingContext &&
@@ -282,11 +272,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     });
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
-
-    this.keyboard = new InputKeyboard({
-      l: () => this.setLayoutScale(-1),
-      k: () => this.setLayoutScale(1),
-    });
   }
 
   render() {

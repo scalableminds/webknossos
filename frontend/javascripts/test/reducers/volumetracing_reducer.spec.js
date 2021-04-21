@@ -3,7 +3,7 @@ import Maybe from "data.maybe";
 import update from "immutability-helper";
 
 import type { Tracing, VolumeTracing } from "oxalis/store";
-import { VolumeToolEnum } from "oxalis/constants";
+import Constants, { VolumeToolEnum } from "oxalis/constants";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -30,6 +30,13 @@ export function getVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
   throw new Error("Tracing is not of type volume!");
 }
 
+const notEmptyViewportRect = {
+  top: 0,
+  left: 0,
+  width: Constants.VIEWPORT_WIDTH,
+  height: Constants.VIEWPORT_WIDTH,
+};
+
 const initialState = update(defaultState, {
   tracing: {
     annotationType: { $set: "Explorational" },
@@ -55,6 +62,24 @@ const initialState = update(defaultState, {
             resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
           },
         ],
+      },
+    },
+  },
+  // To get a valid calculated current zoomstep, the viewport rects are required not to be empty.
+  viewModeData: {
+    plane: {
+      inputCatcherRects: {
+        $set: {
+          PLANE_XY: notEmptyViewportRect,
+          PLANE_YZ: notEmptyViewportRect,
+          PLANE_XZ: notEmptyViewportRect,
+          TDView: notEmptyViewportRect,
+        },
+      },
+    },
+    arbitrary: {
+      $set: {
+        inputCatcherRect: notEmptyViewportRect,
       },
     },
   },

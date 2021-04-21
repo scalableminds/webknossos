@@ -1,8 +1,7 @@
 @import "../../node_modules/antd/dist/antd.less";
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.min.css";
-@import "../../node_modules/golden-layout/src/css/goldenlayout-base.css";
-@import "../../node_modules/golden-layout/src/css/goldenlayout-light-theme.css";
 @import "../../node_modules/react-sortable-tree/style.css";
+@import "../../node_modules/flexlayout-react/style/light.css";
 
 // To update the antd iconfont:
 // * Go to https://ant.design/
@@ -22,10 +21,10 @@
 @import "trace_view/_right_menu.less";
 @import "_help.less";
 @import "antd_overwrites.less";
-@import "goldenlayout_overwrites.less";
 @import "react_sortable_tree_overwrites.less";
 @import "_admin.less";
 @import "_google-charts-overwrites.less";
+@import "flex_layout_overwrites.less";
 
 // ----------------------- MAIN STYLES
 body {
@@ -58,10 +57,10 @@ body {
 .ant-layout-header {
   .logo {
     background: url(/assets/images/oxalis.svg) 15px center no-repeat;
-    padding-left: 43px;
-    height: 40px;
+    padding-left: 46px;
+    height: 48px;
     float: left;
-    margin-top: 6px;
+    margin-top: 1px;
     background-size: 20px 20px;
     filter: invert(1);
   }
@@ -120,7 +119,6 @@ td.nowrap * {
   height: 100px;
   vertical-align: middle;
   display: inline-block;
-  font-size: 80px;
   font-size: 80px;
   line-height: normal;
   color: #000;
@@ -197,6 +195,7 @@ td.nowrap * {
 }
 
 // make sure text and icons have space between them
+.anticon,
 i {
   margin-right: 5px;
 }
@@ -208,8 +207,10 @@ button.narrow {
   }
 }
 
-.withoutIconMargin i,
-i.withoutIconMargin {
+.without-icon-margin i,
+i.without-icon-margin,
+.without-icon-margin .anticon,
+.anticon.without-icon-margin {
   // Allow to undo the above margin-right of 5px
   margin-right: 0 !important;
 }
@@ -436,7 +437,7 @@ img.img-50 {
   }
 }
 
-.highlight-togglable-button {
+.highlight-togglable-button.ant-btn {
   background-color: #2373c1 !important;
   &:not(:hover) {
     border-color: #2098de !important;
@@ -468,6 +469,19 @@ img.img-50 {
   vertical-align: middle;
   line-height: 24px;
   font-weight: bold;
+}
+
+.keyboard-key-icon-small {
+  border: 1px solid rgb(255, 255, 255);
+  border-radius: 2px;
+  min-width: 14px;
+  height: 14px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: bold;
+  vertical-align: middle;
+  display: inline-block;
+  padding: 0px 2px 0px 2px;
 }
 
 .keyboard-mouse-icon {

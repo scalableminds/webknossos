@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 
 case class AnnotationIdentifier(annotationType: AnnotationType, identifier: ObjectId) {
 
-  def toUniqueString =
+  def toUniqueString: String =
     annotationType + "__" + identifier
 
 }
@@ -17,7 +17,7 @@ object AnnotationIdentifier extends FoxImplicits {
 
   def parse(typ: String, id: String)(implicit ec: ExecutionContext): Fox[AnnotationIdentifier] =
     for {
-      identifier <- ObjectId.parse(id) ?~> ("Invalid ObjectId: " + id)
+      identifier <- ObjectId.parse(id)
       typ <- AnnotationType.fromString(typ) ?~> ("Invalid AnnotationType: " + typ)
     } yield AnnotationIdentifier(typ, identifier)
 

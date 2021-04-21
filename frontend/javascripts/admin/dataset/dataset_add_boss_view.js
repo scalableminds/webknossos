@@ -34,124 +34,128 @@ type StateProps = {|
   activeUser: ?APIUser,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
-type PropsWithForm = {|
-  ...Props,
-  form: Object,
-|};
 
-class DatasetAddBossView extends React.PureComponent<PropsWithForm> {
-  handleSubmit = evt => {
-    evt.preventDefault();
-    const { activeUser } = this.props;
+function DatasetAddBossView(props: Props) {
+  const [form] = Form.useForm();
 
-    this.props.form.validateFields(async (err, formValues) => {
-      if (err || activeUser == null) return;
+  const handleSubmit = async formValues => {
+    const { activeUser } = props;
+    if (activeUser == null) return;
 
-      const { name, domain, collection, experiment, username, password } = formValues;
-      const httpsDomain = domain.startsWith("bossdb://")
-        ? domain.replace(/^bossdb/, "https")
-        : domain;
-      const datasetConfig = {
-        boss: {
-          [activeUser.organization]: {
-            [name]: {
-              domain: httpsDomain,
-              collection,
-              experiment,
-              username,
-              password,
-            },
+    const { name, domain, collection, experiment, username, password } = formValues;
+    const httpsDomain = domain.startsWith("bossdb://")
+      ? domain.replace(/^bossdb/, "https")
+      : domain;
+    const datasetConfig = {
+      boss: {
+        [activeUser.organization]: {
+          [name]: {
+            domain: httpsDomain,
+            collection,
+            experiment,
+            username,
+            password,
           },
         },
-      };
+      },
+    };
 
-      trackAction("Add BossDB dataset");
-      await addWkConnectDataset(formValues.datastore, datasetConfig);
+    trackAction("Add BossDB dataset");
+    await addWkConnectDataset(formValues.datastore, datasetConfig);
 
-      Toast.success(messages["dataset.add_success"]);
-      await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-      this.props.onAdded(activeUser.organization, formValues.name);
-    });
+    Toast.success(messages["dataset.add_success"]);
+    await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+    props.onAdded(activeUser.organization, formValues.name);
   };
 
-  render() {
-    const { form, activeUser, datastores } = this.props;
-    const { getFieldDecorator } = form;
+  const { activeUser, datastores } = props;
 
-    return (
-      <div style={{ padding: 5 }}>
-        <CardContainer title="Add BossDB Dataset">
-          <Form style={{ marginTop: 20 }} onSubmit={this.handleSubmit} layout="vertical">
-            <Row gutter={8}>
-              <Col span={12}>
-                <DatasetNameFormItem form={form} activeUser={activeUser} />
-              </Col>
-              <Col span={12}>
-                <DatastoreFormItem form={form} datastores={datastores} />
-              </Col>
-            </Row>
-            <Row gutter={8}>
-              <Col span={12}>
-                <FormItem label="Domain" hasFeedback>
-                  {getFieldDecorator("domain", {
-                    rules: [{ required: true }],
-                    validateFirst: true,
-                  })(<Input />)}
-                </FormItem>
-              </Col>
-              <Slash />
-              <Col span={5}>
-                <FormItem label="Collection" hasFeedback>
-                  {getFieldDecorator("collection", {
-                    rules: [{ required: true }],
-                    validateFirst: true,
-                  })(<Input />)}
-                </FormItem>
-              </Col>
-              <Slash />
-              <Col span={5}>
-                <FormItem label="Experiment" hasFeedback>
-                  {getFieldDecorator("experiment", {
-                    rules: [{ required: true }],
-                    validateFirst: true,
-                  })(<Input />)}
-                </FormItem>
-              </Col>
-            </Row>
-            <Row gutter={8}>
-              <Col span={12}>
-                <FormItem label="Username" hasFeedback>
-                  {getFieldDecorator("username", {
-                    rules: [{ required: true }],
-                    validateFirst: true,
-                  })(<Input />)}
-                </FormItem>
-              </Col>
-              <Col span={12}>
-                <FormItem label="Password" hasFeedback>
-                  {getFieldDecorator("password", {
-                    rules: [{ required: true }],
-                    validateFirst: true,
-                  })(<Password />)}
-                </FormItem>
-              </Col>
-            </Row>
-            <FormItem style={{ marginBottom: 0 }}>
-              <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
-                Add
-              </Button>
-            </FormItem>
-          </Form>
-        </CardContainer>
-      </div>
-    );
-  }
+  return (
+    <div style={{ padding: 5 }}>
+      <CardContainer title="Add BossDB Dataset">
+        <Form style={{ marginTop: 20 }} onFinish={handleSubmit} layout="vertical" form={form}>
+          <Row gutter={8}>
+            <Col span={12}>
+              <DatasetNameFormItem activeUser={activeUser} />
+            </Col>
+            <Col span={12}>
+              <DatastoreFormItem datastores={datastores} />
+            </Col>
+          </Row>
+          <Row gutter={8}>
+            <Col span={12}>
+              <FormItem
+                name="domain"
+                label="Domain"
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Input />
+              </FormItem>
+            </Col>
+            <Slash />
+            <Col span={5}>
+              <FormItem
+                name="collection"
+                label="Collection"
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Input />
+              </FormItem>
+            </Col>
+            <Slash />
+            <Col span={5}>
+              <FormItem
+                name="experiment"
+                label="Experiment"
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Input />
+              </FormItem>
+            </Col>
+          </Row>
+          <Row gutter={8}>
+            <Col span={12}>
+              <FormItem
+                name="username"
+                label="Username"
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Input />
+              </FormItem>
+            </Col>
+            <Col span={12}>
+              <FormItem
+                name="password"
+                label="Password"
+                hasFeedback
+                rules={[{ required: true }]}
+                validateFirst
+              >
+                <Password />
+              </FormItem>
+            </Col>
+          </Row>
+          <FormItem style={{ marginBottom: 0 }}>
+            <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
+              Add
+            </Button>
+          </FormItem>
+        </Form>
+      </CardContainer>
+    </div>
+  );
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  Form.create()(DatasetAddBossView),
-);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetAddBossView);

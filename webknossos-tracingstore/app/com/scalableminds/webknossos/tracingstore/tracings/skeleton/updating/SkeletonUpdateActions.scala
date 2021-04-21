@@ -19,7 +19,7 @@ case class CreateTreeSkeletonAction(id: Int,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     val newTree = Tree(id,
                        Nil,
                        Nil,
@@ -40,7 +40,8 @@ case class CreateTreeSkeletonAction(id: Int,
 
 case class DeleteTreeSkeletonAction(id: Int, actionTimestamp: Option[Long] = None, info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing) = tracing.withTrees(tracing.trees.filter(_.treeId != id))
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
+    tracing.withTrees(tracing.trees.filter(_.treeId != id))
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
@@ -58,7 +59,7 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) =
       tree.copy(
         color = if (color.isDefined) convertColorOpt(color) else tree.color,
@@ -86,7 +87,7 @@ case class MergeTreeSkeletonAction(sourceId: Int,
   // only nodes and edges are merged here,
   // other properties are managed explicitly
   // by the frontend with extra actions
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(targetTree: Tree) = {
       val sourceTree = treeById(tracing, sourceId)
       targetTree.withNodes(targetTree.nodes.union(sourceTree.nodes)).withEdges(targetTree.edges.union(sourceTree.edges))
@@ -109,7 +110,7 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
     with SkeletonUpdateActionHelper {
   // this should only move a whole component,
   // that is disjoint from the rest of the tree
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     val sourceTree = treeById(tracing, sourceId)
     val targetTree = treeById(tracing, targetId)
 
@@ -142,7 +143,7 @@ case class CreateEdgeSkeletonAction(source: Int,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) = tree.withEdges(Edge(source, target) +: tree.edges)
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
@@ -159,7 +160,7 @@ case class DeleteEdgeSkeletonAction(source: Int,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) = tree.copy(edges = tree.edges.filter(_ != Edge(source, target)))
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
@@ -184,7 +185,7 @@ case class CreateNodeSkeletonAction(id: Int,
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
       id,
@@ -223,7 +224,7 @@ case class UpdateNodeSkeletonAction(id: Int,
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
 
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
@@ -256,7 +257,7 @@ case class DeleteNodeSkeletonAction(nodeId: Int,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
 
     def treeTransform(tree: Tree) =
       tree.withNodes(tree.nodes.filter(_.id != nodeId))
@@ -274,7 +275,7 @@ case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup
                                           info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) =
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withTreeGroups(treeGroups.map(convertTreeGroup))
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
@@ -291,7 +292,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with ProtoGeometryImplicits {
-  override def applyOn(tracing: SkeletonTracing) =
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.copy(editPosition = editPosition,
                  editRotation = editRotation,
                  zoomLevel = zoomLevel,
@@ -301,11 +302,12 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class RevertToVersionAction(sourceVersion: Long, actionTimestamp: Option[Long] = None, info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing) =
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     throw new Exception("RevertToVersionAction applied on unversioned tracing")
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
@@ -319,7 +321,7 @@ case class UpdateTreeVisibility(treeId: Int,
                                 info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def treeTransform(tree: Tree) = tree.copy(isVisible = Some(isVisible))
 
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
@@ -328,6 +330,7 @@ case class UpdateTreeVisibility(treeId: Int,
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
@@ -336,7 +339,7 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
                                      info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateTreeGroups(treeGroups: Seq[TreeGroup]) = {
       def treeTransform(tree: Tree) =
         if (treeGroups.exists(group => tree.groupId.contains(group.groupId)))
@@ -361,13 +364,14 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
                                    actionTimestamp: Option[Long] = None,
                                    info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing) =
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
@@ -380,7 +384,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
                                            actionTimestamp: Option[Long] = None,
                                            info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracing) = {
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
       tracing.userBoundingBoxes.map { boundingBox =>
         if (boundingBoxId.forall(_ == boundingBox.id))
@@ -395,6 +399,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
 case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[String] = None)
@@ -405,26 +410,61 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[Str
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+  override def isViewOnlyChange: Boolean = true
 }
 
-object CreateTreeSkeletonAction { implicit val jsonFormat = Json.format[CreateTreeSkeletonAction] }
-object DeleteTreeSkeletonAction { implicit val jsonFormat = Json.format[DeleteTreeSkeletonAction] }
-object UpdateTreeSkeletonAction { implicit val jsonFormat = Json.format[UpdateTreeSkeletonAction] }
-object MergeTreeSkeletonAction { implicit val jsonFormat = Json.format[MergeTreeSkeletonAction] }
-object MoveTreeComponentSkeletonAction { implicit val jsonFormat = Json.format[MoveTreeComponentSkeletonAction] }
-object CreateEdgeSkeletonAction { implicit val jsonFormat = Json.format[CreateEdgeSkeletonAction] }
-object DeleteEdgeSkeletonAction { implicit val jsonFormat = Json.format[DeleteEdgeSkeletonAction] }
-object CreateNodeSkeletonAction { implicit val jsonFormat = Json.format[CreateNodeSkeletonAction] }
-object DeleteNodeSkeletonAction { implicit val jsonFormat = Json.format[DeleteNodeSkeletonAction] }
-object UpdateNodeSkeletonAction { implicit val jsonFormat = Json.format[UpdateNodeSkeletonAction] }
-object UpdateTreeGroupsSkeletonAction { implicit val jsonFormat = Json.format[UpdateTreeGroupsSkeletonAction] }
-object UpdateTracingSkeletonAction { implicit val jsonFormat = Json.format[UpdateTracingSkeletonAction] }
-object RevertToVersionAction { implicit val jsonFormat = Json.format[RevertToVersionAction] }
-object UpdateTreeVisibility { implicit val jsonFormat = Json.format[UpdateTreeVisibility] }
-object UpdateTreeGroupVisibility { implicit val jsonFormat = Json.format[UpdateTreeGroupVisibility] }
-object UpdateUserBoundingBoxes { implicit val jsonFormat = Json.format[UpdateUserBoundingBoxes] }
-object UpdateUserBoundingBoxVisibility { implicit val jsonFormat = Json.format[UpdateUserBoundingBoxVisibility] }
-object UpdateTdCamera { implicit val jsonFormat = Json.format[UpdateTdCamera] }
+object CreateTreeSkeletonAction {
+  implicit val jsonFormat: OFormat[CreateTreeSkeletonAction] = Json.format[CreateTreeSkeletonAction]
+}
+object DeleteTreeSkeletonAction {
+  implicit val jsonFormat: OFormat[DeleteTreeSkeletonAction] = Json.format[DeleteTreeSkeletonAction]
+}
+object UpdateTreeSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTreeSkeletonAction] = Json.format[UpdateTreeSkeletonAction]
+}
+object MergeTreeSkeletonAction {
+  implicit val jsonFormat: OFormat[MergeTreeSkeletonAction] = Json.format[MergeTreeSkeletonAction]
+}
+object MoveTreeComponentSkeletonAction {
+  implicit val jsonFormat: OFormat[MoveTreeComponentSkeletonAction] = Json.format[MoveTreeComponentSkeletonAction]
+}
+object CreateEdgeSkeletonAction {
+  implicit val jsonFormat: OFormat[CreateEdgeSkeletonAction] = Json.format[CreateEdgeSkeletonAction]
+}
+object DeleteEdgeSkeletonAction {
+  implicit val jsonFormat: OFormat[DeleteEdgeSkeletonAction] = Json.format[DeleteEdgeSkeletonAction]
+}
+object CreateNodeSkeletonAction {
+  implicit val jsonFormat: OFormat[CreateNodeSkeletonAction] = Json.format[CreateNodeSkeletonAction]
+}
+object DeleteNodeSkeletonAction {
+  implicit val jsonFormat: OFormat[DeleteNodeSkeletonAction] = Json.format[DeleteNodeSkeletonAction]
+}
+object UpdateNodeSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateNodeSkeletonAction] = Json.format[UpdateNodeSkeletonAction]
+}
+object UpdateTreeGroupsSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTreeGroupsSkeletonAction] = Json.format[UpdateTreeGroupsSkeletonAction]
+}
+object UpdateTracingSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTracingSkeletonAction] = Json.format[UpdateTracingSkeletonAction]
+}
+object RevertToVersionAction {
+  implicit val jsonFormat: OFormat[RevertToVersionAction] = Json.format[RevertToVersionAction]
+}
+object UpdateTreeVisibility {
+  implicit val jsonFormat: OFormat[UpdateTreeVisibility] = Json.format[UpdateTreeVisibility]
+}
+object UpdateTreeGroupVisibility {
+  implicit val jsonFormat: OFormat[UpdateTreeGroupVisibility] = Json.format[UpdateTreeGroupVisibility]
+}
+object UpdateUserBoundingBoxes {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxes] = Json.format[UpdateUserBoundingBoxes]
+}
+object UpdateUserBoundingBoxVisibility {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibility] = Json.format[UpdateUserBoundingBoxVisibility]
+}
+object UpdateTdCamera { implicit val jsonFormat: OFormat[UpdateTdCamera] = Json.format[UpdateTdCamera] }
 
 object SkeletonUpdateAction {
 

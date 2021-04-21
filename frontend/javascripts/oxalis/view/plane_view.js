@@ -4,9 +4,8 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 
-import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
+import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
   OrthoViewColors,
@@ -39,10 +38,9 @@ class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   listenTo: Function;
-  unbindChangedScaleListener: () => void;
 
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
-  throttledPerformIsosurfaceHitTest: () => ?typeof THREE.Vector3;
+  throttledPerformIsosurfaceHitTest: ([number, number]) => ?typeof THREE.Vector3;
 
   running: boolean;
   needsRerender: boolean;
@@ -135,8 +133,6 @@ class PlaneView {
 
       clearCanvas(renderer);
 
-      this.throttledPerformIsosurfaceHitTest();
-
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
@@ -150,16 +146,12 @@ class PlaneView {
     }
   }
 
-  performIsosurfaceHitTest(): ?typeof THREE.Vector3 {
+  performIsosurfaceHitTest(mousePosition: [number, number]): ?typeof THREE.Vector3 {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
-    const { mousePosition, hoveredIsosurfaceId } = storeState.temporaryConfiguration;
-
-    if (mousePosition == null) {
-      return null;
-    }
+    const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
 
     // Outside of the 3D viewport, we don't do isosurface hit tests
     if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
@@ -225,7 +217,7 @@ class PlaneView {
   }, Constants.RESIZE_THROTTLE_TIME);
 
   resize = (): void => {
-    const { width, height } = getDesiredLayoutRect();
+    const { width, height } = getGroundTruthLayoutRect();
     getSceneController().renderer.setSize(width, height);
     this.draw();
   };
@@ -241,7 +233,6 @@ class PlaneView {
       getSceneController().scene.remove(this.cameras[plane]);
     }
     window.removeEventListener("resize", this.resizeThrottled);
-    this.unbindChangedScaleListener();
   }
 
   start(): void {
@@ -250,10 +241,6 @@ class PlaneView {
     this.animate();
 
     window.addEventListener("resize", this.resizeThrottled);
-    this.unbindChangedScaleListener = listenToStoreProperty(
-      store => store.userConfiguration.layoutScaleValue,
-      this.resizeThrottled,
-    );
   }
 }
 

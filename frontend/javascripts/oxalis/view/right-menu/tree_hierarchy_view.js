@@ -1,7 +1,8 @@
 // @flow
 
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, Icon, Menu, Modal, notification } from "antd";
+import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
+import { DeleteOutlined, PlusOutlined, SettingOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
@@ -39,11 +40,11 @@ import {
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
-import { formatNumberToLength } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 
-const CHECKBOX_STYLE = { verticalAlign: "middle" };
-const CHECKBOX_PLACEHOLDER_STYLE = { width: 24, display: "inline-block" };
+const CHECKBOX_STYLE = {};
+const CHECKBOX_PLACEHOLDER_STYLE = { width: 16, display: "inline-block" };
 
 type OwnProps = {|
   activeTreeId: ?number,
@@ -79,6 +80,11 @@ type State = {
   activeTreeDropdownId: ?number,
 };
 
+const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
+  prevProps.trees !== nextProps.trees ||
+  prevProps.treeGroups !== nextProps.treeGroups ||
+  prevProps.sortBy !== nextProps.sortBy;
+
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   state = {
     expandedGroupIds: { [MISSING_GROUP_ID]: true },
@@ -89,12 +95,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
-    if (
-      prevState.prevProps == null ||
-      prevState.prevProps.trees !== nextProps.trees ||
-      prevState.prevProps.treeGroups !== nextProps.treeGroups ||
-      prevState.prevProps.sortBy !== nextProps.sortBy
-    ) {
+    if (prevState.prevProps == null || didTreeDataChange(prevState.prevProps, nextProps)) {
       // Insert the trees into the corresponding groups and create a
       // groupTree object that can be rendered using a SortableTree component
       const groupToTreesMap = createGroupToTreesMap(nextProps.trees);
@@ -125,10 +126,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   async componentDidUpdate(prevProps: Props) {
     // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
     // Also remove the searchFocusOffset from the state and hard-code it as 0
-    if (
-      prevProps.trees !== this.props.trees &&
-      prevProps.activeTreeId !== this.props.activeTreeId
-    ) {
+    const didSearchTermChange =
+      prevProps.activeTreeId !== this.props.activeTreeId ||
+      prevProps.activeGroupId !== this.props.activeGroupId;
+    if (didTreeDataChange(prevProps, this.props) && didSearchTermChange) {
       // eslint-disable-next-line react/no-did-update-set-state
       await this.setState({ searchFocusOffset: 1 });
       // eslint-disable-next-line react/no-did-update-set-state
@@ -290,9 +291,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
-    const length = api.tracing.measureTreeLength(treeId);
+    const [lengthInNm, lengthInVx] = api.tracing.measureTreeLength(treeId);
+
     notification.open({
-      message: messages["tracing.tree_length_notification"](treeName, formatNumberToLength(length)),
+      message: messages["tracing.tree_length_notification"](
+        treeName,
+        formatNumberToLength(lengthInNm),
+        formatLengthAsVx(lengthInVx),
+      ),
       icon: <i className="fas fa-ruler" />,
     });
   };
@@ -313,22 +319,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
         <Menu.Item key="create" data-group-id={id}>
-          <Icon type="plus" />
+          <PlusOutlined />
           Create new group
         </Menu.Item>
         <Menu.Item key="delete" data-group-id={id} disabled={isRoot}>
-          <Icon type="delete" />
+          <DeleteOutlined />
           Delete
         </Menu.Item>
         {hasSubgroup ? (
           <Menu.Item key="collapseSubgroups" data-group-id={id} disabled={!hasExpandedSubgroup}>
-            <Icon type="shrink" />
+            <ShrinkOutlined />
             Collapse all subgroups
           </Menu.Item>
         ) : null}
         {hasSubgroup ? (
           <Menu.Item key="expandSubgroups" data-group-id={id} disabled={!hasCollapsedSubgroup}>
-            <Icon type="shrink" />
+            <ShrinkOutlined />
             Expand all subgroups
           </Menu.Item>
         ) : null}
@@ -339,11 +345,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const displayableName = name.trim() || "<no name>";
     const nameAndDropdown = (
       <span className="ant-dropdown-link">
-        <span data-id={id} onClick={this.onSelectGroup}>
+        <span data-id={id} onClick={this.onSelectGroup} style={{ marginLeft: 9 }}>
           {displayableName}{" "}
         </span>
         <Dropdown overlay={menu} placement="bottomCenter">
-          <Icon type="setting" className="group-actions-icon" />
+          <SettingOutlined className="group-actions-icon" />
         </Dropdown>
       </span>
     );
@@ -432,7 +438,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
           }
         >
-          <Icon type="setting" className="group-actions-icon" />
+          <SettingOutlined className="group-actions-icon" />
         </Dropdown>
       );
 

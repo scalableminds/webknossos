@@ -425,8 +425,17 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 
-export function isFileExtensionEqualTo(fileName: string, extension: string) {
-  return _.last(fileName.split(".")).toLowerCase() === extension;
+export function isFileExtensionEqualTo(
+  fileName: string,
+  extensionOrExtensions: string | Array<string>,
+) {
+  const passedExtension = _.last(fileName.split(".")).toLowerCase();
+
+  if (Array.isArray(extensionOrExtensions)) {
+    return extensionOrExtensions.includes(passedExtension);
+  }
+
+  return passedExtension === extensionOrExtensions;
 }
 
 // Only use this function if you really need a busy wait (useful
@@ -436,6 +445,7 @@ export function busyWaitDevHelper(time: number) {
   const start = new Date();
   let now;
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     now = new Date();
     if (now - start >= time) {
@@ -500,7 +510,7 @@ export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
         const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
         if (value != null && (typeof value === "string" || value instanceof Object)) {
           const values = getRecursiveValues(value);
-          return _.some(values, v => v.toString().match(regexp));
+          return _.some(values, v => v != null && v.toString().match(regexp));
         } else {
           return false;
         }
@@ -531,7 +541,7 @@ export function filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
             const values = getRecursiveValues(value);
-            return _.some(values, v => v.toString().match(pattern));
+            return _.some(values, v => v != null && v.toString().match(pattern));
           } else {
             return false;
           }

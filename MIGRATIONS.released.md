@@ -5,6 +5,12 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.04.0](https://github.com/scalableminds/webknossos/releases/tag/21.04.0) - 2021-03-22
+
+### Postgres Evolutions:
+- [066-publications-foreign-key.sql](conf/evolutions/066-publications-foreign-key.sql)
+- [067-drop-analytics.sql](conf/evolutions/067-drop-analytics.sql)
+
 ## [21.03.0](https://github.com/scalableminds/webknossos/releases/tag/21.03.0) - 2021-02-24
 - Support for KNOSSOS cubes data format was removed. Use the [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber) tool to convert existing datasets saved as KNOSSOS cubes.
 - Multi-organization instances only: user experience domains are now separated per organization. After postgres evolution 64 (see below), make sure to move existing experience domains to the correct organization in the database. (The evolution just selects any one from the database).

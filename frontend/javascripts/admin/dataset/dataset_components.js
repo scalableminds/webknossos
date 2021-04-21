@@ -7,8 +7,6 @@ import { isDatasetNameValid } from "admin/admin_rest_api";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 
 const FormItem = Form.Item;
-const { Option } = Select;
-
 export function CardContainer({
   children,
   withoutCard,
@@ -33,65 +31,64 @@ export function CardContainer({
   }
 }
 
-export function DatasetNameFormItem({ form, activeUser }: { form: Object, activeUser: ?APIUser }) {
-  const { getFieldDecorator } = form;
+export function DatasetNameFormItem({ activeUser }: { activeUser: ?APIUser }) {
   return (
-    <FormItem label="Dataset Name" hasFeedback>
-      {getFieldDecorator("name", {
-        rules: [
-          { required: true, message: messages["dataset.import.required.name"] },
-          { min: 3 },
-          { pattern: /[0-9a-zA-Z_-]+$/ },
-          {
-            validator: async (_rule, value, callback) => {
-              if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
-              const reasons = await isDatasetNameValid({
-                name: value,
-                owningOrganization: activeUser.organization,
-              });
-              if (reasons != null) {
-                callback(reasons);
-              } else {
-                callback();
-              }
-            },
+    <FormItem
+      name="name"
+      label="Dataset Name"
+      hasFeedback
+      rules={[
+        { required: true, message: messages["dataset.import.required.name"] },
+        { min: 3 },
+        { pattern: /[0-9a-zA-Z_-]+$/ },
+        {
+          validator: async (_rule, value) => {
+            if (!activeUser) throw new Error("Can't do operation if no user is logged in.");
+            const reasons = await isDatasetNameValid({
+              name: value,
+              owningOrganization: activeUser.organization,
+            });
+            if (reasons != null) {
+              return Promise.reject(reasons);
+            } else {
+              return Promise.resolve();
+            }
           },
-        ],
-        validateFirst: true,
-      })(<Input />)}
+        },
+      ]}
+      validateFirst
+    >
+      <Input />
     </FormItem>
   );
 }
 
 export function DatastoreFormItem({
-  form,
   datastores,
   hidden,
 }: {
-  form: Object,
   datastores: Array<APIDataStore>,
   hidden?: boolean,
 }) {
-  const { getFieldDecorator } = form;
   return (
-    <FormItem label="Datastore" hasFeedback hidden={hidden || false}>
-      {getFieldDecorator("datastore", {
-        rules: [{ required: true, message: messages["dataset.import.required.datastore"] }],
-        initialValue: datastores.length ? datastores[0].url : null,
-      })(
-        <Select
-          showSearch
-          placeholder="Select a Datastore"
-          optionFilterProp="children"
-          style={{ width: "100%" }}
-        >
-          {datastores.map((datastore: APIDataStore) => (
-            <Option key={datastore.name} value={datastore.url}>
-              {`${datastore.name}`}
-            </Option>
-          ))}
-        </Select>,
-      )}
+    <FormItem
+      name="datastore"
+      label="Datastore"
+      hasFeedback
+      hidden={hidden || false}
+      rules={[{ required: true, message: messages["dataset.import.required.datastore"] }]}
+      initialValue={datastores.length ? datastores[0].url : null}
+    >
+      <Select
+        showSearch
+        placeholder="Select a Datastore"
+        optionFilterProp="label"
+        style={{ width: "100%" }}
+        options={datastores.map((datastore: APIDataStore) => ({
+          label: datastore.name,
+          value: datastore.url,
+        }))}
+      />
     </FormItem>
   );
 }

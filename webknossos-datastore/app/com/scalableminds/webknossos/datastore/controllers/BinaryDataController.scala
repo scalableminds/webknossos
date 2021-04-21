@@ -4,7 +4,6 @@ import java.io.{ByteArrayOutputStream, OutputStream}
 import java.nio.{ByteBuffer, ByteOrder}
 import java.util.Base64
 
-import akka.actor.ActorSystem
 import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
@@ -30,7 +29,7 @@ import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
-import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHeader, Result}
 
 import scala.concurrent.ExecutionContext
 
@@ -42,7 +41,6 @@ class BinaryDataController @Inject()(
     mappingService: MappingService,
     isosurfaceServiceHolder: IsosurfaceServiceHolder,
     findDataService: FindDataService,
-    actorSystem: ActorSystem
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -58,7 +56,7 @@ class BinaryDataController @Inject()(
       organizationName: String,
       dataSetName: String,
       dataLayerName: String
-  ) = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+  ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         val t = System.currentTimeMillis()
@@ -79,8 +77,7 @@ class BinaryDataController @Inject()(
   }
 
   def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)),
-         ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
+    List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
 
   def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
@@ -100,7 +97,7 @@ class BinaryDataController @Inject()(
       depth: Int,
       resolution: Int,
       halfByte: Boolean
-  ) = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -131,7 +128,7 @@ class BinaryDataController @Inject()(
       z: Int,
       resolution: Int,
       halfByte: Boolean
-  ) =
+  ): Action[AnyContent] =
     requestRawCuboid(organizationName,
                      dataSetName,
                      dataLayerName,
@@ -154,7 +151,7 @@ class BinaryDataController @Inject()(
                         x: Int,
                         y: Int,
                         z: Int,
-                        cubeSize: Int) = Action.async { implicit request =>
+                        cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -188,7 +185,7 @@ class BinaryDataController @Inject()(
       z: Int,
       resolution: Int,
       halfByte: Boolean
-  ) = Action.async(parse.raw) { implicit request =>
+  ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -228,7 +225,7 @@ class BinaryDataController @Inject()(
                    z: Int,
                    resolution: Int,
                    halfByte: Boolean,
-                   blackAndWhite: Boolean) = Action.async(parse.raw) { implicit request =>
+                   blackAndWhite: Boolean): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -262,7 +259,7 @@ class BinaryDataController @Inject()(
                                 centerX: Option[Int],
                                 centerY: Option[Int],
                                 centerZ: Option[Int],
-                                zoom: Option[Double]) = Action.async(parse.raw) { implicit request =>
+                                zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -300,7 +297,7 @@ class BinaryDataController @Inject()(
       centerY: Option[Int],
       centerZ: Option[Int],
       zoom: Option[Double]
-  ) = Action.async(parse.raw) { implicit request =>
+  ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -330,7 +327,7 @@ class BinaryDataController @Inject()(
       dataSetName: String,
       dataLayerName: String,
       mappingName: String
-  ) = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
@@ -338,9 +335,7 @@ class BinaryDataController @Inject()(
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
           mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
           result <- mappingService.handleMappingRequest(mappingRequest)
-        } yield {
-          Ok(result)
-        }
+        } yield Ok(result)
       }
     }
   }
@@ -348,14 +343,14 @@ class BinaryDataController @Inject()(
   /**
     * Handles isosurface requests.
     */
-  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String) =
+  def requestIsosurface(organizationName: String,
+                        dataSetName: String,
+                        dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-            _ = if (request.body.isInitialRequest)
-              accessTokenService.webKnossosServer.reportIsosurfaceRequest(accessTokenService.tokenFromRequest(request))
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
             isosurfaceRequest = IsosurfaceRequest(
               Some(dataSource),
@@ -382,59 +377,55 @@ class BinaryDataController @Inject()(
     }
 
   private def getNeighborIndices(neighbors: List[Int]) =
-    List(("NEIGHBORS" -> formatNeighborList(neighbors)), ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+    List("NEIGHBORS" -> formatNeighborList(neighbors), "Access-Control-Expose-Headers" -> "NEIGHBORS")
 
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
-            } yield
-              Ok(
-                Json.obj("mean" -> meanAndStdDev._1, "stdDev" -> meanAndStdDev._2)
-              )
-          }
+  def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
+          } yield
+            Ok(
+              Json.obj("mean" -> meanAndStdDev._1, "stdDev" -> meanAndStdDev._2)
+            )
         }
-  }
+      }
+    }
 
-  def findData(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
-            } yield
-              Ok(
-                Json.obj("position" -> positionAndResolutionOpt.map(_._1),
-                         "resolution" -> positionAndResolutionOpt.map(_._2)))
-          }
+  def findData(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
+          } yield
+            Ok(
+              Json.obj("position" -> positionAndResolutionOpt.map(_._1),
+                       "resolution" -> positionAndResolutionOpt.map(_._2)))
         }
-  }
+      }
+    }
 
-  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
-                "histogram.layerMissing",
-                dataLayerName)
-              listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages(
-                "histogram.failed",
-                dataLayerName)
-            } yield Ok(Json.toJson(listOfHistograms))
-          }
+  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
+              "histogram.layerMissing",
+              dataLayerName)
+            listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages("histogram.failed",
+                                                                                                    dataLayerName)
+          } yield Ok(Json.toJson(listOfHistograms))
         }
-  }
+      }
+    }
 
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
@@ -442,9 +433,7 @@ class BinaryDataController @Inject()(
       dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
         "dataSource.notFound") ~> 404
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
-    } yield {
-      (dataSource, dataLayer)
-    }
+    } yield (dataSource, dataLayer)
 
   private def requestData(
       dataSource: DataSource,
@@ -464,7 +453,7 @@ class BinaryDataController @Inject()(
       request: DataRequest,
       imagesPerRow: Int,
       blackAndWhite: Boolean
-  )(implicit m: MessagesProvider): Fox[(OutputStream) => Unit] = {
+  )(implicit m: MessagesProvider): Fox[OutputStream => Unit] = {
     val params = ImageCreatorParameters(
       dataLayer.bytesPerElement,
       request.settings.halfByte,
@@ -475,15 +464,13 @@ class BinaryDataController @Inject()(
       isSegmentation = dataLayer.category == Category.segmentation
     )
     for {
-      (data, indices) <- requestData(dataSource, dataLayer, request)
+      (data, _) <- requestData(dataSource, dataLayer, request)
       dataWithFallback = if (data.length == 0)
         new Array[Byte](params.slideHeight * params.slideWidth * params.bytesPerElement)
       else data
       spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
-    } yield {
-      new JPEGWriter().writeToOutputStream(firstSheet.image)(_)
-    }
+    } yield new JPEGWriter().writeToOutputStream(firstSheet.image)(_)
   }
 
   private def respondWithImageThumbnail(
@@ -496,13 +483,11 @@ class BinaryDataController @Inject()(
       centerY: Option[Int],
       centerZ: Option[Int],
       zoom: Option[Double]
-  )(implicit m: MessagesProvider): Fox[(OutputStream) => Unit] =
+  )(implicit m: MessagesProvider): Fox[OutputStream => Unit] =
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
       position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
       request = DataRequest(position, width, height, 1)
       image <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite = false)
-    } yield {
-      image
-    }
+    } yield image
 }

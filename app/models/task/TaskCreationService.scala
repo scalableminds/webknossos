@@ -2,7 +2,7 @@ package models.task
 
 import java.io.File
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
@@ -21,7 +21,7 @@ import models.annotation.{
   TracingStoreRpcClient,
   TracingStoreService
 }
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO}
 import models.user.{User, UserExperiencesDAO, UserService, UserTeamRolesDAO}
@@ -47,6 +47,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     userExperiencesDAO: UserExperiencesDAO,
                                     scriptDAO: ScriptDAO,
                                     dataSetDAO: DataSetDAO,
+                                    dataSetService: DataSetService,
                                     tracingStoreService: TracingStoreService,
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -211,6 +212,27 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                             boxContainer.fileName,
                                             boxContainer.description)
     }
+
+  // Used in createFromFiles. For all volume tracings that have an empty bounding box, reset it to the dataset bounding box
+  def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer],
+                                     organizationId: ObjectId): Fox[List[TracingBoxContainer]] =
+    Fox.serialCombined(tracingBoxes) { tracingBox: TracingBoxContainer =>
+      tracingBox.volume match {
+        case Full(v) =>
+          for { volumeAdapted <- addVolumeFallbackBoundingBox(v._1, organizationId) } yield
+            tracingBox.copy(volume = Full(volumeAdapted, v._2))
+        case _ => Fox.successful(tracingBox)
+      }
+    }
+
+  // Used in createFromFiles. Called once per requested task if volume tracing is passed
+  private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
+    if (volume.boundingBox.isEmpty) {
+      for {
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(volume.dataSetName, organizationId)(GlobalAccessContext)
+        dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+      } yield volume.copy(boundingBox = dataSource.boundingBox)
+    } else Fox.successful(volume)
 
   // Used in createFromFiles. Called once per requested task
   private def buildFullParamsFromFilesForSingleTask(
@@ -398,7 +420,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
             dataSet._id,
             description = tuple._1.map(_._1.description).openOr(None)
         ))
-      warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet)
+      warnings <- warnIfTeamHasNoAccess(fullTasks.map(_._1), dataSet, requestingUser)
       zippedTasksAndAnnotations = taskObjects zip createAnnotationBaseResults
       taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonWithOtherFox(tuple._1, tuple._2))
       result <- TaskCreationResult.fromTaskJsFoxes(taskJsons, warnings)
@@ -458,11 +480,12 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _          => Fox.successful(None)
     }
 
-  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet)(
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet, requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
-      projects: List[Project] <- Fox.serialCombined(projectNames)(projectDAO.findOneByName(_))
+      projects: List[Project] <- Fox.serialCombined(projectNames)(
+        projectDAO.findOneByNameAndOrganization(_, requestingUser._organization))
       dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
       noAccessTeamIds = projects.map(_._team).diff(dataSetTeams.map(_._id))
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
@@ -491,18 +514,17 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       case _ => Fox.successful(())
     }
 
-  private def createTaskWithoutAnnotationBase(
-      paramBox: Box[TaskParameters],
-      skeletonTracingIdBox: Box[Option[String]],
-      volumeTracingIdBox: Box[Option[String]],
-      requestingUser: User)(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Task] =
+  private def createTaskWithoutAnnotationBase(paramBox: Box[TaskParameters],
+                                              skeletonTracingIdBox: Box[Option[String]],
+                                              volumeTracingIdBox: Box[Option[String]],
+                                              requestingUser: User)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))
       task = Task(
@@ -510,7 +532,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         project._id,
         params.scriptId.map(ObjectId(_)),
         taskTypeIdValidated,
-        params.neededExperience,
+        params.neededExperience.trim,
         params.openInstances, //all instances are open at this time
         params.openInstances,
         tracingTime = None,
@@ -522,7 +544,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         creationInfo = params.creationInfo
       )
       _ <- taskDAO.insertOne(task)
-      _ <- userExperiencesDAO.insertExperienceToListing(params.neededExperience.domain, requestingUser._organization)
+      _ <- userExperiencesDAO.insertExperienceToListing(params.neededExperience.trim.domain,
+                                                        requestingUser._organization)
     } yield task
 
   private def taskToJsonWithOtherFox(taskFox: Fox[Task], otherFox: Fox[Unit])(

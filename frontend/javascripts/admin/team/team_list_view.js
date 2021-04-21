@@ -1,13 +1,15 @@
 // @flow
 import { PropTypes } from "@scalableminds/prop-types";
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Table, Icon, Spin, Button, Input, Modal, Alert } from "antd";
+import { Table, Spin, Button, Input, Modal, Alert } from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
 import type { APITeam } from "types/api_flow_types";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import CreateTeamModal from "admin/team/create_team_modal_view";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
@@ -115,7 +117,7 @@ class TeamListView extends React.PureComponent<Props, State> {
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Button
-              icon="plus"
+              icon={<PlusOutlined />}
               style={marginRight}
               type="primary"
               onClick={() => this.setState({ isTeamCreationModalVisible: true })}
@@ -156,10 +158,10 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Action"
                 key="actions"
                 render={(__, script: APITeam) => (
-                  <a href="#" onClick={_.partial(this.deleteTeam, script)}>
-                    <Icon type="delete" />
+                  <LinkButton onClick={_.partial(this.deleteTeam, script)}>
+                    <DeleteOutlined />
                     Delete
-                  </a>
+                  </LinkButton>
                 )}
               />
             </Table>

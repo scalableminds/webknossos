@@ -16,6 +16,7 @@
   <logger name="controllers" level="DEBUG" />
   <logger name="controllers.AssetsConfiguration" level="INFO" />
   <logger name="models" level="DEBUG" />
+  <logger name="akka.event" level="WARN" />
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />

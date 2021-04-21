@@ -11,19 +11,22 @@ import {
   Radio,
   Upload,
   Modal,
-  Icon,
   InputNumber,
   Input,
   Spin,
 } from "antd";
+import { FormInstance } from "antd/lib/form";
+import Toast from "libs/toast";
 import React from "react";
+import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
 
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type {
-  TaskCreationResponse,
-  TaskCreationResponseContainer,
+import {
+  type TaskCreationResponse,
+  type TaskCreationResponseContainer,
+  normFile,
 } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector6 } from "oxalis/constants";
@@ -46,7 +49,6 @@ import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 const RadioGroup = Radio.Group;
 
 const fullWidth = { width: "100%" };
@@ -56,7 +58,6 @@ const TASK_CSV_HEADER =
   "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
 type Props = {
-  form: Object,
   taskId: ?string,
   history: RouterHistory,
 };
@@ -225,6 +226,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
 }
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
+  formRef = React.createRef<typeof FormInstance>();
   state = {
     datasets: [],
     taskTypes: [],
@@ -252,6 +254,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   async applyDefaults() {
+    const form = this.formRef.current;
+    if (!form) {
+      Toast.info(messages["ui.no_form_active"]);
+      return;
+    }
     if (this.props.taskId) {
       const task = await getTask(this.props.taskId);
       const defaultValues = Object.assign({}, task, {
@@ -263,7 +270,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       const validFormValues = _.omitBy(defaultValues, _.isNull);
       // The task type is not needed for the form and leads to antd errors if it contains null values
       const { type, ...neededFormValues } = validFormValues;
-      this.props.form.setFieldsValue(neededFormValues);
+      form.setFieldsValue(neededFormValues);
     }
   }
 
@@ -276,192 +283,167 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     };
   }
 
-  handleSubmit = e => {
-    e.preventDefault();
-    this.props.form.validateFields(async (err, formValues) => {
-      if (!err) {
-        formValues.boundingBox = formValues.boundingBox
-          ? this.transformBoundingBox(formValues.boundingBox)
-          : null;
+  onFinish = async formValues => {
+    formValues.boundingBox = formValues.boundingBox
+      ? this.transformBoundingBox(formValues.boundingBox)
+      : null;
 
-        if (this.props.taskId != null) {
-          // either update an existing task
-          const confirmedTask = await updateTask(this.props.taskId, formValues);
-          this.props.history.push(`/tasks/${confirmedTask.id}`);
+    if (this.props.taskId != null) {
+      // either update an existing task
+      const confirmedTask = await updateTask(this.props.taskId, formValues);
+      this.props.history.push(`/tasks/${confirmedTask.id}`);
+    } else {
+      this.setState({ isUploading: true });
+
+      // or create a new one either from the form values or with an NML file
+      let response;
+      try {
+        if (this.state.specificationType === SpecificationEnum.Nml) {
+          // Workaround: Antd replaces file objects in the formValues with a wrapper file
+          // The original file object is contained in the originFileObj property
+          // This is most likely not intentional and may change in a future Antd version
+          formValues.nmlFiles = formValues.nmlFiles.map(wrapperFile => wrapperFile.originFileObj);
+          response = await createTaskFromNML(formValues);
         } else {
-          this.setState({ isUploading: true });
-
-          // or create a new one either from the form values or with an NML file
-          let response;
-          try {
-            if (this.state.specificationType === SpecificationEnum.Nml) {
-              // Workaround: Antd replaces file objects in the formValues with a wrapper file
-              // The original file object is contained in the originFileObj property
-              // This is most likely not intentional and may change in a future Antd version
-              formValues.nmlFiles = formValues.nmlFiles.map(
-                wrapperFile => wrapperFile.originFileObj,
-              );
-              response = await createTaskFromNML(formValues);
-            } else {
-              if (this.state.specificationType !== SpecificationEnum.BaseAnnotation) {
-                // Ensure that the base annotation field is null, if the specification mode
-                // does not include that field.
-                formValues.baseAnnotation = null;
-              }
-              response = await createTasks([formValues]);
-            }
-            handleTaskCreationResponse(response);
-          } finally {
-            this.setState({
-              isUploading: false,
-            });
+          if (this.state.specificationType !== SpecificationEnum.BaseAnnotation) {
+            // Ensure that the base annotation field is null, if the specification mode
+            // does not include that field.
+            formValues.baseAnnotation = null;
           }
+          response = await createTasks([formValues]);
         }
+        handleTaskCreationResponse(response);
+      } finally {
+        this.setState({
+          isUploading: false,
+        });
       }
-    });
-  };
-
-  normFile = e => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e && e.fileList;
-  };
-
-  isVolumeTaskType = (taskTypeId?: string): boolean => {
-    const selectedTaskTypeId = taskTypeId || this.props.form.getFieldValue("taskTypeId");
-    const selectedTaskType = this.state.taskTypes.find(
-      taskType => taskType.id === selectedTaskTypeId,
-    );
-    return selectedTaskType != null ? selectedTaskType.tracingType === "volume" : false;
-  };
-
-  onChangeTaskType = (taskTypeId: string) => {
-    if (this.isVolumeTaskType(taskTypeId)) {
-      this.setState({ specificationType: SpecificationEnum.Manual });
     }
   };
 
   renderSpecification() {
-    const { getFieldDecorator } = this.props.form;
     const isEditingMode = this.props.taskId != null;
 
     if (this.state.specificationType === SpecificationEnum.Nml) {
       return (
-        <FormItem label="NML Files" hasFeedback>
-          {getFieldDecorator("nmlFiles", {
-            rules: [{ required: true }],
-            valuePropName: "fileList",
-            getValueFromEvent: this.normFile,
-          })(
-            <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false}>
-              <p className="ant-upload-drag-icon">
-                <Icon type="inbox" />
-              </p>
-              <p className="ant-upload-text">Click or Drag Files to This Area to Upload</p>
-              <p>
-                Every nml creates a new task. You can upload multiple NML files or zipped
-                collections of nml files (.zip).
-              </p>
-            </Upload.Dragger>,
-          )}
+        <FormItem
+          name="nmlFiles"
+          label="NML Files"
+          hasFeedback
+          rules={[{ required: true }]}
+          valuePropName="fileList"
+          getValueFromEvent={normFile}
+        >
+          <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false}>
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
+            <p className="ant-upload-text">Click or Drag Files to This Area to Upload</p>
+            <p>
+              Every nml creates a new task. You can upload multiple NML files or zipped collections
+              of nml files (.zip).
+            </p>
+          </Upload.Dragger>
         </FormItem>
       );
     } else {
       return (
         <div>
           {this.state.specificationType === SpecificationEnum.BaseAnnotation ? (
-            <FormItem label="Base ID" hasFeedback>
-              {getFieldDecorator("baseAnnotation.baseId", {
-                rules: [
-                  { required: true },
-                  {
-                    validator: async (rule, value, callback) => {
-                      if (value === "") return callback();
+            <FormItem
+              name={["baseAnnotation", "baseId"]}
+              label="Base ID"
+              hasFeedback
+              rules={[
+                { required: true },
+                {
+                  validator: async (rule, value) => {
+                    const newestForm = this.formRef.current;
+                    if (!newestForm || value === "") {
+                      return Promise.resolve();
+                    }
 
-                      const annotationResponse =
-                        (await tryToAwaitPromise(
-                          getAnnotationInformation(value, "Task", {
-                            showErrorToast: false,
-                          }),
-                        )) ||
-                        (await tryToAwaitPromise(
-                          getAnnotationInformation(value, "Explorational", {
-                            showErrorToast: false,
-                          }),
-                        ));
+                    const annotationResponse =
+                      (await tryToAwaitPromise(
+                        getAnnotationInformation(value, "Task", {
+                          showErrorToast: false,
+                        }),
+                      )) ||
+                      (await tryToAwaitPromise(
+                        getAnnotationInformation(value, "Explorational", {
+                          showErrorToast: false,
+                        }),
+                      ));
 
-                      if (annotationResponse != null && annotationResponse.dataSetName != null) {
-                        this.props.form.setFieldsValue({
-                          dataSet: annotationResponse.dataSetName,
-                        });
-                        return callback();
-                      }
+                    if (annotationResponse != null && annotationResponse.dataSetName != null) {
+                      newestForm.setFieldsValue({
+                        dataSet: annotationResponse.dataSetName,
+                      });
+                      return Promise.resolve();
+                    }
 
-                      const taskResponse = await tryToAwaitPromise(
-                        getTask(value, { showErrorToast: false }),
-                      );
+                    const taskResponse = await tryToAwaitPromise(
+                      getTask(value, { showErrorToast: false }),
+                    );
 
-                      if (
-                        taskResponse != null &&
-                        taskResponse.dataSet != null &&
-                        _.isEqual(taskResponse.status, { open: 0, active: 0, finished: 1 })
-                      ) {
-                        this.props.form.setFieldsValue({
-                          dataSet: taskResponse.dataSet,
-                        });
-                        return callback();
-                      }
+                    if (
+                      taskResponse != null &&
+                      taskResponse.dataSet != null &&
+                      _.isEqual(taskResponse.status, { open: 0, active: 0, finished: 1 })
+                    ) {
+                      newestForm.setFieldsValue({
+                        dataSet: taskResponse.dataSet,
+                      });
+                      return Promise.resolve();
+                    }
 
-                      this.props.form.setFieldsValue({ dataSet: null });
-                      return callback("Invalid base annotation id.");
-                    },
+                    newestForm.setFieldsValue({ dataSet: null });
+                    return Promise.reject(new Error("Invalid base annotation id."));
                   },
-                ],
-              })(<Input style={fullWidth} disabled={isEditingMode} />)}
+                },
+              ]}
+            >
+              <Input style={fullWidth} disabled={isEditingMode} />
             </FormItem>
           ) : null}
 
-          <FormItem label="Dataset" hasFeedback>
-            {getFieldDecorator("dataSet", {
-              rules: [{ required: true }],
-            })(
-              <Select
-                showSearch
-                placeholder={
-                  this.state.specificationType === SpecificationEnum.BaseAnnotation
-                    ? "The dataset is inferred from the base annotation."
-                    : "Select a Dataset"
-                }
-                optionFilterProp="children"
-                style={fullWidth}
-                autoFocus
-                disabled={
-                  isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
-                }
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-              >
-                {this.state.datasets.map((dataset: APIDataset) => (
-                  <Option key={dataset.name} value={dataset.name}>
-                    {dataset.name}
-                  </Option>
-                ))}
-              </Select>,
-            )}
+          <FormItem name="dataSet" label="Dataset" hasFeedback rules={[{ required: true }]}>
+            <Select
+              showSearch
+              placeholder={
+                this.state.specificationType === SpecificationEnum.BaseAnnotation
+                  ? "The dataset is inferred from the base annotation."
+                  : "Select a Dataset"
+              }
+              optionFilterProp="label"
+              style={fullWidth}
+              disabled={
+                isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
+              }
+              notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+              options={this.state.datasets.map((dataset: APIDataset) => ({
+                label: dataset.name,
+                value: dataset.name,
+              }))}
+            />
           </FormItem>
 
-          <FormItem label="Starting Position" hasFeedback>
-            {getFieldDecorator("editPosition", {
-              rules: [{ required: true }],
-              initialValue: [0, 0, 0],
-            })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
+          <FormItem
+            name="editPosition"
+            label="Starting Position"
+            hasFeedback
+            rules={[{ required: true }]}
+          >
+            <Vector3Input style={fullWidth} disabled={isEditingMode} />
           </FormItem>
 
-          <FormItem label="Starting Rotation" hasFeedback>
-            {getFieldDecorator("editRotation", {
-              rules: [{ required: true }],
-              initialValue: [0, 0, 0],
-            })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
+          <FormItem
+            name="editRotation"
+            label="Starting Rotation"
+            hasFeedback
+            rules={[{ required: true }]}
+          >
+            <Vector3Input style={fullWidth} disabled={isEditingMode} />
           </FormItem>
         </div>
       );
@@ -469,7 +451,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { getFieldDecorator } = this.props.form;
     const isEditingMode = this.props.taskId != null;
     const titleLabel = isEditingMode ? `Update Task ${this.props.taskId || ""}` : "Create Task";
     const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
@@ -478,109 +459,102 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       <div className="container" style={{ paddingTop: 20 }}>
         <Spin spinning={this.state.isUploading}>
           <Card title={<h3>{titleLabel}</h3>}>
-            <Form onSubmit={this.handleSubmit} layout="vertical">
-              <FormItem label="TaskType" hasFeedback>
-                {getFieldDecorator("taskTypeId", {
-                  rules: [{ required: true }],
-                })(
-                  <Select
-                    showSearch
-                    placeholder="Select a TaskType"
-                    optionFilterProp="children"
-                    style={fullWidth}
-                    autoFocus
-                    disabled={isEditingMode}
-                    onChange={this.onChangeTaskType}
-                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  >
-                    {this.state.taskTypes.map((taskType: APITaskType) => (
-                      <Option key={taskType.id} value={taskType.id}>
-                        {taskType.summary}
-                      </Option>
-                    ))}
-                  </Select>,
-                )}
+            <Form
+              onFinish={this.onFinish}
+              layout="vertical"
+              ref={this.formRef}
+              initialValues={{ editPosition: [0, 0, 0], editRotation: [0, 0, 0] }}
+            >
+              <FormItem name="taskTypeId" label="TaskType" hasFeedback rules={[{ required: true }]}>
+                <Select
+                  showSearch
+                  placeholder="Select a TaskType"
+                  optionFilterProp="label"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                  options={this.state.taskTypes.map((taskType: APITaskType) => ({
+                    value: taskType.id,
+                    label: taskType.summary,
+                  }))}
+                />
               </FormItem>
 
               <Row gutter={8}>
                 <Col span={12}>
-                  <FormItem label="Experience Domain" hasFeedback>
-                    {getFieldDecorator("neededExperience.domain", {
-                      rules: [{ required: true }],
-                    })(
-                      <SelectExperienceDomain
-                        disabled={isEditingMode}
-                        placeholder="Select an Experience Domain"
-                        notFoundContent={messages["task.domain_does_not_exist"]}
-                        width={100}
-                        allowCreation
-                      />,
-                    )}
+                  <FormItem
+                    name={["neededExperience", "domain"]}
+                    label="Experience Domain"
+                    hasFeedback
+                    rules={[{ required: true }]}
+                  >
+                    <SelectExperienceDomain
+                      disabled={isEditingMode}
+                      placeholder="Select an Experience Domain"
+                      notFoundContent={messages["task.domain_does_not_exist"]}
+                      width={100}
+                      allowCreation
+                    />
                   </FormItem>
                 </Col>
                 <Col span={12}>
-                  <FormItem label="Experience Value" hasFeedback>
-                    {getFieldDecorator("neededExperience.value", {
-                      rules: [{ required: true }, { type: "number" }],
-                    })(<InputNumber style={fullWidth} disabled={isEditingMode} />)}
+                  <FormItem
+                    name={["neededExperience", "value"]}
+                    label="Experience Value"
+                    hasFeedback
+                    rules={[{ required: true }, { type: "number" }]}
+                  >
+                    <InputNumber style={fullWidth} disabled={isEditingMode} />
                   </FormItem>
                 </Col>
               </Row>
 
-              <FormItem label={instancesLabel} hasFeedback>
-                {getFieldDecorator("openInstances", {
-                  rules: [{ required: true }, { type: "number" }],
-                })(<InputNumber style={fullWidth} min={0} />)}
+              <FormItem
+                name="openInstances"
+                label={instancesLabel}
+                hasFeedback
+                rules={[{ required: true }, { type: "number" }]}
+              >
+                <InputNumber style={fullWidth} min={0} />
               </FormItem>
 
-              <FormItem label="Project" hasFeedback>
-                {getFieldDecorator("projectName", {
-                  rules: [{ required: true }],
-                })(
-                  <Select
-                    showSearch
-                    placeholder="Select a Project"
-                    optionFilterProp="children"
-                    style={fullWidth}
-                    autoFocus
-                    disabled={isEditingMode}
-                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  >
-                    {this.state.projects.map((project: APIProject) => (
-                      <Option key={project.id} value={project.name}>
-                        {project.name}
-                      </Option>
-                    ))}
-                  </Select>,
-                )}
+              <FormItem name="projectName" label="Project" hasFeedback rules={[{ required: true }]}>
+                <Select
+                  showSearch
+                  placeholder="Select a Project"
+                  optionFilterProp="label"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                  options={this.state.projects.map((project: APIProject) => ({
+                    value: project.name,
+                    label: project.name,
+                  }))}
+                />
               </FormItem>
 
-              <FormItem label="Script" hasFeedback>
-                {getFieldDecorator("scriptId")(
-                  <Select
-                    showSearch
-                    placeholder="Select a Script"
-                    optionFilterProp="children"
-                    style={fullWidth}
-                    autoFocus
-                    disabled={isEditingMode}
-                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  >
-                    {this.state.scripts.map((script: APIScript) => (
-                      <Option key={script.id} value={script.id}>
-                        {script.name}
-                      </Option>
-                    ))}
-                  </Select>,
-                )}
+              <FormItem name="scriptId" label="Script" hasFeedback>
+                <Select
+                  showSearch
+                  placeholder="Select a Script"
+                  optionFilterProp="label"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                  options={this.state.scripts.map((script: APIScript) => ({
+                    value: script.id,
+                    label: script.name,
+                  }))}
+                />
               </FormItem>
 
               <FormItem
+                name="boundingBox"
                 label="Bounding Box"
                 extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
                 hasFeedback
               >
-                {getFieldDecorator("boundingBox")(<Vector6Input disabled={isEditingMode} />)}
+                <Vector6Input disabled={isEditingMode} />
               </FormItem>
 
               <FormItem label="Task Specification" hasFeedback>
@@ -620,4 +594,4 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(TaskCreateFormView));
+export default withRouter(TaskCreateFormView);

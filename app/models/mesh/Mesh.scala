@@ -37,7 +37,7 @@ object MeshInfoParameters {
       MeshInfoParameters(ObjectId(annotationId), description, position))
 }
 
-class MeshService @Inject()(meshDAO: MeshDAO)(implicit ec: ExecutionContext) {
+class MeshService @Inject()()(implicit ec: ExecutionContext) {
   def publicWrites(meshInfo: MeshInfo): Fox[JsObject] =
     Fox.successful(
       Json.obj(
@@ -64,10 +64,11 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def isDeletedColumn(x: Meshes): Rep[Boolean] = x.isdeleted
 
-  def infoColumns = (columnsList diff Seq("data")).mkString(", ")
+  private val infoColumns = (columnsList diff Seq("data")).mkString(", ")
   type InfoTuple = (String, String, String, String, java.sql.Timestamp, Boolean)
 
-  def parse(r: MeshesRow) = Fox.failure("not implemented, use parseInfo or get the data directly")
+  override def parse(r: MeshesRow): Fox[MeshInfo] =
+    Fox.failure("not implemented, use parseInfo or get the data directly")
 
   def parseInfo(r: InfoTuple): Fox[MeshInfo] =
     for {
@@ -87,17 +88,17 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${infoColumns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}"
-          .as[InfoTuple])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parseInfo(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+        sql"select #$infoColumns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[InfoTuple])
+      r <- rList.headOption.toFox
+      parsed <- parseInfo(r)
     } yield parsed
 
   def findAllWithAnnotation(_annotation: ObjectId)(implicit ctx: DBAccessContext): Fox[List[MeshInfo]] =
     for {
       accessQuery <- readAccessQuery
       resultTuples <- run(
-        sql"select #${infoColumns} from #${existingCollectionName} where _annotation = ${_annotation}".as[InfoTuple])
+        sql"select #$infoColumns from #$existingCollectionName where _annotation = ${_annotation} and #$accessQuery"
+          .as[InfoTuple])
       resultsParsed <- Fox.serialCombined(resultTuples.toList)(parseInfo)
     } yield resultsParsed
 
@@ -114,22 +115,22 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.meshes set _annotation = ${_annotation}, description = ${description},
-                            position = '#${writeStructTuple(position.toList.map(_.toString))}' where _id = ${id}""")
+      _ <- run(sqlu"""update webknossos.meshes set _annotation = ${_annotation}, description = $description,
+                            position = '#${writeStructTuple(position.toList.map(_.toString))}' where _id = $id""")
     } yield ()
 
   def getData(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Array[Byte]] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select data from webknossos.meshes where _id = ${id} and #${accessQuery}".as[Option[String]])
-      r <- rList.headOption.flatten.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      rList <- run(sql"select data from webknossos.meshes where _id = $id and #$accessQuery".as[Option[String]])
+      r <- rList.headOption.flatten.toFox
       binary = BaseEncoding.base64().decode(r)
     } yield binary
 
   def updateData(id: ObjectId, data: Array[Byte])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.meshes set data = ${BaseEncoding.base64().encode(data)} where _id = ${id}")
+      _ <- run(sqlu"update webknossos.meshes set data = ${BaseEncoding.base64().encode(data)} where _id = $id")
     } yield ()
 
 }

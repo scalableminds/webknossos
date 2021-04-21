@@ -5,6 +5,7 @@ import models.binary.DataSetService
 import models.task.TaskService
 import models.user.{UserCache, _}
 import models.user.time.TimeSpanService
+import oxalis.telemetry.SlackNotificationService
 import utils.SQLClient
 
 class WebKnossosModule extends AbstractModule {
@@ -23,5 +24,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[DataSetService]).asEagerSingleton()
     bind(classOf[TimeSpanService]).asEagerSingleton()
     bind(classOf[JobService]).asEagerSingleton()
+    bind(classOf[SlackNotificationService]).asEagerSingleton()
   }
 }

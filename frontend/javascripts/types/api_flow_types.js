@@ -335,6 +335,7 @@ export type APIProjectCreator = APIProjectTypeBase & {
 
 export type APIProjectWithAssignments = APIProject & {
   +numberOfOpenAssignments: number,
+  +tracingTime: number,
 };
 
 export type APITask = {
@@ -487,7 +488,9 @@ export type APIOrganization = {
   +name: string,
   +additionalInformation: string,
   +displayName: string,
+  +pricingPlan: string,
   +enableAutoVerify: boolean,
+  +newUserMailingList: string,
 };
 
 export type APIBuildInfo = {
@@ -540,11 +543,20 @@ export type APIFeatureToggles = {
   +allowDeleteDatasets: boolean,
   +jobsEnabled: boolean,
   +publicDemoDatasetUrl: string,
+  +exportTiffMaxVolumeMVx: number,
+  +exportTiffMaxEdgeLengthVx: number,
 };
 
 export type APIJob = {
   +id: string,
   +datasetName: ?string,
+  +exportFileName: ?string,
+  +layerName: ?string,
+  +tracingId: ?string,
+  +annotationId: ?string,
+  +annotationType: ?string,
+  +organizationName: ?string,
+  +boundingBox: ?string,
   +type: string,
   +state: string,
   +createdAt: number,

@@ -21,18 +21,9 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(66);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(69);
 COMMIT TRANSACTION;
 
-CREATE TABLE webknossos.analytics(
-  _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
-  _user CHAR(24),
-  namespace VARCHAR(256) NOT NULL,
-  value JSONB NOT NULL,
-  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT valueIsJsonObject CHECK(jsonb_typeof(value) = 'object')
-);
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
@@ -175,9 +166,10 @@ CREATE TABLE webknossos.tracingStores(
 
 CREATE TABLE webknossos.projects(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _organization CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   _owner CHAR(24) NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'),
+  name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'), -- Unique among non-deleted, enforced in scala
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
   expectedTime BIGINT,
@@ -200,8 +192,9 @@ CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique'
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _organization CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
-  summary VARCHAR(256) NOT NULL UNIQUE,
+  summary VARCHAR(256) NOT NULL,
   description TEXT NOT NULL,
   settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
@@ -214,7 +207,8 @@ CREATE TABLE webknossos.taskTypes(
   tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object')
+  CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object'),
+  UNIQUE (summary, _organization)
 );
 
 CREATE TABLE webknossos.tasks(
@@ -263,6 +257,7 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   name VARCHAR(256) NOT NULL UNIQUE,
@@ -272,6 +267,7 @@ CREATE TABLE webknossos.organizations(
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
+  pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -383,7 +379,6 @@ CREATE TABLE webknossos.invites(
 );
 
 
-CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
 CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;
@@ -439,8 +434,6 @@ CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE INDEX ON webknossos.invites(tokenValue);
 
-ALTER TABLE webknossos.analytics
-  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE;
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,

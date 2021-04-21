@@ -194,8 +194,8 @@ project.remove.confirm=Do you really want to delete this project? All annotation
 project.remove.notAllowed=You are not authorized to remove this project. Talk to the owner.
 project.remove.success=Project was removed
 project.remove.failure=Project couldn’t get removed
-project.notFound=Project {0} couldn’t be found
-project.update.failed=Project {0} update failed
+project.notFound=Project couldn’t be found
+project.update.failed=Project update failed
 project.noAnnotations=We couldn’t find annotations for this project
 project.increaseTaskInstances.negative=Cannot increment task counts by negative number
 project.list.failed=Failed to retrieve list of projects.
@@ -313,7 +313,13 @@ initialData.organizationsNotEmpty=There are already organizations present in the
 
 job.notFound = Job with id {0} could not be found.
 job.couldNotRunCubing = Failed to start WKW conversion job.
+job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
+job.export.fileNotFound = Exported file not found. The link may be expired.
+job.export.tiff.invalidBoundingBox = The selected bounding box could not be parsed, must be x,y,z,width,height,depth
+job.export.tiff.volumeExceeded = The volume of the selected bounding box is too large.
+job.export.tiff.edgeLengthExceeded = An edge length of the selected bounding box is too large.
+job.export.notAllowed.organization = Currently tiff export is only allowed for datasets of your own organization.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

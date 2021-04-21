@@ -10,8 +10,12 @@ import { compareScreenshot } from "./screenshot_helpers";
 import {
   screenshotDataset,
   screenshotDatasetWithMapping,
-  DEV_AUTH_TOKEN,
+  WK_AUTH_TOKEN,
 } from "./dataset_rendering_helpers";
+
+if (!WK_AUTH_TOKEN) {
+  throw new Error("No WK_AUTH_TOKEN specified.");
+}
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -43,7 +47,7 @@ async function getNewPage(browser: Browser) {
   const page = await browser.newPage();
   page.setViewport({ width: 1920, height: 1080 });
   page.setExtraHTTPHeaders({
-    "X-Auth-Token": DEV_AUTH_TOKEN,
+    "X-Auth-Token": WK_AUTH_TOKEN,
   });
   return page;
 }

@@ -2,8 +2,9 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, IsosurfaceRequestEvent, UpdateAnnotationEvent}
+import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
 import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
@@ -11,58 +12,51 @@ import models.organization.OrganizationDAO
 import models.user.time.TimeSpanService
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
-import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreService,
-                                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                         timeSpanService: TimeSpanService,
-                                         dataSetService: DataSetService,
-                                         organizationDAO: OrganizationDAO,
-                                         analyticsService: AnalyticsService,
-                                         dataSetDAO: DataSetDAO,
-                                         annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
+class WKTracingStoreController @Inject()(
+    tracingStoreService: TracingStoreService,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    timeSpanService: TimeSpanService,
+    dataSetService: DataSetService,
+    organizationDAO: OrganizationDAO,
+    analyticsService: AnalyticsService,
+    dataSetDAO: DataSetDAO,
+    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def handleTracingUpdateReport(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    tracingStoreService.validateAccess(name) { _ =>
-      for {
-        tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-        annotation <- annotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
-        _ <- ensureAnnotationNotFinished(annotation)
-        timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
-        statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
-        userTokenOpt = (request.body \ "userToken").asOpt[String]
-        _ <- statisticsOpt match {
-          case Some(statistics) => annotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
-          case None             => Fox.successful(())
-        }
-        _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
-        userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
-        _ <- Fox.runOptional(userBox)(user =>
-          timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
-        _ = userBox.map(user => analyticsService.track(UpdateAnnotationEvent(user, annotation)))
-      } yield {
-        Ok
-      }
-    }
-  }
-
-  def reportIsosurfaceRequest(name: String, token: Option[String]): Action[AnyContent] = Action.async {
-    implicit request =>
+  def handleTracingUpdateReport(name: String): Action[TracingUpdatesReport] =
+    Action.async(validateJson[TracingUpdatesReport]) { implicit request =>
       tracingStoreService.validateAccess(name) { _ =>
+        val report = request.body
         for {
-          userOpt <- Fox.runOptional(token)(bearerTokenService.userForToken(_)(GlobalAccessContext))
-          _ = userOpt.map(user => analyticsService.track(IsosurfaceRequestEvent(user, "annotation")))
+          annotation <- annotationDAO.findOneByTracingId(report.tracingId)(GlobalAccessContext)
+          _ <- ensureAnnotationNotFinished(annotation)
+          _ <- Fox.runOptional(report.statistics) { statistics =>
+            annotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+          }
+          _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
+          userBox <- bearerTokenService.userForTokenOpt(report.userToken)(GlobalAccessContext).futureBox
+          _ <- Fox.runOptional(userBox)(user =>
+            timeSpanService.logUserInteraction(report.timestamps, user, annotation)(GlobalAccessContext))
+          _ = userBox.map { user =>
+            if (report.significantChangesCount > 0) {
+              analyticsService.track(UpdateAnnotationEvent(user, annotation, report.significantChangesCount))
+            }
+            if (report.viewChangesCount > 0) {
+              analyticsService.track(UpdateAnnotationViewOnlyEvent(user, annotation, report.viewChangesCount))
+            }
+          }
         } yield Ok
       }
-  }
+    }
 
   private def ensureAnnotationNotFinished(annotation: Annotation) =
     if (annotation.state == Finished) Fox.failure("annotation already finshed")

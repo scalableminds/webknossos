@@ -63,7 +63,7 @@ export default {
   offline:
     "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
     "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
@@ -104,8 +104,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
-  "tracing.tree_length_notification": (treeName: string, length: string) =>
-    `The tree ${treeName} has a total path length of ${length}.`,
+  "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
+    `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
@@ -177,7 +177,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "webgl.context_loss":
     "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "webgl.too_many_active_layers": _.template(
-    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the sidebar settings.",
+    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now annotating a new task with the following description",
@@ -209,8 +209,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
-  "dataset.upload_none_zip_error":
-    "It looks like the selected file is not a zip file. WebKnossos only supports uploading zipped datasets. Please ensure that your dataset is compressed to a zip archive.",
+  "dataset.unsupported_file_type":
+    "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
   "dataset.upload_invalid_zip":
     "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":
@@ -349,4 +349,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The project report page could not be refreshed. Please try to reload the page.",
   planned_maintenance:
     "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
+  "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
+  "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
+  "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
 };

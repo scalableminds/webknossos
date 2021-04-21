@@ -3,7 +3,15 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tooltip, Modal } from "antd";
+import { Col, Collapse, Row, Switch, Tooltip, Modal } from "antd";
+import {
+  EditOutlined,
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
+  ReloadOutlined,
+  ScanOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { useState } from "react";
@@ -50,6 +58,7 @@ import Store, {
   type Tracing,
   type Task,
 } from "oxalis/store";
+import LinkButton from "components/link_button";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
@@ -59,7 +68,6 @@ import messages, { settings } from "messages";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
 const { Panel } = Collapse;
-const { Option } = Select;
 
 type DatasetSettingsProps = {|
   userConfiguration: UserConfiguration,
@@ -159,7 +167,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <AsyncIconButton
-          type="scan"
+          icon={<ScanOutlined />}
           onClick={
             !isDisabled
               ? () => this.handleFindData(layerName, isColorLayer)
@@ -182,7 +190,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <AsyncIconButton
-          type="reload"
+          icon={<ReloadOutlined />}
           onClick={() => this.reloadLayerData(layerName)}
           style={{
             position: "absolute",
@@ -197,8 +205,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getDeleteButton = () => (
     <Tooltip title="Unlink dataset's original segmentation layer">
-      <Icon
-        type="stop"
+      <StopOutlined
         onClick={() => {
           this.removeFallbackLayer();
         }}
@@ -236,8 +243,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       : "Manually set the possible range of the histogram.";
     return (
       <Tooltip title={tooltipText}>
-        <Icon
-          type="edit"
+        <EditOutlined
           onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
           style={{
             position: "absolute",
@@ -347,7 +353,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-          <span style={{ fontWeight: 700 }}>
+          <span style={{ fontWeight: 700, wordWrap: "break-word" }}>
             {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
           </span>
 
@@ -366,7 +372,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }
             placement="left"
           >
-            <Icon style={{ marginLeft: 4 }} type="info-circle" />
+            <InfoCircleOutlined style={{ marginLeft: 4 }} />
           </Tooltip>
 
           {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
@@ -562,7 +568,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <span>
         Layers
         <Tooltip title="Not all layers are currently visible.">
-          <Icon type="exclamation-circle-o" style={{ marginLeft: 16, color: "coral" }} />
+          <ExclamationCircleOutlined style={{ marginLeft: 16, color: "coral" }} />
         </Tooltip>
       </span>
     ) : (
@@ -607,7 +613,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Tooltip title="Open Dialog to Downsample Volume Data">
-        <a href="#" onClick={this.showDownsampleVolumeModal}>
+        <LinkButton onClick={this.showDownsampleVolumeModal}>
           <img
             src="/assets/images/icon-downsampling.svg"
             style={{
@@ -620,7 +626,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
             alt="Resolution Icon"
           />
-        </a>
+        </LinkButton>
       </Tooltip>
     );
   };
@@ -647,7 +653,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
       ) != null;
     return (
-      <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
+      <Collapse
+        bordered={false}
+        defaultActiveKey={["1", "2", "3", "4"]}
+        className="tracing-settings-menu"
+      >
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
           {layerSettings}
         </Panel>
@@ -657,7 +667,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <React.Fragment>
                 {settings.gpuMemoryFactor}{" "}
                 <Tooltip title="Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }
@@ -665,34 +675,33 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               this.props.userConfiguration.gpuMemoryFactor || constants.DEFAULT_GPU_MEMORY_FACTOR
             ).toString()}
             onChange={this.onChangeGpuFactor}
-          >
-            {getGpuFactorsWithLabels().map(([factor, label]) => (
-              <Option key={label} value={factor.toString()}>
-                {label}
-              </Option>
-            ))}
-          </DropdownSetting>
+            options={getGpuFactorsWithLabels().map(([factor, label]) => ({
+              label,
+              value: factor.toString(),
+            }))}
+          />
           <DropdownSetting
             label={
               <React.Fragment>
                 {settings.loadingStrategy}{" "}
                 <Tooltip title={settings.loadingStrategyDescription}>
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }
             value={this.props.datasetConfiguration.loadingStrategy}
             onChange={_.partial(this.props.onChange, "loadingStrategy")}
-          >
-            <Option value="BEST_QUALITY_FIRST">Best quality first</Option>
-            <Option value="PROGRESSIVE_QUALITY">Progressive quality</Option>
-          </DropdownSetting>
+            options={[
+              { value: "BEST_QUALITY_FIRST", label: "Best quality first" },
+              { value: "PROGRESSIVE_QUALITY", label: "Progressive quality" },
+            ]}
+          />
           <SwitchSetting
             label={
               <React.Fragment>
                 {settings.fourBit}{" "}
                 <Tooltip title="Decrease size of transferred data by half using lossy compression. Recommended for poor and/or capped Internet connections.">
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }
@@ -711,7 +720,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <React.Fragment>
                 {settings.renderMissingDataBlack}{" "}
                 <Tooltip title="If disabled, missing data will be rendered by using poorer resolutions.">
-                  <Icon type="info-circle" />
+                  <InfoCircleOutlined />
                 </Tooltip>
               </React.Fragment>
             }

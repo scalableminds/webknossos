@@ -1,11 +1,13 @@
 // @flow
-import { Button, Icon, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
+import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
+import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Dropzone from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";
 
+import { navbarHeight } from "navbar";
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
@@ -38,7 +40,7 @@ function OverlayDropZone({ children }) {
     bottom: 0,
     left: 0,
     padding: "2.5em 0",
-    background: "rgba(0, 0, 0, 0.65)",
+    background: "rgba(0, 0, 0, 0.45)",
     textAlign: "center",
     zIndex: 1000,
   };
@@ -60,20 +62,22 @@ function OverlayDropZone({ children }) {
   );
 }
 
-function NmlDropArea({ showClickHint, isUpdateAllowed }) {
+function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
+  const clickInput = clickAllowed ? <input {...getInputProps()} /> : null;
   return (
-    <React.Fragment>
+    <div style={{ textAlign: "center", cursor: "pointer" }}>
+      {clickInput}
       <div>
-        <Icon type="inbox" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
+        <InboxOutlined style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
       </div>
       {isUpdateAllowed ? (
-        <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
+        <h5>Drop NML files here{clickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
           Drop NML files here to <b>create a new tracing</b>.
         </h5>
       )}
-    </React.Fragment>
+    </div>
   );
 }
 
@@ -118,7 +122,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           <List.Item>
             <List.Item.Meta
               avatar={
-                <Avatar size="large" icon="file" style={{ backgroundColor: "rgb(58, 144, 255)" }} />
+                <Avatar
+                  size="large"
+                  icon={<FileOutlined />}
+                  style={{ backgroundColor: "rgb(58, 144, 255)" }}
+                />
               }
               title={
                 <span style={{ wordBreak: "break-word" }}>
@@ -173,7 +181,15 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           }}
           onDrop={this.onDrop}
         >
-          <NmlDropArea showClickHint isUpdateAllowed={this.props.isUpdateAllowed} />
+          {({ getRootProps, getInputProps }) => (
+            <div {...getRootProps()}>
+              <NmlDropArea
+                clickAllowed
+                isUpdateAllowed={this.props.isUpdateAllowed}
+                getInputProps={getInputProps}
+              />
+            </div>
+          )}
         </Dropzone>
       </Modal>
     );
@@ -225,34 +241,45 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     return (
       <Dropzone
         disableClick
-        style={{ position: "relative" }}
         multiple
         disablePreview
         onDrop={this.onDrop}
         onDragEnter={this.onDragEnter}
         onDragLeave={this.onDragLeave}
+        noKeyboard
       >
-        {
-          // While dragging files over the view, the OverlayDropZone is rendered
-          // which shows a hint to the user that he may drop files here.
-        }
-        {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
-          <OverlayDropZone>
-            <NmlDropArea showClickHint={false} isUpdateAllowed={this.props.isUpdateAllowed} />
-          </OverlayDropZone>
-        ) : null}
-        {
-          // If the user explicitly selected the menu option to import NMLs,
-          // we show a proper modal which renderes almost the same hint ("You may drag... or click").
-        }
-        {this.props.showDropzoneModal ? this.renderDropzoneModal() : null}
+        {({ getRootProps, getInputProps }) => (
+          <div
+            {...getRootProps()}
+            style={{ position: "relative", minHeight: `calc(100vh - ${navbarHeight}px)` }}
+          >
+            {
+              // While dragging files over the view, the OverlayDropZone is rendered
+              // which shows a hint to the user that he may drop files here.
+            }
+            {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
+              <OverlayDropZone>
+                <NmlDropArea
+                  clickAllowed={false}
+                  isUpdateAllowed={this.props.isUpdateAllowed}
+                  getInputProps={getInputProps}
+                />
+              </OverlayDropZone>
+            ) : null}
+            {
+              // If the user explicitly selected the menu option to import NMLs,
+              // we show a proper modal which renderes almost the same hint ("You may drag... or click").
+            }
+            {this.props.showDropzoneModal ? this.renderDropzoneModal() : null}
 
-        {
-          // Once, files were dropped, we render the import modal
-        }
-        {this.renderImportModal()}
+            {
+              // Once, files were dropped, we render the import modal
+            }
+            {this.renderImportModal()}
 
-        {this.props.children}
+            {this.props.children}
+          </div>
+        )}
       </Dropzone>
     );
   }

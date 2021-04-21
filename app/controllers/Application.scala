@@ -6,24 +6,24 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
 import javax.inject.Inject
-import models.analytics.{AnalyticsDAO, AnalyticsEntry}
+import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.binary.DataStoreRpcClient
 import models.user.{MultiUserDAO, User}
 import oxalis.security.WkEnv
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO, StoreModules, WkConf}
+import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(analyticsDAO: AnalyticsDAO,
-                            multiUserDAO: MultiUserDAO,
+class Application @Inject()(multiUserDAO: MultiUserDAO,
+                            analyticsService: AnalyticsService,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
                             storeModules: StoreModules,
                             sil: Silhouette[WkEnv],
-                            rpc: RPC)(implicit ec: ExecutionContext)
+                            rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -52,9 +52,12 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
       case _ => Fox.successful(None)
     }
 
-  def analytics(namespace: String): Action[JsValue] = sil.UserAwareAction(parse.json(1024 * 1024)) { implicit request =>
-    analyticsDAO.insertOne(AnalyticsEntry(ObjectId.generate, request.identity.map(_._id), namespace, request.body))
-    Ok
+  def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {
+    implicit request =>
+      request.identity.foreach { user =>
+        analyticsService.track(FrontendAnalyticsEvent(user, eventType, request.body))
+      }
+      Ok
   }
 
   def features: Action[AnyContent] = sil.UserAwareAction {

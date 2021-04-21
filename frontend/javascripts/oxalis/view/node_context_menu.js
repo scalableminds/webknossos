@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
-import { Menu, notification, Icon, Divider, Tooltip } from "antd";
+import { Menu, notification, Divider, Tooltip } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
 import type { Vector3, OrthoView } from "oxalis/constants";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
@@ -20,7 +21,8 @@ import Toast from "libs/toast";
 import Clipboard from "clipboard-js";
 import messages from "messages";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
-import { formatNumberToLength } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import { roundTo } from "libs/utils";
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
@@ -51,8 +53,7 @@ type NoNodeContextMenuProps = {| ...Props |};
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
     <Tooltip title={title}>
-      <Icon
-        type="copy"
+      <CopyOutlined
         style={{ margin: "0 0 0 5px" }}
         onClick={async () => {
           await Clipboard.copy(value);
@@ -64,17 +65,26 @@ function copyIconWithTooltip(value: string | number, title: string) {
 }
 
 function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
-  const length = api.tracing.measurePathLengthBetweenNodes(sourceNodeId, targetNodeId);
+  const [lengthNm, lengthVx] = api.tracing.measurePathLengthBetweenNodes(
+    sourceNodeId,
+    targetNodeId,
+  );
   notification.open({
-    message: `The shortest path length between the nodes is ${formatNumberToLength(length)}.`,
+    message: `The shortest path length between the nodes is ${formatNumberToLength(
+      lengthNm,
+    )} (${formatLengthAsVx(lengthVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
 }
 
 function measureAndShowFullTreeLength(treeId: number, treeName: string) {
-  const length = api.tracing.measureTreeLength(treeId);
+  const [lengthInNm, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
-    message: messages["tracing.tree_length_notification"](treeName, formatNumberToLength(length)),
+    message: messages["tracing.tree_length_notification"](
+      treeName,
+      formatNumberToLength(lengthInNm),
+      formatLengthAsVx(lengthInVx),
+    ),
     icon: <i className="fas fa-ruler" />,
   });
 }
@@ -224,20 +234,20 @@ function NodeContextMenu(props: Props) {
       : null;
   const distanceToSelection =
     activeNode != null
-      ? formatNumberToLength(
-          V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
-        )
+      ? [
+          formatNumberToLength(
+            V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+          ),
+          formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
+        ]
       : null;
   const nodePositionAsString =
     nodeContextMenuNode != null
-      ? nodeContextMenuNode.position.map(value => value.toFixed(2)).join(", ")
+      ? nodeContextMenuNode.position.map(value => roundTo(value, 2)).join(", ")
       : "";
   return (
     <React.Fragment>
-      <div
-        style={{ width: "100%", height: "100%", position: "absolute", zIndex: 99 }}
-        onClick={hideNodeContextMenu}
-      />
+      <div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />
       <div
         style={{
           position: "absolute",
@@ -263,9 +273,9 @@ function NodeContextMenu(props: Props) {
         ) : null}
         {distanceToSelection != null ? (
           <div className="node-context-menu-item">
-            <i className="fas fa-ruler" /> {distanceToSelection} to this{" "}
-            {clickedNodeId != null ? "Node" : "Position"}
-            {copyIconWithTooltip(distanceToSelection, "Copy the distance")}
+            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
+            this {clickedNodeId != null ? "Node" : "Position"}
+            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
           </div>
         ) : null}
       </div>

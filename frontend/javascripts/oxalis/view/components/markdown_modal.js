@@ -64,7 +64,7 @@ export function MarkdownModal({
             placeholder={`Add ${label}`}
             onChange={onChange}
             rows={5}
-            autosize={{ minRows: 5, maxRows: 20 }}
+            autoSize={{ minRows: 5, maxRows: 20 }}
             isTextArea
           />
         </Col>

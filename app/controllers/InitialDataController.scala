@@ -55,6 +55,7 @@ class InitialDataService @Inject()(userService: UserService,
 
   private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email
   private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
+  private val defaultUserToken = conf.WebKnossos.SampleOrganization.User.token
   private val additionalInformation = """**Sample Organization**
 
 Sample Street 123
@@ -67,7 +68,8 @@ Samplecountry
                  "sample_organization",
                  additionalInformation,
                  "/assets/images/oxalis.svg",
-                 "Sample Organization")
+                 "Sample Organization",
+                 PricingPlan.Custom)
   private val organizationTeam =
     Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
   private val userId = ObjectId.generate
@@ -155,7 +157,7 @@ Samplecountry
       case _ =>
         val newToken = Token(
           ObjectId.generate,
-          "secretScmBoyToken",
+          defaultUserToken,
           LoginInfo("credentials", defaultUser._id.id),
           new DateTime(System.currentTimeMillis()),
           new DateTime(System.currentTimeMillis() + expiryTime),
@@ -194,7 +196,7 @@ Samplecountry
           "sampleTaskType",
           "Check those cells out!"
         )
-        for { _ <- taskTypeDAO.insertOne(taskType) } yield ()
+        for { _ <- taskTypeDAO.insertOne(taskType, defaultOrganization._id) } yield ()
       } else Fox.successful(())
     }.toFox
 
@@ -210,7 +212,7 @@ Samplecountry
                                 paused = false,
                                 Some(5400000),
                                 isBlacklistedFromReport = false)
-          for { _ <- projectDAO.insertOne(project) } yield ()
+          for { _ <- projectDAO.insertOne(project, defaultOrganization._id) } yield ()
         }
       } else Fox.successful(())
     }.toFox

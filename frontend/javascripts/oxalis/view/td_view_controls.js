@@ -1,12 +1,11 @@
 // @flow
 import { Button, Tooltip } from "antd";
+import { ReloadOutlined } from "@ant-design/icons";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
 
 import api from "oxalis/api/internal_api";
-
-const ButtonGroup = Button.Group;
 
 type Props = {|
   isRefreshingIsosurfaces: boolean,
@@ -23,7 +22,7 @@ function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
     }
   }
   return (
-    <ButtonGroup id="TDViewControls">
+    <div id="TDViewControls" className="antd-legacy-group">
       <Button size="small" onClick={api.tracing.rotate3DViewToDiagonal}>
         3D
       </Button>
@@ -42,12 +41,12 @@ function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
       <Tooltip title={refreshIsosurfaceTooltip}>
         <Button
           size="small"
-          icon="reload"
+          icon={<ReloadOutlined />}
           loading={isRefreshingIsosurfaces}
           onClick={api.data.refreshIsosurfaces}
         />
       </Tooltip>
-    </ButtonGroup>
+    </div>
   );
 }
 

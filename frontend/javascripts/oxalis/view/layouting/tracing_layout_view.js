@@ -3,54 +3,48 @@
  * @flow
  */
 
-import { Alert, Icon, Layout, Tooltip } from "antd";
+import { Alert, Layout, Tooltip } from "antd";
+import { SettingOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
+import _ from "lodash";
 
 import Request from "libs/request";
-import {
-  ArbitraryViewport,
-  type ViewMode,
-  OrthoViews,
-  type Vector3,
-  type OrthoView,
-} from "oxalis/constants";
+import Constants, { type ViewMode, type Vector3, type OrthoView } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import ActionBarView from "oxalis/view/action_bar_view";
-import ButtonComponent from "oxalis/view/components/button_component";
-import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
-import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
-import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
-import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import NodeContextMenu from "oxalis/view/node_context_menu";
-import MeshesView from "oxalis/view/right-menu/meshes_view";
+import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
 import type { ControllerStatus } from "oxalis/controller";
-import RecordingSwitch from "oxalis/view/recording_switch";
-import SettingsView from "oxalis/view/settings/settings_view";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
-import TDViewControls from "oxalis/view/td_view_controls";
 import Toast from "libs/toast";
 import TracingView from "oxalis/view/tracing_view";
-import TreesTabView, { importTracingFiles } from "oxalis/view/right-menu/trees_tab_view";
+import { importTracingFiles } from "oxalis/view/right-menu/trees_tab_view";
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
-import window, { document, location } from "libs/window";
+import { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
+import { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
+import {
+  layoutEmitter,
+  storeLayoutConfig,
+  setActiveLayout,
+  getLastActiveLayout,
+  getLayoutConfig,
+} from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import TabTitle from "../components/tab_title_component";
+import FlexLayoutWrapper from "./flex_layout_wrapper";
 
-import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
-import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 const { Sider } = Layout;
 
@@ -60,7 +54,6 @@ type OwnProps = {|
 |};
 type StateProps = {|
   viewMode: ViewMode,
-  displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,
   storedLayouts: Object,
@@ -70,6 +63,7 @@ type StateProps = {|
   is2d: boolean,
   displayName: string,
   organization: string,
+  isLeftBorderOpen: boolean,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
@@ -78,30 +72,19 @@ type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type PropsWithRouter = {| ...OwnProps, ...StateProps, ...DispatchProps, history: RouterHistory |};
 
 type State = {
-  isSettingsCollapsed: boolean,
-  activeLayout: string,
+  activeLayoutName: string,
   hasError: boolean,
   status: ControllerStatus,
   nodeContextMenuPosition: ?[number, number],
   clickedNodeId: ?number,
   nodeContextMenuGlobalPosition: Vector3,
   nodeContextMenuViewport: ?OrthoView,
+  model: Object,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
-const GOLDEN_LAYOUT_ADAPTER_STYLE = {
-  display: "block",
-  height: "100%",
-  width: "100%",
-  flex: "1 1 auto",
-  overflow: "hidden",
-};
-
 class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
-  currentLayoutConfig: Object;
-  currentLayoutName: string;
-
   static getDerivedStateFromError() {
     // DO NOT set hasError back to false EVER as this will trigger a remount of the Controller
     // with unforeseeable consequences
@@ -115,27 +98,22 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.viewMode,
       this.props.is2d,
     );
-    let lastActiveLayout;
-    if (
-      props.storedLayouts.LastActiveLayouts &&
-      props.storedLayouts.LastActiveLayouts[layoutType]
-    ) {
-      lastActiveLayout = props.storedLayouts.LastActiveLayouts[layoutType];
-    } else {
-      // added as a fallback when there are no stored last active layouts
-      const firstStoredLayout = Object.keys(props.storedLayouts[layoutType])[0];
-      lastActiveLayout = firstStoredLayout;
-    }
+    const lastActiveLayoutName = getLastActiveLayout(layoutType);
+    const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
     this.state = {
-      isSettingsCollapsed: true,
-      activeLayout: lastActiveLayout,
+      activeLayoutName: lastActiveLayoutName,
       hasError: false,
       status: "loading",
       nodeContextMenuPosition: null,
       clickedNodeId: null,
       nodeContextMenuGlobalPosition: [0, 0, 0],
       nodeContextMenuViewport: null,
+      model: layout,
     };
+  }
+
+  componentDidMount() {
+    window.addEventListener("resize", this.debouncedOnLayoutChange);
   }
 
   componentDidCatch(error: Error) {
@@ -146,18 +124,36 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   componentWillUnmount() {
     // Replace entire document with loading message
     document.body.removeChild(document.getElementById("main-container"));
+    window.removeEventListener("resize", this.debouncedOnLayoutChange);
 
     const refreshMessage = document.createElement("p");
     refreshMessage.innerHTML = "Reloading webKnossos...";
     refreshMessage.style.position = "absolute";
-    refreshMessage.style.top = 30;
-    refreshMessage.style.left = 50;
+    refreshMessage.style.top = "10px";
+    refreshMessage.style.left = "10px";
     document.body.appendChild(refreshMessage);
 
     // Do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
     location.reload();
   }
+
+  onStatusLoaded = (newStatus: ControllerStatus) => {
+    this.setState({ status: newStatus });
+    // After the data is loaded recalculate the layout type and the active layout.
+    const { initialCommandType, viewMode, is2d } = this.props;
+    const layoutType = determineLayout(initialCommandType.type, viewMode, is2d);
+    const lastActiveLayoutName = getLastActiveLayout(layoutType);
+    const layout = getLayoutConfig(layoutType, lastActiveLayoutName);
+    this.setState({
+      activeLayoutName: lastActiveLayoutName,
+      model: layout,
+    });
+    setTimeout(() => {
+      recalculateInputCatcherSizes();
+      window.needsRerender = true;
+    }, 500);
+  };
 
   showNodeContextMenuAt = (
     xPos: number,
@@ -183,32 +179,27 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     });
   };
 
-  handleSettingsCollapse = () => {
-    this.setState(prevState => ({
-      isSettingsCollapsed: !prevState.isSettingsCollapsed,
-    }));
-  };
-
-  onLayoutChange = (layoutConfig, layoutName) => {
+  onLayoutChange = (model?: Object, layoutName?: string) => {
     recalculateInputCatcherSizes();
     window.needsRerender = true;
-    this.currentLayoutConfig = layoutConfig;
-    this.currentLayoutName = layoutName;
+    if (model != null) {
+      this.setState({ model });
+    }
     if (this.props.autoSaveLayouts) {
-      this.saveCurrentLayout();
+      this.saveCurrentLayout(layoutName);
     }
   };
 
-  saveCurrentLayout = () => {
-    if (this.currentLayoutConfig == null || this.currentLayoutName == null) {
-      return;
-    }
+  // eslint-disable-next-line react/sort-comp
+  debouncedOnLayoutChange = _.debounce(() => this.onLayoutChange(), Constants.RESIZE_THROTTLE_TIME);
+
+  saveCurrentLayout = (layoutName?: string) => {
     const layoutKey = determineLayout(
       this.props.initialCommandType.type,
       this.props.viewMode,
       this.props.is2d,
     );
-    storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
+    storeLayoutConfig(this.state.model, layoutKey, layoutName || this.state.activeLayoutName);
   };
 
   getTabTitle = () => {
@@ -229,6 +220,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
+  toggleLeftBorder = () => {
+    layoutEmitter.emit("toggleBorder", "left");
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -244,8 +239,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       nodeContextMenuGlobalPosition,
       nodeContextMenuViewport,
       status,
-      isSettingsCollapsed,
-      activeLayout,
+      activeLayoutName,
     } = this.state;
 
     const layoutType = determineLayout(
@@ -254,7 +248,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       this.props.is2d,
     );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
+    const { isDatasetOnScratchVolume, isUpdateTracingAllowed, isLeftBorderOpen } = this.props;
 
     const createNewTracing = async (
       files: Array<File>,
@@ -286,9 +280,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialAnnotationType={this.props.initialAnnotationType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
-            setControllerStatus={(newStatus: ControllerStatus) =>
-              this.setState({ status: newStatus })
-            }
+            setControllerStatus={this.onStatusLoaded}
             showNodeContextMenuAt={this.showNodeContextMenuAt}
           />
           <CrossOriginApi />
@@ -297,13 +289,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               {status === "loaded" ? (
                 <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
                   <ButtonComponent
-                    className={isSettingsCollapsed ? "" : "highlight-togglable-button"}
-                    onClick={this.handleSettingsCollapse}
+                    className={isLeftBorderOpen ? "highlight-togglable-button" : ""}
+                    onClick={this.toggleLeftBorder}
                     shape="circle"
                   >
-                    <Icon
-                      type="setting"
-                      className="withoutIconMargin"
+                    <SettingOutlined
+                      className="without-icon-margin"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -314,10 +305,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   <ActionBarView
                     layoutProps={{
                       storedLayoutNamesForView: currentLayoutNames,
-                      activeLayout,
+                      activeLayout: activeLayoutName,
                       layoutKey: layoutType,
                       setCurrentLayout: layoutName => {
-                        this.setState({ activeLayout: layoutName });
+                        this.setState({
+                          activeLayoutName: layoutName,
+                        });
                         setActiveLayout(layoutType, layoutName);
                       },
                       saveCurrentLayout: this.saveCurrentLayout,
@@ -338,7 +331,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                         message={
                           <span>
                             Dataset is on tmpscratch!{" "}
-                            <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
+                            <WarningFilled style={{ margin: "0 0 0 6px" }} />
                           </span>
                         }
                         type="error"
@@ -349,70 +342,16 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               ) : null}
             </RenderToPortal>
             <Layout style={{ display: "flex" }}>
-              <Sider
-                collapsible
-                trigger={null}
-                collapsed={isSettingsCollapsed}
-                collapsedWidth={0}
-                width={360}
-                style={{ zIndex: 100, marginRight: isSettingsCollapsed ? 0 : 8 }}
-              >
-                <SettingsView dontRenderContents={isSettingsCollapsed} />
-              </Sider>
               <MergerModeController />
-              <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
+              <div id={canvasAndLayoutContainerID} style={{ width: "100%", height: "100%" }}>
                 <TracingView />
-                <GoldenLayoutAdapter
-                  id="layoutContainer"
-                  style={GOLDEN_LAYOUT_ADAPTER_STYLE}
-                  layoutKey={layoutType}
-                  activeLayoutName={activeLayout}
-                  onLayoutChange={this.onLayoutChange}
-                >
-                  {/*
-                   * All possible layout panes are passed here. Depending on the actual layout,
-                   *  the components are rendered or not.
-                   */}
-                  <InputCatcher
-                    viewportID={OrthoViews.PLANE_XY}
-                    key="xy"
-                    portalKey="xy"
-                    displayScalebars={displayScalebars}
+                {status === "loaded" ? (
+                  <FlexLayoutWrapper
+                    onLayoutChange={this.onLayoutChange}
+                    layoutKey={layoutType}
+                    layoutName={activeLayoutName}
                   />
-                  <InputCatcher
-                    viewportID={OrthoViews.PLANE_YZ}
-                    key="yz"
-                    portalKey="yz"
-                    displayScalebars={displayScalebars}
-                  />
-                  <InputCatcher
-                    viewportID={OrthoViews.PLANE_XZ}
-                    key="xz"
-                    portalKey="xz"
-                    displayScalebars={displayScalebars}
-                  />
-                  <InputCatcher
-                    viewportID={OrthoViews.TDView}
-                    key="td"
-                    portalKey="td"
-                    displayScalebars={displayScalebars}
-                  >
-                    <TDViewControls />
-                  </InputCatcher>
-                  <InputCatcher
-                    viewportID={ArbitraryViewport}
-                    key="arbitraryViewport"
-                    portalKey="arbitraryViewport"
-                  >
-                    {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
-                  </InputCatcher>
-                  <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />
-                  <TreesTabView key="TreesTabView" portalKey="TreesTabView" />
-                  <CommentTabView key="CommentTabView" portalKey="CommentTabView" />
-                  <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />
-                  <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
-                  <MeshesView key="MeshesView" portalKey="MeshesView" />
-                </GoldenLayoutAdapter>
+                ) : null}
               </div>
               {this.props.showVersionRestore ? (
                 <Sider id="version-restore-sider" width={400}>
@@ -436,7 +375,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
-    displayScalebars: state.userConfiguration.displayScalebars,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
@@ -446,6 +384,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     is2d: is2dDataset(state.dataset),
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
     organization: state.dataset.owningOrganization,
+    isLeftBorderOpen: state.uiInformation.borderOpenStatus.left,
   };
 }
 

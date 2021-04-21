@@ -1,5 +1,15 @@
 // @flow
-import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
+import { Button, Modal, Tag, Card, Row, Col, List } from "antd";
+import {
+  CheckCircleOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  PlayCircleOutlined,
+  RollbackOutlined,
+  TeamOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
@@ -20,6 +30,7 @@ import {
 } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
@@ -225,19 +236,19 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     // TODO use React fragments <> instead of spans / divs
     const label = this.props.isAdminView ? (
       <span>
-        <Icon type="eye-o" />
+        <EyeOutlined />
         View
       </span>
     ) : (
       <span>
-        <Icon type="play-circle-o" />
+        <PlayCircleOutlined />
         Trace
       </span>
     );
 
     return task.annotation.state === "Finished" ? (
       <div>
-        <Icon type="check-circle-o" />
+        <CheckCircleOutlined />
         Finished
         <br />
       </div>
@@ -247,10 +258,10 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         <br />
         {isAdmin || this.props.isAdminView ? (
           <div>
-            <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
-              <Icon type="team" />
+            <LinkButton onClick={() => this.openTransferModal(annotation.id)}>
+              <TeamOutlined />
               Transfer
-            </a>
+            </LinkButton>
             <br />
           </div>
         ) : null}
@@ -262,28 +273,28 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
                 const isVolumeIncluded = annotation.tracing.volume != null;
                 return downloadNml(annotation.id, "Task", isVolumeIncluded);
               }}
+              icon={<DownloadOutlined />}
             >
-              <Icon type="download" />
               Download
             </AsyncLink>
             <br />
-            <a href="#" onClick={() => this.resetTask(annotation)}>
-              <Icon type="rollback" />
+            <LinkButton onClick={() => this.resetTask(annotation)}>
+              <RollbackOutlined />
               Reset
-            </a>
+            </LinkButton>
             <br />
-            <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
-              <Icon type="delete" />
+            <LinkButton onClick={() => this.cancelAnnotation(annotation)}>
+              <DeleteOutlined />
               Reset and Cancel
-            </a>
+            </LinkButton>
             <br />
           </div>
         ) : null}
         {this.props.isAdminView ? null : (
-          <a href="#" onClick={() => this.confirmFinish(task)}>
-            <Icon type="check-circle-o" />
+          <LinkButton onClick={() => this.confirmFinish(task)}>
+            <CheckCircleOutlined />
             Finish
-          </a>
+          </LinkButton>
         )}
       </div>
     );
@@ -483,7 +494,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         <div className="pull-right">
           <AsyncButton
             type="primary"
-            icon="file-add"
+            icon={<UserAddOutlined />}
             onClick={() => this.confirmGetNewTask()}
             disabled={this.props.isAdminView && this.props.userId}
           >

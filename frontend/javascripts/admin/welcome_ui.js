@@ -1,6 +1,14 @@
 // @flow
+import {
+  CloseOutlined,
+  CloudUploadOutlined,
+  MailOutlined,
+  PlayCircleOutlined,
+  PlusCircleOutlined,
+  RightOutlined,
+} from "@ant-design/icons";
 
-import { Icon, Tooltip } from "antd";
+import { Tooltip } from "antd";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { isUserAdminOrTeamManager, isUserAdminOrDatasetManager } from "libs/utils";
@@ -28,7 +36,7 @@ const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsN
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-      <Icon type="right" className="chevron" />
+      <RightOutlined className="chevron" />
     </React.Fragment>
   );
 
@@ -66,7 +74,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
     >
       <div style={{ position: "absolute", right: 0, top: 0, margin: 8 }}>
         <Tooltip title="Don't show this again" placement="left">
-          <Icon type="close" onClick={onDismiss} />
+          <CloseOutlined onClick={onDismiss} />
         </Tooltip>
       </div>
       <div className="welcome-header-content">
@@ -109,7 +117,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 title="Open a Demo Dataset"
                 description="Have a look at a public dataset to experience webKnossos in action."
                 href={getDemoDatasetUrl()}
-                icon={<Icon type="play-circle" className="action-icon" />}
+                icon={<PlayCircleOutlined className="action-icon" />}
               />
 
               {isUserAdminOrDatasetManager(activeUser) ? (
@@ -117,21 +125,21 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                   title="Import Your Own Data"
                   description="Directly upload your data as a zip file."
                   to="/datasets/upload"
-                  icon={<Icon type="cloud-upload" className="action-icon" />}
+                  icon={<CloudUploadOutlined className="action-icon" />}
                 />
               ) : null}
 
               <WhatsNextAction
                 title="Learn How To Create Annotations"
                 description="Watch a short video to see how data can be annotated with webKnossos."
-                icon={<Icon type="plus-circle" className="action-icon" />}
-                href="https://youtu.be/W-dosptovEU?t=52"
+                icon={<PlusCircleOutlined className="action-icon" />}
+                href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
               />
               {isUserAdminOrTeamManager(activeUser) ? (
                 <WhatsNextAction
                   title="Invite Your Colleagues"
                   description="Send invites to your colleagues and ask them to join your organization."
-                  icon={<Icon type="mail" className="action-icon" />}
+                  icon={<MailOutlined className="action-icon" />}
                   onClick={() => {
                     renderIndependently(destroy => (
                       <InviteUsersModal

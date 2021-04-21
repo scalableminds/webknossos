@@ -8,7 +8,6 @@ import {
 import constants, {
   ViewModeValuesIndices,
   OrthoViewIndices,
-  OrthoViews,
   type Vector3,
   VolumeToolEnum,
   volumeToolEnumToIndex,
@@ -111,7 +110,7 @@ const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
 
-// For some reason, taking the dataset scale from the uniform results is imprecise
+// For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
 // is directly inserted into the source via templating.
 const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
@@ -137,7 +136,7 @@ ${compileShader(
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
   if (isOutsideOfBoundingBox(worldCoordUVW)) {
-    gl_FragColor = vec4(0.0);
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
   vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
@@ -235,7 +234,6 @@ void main() {
       ? formatNumberAsGLSLFloat(params.packingDegreeLookup[params.segmentationName])
       : 0.0,
     ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
-    OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
     l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),

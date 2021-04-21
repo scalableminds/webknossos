@@ -3,14 +3,7 @@
  * @flow
  */
 import type { ServerVolumeTracing } from "types/api_flow_types";
-import type {
-  Vector2,
-  Vector3,
-  Vector4,
-  OrthoView,
-  AnnotationTool,
-  ContourMode,
-} from "oxalis/constants";
+import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 
 type InitializeVolumeTracingAction = {
@@ -23,8 +16,7 @@ type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
 type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
 type FinishEditingAction = { type: "FINISH_EDITING" };
 type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
-type SetToolAction = { type: "SET_TOOL", tool: AnnotationTool };
-type CycleToolAction = { type: "CYCLE_TOOL" };
+
 export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
   source: "previousLayer" | "nextLayer",
@@ -55,8 +47,6 @@ export type VolumeTracingAction =
   | FloodFillAction
   | FinishEditingAction
   | SetActiveCellAction
-  | SetToolAction
-  | CycleToolAction
   | UpdateDirectionAction
   | ResetContourAction
   | FinishAnnotationStrokeAction
@@ -114,15 +104,6 @@ export const finishEditingAction = (): FinishEditingAction => ({
 export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
   type: "SET_ACTIVE_CELL",
   cellId,
-});
-
-export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
-  type: "SET_TOOL",
-  tool,
-});
-
-export const cycleToolAction = (): CycleToolAction => ({
-  type: "CYCLE_TOOL",
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({

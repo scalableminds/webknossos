@@ -5,9 +5,9 @@ import DataLayer from "oxalis/model/data_layer";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
-  setToolAction,
   finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { setToolAction } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
   _take,

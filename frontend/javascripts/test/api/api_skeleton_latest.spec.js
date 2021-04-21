@@ -197,6 +197,11 @@ test("Utils Api: registerOverwrite should overwrite an existing function", t => 
   t.is(api.tracing.getActiveNodeId(), 2);
 });
 
+test("Calling a volume api function in a skeleton tracing should throw an error", t => {
+  const { api } = t.context;
+  t.throws(() => api.tracing.getActiveCellId());
+});
+
 test("getTreeName should get the name of a tree", t => {
   const { api } = t.context;
   const name = api.tracing.getTreeName(2);

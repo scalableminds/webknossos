@@ -28,7 +28,7 @@ import {
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
 import type {
@@ -49,6 +49,7 @@ import * as Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { setToolAction } from "oxalis/model/actions/annotation_actions";
 import TWEEN from "tween.js";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";
@@ -491,8 +492,7 @@ class TracingApi {
 
   /**
    * Returns the active volume tool which is either
-   * "MOVE", "TRACE" or "BRUSH".
-   * _Volume tracing only!_
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL".
    */
   getAnnotationTool(): AnnotationTool {
     return Store.getState().tracing.activeTool;
@@ -500,11 +500,9 @@ class TracingApi {
 
   /**
    * Sets the active volume tool which should be either
-   * "MOVE", "TRACE" or "BRUSH".
-   * _Volume tracing only!_
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL".
    */
   setAnnotationTool(tool: AnnotationTool) {
-    assertVolume(Store.getState().tracing);
     assertExists(tool, "Volume tool is missing.");
     if (AnnotationToolEnum[tool] == null) {
       throw new Error(
@@ -515,8 +513,6 @@ class TracingApi {
   }
 
   /**
-   * Returns the active tool which is either
-   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
    * Deprecated! Use getAnnotationTool instead.
    */
   getVolumeTool(): AnnotationTool {
@@ -524,8 +520,6 @@ class TracingApi {
   }
 
   /**
-   * Sets the active tool which should be either
-   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
    * Deprecated! Use setAnnotationTool instead.
    */
   setVolumeTool(tool: AnnotationTool) {

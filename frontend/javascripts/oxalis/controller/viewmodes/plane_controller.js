@@ -32,9 +32,9 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import {
   createCellAction,
-  cycleToolAction,
   copySegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { cycleToolAction } from "oxalis/model/actions/annotation_actions";
 import {
   MoveTool,
   SkeletonTool,

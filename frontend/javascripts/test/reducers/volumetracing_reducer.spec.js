@@ -6,6 +6,7 @@ import type { Tracing, VolumeTracing } from "oxalis/store";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
+import * as AnnotationActions from "oxalis/model/actions/annotation_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import mockRequire from "mock-require";
@@ -233,7 +234,7 @@ test("VolumeTracing should create cells and only update the maxCellId after a vo
 });
 
 test("VolumeTracing should set trace/view tool", t => {
-  const setToolAction = VolumeTracingActions.setToolAction(AnnotationToolEnum.TRACE);
+  const setToolAction = AnnotationActions.setToolAction(AnnotationToolEnum.TRACE);
 
   // Change tool to Trace
   const newState = AnnotationReducer(initialState, setToolAction);
@@ -243,7 +244,7 @@ test("VolumeTracing should set trace/view tool", t => {
 });
 
 test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(zoomStep) is > 1", t => {
-  const setToolAction = VolumeTracingActions.setToolAction(AnnotationToolEnum.TRACE);
+  const setToolAction = AnnotationActions.setToolAction(AnnotationToolEnum.TRACE);
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: { $set: 3 },
@@ -262,7 +263,7 @@ test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(
 });
 
 test("VolumeTracing should cycle trace/view/brush tool", t => {
-  const cycleToolAction = VolumeTracingActions.cycleToolAction();
+  const cycleToolAction = AnnotationActions.cycleToolAction();
 
   // Cycle tool to Brush
   let newState = AnnotationReducer(initialState, cycleToolAction);

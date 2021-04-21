@@ -63,7 +63,7 @@ import {
   globalPositionToBaseBucket,
 } from "oxalis/model/helpers/position_converter";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
-import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   addTreesAndGroupsAction,
   setActiveNodeAction,
@@ -83,7 +83,7 @@ import {
   setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { refreshIsosurfacesAction } from "oxalis/model/actions/annotation_actions";
+import { setToolAction, refreshIsosurfacesAction } from "oxalis/model/actions/annotation_actions";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -833,7 +833,7 @@ class TracingApi {
 
   /**
    * Returns the active tool which is either
-   * "MOVE", "SKELETON", TRACE", "BRUSH",  FILL_CELL or PICK_CELL
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
    */
   getAnnotationTool(): AnnotationTool {
     return Store.getState().tracing.activeTool;
@@ -841,11 +841,10 @@ class TracingApi {
 
   /**
    * Sets the active tool which should be either
-   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
    * _Volume tracing only!_
    */
   setAnnotationTool(tool: AnnotationTool) {
-    assertVolume(Store.getState().tracing);
     if (AnnotationToolEnum[tool] == null) {
       throw new Error(
         `Annotation tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
@@ -855,8 +854,6 @@ class TracingApi {
   }
 
   /**
-   * Returns the active tool which is either
-   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
    * Deprecated! Use getAnnotationTool instead.
    */
   getVolumeTool(): AnnotationTool {
@@ -864,8 +861,6 @@ class TracingApi {
   }
 
   /**
-   * Sets the active tool which should be either
-   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
    * Deprecated! Use setAnnotationTool instead.
    */
   setVolumeTool(tool: AnnotationTool) {

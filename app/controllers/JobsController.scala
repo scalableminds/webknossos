@@ -255,7 +255,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
-        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
         command = "compute_mesh_file"
         commandArgs = Json.obj(
           "organization_name" -> organizationName,

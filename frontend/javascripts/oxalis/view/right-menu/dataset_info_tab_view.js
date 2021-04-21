@@ -28,10 +28,6 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
@@ -44,7 +40,7 @@ type DispatchProps = {|
   setAnnotationDescription: string => void,
 |};
 
-type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
+type Props = {| ...StateProps, ...DispatchProps |};
 
 const shortcuts = [
   {
@@ -292,7 +288,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     }
 
     return (
-      <div className="flex-overflow">
+      <div>
         <div>{annotationTypeLabel}</div>
         <div>{descriptionEditField}</div>
       </div>
@@ -473,7 +469,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(DatasetInfoTabView);

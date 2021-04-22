@@ -16,6 +16,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
+import classnames from "classnames";
 
 import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
@@ -244,13 +245,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <EditOutlined
+          className={classnames({ "color-primary": isInEditMode })}
           onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
           style={{
             position: "absolute",
             top: 4,
             right: 30,
             cursor: "pointer",
-            color: isInEditMode ? "rgb(24, 144, 255)" : null,
           }}
         />
       </Tooltip>

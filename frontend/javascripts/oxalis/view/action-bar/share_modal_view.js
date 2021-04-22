@@ -35,8 +35,8 @@ function Hint({ children, style }) {
         ...style,
         marginBottom: 12,
         fontSize: 12,
-        color: "rgb(118, 118, 118)",
       }}
+      className="color-text-secondary"
     >
       {children}
     </div>

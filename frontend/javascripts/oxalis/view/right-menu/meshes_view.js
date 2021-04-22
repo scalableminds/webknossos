@@ -44,7 +44,7 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-import classNames from "classnames";
+import classnames from "classnames";
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -146,14 +146,6 @@ type StateProps = {|
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
-
-const getCheckboxStyle = isLoaded =>
-  isLoaded
-    ? {}
-    : {
-        fontStyle: "italic",
-        color: "#989898",
-      };
 
 class MeshesView extends React.Component<
   Props,
@@ -302,7 +294,7 @@ class MeshesView extends React.Component<
         >
           <div style={{ display: "flex" }}>
             <div
-              className={classNames("isosurface-list-item", {
+              className={classnames("isosurface-list-item", {
                 "is-centered-cell": segmentId === isCenteredCell,
               })}
               onClick={() => {
@@ -338,7 +330,8 @@ class MeshesView extends React.Component<
               this.props.onChangeVisibility(mesh, event.target.checked);
             }}
             disabled={isLoading}
-            style={getCheckboxStyle(mesh.isLoaded)}
+            style={mesh.isLoaded ? null : { fontStyle: "italic" }}
+            className={classnames({ "color-text-secondary": !mesh.isLoaded })}
           >
             {mesh.description}
           </Checkbox>

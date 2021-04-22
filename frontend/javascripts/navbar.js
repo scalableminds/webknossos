@@ -319,10 +319,10 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
           key="theme"
           onClick={() => {
             const styleEl = ((document.getElementById("primary-stylesheet"): any): HTMLLinkElement);
-            if (styleEl.href.includes("light")) {
-              styleEl.href = styleEl.href.replace("light", "dark");
+            if (styleEl.href.includes("light.css")) {
+              styleEl.href = styleEl.href.replace("light.css", "dark.css");
             } else {
-              styleEl.href = styleEl.href.replace("dark", "light");
+              styleEl.href = styleEl.href.replace("dark.css", "light.css");
             }
           }}
         >

@@ -1,6 +1,6 @@
 // @flow
 import Maybe from "data.maybe";
-import update from "immutability-helper";
+import { updateKey } from "oxalis/model/helpers/deep_update";
 
 import type {
   APIAnnotation,
@@ -16,7 +16,6 @@ import type {
 } from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
-import { AnnotationToolEnum } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import {
@@ -133,22 +132,16 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     meshes,
     user,
-    // todop: activeTool needs to be stored in annotation (on server)
-    activeTool: AnnotationToolEnum.MOVE,
   };
 }
 
 export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
-  if (tool === state.tracing.activeTool) {
+  if (tool === state.uiInformation.activeTool) {
     return state;
   }
   if (isVolumeTool(tool) && isVolumeAnnotationDisallowedForZoom(tool, state)) {
     return state;
   }
 
-  return update(state, {
-    tracing: {
-      activeTool: { $set: tool },
-    },
-  });
+  return updateKey(state, "uiInformation", { activeTool: tool });
 }

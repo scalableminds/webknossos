@@ -206,7 +206,7 @@ export default function ToolbarView() {
   const viewMode = useSelector(state => state.temporaryConfiguration.viewMode);
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
 
-  const activeTool = useSelector(state => state.tracing.activeTool);
+  const activeTool = useSelector(state => state.uiInformation.activeTool);
 
   const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentation);
   const labeledResolution =

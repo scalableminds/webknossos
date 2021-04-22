@@ -76,6 +76,7 @@ type OwnProps = {| showNodeContextMenuAt: ShowContextMenuFunction |};
 
 type StateProps = {|
   tracing: Tracing,
+  activeTool: AnnotationTool,
 |};
 
 type Props = {|
@@ -447,7 +448,7 @@ class PlaneController extends React.PureComponent<Props> {
     viewHandler?: ?Function,
   ): Function {
     return (...args) => {
-      const tool = this.props.tracing.activeTool;
+      const tool = this.props.activeTool;
       if (tool === AnnotationToolEnum.MOVE) {
         if (viewHandler != null) {
           viewHandler(...args);
@@ -473,7 +474,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   createToolDependentMouseHandler(toolToHandlerMap: { [key: AnnotationTool]: Function }): Function {
     return (...args) => {
-      const tool = this.props.tracing.activeTool;
+      const tool = this.props.activeTool;
       const handler = toolToHandlerMap[tool];
       const fallbackHandler = toolToHandlerMap[AnnotationToolEnum.MOVE];
       if (handler != null) {
@@ -502,6 +503,7 @@ class PlaneController extends React.PureComponent<Props> {
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
     tracing: state.tracing,
+    activeTool: state.uiInformation.activeTool,
   };
 }
 

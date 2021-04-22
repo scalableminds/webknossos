@@ -566,7 +566,7 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => annotationToolEnumToIndex(storeState.tracing.activeTool),
+          storeState => annotationToolEnumToIndex(storeState.uiInformation.activeTool),
           annotationTool => {
             this.uniforms.activeAnnotationToolIndex.value = annotationTool;
           },

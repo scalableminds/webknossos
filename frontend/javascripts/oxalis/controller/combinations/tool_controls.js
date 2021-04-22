@@ -50,8 +50,8 @@ export class MoveTool {
             break;
           }
           case "shift": {
-            const { tracing } = Store.getState();
-            const isBrushActive = tracing.activeTool === AnnotationToolEnum.BRUSH;
+            const { uiInformation, tracing } = Store.getState();
+            const isBrushActive = uiInformation.activeTool === AnnotationToolEnum.BRUSH;
             if (isBrushActive) {
               // Different browsers send different deltas, this way the behavior is comparable
               if (delta > 0) {

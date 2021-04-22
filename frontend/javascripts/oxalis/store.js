@@ -186,7 +186,6 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +annotationType: AnnotationType,
-  +activeTool: AnnotationTool,
   +meshes: Array<MeshMetaData>,
   +user: ?APIUserBase,
 |};
@@ -450,6 +449,7 @@ export type BorderOpenStatus = {
 
 type UiInformation = {
   +showDropzoneModal: boolean,
+  +activeTool: AnnotationTool,
   +showVersionRestore: boolean,
   +storedLayouts: Object,
   +isImportingMesh: boolean,

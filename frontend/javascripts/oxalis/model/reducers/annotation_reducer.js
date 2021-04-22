@@ -5,13 +5,7 @@ import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { type StateShape1, updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
-import {
-  convertServerAnnotationToFrontendAnnotation,
-  setToolReducer,
-} from "oxalis/model/reducers/reducer_helpers";
-import { AnnotationToolEnum } from "oxalis/constants";
-import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -144,38 +138,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey2(state, "isosurfaces", cellId, {
         isLoading: false,
       });
-    }
-
-    case "SET_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
-        return state;
-      }
-      return setToolReducer(state, action.tool);
-    }
-
-    case "CYCLE_TOOL": {
-      if (!state.tracing.restrictions.allowUpdate) {
-        return state;
-      }
-
-      const disabledToolInfo = getDisabledInfoForTools(state);
-
-      const tools = Object.keys(AnnotationToolEnum);
-      const currentToolIndex = tools.indexOf(state.tracing.activeTool);
-
-      // Search for the next tool which is not disabled.
-      for (
-        let newToolIndex = currentToolIndex + 1;
-        newToolIndex < currentToolIndex + tools.length;
-        newToolIndex++
-      ) {
-        const newTool = tools[newToolIndex % tools.length];
-        if (!disabledToolInfo[newTool].isDisabled) {
-          return setToolReducer(hideBrushReducer(state), newTool);
-        }
-      }
-      // Don't change the current tool if another tool could not be selected.
-      return state;
     }
 
     default:

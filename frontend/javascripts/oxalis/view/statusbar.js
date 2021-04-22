@@ -279,7 +279,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeResolution: getCurrentResolution(state),
   mousePosition: state.temporaryConfiguration.mousePosition,
   activeViewport: state.viewModeData.plane.activeViewport,
-  activeTool: state.tracing.activeTool,
+  activeTool: state.uiInformation.activeTool,
   isPlaneMode: isPlaneMode(state),
 });
 

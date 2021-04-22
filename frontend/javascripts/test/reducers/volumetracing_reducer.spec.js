@@ -8,7 +8,7 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import * as AnnotationActions from "oxalis/model/actions/annotation_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
+import UiReducer from "oxalis/model/reducers/ui_reducer";
 import mockRequire from "mock-require";
 import test from "ava";
 import defaultState from "oxalis/default_state";
@@ -237,10 +237,10 @@ test("VolumeTracing should set trace/view tool", t => {
   const setToolAction = AnnotationActions.setToolAction(AnnotationToolEnum.TRACE);
 
   // Change tool to Trace
-  const newState = AnnotationReducer(initialState, setToolAction);
+  const newState = UiReducer(initialState, setToolAction);
 
   t.not(newState, initialState);
-  t.is(newState.tracing.activeTool, AnnotationToolEnum.TRACE);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.TRACE);
 });
 
 test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(zoomStep) is > 1", t => {
@@ -254,39 +254,39 @@ test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(
   t.true(getRequestLogZoomStep(alteredState) > 1);
 
   // Try to change tool to Trace
-  const newState = AnnotationReducer(alteredState, setToolAction);
+  const newState = UiReducer(alteredState, setToolAction);
 
   t.is(alteredState, newState);
 
   // Tool should not have changed
-  t.is(newState.tracing.activeTool, AnnotationToolEnum.MOVE);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
 });
 
 test("VolumeTracing should cycle trace/view/brush tool", t => {
   const cycleToolAction = AnnotationActions.cycleToolAction();
 
   // Cycle tool to Brush
-  let newState = AnnotationReducer(initialState, cycleToolAction);
+  let newState = UiReducer(initialState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, AnnotationToolEnum.BRUSH);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BRUSH);
 
   // Cycle tool to Trace
-  newState = AnnotationReducer(newState, cycleToolAction);
+  newState = UiReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, AnnotationToolEnum.TRACE);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.TRACE);
 
-  newState = AnnotationReducer(newState, cycleToolAction);
+  newState = UiReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, AnnotationToolEnum.FILL_CELL);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.FILL_CELL);
 
-  newState = AnnotationReducer(newState, cycleToolAction);
+  newState = UiReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, AnnotationToolEnum.PICK_CELL);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.PICK_CELL);
 
   // Cycle tool back to MOVE
-  newState = AnnotationReducer(newState, cycleToolAction);
+  newState = UiReducer(newState, cycleToolAction);
 
-  t.is(newState.tracing.activeTool, AnnotationToolEnum.MOVE);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
 });
 
 test("VolumeTracing should update its lastCentroid", t => {

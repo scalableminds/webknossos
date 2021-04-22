@@ -25,9 +25,9 @@ class ContourGeometry {
       let lastContourList = initialTracing.contourList;
 
       Store.subscribe(() => {
-        const { tracing } = Store.getState();
+        const { tracing, uiInformation } = Store.getState();
         getVolumeTracing(tracing).map(volumeTracing => {
-          if (tracing.activeTool === AnnotationToolEnum.TRACE) {
+          if (uiInformation.activeTool === AnnotationToolEnum.TRACE) {
             const contourList = volumeTracing.contourList;
             if (contourList && lastContourList.length !== contourList.length) {
               // Update meshes according to the new contourList

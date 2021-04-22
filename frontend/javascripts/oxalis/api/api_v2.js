@@ -495,7 +495,7 @@ class TracingApi {
    * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL".
    */
   getAnnotationTool(): AnnotationTool {
-    return Store.getState().tracing.activeTool;
+    return Store.getState().uiInformation.activeTool;
   }
 
   /**

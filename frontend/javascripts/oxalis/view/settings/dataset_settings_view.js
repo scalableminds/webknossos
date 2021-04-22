@@ -461,15 +461,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                       }}
                     >
                       <i
-                        className={`fas fa-adjust ${
-                          layerConfiguration.isInverted ? "flip-horizontally" : ""
-                        }`}
+                        className={classnames("fas", "fa-adjust", {
+                          "flip-horizontally": layerConfiguration.isInverted,
+                          "color-primary": layerConfiguration.isInverted,
+                          "color-text-secondary": !layerConfiguration.isInverted,
+                        })}
                         style={{
                           margin: 0,
                           transition: "transform 0.5s ease 0s",
-                          color: layerConfiguration.isInverted
-                            ? "rgba(24, 144, 255, 1.0)"
-                            : "rgba(0, 0, 0, 0.65)",
                         }}
                       />
                     </div>

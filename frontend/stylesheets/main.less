@@ -12,7 +12,7 @@
 @icon-url: "../../../../../frontend/stylesheets/iconfont/iconfont";
 
 @import "_variables.less";
-@import "_general.less";
+@import "_utils.less";
 @import "_dashboard.less";
 @import "_spotlight.less";
 @import "trace_view/_tracing_view.less";
@@ -75,19 +75,6 @@ body {
   }
 }
 
-.bold {
-  font-weight: bold;
-}
-
-// Only affect child items in tables
-td.nowrap * {
-  white-space: nowrap;
-}
-
-.nowrap {
-  white-space: nowrap;
-}
-
 .fa-random {
   width: 14px;
   background-position: -217px -120px;
@@ -102,13 +89,6 @@ td.nowrap * {
 
 .inline-block {
   display: inline-block;
-}
-
-.color-primary {
-  color: @primary-color;
-}
-.bg-primary {
-  background-color: @primary-color;
 }
 
 #credits {
@@ -147,10 +127,6 @@ td.nowrap * {
   }
 }
 
-.pull-right {
-  float: right !important;
-}
-
 // Fixing font awesome
 .btn [class^="fa-"],
 .nav [class^="fa-"],
@@ -186,17 +162,6 @@ i.without-icon-margin,
   margin-right: 0;
 }
 
-.flex-column {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-.flex-overflow {
-  overflow-y: auto;
-  flex-grow: 1;
-}
-
 .monospace-id {
   // break long IDs
   word-wrap: break-word;
@@ -206,42 +171,24 @@ i.without-icon-margin,
   width: 135px;
 }
 
-@media (min-width: 1200px) {
-  .container {
-    width: 1170px;
-  }
-}
-@media (min-width: 992px) {
-  .container {
-    width: 970px;
-  }
-}
-@media (min-width: 768px) {
-  .container {
-    width: 750px;
-  }
-}
-
-@media screen and (max-width: 968px) {
-  .container {
-    width: auto;
-    margin: 0 10px;
-  }
-}
-
-@media screen and (max-width: 1024px) {
-  .hide-on-small-screen {
+.hide-on-small-screen {
+  @media (max-width: 1024px) {
     display: none !important;
   }
 }
 
 .container {
   padding-top: 20px;
-  margin-left: 20px;
-  margin-right: 20px;
+  margin-left: 10px;
+  margin-right: 10px;
   width: auto;
   padding-left: 15px;
   padding-right: 15px;
+
+  @media (min-width: 970px) {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
 }
 
 .icon-big {

@@ -1,3 +1,25 @@
+h1 {
+  font-size: 36px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 14px;
+}
+h6 {
+  font-size: 12px;
+}
+p {
+  margin: 0 0 10px;
+}
+
 .ant-layout-sider,
 .ant-collapse-borderless,
 .ant-layout {
@@ -35,6 +57,24 @@
     resize: both;
   }
 
+  &.ant-notification-notice-error {
+    background-color: #f2dede;
+    border-color: #ebccd1;
+    color: #a94442;
+    .ant-notification-notice-message {
+      color: #a94442;
+    }
+    .ant-notification-notice-close {
+      color: #a94442;
+    }
+    .ant-notification-notice-icon {
+      animation-name: alert-wiggle;
+      animation-duration: 5s;
+      animation-delay: 0s;
+      animation-iteration-count: infinite;
+    }
+  }
+
   @keyframes alert-wiggle {
     0% {
       transform: translateX(0px) translateY(0px);
@@ -69,13 +109,6 @@
     20% {
       transform: translateX(0px) translateY(0px);
     }
-  }
-
-  .alert-wiggle {
-    animation-name: alert-wiggle;
-    animation-duration: 5s;
-    animation-delay: 0s;
-    animation-iteration-count: infinite;
   }
 }
 

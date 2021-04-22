@@ -141,7 +141,6 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           style={{
             fontSize: 20,
             lineHeight: "22px",
-            color: "#0d232d",
             marginBottom: 0,
           }}
         >

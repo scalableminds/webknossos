@@ -107,6 +107,9 @@ td.nowrap * {
 .color-primary {
   color: @primary-color;
 }
+.bg-primary {
+  background-color: @primary-color;
+}
 
 #credits {
   background-color: @layout-footer-background;
@@ -368,4 +371,25 @@ i.without-icon-margin,
 span.keyboard-key-icon:first-child,
 img.keyboard-mouse-icon:first-child {
   margin-left: 0px;
+}
+
+.nml-upload-zone-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 2.5em 0;
+  background: @modal-mask-bg;
+  text-align: center;
+  z-index: 1000;
+}
+.nml-upload-zone-modal {
+  position: relative;
+  top: 100px;
+  width: 400px;
+  height: 250px;
+  background: @modal-header-bg;
+  border-radius: 4px;
+  margin: 0 auto;
 }

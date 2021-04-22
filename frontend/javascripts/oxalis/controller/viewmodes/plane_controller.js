@@ -34,7 +34,7 @@ import {
   createCellAction,
   copySegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { cycleToolAction } from "oxalis/model/actions/annotation_actions";
+import { cycleToolAction } from "oxalis/model/actions/ui_actions";
 import {
   MoveTool,
   SkeletonTool,

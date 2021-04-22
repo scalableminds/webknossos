@@ -7,7 +7,7 @@ import {
   updateDirectionAction,
   finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { setToolAction } from "oxalis/model/actions/annotation_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   type Saga,
   _take,

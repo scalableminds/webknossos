@@ -6,7 +6,7 @@ import type {
   RemoteMeshMetaData,
   APIAnnotationVisibility,
 } from "types/api_flow_types";
-import type { Vector3, AnnotationTool } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import type { UserBoundingBox } from "oxalis/store";
 
 type InitializeAnnotationAction = {
@@ -43,10 +43,6 @@ type AddUserBoundingBoxesAction = {
   type: "ADD_USER_BOUNDING_BOXES",
   userBoundingBoxes: Array<UserBoundingBox>,
 };
-
-type SetToolAction = { type: "SET_TOOL", tool: AnnotationTool };
-
-type CycleToolAction = { type: "CYCLE_TOOL" };
 
 export type UpdateRemoteMeshMetaDataAction = {
   type: "UPDATE_REMOTE_MESH_METADATA",
@@ -121,14 +117,12 @@ export type AddIsosurfaceAction = {
   seedPosition: Vector3,
 };
 
-export type AnnotationActionTypes =
+export type AnnotationActionTypes = 
   | InitializeAnnotationAction
   | SetAnnotationNameAction
   | SetAnnotationVisibilityAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
-  | SetToolAction
-  | CycleToolAction
   | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
   | AddUserBoundingBoxesAction
@@ -194,15 +188,6 @@ export const addUserBoundingBoxesAction = (
 ): AddUserBoundingBoxesAction => ({
   type: "ADD_USER_BOUNDING_BOXES",
   userBoundingBoxes,
-});
-
-export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
-  type: "SET_TOOL",
-  tool,
-});
-
-export const cycleToolAction = (): CycleToolAction => ({
-  type: "CYCLE_TOOL",
 });
 
 export const updateRemoteMeshMetaDataAction = (

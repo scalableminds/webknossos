@@ -49,7 +49,7 @@ import * as Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { setToolAction } from "oxalis/model/actions/annotation_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import TWEEN from "tween.js";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";

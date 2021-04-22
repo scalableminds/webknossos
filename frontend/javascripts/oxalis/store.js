@@ -310,6 +310,7 @@ export type UserConfiguration = {|
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
   +overwriteMode: OverwriteMode,
+  +useLegacyBindings: boolean,
 |};
 
 export type RecommendedConfiguration = $Shape<{

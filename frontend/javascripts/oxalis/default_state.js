@@ -72,6 +72,7 @@ const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
+    useLegacyBindings: false,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

@@ -445,6 +445,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.userConfiguration.dynamicSpaceDirection}
             onChange={this.onChangeUser.dynamicSpaceDirection}
           />
+          <SwitchSetting
+            label={settingsLabels.useLegacyBindings}
+            value={this.props.userConfiguration.useLegacyBindings}
+            onChange={this.onChangeUser.useLegacyBindings}
+          />
         </Panel>
         {this.getViewportOptions()}
         {this.getSkeletonOrVolumeOptions()}

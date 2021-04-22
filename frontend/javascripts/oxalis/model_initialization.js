@@ -37,6 +37,7 @@ import {
   getDatasetViewConfiguration,
 } from "admin/admin_rest_api";
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   initializeSettingsAction,
   initializeGpuSetupAction,
@@ -161,6 +162,10 @@ export async function initialize(
   // Don't override zoom when swapping the task
   applyState(defaultState, !initialFetch);
 
+  if (initialFetch) {
+    setInitialTool();
+  }
+
   return initializationInformation;
 }
 
@@ -277,6 +282,23 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
     }
     const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
+  }
+}
+
+function setInitialTool() {
+  const { useLegacyBindings } = Store.getState().userConfiguration;
+
+  if (!useLegacyBindings) {
+    // The MOVE tool is already the default
+    return;
+  }
+
+  const { tracing } = Store.getState();
+
+  if (tracing.skeleton != null && tracing.volume == null) {
+    // We are in a skeleton-only annotation with legacy-bindings.
+    // Therefore, switch to the skeleton tool.
+    Store.dispatch(setToolAction("SKELETON"));
   }
 }
 

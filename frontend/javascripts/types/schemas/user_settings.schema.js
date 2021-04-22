@@ -36,6 +36,7 @@ export const userSettings = {
     type: "string",
     enum: [OverwriteModeEnum.OVERWRITE_ALL, OverwriteModeEnum.OVERWRITE_EMPTY],
   },
+  useLegacyBindings: { type: "boolean" },
   ...baseDatasetViewConfiguration,
 };
 

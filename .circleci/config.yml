@@ -263,7 +263,7 @@ jobs:
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
-            yarn install --frozen-lockfile &
+            yarn install --frozen-lockfile
             # sleep 180 &
             # wait
       - run:

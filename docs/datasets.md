@@ -24,9 +24,9 @@ Read more about the [Data Formats](./data_formats.md) we support and how they sh
 Once the data is uploaded (and potentially converted) you can to go the Dataset Settings to doublecheck important properties (such as the dataset scale) or to make it public.
 
 ### Convert Datasets
-If your dataset is not yet in WKW format, you need to convert it.
-The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) is a tool that can convert many formats to WKW in order to be used with webKnossos.
-Read more in the [Data Formats documentation](./data_formats.md).
+If your dataset is not yet in WKW format and you don't want to use [webknossos.org](https://webknossos.org) for the conversion, you can also convert it manually.
+The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) is a tool that can convert many formats to WKW.
+Read more in the [tools section of the data formats documentation](./data_formats.md#tools).
 
 ### Uploading through the File System (Self-Hosted Instances Only)
 On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system:

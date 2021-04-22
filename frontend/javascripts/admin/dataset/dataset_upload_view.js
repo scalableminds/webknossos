@@ -69,13 +69,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   formRef = React.createRef<typeof FormInstance>();
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
+    const uploadableDatastores = this.props.datastores.filter(datastore => datastore.allowsUpload);
     if (this.formRef.current != null) {
       if (
         prevProps.datastores.length === 0 &&
-        this.props.datastores.length > 0 &&
-        this.formRef.current.getFieldValue("datastore") !== this.props.datastores[0].url
+        uploadableDatastores.length > 0 &&
+        this.formRef.current.getFieldValue("datastore") !== uploadableDatastores[0].url
       ) {
-        this.formRef.current.setFieldsValue({ datastore: this.props.datastores[0].url });
+        this.formRef.current.setFieldsValue({ datastore: uploadableDatastores[0].url });
       }
     }
   }

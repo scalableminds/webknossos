@@ -29,7 +29,6 @@ export const userSettings = {
   tdViewDisplayPlanes: { type: "boolean" },
   hideTreeRemovalWarning: { type: "boolean" },
   brushSize: { type: "number", minimum: 1, maximum: 300 },
-  layoutScaleValue: { type: "number", minimum: 1, maximum: 5 },
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },
   segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },

@@ -8,7 +8,6 @@ import {
 import constants, {
   ViewModeValuesIndices,
   OrthoViewIndices,
-  OrthoViews,
   type Vector3,
   VolumeToolEnum,
   volumeToolEnumToIndex,
@@ -235,7 +234,6 @@ void main() {
       ? formatNumberAsGLSLFloat(params.packingDegreeLookup[params.segmentationName])
       : 0.0,
     ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
-    OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
     l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),

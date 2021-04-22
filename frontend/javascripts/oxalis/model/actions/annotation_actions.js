@@ -117,7 +117,7 @@ export type AddIsosurfaceAction = {
   seedPosition: Vector3,
 };
 
-export type AnnotationActionTypes = 
+export type AnnotationActionTypes =
   | InitializeAnnotationAction
   | SetAnnotationNameAction
   | SetAnnotationVisibilityAction

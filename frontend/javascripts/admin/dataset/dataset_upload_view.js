@@ -1,6 +1,18 @@
 // @flow
-import { Avatar, Form, Button, Col, Row, Tooltip, Modal, Progress, Alert, List } from "antd";
-import { FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
+import {
+  Popover,
+  Avatar,
+  Form,
+  Button,
+  Col,
+  Row,
+  Tooltip,
+  Modal,
+  Progress,
+  Alert,
+  List,
+} from "antd";
+import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { useMemo } from "react";
 import moment from "moment";
@@ -56,6 +68,68 @@ type State = {
   uploadProgress: number,
   selectedTeams: APITeam | Array<APITeam>,
 };
+
+function WkwExample() {
+  const description = `
+  great_dataset          # Root folder
+  ├─ color               # Dataset layer (e.g., color, segmentation)
+  │  ├─ 1                # Magnification step (1, 2, 4, 8, 16 etc.)
+  │  │  ├─ header.wkw    # Header wkw file
+  │  │  ├─ z0
+  │  │  │  ├─ y0
+  │  │  │  │  ├─ x0.wkw  # Actual data wkw file
+  │  │  │  │  └─ x1.wkw  # Actual data wkw file
+  │  │  │  └─ y1/...
+  │  │  └─ z1/...
+  │  └─ 2/...
+  ├─ segmentation/...
+  └─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existent)
+  `;
+
+  return (
+    <div>
+      <h4>A typical WKW dataset looks like this:</h4>
+      <pre className="dataset-import-folder-structure-hint">{description}</pre>
+    </div>
+  );
+}
+
+function SingleLayerImageStackExample() {
+  const description = `
+  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  ├─ file1.tif           # The files don't have to follow a certain naming pattern.
+  ├─ file2.tif           # However, the files are sorted to obtain the final z-order.
+  └─ file3.tif
+  `;
+
+  return (
+    <div>
+      <h4>For example, a flat list of (sorted) image files can be imported:</h4>
+      <pre className="dataset-import-folder-structure-hint">{description}</pre>
+    </div>
+  );
+}
+
+function MultiLayerImageStackExample() {
+  const description = `
+  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  ├─ color               # 1st dataset layer (name may be arbitrary, e.g., color or segmentation)
+  │  ├─ file1.tif        # The files don't have to follow a certain naming pattern.
+  │  ├─ file2.tif        # However, the files are sorted to obtain the final z-order.
+  │  └─ file3.tif
+  └─ segmentation        # 2nd dataset layer
+     ├─ file1.tif
+     ├─ file2.tif
+     └─ file3.tif
+  `;
+
+  return (
+    <div>
+      <h4>Uploading multiple image stacks (one per folder) will create a multi-layer dataset:</h4>
+      <pre className="dataset-import-folder-structure-hint">{description}</pre>
+    </div>
+  );
+}
 
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state = {
@@ -665,16 +739,34 @@ function FileUploadArea({ fileList, onChange }) {
                 The following file formats are supported:
                 <ul>
                   <li>
-                    <a href="https://docs.webknossos.org/reference/data_formats#wkw-datasets">
+                    <Popover content={<WkwExample />} trigger="hover">
                       WKW dataset
-                    </a>
+                      <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                    </Popover>
                   </li>
-                  <li>Image file sequence in one folder (tif, jpg, png, dm3, dm4)</li>
+
+                  <li>
+                    <Popover content={<SingleLayerImageStackExample />} trigger="hover">
+                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4)
+                      <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                    </Popover>
+                  </li>
+
+                  <li>
+                    <Popover content={<MultiLayerImageStackExample />} trigger="hover">
+                      Multi-Layer Image File Sequence
+                      <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                    </Popover>
+                  </li>
+
                   <li>Single-file images (tif, czi, nifti, raw)</li>
-                  <li>KNOSSOS file hierarchy </li>
+
+                  <li>KNOSSOS file hierarchy</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/reference/data_formats">our documentation</a>{" "}
+                <a href="https://docs.webknossos.org/reference/data_formats#conversion-with-webknossos-org">
+                  our documentation
+                </a>{" "}
                 to learn more.
               </div>
             </>

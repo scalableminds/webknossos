@@ -131,11 +131,33 @@ export class SkeletonTool {
       }
     };
 
+    let draggingNodeId = null;
+
     return {
+      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        const { useLegacyBindings } = Store.getState().userConfiguration;
+        if (useLegacyBindings) {
+          // There's no implicit node selection happening in the legacy mode
+          return;
+        }
+        draggingNodeId = SkeletonHandlers.maybeGetNodeIdFromPosition(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+        );
+      },
+      leftMouseUp: () => {
+        draggingNodeId = null;
+      },
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
         const { tracing } = Store.getState();
-        if (tracing.skeleton != null && event.ctrlKey) {
-          SkeletonHandlers.moveNode(delta.x, delta.y);
+        const { useLegacyBindings } = Store.getState().userConfiguration;
+        if (
+          tracing.skeleton != null &&
+          (draggingNodeId != null || (useLegacyBindings && event.ctrlKey))
+        ) {
+          SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId);
         } else {
           MoveHandlers.handleMovePlane(delta);
         }

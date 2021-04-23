@@ -144,10 +144,10 @@ export function handleOpenContextMenu(
   showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
 }
 
-export function moveNode(dx: number, dy: number) {
+export function moveNode(dx: number, dy: number, nodeId: ?number) {
   // dx and dy are measured in pixel.
   getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
-    getNodeAndTree(skeletonTracing).map(([activeTree, activeNode]) => {
+    getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, activeNode]) => {
       const state = Store.getState();
       const { activeViewport } = state.viewModeData.plane;
       const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
@@ -271,7 +271,7 @@ export function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 
-function maybeGetNodeIdFromPosition(
+export function maybeGetNodeIdFromPosition(
   planeView: PlaneView,
   position: Point2,
   plane: OrthoView,

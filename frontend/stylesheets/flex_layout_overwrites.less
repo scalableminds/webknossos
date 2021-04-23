@@ -43,6 +43,12 @@
   top: -15px;
 }
 
+.flexlayout__tab_button_content {
+  // On Safari, this ensures that the button is easily clickable
+  // (otherwise, the resizer becomes the default target for some reason).
+  z-index: 100;
+}
+
 .flexlayout__tab_button--selected,
 .flexlayout__tab_button:hover {
   background-color: white;

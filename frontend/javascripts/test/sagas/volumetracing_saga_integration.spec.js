@@ -9,7 +9,6 @@ import { OrthoViews } from "oxalis/constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { getVolumeTracingOrFail } from "../reducers/volumetracing_reducer.spec";
-import setViewportRectsToNoneZeroExtent from "../test_helpers";
 
 const {
   setActiveCellAction,
@@ -24,8 +23,6 @@ test.beforeEach(async t => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
-  setViewportRectsToNoneZeroExtent();
-
   await __setupOxalis(t, "volume");
 
   // Dispatch the wkReadyAction, so the sagas are started

@@ -175,7 +175,7 @@ class MappingSettingsView extends React.Component<Props, State> {
 
   render() {
     if (!hasSegmentation()) {
-      return "No segmentation available";
+      return <div className="padded-tab-content">No segmentation available</div>;
     }
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null

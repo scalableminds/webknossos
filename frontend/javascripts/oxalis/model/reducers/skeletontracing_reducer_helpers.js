@@ -746,9 +746,11 @@ export function deleteComment(
 export function toggleAllTreesReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracing,
+  setVisible?: boolean,
 ): OxalisState {
   // Let's make all trees visible if there is one invisible tree
-  const shouldBecomeVisible = _.values(skeletonTracing.trees).some(tree => !tree.isVisible);
+  const shouldBecomeVisible =
+    setVisible != null ? setVisible : _.values(skeletonTracing.trees).some(tree => !tree.isVisible);
 
   const updateTreeObject = {};
   const isVisibleUpdater = {

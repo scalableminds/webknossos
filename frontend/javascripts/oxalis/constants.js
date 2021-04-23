@@ -103,10 +103,10 @@ export const BorderTabs = {
   MeshesView: { id: "MeshesView", name: "Meshes" },
   SkeletonTabView: { id: "SkeletonTabView", name: "Skeleton" },
   VolumeTabView: { id: "VolumeTabView", name: "Volume" },
-  AbstractTreeTabView: { id: "AbstractTreeTabView", name: "Abstract Tree" },
-  LayerSettingsTab: { id: "LayerSettingsView", name: "Layers" },
-  GeneralSettingsTab: { id: "GeneralSettingsView", name: "General" },
-  BoundingBoxTabView: { id: "BoundingBoxTabView", name: "Bounding Boxes" },
+  AbstractTreeTab: { id: "AbstractTreeTab", name: "Abstract Tree" },
+  GeneralSettingsTab: { id: "GeneralSettingsTab", name: "General" },
+  BoundingBoxTab: { id: "BoundingBoxTab", name: "Bounding Boxes" },
+  LayerSettingsTab: { id: "LayerSettingsTab", name: "Layer" },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;

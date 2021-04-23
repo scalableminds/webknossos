@@ -226,8 +226,8 @@ const _getDefaultLayouts = () => {
       [
         borderTabs.VolumeTabView,
         borderTabs.MeshesView,
-        borderTabs.BoundingBoxTabView,
-        borderTabs.AbstractTreeTabView,
+        borderTabs.BoundingBoxTab,
+        borderTabs.AbstractTreeTab,
       ],
     ],
     defaultBorderWidth,
@@ -239,7 +239,7 @@ const _getDefaultLayouts = () => {
       [
         borderTabs.DatasetInfoTabView,
         borderTabs.VolumeTabView,
-        borderTabs.BoundingBoxTabView,
+        borderTabs.BoundingBoxTab,
         borderTabs.MeshesView,
       ],
     ],

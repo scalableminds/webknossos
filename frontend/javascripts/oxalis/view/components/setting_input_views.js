@@ -9,7 +9,6 @@ import * as Utils from "libs/utils";
 
 import features from "features";
 
-const MAX_COL_SPAN = 24;
 const rowGutter = { xs: 8, sm: 16, md: 16, lg: 16 };
 
 type NumberSliderSettingProps = {
@@ -173,7 +172,6 @@ type SwitchSettingProps = {
   disabled: boolean,
   tooltipText: ?string,
   loading: boolean,
-  labelSpan: number,
 };
 
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
@@ -181,18 +179,16 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
     disabled: false,
     tooltipText: null,
     loading: false,
-    labelSpan: 9,
   };
 
   render() {
-    const { label, onChange, value, disabled, tooltipText, loading, labelSpan } = this.props;
-    const switchSpan = MAX_COL_SPAN - labelSpan;
+    const { label, onChange, value, disabled, tooltipText, loading } = this.props;
     return (
       <Row className="margin-bottom" type="flex" align="middle" gutter={rowGutter}>
-        <Col span={labelSpan}>
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={switchSpan}>
+        <Col span={15}>
           <Tooltip title={tooltipText} placement="top">
             {/* This div is necessary for the tooltip to be displayed */}
             <div style={{ display: "inline-block" }}>
@@ -218,7 +214,6 @@ type NumberInputSettingProps = {
   max?: number,
   min?: number,
   step?: number,
-  labelSpan: number,
 };
 
 export class NumberInputSetting extends React.PureComponent<NumberInputSettingProps> {
@@ -226,18 +221,16 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
     max: undefined,
     min: 1,
     step: 1,
-    labelSpan: 9,
   };
 
   render() {
-    const { onChange, value, label, max, min, step, labelSpan } = this.props;
-    const inputSpan = MAX_COL_SPAN - labelSpan;
+    const { onChange, value, label, max, min, step } = this.props;
     return (
       <Row className="margin-bottom" align="top" gutter={rowGutter}>
-        <Col span={labelSpan}>
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={inputSpan}>
+        <Col span={15}>
           <InputNumber
             style={{ width: 80 }}
             min={min}

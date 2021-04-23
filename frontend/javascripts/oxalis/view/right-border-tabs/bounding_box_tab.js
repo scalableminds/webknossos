@@ -23,13 +23,13 @@ import * as Utils from "libs/utils";
 import renderIndependently from "libs/render_independently";
 import ExportBoundingBoxModal from "oxalis/view/left-border-tabs/export_bounding_box_modal";
 
-type BoundingBoxTabViewProps = {
+type BoundingBoxTabProps = {
   tracing: Tracing,
   onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
   dataset: APIDataset,
 };
 
-function BoundingBoxTabView(props: BoundingBoxTabViewProps) {
+function BoundingBoxTab(props: BoundingBoxTabProps) {
   const { tracing, dataset, onChangeBoundingBoxes } = props;
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
@@ -135,7 +135,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<BoundingBoxTabViewProps, {||}, _, _, _, _>(
+export default connect<BoundingBoxTabProps, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(BoundingBoxTabView);
+)(BoundingBoxTab);

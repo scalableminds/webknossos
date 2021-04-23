@@ -12,17 +12,17 @@ import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { InputKeyboardNoLoop } from "libs/input";
 
 import { OrthoViews, ArbitraryViews } from "oxalis/constants";
-import AbstractTreeTabView from "oxalis/view/right-border-tabs/abstract_tree_tab_view";
+import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
 import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import InputCatcher from "oxalis/view/input_catcher";
 import MeshesView from "oxalis/view/right-border-tabs/meshes_view";
 import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import VolumeTabView from "oxalis/view/right-border-tabs/volume_tab_view";
-import BoundingBoxTabView from "oxalis/view/right-border-tabs/bounding_box_tab_view";
+import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
 import RecordingSwitch from "oxalis/view/recording_switch";
-import LayerSettingsView from "oxalis/view/left-border-tabs/layer_settings_view";
-import GeneralSettingsView from "oxalis/view/left-border-tabs/general_settings_view";
+import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
+import GeneralSettingsTab from "oxalis/view/left-border-tabs/general_settings_tab";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-border-tabs/trees_tab_view";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
@@ -186,8 +186,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       case "CommentTabView": {
         return <CommentTabView />;
       }
-      case "AbstractTreeTabView": {
-        return <AbstractTreeTabView />;
+      case "AbstractTreeTab": {
+        return <AbstractTreeTab />;
       }
       case "MeshesView": {
         return <MeshesView />;
@@ -198,14 +198,14 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       case "VolumeTabView": {
         return <VolumeTabView />;
       }
-      case "BoundingBoxTabView": {
-        return <BoundingBoxTabView />;
+      case "BoundingBoxTab": {
+        return <BoundingBoxTab />;
       }
-      case "LayerSettingsView": {
-        return <LayerSettingsView />;
+      case "LayerSettingsTab": {
+        return <LayerSettingsTab />;
       }
-      case "GeneralSettingsView": {
-        return <GeneralSettingsView />;
+      case "GeneralSettingsTab": {
+        return <GeneralSettingsTab />;
       }
       default: {
         console.error(`The tab with id ${id} is unknown.`);

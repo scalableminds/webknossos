@@ -217,7 +217,12 @@ class GeneralSettingsTab extends PureComponent<GeneralSettingsTabProps> {
     );
 
     return (
-      <Collapse bordered={false} defaultActiveKey={["1", "2", "3"]}>
+      <Collapse
+        bordered={false}
+        defaultActiveKey={["1", "2", "3"]}
+        className="tracing-settings-menu"
+        style={{ padding: 0 }}
+      >
         <Panel header="Controls" key="1">
           <NumberSliderSetting
             label={settingsLabels.keyboardDelay}

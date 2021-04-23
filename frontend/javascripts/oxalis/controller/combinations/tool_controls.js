@@ -175,28 +175,29 @@ export class SkeletonTool {
             plane,
             isTouch,
           );
-        } else {
-          const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-          if (!didSelectNode) {
-            SkeletonHandlers.handleCreateNode(planeView, pos, event.ctrlKey);
-          }
+          return;
+        }
+
+        const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+        if (!didSelectNode) {
+          SkeletonHandlers.handleCreateNode(planeView, pos, event.ctrlKey);
         }
       },
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
-
         if (useLegacyBindings) {
           legacyRightClick(position, plane, event, isTouch);
-        } else {
-          SkeletonHandlers.handleOpenContextMenu(
-            planeView,
-            position,
-            plane,
-            isTouch,
-            event,
-            showNodeContextMenuAt,
-          );
+          return;
         }
+
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          position,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
       },
 
       middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -221,6 +222,7 @@ export class SkeletonTool {
       return;
     }
 
+    // The following functions are all covered by the context menu, too.
     if (altPressed) {
       SkeletonHandlers.handleMergeTrees(planeView, position, plane, isTouch);
     } else if (ctrlPressed) {

@@ -136,9 +136,7 @@ export function handleOpenContextMenu(
   if (activeViewport === OrthoViews.TDView) {
     return;
   }
-  const nodeId = event.shiftKey
-    ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)
-    : null;
+  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, position);
   showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);

@@ -91,13 +91,15 @@ export function handleSelectNode(
   position: Point2,
   plane: OrthoView,
   isTouch: boolean,
-) {
+): boolean {
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
     Store.dispatch(setActiveNodeAction(nodeId));
+    return true;
   }
+  return false;
 }
 
 export function handleCreateNode(planeView: PlaneView, position: Point2, ctrlPressed: boolean) {

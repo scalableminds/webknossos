@@ -106,6 +106,31 @@ export class MoveTool {
 
 export class SkeletonTool {
   static getMouseControls(planeView: PlaneView, showNodeContextMenuAt: ShowContextMenuFunction) {
+    const legacyRightClick = (
+      position: Point2,
+      plane: OrthoView,
+      event: MouseEvent,
+      isTouch: boolean,
+    ) => {
+      const { activeViewport } = Store.getState().viewModeData.plane;
+      if (activeViewport === OrthoViews.TDView) {
+        return;
+      }
+
+      if (event.shiftKey) {
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          position,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
+      } else {
+        SkeletonHandlers.handleCreateNode(planeView, position, event.ctrlKey);
+      }
+    };
+
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
         const { tracing } = Store.getState();
@@ -115,15 +140,32 @@ export class SkeletonTool {
           MoveHandlers.handleMovePlane(delta);
         }
       },
-      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-        this.onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
-      rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const { activeViewport } = Store.getState().viewModeData.plane;
-        if (activeViewport === OrthoViews.TDView) {
-          return;
-        }
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        const { useLegacyBindings } = Store.getState().userConfiguration;
 
-        if (event.shiftKey) {
+        if (useLegacyBindings) {
+          this.onLegacyLeftClick(
+            planeView,
+            pos,
+            event.shiftKey,
+            event.altKey,
+            event.ctrlKey,
+            plane,
+            isTouch,
+          );
+        } else {
+          const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+          if (!didSelectNode) {
+            SkeletonHandlers.handleCreateNode(planeView, pos, event.ctrlKey);
+          }
+        }
+      },
+      rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        const { useLegacyBindings } = Store.getState().userConfiguration;
+
+        if (useLegacyBindings) {
+          legacyRightClick(position, plane, event, isTouch);
+        } else {
           SkeletonHandlers.handleOpenContextMenu(
             planeView,
             position,
@@ -132,10 +174,9 @@ export class SkeletonTool {
             event,
             showNodeContextMenuAt,
           );
-        } else {
-          SkeletonHandlers.handleCreateNode(planeView, position, event.ctrlKey);
         }
       },
+
       middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
           handleAgglomerateSkeletonAtClick(pos);
@@ -144,7 +185,7 @@ export class SkeletonTool {
     };
   }
 
-  static onClick(
+  static onLegacyLeftClick(
     planeView: PlaneView,
     position: Point2,
     shiftPressed: boolean,
@@ -195,25 +236,25 @@ export class DrawTool {
         VolumeHandlers.handleDrawEraseEnd();
       },
 
-      rightDownMove: (delta: Point2, pos: Point2) => {
-        const { tracing } = Store.getState();
-        const volumeTracing = enforceVolumeTracing(tracing);
-        const contourTracingMode = getContourTracingMode(volumeTracing);
+      // rightDownMove: (delta: Point2, pos: Point2) => {
+      //   const { tracing } = Store.getState();
+      //   const volumeTracing = enforceVolumeTracing(tracing);
+      //   const contourTracingMode = getContourTracingMode(volumeTracing);
 
-        if (contourTracingMode === ContourModeEnum.DELETE) {
-          VolumeHandlers.handleDrawDeleteMove(pos);
-        }
-      },
+      //   if (contourTracingMode === ContourModeEnum.DELETE) {
+      //     VolumeHandlers.handleDrawDeleteMove(pos);
+      //   }
+      // },
 
-      rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        if (!event.shiftKey) {
-          VolumeHandlers.handleEraseStart(pos, plane);
-        }
-      },
+      // rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      //   if (!event.shiftKey) {
+      //     VolumeHandlers.handleEraseStart(pos, plane);
+      //   }
+      // },
 
-      rightMouseUp: () => {
-        VolumeHandlers.handleDrawEraseEnd();
-      },
+      // rightMouseUp: () => {
+      //   VolumeHandlers.handleDrawEraseEnd();
+      // },
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         const shouldPickCell = event.shiftKey && !event.ctrlKey;
@@ -228,11 +269,11 @@ export class DrawTool {
         }
       },
 
-      rightClick: (_pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        // Don't do anything. rightMouse* will take care of brushing.
-        // This handler has to be defined, as the rightClick handler of the move tool
-        // would overtake otherwise.
-      },
+      // rightClick: (_pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+      //   // Don't do anything. rightMouse* will take care of brushing.
+      //   // This handler has to be defined, as the rightClick handler of the move tool
+      //   // would overtake otherwise.
+      // },
 
       out: () => {
         Store.dispatch(hideBrushAction());

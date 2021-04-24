@@ -254,19 +254,19 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
           >
             <Radio value={PERMISSIONS.admin}>
               <div style={roleStyle}>Admin</div>
-              <div style={explanationStyle}>
+              <div style={explanationStyle} className="color-text-secondary">
                 Full administration capabilities. View and edit all datasets.
               </div>
             </Radio>
             <Radio value={PERMISSIONS.datasetManager}>
               <div style={roleStyle}>Dataset Manager</div>
-              <div style={explanationStyle}>
+              <div style={explanationStyle} className="color-text-secondary">
                 No administration capabilities. View and edit all datasets.
               </div>
             </Radio>
             <Radio value={PERMISSIONS.member}>
               <div style={roleStyle}>Member</div>
-              <div style={explanationStyle}>
+              <div style={explanationStyle} className="color-text-secondary">
                 No special permissions. Dataset access based on team memberships.
               </div>
             </Radio>

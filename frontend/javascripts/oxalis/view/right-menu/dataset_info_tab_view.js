@@ -149,13 +149,10 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
       <div style={{ marginBottom: 25 }}>
-        <table style={{ marginRight: 20, marginTop: 25, maxWidth: 500, fontSize: 14 }}>
+        <table className="shortcut-table">
           <tbody>
             {shortcuts.map(shortcut => (
-              <tr
-                key={shortcut.key}
-                style={{ borderBottom: "1px solid #e8e8e8", borderTop: "1px solid #e8e8e8" }}
-              >
+              <tr key={shortcut.key}>
                 <td style={{ width: 200 }}>{shortcut.keybinding}</td>
                 <td>{shortcut.action}</td>
               </tr>

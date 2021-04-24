@@ -248,7 +248,7 @@ class MappingInfoView extends React.Component<Props, State> {
         <React.Fragment>
           {title}{" "}
           <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
-            <WarningOutlined style={{ color: "rgb(255, 155, 85)" }} />
+            <WarningOutlined className="color-warning" />
           </Tooltip>
         </React.Fragment>
       ) : (

@@ -23,6 +23,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Measured distances will be shown in voxel space, too. [#5240](https://github.com/scalableminds/webknossos/pull/5240)
+- Improved documentation and inline-help for data import and conversion. [#5420](https://github.com/scalableminds/webknossos/pull/5420)
 
 ### Fixed
 - Fixed a regression in the task search which could lead to a frontend crash. [#5267](https://github.com/scalableminds/webknossos/pull/5267)

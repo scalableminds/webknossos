@@ -56,10 +56,10 @@ export function handlePickCell(pos: Point2) {
   return handlePickCellFromGlobalPosition(globalPos);
 }
 
-export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
+export function getCellFromGlobalPosition(globalPos: Vector3): number {
   const segmentation = Model.getSegmentationLayer();
   if (!segmentation) {
-    return;
+    return 0;
   }
 
   const storeState = Store.getState();
@@ -68,6 +68,11 @@ export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
   const existingZoomStep = resolutionInfo.getClosestExistingIndex(logZoomStep);
 
   const cellId = segmentation.cube.getMappedDataValue(globalPos, existingZoomStep);
+  return cellId;
+}
+
+export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
+  const cellId = getCellFromGlobalPosition(globalPos);
   if (cellId > 0) {
     Store.dispatch(setActiveCellAction(cellId));
   }

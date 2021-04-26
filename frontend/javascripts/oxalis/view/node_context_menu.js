@@ -16,7 +16,10 @@ import {
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
-import { handlePickCellFromGlobalPosition } from "oxalis/controller/combinations/volume_handlers";
+import {
+  getCellFromGlobalPosition,
+  handlePickCellFromGlobalPosition,
+} from "oxalis/controller/combinations/volume_handlers";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import Clipboard from "clipboard-js";
@@ -182,6 +185,7 @@ function NoNodeContextMenuOptions({
   globalPosition,
   viewport,
   createTree,
+  cellIdAtPosition,
 }: NoNodeContextMenuProps) {
   return (
     <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
@@ -190,7 +194,7 @@ function NoNodeContextMenuOptions({
         key="select-cell"
         onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
       >
-        Select Cell
+        Select Cell ({cellIdAtPosition})
       </Menu.Item>
 
       <Menu.Item
@@ -255,6 +259,8 @@ function NodeContextMenu(props: Props) {
       ? nodeContextMenuNode.position.map(value => roundTo(value, 2)).join(", ")
       : "";
 
+  const cellIdAtPosition = getCellFromGlobalPosition(globalPosition);
+
   const infoRows = [];
 
   if (clickedNodeId != null && nodeContextMenuTree != null) {
@@ -283,6 +289,15 @@ function NodeContextMenu(props: Props) {
     );
   }
 
+  if (cellIdAtPosition > 0) {
+    infoRows.push(
+      <div key="copy-cell" className="node-context-menu-item">
+        <img src="/assets/images/cell.svg" className="cell-context-icon" alt="Cell Icon" />
+        Cell ID: {cellIdAtPosition} {copyIconWithTooltip(cellIdAtPosition, "Copy Cell ID")}
+      </div>,
+    );
+  }
+
   return (
     <React.Fragment>
       <div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />
@@ -296,7 +311,7 @@ function NodeContextMenu(props: Props) {
       >
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ ...props })}
+          : NoNodeContextMenuOptions({ cellIdAtPosition, ...props })}
         {infoRows.length > 0 ? <Divider style={{ margin: "4px 0px" }} /> : null}
         {infoRows}
       </div>

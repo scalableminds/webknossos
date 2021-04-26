@@ -14,8 +14,9 @@ import {
 } from "antd";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { useMemo } from "react";
+import React from "react";
 import moment from "moment";
+import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone } from "react-dropzone";
 
@@ -630,36 +631,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   }
 }
 
-const baseStyle: Object = {
-  flex: 1,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  padding: "20px",
-  borderWidth: 2,
-  borderRadius: 2,
-  borderColor: "#eeeeee",
-  borderStyle: "dashed",
-  backgroundColor: "#fafafa",
-  color: "rgba(0, 0, 0, 0.85)",
-  fontSize: 16,
-  outline: "none",
-  transition: "border .24s ease-in-out",
-  cursor: "pointer",
-};
-
-const activeStyle: Object = {
-  borderColor: "#2196f3",
-};
-
-const acceptStyle: Object = {
-  borderColor: "#00e676",
-};
-
-const rejectStyle: Object = {
-  borderColor: "#ff1744",
-};
-
 function FileUploadArea({ fileList, onChange }) {
   const onDropAccepted = acceptedFiles => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -672,16 +643,6 @@ function FileUploadArea({ fileList, onChange }) {
     onDropAccepted,
   });
   const acceptedFiles = fileList;
-
-  const style: Object = useMemo(
-    () => ({
-      ...baseStyle,
-      ...(isDragActive ? activeStyle : {}),
-      ...(isDragAccept ? acceptStyle : {}),
-      ...(isDragReject ? rejectStyle : {}),
-    }),
-    [isDragActive, isDragReject, isDragAccept],
-  );
 
   const files = acceptedFiles.map(file => <li key={file.path}>{file.path}</li>);
 
@@ -725,9 +686,17 @@ function FileUploadArea({ fileList, onChange }) {
 
   return (
     <div>
-      <div {...getRootProps({ style })}>
+      <div
+        {...getRootProps({
+          className: classnames("dataset-upload-dropzone", {
+            "dataset-upload-dropzone-active": isDragActive,
+            "dataset-upload-dropzone-accept": isDragAccept,
+            "dataset-upload-dropzone-rejct": isDragReject,
+          }),
+        })}
+      >
         <input {...getInputProps()} />
-        <InboxOutlined style={{ fontSize: 48, color: "#41a9ff" }} />
+        <InboxOutlined style={{ fontSize: 48 }} className="color-primary" />
         <p style={{ maxWidth: 800, textAlign: "center", marginTop: 8 }}>
           Drag your file(s) to this area to upload them. Either add individual image files, a zip
           archive or a folder.{" "}

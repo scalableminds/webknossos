@@ -340,3 +340,30 @@ img.keyboard-mouse-icon:first-child {
   border-radius: 4px;
   margin: 0 auto;
 }
+.dataset-upload-dropzone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  border-width: 2px;
+  border-radius: 2px;
+  border-color: @border-color-base;
+  border-style: dashed;
+  background-color: @component-background;
+  color: @text-color;
+  font-size: 16px;
+  outline: none;
+  transition: border 0.24s ease-in-out;
+  cursor: pointer;
+
+  &.dataset-upload-dropzone-active {
+    border-color: @primary-color;
+  }
+  &.dataset-upload-dropzone-accept {
+    border-color: @success-color;
+  }
+  &.dataset-upload-dropzone-reject {
+    border-color: @error-color;
+  }
+}

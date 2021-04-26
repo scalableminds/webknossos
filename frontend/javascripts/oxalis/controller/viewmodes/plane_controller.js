@@ -218,7 +218,11 @@ class PlaneController extends React.PureComponent<Props> {
       this.props.showNodeContextMenuAt,
     );
 
-    const drawControls = DrawTool.getPlaneMouseControls(planeId);
+    const drawControls = DrawTool.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showNodeContextMenuAt,
+    );
     const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
     const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
 

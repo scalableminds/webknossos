@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { ContourModeEnum, type OrthoView, type Point2 } from "oxalis/constants";
+import { ContourModeEnum, type OrthoView, type Point2, type Vector3 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   startEditingAction,
@@ -51,19 +51,23 @@ export function handleDrawEraseEnd() {
 }
 
 export function handlePickCell(pos: Point2) {
+  const storeState = Store.getState();
+  const globalPos = calculateGlobalPos(storeState, pos);
+  return handlePickCellFromGlobalPosition(globalPos);
+}
+
+export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
   const segmentation = Model.getSegmentationLayer();
   if (!segmentation) {
     return;
   }
+
   const storeState = Store.getState();
   const logZoomStep = getRequestLogZoomStep(storeState);
   const resolutionInfo = getResolutionInfoOfSegmentationLayer(storeState.dataset);
   const existingZoomStep = resolutionInfo.getClosestExistingIndex(logZoomStep);
 
-  const cellId = segmentation.cube.getMappedDataValue(
-    calculateGlobalPos(storeState, pos),
-    existingZoomStep,
-  );
+  const cellId = segmentation.cube.getMappedDataValue(globalPos, existingZoomStep);
   if (cellId > 0) {
     Store.dispatch(setActiveCellAction(cellId));
   }

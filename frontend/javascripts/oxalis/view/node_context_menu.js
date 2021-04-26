@@ -16,6 +16,7 @@ import {
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
+import { handlePickCellFromGlobalPosition } from "oxalis/controller/combinations/volume_handlers";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import Clipboard from "clipboard-js";
@@ -184,6 +185,14 @@ function NoNodeContextMenuOptions({
 }: NoNodeContextMenuProps) {
   return (
     <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+      <Menu.Item
+        className="node-context-menu-item"
+        key="select-cell"
+        onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
+      >
+        Select Cell
+      </Menu.Item>
+
       <Menu.Item
         className="node-context-menu-item"
         key="create-node"

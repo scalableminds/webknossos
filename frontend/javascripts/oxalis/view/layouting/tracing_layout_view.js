@@ -321,11 +321,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   {isDatasetOnScratchVolume ? (
                     <Tooltip title={messages["dataset.is_scratch"]}>
                       <Alert
-                        className="hide-on-small-screen"
+                        className="hide-on-small-screen bg-warning"
                         style={{
                           height: 30,
                           paddingTop: 4,
-                          backgroundColor: "#f17a27",
+                          backgroundColor: "var(--ant-warning)",
                           border: "none",
                           color: "white",
                         }}

@@ -696,7 +696,7 @@ function FileUploadArea({ fileList, onChange }) {
         })}
       >
         <input {...getInputProps()} />
-        <InboxOutlined style={{ fontSize: 48 }} className="color-primary" />
+        <InboxOutlined style={{ fontSize: 48, color: "var(--ant-primary)" }} />
         <p style={{ maxWidth: 800, textAlign: "center", marginTop: 8 }}>
           Drag your file(s) to this area to upload them. Either add individual image files, a zip
           archive or a folder.{" "}

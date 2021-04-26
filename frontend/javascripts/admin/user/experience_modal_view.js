@@ -312,7 +312,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                   >
                     <Badge
                       count={record.sharedByCount}
-                      style={isSharedByAll ? { backgroundColor: "#52c41a" } : null}
+                      style={isSharedByAll ? { backgroundColor: "var(--ant-success)" } : null}
                     />
                   </Tooltip>
                 );

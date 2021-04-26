@@ -245,13 +245,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Tooltip title={tooltipText}>
         <EditOutlined
-          className={classnames({ "color-primary": isInEditMode })}
           onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
           style={{
             position: "absolute",
             top: 4,
             right: 30,
             cursor: "pointer",
+            color: isInEditMode ? "var(--ant-primary)" : null,
           }}
         />
       </Tooltip>
@@ -463,12 +463,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                       <i
                         className={classnames("fas", "fa-adjust", {
                           "flip-horizontally": layerConfiguration.isInverted,
-                          "color-primary": layerConfiguration.isInverted,
-                          "color-text-secondary": !layerConfiguration.isInverted,
                         })}
                         style={{
                           margin: 0,
                           transition: "transform 0.5s ease 0s",
+                          color: layerConfiguration.isInverted
+                            ? "var(--ant-primary)"
+                            : "var(--ant-text-secondary)",
                         }}
                       />
                     </div>

@@ -225,7 +225,7 @@ class MeshesView extends React.Component<
             this.props.onStlUpload(file);
           }}
           showUploadList={false}
-          style={{ fontSize: 16, color: "#2a3a48", cursor: "pointer" }}
+          style={{ fontSize: 16, cursor: "pointer" }}
           disabled={!this.props.allowUpdate || this.props.isImporting}
         >
           <Tooltip
@@ -330,8 +330,9 @@ class MeshesView extends React.Component<
               this.props.onChangeVisibility(mesh, event.target.checked);
             }}
             disabled={isLoading}
-            style={mesh.isLoaded ? null : { fontStyle: "italic" }}
-            className={classnames({ "color-text-secondary": !mesh.isLoaded })}
+            style={
+              mesh.isLoaded ? null : { fontStyle: "italic", color: "var(--ant-text-secondary)" }
+            }
           >
             {mesh.description}
           </Checkbox>

@@ -228,7 +228,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
 
   getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
     const roleStyle = { fontWeight: "bold" };
-    const explanationStyle = { paddingBottom: 12 };
+    const explanationStyle = { paddingBottom: 12, color: "var(--ant-text-secondary)" };
     return (
       <React.Fragment>
         <h4>
@@ -254,19 +254,19 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
           >
             <Radio value={PERMISSIONS.admin}>
               <div style={roleStyle}>Admin</div>
-              <div style={explanationStyle} className="color-text-secondary">
+              <div style={explanationStyle}>
                 Full administration capabilities. View and edit all datasets.
               </div>
             </Radio>
             <Radio value={PERMISSIONS.datasetManager}>
               <div style={roleStyle}>Dataset Manager</div>
-              <div style={explanationStyle} className="color-text-secondary">
+              <div style={explanationStyle}>
                 No administration capabilities. View and edit all datasets.
               </div>
             </Radio>
             <Radio value={PERMISSIONS.member}>
               <div style={roleStyle}>Member</div>
-              <div style={explanationStyle} className="color-text-secondary">
+              <div style={explanationStyle}>
                 No special permissions. Dataset access based on team memberships.
               </div>
             </Radio>

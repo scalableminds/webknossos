@@ -46,7 +46,7 @@ function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
     <div style={{ textAlign: "center", cursor: "pointer" }}>
       {clickInput}
       <div>
-        <InboxOutlined style={{ fontSize: 180 }} className="color-primary" />
+        <InboxOutlined style={{ fontSize: 180, color: "var(--ant-primary)" }} />
       </div>
       {isUpdateAllowed ? (
         <h5>Drop NML files here{clickAllowed ? " or click to select files" : null}...</h5>
@@ -99,7 +99,13 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         renderItem={file => (
           <List.Item>
             <List.Item.Meta
-              avatar={<Avatar size="large" icon={<FileOutlined />} className="bg-primary" />}
+              avatar={
+                <Avatar
+                  size="large"
+                  icon={<FileOutlined />}
+                  style={{ backgroundColor: "var(--ant-primary)" }}
+                />
+              }
               title={
                 <span style={{ wordBreak: "break-word" }}>
                   {file.name}{" "}

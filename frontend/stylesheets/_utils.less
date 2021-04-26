@@ -28,42 +28,21 @@ td.nowrap * {
   width: fit-content;
 }
 
-// Color util classes
-.color-primary {
-  color: @primary-color;
-}
-.color-success {
-  color: @success-color;
-}
-.color-info {
-  color: @info-color;
-}
-.color-warning {
-  color: @warning-color;
-}
-.color-error {
-  color: @error-color;
-}
-.color-highlight {
-  color: @highlight-color;
-}
-.color-text {
-  color: @text-color;
-}
-.color-text-secondary {
-  color: @text-color-secondary;
-}
-.bg-primary {
-  background-color: @primary-color;
-}
-.bg-success {
-  background-color: @success-color;
-}
-.bg-body {
-  background-color: @body-background;
-}
-.bg-component {
-  background-color: @component-background;
+// Export antd color vars
+:root {
+  --ant-primary: @primary-color;
+  --ant-success: @success-color;
+  --ant-info: @info-color;
+  --ant-warning: @warning-color;
+  --ant-error: @error-color;
+  --ant-highlight: @highlight-color;
+  --ant-text: @text-color;
+  --ant-text-secondary: @text-color-secondary;
+  --ant-link: @link-color;
+  --ant-border-base: @border-color-base;
+  --ant-body-background: @body-background;
+  --ant-component-background: @component-background;
+  --ant-disabled: @disabled-color;
 }
 
 // Layout util classes

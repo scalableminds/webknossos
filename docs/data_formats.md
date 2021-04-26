@@ -74,7 +74,6 @@ Each layer of a WKW dataset may contain one of the following:
 * Grayscale data (8 Bit, 16 Bit, Float), also referred to as `color` data
 * RGB data (24 Bit)
 * Segmentation data (8 Bit, 16 Bit, 32 Bit)
-* Multi-channel data (multiple 8 Bit). Note that multi-channel is currently only supported by webKnossos if there are exactly three 8-bit channels.
 
 #### WKW Folder Structure
 A WKW dataset is represented with the following file system structure:

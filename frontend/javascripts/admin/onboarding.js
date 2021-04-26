@@ -115,7 +115,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-around",
-          boxShadow: "0px 0px 4px rgba(0, 0, 0, 0.25)",
+          boxShadow: "var(--ant-box-shadow-base)",
           borderRadius: 3,
           border: 0,
         }}
@@ -124,7 +124,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           className="without-icon-margin"
           style={{
             fontSize: 32,
-            background: "#1790ff",
+            background: "var(--ant-primary)",
             borderRadius: "30px",
             padding: "6px 14px",
             color: "white",
@@ -137,7 +137,6 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           {icon}
         </div>
         <h1
-          className="onboarding-option-card-header"
           style={{
             fontSize: 20,
             lineHeight: "22px",
@@ -146,7 +145,16 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
         >
           {header}
         </h1>
-        <p style={{ fontSize: 14, lineHeight: "18px", color: "#6b7280", margin: 0 }}>{children}</p>
+        <p
+          style={{
+            fontSize: 14,
+            lineHeight: "18px",
+            color: "var(--ant-text-secondary)",
+            margin: 0,
+          }}
+        >
+          {children}
+        </p>
         <p>{action}</p>
       </Card>
     </div>

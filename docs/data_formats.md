@@ -74,7 +74,7 @@ Each layer of a WKW dataset may contain one of the following:
 * Grayscale data (8 Bit, 16 Bit, Float), also referred to as `color` data
 * RGB data (24 Bit)
 * Segmentation data (8 Bit, 16 Bit, 32 Bit)
-* Multi-channel data (multiple 8 Bit)
+* Multi-channel data (multiple 8 Bit). Note that multi-channel is currently only supported by webKnossos if there are exactly three 8-bit channels.
 
 #### WKW Folder Structure
 A WKW dataset is represented with the following file system structure:
@@ -168,19 +168,15 @@ When using the [webKnossos Cuber](https://github.com/scalableminds/webknossos-cu
 - `dataLayers`: This array contains information about the layers of the dataset.
   + `dataLayers.name`: Name of the layer. Can be an arbitrary string, but needs to correspond to the folder in the file system. Needs to be unique within the dataset. Usually is either `color`, `segmentation` or `color_0`.
   + `dataLayers.category`: Either `color` for raw data or `segmentation` for segmentation layers.
-  + `dataLayers.boundingBox`: The position and size of the data that is contained in this layer. `topLeft` holds the `min_x,min_y,min_z` position, `width` is `max_x - min_x`, `height` is `max_y - min_y` and `depth` is `max_z - min_z`. *Only for WKW datasets.*
+  + `dataLayers.boundingBox`: The position and size of the data that is contained in this layer. `topLeft` holds the `min_x,min_y,min_z` position, `width` is `max_x - min_x`, `height` is `max_y - min_y` and `depth` is `max_z - min_z`.
 
-  + `dataLayers.wkwResolutions`: Holds information about the available magnification steps of the layer. *Only for WKW datasets.*
-    * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g. `1`, `2` or `4`) or a 3-tuple (e.g. `2, 2, 1`) for non-uniform magnifications. *Only for WKW datasets.*
-    * `dataLayers.wkwResolutions.cubeLength`: The cube size of the WKW cube files. Usually is `1024`. *Only for WKW datasets.*
-
-  + `dataLayers.sections`: Holds information about the sections in the layer. Usually, a dataset only has one section. *Only for KNOSSOS datasets.*
-    * `dataLayers.sections.boundingBox`: Same as `dataLayers.boundingBox` but for a section. *Only for KNOSSOS datasets.*
-    * `dataLayers.sections.resolutions`: Contains an array of the available magnification steps, e.g. `[1, 2, 4, 8]`. Does not support non-uniform magnifications. *Only for KNOSSOS datasets.*
+  + `dataLayers.wkwResolutions`: Holds information about the available magnification steps of the layer.
+    * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g. `1`, `2` or `4`) or a 3-tuple (e.g. `2, 2, 1`) for non-uniform magnifications.
+    * `dataLayers.wkwResolutions.cubeLength`: The cube size of the WKW cube files. Usually is `1024`.
 
   + `dataLayers.elementClass`: The underlying datatype of the layer, e.g. `uint8`, `uint16` or `float32`.
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
-  + `dataLayers.dataFormat`: Either `wkw` or `knossos`.
+  + `dataLayers.dataFormat`: Should be `wkw`.
 
 
 #### NML

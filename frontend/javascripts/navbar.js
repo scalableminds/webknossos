@@ -3,6 +3,7 @@ import { Avatar, Layout, Menu, Popover } from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
+  CheckOutlined,
   BarChartOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
@@ -14,10 +15,15 @@ import { connect } from "react-redux";
 import React from "react";
 
 import Toast from "libs/toast";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser, APIUserTheme } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import { getBuildInfo, getUsersOrganizations, switchToOrganization } from "admin/admin_rest_api";
-import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import {
+  getBuildInfo,
+  getUsersOrganizations,
+  switchToOrganization,
+  updateSelectedThemeOfUser,
+} from "admin/admin_rest_api";
+import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
@@ -267,7 +273,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName, organization: organizationName } = activeUser;
+  const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
 
   const activeOrganization = usersOrganizations.find(org => org.name === organizationName);
@@ -280,6 +286,27 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const switchTo = async org => {
     Toast.info(`Switching to ${org.displayName || org.name}`);
     await switchToOrganization(org.name);
+  };
+
+  const setSelectedTheme = async (theme: APIUserTheme) => {
+    let newTheme = theme;
+    if (newTheme === "auto") {
+      newTheme =
+        window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+    }
+    const styleEl = ((document.getElementById("primary-stylesheet"): any): HTMLLinkElement);
+    const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
+    const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
+    if (oldTheme !== newTheme) {
+      styleEl.href = styleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
+    }
+    if (selectedTheme !== theme) {
+      const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+      Store.dispatch(setActiveUserAction(newUser));
+    }
   };
 
   const isMultiMember = switchableOrganizations.length > 0;
@@ -315,19 +342,20 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item key="token">
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>
-        <Menu.Item
-          key="theme"
-          onClick={() => {
-            const styleEl = ((document.getElementById("primary-stylesheet"): any): HTMLLinkElement);
-            if (styleEl.href.includes("light.css")) {
-              styleEl.href = styleEl.href.replace("light.css", "dark.css");
-            } else {
-              styleEl.href = styleEl.href.replace("dark.css", "light.css");
-            }
-          }}
-        >
-          Toggle Theme
-        </Menu.Item>
+        <Menu.SubMenu title="Theme" key="theme">
+          {[["auto", "System-default"], ["light", "Light"], ["dark", "Dark"]].map(
+            ([key, label]) => (
+              <Menu.Item
+                key={key}
+                onClick={() => {
+                  setSelectedTheme(key);
+                }}
+              >
+                {selectedTheme === key && <CheckOutlined />} {label}
+              </Menu.Item>
+            ),
+          )}
+        </Menu.SubMenu>
         <Menu.Item key="logout">
           <a href="/" onClick={handleLogout}>
             Logout

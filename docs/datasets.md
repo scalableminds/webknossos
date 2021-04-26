@@ -1,19 +1,35 @@
 # Managing Datasets
 
 3D image datasets are at the heart of webKnossos.
-[Import datasets](#importing-datasets) via the file system or the upload feature.
+[Import datasets](#importing-datasets) by uploading them directly via the UI or by using the file system (self-hosted instances only).
 [Configure the dataset](#edit-dataset) defaults and permissions to your specification.
 [Share your datasets](./sharing.md#dataset-sharing) with the public or with selected users.
 
 ## Importing Datasets
 
-### Convert Datasets
-If your dataset is not yet in WKW format, you need to convert it.
-The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) is a tool that can convert many formats to WKW in order to be used with webKnossos.
-Read more in the [Data Formats documentation](./data_formats.md).
 
-### Uploading through the File System
-To efficiently import large datasets, we recommend to place them directly in the file system:
+### Uploading through the web browser
+To import a dataset, you can use the upload functionality within webKnossos.
+For that, click "Add Dataset" in the dashboard.
+Then, drag your data into the form and ensure all form fields are filled.
+
+webKnossos uses the WKW-format internally to display your data.
+If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
+If your data is not in WKW, you can either:
+- upload the data to [webknossos.org](https://webknossos.org) where it will be automatically converted to WKW
+- or [convert](#convert-datasets) your data manually to WKW.
+
+Read more about the [Data Formats](./data_formats.md) we support and how they should be structured when uploading them.
+
+Once the data is uploaded (and potentially converted) you can to go the Dataset Settings to doublecheck important properties (such as the dataset scale) or to make it public.
+
+### Convert Datasets
+If your dataset is not yet in WKW format and you don't want to use [webknossos.org](https://webknossos.org) for the conversion, you can also convert it manually.
+The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) is a tool that can convert many formats to WKW.
+Read more in the [tools section of the data formats documentation](./data_formats.md#tools).
+
+### Uploading through the File System (Self-Hosted Instances Only)
+On self-hosted instances, large datasets can be efficiently imported by placing them directly in the file system:
 
 * Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
 * Go to the [dataset view on the dashboard](./dashboard.md)
@@ -21,7 +37,7 @@ To efficiently import large datasets, we recommend to place them directly in the
 * Click `Import` for your new dataset
 * Complete the [Import screen](#importing-in-webknossos)
 
-#### Using Symbolic Links
+#### Using Symbolic Links (Self-Hosted Instances Only)
 
 You can also use symbolic links to import your data into webKnossos.
 However, when using Docker, the targets of the link also need to be available to the container through mounts.
@@ -41,18 +57,11 @@ services:
 ...
 ```
 
-### Uploading through the web browser
-To quickly import a dataset, you may use the upload functionality from webKnossos.
-This is only recommended for datasets up to 1 GB.
-
-In order to upload the datasets, create a ZIP file that contains the WKW cubes in the folder structure as described in the [Data Formats guide](./data_formats.md).
-Once the data is uploaded you need to complete the [Import screen](#importing-in-webknossos).
-
 ### Importing in webKnossos
 
 The Import screen allows you to set some properties of your datasets.
 Many properties such as available layers, bounding boxes and datatypes can be detected automatically.
-Some properties require your manual input, though.
+Some properties may require your manual input, though.
 Most of the time these are **scale** which represents the physical size of one voxel in nanometers and **largestSegmentId** of a segmentation layer.
 
 Once you entered the required properties, you can click the `Import` button to complete the process.

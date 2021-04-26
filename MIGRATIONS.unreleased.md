@@ -11,3 +11,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 - [068-pricing-plan.sql](conf/evolutions/068-pricing-plan.sql)
 - [069-tasktype-project-unique-per-orga.sql](conf/evolutions/069-tasktype-project-unique-per-orga.sql)
+- [070-dark-theme.sql](conf/evolutions/070-dark-theme.sql)

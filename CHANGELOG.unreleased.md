@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a screenshot of the 3D view when using the screenshot functionality in the tracing view. [#5324](https://github.com/scalableminds/webknossos/pull/5324)
 - Tiff export jobs of volume annotations now show the link back to the annotation in the jobs list. [#5378](https://github.com/scalableminds/webknossos/pull/5378)
 - Added support for flight- and oblique-mode when having non-uint8 dataset layers. [#5396](https://github.com/scalableminds/webknossos/pull/5396)
+- Added a dark theme for webKnossos. [#5407](https://github.com/scalableminds/webknossos/pull/5407)
 
 ### Changed
 - webKnossos is now part of the [image.sc support community](https://forum.image.sc/tag/webknossos). [#5332](https://github.com/scalableminds/webknossos/pull/5332)

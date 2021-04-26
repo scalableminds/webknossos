@@ -33,6 +33,9 @@ class Startup @Inject()(actorSystem: ActorSystem,
     extends LazyLogging {
 
   logger.info("Executing Startup")
+
+  conf.warnIfOldKeysPresent()
+
   startActors(actorSystem)
 
   private val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService

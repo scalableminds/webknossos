@@ -68,7 +68,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
     def checkDatastoreHealthIfEnabled: Fox[Unit] =
       if (storeModules.localDataStoreEnabled) {
         for {
-          response <- rpc(s"${conf.Http.uri}/data/health").get
+          response <- rpc(s"http://localhost:${conf.Http.port}/data/health").get
           if response.status == 200
         } yield ()
       } else Fox.successful(())
@@ -76,7 +76,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
     def checkTracingstoreHealthIfEnabled: Fox[Unit] =
       if (storeModules.localTracingStoreEnabled) {
         for {
-          response <- rpc(s"${conf.Http.uri}/tracings/health").get
+          response <- rpc(s"http://localhost:${conf.Http.port}/tracings/health").get
           if response.status == 200
         } yield ()
       } else Fox.successful(())

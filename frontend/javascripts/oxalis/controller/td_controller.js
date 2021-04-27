@@ -207,6 +207,9 @@ class TDController extends React.PureComponent<Props> {
   }
 
   setTargetAndFixPosition(position?: Vector3): void {
+    if (this.controls == null) {
+      return;
+    }
     position = position || getPosition(this.props.flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
 

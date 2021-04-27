@@ -5,6 +5,13 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.05.0](https://github.com/scalableminds/webknossos/releases/tag/21.05.0) - 2021-04-22
+- Instances with long-running jobs only: the `tiff_cubing` job was renamed to `convert_to_wkw`. For old jobs to be listed properly, execute sql `update webknossos.jobs set command = 'convert_to_wkw' where command = 'tiff_cubing';`
+
+### Postgres Evolutions:
+- [068-pricing-plan.sql](conf/evolutions/068-pricing-plan.sql)
+- [069-tasktype-project-unique-per-orga.sql](conf/evolutions/069-tasktype-project-unique-per-orga.sql)
+
 ## [21.04.0](https://github.com/scalableminds/webknossos/releases/tag/21.04.0) - 2021-03-22
 
 ### Postgres Evolutions:

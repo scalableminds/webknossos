@@ -2,7 +2,6 @@ package oxalis.mail
 
 import java.net.URL
 
-import com.scalableminds.util.mail.Mail
 import javax.inject.Inject
 import models.organization.Organization
 import models.user.User
@@ -55,6 +54,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
+  // TODO: Remove if unused
   def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean): Mail =
     Mail(
       from = wkOrgSender,
@@ -63,6 +63,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
+  // TODO: Remove if unused
   def newAdminWKOrgMail(name: String, receiver: String): Mail =
     Mail(
       from = wkOrgSender,

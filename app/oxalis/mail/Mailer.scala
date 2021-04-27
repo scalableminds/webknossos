@@ -1,4 +1,4 @@
-package com.scalableminds.util.mail
+package oxalis.mail
 
 import akka.actor._
 import com.typesafe.scalalogging.LazyLogging

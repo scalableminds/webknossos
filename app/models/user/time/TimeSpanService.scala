@@ -1,6 +1,5 @@
 package models.user.time
 
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -11,7 +10,7 @@ import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.mail.DefaultMails
+import oxalis.mail.{DefaultMails, Send}
 import oxalis.thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 

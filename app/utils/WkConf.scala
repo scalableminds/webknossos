@@ -47,6 +47,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     }
     val demoSender: String = get[String]("mail.demoSender")
     val defaultSender: String = get[String]("mail.defaultSender")
+    object Mailchimp {
+      val host: String = get[String]("mail.mailchimp.host")
+      val listId: String = get[String]("mail.mailchimp.listId")
+      val user: String = get[String]("mail.mailchimp.user")
+      val password: String = get[String]("mail.mailchimp.password")
+    }
   }
 
   object WebKnossos {

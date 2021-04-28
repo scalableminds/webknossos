@@ -343,7 +343,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>
         <Menu.SubMenu title="Theme" key="theme">
-          {[["auto", "System-default"], ["light", "Light"], ["dark", "Dark"]].map(
+          {[["auto", "System-default"], ["light", "Light"], ["dark", "Dark (beta)"]].map(
             ([key, label]) => (
               <Menu.Item
                 key={key}

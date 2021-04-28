@@ -89,7 +89,9 @@ class Statusbar extends React.PureComponent<Props, State> {
       MOVE: "Move",
       SKELETON: "Move",
       BRUSH: "Brush",
+      ERASE_BRUSH: "Erase (Brush)",
       TRACE: "Trace",
+      ERASE_TRACE: "Erase (Trace)",
       FILL_CELL: "Fill Cell",
       PICK_CELL: "Pick Cell",
     };
@@ -119,8 +121,10 @@ class Statusbar extends React.PureComponent<Props, State> {
     const rightClickToLabel = {
       MOVE: "Context Menu",
       SKELETON: "Place Node",
-      BRUSH: "Erase",
+      BRUSH: "Erase", // todop: depends on legacy mode setting
+      ERASE_BRUSH: "Context Menu",
       TRACE: "Erase",
+      ERASE_TRACE: "Context Menu",
       FILL_CELL: null,
       PICK_CELL: null,
     };

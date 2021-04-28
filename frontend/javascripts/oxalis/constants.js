@@ -128,13 +128,17 @@ export const AnnotationToolEnum = {
   MOVE: "MOVE",
   SKELETON: "SKELETON",
   BRUSH: "BRUSH",
+  ERASE_BRUSH: "ERASE_BRUSH",
   TRACE: "TRACE",
+  ERASE_TRACE: "ERASE_TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
 };
 export const VolumeTools = [
   AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.ERASE_BRUSH,
   AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
 ];

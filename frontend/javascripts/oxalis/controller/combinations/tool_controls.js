@@ -1,26 +1,26 @@
 // @flow
-import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
-import PlaneView from "oxalis/view/plane_view";
-import Store from "oxalis/store";
+import { type ModifierKeys } from "libs/input";
 import {
   type OrthoView,
   OrthoViews,
-  AnnotationToolEnum,
   type Point2,
   ContourModeEnum,
   type ShowContextMenuFunction,
 } from "oxalis/constants";
-import { type ModifierKeys } from "libs/input";
-import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
-import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
-import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_handlers";
 import {
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_handlers";
+import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import PlaneView from "oxalis/view/plane_view";
+import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
+import Store from "oxalis/store";
+import * as Utils from "libs/utils";
+import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
+import api from "oxalis/api/internal_api";
 
 /*
   This module contains classes for the different tools, such as MoveTool, SkeletonTool, DrawTool etc.
@@ -51,7 +51,7 @@ export class MoveTool {
           }
           case "shift": {
             const { uiInformation, tracing } = Store.getState();
-            const isBrushActive = uiInformation.activeTool === AnnotationToolEnum.BRUSH;
+            const isBrushActive = isBrushTool(uiInformation.activeTool);
             if (isBrushActive) {
               // Different browsers send different deltas, this way the behavior is comparable
               if (delta > 0) {
@@ -241,13 +241,7 @@ export class DrawTool {
   ): * {
     return {
       leftDownMove: (delta: Point2, pos: Point2) => {
-        const { tracing } = Store.getState();
-        const volumeTracing = enforceVolumeTracing(tracing);
-        const contourTracingMode = getContourTracingMode(volumeTracing);
-
-        if (contourTracingMode === ContourModeEnum.DRAW) {
-          VolumeHandlers.handleDrawDeleteMove(pos);
-        }
+        VolumeHandlers.handleDrawDeleteMove(pos);
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -318,6 +312,43 @@ export class DrawTool {
           return;
         }
 
+        SkeletonHandlers.openContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
+      },
+
+      out: () => {
+        Store.dispatch(hideBrushAction());
+      },
+    };
+  }
+}
+
+export class EraseTool {
+  static getPlaneMouseControls(
+    _planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): * {
+    return {
+      leftDownMove: (delta: Point2, pos: Point2) => {
+        VolumeHandlers.handleDrawDeleteMove(pos);
+      },
+
+      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
+        VolumeHandlers.handleEraseStart(pos, plane);
+      },
+
+      leftMouseUp: () => {
+        VolumeHandlers.handleDrawEraseEnd();
+      },
+
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.openContextMenu(
           planeView,
           pos,

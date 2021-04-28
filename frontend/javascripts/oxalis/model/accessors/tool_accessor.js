@@ -1,6 +1,6 @@
 // @flow
 import type { OxalisState } from "oxalis/store";
-import { AnnotationToolEnum } from "oxalis/constants";
+import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   isLayerVisible,
@@ -35,8 +35,26 @@ const getExplanationForDisabledVolume = (
   return "Volume annotation is currently disabled.";
 };
 
-// eslint-disable-next-line import/prefer-default-export
-export function getDisabledInfoForTools(state: OxalisState) {
+export function isVolumeDrawingTool(activeTool: AnnotationTool): boolean {
+  return (
+    activeTool === AnnotationToolEnum.TRACE ||
+    activeTool === AnnotationToolEnum.BRUSH ||
+    activeTool === AnnotationToolEnum.ERASE_TRACE ||
+    activeTool === AnnotationToolEnum.ERASE_BRUSH
+  );
+}
+
+export function isBrushTool(activeTool: AnnotationTool): boolean {
+  return activeTool === AnnotationToolEnum.BRUSH || activeTool === AnnotationToolEnum.ERASE_BRUSH;
+}
+
+export function isTraceTool(activeTool: AnnotationTool): boolean {
+  return activeTool === AnnotationToolEnum.TRACE || activeTool === AnnotationToolEnum.ERASE_TRACE;
+}
+
+export function getDisabledInfoForTools(
+  state: OxalisState,
+): { [key: AnnotationTool]: { isDisabled: boolean, explanation: string } } {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
   const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentation(state);
@@ -85,7 +103,9 @@ export function getDisabledInfoForTools(state: OxalisState) {
         explanation: disabledSkeletonExplanation,
       },
       [AnnotationToolEnum.BRUSH]: disabledInfo,
+      [AnnotationToolEnum.ERASE_BRUSH]: disabledInfo,
       [AnnotationToolEnum.TRACE]: disabledInfo,
+      [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
       [AnnotationToolEnum.FILL_CELL]: disabledInfo,
       [AnnotationToolEnum.PICK_CELL]: disabledInfo,
     };
@@ -106,6 +126,14 @@ export function getDisabledInfoForTools(state: OxalisState) {
     },
     [AnnotationToolEnum.BRUSH]: {
       isDisabled: isZoomStepTooHighForBrushing,
+      explanation: zoomInToUseToolMessage,
+    },
+    [AnnotationToolEnum.ERASE_BRUSH]: {
+      isDisabled: isZoomStepTooHighForBrushing,
+      explanation: zoomInToUseToolMessage,
+    },
+    [AnnotationToolEnum.ERASE_TRACE]: {
+      isDisabled: isZoomStepTooHighForTracing,
       explanation: zoomInToUseToolMessage,
     },
     [AnnotationToolEnum.TRACE]: {

@@ -39,6 +39,7 @@ import {
   MoveTool,
   SkeletonTool,
   DrawTool,
+  EraseTool,
   PickCellTool,
   FillCellTool,
 } from "oxalis/controller/combinations/tool_controls";
@@ -223,6 +224,11 @@ class PlaneController extends React.PureComponent<Props> {
       this.planeView,
       this.props.showNodeContextMenuAt,
     );
+    const eraseControls = EraseTool.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showNodeContextMenuAt,
+    );
     const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
     const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
 
@@ -230,6 +236,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(moveControls),
       Object.keys(skeletonControls),
       Object.keys(drawControls),
+      Object.keys(eraseControls),
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
     );
@@ -241,6 +248,8 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.SKELETON]: skeletonControls[controlKey],
         [AnnotationToolEnum.BRUSH]: drawControls[controlKey],
         [AnnotationToolEnum.TRACE]: drawControls[controlKey],
+        [AnnotationToolEnum.ERASE_BRUSH]: eraseControls[controlKey],
+        [AnnotationToolEnum.ERASE_TRACE]: eraseControls[controlKey],
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
       });

@@ -8,9 +8,9 @@ import {
   OrthoViewValues,
   OrthoViews,
   type Vector3,
-  annotationToolEnumToIndex,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
@@ -176,9 +176,9 @@ class PlaneMaterialFactory {
         type: "b",
         value: false,
       },
-      activeAnnotationToolIndex: {
-        type: "f",
-        value: 0,
+      showBrush: {
+        type: "b",
+        value: false,
       },
       viewMode: {
         type: "f",
@@ -566,9 +566,9 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => annotationToolEnumToIndex(storeState.uiInformation.activeTool),
+          storeState => storeState.uiInformation.activeTool,
           annotationTool => {
-            this.uniforms.activeAnnotationToolIndex.value = annotationTool;
+            this.uniforms.showBrush.value = isBrushTool(annotationTool);
           },
           true,
         ),

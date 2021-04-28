@@ -42,7 +42,9 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
 
 const MAG_THRESHOLDS_FOR_ZOOM: { [AnnotationTool]: number } = {
   [AnnotationToolEnum.TRACE]: 1,
+  [AnnotationToolEnum.ERASE_TRACE]: 1,
   [AnnotationToolEnum.BRUSH]: 3,
+  [AnnotationToolEnum.ERASE_BRUSH]: 3,
   [AnnotationToolEnum.FILL_CELL]: 1,
 };
 

@@ -53,7 +53,7 @@ export function threeCameraToCameraData(camera: typeof THREE.OrthographicCamera)
 function getTDViewMouseControlsSkeleton(planeView: PlaneView): Object {
   return {
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      SkeletonTool.onClick(
+      SkeletonTool.onLegacyLeftClick(
         planeView,
         pos,
         event.shiftKey,

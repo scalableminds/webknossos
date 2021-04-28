@@ -8,7 +8,13 @@ import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
-import { defaultViewportRect } from "oxalis/default_state";
+
+const emptyViewportRect = {
+  top: 0,
+  left: 0,
+  width: 0,
+  height: 0,
+};
 
 type Props = {
   viewportID: Viewport,
@@ -50,10 +56,10 @@ const renderedInputCatchers = new Map();
 
 export function recalculateInputCatcherSizes() {
   const viewportRects: Object = {
-    PLANE_XY: defaultViewportRect,
-    PLANE_YZ: defaultViewportRect,
-    PLANE_XZ: defaultViewportRect,
-    TDView: defaultViewportRect,
+    PLANE_XY: emptyViewportRect,
+    PLANE_YZ: emptyViewportRect,
+    PLANE_XZ: emptyViewportRect,
+    TDView: emptyViewportRect,
   };
 
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {

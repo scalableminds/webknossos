@@ -62,8 +62,12 @@ function adaptActiveToolToShortcuts(
     return activeTool;
   }
 
-  if (activeTool === AnnotationToolEnum.MOVE) {
-    // The move tool does not have any modifier-related behavior currently.
+  if (
+    activeTool === AnnotationToolEnum.MOVE ||
+    activeTool === AnnotationToolEnum.ERASE_BRUSH ||
+    activeTool === AnnotationToolEnum.ERASE_TRACE
+  ) {
+    // These tools do not have any modifier-related behavior currently.
     return activeTool;
   }
 

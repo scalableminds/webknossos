@@ -52,7 +52,7 @@ type StateProps = {| skeletonTracing: ?SkeletonTracing, datasetScale: Vector3 |}
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
-type NoNodeContextMenuProps = {| ...Props |};
+type NoNodeContextMenuProps = {| ...Props, cellIdAtPosition: number |};
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (

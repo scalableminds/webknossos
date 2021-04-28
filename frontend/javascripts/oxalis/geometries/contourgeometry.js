@@ -5,8 +5,9 @@
 
 import * as THREE from "three";
 
-import { ContourModeEnum, type Vector3, AnnotationToolEnum } from "oxalis/constants";
+import { ContourModeEnum, type Vector3 } from "oxalis/constants";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { isTraceTool } from "oxalis/model/accessors/tool_accessor";
 import ResizableBuffer from "libs/resizable_buffer";
 import Store from "oxalis/store";
 import app from "app";
@@ -27,7 +28,7 @@ class ContourGeometry {
       Store.subscribe(() => {
         const { tracing, uiInformation } = Store.getState();
         getVolumeTracing(tracing).map(volumeTracing => {
-          if (uiInformation.activeTool === AnnotationToolEnum.TRACE) {
+          if (isTraceTool(uiInformation.activeTool)) {
             const contourList = volumeTracing.contourList;
             if (contourList && lastContourList.length !== contourList.length) {
               // Update meshes according to the new contourList

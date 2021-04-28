@@ -350,6 +350,23 @@ export default function ToolbarView() {
               {adaptedActiveTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
             </RadioButtonWithTooltip>
             <RadioButtonWithTooltip
+              title="Erase – Draw outlines around the voxel you would like to erase."
+              disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation}
+              disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
+              style={narrowButtonStyle}
+              value={AnnotationToolEnum.ERASE_TRACE}
+            >
+              <i
+                className="fas fa-eraser"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled
+                    ? 0.5
+                    : 1,
+                }}
+              />
+              {adaptedActiveTool === "ERASE_TRACE" ? multiSliceAnnotationInfoIcon : null}
+            </RadioButtonWithTooltip>
+            <RadioButtonWithTooltip
               title="Fill Tool – Flood-fill the clicked region."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].isDisabled}

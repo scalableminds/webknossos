@@ -28,6 +28,7 @@ type StateProps = {|
   mousePosition: ?Vector2,
   activeTool: AnnotationTool,
   isPlaneMode: boolean,
+  useLegacyBindings: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 type State = {||};
@@ -87,7 +88,7 @@ class Statusbar extends React.PureComponent<Props, State> {
   getLeftClickShortcut() {
     const leftClickToLabel = {
       MOVE: "Move",
-      SKELETON: "Move",
+      SKELETON: this.props.useLegacyBindings ? "Move" : "Place Node",
       BRUSH: "Brush",
       ERASE_BRUSH: "Erase (Brush)",
       TRACE: "Trace",
@@ -118,15 +119,17 @@ class Statusbar extends React.PureComponent<Props, State> {
   }
 
   getRightClickShortcut() {
+    const contextMenu = "Context Menu";
+    const { useLegacyBindings } = this.props;
     const rightClickToLabel = {
-      MOVE: "Context Menu",
-      SKELETON: "Place Node",
-      BRUSH: "Erase", // todop: depends on legacy mode setting
-      ERASE_BRUSH: "Context Menu",
-      TRACE: "Erase",
-      ERASE_TRACE: "Context Menu",
-      FILL_CELL: null,
-      PICK_CELL: null,
+      MOVE: contextMenu,
+      SKELETON: useLegacyBindings ? "Place Node" : contextMenu,
+      BRUSH: useLegacyBindings ? "Erase" : contextMenu,
+      ERASE_BRUSH: contextMenu,
+      TRACE: useLegacyBindings ? "Erase" : contextMenu,
+      ERASE_TRACE: contextMenu,
+      FILL_CELL: contextMenu,
+      PICK_CELL: contextMenu,
     };
     const label = rightClickToLabel[this.props.activeTool];
     return (
@@ -285,6 +288,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeViewport: state.viewModeData.plane.activeViewport,
   activeTool: state.uiInformation.activeTool,
   isPlaneMode: isPlaneMode(state),
+  useLegacyBindings: state.userConfiguration.useLegacyBindings,
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Statusbar);

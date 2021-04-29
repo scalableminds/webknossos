@@ -76,16 +76,12 @@ function Tab(name: string, id: string, component: string): TabNode {
   };
 }
 
-function Tabset(
-  children: Array<TabNode>,
-  weight?: number,
-  defaultSelectedIndex?: number,
-): TabsetNode {
+function Tabset(children: Array<TabNode>, weight?: number): TabsetNode {
   weight = weight != null ? weight : 100;
   return {
     type: "tabset",
     weight,
-    selected: defaultSelectedIndex || 0,
+    selected: 0,
     children,
   };
 }
@@ -134,23 +130,14 @@ const subLayoutGlobalSettings: GlobalConfig = {
   tabSetTabStripHeight: layoutHeaderHeight + additionalHeaderHeightForBorderTabSets,
 };
 
-function buildTabsets(
-  setsOfTabs: Array<Array<TabNode>>,
-  defaultSelectedIndex?: number,
-): Array<TabsetNode> {
+function buildTabsets(setsOfTabs: Array<Array<TabNode>>): Array<TabsetNode> {
   const tabsetWeight = 100 / setsOfTabs.length;
-  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight, defaultSelectedIndex));
+  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight));
   return tabsets;
 }
 
-function buildBorder(
-  side,
-  tabset: Array<TabNode>,
-  width: number,
-  isBorderOpen: boolean,
-  defaultSelectedIndex?: number,
-): Border {
-  const buildTabset = Tabset(tabset, 100, defaultSelectedIndex);
+function buildBorder(side, tabset: Array<TabNode>, width: number, isBorderOpen: boolean): Border {
+  const buildTabset = Tabset(tabset, 100);
   const border: Border = {
     type: "border",
     location: side,
@@ -212,7 +199,6 @@ const _getDefaultLayouts = () => {
     [borderTabs.LayerSettingsTab, borderTabs.ControlsAndRenderingSettingsTab],
     leftBorderWidth,
     borderIsOpenByDefault,
-    1,
   );
   const rightBorderWithSkeleton = buildBorder(
     "right",

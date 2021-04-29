@@ -3,6 +3,7 @@ import * as React from "react";
 import { Button, Tooltip } from "antd";
 import { connect } from "react-redux";
 import type { OxalisState, BorderOpenStatus } from "oxalis/store";
+import { document } from "libs/window";
 
 type OwnProps = {|
   onClick: () => void,
@@ -14,7 +15,13 @@ type StateProps = {|
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
+function useIsDarkMode() {
+  const style = getComputedStyle(document.body);
+  return parseInt(style.getPropertyValue("--is-dark-mode")) === 1;
+}
+
 function BorderToggleButton(props: Props) {
+  const isDarkMode = useIsDarkMode();
   const { onClick, side, borderOpenStatus, inFooter } = props;
   const placement = side === "left" ? "right" : "left";
   const iconKind = borderOpenStatus[side] ? "hide" : "show";
@@ -23,7 +30,7 @@ function BorderToggleButton(props: Props) {
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;
   const imageSrc = `/assets/images/icon-sidebar-${iconKind}-${side}-${
-    inFooter ? "dark" : "bright"
+    inFooter || isDarkMode ? "dark" : "bright"
   }.svg`;
 
   return (

@@ -1,10 +1,9 @@
 // @flow
 
-import { Button, Checkbox, Input, List, Modal, Spin, Tooltip, Upload, Dropdown, Menu } from "antd";
+import { Button, Input, List, Modal, Tooltip, Upload, Dropdown, Menu } from "antd";
 import {
   DeleteOutlined,
   DownOutlined,
-  EditOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
   PlusSquareOutlined,
@@ -41,6 +40,7 @@ import {
   updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
+  addIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
@@ -145,23 +145,15 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     if (cellId == null) return;
     dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition));
   },
+  addMesh(cellId, seedPosition) {
+    if (cellId == null) return;
+    dispatch(addIsosurfaceAction(cellId, seedPosition));
+  },
 });
 
-type StateProps = {|
-  meshes: Array<MeshMetaData>,
-  isImporting: boolean,
-|};
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
-type Props = {| ...DispatchProps, ...StateProps |};
-
-const getCheckboxStyle = isLoaded =>
-  isLoaded
-    ? {}
-    : {
-        fontStyle: "italic",
-        color: "#989898",
-      };
+type Props = {| ...DispatchProps |};
 
 class MeshesView extends React.Component<
   Props,
@@ -197,6 +189,7 @@ class MeshesView extends React.Component<
       </Tooltip>
     );
     const getRefreshButton = (segmentId: number, isLoading: boolean) => (
+      // TODO: ask what should happen to precomputed/imported stuff: compute freshly?
       <Tooltip title="Refresh Isosurface">
         {isLoading ? (
           <LoadingOutlined
@@ -253,6 +246,7 @@ class MeshesView extends React.Component<
         </Upload>
       </React.Fragment>
     );
+
     const getLoadMeshCellButton = () => (
       <Button
         onClick={() => {
@@ -266,12 +260,38 @@ class MeshesView extends React.Component<
         disabled={!hasSegmentation}
         size="small"
       >
-        Mesh for centered Cell
+        Compute Mesh
       </Button>
     );
 
-    const handleMeshSelected = mesh => {
-      console.log(mesh);
+    const handleMeshSelected = async mesh => {
+      const pos = getPosition(this.props.flycam);
+      const id = getIdForPos(pos);
+
+      const layerName =
+        this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name;
+      const meshFile = mesh.key;
+      const availableChunks = await getMeshfileChunksForSegment(
+        this.props.dataset.dataStore.url,
+        this.props.dataset,
+        layerName,
+        meshFile,
+        id,
+      );
+      for (const chunkPos of availableChunks) {
+        // eslint-disable-next-line no-await-in-loop
+        const stlData = await getMeshfileChunkData(
+          this.props.dataset.dataStore.url,
+          this.props.dataset,
+          layerName,
+          meshFile,
+          id,
+          chunkPos,
+        );
+        const geometry = parseStlBuffer(stlData);
+        getSceneController().addIsosurfaceFromGeometry(geometry, id);
+      }
+      this.props.addMesh(id, pos);
     };
 
     const updateMeshFileList = async () => {
@@ -296,60 +316,12 @@ class MeshesView extends React.Component<
       <Dropdown overlay={getMeshesDropdown} trigger="hover">
         <Tooltip title="Click to refresh.">
           <Button size="small" onClick={updateMeshFileList}>
-            Meshes <DownOutlined />
+            Load from Meshfile <DownOutlined />
           </Button>
         </Tooltip>
       </Dropdown>
     );
-    /* 
-    const getLoadMeshCellButton = () => (
-      <Button
-        onClick={async () => {
-          const pos = getPosition(this.props.flycam);
-          const id = getIdForPos(pos);
-          if (id === 0) {
-            Toast.info("No cell found at centered position");
-            return;
-          }
-          const layerName =
-            this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name;
-          const availableMeshFiles = await getMeshfilesForDatasetLayer(
-            this.props.dataset.dataStore.url,
-            this.props.dataset,
-            layerName,
-          );
-          if (availableMeshFiles.length < 1) {
-            Toast.info("No mesh file available.");
-            return;
-          }
-          const meshFile = availableMeshFiles[0];
-          const availableChunks = await getMeshfileChunksForSegment(
-            this.props.dataset.dataStore.url,
-            this.props.dataset,
-            layerName,
-            meshFile,
-            id,
-          );
-          for (const chunkPos of availableChunks) {
-            // eslint-disable-next-line no-await-in-loop
-            const stlData = await getMeshfileChunkData(
-              this.props.dataset.dataStore.url,
-              this.props.dataset,
-              layerName,
-              meshFile,
-              id,
-              chunkPos,
-            );
-            const geometry = parseStlBuffer(stlData);
-            getSceneController().addIsosurfaceFromGeometry(geometry, id);
-          }
-        }}
-        disabled={!hasSegmentation}
-        size="small"
-      >
-        Load Mesh for centered Cell
-      </Button>
-    ); */
+
     const getMeshesHeader = () => (
       <React.Fragment>
         Meshes{" "}
@@ -364,7 +336,7 @@ class MeshesView extends React.Component<
       </React.Fragment>
     );
 
-    const renderIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
+    const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
       const isCenteredCell = hasSegmentation ? getIdForPos(getPosition(this.props.flycam)) : false;
       const actionVisibility =
@@ -381,6 +353,7 @@ class MeshesView extends React.Component<
           onMouseLeave={() => {
             this.setState({ hoveredListItem: null });
           }}
+          key={segmentId}
         >
           <div style={{ display: "flex" }}>
             <div
@@ -392,7 +365,7 @@ class MeshesView extends React.Component<
                 borderRadius: 2,
               }}
               onClick={() => {
-                this.props.changeActiveIsosurfaceId(segmentId);
+                // this.props.changeActiveIsosurfaceId(segmentId);
                 moveTo(seedPosition);
               }}
             >
@@ -414,46 +387,14 @@ class MeshesView extends React.Component<
         </List.Item>
       );
     };
-    const renderMeshListItem = (mesh: Object) => {
-      const isLoading = mesh.isLoading === true;
-      return (
-        <div key={mesh.id}>
-          <Checkbox
-            checked={mesh.isVisible}
-            onChange={(event: SyntheticInputEvent<>) => {
-              this.props.onChangeVisibility(mesh, event.target.checked);
-            }}
-            disabled={isLoading}
-            style={getCheckboxStyle(mesh.isLoaded)}
-          >
-            {mesh.description}
-          </Checkbox>
-          {mesh.isLoaded ? (
-            <React.Fragment>
-              <EditOutlined
-                onClick={() => this.setState({ currentlyEditedMesh: mesh })}
-                style={{ cursor: "pointer" }}
-              />
-              <DeleteOutlined
-                onClick={() => this.props.deleteMesh(mesh.id)}
-                style={{ cursor: "pointer" }}
-              />
-            </React.Fragment>
-          ) : null}
-          <Spin size="small" spinning={isLoading} />
-        </div>
-      );
-    };
 
     return (
       <div className="padded-tab-content">
         {getMeshesHeader()}
         <List
-          dataSource={Object.values(this.props.isosurfaces)}
           size="small"
           split={false}
           style={{ marginTop: 12 }}
-          renderItem={renderIsosurfaceListItem}
           locale={{
             emptyText: `There are no Meshes.${
               this.props.allowUpdate
@@ -461,7 +402,11 @@ class MeshesView extends React.Component<
                 : ""
             }`,
           }}
-        />
+        >
+          {Object.values(this.props.isosurfaces).map(isosurface =>
+            getIsosurfaceListItem(isosurface),
+          )}
+        </List>
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal
             initialMesh={this.state.currentlyEditedMesh}
@@ -472,18 +417,6 @@ class MeshesView extends React.Component<
             onCancel={() => this.setState({ currentlyEditedMesh: null })}
           />
         ) : null}
-        {/* 
-        <List
-          dataSource={this.props.meshes}
-          size="small"
-          split={false}
-          renderItem={renderMeshListItem}
-          locale={{
-            emptyText: `There are no meshes.${
-              this.props.allowUpdate ? " You can import an STL file to change this." : ""
-            } `,
-          }}
-        /> */}
       </div>
     );
   }

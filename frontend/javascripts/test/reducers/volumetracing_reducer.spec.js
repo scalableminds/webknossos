@@ -267,25 +267,26 @@ test("VolumeTracing should cycle trace/view/brush tool", t => {
 
   // Cycle tool to Brush
   let newState = UiReducer(initialState, cycleToolAction);
-
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BRUSH);
+
+  newState = UiReducer(newState, cycleToolAction);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.ERASE_BRUSH);
 
   // Cycle tool to Trace
   newState = UiReducer(newState, cycleToolAction);
-
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.TRACE);
 
   newState = UiReducer(newState, cycleToolAction);
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.ERASE_TRACE);
 
+  newState = UiReducer(newState, cycleToolAction);
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.FILL_CELL);
 
   newState = UiReducer(newState, cycleToolAction);
-
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.PICK_CELL);
 
   // Cycle tool back to MOVE
   newState = UiReducer(newState, cycleToolAction);
-
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
 });
 

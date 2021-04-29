@@ -46,6 +46,7 @@ function TDViewControls({
             value={tdViewDisplayPlanes}
             onChange={onChangeTdViewDisplayPlanes}
             size="small"
+            className="without-icon-margin"
           >
             <Tooltip title="Hide everything">
               <Radio.Button value={TDViewDisplayModeEnum.NONE}>
@@ -69,7 +70,7 @@ function TDViewControls({
   );
 
   return (
-    <div id="TDViewControls" className="antd-legacy-group without-icon-margin">
+    <div id="TDViewControls" className="antd-legacy-group">
       <Button size="small" onClick={api.tracing.rotate3DViewToDiagonal}>
         3D
       </Button>

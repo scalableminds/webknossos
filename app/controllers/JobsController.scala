@@ -4,7 +4,7 @@ import java.nio.file.{Files, Paths}
 import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
@@ -61,6 +61,13 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""_owner = '$requestingUserId'"""
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Job]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery order by created".as[JobsRow])
+      parsed <- parseAll(r)
+    } yield parsed
 
   def getAllByCeleryIds(celeryJobIds: List[String]): Fox[List[Job]] =
     if (celeryJobIds.isEmpty) Fox.successful(List())

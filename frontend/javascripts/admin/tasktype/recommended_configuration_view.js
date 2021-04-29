@@ -22,6 +22,7 @@ const recommendedConfigByCategory = {
     newNodeNewTree: false,
     centerNewNode: true,
     tdViewDisplayPlanes: TDViewDisplayModeEnum.WIREFRAME,
+    tdViewDisplayDatasetBorders: true,
   },
   all: {
     dynamicSpaceDirection: true,
@@ -71,7 +72,7 @@ export const settingComments = {
   clippingDistanceArbitrary: "flight/oblique mode",
   moveValue3d: "flight/oblique mode",
   loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
-  tdViewDisplayPlanes: Object.keys(TDViewDisplayModeEnum).join(" or "),
+  tdViewDisplayPlanes: Object.values(TDViewDisplayModeEnum).join(" or "),
 };
 
 const columns = [

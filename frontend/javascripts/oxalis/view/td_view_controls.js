@@ -1,5 +1,5 @@
 // @flow
-import { Button, Radio, Tooltip, Menu, Dropdown } from "antd";
+import { Button, Radio, Tooltip, Menu, Dropdown, Col, Row, Switch } from "antd";
 import {
   ReloadOutlined,
   StopOutlined,
@@ -20,14 +20,18 @@ type Props = {|
   isRefreshingIsosurfaces: boolean,
   volumeTracing: ?VolumeTracing,
   tdViewDisplayPlanes: TDViewDisplayMode,
+  tdViewDisplayDatasetBorders: boolean,
   onChangeTdViewDisplayPlanes: (SyntheticInputEvent<>) => void,
+  onChangeTdViewDisplayDatasetBorders: boolean => void,
 |};
 
 function TDViewControls({
   isRefreshingIsosurfaces,
   volumeTracing,
   tdViewDisplayPlanes,
+  tdViewDisplayDatasetBorders,
   onChangeTdViewDisplayPlanes,
+  onChangeTdViewDisplayDatasetBorders,
 }: Props) {
   let refreshIsosurfaceTooltip = "Load Isosurface of centered cell from segmentation layer.";
   if (volumeTracing != null) {
@@ -39,33 +43,51 @@ function TDViewControls({
   }
 
   const settingsMenu = (
-    <Menu>
-      <Menu.ItemGroup title="Plane Display Mode">
-        <Menu.Item>
-          <Radio.Group
-            value={tdViewDisplayPlanes}
-            onChange={onChangeTdViewDisplayPlanes}
-            size="small"
-            className="without-icon-margin"
-          >
-            <Tooltip title="Hide everything">
-              <Radio.Button value={TDViewDisplayModeEnum.NONE}>
-                <StopOutlined />
-              </Radio.Button>
-            </Tooltip>
-            <Tooltip title="Show wireframes only">
-              <Radio.Button value={TDViewDisplayModeEnum.WIREFRAME}>
-                <BorderInnerOutlined />
-              </Radio.Button>
-            </Tooltip>
-            <Tooltip title="Show planes with data">
-              <Radio.Button value={TDViewDisplayModeEnum.DATA}>
-                <BorderOuterOutlined />
-              </Radio.Button>
-            </Tooltip>
-          </Radio.Group>
-        </Menu.Item>
-      </Menu.ItemGroup>
+    <Menu style={{ width: 260 }}>
+      <Menu.Item key="tdViewDisplayPlanes">
+        <Row>
+          <Col span={14}>
+            <label className="setting-label">Plane Display Mode</label>
+          </Col>
+          <Col span={10}>
+            <Radio.Group
+              value={tdViewDisplayPlanes}
+              onChange={onChangeTdViewDisplayPlanes}
+              size="small"
+              className="without-icon-margin"
+            >
+              <Tooltip title="Hide everything">
+                <Radio.Button value={TDViewDisplayModeEnum.NONE}>
+                  <StopOutlined />
+                </Radio.Button>
+              </Tooltip>
+              <Tooltip title="Show wireframes only">
+                <Radio.Button value={TDViewDisplayModeEnum.WIREFRAME}>
+                  <BorderInnerOutlined />
+                </Radio.Button>
+              </Tooltip>
+              <Tooltip title="Show planes with data">
+                <Radio.Button value={TDViewDisplayModeEnum.DATA}>
+                  <BorderOuterOutlined />
+                </Radio.Button>
+              </Tooltip>
+            </Radio.Group>
+          </Col>
+        </Row>
+      </Menu.Item>
+      <Menu.Item key="showDatasetBorder">
+        <Row>
+          <Col span={14}>
+            <label className="setting-label">Show Dataset Border</label>
+          </Col>
+          <Col span={10}>
+            <Switch
+              checked={tdViewDisplayDatasetBorders}
+              onChange={onChangeTdViewDisplayDatasetBorders}
+            />
+          </Col>
+        </Row>
+      </Menu.Item>
     </Menu>
   );
 
@@ -109,6 +131,7 @@ function mapStateToProps(state: OxalisState) {
     isRefreshingIsosurfaces: state.uiInformation.isRefreshingIsosurfaces,
     volumeTracing: state.tracing.volume,
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
+    tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
   };
 }
 
@@ -117,6 +140,9 @@ function mapDispatchToProps(dispatch: Dispatch<*>) {
     onChangeTdViewDisplayPlanes(evt: SyntheticInputEvent<>) {
       const tdViewDisplayPlanes: $Values<typeof TDViewDisplayModeEnum> = evt.target.value;
       dispatch(updateUserSettingAction("tdViewDisplayPlanes", tdViewDisplayPlanes));
+    },
+    onChangeTdViewDisplayDatasetBorders(tdViewDisplayDatasetBorders: boolean) {
+      dispatch(updateUserSettingAction("tdViewDisplayDatasetBorders", tdViewDisplayDatasetBorders));
     },
   };
 }

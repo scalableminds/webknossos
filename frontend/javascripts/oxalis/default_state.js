@@ -75,6 +75,7 @@ const defaultState: OxalisState = {
     sortTreesByName: false,
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
+    tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
   },

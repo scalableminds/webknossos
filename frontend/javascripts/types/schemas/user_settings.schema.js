@@ -28,8 +28,9 @@ export const userSettings = {
   sphericalCapRadius: { type: "number", minimum: 50, maximum: 500 },
   tdViewDisplayPlanes: {
     type: "string",
-    enum: Object.keys(TDViewDisplayModeEnum),
+    enum: Object.values(TDViewDisplayModeEnum),
   },
+  tdViewDisplayDatasetBorders: { type: "boolean" },
   hideTreeRemovalWarning: { type: "boolean" },
   brushSize: { type: "number", minimum: 1, maximum: 300 },
   autoSaveLayouts: { type: "boolean" },
@@ -37,7 +38,7 @@ export const userSettings = {
   segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },
   overwriteMode: {
     type: "string",
-    enum: Object.keys(OverwriteModeEnum),
+    enum: Object.values(OverwriteModeEnum),
   },
   ...baseDatasetViewConfiguration,
 };

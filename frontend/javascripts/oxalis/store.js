@@ -308,6 +308,7 @@ export type UserConfiguration = {|
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: TDViewDisplayMode,
+  +tdViewDisplayDatasetBorders: boolean,
   +gpuMemoryFactor: number,
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.

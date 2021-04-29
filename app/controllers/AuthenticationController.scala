@@ -104,7 +104,7 @@ class AuthenticationController @Inject()(
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 if (conf.Features.isDemoInstance) {
-                  mailchimpClient.registerUser(user, multiUser)
+                  mailchimpClient.registerUser(user, multiUser, tag = "registered_as_user")
                 } else {
                   Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
                 }
@@ -400,7 +400,7 @@ class AuthenticationController @Inject()(
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      mailchimpClient.registerUser(user, multiUser)
+                      mailchimpClient.registerUser(user, multiUser, tag = "registered_as_admin")
                     }
                     Ok
                   }

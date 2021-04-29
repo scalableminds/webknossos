@@ -15,7 +15,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execution
 
   private lazy val conf = wkConf.Mail.Mailchimp
 
-  def registerUser(user: User, multiUser: MultiUser): Fox[Unit] = {
+  def registerUser(user: User, multiUser: MultiUser, tag: String): Fox[Unit] = {
     if (conf.host.isEmpty) return Fox.successful(())
     val emailMd5 = SCrypt.md5(multiUser.email)
     val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5"
@@ -27,9 +27,22 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC)(implicit ec: Execution
         "LNAME" -> user.lastName,
       )
     )
-    logger.info(s"Registering user ${user._id} for Mailchimp")
+    logger.info(s"Registering user ${user._id} for Mailchimp, tag=$tag")
     for {
       _ <- rpc(uri).silent.withBasicAuth(conf.user, conf.password).put(userBody)
+      _ <- tagUser(user, multiUser, tag)
+    } yield ()
+  }
+
+  private def tagUser(user: User, multiUser: MultiUser, tag: String): Fox[Unit] = {
+    if (conf.host.isEmpty) return Fox.successful(())
+    val emailMd5 = SCrypt.md5(multiUser.email)
+    val uri = s"${conf.host}/lists/${conf.listId}/members/$emailMd5/tags"
+    val tagBody = Json.obj(
+      "tags" -> List(Json.obj("name" -> tag, "status" -> "active"))
+    )
+    for {
+      _ <- rpc(uri).silent.withBasicAuth(conf.user, conf.password).post(tagBody)
     } yield ()
   }
 

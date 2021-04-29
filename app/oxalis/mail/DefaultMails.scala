@@ -54,24 +54,6 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
-  // TODO: Remove if unused
-  def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean): Mail =
-    Mail(
-      from = wkOrgSender,
-      subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.newUserWKOrg(name, enableAutoVerify, demoDatasetUrl, tutorialVideoUrl).body,
-      recipients = List(receiver)
-    )
-
-  // TODO: Remove if unused
-  def newAdminWKOrgMail(name: String, receiver: String): Mail =
-    Mail(
-      from = wkOrgSender,
-      subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.newAdminWKOrg(name, demoDatasetUrl, tutorialVideoUrl).body,
-      recipients = List(receiver)
-    )
-
   def activatedMail(name: String, receiver: String): Mail =
     Mail(from = defaultSender,
          subject = "webKnossos | Account activated",

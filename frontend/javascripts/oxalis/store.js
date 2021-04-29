@@ -36,6 +36,7 @@ import {
   type OverwriteMode,
   type ControlMode,
   ControlModeEnum,
+  type TDViewDisplayMode,
   type ViewMode,
   type OrthoView,
   type Rect,
@@ -306,7 +307,7 @@ export type UserConfiguration = {|
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
-  +tdViewDisplayPlanes: boolean,
+  +tdViewDisplayPlanes: TDViewDisplayMode,
   +gpuMemoryFactor: number,
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.

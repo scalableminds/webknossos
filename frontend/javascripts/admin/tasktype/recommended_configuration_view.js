@@ -9,6 +9,7 @@ import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import { jsonStringify } from "libs/utils";
 import { settings } from "messages";
 import { validateUserSettingsJSON } from "types/validation";
+import { TDViewDisplayModeEnum } from "oxalis/constants";
 
 const FormItem = Form.Item;
 const { Panel } = Collapse;
@@ -20,7 +21,7 @@ const recommendedConfigByCategory = {
     displayScalebars: false,
     newNodeNewTree: false,
     centerNewNode: true,
-    tdViewDisplayPlanes: false,
+    tdViewDisplayPlanes: TDViewDisplayModeEnum.WIREFRAME,
   },
   all: {
     dynamicSpaceDirection: true,
@@ -70,6 +71,7 @@ export const settingComments = {
   clippingDistanceArbitrary: "flight/oblique mode",
   moveValue3d: "flight/oblique mode",
   loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
+  tdViewDisplayPlanes: Object.keys(TDViewDisplayModeEnum).join(" or "),
 };
 
 const columns = [

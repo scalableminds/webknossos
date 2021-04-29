@@ -26,7 +26,6 @@ object UserConfiguration {
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
       "scale" -> JsNumber(1),
-      "tdViewDisplayPlanes" -> JsBoolean(true),
       "isosurfaceDisplay" -> JsBoolean(false),
       "isosurfaceBBsize" -> JsNumber(1),
       "isosurfaceResolution" -> JsNumber(80),

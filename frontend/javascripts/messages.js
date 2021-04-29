@@ -16,7 +16,7 @@ export const settings = {
   nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
-  tdViewDisplayPlanes: "Display Planes in 3D View",
+  tdViewDisplayPlanes: "Plane Display Mode in 3D View",
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   quality: "Quality",

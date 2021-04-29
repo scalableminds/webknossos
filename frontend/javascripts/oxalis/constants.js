@@ -97,15 +97,19 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
 };
 
 export const BorderTabs = {
+  // TODO: Somehow add a tooltip and option to have a short name to the title
   DatasetInfoTabView: { id: "DatasetInfoTabView", name: "Info" },
   TreesTabView: { id: "TreesTabView", name: "Trees" },
   CommentTabView: { id: "CommentTabView", name: "Comments" },
   MeshesView: { id: "MeshesView", name: "Meshes" },
   SkeletonTabView: { id: "SkeletonTabView", name: "Skeleton" },
   VolumeTabView: { id: "VolumeTabView", name: "Volume" },
-  AbstractTreeTab: { id: "AbstractTreeTab", name: "Abstract Tree" },
-  GeneralSettingsTab: { id: "GeneralSettingsTab", name: "General" },
-  BoundingBoxTab: { id: "BoundingBoxTab", name: "Bounding Boxes" },
+  AbstractTreeTab: { id: "AbstractTreeTab", name: "AbsTree" },
+  ControlsAndRenderingSettingsTab: {
+    id: "ControlsAndRenderingSettingsTab",
+    name: "Controls/Rendering",
+  },
+  BoundingBoxTab: { id: "BoundingBoxTab", name: "BBoxes" },
   LayerSettingsTab: { id: "LayerSettingsTab", name: "Layer" },
 };
 

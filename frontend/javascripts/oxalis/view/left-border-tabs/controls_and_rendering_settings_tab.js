@@ -36,7 +36,7 @@ import Toast from "libs/toast";
 
 const { Panel } = Collapse;
 
-type GeneralSettingsTabProps = {
+type ControlsAndRenderingSettingsTabProps = {
   userConfiguration: UserConfiguration,
   zoomStep: number,
   validZoomRange: [number, number],
@@ -48,7 +48,7 @@ type GeneralSettingsTabProps = {
   dataset: APIDataset,
 };
 
-class GeneralSettingsTab extends PureComponent<GeneralSettingsTabProps> {
+class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRenderingSettingsTabProps> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
   onChangeDataset: { [$Keys<DatasetConfiguration>]: Function };
 
@@ -348,7 +348,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<GeneralSettingsTabProps, {||}, _, _, _, _>(
+export default connect<ControlsAndRenderingSettingsTabProps, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(GeneralSettingsTab);
+)(ControlsAndRenderingSettingsTab);

@@ -22,7 +22,7 @@ import VolumeTabView from "oxalis/view/right-border-tabs/volume_tab_view";
 import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
-import GeneralSettingsTab from "oxalis/view/left-border-tabs/general_settings_tab";
+import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-border-tabs/trees_tab_view";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
@@ -204,8 +204,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       case "LayerSettingsTab": {
         return <LayerSettingsTab />;
       }
-      case "GeneralSettingsTab": {
-        return <GeneralSettingsTab />;
+      case "ControlsAndRenderingSettingsTab": {
+        return <ControlsAndRenderingSettingsTab />;
       }
       default: {
         console.error(`The tab with id ${id} is unknown.`);

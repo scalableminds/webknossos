@@ -325,27 +325,32 @@ export default function ToolbarView() {
               />
               {adaptedActiveTool === AnnotationToolEnum.BRUSH ? multiSliceAnnotationInfoIcon : null}
             </RadioButtonWithTooltip>
-            {showEraseBrushTool ? (
-              <RadioButtonWithTooltip
-                title="Erase (via Brush) – Erase the voxel by brushing over them. Adjust the brush size with Shift + Mousewheel."
-                disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation}
-                disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
-                style={narrowButtonStyle}
-                value={AnnotationToolEnum.ERASE_BRUSH}
-              >
-                <i
-                  className="fas fa-eraser"
-                  style={{
-                    opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled
-                      ? 0.5
-                      : 1,
-                  }}
-                />
-                {adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH
-                  ? multiSliceAnnotationInfoIcon
-                  : null}
-              </RadioButtonWithTooltip>
-            ) : null}
+
+            <RadioButtonWithTooltip
+              title="Erase (via Brush) – Erase the voxel by brushing over them. Adjust the brush size with Shift + Mousewheel."
+              disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation}
+              disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
+              style={{
+                ...narrowButtonStyle,
+                marginLeft: showEraseBrushTool ? 0 : -38,
+                zIndex: showEraseBrushTool ? "initial" : -10,
+                transition: "margin 0.3s",
+              }}
+              value={AnnotationToolEnum.ERASE_BRUSH}
+            >
+              <i
+                className="fas fa-eraser"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled
+                    ? 0.5
+                    : 1,
+                }}
+              />
+              {adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH
+                ? multiSliceAnnotationInfoIcon
+                : null}
+            </RadioButtonWithTooltip>
+
             <RadioButtonWithTooltip
               title="Trace – Draw outlines around the voxel you would like to label."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
@@ -362,27 +367,32 @@ export default function ToolbarView() {
               />
               {adaptedActiveTool === AnnotationToolEnum.TRACE ? multiSliceAnnotationInfoIcon : null}
             </RadioButtonWithTooltip>
-            {showEraseTraceTool ? (
-              <RadioButtonWithTooltip
-                title="Erase – Draw outlines around the voxel you would like to erase."
-                disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation}
-                disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
-                style={narrowButtonStyle}
-                value={AnnotationToolEnum.ERASE_TRACE}
-              >
-                <i
-                  className="fas fa-eraser"
-                  style={{
-                    opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled
-                      ? 0.5
-                      : 1,
-                  }}
-                />
-                {adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE
-                  ? multiSliceAnnotationInfoIcon
-                  : null}
-              </RadioButtonWithTooltip>
-            ) : null}
+
+            <RadioButtonWithTooltip
+              title="Erase – Draw outlines around the voxel you would like to erase."
+              disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation}
+              disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
+              style={{
+                ...narrowButtonStyle,
+                marginLeft: showEraseTraceTool ? 0 : -38,
+                zIndex: showEraseTraceTool ? "initial" : -10,
+                transition: "margin 0.3s",
+              }}
+              value={AnnotationToolEnum.ERASE_TRACE}
+            >
+              <i
+                className="fas fa-eraser"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled
+                    ? 0.5
+                    : 1,
+                }}
+              />
+              {adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE
+                ? multiSliceAnnotationInfoIcon
+                : null}
+            </RadioButtonWithTooltip>
+
             <RadioButtonWithTooltip
               title="Fill Tool – Flood-fill the clicked region."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.FILL_CELL].explanation}

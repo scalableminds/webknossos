@@ -1,10 +1,6 @@
 @import "../../node_modules/antd/dist/antd.dark.less";
 @import "./main.less";
 
-:root {
-  --is-dark-mode: 1;
-}
-
 .welcome-header-wrapper {
   background-image: linear-gradient(0deg, @body-background 0%, @blue-2 70%);
 }
@@ -57,4 +53,13 @@ a:hover {
   .ant-slider-handle {
     background-color: @blue-5;
   }
+}
+
+// Change the bright versions to dark, too
+.icon-sidebar-hide-left-bright {
+  background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);
+}
+
+.icon-sidebar-hide-right-bright {
+  background-image: url(/assets/images/icon-sidebar-hide-right-dark.svg);
 }

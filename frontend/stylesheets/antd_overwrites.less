@@ -197,3 +197,14 @@ label.ant-checkbox-wrapper {
   flex-direction: column;
   line-height: 13px;
 }
+
+// Custom component `LinkButton` renders a button that looks like a link.
+// Antd’s `button type="link"` only gets us halfway there, though, hence, this:
+.link-button {
+  border: 0;
+  padding: 0;
+  height: initial;
+}
+.link-button > .anticon + span, .link-button > span + .anticon {
+  margin-left: initial;
+}

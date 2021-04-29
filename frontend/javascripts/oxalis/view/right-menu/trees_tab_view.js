@@ -10,7 +10,6 @@ import {
   Modal,
   Tooltip,
   notification,
-  Space,
 } from "antd";
 import {
   DownloadOutlined,
@@ -108,10 +107,6 @@ type TreeOrTreeGroup = {
   type: string,
 };
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,
@@ -131,7 +126,7 @@ type StateProps = {|
   onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 type State = {
   isUploading: boolean,
@@ -696,7 +691,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <Space size={0}>
+                <div className="antd-legacy-group">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -734,7 +729,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </Space>
+                </div>
                 <InputGroup compact>
                   <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
                     <i className="fas fa-arrow-left" />
@@ -841,7 +836,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(TreesTabView);

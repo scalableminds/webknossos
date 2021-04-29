@@ -1,21 +1,102 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
+import models.project.ProjectDAO
+import models.task.{TaskDAO, TaskService}
 import oxalis.security.WkEnv
 import play.api.http.HttpEntity
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
-import utils.WkConf
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
 class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     taskController: TaskController,
                                     userController: UserController,
-                                    conf: WkConf,
+                                    projectController: ProjectController,
+                                    projectDAO: ProjectDAO,
+                                    taskDAO: TaskDAO,
+                                    taskService: TaskService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
+
+  /* to provide v3, find projects by name */
+
+  def projectRead(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
+      result <- projectController.read(project._id.toString)(request)
+    } yield result
+  }
+
+  def projectDelete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
+      result <- projectController.delete(project._id.toString)(request)
+    } yield result
+  }
+
+  def projectUpdate(name: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+    for {
+      project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
+      result <- projectController.update(project._id.toString)(request)
+    } yield result
+  }
+
+  def projectTasksForProject(name: String,
+                             limit: Option[Int] = None,
+                             pageNumber: Option[Int] = None,
+                             includeTotalCount: Option[Boolean]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
+        result <- projectController.tasksForProject(project._id.toString, limit, pageNumber, includeTotalCount)(request)
+      } yield result
+    }
+
+  def projectIncrementEachTasksInstances(name: String, delta: Option[Long]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
+        result <- projectController.incrementEachTasksInstances(project._id.toString, delta)(request)
+      } yield result
+    }
+
+  def projectPause(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
+      result <- projectController.pause(project._id.toString)(request)
+    } yield result
+  }
+
+  def projectResume(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization)
+      result <- projectController.resume(project._id.toString)(request)
+    } yield result
+  }
+
+  def taskListTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+    for {
+      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
+      projectNameOpt = (request.body \ "project").asOpt[String]
+      projectOpt <- Fox.runOptional(projectNameOpt)(projectName =>
+        projectDAO.findOneByNameAndOrganization(projectName, request.identity._organization))
+      taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids =>
+        Fox.serialCombined(ids)(ObjectId.parse))
+      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse)
+      randomizeOpt = (request.body \ "random").asOpt[Boolean]
+      tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectOpt.map(_._id),
+                                                                taskTypeIdOpt,
+                                                                taskIdsOpt,
+                                                                userIdOpt,
+                                                                randomizeOpt)
+      jsResult <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
+    } yield Ok(Json.toJson(jsResult))
+  }
 
   /* to provide v2, insert automatic timestamp in finish and info request */
 

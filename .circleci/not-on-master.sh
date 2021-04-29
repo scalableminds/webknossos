@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-echo "Skipping this step on hackathon..."
+if [ "${CIRCLE_BRANCH}" == "master" ]; then
+  echo "Skipping this step on master..."
+else
+  exec "$@"
+fi

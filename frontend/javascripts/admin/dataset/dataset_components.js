@@ -82,7 +82,7 @@ export function DatastoreFormItem({
       <Select
         showSearch
         placeholder="Select a Datastore"
-        optionFilterProp="children"
+        optionFilterProp="label"
         style={{ width: "100%" }}
         options={datastores.map((datastore: APIDataStore) => ({
           label: datastore.name,

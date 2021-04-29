@@ -275,7 +275,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     allowClear
                     showSearch
                     placeholder="Select a User"
-                    optionFilterProp="children"
+                    optionFilterProp="label"
                     style={{ width: "100%" }}
                     onChange={this.handleUserChange}
                     notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}

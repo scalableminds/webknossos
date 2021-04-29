@@ -99,38 +99,35 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
-       or (select _organization from webknossos.teams where webknossos.teams._id = _team)
-          in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+       or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def updateAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
-      or (select _organization from webknossos.teams where webknossos.teams._id = _team)
-        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+       or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
+      r <- run(
         sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasktypesRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      parsed <- parseFirst(r, id.toString)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TasktypesRow])
-      parsed <- Fox.combined(r.toList.map(parse)) ?~> ("SQLDAO Error: Could not parse one of the database rows in " + collectionName)
+      parsed <- parseAll(r)
     } yield parsed
 
-  def insertOne(t: TaskType): Fox[Unit] =
+  def insertOne(t: TaskType, organizationId: ObjectId): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.taskTypes(
-                          _id, _team, summary, description, settings_allowedModes, settings_preferredMode,
+                          _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,
                           settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode,
                           settings_resolutionRestrictions_min, settings_resolutionRestrictions_max,
                           recommendedConfiguration, tracingType, created, isDeleted)
-                       values(${t._id.id}, ${t._team.id}, ${t.summary}, ${t.description},
+                       values(${t._id.id}, $organizationId, ${t._team.id}, ${t.summary}, ${t.description},
                               '#${sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))}',
                               #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                               ${t.settings.branchPointsAllowed},
@@ -145,7 +142,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for { //note that t.created is skipped
+    for { // note that t.created is immutable, hence skipped here
       _ <- assertUpdateAccess(t._id)
       allowedModesLiteral = sanitize(writeArrayTuple(t.settings.allowedModes.map(_.toString)))
       resolutionMinLiteral = optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))

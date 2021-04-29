@@ -10,6 +10,7 @@ import _ from "lodash";
 import type { APIScript, APIUser } from "types/api_flow_types";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -190,10 +191,10 @@ class ScriptListView extends React.PureComponent<Props, State> {
                       Edit
                     </Link>
                     <br />
-                    <a href="#" onClick={_.partial(this.deleteScript, script)}>
+                    <LinkButton onClick={_.partial(this.deleteScript, script)}>
                       <DeleteOutlined />
                       Delete
-                    </a>
+                    </LinkButton>
                   </span>
                 )}
               />

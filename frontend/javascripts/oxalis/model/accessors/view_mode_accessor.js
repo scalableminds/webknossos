@@ -10,6 +10,7 @@ import constants, {
   type Rect,
   type Viewport,
   OrthoViews,
+  type ViewMode,
 } from "oxalis/constants";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
@@ -89,6 +90,15 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
   const xScale = (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   const yScale = (height + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   return [xScale, yScale];
+}
+
+export function getViewMode(state: OxalisState): ViewMode {
+  return state.temporaryConfiguration.viewMode;
+}
+
+export function isPlaneMode(state: OxalisState): boolean {
+  const viewMode = getViewMode(state);
+  return constants.MODES_PLANE.includes(viewMode);
 }
 
 export default {};

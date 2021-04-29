@@ -32,7 +32,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 13;
+export const currentLayoutVersion = 14;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
@@ -99,19 +99,19 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
   };
 }
 
-const borderTabs = {};
+const borderTabs: { [$Keys<typeof BorderTabs>]: Object } = {};
 // Flow does not understand that the values must have a name and an id.
 Object.entries(BorderTabs).forEach(([tabKey, { name, id }]: any) => {
   borderTabs[tabKey] = Tab(name, id, "border-tab");
 });
 
-const OrthoViewports = {};
+const OrthoViewports: { [$Keys<typeof OrthoViews>]: Object } = {};
 Object.keys(OrthoViews).forEach(viewportId => {
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 
-const ArbitraryViewports = {};
+const ArbitraryViewports: { [$Keys<typeof ArbitraryViews>]: Object } = {};
 Object.keys(ArbitraryViews).forEach(viewportId => {
   const name = ArbitraryViewsToName[viewportId];
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
@@ -145,12 +145,12 @@ function buildTabsets(
 
 function buildBorder(
   side,
-  setsOfTabs: Array<Array<TabNode>>,
+  tabset: Array<TabNode>,
   width: number,
   isBorderOpen: boolean,
   defaultSelectedIndex?: number,
 ): Border {
-  const tabsets = buildTabsets(setsOfTabs, defaultSelectedIndex);
+  const buildTabset = Tabset(tabset, 100, defaultSelectedIndex);
   const border: Border = {
     type: "border",
     location: side,
@@ -166,7 +166,7 @@ function buildBorder(
         config: {
           model: {
             global: subLayoutGlobalSettings,
-            layout: Row([Row(tabsets)]),
+            layout: Row([buildTabset]),
             borders: [],
           },
         },
@@ -209,7 +209,7 @@ const _getDefaultLayouts = () => {
   const borderIsOpenByDefault = !isInIframe;
   const leftBorder = buildBorder(
     "left",
-    [[borderTabs.GeneralSettingsTab, borderTabs.LayerSettingsTab]],
+    [borderTabs.LayerSettingsTab, borderTabs.ControlsAndRenderingSettingsTab],
     leftBorderWidth,
     borderIsOpenByDefault,
     1,
@@ -217,18 +217,14 @@ const _getDefaultLayouts = () => {
   const rightBorderWithSkeleton = buildBorder(
     "right",
     [
-      [
-        borderTabs.DatasetInfoTabView,
-        borderTabs.TreesTabView,
-        borderTabs.CommentTabView,
-        borderTabs.SkeletonTabView,
-      ],
-      [
-        borderTabs.VolumeTabView,
-        borderTabs.MeshesView,
-        borderTabs.BoundingBoxTab,
-        borderTabs.AbstractTreeTab,
-      ],
+      borderTabs.DatasetInfoTabView,
+      borderTabs.TreesTabView,
+      borderTabs.CommentTabView,
+      borderTabs.SkeletonTabView,
+      borderTabs.VolumeTabView,
+      borderTabs.MeshesView,
+      borderTabs.BoundingBoxTab,
+      borderTabs.AbstractTreeTab,
     ],
     defaultBorderWidth,
     borderIsOpenByDefault,
@@ -236,12 +232,10 @@ const _getDefaultLayouts = () => {
   const rightBorderWithoutSkeleton = buildBorder(
     "right",
     [
-      [
-        borderTabs.DatasetInfoTabView,
-        borderTabs.VolumeTabView,
-        borderTabs.BoundingBoxTab,
-        borderTabs.MeshesView,
-      ],
+      borderTabs.DatasetInfoTabView,
+      borderTabs.VolumeTabView,
+      borderTabs.BoundingBoxTab,
+      borderTabs.MeshesView,
     ],
     defaultBorderWidth,
     borderIsOpenByDefault,

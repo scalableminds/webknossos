@@ -557,6 +557,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name="zipFile"
               label="Dataset"
               hasFeedback
+              className="hide-valid-form-item-icon"
               rules={[
                 { required: true, message: messages["dataset.import.required.zipFile"] },
                 {

@@ -179,6 +179,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               <Link
                 to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
                 title="View Dataset"
+                className="incognito-link"
               >
                 {dataset.name}
               </Link>

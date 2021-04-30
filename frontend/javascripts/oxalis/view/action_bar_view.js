@@ -31,6 +31,7 @@ import TracingActionsView, {
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
+import SkeletonActionsView from "oxalis/view/action-bar/skeleton_actions_view";
 import {
   is2dDataset,
   doesSupportVolumeWithFallback,
@@ -169,6 +170,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
           {!isReadOnly && hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
+          {!isReadOnly && hasSkeleton ? <SkeletonActionsView /> : null}
           {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>

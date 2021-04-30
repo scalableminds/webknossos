@@ -30,8 +30,9 @@ import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
+import { document } from "libs/window";
 import features from "features";
-import { setThemeAction } from "./oxalis/model/actions/ui_actions";
+import { setThemeAction } from "oxalis/model/actions/ui_actions";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -298,7 +299,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
           ? "dark"
           : "light";
     }
-    const styleEl = ((document.getElementById("primary-stylesheet"): any): HTMLLinkElement);
+    const styleEl = (document.getElementById("primary-stylesheet"): HTMLLinkElement);
     const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
     const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
     if (oldTheme !== newTheme) {

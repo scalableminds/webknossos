@@ -32,7 +32,7 @@ import { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
-import { importTracingFiles } from "oxalis/view/right-border-tabs/trees_tab_view";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import {
   layoutEmitter,
   storeLayoutConfig,

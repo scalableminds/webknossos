@@ -3,7 +3,7 @@ import * as React from "react";
 import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import Store, { type OxalisState, type AnnotationType, type BorderOpenStatus } from "oxalis/store";
+import Store, { type OxalisState, type BorderOpenStatus } from "oxalis/store";
 import { Layout } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
@@ -19,13 +19,11 @@ import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_v
 import InputCatcher from "oxalis/view/input_catcher";
 import MeshesView from "oxalis/view/right-border-tabs/meshes_view";
 import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
-import VolumeTabView from "oxalis/view/right-border-tabs/volume_tab_view";
 import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
 import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
 import TDViewControls from "oxalis/view/td_view_controls";
-import TreesTabView from "oxalis/view/right-border-tabs/trees_tab_view";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
 import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
@@ -176,9 +174,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       case "DatasetInfoTabView": {
         return <DatasetInfoTabView />;
       }
-      case "TreesTabView": {
-        return <TreesTabView />;
-      }
       case "CommentTabView": {
         return <CommentTabView />;
       }
@@ -190,9 +185,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }
       case "SkeletonTabView": {
         return <SkeletonTabView />;
-      }
-      case "VolumeTabView": {
-        return <VolumeTabView />;
       }
       case "BoundingBoxTab": {
         return <BoundingBoxTab />;

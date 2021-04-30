@@ -2,6 +2,7 @@
 import { Space, Tooltip } from "antd";
 import _ from "lodash";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import React from "react";
 
 import type { OxalisState } from "oxalis/store";
@@ -13,11 +14,17 @@ import {
   type VolumeTool,
   VolumeToolEnum,
 } from "oxalis/constants";
+import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import api from "oxalis/api/internal_api";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setActiveNodeAction,
+  setActiveTreeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import { MoreOutlined } from "@ant-design/icons";
@@ -28,27 +35,26 @@ type StateProps = {|
   activeViewport: OrthoView,
   mousePosition: ?Vector2,
   isSkeletonAnnotation: boolean,
+  isVolumeAnnotation: boolean,
   activeTool: ?VolumeTool,
   isPlaneMode: boolean,
+  activeCellId: ?number,
+  activeNodeId: ?number,
+  activeTreeId: ?number,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+
+type DispatchProps = {|
+  onChangeActiveNodeId: (value: number) => void,
+  onChangeActiveTreeId: (value: number) => void,
+  onChangeActiveCellId: (value: number) => void,
+|};
+
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type State = {||};
 
-const borderToggleButtonMargin = 40;
-const fontSize = 14;
 const spaceBetweenItems = 25;
 const lineColor = "rgba(255, 255, 255, 0.67)";
 
-const statusbarStyle: Object = {
-  marginLeft: borderToggleButtonMargin,
-  marginRight: borderToggleButtonMargin,
-  fontSize,
-  display: "flex",
-  flexWrap: "wrap",
-  overflow: "hidden",
-};
-const defaultIconStyle = { height: fontSize, marginTop: 2 };
-const defaultInfoStyle = { display: "inline-block", textAlign: "left" };
 const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
@@ -79,7 +85,6 @@ class Statusbar extends React.PureComponent<Props, State> {
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
-          style={defaultIconStyle}
         />
         Zoom in/out
       </span>
@@ -104,7 +109,6 @@ class Statusbar extends React.PureComponent<Props, State> {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-right.svg"
             alt="Mouse Left"
-            style={defaultIconStyle}
           />
           {label}
         </span>
@@ -138,7 +142,6 @@ class Statusbar extends React.PureComponent<Props, State> {
               className="keyboard-mouse-icon"
               src="/assets/images/icon-statusbar-mouse-left-drag.svg"
               alt="Mouse Left Drag"
-              style={defaultIconStyle}
             />
             Move
           </span>
@@ -175,7 +178,6 @@ class Statusbar extends React.PureComponent<Props, State> {
                 : "/assets/images/icon-statusbar-mouse-left-drag.svg"
             }
             alt="Mouse Left Drag"
-            style={defaultIconStyle}
           />
           {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
         </span>
@@ -185,7 +187,6 @@ class Statusbar extends React.PureComponent<Props, State> {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-wheel.svg"
             alt="Mouse Wheel"
-            style={defaultIconStyle}
           />
           Move along 3rd axis
         </span>
@@ -194,7 +195,6 @@ class Statusbar extends React.PureComponent<Props, State> {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-right-drag.svg"
             alt="Mouse Right"
-            style={defaultIconStyle}
           />
           Rotate 3D View
         </span>
@@ -223,12 +223,23 @@ class Statusbar extends React.PureComponent<Props, State> {
     };
 
     return (
-      <span style={{ minWidth: 180, ...defaultInfoStyle }}>Segment {getSegmentIdString()}</span>
+      <span className="info-element" style={{ minWidth: 140 }}>
+        Segment {getSegmentIdString()}
+      </span>
     );
   }
 
   getInfos() {
-    const { activeViewport, mousePosition, activeResolution } = this.props;
+    const {
+      activeViewport,
+      mousePosition,
+      activeResolution,
+      isSkeletonAnnotation,
+      isVolumeAnnotation,
+      activeCellId,
+      activeNodeId,
+      activeTreeId,
+    } = this.props;
     let globalMousePosition;
     if (mousePosition && activeViewport !== OrthoViews.TDView) {
       const [x, y] = mousePosition;
@@ -246,18 +257,48 @@ class Statusbar extends React.PureComponent<Props, State> {
           {activeResolution.join("-")}{" "}
         </span>
         {this.props.isPlaneMode ? (
-          <span style={{ minWidth: 140, ...defaultInfoStyle }}>
+          <span className="info-element" style={{ minWidth: 140 }}>
             Pos [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
           </span>
         ) : null}
         {this.props.isPlaneMode ? this.getCellInfo(globalMousePosition) : null}
+        {isSkeletonAnnotation ? (
+          <span className="info-element" style={{ minWidth: 120 }}>
+            <NumberInputPopoverSetting
+              value={activeCellId}
+              label="Active Cell"
+              detailedLabel="Change Active Cell ID"
+              onChange={this.props.onChangeActiveCellId}
+            />
+          </span>
+        ) : null}
+        {isVolumeAnnotation ? (
+          <span className="info-element" style={{ minWidth: 120 }}>
+            <NumberInputPopoverSetting
+              value={activeNodeId}
+              label="Active Node"
+              detailedLabel="Change Active Node ID"
+              onChange={this.props.onChangeActiveNodeId}
+            />
+          </span>
+        ) : null}
+        {isSkeletonAnnotation ? (
+          <span className="info-element" style={{ minWidth: 120 }}>
+            <NumberInputPopoverSetting
+              value={activeTreeId}
+              label="Active Tree"
+              detailedLabel="Change Active Tree ID"
+              onChange={this.props.onChangeActiveTreeId}
+            />
+          </span>
+        ) : null}
       </Space>
     );
   }
 
   render() {
     return (
-      <span style={statusbarStyle}>
+      <span className="statusbar">
         {this.getInfos()}
         {this.getShortcuts()}
       </span>
@@ -270,8 +311,27 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   mousePosition: state.temporaryConfiguration.mousePosition,
   activeViewport: state.viewModeData.plane.activeViewport,
   isSkeletonAnnotation: state.tracing.skeleton != null,
+  isVolumeAnnotation: state.tracing.volume != null,
   activeTool: state.tracing.volume ? state.tracing.volume.activeTool : null,
+  activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
+  activeNodeId: state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
+  activeTreeId: state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
   isPlaneMode: isPlaneMode(state),
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Statusbar);
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  onChangeActiveNodeId(id: number) {
+    dispatch(setActiveNodeAction(id));
+  },
+  onChangeActiveTreeId(id: number) {
+    dispatch(setActiveTreeAction(id));
+  },
+  onChangeActiveCellId(id: number) {
+    dispatch(setActiveCellAction(id));
+  },
+});
+
+export default connect<Props, OwnProps, _, _, _, _>(
+  mapStateToProps,
+  mapDispatchToProps,
+)(Statusbar);

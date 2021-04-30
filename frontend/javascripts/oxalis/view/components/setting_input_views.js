@@ -1,5 +1,5 @@
 // @flow
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
+import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
 import { DeleteOutlined, DownloadOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -244,6 +244,45 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
       </Row>
     );
   }
+}
+
+type NumberInputPopoverSettingProps = {
+  onChange: (value: number) => void,
+  value: ?number,
+  label: string,
+  detailedLabel: string,
+  placement?: string,
+  max?: number,
+  min?: number,
+  step?: number,
+};
+export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
+  const { min, max, onChange, step, value, label, detailedLabel } = props;
+  const placement = props.placement || "top";
+  const numberInput = (
+    <div>
+      <div style={{ marginBottom: 8 }}>{detailedLabel}:</div>
+      <InputNumber
+        style={{ width: 140 }}
+        min={min}
+        max={max}
+        onChange={onChange}
+        value={value}
+        step={step}
+        size="small"
+      />
+    </div>
+  );
+  return (
+    <Popover
+      content={numberInput}
+      trigger="click"
+      placement={placement}
+      style={{ cursor: "pointer" }}
+    >
+      {label} {value != null ? value : "-"}
+    </Popover>
+  );
 }
 
 export type UserBoundingBoxInputUpdate = {

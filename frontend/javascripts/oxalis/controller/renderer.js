@@ -15,7 +15,6 @@ function getRenderer() {
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,
           antialias: true,
-          alpha: true,
         })
       : {};
 

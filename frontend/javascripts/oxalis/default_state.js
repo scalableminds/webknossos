@@ -2,6 +2,7 @@
 
 import type { OxalisState } from "oxalis/store";
 import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
+import { document } from "libs/window";
 
 export const defaultViewportRect = {
   top: 0,
@@ -204,6 +205,11 @@ const defaultState: OxalisState = {
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
     borderOpenStatus: { right: false, left: false },
+    theme: (document.getElementById("primary-stylesheet"): HTMLLinkElement).href.includes(
+      "dark.css",
+    )
+      ? "dark"
+      : "light",
   },
   isosurfaces: {},
 };

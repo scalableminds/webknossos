@@ -31,6 +31,7 @@ import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 import features from "features";
+import { setThemeAction } from "./oxalis/model/actions/ui_actions";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -302,6 +303,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
     const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
     if (oldTheme !== newTheme) {
       styleEl.href = styleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
+      Store.dispatch(setThemeAction(newTheme));
     }
     if (selectedTheme !== theme) {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);

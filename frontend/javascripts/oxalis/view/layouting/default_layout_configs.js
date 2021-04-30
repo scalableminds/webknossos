@@ -36,13 +36,13 @@ export const currentLayoutVersion = 14;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
-export const defaultSplitterSize = 1;
+const defaultSplitterSize = 1;
 // The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
 // The borderBar is (vertical) bar the the borders of the screen that contains a button for each tab of in the border to toggle.
 // As we want a flexible layout in the border, we use only on tab containing a sub-layout that is more flexible.
 // Additionally, we want to avoid the borderBar. As the borderBars width will be automatically calculated
 // when it is set to 0, we use a value near value to make it almost not visible.
-export const borderBarSize = 1;
+const borderBarSize = 1;
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");

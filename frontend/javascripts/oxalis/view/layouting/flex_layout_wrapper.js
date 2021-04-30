@@ -11,6 +11,7 @@ import messages from "messages";
 import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { InputKeyboardNoLoop } from "libs/input";
 
+import Statusbar from "oxalis/view/statusbar";
 import { OrthoViews, ArbitraryViews } from "oxalis/constants";
 import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
 import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
@@ -42,11 +43,6 @@ type Action = typeof FlexLayout.Action;
 type StateProps = {|
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
-  datasetName: string,
-  organization: string,
-  annotationType: AnnotationType,
-  name: string,
-  taskId: ?string,
 |};
 
 type OwnProps = {|
@@ -320,7 +316,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   toggleBorder(side: string, toggleInternalState: boolean = true) {
-    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
     const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
@@ -330,6 +325,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
+    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     this.onLayoutChange();
   }
 
@@ -376,10 +372,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { datasetName, organization, annotationType, name, taskId } = this.props;
-    const tracingName = name || "[untitled]";
-    let footerText = `${datasetName} | ${organization} | `;
-    footerText += taskId != null ? `${annotationType} : ${taskId}` : tracingName;
     const { model } = this.state;
     return (
       <React.Fragment>
@@ -397,7 +389,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         <Footer className="footer">
           <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
           <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
-          {footerText}
+          <Statusbar />
         </Footer>
       </React.Fragment>
     );
@@ -408,11 +400,6 @@ function mapStateToProps(state: OxalisState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
-    datasetName: state.dataset.name,
-    organization: state.dataset.owningOrganization,
-    annotationType: state.tracing.annotationType,
-    name: state.tracing.name,
-    taskId: state.task != null ? state.task.id : null,
   };
 }
 function mapDispatchToProps(dispatch: Dispatch<*>) {

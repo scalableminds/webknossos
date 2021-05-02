@@ -303,8 +303,21 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
     const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
     const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
     if (oldTheme !== newTheme) {
-      styleEl.href = styleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
-      Store.dispatch(setThemeAction(newTheme));
+      const newStyleEl = styleEl.cloneNode();
+      const parentEl = styleEl.parentNode;
+      if (parentEl != null) {
+        newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
+        newStyleEl.addEventListener(
+          "load",
+          () => {
+            parentEl.removeChild(styleEl);
+          },
+          { once: true },
+        );
+        parentEl.insertBefore(newStyleEl, styleEl);
+
+        Store.dispatch(setThemeAction(newTheme));
+      }
     }
     if (selectedTheme !== theme) {
       const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);

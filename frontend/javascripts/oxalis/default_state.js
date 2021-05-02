@@ -205,7 +205,7 @@ const defaultState: OxalisState = {
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
     borderOpenStatus: { right: false, left: false },
-    theme: (document.getElementById("primary-stylesheet"): HTMLLinkElement).href.includes(
+    theme: (document.getElementById("primary-stylesheet"): ?HTMLLinkElement)?.href.includes(
       "dark.css",
     )
       ? "dark"

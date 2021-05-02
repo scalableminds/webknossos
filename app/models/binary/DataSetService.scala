@@ -41,7 +41,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
-                               conf: WkConf)(implicit ec: ExecutionContext, m: MessagesProvider)
+                               conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
   val unreportedStatus = "No longer available on datastore."
@@ -311,7 +311,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
 
-  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext,
+                                                             m: MessagesProvider): Fox[Unit] =
     for {
       now <- Fox.successful(System.currentTimeMillis())
       _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeout.toMillis) ?~> Messages(

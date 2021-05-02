@@ -22,7 +22,9 @@ import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import models.organization.{Organization, OrganizationDAO}
+import play.api.i18n.{Messages, MessagesProvider}
 
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -39,11 +41,11 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC,
-                               conf: WkConf)(implicit ec: ExecutionContext)
+                               conf: WkConf)(implicit ec: ExecutionContext, m: MessagesProvider)
     extends FoxImplicits
     with LazyLogging {
   val unreportedStatus = "No longer available on datastore."
-  val initialTeamsTimeoutMs: Long = 5 * 60 * 1000
+  val initialTeamsTimeout: FiniteDuration = 1 hour
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
@@ -311,7 +313,11 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeoutMs) ?~> "dataset.initialTeams.timeout"
+      now <- Fox.successful(System.currentTimeMillis())
+      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeout.toMillis) ?~> Messages(
+        "dataset.initialTeams.timeout",
+        now,
+        dataSet.created)
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable

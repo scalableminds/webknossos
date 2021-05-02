@@ -37,6 +37,8 @@ const initialAnnotationInfo = {
   meshes: [],
 };
 
+const primaryStylesheetElement: ?HTMLLinkElement = document.getElementById("primary-stylesheet");
+
 const defaultState: OxalisState = {
   datasetConfiguration: {
     fourBit: false,
@@ -205,11 +207,10 @@ const defaultState: OxalisState = {
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
     borderOpenStatus: { right: false, left: false },
-    theme: (document.getElementById("primary-stylesheet"): ?HTMLLinkElement)?.href.includes(
-      "dark.css",
-    )
-      ? "dark"
-      : "light",
+    theme:
+      primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
+        ? "dark"
+        : "light",
   },
   isosurfaces: {},
 };

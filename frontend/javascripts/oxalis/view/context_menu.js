@@ -218,7 +218,7 @@ function NoNodeContextMenuOptions({
   );
 }
 
-function NodeContextMenu(props: Props) {
+function ContextMenu(props: Props) {
   const {
     skeletonTracing,
     clickedNodeId,
@@ -350,4 +350,4 @@ function mapStateToProps(state: OxalisState): StateProps {
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(NodeContextMenu);
+)(ContextMenu);

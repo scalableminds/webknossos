@@ -73,12 +73,12 @@ test.beforeEach(async t => {
 // These are the datasets that are available on our dev instance
 const datasetNames = [
   "ROI2017_wkw",
-  // "2017-05-31_mSEM_aniso-test",
-  // "dsA_2",
-  // "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
-  // "ROI2017_wkw_fallback",
-  // "float_test_dataset",
-  // "Multi-Channel-Test",
+  "2017-05-31_mSEM_aniso-test",
+  "dsA_2",
+  "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
+  "ROI2017_wkw_fallback",
+  "float_test_dataset",
+  "Multi-Channel-Test",
 ];
 
 const viewOverrides: { [key: string]: string } = {
@@ -169,38 +169,38 @@ datasetNames.map(async datasetName => {
   });
 });
 
-// test.serial("it should render a dataset with mappings correctly", async t => {
-//   const datasetName = "ROI2017_wkw";
-//   const mappingName = "astrocyte";
-//   await withRetry(
-//     3,
-//     async () => {
-//       const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
-//       const { screenshot, width, height } = await screenshotDatasetWithMapping(
-//         await getNewPage(t.context.browser),
-//         URL,
-//         datasetId,
-//         mappingName,
-//       );
-//       const changedPixels = await compareScreenshot(
-//         screenshot,
-//         width,
-//         height,
-//         BASE_PATH,
-//         `${datasetName}_with_mapping_${mappingName}`,
-//       );
+test.serial("it should render a dataset with mappings correctly", async t => {
+  const datasetName = "ROI2017_wkw";
+  const mappingName = "astrocyte";
+  await withRetry(
+    3,
+    async () => {
+      const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
+      const { screenshot, width, height } = await screenshotDatasetWithMapping(
+        await getNewPage(t.context.browser),
+        URL,
+        datasetId,
+        mappingName,
+      );
+      const changedPixels = await compareScreenshot(
+        screenshot,
+        width,
+        height,
+        BASE_PATH,
+        `${datasetName}_with_mapping_${mappingName}`,
+      );
 
-//       return isPixelEquivalent(changedPixels, width, height);
-//     },
-//     condition => {
-//       t.true(
-//         condition,
-//         `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
-//       );
-//     },
-//   );
-// });
+      return isPixelEquivalent(changedPixels, width, height);
+    },
+    condition => {
+      t.true(
+        condition,
+        `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
+      );
+    },
+  );
+});
 
-// test.afterEach(async t => {
-//   await t.context.browser.close();
-// });
+test.afterEach(async t => {
+  await t.context.browser.close();
+});

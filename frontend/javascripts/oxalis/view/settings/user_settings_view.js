@@ -5,7 +5,7 @@
 
 import features from "features";
 import { Collapse, Tooltip } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -347,11 +347,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.isMergerModeEnabled}
             onChange={this.props.onChangeEnableMergerMode}
             disabled={!isMergerModeSupported || this.props.isMergerModeTask}
-            tooltipText={
-              !isMergerModeSupported
-                ? "The merger mode is only available for datasets with a segmentation layer."
-                : null
-            }
           />
         </Panel>,
       );
@@ -446,7 +441,14 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.dynamicSpaceDirection}
           />
           <SwitchSetting
-            label={settingsLabels.useLegacyBindings}
+            label={
+              <React.Fragment>
+                {settingsLabels.useLegacyBindings}{" "}
+                <Tooltip title="When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </React.Fragment>
+            }
             value={this.props.userConfiguration.useLegacyBindings}
             onChange={this.onChangeUser.useLegacyBindings}
           />

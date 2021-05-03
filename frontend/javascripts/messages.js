@@ -42,7 +42,7 @@ export const settings = {
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
   overwriteMode: "Volume Annotation Overwrite Mode",
-  useLegacyBindings: "Legacy Key/Mouse Bindings",
+  useLegacyBindings: "Classic Key/Mouse Controls",
 };
 
 export const layerViewConfigurations = {

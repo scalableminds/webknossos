@@ -47,7 +47,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
     const GroupHeader = () => (
       <List.Item
         style={{ cursor: "pointer" }}
-        className="version-entry"
+        className="version-entry version-entry-header"
         onClick={this.toggleExpand}
       >
         <List.Item.Meta
@@ -60,7 +60,6 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
           avatar={
             <Avatar
               size="small"
-              style={{ backgroundColor: "transparent", color: "rgba(0, 0, 0, 0.65)" }}
               icon={this.state.expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
             />
           }

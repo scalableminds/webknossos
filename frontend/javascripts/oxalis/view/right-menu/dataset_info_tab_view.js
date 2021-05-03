@@ -149,13 +149,10 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
       <div style={{ marginBottom: 25 }}>
-        <table style={{ marginRight: 20, marginTop: 25, maxWidth: 500, fontSize: 14 }}>
+        <table className="shortcut-table">
           <tbody>
             {shortcuts.map(shortcut => (
-              <tr
-                key={shortcut.key}
-                style={{ borderBottom: "1px solid #e8e8e8", borderTop: "1px solid #e8e8e8" }}
-              >
+              <tr key={shortcut.key}>
                 <td style={{ width: 200 }}>{shortcut.keybinding}</td>
                 <td>{shortcut.action}</td>
               </tr>
@@ -388,8 +385,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           <tr>
             <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
               <img
+                className="info-tab-icon"
                 src="/assets/images/icon-downsampling.svg"
-                style={{ width: 24, height: 24 }}
                 alt="Resolution"
               />
             </td>
@@ -416,8 +413,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-voxelsize.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Voxel size"
                     />
                   </td>
@@ -428,8 +425,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-extent.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Dataset extent"
                     />
                   </td>

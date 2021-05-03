@@ -59,4 +59,4 @@ old key | new key | notes
 `operatorData` | `webKnossos.operatorData`
 
 ### Postgres Evolutions:
--
+- [070-dark-theme.sql](conf/evolutions/070-dark-theme.sql)

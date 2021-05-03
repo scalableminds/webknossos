@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a screenshot of the 3D view when using the screenshot functionality in the tracing view. [#5324](https://github.com/scalableminds/webknossos/pull/5324)
 - Tiff export jobs of volume annotations now show the link back to the annotation in the jobs list. [#5378](https://github.com/scalableminds/webknossos/pull/5378)
 - Added support for flight- and oblique-mode when having non-uint8 dataset layers. [#5396](https://github.com/scalableminds/webknossos/pull/5396)
+- Added a dark theme for webKnossos. [#5407](https://github.com/scalableminds/webknossos/pull/5407)
 
 ### Changed
 - webKnossos is now part of the [image.sc support community](https://forum.image.sc/tag/webknossos). [#5332](https://github.com/scalableminds/webknossos/pull/5332)
@@ -35,6 +36,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where the page would scroll up unexpectedly when showing various confirm modals. [#5371](https://github.com/scalableminds/webknossos/pull/5371)
 - Fixed a bug where user changes (email, activation) would show as successful even if they actually failed. [#5392](https://github.com/scalableminds/webknossos/pull/5392)
 - Fixed a bug where dataset uploads were sent to the wrong datastore, and failed [#5404](https://github.com/scalableminds/webknossos/pull/5404)
+- Fixed a bug where users could see long-running jobs listing of other users [#5435](https://github.com/scalableminds/webknossos/pull/5435)
+- Fixed a rendering bug which occurred when the initial layout had a hidden 3D viewport. [#5429](https://github.com/scalableminds/webknossos/pull/5429)
 
 ### Removed
 -

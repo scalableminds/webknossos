@@ -1,6 +1,6 @@
 // @flow
 
-import { type BorderOpenStatus } from "oxalis/store";
+import { type BorderOpenStatus, type Theme } from "oxalis/store";
 
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",
@@ -37,6 +37,11 @@ type SetHasOrganizationsAction = {
   value: boolean,
 };
 
+type SetThemeAction = {
+  type: "SET_THEME",
+  value: Theme,
+};
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
@@ -44,7 +49,8 @@ export type UiAction =
   | SetBorderOpenStatusAction
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
-  | SetHasOrganizationsAction;
+  | SetHasOrganizationsAction
+  | SetThemeAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -84,5 +90,10 @@ export const setIsInAnnotationViewAction = (value: boolean): SetIsInAnnotationVi
 
 export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAction => ({
   type: "SET_HAS_ORGANIZATIONS",
+  value,
+});
+
+export const setThemeAction = (value: Theme): SetThemeAction => ({
+  type: "SET_THEME",
   value,
 });

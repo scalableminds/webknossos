@@ -1,0 +1,48 @@
+@import "../../node_modules/antd/dist/antd.dark.less";
+@import "./main.less";
+
+.welcome-header-wrapper {
+  background-image: linear-gradient(0deg, @body-background 0%, @blue-2 70%);
+}
+.welcome-header-content .wk-logo {
+  filter: invert(1);
+  opacity: 0.8;
+}
+
+.info-tab-block .info-tab-icon {
+  filter: invert(1);
+}
+
+.brain-loading-content img {
+  filter: invert(1) contrast(0.7);
+}
+
+.inputcatcher.TDView,
+.inputcatcher.arbitraryViewport {
+  border-color: transparent;
+}
+
+a:hover {
+  color: @blue-8;
+}
+
+.ant-slider-track,
+.ant-slider-handle {
+  background-color: @blue-4;
+}
+
+.ant-slider:hover {
+  .ant-slider-track,
+  .ant-slider-handle {
+    background-color: @blue-5;
+  }
+}
+
+// Change the bright versions to dark, too
+.icon-sidebar-hide-left-bright {
+  background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);
+}
+
+.icon-sidebar-hide-right-bright {
+  background-image: url(/assets/images/icon-sidebar-hide-right-dark.svg);
+}

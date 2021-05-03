@@ -33,7 +33,7 @@ const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsN
     <React.Fragment>
       {icon}
       <div className="label">
-        <h1>{title}</h1>
+        <h2>{title}</h2>
         <p>{description}</p>
       </div>
       <RightOutlined className="chevron" />
@@ -65,13 +65,7 @@ type WhatsNextHeaderProps = {
 
 export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps) => (
   <div>
-    <div
-      style={{
-        backgroundColor: "rgba(88, 88, 88, 0.4)",
-        backgroundImage: "linear-gradient(0deg, rgb(255 255 255) 0%, rgb(231 247 255) 70%)",
-        position: "relative",
-      }}
-    >
+    <div className="welcome-header-wrapper" style={{ position: "relative" }}>
       <div style={{ position: "absolute", right: 0, top: 0, margin: 8 }}>
         <Tooltip title="Don't show this again" placement="left">
           <CloseOutlined onClick={onDismiss} />
@@ -80,27 +74,8 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
       <div className="welcome-header-content">
         <img className="wk-logo" src="/assets/images/oxalis.svg" alt="webKnossos Logo" />
         <div className="text-and-button-container">
-          <h1
-            style={{
-              color: "#1F2937",
-              marginLeft: 56,
-              fontWeight: 200,
-              fontSize: 64,
-              lineHeight: "150%",
-              marginBottom: 0,
-            }}
-          >
-            Welcome to webKnossos!
-          </h1>
-          <div
-            style={{
-              margin: "0 20px 0px 60px",
-              fontWeight: 300,
-              fontSize: 20,
-              lineHeight: "150%",
-              color: "#6B7280",
-            }}
-          >
+          <h1>Welcome to webKnossos!</h1>
+          <div className="subtitle">
             <p
               style={{
                 fontSize: 20,

@@ -31,8 +31,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val MaxTracingPause =
-    conf.WebKnossos.User.Time.tracingPauseInSeconds.toMillis
+  private val MaxTracingPauseMillis =
+    conf.WebKnossos.User.timeTrackingPause.toMillis
 
   def logUserInteraction(timestamp: Long, user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -135,7 +135,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       val start = pair.head
       val end = pair.last
       val duration = end - start
-      if (duration >= MaxTracingPause) {
+      if (duration >= MaxTracingPauseMillis) {
         updateTimeSpan(current, start)
         current = createNewTimeSpan(end, _user, annotation)
       }
@@ -152,7 +152,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       logger.info(
         s"Negative timespan duration $duration ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=$this)")
     }
-    duration < MaxTracingPause
+    duration < MaxTracingPauseMillis
   }
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =

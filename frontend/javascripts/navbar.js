@@ -3,29 +3,36 @@ import { Avatar, Layout, Menu, Popover } from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
+  CheckOutlined,
   BarChartOutlined,
   HomeOutlined,
-  RocketOutlined,
-  TrophyOutlined,
   QuestionCircleOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
+import classnames from "classnames";
 import { connect } from "react-redux";
 import React from "react";
 
 import Toast from "libs/toast";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser, APIUserTheme } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import { getBuildInfo, getUsersOrganizations, switchToOrganization } from "admin/admin_rest_api";
-import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import {
+  getBuildInfo,
+  getUsersOrganizations,
+  switchToOrganization,
+  updateSelectedThemeOfUser,
+} from "admin/admin_rest_api";
+import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
+import { document } from "libs/window";
 import features from "features";
+import { setThemeAction } from "oxalis/model/actions/ui_actions";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -268,7 +275,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName, organization: organizationName } = activeUser;
+  const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
 
   const activeOrganization = usersOrganizations.find(org => org.name === organizationName);
@@ -281,6 +288,41 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const switchTo = async org => {
     Toast.info(`Switching to ${org.displayName || org.name}`);
     await switchToOrganization(org.name);
+  };
+
+  const setSelectedTheme = async (theme: APIUserTheme) => {
+    let newTheme = theme;
+    if (newTheme === "auto") {
+      newTheme =
+        window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+    }
+    const styleEl = (document.getElementById("primary-stylesheet"): HTMLLinkElement);
+    const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
+    const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
+    if (oldTheme !== newTheme) {
+      const newStyleEl = styleEl.cloneNode();
+      const parentEl = styleEl.parentNode;
+      if (parentEl != null) {
+        newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
+        newStyleEl.addEventListener(
+          "load",
+          () => {
+            parentEl.removeChild(styleEl);
+          },
+          { once: true },
+        );
+        parentEl.insertBefore(newStyleEl, styleEl);
+
+        Store.dispatch(setThemeAction(newTheme));
+      }
+    }
+    if (selectedTheme !== theme) {
+      const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+      Store.dispatch(setActiveUserAction(newUser));
+    }
   };
 
   const isMultiMember = switchableOrganizations.length > 0;
@@ -316,6 +358,20 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item key="token">
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>
+        <Menu.SubMenu title="Theme" key="theme">
+          {[["auto", "System-default"], ["light", "Light"], ["dark", "Dark (beta)"]].map(
+            ([key, label]) => (
+              <Menu.Item
+                key={key}
+                onClick={() => {
+                  setSelectedTheme(key);
+                }}
+              >
+                {selectedTheme === key && <CheckOutlined />} {label}
+              </Menu.Item>
+            ),
+          )}
+        </Menu.SubMenu>
         <Menu.Item key="logout">
           <a href="/" onClick={handleLogout}>
             Logout
@@ -413,21 +469,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     );
   }
 
-  if (!_isAuthenticated && features().isDemoInstance && !Utils.getIsInIframe()) {
-    menuItems.push(
-      <Menu.Item key="features">
-        <Link to="/features" style={{ fontWeight: 400 }}>
-          <RocketOutlined /> Features
-        </Link>
-      </Menu.Item>,
-      <Menu.Item key="pricing">
-        <Link to="/pricing" style={{ fontWeight: 400 }}>
-          <TrophyOutlined /> Pricing
-        </Link>
-      </Menu.Item>,
-    );
-  }
-
   if (!(_isAuthenticated || hideNavbarLogin)) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
@@ -444,14 +485,13 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
-  const separator = (
-    <div
-      style={{ height: "100%", marginLeft: 2, marginRight: 10, borderLeft: "1px #666879 solid" }}
-    />
-  );
+  const separator = <div className="navbar-separator" />;
 
   return (
-    <Header style={navbarStyle} className={collapseAllNavItems ? "collapsed-nav-header" : ""}>
+    <Header
+      style={navbarStyle}
+      className={classnames("navbar-header", { "collapsed-nav-header": collapseAllNavItems })}
+    >
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}

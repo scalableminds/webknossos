@@ -1,0 +1,99 @@
+.bold {
+  font-weight: bold;
+}
+
+// Only affect child items in tables
+td.nowrap * {
+  white-space: nowrap;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.flip-horizontally {
+  -webkit-transform: scaleX(-1);
+  -moz-transform: scaleX(-1);
+  -o-transform: scaleX(-1);
+  transform: scaleX(-1);
+
+  filter: FlipH;
+  -ms-filter: "FlipH";
+}
+
+.bordered {
+  border: 1px solid @border-color-base;
+  border-radius: 4px;
+  padding: 4px 11px;
+  width: fit-content;
+}
+
+// Export antd color vars
+:root {
+  --ant-primary: @primary-color;
+  --ant-success: @success-color;
+  --ant-info: @info-color;
+  --ant-warning: @warning-color;
+  --ant-error: @error-color;
+  --ant-highlight: @highlight-color;
+  --ant-text: @text-color;
+  --ant-text-secondary: @text-color-secondary;
+  --ant-link: @link-color;
+  --ant-border-base: @border-color-base;
+  --ant-body-background: @body-background;
+  --ant-component-background: @component-background;
+  --ant-disabled: @disabled-color;
+  --ant-box-shadow-base: @box-shadow-base;
+}
+
+// Layout util classes
+.inline-block {
+  display: inline-block;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.flex-overflow {
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.centered-items {
+  display: flex;
+  flex-direction: row;
+
+  & > * {
+    margin: 6px;
+    font-size: 14;
+  }
+
+  &:first-child {
+    margin-left: 0px;
+  }
+
+  &:last-child {
+    margin-right: 0px;
+  }
+}
+
+.pull-right {
+  float: right !important;
+}
+
+.circle {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.no-footer-modal {
+  .ant-modal-footer {
+    display: none;
+  }
+}

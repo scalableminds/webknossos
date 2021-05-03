@@ -17,7 +17,7 @@ import test from "ava";
 
 mock.stopAll();
 mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
-mock("libs/window", { confirm: () => true });
+mock("libs/window", { confirm: () => true, document: { getElementById: () => null } });
 const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontracing_reducer")
   .default;
 const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontracing_actions");

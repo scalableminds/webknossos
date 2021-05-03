@@ -208,7 +208,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }.futureBox
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
-    if (conf.Application.insertInitialData) {
+    if (conf.WebKnossos.SampleOrganization.enabled) {
       dataSetDAO.isEmpty.map { isEmpty =>
         if (isEmpty)
           Some(ObjectId("5c766bec6c01006c018c7459"))

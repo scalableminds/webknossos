@@ -2,6 +2,7 @@
 
 import type { OxalisState } from "oxalis/store";
 import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
+import { document } from "libs/window";
 
 export const defaultViewportRect = {
   top: 0,
@@ -35,6 +36,8 @@ const initialAnnotationInfo = {
   annotationType: "View",
   meshes: [],
 };
+
+const primaryStylesheetElement: ?HTMLLinkElement = document.getElementById("primary-stylesheet");
 
 const defaultState: OxalisState = {
   datasetConfiguration: {
@@ -204,6 +207,10 @@ const defaultState: OxalisState = {
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
     borderOpenStatus: { right: false, left: false },
+    theme:
+      primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
+        ? "dark"
+        : "light",
   },
   isosurfaces: {},
 };

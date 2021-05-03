@@ -375,9 +375,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
     const nodeProps = {};
+    const isRoot = node.id === MISSING_GROUP_ID;
     if (node.type === TYPE_GROUP) {
       nodeProps.title = this.renderGroupActionsDropdown(node);
-      nodeProps.className = "group-type";
+      if (!isRoot) {
+        // Only render the group icon if it's not the root.
+        nodeProps.className = "group-type";
+      }
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");

@@ -32,7 +32,10 @@ import messages from "messages";
 import { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
-import { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
+import {
+  initializeInputCatcherSizes,
+  recalculateInputCatcherSizes,
+} from "oxalis/view/input_catcher";
 import {
   layoutEmitter,
   storeLayoutConfig,
@@ -149,10 +152,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       activeLayoutName: lastActiveLayoutName,
       model: layout,
     });
-    setTimeout(() => {
-      recalculateInputCatcherSizes();
-      window.needsRerender = true;
-    }, 500);
+    initializeInputCatcherSizes();
   };
 
   showNodeContextMenuAt = (

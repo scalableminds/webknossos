@@ -1,7 +1,6 @@
 // @flow
 import { Button, Radio, Tooltip, Menu, Dropdown, Col, Row, Switch } from "antd";
 import {
-  ReloadOutlined,
   StopOutlined,
   BorderInnerOutlined,
   BorderOuterOutlined,
@@ -10,15 +9,13 @@ import {
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import type { OxalisState, VolumeTracing } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { TDViewDisplayModeEnum, type TDViewDisplayMode } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 
 import api from "oxalis/api/internal_api";
 
 type Props = {|
-  isRefreshingIsosurfaces: boolean,
-  volumeTracing: ?VolumeTracing,
   tdViewDisplayPlanes: TDViewDisplayMode,
   tdViewDisplayDatasetBorders: boolean,
   onChangeTdViewDisplayPlanes: (SyntheticInputEvent<>) => void,
@@ -26,22 +23,11 @@ type Props = {|
 |};
 
 function TDViewControls({
-  isRefreshingIsosurfaces,
-  volumeTracing,
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
 }: Props) {
-  let refreshIsosurfaceTooltip = "Load Isosurface of centered cell from segmentation layer.";
-  if (volumeTracing != null) {
-    if (volumeTracing.fallbackLayer != null) {
-      refreshIsosurfaceTooltip = "Load Isosurface of centered cell from fallback annotation layer";
-    } else {
-      refreshIsosurfaceTooltip = "Reload annotated Isosurfaces to newest version.";
-    }
-  }
-
   const settingsMenu = (
     <Menu style={{ width: 260 }}>
       <Menu.Item key="tdViewDisplayPlanes">
@@ -56,17 +42,17 @@ function TDViewControls({
               size="small"
               className="without-icon-margin"
             >
-              <Tooltip title="Hide everything">
+              <Tooltip title="Hide Planes">
                 <Radio.Button value={TDViewDisplayModeEnum.NONE}>
                   <StopOutlined />
                 </Radio.Button>
               </Tooltip>
-              <Tooltip title="Show wireframes only">
+              <Tooltip title="Show Wireframes Only">
                 <Radio.Button value={TDViewDisplayModeEnum.WIREFRAME}>
                   <BorderInnerOutlined />
                 </Radio.Button>
               </Tooltip>
-              <Tooltip title="Show planes with data">
+              <Tooltip title="Show Planes with Data">
                 <Radio.Button value={TDViewDisplayModeEnum.DATA}>
                   <BorderOuterOutlined />
                 </Radio.Button>
@@ -108,15 +94,6 @@ function TDViewControls({
         <span className="colored-dot" />
         XZ
       </Button>
-      <Tooltip title={refreshIsosurfaceTooltip}>
-        <Button
-          size="small"
-          loading={isRefreshingIsosurfaces}
-          onClick={api.data.refreshIsosurfaces}
-        >
-          <ReloadOutlined />
-        </Button>
-      </Tooltip>
       <Dropdown overlay={settingsMenu} placement="bottomRight" trigger={["click"]}>
         <Button size="small">
           <SettingOutlined />
@@ -128,8 +105,6 @@ function TDViewControls({
 
 function mapStateToProps(state: OxalisState) {
   return {
-    isRefreshingIsosurfaces: state.uiInformation.isRefreshingIsosurfaces,
-    volumeTracing: state.tracing.volume,
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
   };

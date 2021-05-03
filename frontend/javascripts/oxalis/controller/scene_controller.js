@@ -373,9 +373,10 @@ class SceneController {
         const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(pos);
         this.planes[planeId].setGrayCrosshairColor();
-        this.planes[planeId].setVisible(tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE);
-        this.planes[planeId].plane.visible =
-          this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA;
+        this.planes[planeId].setVisible(
+          tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
+          this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
+        );
       }
     }
   };

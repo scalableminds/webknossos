@@ -40,7 +40,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a rendering bug which occurred when the initial layout had a hidden 3D viewport. [#5429](https://github.com/scalableminds/webknossos/pull/5429)
 
 ### Removed
-- 
+- Removed the button to load or refresh the isosurface of the centered cell from the 3D view. Instead, this action can be triggered from the "Meshes" tab. [#5440](https://github.com/scalableminds/webknossos/pull/5440)
 
 ### Breaking Change
 -

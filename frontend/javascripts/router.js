@@ -39,7 +39,6 @@ import RegistrationView from "admin/auth/registration_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import SecuredRoute from "components/secured_route";
-import SpotlightView from "dashboard/spotlight_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
@@ -146,9 +145,6 @@ class ReactRouter extends React.Component<Props> {
                   }
                   if (isAuthenticated) {
                     return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
-                  }
-                  if (features().isDemoInstance) {
-                    return <SpotlightView />;
                   }
                   return <Redirect to="/auth/login" />;
                 }}
@@ -449,7 +445,6 @@ class ReactRouter extends React.Component<Props> {
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
-              <Route path="/spotlight" component={SpotlightView} />
               <Route
                 path="/datasets/:organizationName/:datasetName/view"
                 render={this.tracingViewMode}

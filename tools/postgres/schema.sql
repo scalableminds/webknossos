@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(69);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(70);
 COMMIT TRANSACTION;
 
 
@@ -323,6 +323,8 @@ CREATE TABLE webknossos.user_dataSetLayerConfigurations(
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
+
+CREATE TYPE webknossos.THEME AS ENUM ('light', 'dark', 'auto');
 CREATE TABLE webknossos.multiUsers(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
@@ -331,6 +333,7 @@ CREATE TABLE webknossos.multiUsers(
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   novelUserExperienceInfos JSONB NOT NULL DEFAULT '{}'::json,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')

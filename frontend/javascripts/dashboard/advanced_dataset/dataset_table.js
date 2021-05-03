@@ -179,7 +179,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               <Link
                 to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
                 title="View Dataset"
-                style={{ color: "rgba(0, 0, 0, 0.65)" }}
+                className="incognito-link"
               >
                 {dataset.name}
               </Link>
@@ -234,17 +234,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
           render={(isActive: boolean) =>
             isActive ? (
-              <CheckCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
+              <CheckCircleOutlined style={{ fontSize: 20 }} />
             ) : (
-              <CloseCircleOutlined
-                style={{
-                  fontSize: 20,
-                }}
-              />
+              <CloseCircleOutlined style={{ fontSize: 20 }} />
             )
           }
         />

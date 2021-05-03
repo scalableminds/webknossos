@@ -331,6 +331,7 @@ class UserService @Inject()(conf: WkConf,
         "isEditable" -> isEditable,
         "organization" -> organization.name,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
+        "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
       )

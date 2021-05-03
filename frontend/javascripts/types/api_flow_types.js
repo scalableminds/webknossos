@@ -204,6 +204,8 @@ export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
 |};
 
+export type APIUserTheme = "auto" | "light" | "dark";
+
 export type APIUser = APIUserBase & {
   +created: number,
   +experiences: ExperienceMap,
@@ -215,6 +217,7 @@ export type APIUser = APIUserBase & {
   +lastTaskTypeId: ?string,
   +organization: string,
   +novelUserExperienceInfos: NovelUserExperienceInfoType,
+  +selectedTheme: APIUserTheme,
 };
 
 export type APITimeInterval = {

@@ -60,7 +60,7 @@ class AuthenticationController @Inject()(
     actorSystem.actorSelection("/user/mailActor")
 
   private lazy val ssoKey =
-    conf.Application.Authentication.ssoKey
+    conf.WebKnossos.User.ssoKey
 
   def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(

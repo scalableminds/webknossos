@@ -207,7 +207,7 @@ class JobService @Inject()(wkConf: WkConf,
     } yield job
 
   private def flowerRpc(route: String): RPCRequest =
-    rpc(wkConf.Jobs.Flower.uri + route).withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
+    rpc(wkConf.Jobs.Flower.uri + route).withBasicAuth(wkConf.Jobs.Flower.user, wkConf.Jobs.Flower.password)
 
   def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
     for {

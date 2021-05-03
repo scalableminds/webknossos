@@ -250,9 +250,9 @@ jobs:
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
             https://kube.scm.io/hooks/remove/webknossos/dev/fixnightly?user=CI+%28nightly%29
-      # - run:
-      #     name: Wait 3min
-      #     command: sleep 600
+      - run:
+          name: Wait 3min
+          command: sleep 180
       - run:
           name: Install dev-deployment
           command: >
@@ -282,10 +282,10 @@ workflows:
   version: 2
   circleci_build:
     jobs:
-      # - build_test_deploy:
-      #     filters:
-      #       tags:
-      #         only: /.*/
+      - build_test_deploy:
+          filters:
+            tags:
+              only: /.*/
       - nightly
   circleci_nightly:
     jobs:

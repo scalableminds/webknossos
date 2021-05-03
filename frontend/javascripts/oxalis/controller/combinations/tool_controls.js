@@ -217,17 +217,12 @@ export class SkeletonTool {
     plane: OrthoView,
     isTouch: boolean,
   ): void {
-    if (!shiftPressed && !isTouch && !ctrlPressed) {
-      // do nothing
-      return;
-    }
-
     // The following functions are all covered by the context menu, too.
-    if (altPressed) {
+    if (shiftPressed && altPressed) {
       SkeletonHandlers.handleMergeTrees(planeView, position, plane, isTouch);
-    } else if (ctrlPressed) {
+    } else if (shiftPressed && ctrlPressed) {
       SkeletonHandlers.handleDeleteEdge(planeView, position, plane, isTouch);
-    } else {
+    } else if (shiftPressed || isTouch) {
       SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
     }
   }

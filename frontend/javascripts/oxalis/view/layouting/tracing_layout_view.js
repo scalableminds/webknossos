@@ -18,7 +18,7 @@ import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/sto
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
-import NodeContextMenu from "oxalis/view/node_context_menu";
+import NodeContextMenu from "oxalis/view/context_menu";
 import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";

@@ -10,3 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [070-dark-theme.sql](conf/evolutions/070-dark-theme.sql)
+- [071-adapt-td-view-display-planes.sql](conf/evolutions/071-adapt-td-view-display-planes.sql)

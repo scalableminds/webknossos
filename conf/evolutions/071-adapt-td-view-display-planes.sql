@@ -34,6 +34,11 @@ ELSE jsonb_set(
 END
 WHERE recommendedconfiguration ? 'tdViewDisplayPlanes';
 
+-- Remove unused configuration key of user configuration
+UPDATE webknossos.users
+SET userconfiguration = userconfiguration - 'configuration'
+WHERE userconfiguration ? 'configuration';
+
 UPDATE webknossos.releaseInformation SET schemaVersion = 71;
 
 COMMIT TRANSACTION;

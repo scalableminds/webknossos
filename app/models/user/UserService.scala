@@ -48,9 +48,6 @@ class UserService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  def defaultUser: Fox[User] =
-    userFromMultiUserEmail(conf.Application.Authentication.DefaultUser.email)(GlobalAccessContext)
-
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       multiUser <- multiUserDAO.findOneByEmail(email)(GlobalAccessContext)
@@ -331,6 +328,7 @@ class UserService @Inject()(conf: WkConf,
         "isEditable" -> isEditable,
         "organization" -> organization.name,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
+        "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
       )

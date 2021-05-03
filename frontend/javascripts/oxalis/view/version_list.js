@@ -149,7 +149,7 @@ class VersionList extends React.Component<Props, State> {
         locale={VERSION_LIST_PLACEHOLDER}
         renderItem={batchesOrDateString =>
           _.isString(batchesOrDateString) ? (
-            <List.Item style={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}>
+            <List.Item className="version-section">
               <div style={{ margin: "auto" }}>{batchesOrDateString}</div>
             </List.Item>
           ) : (

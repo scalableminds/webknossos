@@ -147,7 +147,8 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
       {...others}
       title={
         <span style={{ display: "inline-block", minWidth: 120 }}>
-          <LayoutOutlined /> Layout
+          <LayoutOutlined />
+          Layout
           <Tooltip placement="top" title={layoutMissingHelpTitle}>
             <InfoCircleOutlined
               style={{ color: "gray", marginRight: 36 }}

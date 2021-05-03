@@ -66,7 +66,7 @@ class VersionView extends React.Component<Props, State> {
             shape="circle"
             icon={<CloseOutlined />}
           />
-          <div style={{ fontSize: 12, marginBottom: 8, color: "rgba(0, 0, 0, 0.65)" }}>
+          <div style={{ fontSize: 12, marginBottom: 8 }}>
             <Alert
               type="info"
               message={

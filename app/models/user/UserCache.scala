@@ -11,7 +11,7 @@ class UserCache @Inject()(userDAO: UserDAO, conf: WkConf, cache: SyncCacheApi) {
     s"user.${id.toString}"
 
   def findUser(id: ObjectId): Fox[User] =
-    cache.getOrElseUpdate(cacheKeyForUser(id), conf.User.cacheTimeoutInMinutes) {
+    cache.getOrElseUpdate(cacheKeyForUser(id), conf.WebKnossos.Cache.User.timeout) {
       userDAO.findOne(id)(GlobalAccessContext)
     }
 

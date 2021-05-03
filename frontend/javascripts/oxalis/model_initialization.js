@@ -295,9 +295,10 @@ function setInitialTool() {
 
   const { tracing } = Store.getState();
 
-  if (tracing.skeleton != null && tracing.volume == null) {
-    // We are in a skeleton-only annotation with legacy-bindings.
-    // Therefore, switch to the skeleton tool.
+  if (tracing.skeleton != null) {
+    // We are in a annotation which contains a skeleton. Due to the
+    // enabled legacy-bindings, the user can expect to immediately create new nodes
+    // with right click. Therefore, switch to the skeleton tool.
     Store.dispatch(setToolAction("SKELETON"));
   }
 }

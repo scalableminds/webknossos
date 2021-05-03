@@ -38,6 +38,7 @@ import {
   APIAnnotationTypeEnum,
   type APIUpdateActionBatch,
   type APIUser,
+  type APIUserTheme,
   type APIUserLoggedTime,
   type ExperienceDomainList,
   type HybridServerTracing,
@@ -223,6 +224,16 @@ export function updateLastTaskTypeIdOfUser(
   return Request.sendJSONReceiveJSON(`/api/users/${userId}/taskTypeId`, {
     method: "PUT",
     data: { lastTaskTypeId },
+  });
+}
+
+export function updateSelectedThemeOfUser(
+  userId: string,
+  selectedTheme: APIUserTheme,
+): Promise<APIUser> {
+  return Request.sendJSONReceiveJSON(`/api/users/${userId}/selectedTheme`, {
+    method: "PUT",
+    data: JSON.stringify(selectedTheme),
   });
 }
 

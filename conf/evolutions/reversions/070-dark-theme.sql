@@ -1,12 +1,12 @@
 START TRANSACTION;
 
 DROP VIEW webknossos.userInfos;
-DROP VIEW webknossos.organizations_;
+DROP VIEW webknossos.multiUsers_;
 
-ALTER TABLE webknossos.organizations DROP COLUMN pricingPlan;
-DROP TYPE webknossos.PRICING_PLANS;
+ALTER TABLE webknossos.multiUsers DROP COLUMN selectedTheme;
+DROP TYPE webknossos.THEME;
 
-CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 
 -- identical to previous (has to be dropped first because of the dependency)
 CREATE VIEW webknossos.userInfos AS
@@ -20,6 +20,6 @@ JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 67;
+UPDATE webknossos.releaseInformation SET schemaVersion = 69;
 
 COMMIT TRANSACTION;

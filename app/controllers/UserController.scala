@@ -17,6 +17,7 @@ import play.api.libs.json._
 import play.api.mvc._
 import utils.ObjectId
 import javax.inject.Inject
+import models.user.Theme.Theme
 
 import scala.concurrent.ExecutionContext
 
@@ -381,6 +382,17 @@ class UserController @Inject()(userService: UserService,
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         _ <- bool2Fox(request.identity._id == userIdValidated) ?~> "notAllowed" ~> FORBIDDEN
         _ <- multiUserDAO.updateNovelUserExperienceInfos(request.identity._multiUser, request.body)
+        updatedUser <- userDAO.findOne(userIdValidated)
+        updatedJs <- userService.publicWrites(updatedUser, request.identity)
+      } yield Ok(updatedJs)
+    }
+
+  def updateSelectedTheme(userId: String): Action[Theme] =
+    sil.SecuredAction.async(validateJson[Theme]) { implicit request =>
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        _ <- bool2Fox(request.identity._id == userIdValidated) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- multiUserDAO.updateSelectedTheme(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userIdValidated)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
       } yield Ok(updatedJs)

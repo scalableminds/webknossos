@@ -18,6 +18,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   object Play {
     object Modules {
       val enabled: Seq[String] = getList[String]("play.modules.enabled")
+      val disabled: Seq[String] = getList[String]("play.modules.disabled")
     }
   }
 

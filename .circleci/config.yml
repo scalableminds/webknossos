@@ -287,8 +287,8 @@ workflows:
             tags:
               only: /.*/
       - nightly:
-        requires:
-          - build_test_deploy
+          requires:
+            - build_test_deploy
   circleci_nightly:
     jobs:
       - nightly

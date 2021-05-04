@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.binary._
-import models.configuration.UserConfiguration
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
@@ -86,7 +85,7 @@ Samplecountry
     "SCM",
     "Boy",
     System.currentTimeMillis(),
-    Json.toJson(UserConfiguration.default),
+    Json.obj(),
     userService.createLoginInfo(userId),
     isAdmin = true,
     isDatasetManager = true,

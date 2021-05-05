@@ -463,6 +463,9 @@ export type IsosurfaceInformation = {|
   +segmentId: number,
   +seedPosition: Vector3,
   +isLoading: boolean,
+  +isPrecomputed: boolean,
+  +isVisible?: boolean,
+  +fileName?: string,
 |};
 
 export type OxalisState = {|

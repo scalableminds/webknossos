@@ -115,6 +115,8 @@ export type AddIsosurfaceAction = {
   type: "ADD_ISOSURFACE",
   cellId: number,
   seedPosition: Vector3,
+  isPrecomputed: boolean,
+  fileName?: string,
 };
 
 export type AnnotationActionTypes =
@@ -280,8 +282,12 @@ export const removeIsosurfaceAction = (cellId: number): RemoveIsosurfaceAction =
 export const addIsosurfaceAction = (
   cellId: number,
   seedPosition: Vector3,
+  isPrecomputed: boolean,
+  fileName?: string,
 ): AddIsosurfaceAction => ({
   type: "ADD_ISOSURFACE",
   cellId,
   seedPosition,
+  isPrecomputed,
+  fileName,
 });

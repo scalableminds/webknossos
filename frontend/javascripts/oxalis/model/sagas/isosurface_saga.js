@@ -132,7 +132,9 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-  yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
+  if (action.shouldReload) {
+    yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
+  }
 }
 
 // This function either returns the activeCellId of the current volume tracing
@@ -217,7 +219,7 @@ function* loadIsosurfaceWithNeighbors(
 
   const hasIsosurface = yield* select(state => state.isosurfaces[segmentId] != null);
   if (!hasIsosurface) {
-    yield* put(addIsosurfaceAction(segmentId, position));
+    yield* put(addIsosurfaceAction(segmentId, position, false));
   }
   yield* put(startRefreshingIsosurfaceAction(segmentId));
 
@@ -369,7 +371,7 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.
   const seedPosition = yield* select(state => getFlooredPosition(state.flycam));
-  yield* put(addIsosurfaceAction(segmentId, seedPosition));
+  yield* put(addIsosurfaceAction(segmentId, seedPosition, true));
 }
 
 function* removeIsosurface(
@@ -389,7 +391,7 @@ function* removeIsosurface(
   if (cellId === currentCellId) {
     // Clear the active cell id to avoid that the isosurface is immediately reconstructed
     // when the position changes.
-    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0]));
+    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0], false));
   }
 }
 

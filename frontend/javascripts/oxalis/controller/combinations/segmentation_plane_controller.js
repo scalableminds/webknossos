@@ -100,6 +100,6 @@ export function isosurfaceLeftClick(pos: Point2, plane: OrthoView, event: MouseE
   cellId = segmentation.cube.getMappedDataValue(position, getRequestLogZoomStep(Store.getState()));
 
   if (cellId > 0) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
+    Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position, true));
   }
 }

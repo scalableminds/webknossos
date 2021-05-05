@@ -115,12 +115,15 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_ISOSURFACE": {
-      const { cellId, seedPosition } = action;
+      const { cellId, seedPosition, isPrecomputed, fileName } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
       return updateKey2(state, "isosurfaces", cellId, {
         segmentId: cellId,
         seedPosition,
         isLoading: false,
+        isVisible: true,
+        isPrecomputed,
+        fileName,
       });
     }
 

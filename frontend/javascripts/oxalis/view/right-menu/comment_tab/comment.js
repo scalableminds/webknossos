@@ -59,7 +59,7 @@ export function Comment({ comment, isActive, style }: CommentProps) {
   };
 
   const liClassName = classNames("markdown", "markdown-small", "nowrap", {
-    bold: isActive,
+    "comment-active": isActive,
   });
   const iClassName = classNames("fa", "fa-fw", {
     "fa-angle-right": isActive,

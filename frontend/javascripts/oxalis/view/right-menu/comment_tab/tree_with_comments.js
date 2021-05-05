@@ -17,7 +17,7 @@ function TreeWithComments(props: Props) {
     props.onExpand(props.tree.treeId);
   };
 
-  const liClassName = classNames("nowrap", { bold: props.isActive });
+  const liClassName = classNames("nowrap", { "comment-active": props.isActive });
   const iClassName = classNames("fa", "fa-fw", {
     "fa-chevron-right": props.collapsed,
     "fa-chevron-down": !props.collapsed,

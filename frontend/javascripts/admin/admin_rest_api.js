@@ -516,10 +516,10 @@ export function transferTask(annotationId: string, userId: string): Promise<APIA
 }
 
 export async function transferActiveTasksOfProject(
-  projectName: string,
+  projectId: string,
   userId: string,
 ): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}/transferActiveTasks`, {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}/transferActiveTasks`, {
     data: {
       userId,
     },
@@ -527,8 +527,8 @@ export async function transferActiveTasksOfProject(
   });
 }
 
-export async function getUsersWithActiveTasks(projectName: string): Promise<Array<APIActiveUser>> {
-  return Request.receiveJSON(`/api/projects/${projectName}/usersWithActiveTasks`);
+export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
+  return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
 // ### Annotations

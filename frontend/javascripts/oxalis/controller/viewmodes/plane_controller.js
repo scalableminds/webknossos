@@ -135,8 +135,6 @@ class PlaneController extends React.PureComponent<Props> {
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
 
-    // const tdId = `inputcatcher_${OrthoViews.TDView}`;
-    // Utils.waitForElementWithId(tdId).then(() => {
     OrthoViewValuesWithoutTDView.forEach(id => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
       Utils.waitForElementWithId(inputcatcherId).then(el => {
@@ -151,7 +149,6 @@ class PlaneController extends React.PureComponent<Props> {
         );
       });
     });
-    // });
   }
 
   getPlaneMouseControls(planeId: OrthoView): Object {

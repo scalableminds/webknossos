@@ -38,6 +38,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where dataset uploads were sent to the wrong datastore, and failed [#5404](https://github.com/scalableminds/webknossos/pull/5404)
 - Fixed a bug where users could see long-running jobs listing of other users [#5435](https://github.com/scalableminds/webknossos/pull/5435)
 - Fixed a rendering bug which occurred when the initial layout had a hidden 3D viewport. [#5429](https://github.com/scalableminds/webknossos/pull/5429)
+- Fixed a bug where the task search showed duplicates if a user had multiple instances of a task (as made possible by the transfer functionality). [#5456](https://github.com/scalableminds/webknossos/pull/5456)
+- Fixed a bug where showing active users of a project, and transferring their tasks was broken. [#5456](https://github.com/scalableminds/webknossos/pull/5456)
 
 ### Removed
 -

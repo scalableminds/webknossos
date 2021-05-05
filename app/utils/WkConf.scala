@@ -20,6 +20,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val enabled: Seq[String] = getList[String]("play.modules.enabled")
       val disabled: Seq[String] = getList[String]("play.modules.disabled")
     }
+    val children = List(Modules)
   }
 
   object WebKnossos {
@@ -92,6 +93,13 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     }
     val demoSender: String = get[String]("mail.demoSender")
     val defaultSender: String = get[String]("mail.defaultSender")
+    object Mailchimp {
+      val host: String = get[String]("mail.mailchimp.host")
+      val listId: String = get[String]("mail.mailchimp.listId")
+      val user: String = get[String]("mail.mailchimp.user")
+      val password: String = get[String]("mail.mailchimp.password")
+    }
+    val children = List(Smtp, Mailchimp)
   }
 
   object Silhouette {

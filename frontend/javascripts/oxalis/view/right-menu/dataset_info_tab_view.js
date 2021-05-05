@@ -3,8 +3,8 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Tooltip, Button } from "antd";
+import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -221,6 +221,13 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         >
           {datasetName}
         </Link>
+        <Tooltip title="Edit dataset settings">
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+          />
+        </Tooltip>
       </p>
     );
   }

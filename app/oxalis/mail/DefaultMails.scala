@@ -15,10 +15,7 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
-  private val wkOrgSender = conf.Mail.demoSender
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
-  private val demoDatasetUrl = conf.Features.publicDemoDatasetUrl
-  private val tutorialVideoUrl = "https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
 
   def registerAdminNotifyerMail(name: String,
                                 email: String,

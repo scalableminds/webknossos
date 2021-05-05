@@ -65,26 +65,42 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
   }
 
   def health: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    def checkDatastoreHealthIfEnabled: Fox[Unit] =
+    def checkDatastoreHealthIfEnabled: Fox[Option[Long]] =
       if (storeModules.localDataStoreEnabled) {
         for {
+          before <- Fox.successful(System.currentTimeMillis())
           response <- rpc(s"http://localhost:${conf.Http.port}/data/health").get
           if response.status == 200
-        } yield ()
-      } else Fox.successful(())
+          after = System.currentTimeMillis()
+        } yield Some(after - before)
+      } else Fox.successful(None)
 
-    def checkTracingstoreHealthIfEnabled: Fox[Unit] =
+    def checkTracingstoreHealthIfEnabled: Fox[Option[Long]] =
       if (storeModules.localTracingStoreEnabled) {
         for {
+          before <- Fox.successful(System.currentTimeMillis())
           response <- rpc(s"http://localhost:${conf.Http.port}/tracings/health").get
           if response.status == 200
-        } yield ()
-      } else Fox.successful(())
+          after = System.currentTimeMillis()
+        } yield Some(after - before)
+      } else Fox.successful(None)
 
-    for {
-      _ <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"
-      _ <- checkTracingstoreHealthIfEnabled ?~> "tracingStore.unavailable"
-    } yield Ok
+    def logDuration(before: Long, dataStoreDuration: Option[Long], tracingStoreDuration: Option[Long]): Unit = {
+      val dataStoreLabel = dataStoreDuration.map(dd => s"local Datastore $dd ms")
+      val tracingStoreLabel = tracingStoreDuration.map(td => s"local Tracingstore $td ms")
+      val localStoresLabel = List(dataStoreLabel, tracingStoreLabel).flatten.mkString(", ")
+      val localStoresLabelWrapped = if (localStoresLabel.isEmpty) "" else s" ($localStoresLabel)"
+      val after = System.currentTimeMillis()
+      logger.info(s"Answering ok for wK health check, took ${after - before} ms$localStoresLabelWrapped")
+    }
+    log {
+      for {
+        before <- Fox.successful(System.currentTimeMillis())
+        dataStoreDuration <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"
+        tracingStoreDuration <- checkTracingstoreHealthIfEnabled ?~> "tracingStore.unavailable"
+        _ = logDuration(before, dataStoreDuration, tracingStoreDuration)
+      } yield Ok
+    }
   }
 
 }

@@ -249,7 +249,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/remove/webknossos/dev/fixnightly?user=CI+%28nightly%29
+            https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Wait 3min
           command: sleep 180
@@ -259,7 +259,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/install/webknossos/dev/fixnightly?user=CI+%28nightly%29
+            https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
@@ -268,11 +268,11 @@ jobs:
             wait
       - run:
           name: Refresh datasets
-          command: curl https://fixnightly.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
+          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
       - run:
           name: Run screenshot-tests
           command: |
-            URL=https://fixnightly.webknossos.xyz/ \
+            URL=https://master.webknossos.xyz/ \
             yarn test-screenshot
 
       - store_artifacts:
@@ -286,9 +286,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - nightly:
-          requires:
-            - build_test_deploy
   circleci_nightly:
     jobs:
       - nightly

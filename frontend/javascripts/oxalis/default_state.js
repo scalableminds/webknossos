@@ -4,7 +4,7 @@ import type { OxalisState } from "oxalis/store";
 import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
 import { document } from "libs/window";
 
-export const defaultViewportRect = {
+const defaultViewportRect = {
   top: 0,
   left: 0,
   width: Constants.VIEWPORT_WIDTH,

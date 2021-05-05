@@ -54,7 +54,7 @@ class InviteService @Inject()(conf: WkConf,
         tokenValue,
         organizationID,
         autoActivate,
-        new DateTime(System.currentTimeMillis() + conf.Application.Authentication.inviteExpiry.toMillis)
+        new DateTime(System.currentTimeMillis() + conf.WebKnossos.User.inviteExpiry.toMillis)
       )
 
   private def sendInviteMail(recipient: String, sender: User, invite: Invite)(
@@ -68,7 +68,7 @@ class InviteService @Inject()(conf: WkConf,
     } yield ()
 
   def removeExpiredInvites(): Fox[Unit] =
-    inviteDAO.deleteAllExpired
+    inviteDAO.deleteAllExpired()
 
   def deactivateUsedInvite(invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
     inviteDAO.deleteOne(invite._id)

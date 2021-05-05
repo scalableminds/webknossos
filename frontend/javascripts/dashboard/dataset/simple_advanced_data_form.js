@@ -154,8 +154,8 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index }) {
   return (
     <Row gutter={48} style={{ width: "100%" }}>
       <Col span={5}>
-        <div style={{ paddingTop: 9, color: "rgba(0, 0, 0, 0.85)" }}>
-          {index + 1}. Layer &ldquo;{layer.name}&rdquo;:
+        <div style={{ paddingTop: 9 }}>
+          {index + 1}. Layer &ldquo;{layer.name}&rdquo;
         </div>
       </Col>
       <Col span={17}>

@@ -16,7 +16,6 @@ case class Send(mail: Mail)
   * "org.apache.commons" % "commons-mail" % "1.2"
   */
 case class MailerConfig(
-    enabled: Boolean,
     logToStdout: Boolean,
     smtpHost: String,
     smtpPort: Int,
@@ -34,8 +33,8 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       logger.warn(s"Mailer received unknown message: $unknownMessage")
   }
 
-  private def send(mail: Mail) =
-    if (conf.enabled && mail.recipients.exists(_.trim != "")) {
+  private def send(mail: Mail): Unit =
+    if (mail.recipients.exists(_.trim != "")) {
       if (conf.logToStdout) {
         logger.info(s"Sending mail: $mail")
       }
@@ -59,9 +58,12 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       multiPartMail.setDebug(false)
       multiPartMail.getMailSession.getProperties.put("mail.smtp.ssl.protocols", "TLSv1.2")
 
-      multiPartMail.send
-    } else {
-      ""
+      if (conf.smtpHost.nonEmpty) {
+        multiPartMail.send
+        ()
+      } else {
+        logger.info("Mail was not sent as no smpt host is configured.")
+      }
     }
 
   /**

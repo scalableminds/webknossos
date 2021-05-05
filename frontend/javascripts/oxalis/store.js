@@ -448,6 +448,8 @@ export type BorderOpenStatus = {
   right: boolean,
 };
 
+export type Theme = "light" | "dark";
+
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
@@ -457,6 +459,7 @@ type UiInformation = {
   +hasOrganizations: boolean,
   +isRefreshingIsosurfaces: boolean,
   +borderOpenStatus: BorderOpenStatus,
+  +theme: Theme,
 };
 
 export type IsosurfaceInformation = {|

@@ -29,7 +29,7 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
   }
 
   object SlackNotifications {
-    val url: String = get[String]("slackNotifications.url")
+    val uri: String = get[String]("slackNotifications.uri")
     val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
   val children = List(Http, Tracingstore)

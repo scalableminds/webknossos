@@ -228,7 +228,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
 
   getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
     const roleStyle = { fontWeight: "bold" };
-    const explanationStyle = { color: "rgba(0, 0, 0, 0.55", paddingBottom: 12 };
+    const explanationStyle = { paddingBottom: 12, color: "var(--ant-text-secondary)" };
     return (
       <React.Fragment>
         <h4>

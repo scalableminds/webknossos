@@ -1,10 +1,10 @@
-@( conf: utils.WkConf )
+@( conf: utils.WkConf, selectedTheme: String )
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
-    <title>@(conf.Application.title)</title>
+    <title>@(conf.WebKnossos.tabTitle)</title>
     @if(conf.Features.isDemoInstance){
     <meta
       name="description"
@@ -22,13 +22,7 @@
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
-    />
-    <link
-      rel="stylesheet"
-      type="text/css"
-      media="screen"
-      href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+      href="/assets/bundle/vendors~dark~light.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     <link
       rel="stylesheet"
@@ -36,6 +30,27 @@
       media="screen"
       href="/assets/fonts/titillium-web.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
+    <script>
+      let initialTheme = "@(selectedTheme)";
+      if (initialTheme === "auto") {
+        initialTheme = 
+          window.matchMedia('(prefers-color-scheme: dark)').media !== "not all" && 
+          window.matchMedia('(prefers-color-scheme: dark)').matches ? 
+            "dark" : 
+            "light";
+      }
+      document.documentElement.style.display = 'none';
+      document.head.insertAdjacentHTML(
+        'beforeend',
+        '<link ' +
+          'id="primary-stylesheet" ' +
+          'rel="stylesheet" ' +
+          'type="text/css" ' +
+          'media="screen" ' +
+          'href="/assets/bundle/' + initialTheme + '.css?nocache=@(webknossos.BuildInfo.commitHash)" ' +
+          'onload="document.documentElement.style.display = \'\'" ' + 
+        '/>');
+    </script>
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"
@@ -47,7 +62,7 @@
   <body>
     <main id="main-container"></main>
 
-    @if(conf.Google.Analytics.trackingID.nonEmpty) {
+    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
     <script>
       (function(i, s, o, g, r, a, m) {
         i["GoogleAnalyticsObject"] = r;
@@ -63,7 +78,7 @@
         m.parentNode.insertBefore(a, m);
       })(window, document, "script", "https://www.google-analytics.com/analytics.js", "ga");
 
-      ga("create", "@(conf.Google.Analytics.trackingID)", "auto");
+      ga("create", "@(conf.GoogleAnalytics.trackingId)", "auto");
       ga("set", "anonymizeIp", true);
       ga("send", "pageview");
     </script>

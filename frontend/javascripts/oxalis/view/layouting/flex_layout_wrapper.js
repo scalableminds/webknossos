@@ -396,7 +396,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             classNameMapper={this.classNameMapper}
           />
         </div>
-        <Footer className="footer">
+        <Footer className="statusbar-footer">
           <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
           <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
           <Statusbar />

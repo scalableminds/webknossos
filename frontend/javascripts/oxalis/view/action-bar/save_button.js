@@ -105,7 +105,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
         className={this.props.className}
-        style={{ background: showUnsavedWarning ? "#e33f36" : null }}
+        style={{ background: showUnsavedWarning ? "var(--ant-error)" : null }}
       >
         {this.shouldShowProgress() ? (
           <span style={{ marginLeft: 8 }}>{Math.floor((progressFraction || 0) * 100)} %</span>

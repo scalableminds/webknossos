@@ -142,7 +142,12 @@ export const VolumeTools = [
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
 ];
-export const ToolsWithOverwriteCapabilities = [AnnotationToolEnum.TRACE, AnnotationToolEnum.BRUSH];
+export const ToolsWithOverwriteCapabilities = [
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.ERASE_TRACE,
+  AnnotationToolEnum.ERASE_BRUSH,
+];
 export type AnnotationTool = $Keys<typeof AnnotationToolEnum>;
 
 export function annotationToolEnumToIndex(annotationTool: ?AnnotationTool): number {

@@ -76,7 +76,7 @@ export class MoveTool {
         // Always set the correct mouse position. Otherwise, using alt + mouse move and
         // alt + scroll won't result in the correct zoomToMouse behavior.
         MoveHandlers.setMousePosition(position);
-        if (event.altKey && !event.shiftKey) {
+        if (event.altKey && !event.shiftKey && !event.ctrlKey) {
           MoveHandlers.handleMovePlane(delta);
         }
       },
@@ -244,6 +244,10 @@ export class DrawTool {
           return;
         }
         if (event.ctrlKey && VolumeHandlers.isAutomaticBrushEnabled()) {
+          return;
+        }
+        if (event.ctrlKey && event.shiftKey) {
+          VolumeHandlers.handleEraseStart(pos, plane);
           return;
         }
         VolumeHandlers.handleDrawStart(pos, plane);

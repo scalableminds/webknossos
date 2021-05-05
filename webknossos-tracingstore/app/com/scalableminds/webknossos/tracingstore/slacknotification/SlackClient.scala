@@ -29,7 +29,7 @@ class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnable
       "text" -> msg,
       "color" -> color
     )
-    if (slackUri == "empty" || slackUri.isEmpty) {
+    if (slackUri.isEmpty) {
       if (verboseLoggingEnabled) {
         logger.info(s"Not sending slack notification as it was not configured. Message was: $jsonMessage")
       }

@@ -21,10 +21,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"
-  private val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val cumsumFileName = "cumsum.json"
 
-  lazy val agglomerateFileCache = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
+  lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -107,11 +107,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     val cache: Either[AgglomerateIdCache, BoundingBoxCache] =
       if (Files.exists(cumsumPath)) {
-        Right(CumsumParser.parse(cumsumPath.toFile, ULong(config.Braingames.Binary.agglomerateMaxReaderRange)))
+        Right(CumsumParser.parse(cumsumPath.toFile, ULong(config.Datastore.Cache.AgglomerateFile.cumsumMaxReaderRange)))
       } else {
         Left(
-          new AgglomerateIdCache(config.Braingames.Binary.agglomerateCacheMaxSize,
-                                 config.Braingames.Binary.agglomerateStandardBlockSize))
+          new AgglomerateIdCache(config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
+                                 config.Datastore.Cache.AgglomerateFile.blockSize))
       }
 
     CachedAgglomerateFile(reader,
@@ -144,13 +144,12 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
-      if (nodeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
-        throw new Exception(
-          s"Agglomerate has too many nodes ($nodeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit})")
+      val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      if (nodeCount > edgeLimit) {
+        throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
       }
-      if (edgeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
-        throw new Exception(
-          s"Agglomerate has too many edges ($edgeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit})")
+      if (edgeCount > edgeLimit) {
+        throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
       }
       val positions: Array[Array[Long]] =
         reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)

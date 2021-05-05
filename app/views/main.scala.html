@@ -4,7 +4,7 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
-    <title>@(conf.Application.title)</title>
+    <title>@(conf.WebKnossos.tabTitle)</title>
     @if(conf.Features.isDemoInstance){
     <meta
       name="description"
@@ -62,7 +62,7 @@
   <body>
     <main id="main-container"></main>
 
-    @if(conf.Google.Analytics.trackingID.nonEmpty) {
+    @if(conf.GoogleAnalytics.trackingId.nonEmpty) {
     <script>
       (function(i, s, o, g, r, a, m) {
         i["GoogleAnalyticsObject"] = r;
@@ -78,7 +78,7 @@
         m.parentNode.insertBefore(a, m);
       })(window, document, "script", "https://www.google-analytics.com/analytics.js", "ga");
 
-      ga("create", "@(conf.Google.Analytics.trackingID)", "auto");
+      ga("create", "@(conf.GoogleAnalytics.trackingId)", "auto");
       ga("set", "anonymizeIp", true);
       ga("send", "pageview");
     </script>

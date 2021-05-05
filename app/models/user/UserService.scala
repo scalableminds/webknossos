@@ -6,7 +6,6 @@ import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
@@ -14,7 +13,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.DataSetDAO
 import models.team._
-import oxalis.mail.DefaultMails
+import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.TokenDAO
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
@@ -46,9 +45,6 @@ class UserService @Inject()(conf: WkConf,
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
-
-  def defaultUser: Fox[User] =
-    userFromMultiUserEmail(conf.Application.Authentication.DefaultUser.email)(GlobalAccessContext)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {

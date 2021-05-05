@@ -13,7 +13,7 @@ import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import slick.jdbc.PostgresProfile.api._
-import utils.{SQLClient, SimpleSQLDAO, WkConf}
+import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -21,6 +21,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
                             analyticsService: AnalyticsService,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
+                            storeModules: StoreModules,
                             sil: Silhouette[WkEnv],
                             rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
@@ -35,7 +36,9 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
           "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
           "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
           "schemaVersion" -> schemaVersion.toOption,
-          "token" -> token
+          "token" -> token,
+          "localDataStoreEnabled" -> storeModules.localDataStoreEnabled,
+          "localTracingStoreEnabled" -> storeModules.localTracingStoreEnabled
         ))
     }
   }
@@ -63,24 +66,20 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
 
   def health: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     def checkDatastoreHealthIfEnabled: Fox[Unit] =
-      if (conf.Datastore.enabled) {
+      if (storeModules.localDataStoreEnabled) {
         for {
           response <- rpc(s"http://localhost:${conf.Http.port}/data/health").get
           if response.status == 200
         } yield ()
-      } else {
-        Fox.successful(())
-      }
+      } else Fox.successful(())
 
     def checkTracingstoreHealthIfEnabled: Fox[Unit] =
-      if (conf.Tracingstore.enabled) {
+      if (storeModules.localTracingStoreEnabled) {
         for {
           response <- rpc(s"http://localhost:${conf.Http.port}/tracings/health").get
           if response.status == 200
         } yield ()
-      } else {
-        Fox.successful(())
-      }
+      } else Fox.successful(())
 
     for {
       _ <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"

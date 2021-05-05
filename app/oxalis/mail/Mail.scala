@@ -1,4 +1,4 @@
-package com.scalableminds.util.mail;
+package oxalis.mail
 
 case class Mail(from: String = "",
                 subject: String = "",

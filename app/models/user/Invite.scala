@@ -2,14 +2,13 @@ package models.user
 
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.organization.OrganizationDAO
 import org.joda.time.DateTime
-import oxalis.mail.DefaultMails
+import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.CompactRandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep

@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfi
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.DataSetDAO
-import models.configuration.UserConfiguration
 import models.team._
 import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.TokenDAO
@@ -105,7 +104,7 @@ class UserService @Inject()(conf: WkConf,
         firstName,
         lastName,
         System.currentTimeMillis(),
-        Json.toJson(UserConfiguration.default),
+        Json.obj(),
         LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
         isDatasetManager = false,
@@ -201,7 +200,7 @@ class UserService @Inject()(conf: WkConf,
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo
 
-  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
       userCache.invalidateUser(user._id)
       result

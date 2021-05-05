@@ -10,7 +10,6 @@ import com.mohiva.play.silhouette.api.util.Credentials
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.mail._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
@@ -19,7 +18,7 @@ import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
-import oxalis.mail.DefaultMails
+import oxalis.mail.{DefaultMails, MailchimpClient, Send}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import play.api.data.Form
@@ -41,6 +40,7 @@ class AuthenticationController @Inject()(
     inviteService: InviteService,
     inviteDAO: InviteDAO,
     brainTracing: BrainTracing,
+    mailchimpClient: MailchimpClient,
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
     userDAO: UserDAO,
@@ -97,13 +97,14 @@ class AuthenticationController @Inject()(
                                            lastName,
                                            autoActivate,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
+                multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
                 _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
                 _ <- Fox.runOptional(inviteBox.toOption)(i =>
                   inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 if (conf.Features.isDemoInstance) {
-                  Mailer ! Send(defaultMails.newUserWKOrgMail(user.name, email, autoActivate))
+                  mailchimpClient.registerUser(user, multiUser, tag = "registered_as_user")
                 } else {
                   Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
                 }
@@ -387,6 +388,7 @@ class AuthenticationController @Inject()(
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
+                    multiUser <- multiUserDAO.findOne(user._multiUser)
                     dataStoreToken <- bearerTokenAuthenticatorService
                       .createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false)
                       .toFox
@@ -398,7 +400,7 @@ class AuthenticationController @Inject()(
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      Mailer ! Send(defaultMails.newAdminWKOrgMail(user.firstName, email))
+                      mailchimpClient.registerUser(user, multiUser, tag = "registered_as_admin")
                     }
                     Ok
                   }

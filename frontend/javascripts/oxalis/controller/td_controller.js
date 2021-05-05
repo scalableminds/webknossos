@@ -124,7 +124,6 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    console.log("this.controls = new TrackballControls");
     this.controls = new TrackballControls(
       tdCamera,
       view,

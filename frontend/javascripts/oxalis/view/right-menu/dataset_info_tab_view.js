@@ -192,12 +192,22 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       description: datasetDescription,
       owningOrganization,
     } = this.props.dataset;
+    const getEditSettingsIcon = () => (
+      <Tooltip title="Edit dataset settings">
+        <Button
+          type="text"
+          icon={<EditOutlined />}
+          href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+        />
+      </Tooltip>
+    );
 
     if (isDatasetViewMode) {
       return (
         <div>
           <p style={{ wordWrap: "break-word" }}>
             <strong>{displayName || datasetName}</strong>
+            {getEditSettingsIcon()}
           </p>
           {datasetDescription ? (
             <div style={{ fontSize: 14 }}>
@@ -221,13 +231,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         >
           {datasetName}
         </Link>
-        <Tooltip title="Edit dataset settings">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            href={`/datasets/${owningOrganization}/${datasetName}/edit`}
-          />
-        </Tooltip>
+        {getEditSettingsIcon()}
       </p>
     );
   }

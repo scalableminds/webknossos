@@ -198,6 +198,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           type="text"
           icon={<EditOutlined />}
           href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+          target="_blank"
         />
       </Tooltip>
     );

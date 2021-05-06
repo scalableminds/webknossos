@@ -251,8 +251,8 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
 type NumberInputPopoverSettingProps = {
   onChange: (value: number) => void,
   value: ?number,
-  label: string,
-  detailedLabel: string,
+  label: string | React.Node,
+  detailedLabel: string | React.Node,
   placement?: string,
   max?: number,
   min?: number,

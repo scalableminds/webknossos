@@ -63,13 +63,6 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   }
 
   getViewportOptions = () => {
-    const showPlanesInTDViewSetting = (
-      <SwitchSetting
-        label={settingsLabels.tdViewDisplayPlanes}
-        value={this.props.userConfiguration.tdViewDisplayPlanes}
-        onChange={this.onChangeUser.tdViewDisplayPlanes}
-      />
-    );
     switch (this.props.viewMode) {
       case Constants.MODE_PLANE_TRACING:
         return (
@@ -92,7 +85,6 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
-            {showPlanesInTDViewSetting}
           </Panel>
         );
       case Constants.MODE_VOLUME:
@@ -116,7 +108,6 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
-            {showPlanesInTDViewSetting}
           </Panel>
         );
       default:

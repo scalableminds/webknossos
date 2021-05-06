@@ -4,6 +4,7 @@ import _ from "lodash";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import React from "react";
+import { WarningOutlined, MoreOutlined } from "@ant-design/icons";
 
 import type { OxalisState } from "oxalis/store";
 import {
@@ -14,6 +15,7 @@ import {
   type VolumeTool,
   VolumeToolEnum,
 } from "oxalis/constants";
+import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
@@ -25,9 +27,9 @@ import {
   setActiveNodeAction,
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import message from "messages";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
-import { MoreOutlined } from "@ant-design/icons";
 
 type OwnProps = {||};
 type StateProps = {|
@@ -41,6 +43,7 @@ type StateProps = {|
   activeCellId: ?number,
   activeNodeId: ?number,
   activeTreeId: ?number,
+  isUint64Segmentation: boolean,
 |};
 
 type DispatchProps = {|
@@ -229,6 +232,18 @@ class Statusbar extends React.PureComponent<Props, State> {
     );
   }
 
+  maybeLabelWitSegmentationWarning = (label: string) =>
+    this.props.isUint64Segmentation ? (
+      <React.Fragment>
+        {label}{" "}
+        <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
+          <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+        </Tooltip>
+      </React.Fragment>
+    ) : (
+      label
+    );
+
   getInfos() {
     const {
       activeViewport,
@@ -266,8 +281,8 @@ class Statusbar extends React.PureComponent<Props, State> {
           <span className="info-element" style={{ minWidth: 120 }}>
             <NumberInputPopoverSetting
               value={activeCellId}
-              label="Active Cell"
-              detailedLabel="Change Active Cell ID"
+              label={this.maybeLabelWitSegmentationWarning("Active Cell")}
+              detailedLabel={this.maybeLabelWitSegmentationWarning("Change Active Cell ID")}
               onChange={this.props.onChangeActiveCellId}
             />
           </span>
@@ -306,18 +321,24 @@ class Statusbar extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeResolution: getCurrentResolution(state),
-  mousePosition: state.temporaryConfiguration.mousePosition,
-  activeViewport: state.viewModeData.plane.activeViewport,
-  isSkeletonAnnotation: state.tracing.skeleton != null,
-  isVolumeAnnotation: state.tracing.volume != null,
-  activeTool: state.tracing.volume ? state.tracing.volume.activeTool : null,
-  activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
-  activeNodeId: state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
-  activeTreeId: state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
-  isPlaneMode: isPlaneMode(state),
-});
+const mapStateToProps = (state: OxalisState): StateProps => {
+  const segmentationLayer = getSegmentationLayer(state.dataset);
+  return {
+    activeResolution: getCurrentResolution(state),
+    mousePosition: state.temporaryConfiguration.mousePosition,
+    activeViewport: state.viewModeData.plane.activeViewport,
+    isSkeletonAnnotation: state.tracing.skeleton != null,
+    isVolumeAnnotation: state.tracing.volume != null,
+    activeTool: state.tracing.volume ? state.tracing.volume.activeTool : null,
+    activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
+    activeNodeId: state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
+    activeTreeId: state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
+    isUint64Segmentation: segmentationLayer
+      ? segmentationLayer.originalElementClass === "uint64"
+      : false,
+    isPlaneMode: isPlaneMode(state),
+  };
+};
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeActiveNodeId(id: number) {

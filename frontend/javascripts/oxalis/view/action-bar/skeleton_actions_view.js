@@ -1,19 +1,28 @@
 // @flow
-import { Button, Tooltip } from "antd";
+import { Tooltip, Radio } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import React from "react";
 
 import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { document } from "libs/window";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { narrowButtonStyle } from "./volume_actions_view";
 
 export default function SkeletonActionsView() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
     state => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  const activeStyle = { borderColor: "pink", padding: "0px 5px" };
   const isNewNodeNewTreeModeOn = useSelector(state => state.userConfiguration.newNodeNewTree);
+  const toggleNewNodeNewTreeMode = () =>
+    dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
+  const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
+  const imgStyle = {
+    width: 22,
+    height: 22,
+    lineHeight: 10,
+    marginTop: -2,
+  };
   return (
     <div
       onClick={() => {
@@ -21,24 +30,22 @@ export default function SkeletonActionsView() {
       }}
     >
       <Tooltip title="Toggle the Single node Tree (soma clicking) mode">
-        <Button
-          type="button"
-          style={isNewNodeNewTreeModeOn ? activeStyle : { padding: "0px 5px" }}
-          onClick={() =>
-            dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn))
-          }
-        >
-          <img src="/assets/images/soma-clicking-icon.svg" alt="Single Node Tree Mode" />
-        </Button>
+        <Radio.Group value={isNewNodeNewTreeModeOn ? "active" : null}>
+          <Radio.Button style={narrowButtonStyle} value="active" onClick={toggleNewNodeNewTreeMode}>
+            <img
+              style={imgStyle}
+              src="/assets/images/soma-clicking-icon.svg"
+              alt="Single Node Tree Mode"
+            />
+          </Radio.Button>
+        </Radio.Group>
       </Tooltip>
       <Tooltip title="Toggle Merger Mode">
-        <Button
-          type="button"
-          style={isMergerModeEnabled ? activeStyle : { padding: "0px 5px" }}
-          onClick={() => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled))}
-        >
-          <img src="/assets/images/merger-mode-icon.svg" alt="Merger Mode" />
-        </Button>
+        <Radio.Group value={isMergerModeEnabled ? "active" : null}>
+          <Radio.Button style={narrowButtonStyle} value="active" onClick={toggleMergerMode}>
+            <img style={imgStyle} src="/assets/images/merger-mode-icon.svg" alt="Merger Mode" />
+          </Radio.Button>
+        </Radio.Group>
       </Tooltip>
     </div>
   );

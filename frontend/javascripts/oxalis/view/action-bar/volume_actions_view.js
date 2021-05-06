@@ -105,7 +105,7 @@ function toggleOverwriteMode(overwriteMode) {
   }
 }
 
-const narrowButtonStyle = {
+export const narrowButtonStyle = {
   paddingLeft: 10,
   paddingRight: 8,
 };

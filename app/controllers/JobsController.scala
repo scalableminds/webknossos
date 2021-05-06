@@ -220,6 +220,7 @@ class JobService @Inject()(wkConf: WkConf,
 class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
                                jobService: JobService,
+                               slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
 
@@ -241,16 +242,18 @@ class JobsController @Inject()(jobDAO: JobDAO,
 
   def runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName)
-        _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
-        command = "convert_to_wkw"
-        commandArgs = Json.obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale)
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+            organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+          command = "convert_to_wkw"
+          commandArgs = Json.obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale)
 
-        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
-        js <- jobService.publicWrites(job)
-      } yield Ok(js)
+          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
     }
 
   def runExportTiffJob(organizationName: String,
@@ -262,28 +265,30 @@ class JobsController @Inject()(jobDAO: JobDAO,
                        annotationId: Option[String],
                        annotationType: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName)
-        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
-        _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
-        command = "export_tiff"
-        exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${tracingId.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
-        commandArgs = Json.obj(
-          "organization_name" -> organizationName,
-          "dataset_name" -> dataSetName,
-          "bbox" -> bbox,
-          "webknossos_token" -> TracingStoreRpcClient.webKnossosToken,
-          "export_file_name" -> exportFileName,
-          "layer_name" -> layerName,
-          "volume_tracing_id" -> tracingId,
-          "volume_tracing_version" -> tracingVersion,
-          "annotation_id" -> annotationId,
-          "annotation_type" -> annotationType
-        )
-        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
-        js <- jobService.publicWrites(job)
-      } yield Ok(js)
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+            organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+          _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
+          command = "export_tiff"
+          exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${tracingId.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "bbox" -> bbox,
+            "webknossos_token" -> TracingStoreRpcClient.webKnossosToken,
+            "export_file_name" -> exportFileName,
+            "layer_name" -> layerName,
+            "volume_tracing_id" -> tracingId,
+            "volume_tracing_version" -> tracingVersion,
+            "annotation_id" -> annotationId,
+            "annotation_type" -> annotationType
+          )
+          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
     }
 
   def downloadExport(jobId: String, exportFileName: String): Action[AnyContent] =

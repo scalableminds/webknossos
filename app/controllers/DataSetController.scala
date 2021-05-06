@@ -205,7 +205,7 @@ class DataSetController @Inject()(userService: UserService,
 
   def read(organizationName: String, dataSetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      log {
+      log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         for {
           organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(

@@ -1,10 +1,10 @@
 // @flow
-import { Tooltip, Radio } from "antd";
+import { Tooltip, Space } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import React from "react";
+import ButtonComponent from "oxalis/view/components/button_component";
 
 import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
-import { document } from "libs/window";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { narrowButtonStyle } from "./volume_actions_view";
 
@@ -23,30 +23,32 @@ export default function SkeletonActionsView() {
     lineHeight: 10,
     marginTop: -2,
   };
+  const activeButtonStyle = { ...narrowButtonStyle, borderColor: "#1890ff" };
+  const newNodeNewTreeModeButtonStyle = isNewNodeNewTreeModeOn
+    ? activeButtonStyle
+    : narrowButtonStyle;
+  const mergerModeButtonStyle = isMergerModeEnabled ? activeButtonStyle : narrowButtonStyle;
+
   return (
-    <div
-      onClick={() => {
-        if (document.activeElement) document.activeElement.blur();
-      }}
-    >
+    <Space size={0} className="tight-button-group">
       <Tooltip title="Toggle the Single node Tree (soma clicking) mode">
-        <Radio.Group value={isNewNodeNewTreeModeOn ? "active" : null}>
-          <Radio.Button style={narrowButtonStyle} value="active" onClick={toggleNewNodeNewTreeMode}>
-            <img
-              style={imgStyle}
-              src="/assets/images/soma-clicking-icon.svg"
-              alt="Single Node Tree Mode"
-            />
-          </Radio.Button>
-        </Radio.Group>
+        <ButtonComponent
+          style={newNodeNewTreeModeButtonStyle}
+          value="active"
+          onClick={toggleNewNodeNewTreeMode}
+        >
+          <img
+            style={imgStyle}
+            src="/assets/images/soma-clicking-icon.svg"
+            alt="Single Node Tree Mode"
+          />
+        </ButtonComponent>
       </Tooltip>
       <Tooltip title="Toggle Merger Mode">
-        <Radio.Group value={isMergerModeEnabled ? "active" : null}>
-          <Radio.Button style={narrowButtonStyle} value="active" onClick={toggleMergerMode}>
-            <img style={imgStyle} src="/assets/images/merger-mode-icon.svg" alt="Merger Mode" />
-          </Radio.Button>
-        </Radio.Group>
+        <ButtonComponent style={mergerModeButtonStyle} value="active" onClick={toggleMergerMode}>
+          <img style={imgStyle} src="/assets/images/merger-mode-icon.svg" alt="Merger Mode" />
+        </ButtonComponent>
       </Tooltip>
-    </div>
+    </Space>
   );
 }

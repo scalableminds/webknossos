@@ -1,5 +1,5 @@
 // @flow
-import { Radio, Tooltip, Badge, Space } from "antd";
+import { Radio, Tooltip, Badge, Space, Popover } from "antd";
 import { useSelector } from "react-redux";
 import React, { useEffect } from "react";
 
@@ -26,6 +26,8 @@ import { setToolAction, createCellAction } from "oxalis/model/actions/volumetrac
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
+import { userSettings } from "types/schemas/user_settings.schema";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 
@@ -116,6 +118,10 @@ const handleSetTool = (event: { target: { value: VolumeTool } }) => {
 
 const handleCreateCell = () => {
   Store.dispatch(createCellAction());
+};
+
+const handleUpdateBrushSize = (value: number) => {
+  Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
 const handleSetOverwriteMode = (event: { target: { value: OverwriteMode } }) => {
@@ -272,6 +278,7 @@ export default function VolumeActionsView() {
   const unmappedActiveCellId = useSelector(
     state => enforceVolumeTracing(state.tracing).activeCellId,
   );
+  const brushSize = useSelector(state => state.userConfiguration.brushSize);
   const isMappingEnabled = useSelector(
     state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
   );
@@ -415,7 +422,7 @@ export default function VolumeActionsView() {
         <OverwriteModeSwitch isControlPressed={isControlPressed} />
       ) : null}
 
-      <Space size={0} style={{ marginLeft: 12 }}>
+      <Space size={0} style={{ marginLeft: 12 }} className="tight-button-group">
         <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
           <Tooltip
             title={`Create a new Cell ID – The active cell id is ${unmappedActiveCellId}${mappedIdInfo}.`}
@@ -425,6 +432,32 @@ export default function VolumeActionsView() {
             </ButtonComponent>
           </Tooltip>
         </Badge>
+        <Tooltip title="Change the brush size">
+          <Popover
+            content={
+              <div style={{ width: 230 }}>
+                <div style={{ marginBottom: 8 }}>Set the brush size:</div>
+                <LogSliderSetting
+                  label=""
+                  roundTo={0}
+                  min={userSettings.brushSize.minimum}
+                  max={userSettings.brushSize.maximum}
+                  step={5}
+                  spans={[0, 14, 10]}
+                  value={brushSize}
+                  onChange={handleUpdateBrushSize}
+                />
+              </div>
+            }
+            trigger="click"
+            placement="bottom"
+            style={{ cursor: "pointer" }}
+          >
+            <ButtonComponent style={{ width: 36, padding: 0 }} value="active">
+              <img src="/assets/images/brush-size-icon.svg" alt="Merger Mode" />
+            </ButtonComponent>
+          </Popover>
+        </Tooltip>
       </Space>
     </div>
   );

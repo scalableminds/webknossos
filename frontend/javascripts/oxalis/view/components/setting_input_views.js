@@ -84,6 +84,7 @@ type LogSliderSettingProps = {
   min: number,
   roundTo: number,
   disabled?: boolean,
+  spans: [number, number, number],
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -93,6 +94,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   static defaultProps = {
     disabled: false,
     roundTo: 3,
+    spans: [9, 8, 5],
   };
 
   onChangeInput = (value: number) => {
@@ -133,13 +135,13 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   };
 
   render() {
-    const { label, roundTo, value, min, max, disabled } = this.props;
+    const { label, roundTo, value, min, max, disabled, spans } = this.props;
     return (
       <Row type="flex" align="middle">
-        <Col span={9}>
+        <Col span={spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={8}>
+        <Col span={spans[1]}>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
@@ -149,7 +151,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             disabled={disabled}
           />
         </Col>
-        <Col span={5}>
+        <Col span={spans[2]}>
           <InputNumber
             min={min}
             max={max}

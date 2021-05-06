@@ -423,3 +423,21 @@ img.keyboard-mouse-icon:first-child {
   position: absolute;
   overflow: hidden;
 }
+
+.tight-button-group {
+  button {
+    border-radius: 0px;
+  }
+  .ant-space-item:first-child {
+    button {
+      border-top-left-radius: 2px;
+      border-bottom-left-radius: 2px;
+    }
+  }
+  .ant-space-item:last-child {
+    button {
+      border-top-right-radius: 2px;
+      border-bottom-right-radius: 2px;
+    }
+  }
+}

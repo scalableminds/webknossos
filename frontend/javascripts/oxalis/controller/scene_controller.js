@@ -37,6 +37,7 @@ import constants, {
   OrthoViewValuesWithoutTDView,
   OrthoViews,
   type Vector3,
+  TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import window from "libs/window";
 
@@ -339,6 +340,12 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
+    const { tdViewDisplayPlanes, tdViewDisplayDatasetBorders } = Store.getState().userConfiguration;
+
+    // Only set the visibility of the dataset bounding box for the TDView.
+    // This has to happen before updateForCam is called as otherwise cross section visibility
+    // might be changed unintentionally.
+    this.datasetBoundingBox.setVisibility(id !== OrthoViews.TDView || tdViewDisplayDatasetBorders);
     this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBoxes.forEach(bbCube => bbCube.updateForCam(id));
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
@@ -362,13 +369,14 @@ class SceneController {
         }
       }
     } else {
-      const { tdViewDisplayPlanes } = Store.getState().userConfiguration;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(pos);
         this.planes[planeId].setGrayCrosshairColor();
-        this.planes[planeId].setVisible(true);
-        this.planes[planeId].plane.visible = this.isPlaneVisible[planeId] && tdViewDisplayPlanes;
+        this.planes[planeId].setVisible(
+          tdViewDisplayPlanes !== TDViewDisplayModeEnum.NONE,
+          this.isPlaneVisible[planeId] && tdViewDisplayPlanes === TDViewDisplayModeEnum.DATA,
+        );
       }
     }
   };

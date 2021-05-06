@@ -55,6 +55,11 @@ export type UpdateLocalMeshMetaDataAction = {
   id: string,
   meshShape: $Shape<LocalMeshMetaData>,
 };
+export type UpdatePrecomMeshVisAction = {
+  type: "UPDATE_PREC_MESH_VISIBILITY",
+  id: number,
+  visibility: boolean,
+};
 
 export type AddMeshMetadataAction = {
   type: "ADD_MESH_METADATA",
@@ -132,6 +137,7 @@ export type AnnotationActionTypes =
   | DeleteMeshAction
   | CreateMeshFromBufferAction
   | UpdateLocalMeshMetaDataAction
+  | UpdatePrecomMeshVisAction
   | TriggerActiveIsosurfaceDownloadAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
@@ -209,7 +215,14 @@ export const updateLocalMeshMetaDataAction = (
   id,
   meshShape,
 });
-
+export const updatePrecomMeshVisAction = (
+  id: number,
+  visibility: boolean,
+): UpdatePrecomMeshVisAction => ({
+  type: "UPDATE_PREC_MESH_VISIBILITY",
+  id,
+  visibility,
+});
 export const addMeshMetaDataAction = (mesh: MeshMetaData): AddMeshMetadataAction => ({
   type: "ADD_MESH_METADATA",
   mesh,

@@ -7,6 +7,7 @@ import {
   LoadingOutlined,
   PlusSquareOutlined,
   ReloadOutlined,
+  UserOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
 import type { Dispatch } from "redux";
@@ -35,6 +36,7 @@ import {
   triggerActiveIsosurfaceDownloadAction,
   triggerIsosurfaceDownloadAction,
   updateLocalMeshMetaDataAction,
+  updatePrecomMeshVisAction,
   updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
@@ -50,6 +52,7 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+import classnames from "classnames";
 
 // $FlowIgnore[prop-missing] flow does not know that Dropdown has a Button
 const DropdownButton = Dropdown.Button;
@@ -87,6 +90,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeVisibility(mesh: MeshMetaData, isVisible: boolean) {
     dispatch(updateLocalMeshMetaDataAction(mesh.id, { isVisible }));
+  },
+  onChangePecompVisibility(id, isVisible: boolean) {
+    dispatch(updatePrecomMeshVisAction(id, isVisible));
   },
   async onStlUpload(info) {
     dispatch(setImportingMeshStateAction(true));
@@ -196,7 +202,7 @@ class MeshesView extends React.Component<
             this.props.onStlUpload(file);
           }}
           showUploadList={false}
-          style={{ fontSize: 16, color: "#2a3a48", cursor: "pointer" }}
+          style={{ fontSize: 16, cursor: "pointer" }}
           disabled={!this.props.allowUpdate || this.props.isImporting}
         >
           <Tooltip
@@ -329,6 +335,16 @@ class MeshesView extends React.Component<
         </div>
       </React.Fragment>
     );
+    const getToggleVisButton = segmentId => (
+      <Tooltip title="Change visibility">
+        <UserOutlined
+          key="vis-button"
+          onClick={() => {
+            this.props.onChangePecompVisibility(segmentId, false);
+          }}
+        />
+      </Tooltip>
+    );
 
     const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading, isPrecomputed } = isosurface;
@@ -351,13 +367,9 @@ class MeshesView extends React.Component<
         >
           <div style={{ display: "flex" }}>
             <div
-              className="isosurface-list-item"
-              style={{
-                paddingLeft: 5,
-                paddingRight: 5,
-                backgroundColor: segmentId === isCenteredCell ? "#91d5ff" : "white",
-                borderRadius: 2,
-              }}
+              className={classnames("isosurface-list-item", {
+                "is-centered-cell": segmentId === isCenteredCell,
+              })}
               onClick={() => {
                 this.props.changeActiveIsosurfaceId(segmentId, !isPrecomputed);
                 moveTo(seedPosition);
@@ -374,7 +386,9 @@ class MeshesView extends React.Component<
             </div>
             <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
               {getDownloadButton(segmentId)}
-              {isPrecomputed ? null : getRefreshButton(segmentId, isLoading)}
+              {isPrecomputed
+                ? getToggleVisButton(segmentId)
+                : getRefreshButton(segmentId, isLoading)}
               {getDeleteButton(segmentId)}
             </div>
           </div>

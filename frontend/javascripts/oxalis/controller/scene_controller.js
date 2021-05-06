@@ -259,6 +259,10 @@ class SceneController {
     this.stlMeshes[id].visible = visibility;
   }
 
+  setIsoVisibility(id: number, visibility: boolean): void {
+    this.isosurfacesGroupsPerSegmentationId[id].visible = visibility;
+  }
+
   updateMeshPostion(id: string, position: Vector3): void {
     const [x, y, z] = position;
     const mesh = this.stlMeshes[id];

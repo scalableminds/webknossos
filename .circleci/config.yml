@@ -282,6 +282,8 @@ workflows:
   version: 2
   circleci_build:
     jobs:
+      # TODO: Remove again
+      - nightly
       - build_test_deploy:
           filters:
             tags:

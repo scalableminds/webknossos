@@ -96,7 +96,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "tracing", { meshes: newMeshes });
     }
 
-    case "UPDATE_PREC_MESH_VISIBILITY": {
+    case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { id, visibility } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
       return updateKey2(state, "isosurfaces", id, {

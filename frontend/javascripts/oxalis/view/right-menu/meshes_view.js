@@ -7,7 +7,6 @@ import {
   LoadingOutlined,
   PlusSquareOutlined,
   ReloadOutlined,
-  UserOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
 import type { Dispatch } from "redux";
@@ -18,7 +17,7 @@ import _ from "lodash";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
-import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
+import type { RemoteMeshMetaData } from "types/api_flow_types";
 import {
   getMeshfileChunksForSegment,
   getMeshfileChunkData,
@@ -35,8 +34,7 @@ import {
   importIsosurfaceFromStlAction,
   triggerActiveIsosurfaceDownloadAction,
   triggerIsosurfaceDownloadAction,
-  updateLocalMeshMetaDataAction,
-  updatePrecomMeshVisAction,
+  updateIsosurfaceVisibilityAction,
   updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
@@ -53,6 +51,7 @@ import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
+import Checkbox from "antd/lib/checkbox/Checkbox";
 
 // $FlowIgnore[prop-missing] flow does not know that Dropdown has a Button
 const DropdownButton = Dropdown.Button;
@@ -88,11 +87,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   deleteMesh(id: string) {
     dispatch(deleteMeshAction(id));
   },
-  onChangeVisibility(mesh: MeshMetaData, isVisible: boolean) {
-    dispatch(updateLocalMeshMetaDataAction(mesh.id, { isVisible }));
-  },
-  onChangePecompVisibility(id, isVisible: boolean) {
-    dispatch(updatePrecomMeshVisAction(id, isVisible));
+  onChangeVisibility(id, isVisible: boolean) {
+    dispatch(updateIsosurfaceVisibilityAction(id, isVisible));
   },
   async onStlUpload(info) {
     dispatch(setImportingMeshStateAction(true));
@@ -335,22 +331,24 @@ class MeshesView extends React.Component<
         </div>
       </React.Fragment>
     );
-    const getToggleVisButton = segmentId => (
+    const getToggleVisibilityCheckbox = (segmentId: number, isVisible: boolean) => (
       <Tooltip title="Change visibility">
-        <UserOutlined
-          key="vis-button"
-          onClick={() => {
-            this.props.onChangePecompVisibility(segmentId, false);
+        <Checkbox
+          checked={isVisible}
+          onChange={(event: SyntheticInputEvent<>) => {
+            this.props.onChangeVisibility(segmentId, event.target.checked);
           }}
         />
       </Tooltip>
     );
 
     const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
-      const { segmentId, seedPosition, isLoading, isPrecomputed } = isosurface;
+      const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
       const isCenteredCell = hasSegmentation ? getIdForPos(getPosition(this.props.flycam)) : false;
-      const actionVisibility =
-        isLoading || segmentId === this.state.hoveredListItem ? "visible" : "hidden";
+      const isHoveredItem = segmentId === this.state.hoveredListItem;
+      const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
+
+      const textStyle = isVisible ? {} : { fontStyle: "italic", color: "#989898" };
       return (
         <List.Item
           style={{
@@ -370,25 +368,31 @@ class MeshesView extends React.Component<
               className={classnames("isosurface-list-item", {
                 "is-centered-cell": segmentId === isCenteredCell,
               })}
-              onClick={() => {
-                this.props.changeActiveIsosurfaceId(segmentId, !isPrecomputed);
-                moveTo(seedPosition);
-              }}
             >
+              {isHoveredItem ? (
+                getToggleVisibilityCheckbox(segmentId, isVisible)
+              ) : (
+                <span
+                  className="circle"
+                  style={{
+                    paddingLeft: "10px",
+                    backgroundColor: convertCellIdToCSS(segmentId),
+                  }}
+                />
+              )}{" "}
               <span
-                className="circle"
-                style={{
-                  paddingLeft: "10px",
-                  backgroundColor: convertCellIdToCSS(segmentId),
+                onClick={() => {
+                  this.props.changeActiveIsosurfaceId(segmentId, !isPrecomputed);
+                  moveTo(seedPosition);
                 }}
-              />{" "}
-              Segment {segmentId}
+                style={textStyle}
+              >
+                Segment {segmentId}
+              </span>
             </div>
             <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
               {getDownloadButton(segmentId)}
-              {isPrecomputed
-                ? getToggleVisButton(segmentId)
-                : getRefreshButton(segmentId, isLoading)}
+              {isPrecomputed ? null : getRefreshButton(segmentId, isLoading)}
               {getDeleteButton(segmentId)}
             </div>
           </div>

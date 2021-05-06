@@ -18,6 +18,7 @@ import {
   startRefreshingIsosurfaceAction,
   finishedRefreshingIsosurfaceAction,
   type ImportIsosurfaceFromStlAction,
+  type UpdateIsosurfaceVisibilityAction,
   type RemoveIsosurfaceAction,
   type RefreshIsosurfaceAction,
   type TriggerIsosurfaceDownloadAction,
@@ -465,6 +466,12 @@ function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   yield* put(finishedRefreshingIsosurfaceAction(cellId));
 }
 
+function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
+  const { id, visibility } = action;
+  const SceneController = yield* call(getSceneController);
+  SceneController.setIsoVisibility(id, visibility);
+}
+
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
@@ -475,5 +482,6 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
   yield _takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
+  yield _takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield _takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
 }

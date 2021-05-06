@@ -464,7 +464,7 @@ export type IsosurfaceInformation = {|
   +seedPosition: Vector3,
   +isLoading: boolean,
   +isPrecomputed: boolean,
-  +isVisible?: boolean,
+  +isVisible: boolean,
   +fileName?: string,
 |};
 

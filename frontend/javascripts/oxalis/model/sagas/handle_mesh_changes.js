@@ -5,7 +5,6 @@ import {
   type DeleteMeshAction,
   type UpdateLocalMeshMetaDataAction,
   type UpdateRemoteMeshMetaDataAction,
-  type UpdatePrecomMeshVisAction,
   addMeshMetaDataAction,
   updateLocalMeshMetaDataAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -54,12 +53,6 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
     yield* put(updateLocalMeshMetaDataAction(id, { isLoading: false }));
   }
 }
-function* handleIsoVisibilityChange(action: UpdatePrecomMeshVisAction): Saga<void> {
-  const { id, visibility } = action;
-  const SceneController = yield* call(getSceneController);
-  SceneController.setIsoVisibility(id, visibility);
-}
-
 function* handleRemoteUpdateMesh(action: UpdateRemoteMeshMetaDataAction): Saga<void> {
   const { id } = action;
 
@@ -125,7 +118,6 @@ function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
 
 export default function* handleMeshChanges(): Saga<void> {
   yield _takeEvery("DELETE_MESH", handleDeleteMesh);
-  yield _takeEvery("UPDATE_PREC_MESH_VISIBILITY", handleIsoVisibilityChange);
   yield _takeEvery("UPDATE_LOCAL_MESH_METADATA", handleLocalUpdateMesh);
   yield _takeEvery("UPDATE_REMOTE_MESH_METADATA", handleRemoteUpdateMesh);
   yield _takeEvery("CREATE_MESH_FROM_BUFFER", createMeshFromBuffer);

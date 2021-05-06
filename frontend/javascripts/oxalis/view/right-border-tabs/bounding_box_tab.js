@@ -21,7 +21,7 @@ import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_acti
 import * as Utils from "libs/utils";
 
 import renderIndependently from "libs/render_independently";
-import ExportBoundingBoxModal from "oxalis/view/left-border-tabs/export_bounding_box_modal";
+import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
 
 type BoundingBoxTabProps = {
   tracing: Tracing,

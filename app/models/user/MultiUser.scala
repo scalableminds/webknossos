@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import javax.inject.Inject
 import slick.jdbc.PostgresProfile.api._
 import com.scalableminds.webknossos.schema.Tables._
+import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
@@ -20,6 +21,7 @@ case class MultiUser(
     isSuperUser: Boolean,
     _lastLoggedInIdentity: Option[ObjectId] = None,
     novelUserExperienceInfos: JsObject = Json.obj(),
+    selectedTheme: Theme = Theme.auto,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -33,7 +35,8 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
-      novelUserExperienceInfos <- JsonHelper.parseJsonToFox[JsObject](r.noveluserexperienceinfos)
+      novelUserExperienceInfos <- JsonHelper.parseJsonToFox[JsObject](r.noveluserexperienceinfos).toFox
+      theme <- Theme.fromString(r.selectedtheme).toFox
     } yield {
       MultiUser(
         ObjectId(r._Id),
@@ -42,6 +45,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.issuperuser,
         r._Lastloggedinidentity.map(ObjectId(_)),
         novelUserExperienceInfos,
+        theme,
         r.created.getTime,
         r.isdeleted
       )
@@ -51,9 +55,9 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     val novelUserExperienceInfosString = sanitize(u.novelUserExperienceInfos.toString)
     for {
       _ <- run(sqlu"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher, passwordInfo_password,
-                       isSuperUser, novelUserExperienceInfos, created, isDeleted)
+                       isSuperUser, novelUserExperienceInfos, selectedTheme, created, isDeleted)
                      values(${u._id}, ${u.email}, '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password},
-                      ${u.isSuperUser}, '#$novelUserExperienceInfosString',
+                      ${u.isSuperUser}, '#$novelUserExperienceInfosString', '#${u.selectedTheme}',
                      ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
     } yield ()
@@ -91,6 +95,14 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       novelUserExperienceInfosString = sanitize(novelUserExperienceInfos.toString)
       _ <- run(sqlu"""update webknossos.multiusers set
                             novelUserExperienceInfos = '#$novelUserExperienceInfosString'
+                        where _id = $multiUserId""")
+    } yield ()
+
+  def updateSelectedTheme(multiUserId: ObjectId, selectedTheme: Theme)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(multiUserId)
+      _ <- run(sqlu"""update webknossos.multiusers set
+                            selectedTheme = '#$selectedTheme'
                         where _id = $multiUserId""")
     } yield ()
 

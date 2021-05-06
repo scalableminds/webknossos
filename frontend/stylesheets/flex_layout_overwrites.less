@@ -1,12 +1,24 @@
-.flexlayout__tab {
+.flexlayout__tab,
+.flexlayout__tabset,
+.flexlayout__tabset_tabbar_outer,
+.flexlayout__border {
   background-color: transparent;
-}
-.flexlayout__tabset {
-  background-color: transparent;
+  color: unset;
 }
 .flexlayout__tab_border,
 .flexlayout__tabset-selected {
-  background-color: white !important;
+  background-color: @body-background !important;
+}
+
+.flexlayout__tabset_tabbar_outer_top {
+  border-color: @border-color-base;
+}
+
+.flexlayout__border_left {
+  border-right: none;
+}
+.flexlayout__border_right {
+  border-left: none;
 }
 
 .flexlayout__tabset_tabbar_inner_tab_container_top {
@@ -15,14 +27,14 @@
 
 .flexlayout__splitter:hover,
 .flexlayout__splitter_drag {
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(@text-color, 0.4);
 }
 .flexlayout__splitter {
   z-index: 21;
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(@text-color, 0.1);
   &::before {
     content: "";
-    background-color: rgba(0, 0, 0, 0);
+    background-color: rgba(@text-color, 0);
   }
 }
 
@@ -49,31 +61,39 @@
   z-index: 100;
 }
 
-.flexlayout__tab_button--selected,
-.flexlayout__tab_button:hover {
-  background-color: white;
-  .flexlayout__tab_button_content {
-    background-color: white;
-    color: #1890ff;
-    border-bottom: 1px solid #1890ff;
-  }
-}
-
 .flexlayout__tab_button {
   margin: 0;
   padding: 0px 5px;
   line-height: 1;
   // These properties are copied from antd's styling:
-  color: rgba(0, 0, 0, 0.65);
   font-size: 14px;
   font-weight: 400;
-  font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
+  font-family: @font-family;
   &:hover {
     cursor: move;
   }
-  background-color: white;
+  background-color: @body-background;
+
+  .flexlayout__tab_button_content {
+    background-color: @body-background;
+    color: rgba(@text-color, 0.65);
+    border-bottom: 1px solid transparent;
+  }
+  &.flexlayout__tab_button--selected {
+    background-color: @body-background;
+    .flexlayout__tab_button_content {
+      background-color: @body-background;
+      color: @link-color;
+    }
+  }
+  &:hover {
+    background-color: @body-background;
+    .flexlayout__tab_button_content {
+      background-color: @body-background;
+      color: @link-color;
+      border-bottom: 1px solid @link-color;
+    }
+  }
 }
 
 .flexlayout-dont-overflow {

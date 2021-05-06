@@ -60,9 +60,10 @@
   width: 100%;
 
   .ant-btn {
-    width: 60px;
     line-height: 23px;
     vertical-align: baseline;
+    padding-left: 10px;
+    padding-right: 10px;
     & > .colored-dot {
       display: inline-block;
       width: 10px;
@@ -121,13 +122,13 @@
   color: rgba(0, 0, 0, 0.85);
   padding: 16px;
   padding-top: 10px;
+}
 
-  .setting-label {
-    word-wrap: break-word;
-    white-space: normal;
-    margin-right: 5px;
-    display: inline-block;
-  }
+.setting-label {
+  word-wrap: break-word;
+  white-space: normal;
+  margin-right: 5px;
+  display: inline-block;
 }
 
 .flexlayout__tab {
@@ -139,14 +140,17 @@
 .node-context-menu {
   z-index: 100;
   border-radius: 6px;
-  color: rgba(0, 0, 0, 0.65);
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: @text-color;
+  background: @component-background;
+  box-shadow: @box-shadow-base;
   .node-context-menu-item {
     font-size: 12px;
     height: 30px;
     line-height: 30px;
     padding: 0px 10px;
+  }
+  .ant-menu {
+    border-right: none;
   }
 }
 .node-context-menu-overlay {
@@ -157,31 +161,42 @@
 }
 
 #version-restore-sider {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-left: 1px solid #e8e8e8;
+  box-shadow: @box-shadow-base;
+  border-left: 1px solid @border-color-base;
   padding-top: 15px;
   position: fixed;
   right: 0;
   z-index: 1000;
   top: @navbar-height;
   bottom: 0;
-}
 
-.version-entry {
-  padding: 3px;
-  &:hover:not(.active-version-entry) {
-    background-color: #e6f7ff;
+  .version-section {
+    font-weight: bold;
+    background-color: @layout-body-background;
   }
-}
-.version-entry-indented {
-  padding-left: 40px;
-}
-.active-version-entry {
-  background-color: #bae7ff;
-}
 
-.close-button > i {
-  margin-right: 0px;
+  .version-entry-header {
+    .ant-avatar {
+      color: @text-color;
+      background-color: transparent;
+    }
+  }
+  .version-entry {
+    padding: 3px;
+    &:hover:not(.active-version-entry) {
+      background-color: @blue-1;
+    }
+  }
+  .version-entry-indented {
+    padding-left: 40px;
+  }
+  .active-version-entry {
+    background-color: @blue-2;
+  }
+
+  .close-button > i {
+    margin-right: 0px;
+  }
 }
 
 .info-tab-block {
@@ -189,10 +204,15 @@
     margin-bottom: 0px;
   }
   margin-bottom: 12px;
+
+  .info-tab-icon {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .keyboard-key-icon {
-  border: 2px solid #888;
+  border: 2px solid @border-color-base;
   border-radius: 2px;
   min-width: 26px;
   min-height: 26px;
@@ -203,17 +223,6 @@
   vertical-align: middle;
   line-height: 24px;
   font-weight: bold;
-}
-
-span.keyboard-key-icon:first-child,
-img.keyboard-mouse-icon:first-child {
-  margin-left: 0px;
-}
-
-.keyboard-mouse-icon {
-  max-width: 18px;
-  max-height: 28px;
-  margin: 4px;
 }
 
 .keyboard-key-icon-small {
@@ -229,8 +238,27 @@ img.keyboard-mouse-icon:first-child {
   padding: 0px 2px 0px 2px;
 }
 
-.isosurface-list-item:hover {
-  background-color: #e6f7ff !important;
+.keyboard-mouse-icon {
+  max-width: 18px;
+  max-height: 28px;
+  margin: 4px;
+}
+
+span.keyboard-key-icon:first-child,
+img.keyboard-mouse-icon:first-child {
+  margin-left: 0px;
+}
+
+.shortcut-table {
+  margin-right: 20px;
+  margin-top: 25px;
+  max-width: 500px;
+  font-size: 14px;
+
+  tr {
+    border-bottom: 1px solid @border-color-base;
+    border-top: 1px solid @border-color-base;
+  }
 }
 
 #portal-navbarTracingSlot {
@@ -253,19 +281,42 @@ img.keyboard-mouse-icon:first-child {
   }
 }
 
-// Dark mode for UI within navbar and footer
-@dark-bg: #383d48;
-@dark-fg: #f1f1f1;
-@dark-border: #585868;
-@primary-border: #1890ff;
-@hover-border: #40a9ff;
+.navbar-header,
+.statusbar-footer {
+  // Dark mode for UI within navbar and footer
+  @dark-bg: #383d48;
+  @dark-fg: #f1f1f1;
+  @dark-border: #585868;
+  @primary-bg: #2174c1;
+  @primary-border: #1890ff;
+  @hover-border: #40a9ff;
 
-.ant-layout-header,
-.ant-layout-footer {
-  width: 100%;
+  background-color: @layout-header-background;
+  color: rgba(255, 255, 255, 0.67);
   z-index: 1000;
-  color: rgba(255, 255, 255, 0.67) !important;
-  background: #001529 !important;
+
+  &.statusbar-footer {
+    left: 0px;
+    bottom: 0px;
+    right: 0px;
+    position: absolute;
+    height: @footer-height;
+    overflow: hidden;
+    font-size: 11px;
+    text-align: center;
+    padding: 0px;
+  }
+
+  &.navbar-header {
+    width: 100%;
+  }
+
+  .navbar-separator {
+    height: 100%;
+    margin-left: 2px;
+    margin-right: 10px;
+    border-left: 1px #666879 solid;
+  }
 
   .ant-select-arrow,
   .ant-badge-dot {
@@ -311,7 +362,7 @@ img.keyboard-mouse-icon:first-child {
   }
 
   .ant-btn-primary {
-    background-color: #2174c1 !important;
+    background-color: @primary-bg !important;
   }
 
   // Radio button
@@ -344,6 +395,10 @@ img.keyboard-mouse-icon:first-child {
     background-color: @dark-border;
   }
 
+  .ant-radio-button-wrapper-checked:not([class*=" ant-radio-button-wrapper-disabled"]).ant-radio-button-wrapper:first-child {
+    border-right-color: @primary-border;
+  }
+
   // Primary button in button group
   .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
     border-right-color: @dark-border;
@@ -351,31 +406,57 @@ img.keyboard-mouse-icon:first-child {
   }
 
   .ant-btn-danger {
-    background: #ea7d09;
+    background: @error-color;
 
     &:hover {
-      background: #ea7d09;
+      background: @error-color;
       color: white;
     }
   }
+
+  // Settings icon
+  .highlight-togglable-button.ant-btn {
+    background-color: @primary-bg !important;
+    &:not(:hover) {
+      border-color: @primary-border !important;
+    }
+  }
+
+  .left-border-button.footer-button,
+  .right-border-button.footer-button {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    height: auto;
+    color: @dark-fg;
+    background-color: inherit;
+  }
+  .left-border-button.footer-button {
+    left: 8px;
+  }
+  .right-border-button.footer-button {
+    right: 8px;
+  }
 }
 
-.footer {
+.left-border-button,
+.right-border-button {
+  border: none;
+  padding: 0px 5px 0px 0px;
+  color: @text-color-secondary;
+  i {
+    font-size: 15px !important;
+    margin: 0;
+  }
+}
+
+.flex-layout-container {
   left: 0px;
-  bottom: 0px;
+  top: 0px;
   right: 0px;
+  height: calc(100% - @footer-height);
   position: absolute;
-  height: @footer-height;
   overflow: hidden;
-  font-size: 11px;
-  text-align: center;
-  padding: 0px;
-}
-
-.center-item-using-flex {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
 }
 
 .no-hover-highlighting {
@@ -388,40 +469,42 @@ img.keyboard-mouse-icon:first-child {
   }
 }
 
-.left-border-button,
-.right-border-button {
-  border: none;
-  padding: 0px 5px 0px 0px;
-  color: rgba(0, 0, 0, 0.65);
-  i {
-    font-size: 15px !important;
-    margin: 0;
-  }
+.center-item-using-flex {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 
-.left-border-button.footer-button,
-.right-border-button.footer-button {
-  position: absolute;
-  top: 0px;
-  bottom: 0px;
-  height: auto;
-  color: @dark-fg;
-  background-color: inherit;
-}
-.left-border-button.footer-button {
-  left: 8px;
-}
-.right-border-button.footer-button {
-  right: 8px;
+// Provide different image variants as classes
+.icon-sidebar-toggle {
+  width: 17px;
+  height: 13px;
 }
 
-.flex-layout-container {
-  left: 0px;
-  top: 0px;
-  right: 0px;
-  height: calc(100% - @footer-height);
-  position: absolute;
-  overflow: hidden;
+.icon-sidebar-show-left-bright {
+  background-image: url(/assets/images/icon-sidebar-show-left-bright.svg);
+}
+.icon-sidebar-show-left-dark {
+  background-image: url(/assets/images/icon-sidebar-show-left-dark.svg);
+}
+.icon-sidebar-show-right-bright {
+  background-image: url(/assets/images/icon-sidebar-show-right-bright.svg);
+}
+.icon-sidebar-show-right-dark {
+  background-image: url(/assets/images/icon-sidebar-show-right-dark.svg);
+}
+
+.icon-sidebar-hide-left-bright {
+  background-image: url(/assets/images/icon-sidebar-hide-left-bright.svg);
+}
+.icon-sidebar-hide-left-dark {
+  background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);
+}
+.icon-sidebar-hide-right-bright {
+  background-image: url(/assets/images/icon-sidebar-hide-right-bright.svg);
+}
+.icon-sidebar-hide-right-dark {
+  background-image: url(/assets/images/icon-sidebar-hide-right-dark.svg);
 }
 
 .tight-button-group {

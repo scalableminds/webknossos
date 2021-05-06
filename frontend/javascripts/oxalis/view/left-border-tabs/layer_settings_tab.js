@@ -16,6 +16,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
+import classnames from "classnames";
 
 import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
@@ -275,7 +276,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             top: 4,
             right: 38,
             cursor: "pointer",
-            color: isInEditMode ? "rgb(24, 144, 255)" : null,
+            color: isInEditMode ? "var(--ant-primary)" : null,
           }}
         />
       </Tooltip>
@@ -475,15 +476,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             }}
           >
             <i
-              className={`fas fa-adjust ${
-                layerConfiguration.isInverted ? "flip-horizontally" : ""
-              }`}
+              className={classnames("fas", "fa-adjust", {
+                "flip-horizontally": layerConfiguration.isInverted,
+              })}
               style={{
                 margin: 0,
                 transition: "transform 0.5s ease 0s",
                 color: layerConfiguration.isInverted
-                  ? "rgba(24, 144, 255, 1.0)"
-                  : "rgba(0, 0, 0, 0.65)",
+                  ? "var(--ant-primary)"
+                  : "var(--ant-text-secondary)",
               }}
             />
           </div>

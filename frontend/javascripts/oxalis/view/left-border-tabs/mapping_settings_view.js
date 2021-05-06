@@ -63,7 +63,7 @@ type State = {
 
 const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 export const convertCellIdToCSS = (id: number, customColors: ?Array<number>, alpha?: number) =>
-  convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
+  id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 

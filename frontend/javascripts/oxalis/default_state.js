@@ -1,9 +1,15 @@
 // @flow
 
 import type { OxalisState } from "oxalis/store";
-import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
+import Constants, {
+  ControlModeEnum,
+  OrthoViews,
+  OverwriteModeEnum,
+  TDViewDisplayModeEnum,
+} from "oxalis/constants";
+import { document } from "libs/window";
 
-export const defaultViewportRect = {
+const defaultViewportRect = {
   top: 0,
   left: 0,
   width: Constants.VIEWPORT_WIDTH,
@@ -35,6 +41,8 @@ const initialAnnotationInfo = {
   annotationType: "View",
   meshes: [],
 };
+
+const primaryStylesheetElement: ?HTMLLinkElement = document.getElementById("primary-stylesheet");
 
 const defaultState: OxalisState = {
   datasetConfiguration: {
@@ -68,7 +76,8 @@ const defaultState: OxalisState = {
     sortCommentsAsc: true,
     sortTreesByName: false,
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
-    tdViewDisplayPlanes: true,
+    tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
+    tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
   },
@@ -203,6 +212,10 @@ const defaultState: OxalisState = {
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
     borderOpenStatus: { right: false, left: false },
+    theme:
+      primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
+        ? "dark"
+        : "light",
   },
   isosurfaces: {},
 };

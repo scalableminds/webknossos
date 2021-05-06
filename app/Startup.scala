@@ -1,7 +1,6 @@
 import java.io.{ByteArrayOutputStream, File}
 
 import akka.actor.{ActorSystem, Props}
-import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import io.apigee.trireme.core.{NodeEnvironment, Sandbox}
@@ -10,6 +9,7 @@ import models.annotation.AnnotationDAO
 import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
+import oxalis.mail.{Mailer, MailerConfig}
 import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
@@ -33,6 +33,9 @@ class Startup @Inject()(actorSystem: ActorSystem,
     extends LazyLogging {
 
   logger.info("Executing Startup")
+
+  conf.warnIfOldKeysPresent()
+
   startActors(actorSystem)
 
   private val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
@@ -91,7 +94,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
       logger.info("Schema is up to date.")
     } else {
       val nodeOut = new String(nodeOutput.toByteArray, "UTF-8")
-      val errorMessage = s"Database schema does not fit to schema.sql! \n ${nodeOut}"
+      val errorMessage = s"Database schema does not fit to schema.sql! \n $nodeOut"
       logger.error(errorMessage)
       slackNotificationService.warn("SQL schema mismatch", errorMessage)
     }
@@ -101,7 +104,6 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   private def startActors(actorSystem: ActorSystem) {
     val mailerConf = MailerConfig(
-      conf.Mail.enabled,
       conf.Mail.logToStdout,
       conf.Mail.Smtp.host,
       conf.Mail.Smtp.port,

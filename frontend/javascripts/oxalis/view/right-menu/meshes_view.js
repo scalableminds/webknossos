@@ -109,9 +109,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     if (cellId == null) return;
     dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
   },
-  addPrecomputedMesh(cellId, seedPosition, fileName) {
+  addPrecomputedMesh(cellId, seedPosition) {
     if (cellId == null) return;
-    dispatch(addIsosurfaceAction(cellId, seedPosition, fileName));
+    dispatch(addIsosurfaceAction(cellId, seedPosition, true));
   },
 });
 

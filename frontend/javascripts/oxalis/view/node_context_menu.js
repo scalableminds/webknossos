@@ -1,8 +1,9 @@
 // @flow
-import * as React from "react";
+import React, { useState } from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import type { Vector3, OrthoView } from "oxalis/constants";
+import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -15,14 +16,26 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { addIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import Model from "oxalis/model";
+import {
+  getMeshfileChunksForSegment,
+  getMeshfileChunkData,
+  getMeshfilesForDatasetLayer,
+} from "admin/admin_rest_api";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { setWaypoint } from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import Clipboard from "clipboard-js";
 import messages from "messages";
+import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { roundTo } from "libs/utils";
+import parseStlBuffer from "libs/parse_stl_buffer";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import SubMenu from "antd/lib/menu/SubMenu";
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
@@ -41,9 +54,16 @@ type DispatchProps = {|
   setActiveNode: number => void,
   hideTree: number => void,
   createTree: () => void,
+  createMesh: (number, Vector3) => void,
 |};
 
-type StateProps = {| skeletonTracing: ?SkeletonTracing, datasetScale: Vector3 |};
+type StateProps = {|
+  skeletonTracing: ?SkeletonTracing,
+  datasetScale: Vector3,
+  segmentationLayer: ?APIDataLayer,
+  dataset: APIDataset,
+  zoomStep: number,
+|};
 /* eslint-enable react/no-unused-prop-types */
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
@@ -181,9 +201,62 @@ function NoNodeContextMenuOptions({
   globalPosition,
   viewport,
   createTree,
+  segmentationLayer,
+  dataset,
+  createMesh,
+  zoomStep,
 }: NoNodeContextMenuProps) {
+  const [availableMeshFiles, setAvailableMeshFiles] = useState([]);
+
+  const updateAvailableMeshFiles = async () => {
+    if (segmentationLayer) {
+      const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
+      setAvailableMeshFiles(
+        await getMeshfilesForDatasetLayer(dataset.dataStore.url, dataset, layerName),
+      );
+    }
+  };
+
+  const loadMeshFromFile = async meshFileItem => {
+    const layer = Model.getSegmentationLayer();
+    if (!layer) {
+      throw new Error("No segmentation layer found");
+    }
+    const segmentationCube = layer.cube;
+    const fileName = meshFileItem.key;
+    const id = segmentationCube.getDataValue(globalPosition, null, zoomStep);
+    if (segmentationLayer == null) return;
+    const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
+    const availableChunks = await getMeshfileChunksForSegment(
+      dataset.dataStore.url,
+      dataset,
+      layerName,
+      fileName,
+      id,
+    );
+    for (const chunkPos of availableChunks) {
+      // eslint-disable-next-line no-await-in-loop
+      const stlData = await getMeshfileChunkData(
+        dataset.dataStore.url,
+        dataset,
+        layerName,
+        fileName,
+        id,
+        chunkPos,
+      );
+      const geometry = parseStlBuffer(stlData);
+      getSceneController().addIsosurfaceFromGeometry(geometry, id);
+    }
+    createMesh(id, globalPosition);
+  };
+
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+    <Menu
+      onClick={hideNodeContextMenu}
+      style={{ borderRadius: 6 }}
+      mode="vertical"
+      onOpenChange={updateAvailableMeshFiles}
+    >
       <Menu.Item
         className="node-context-menu-item"
         key="create-node"
@@ -201,6 +274,24 @@ function NoNodeContextMenuOptions({
       >
         Create new Tree here
       </Menu.Item>
+      <SubMenu
+        className="node-context-menu-sub"
+        key="load-mesh-from-file"
+        onClick={loadMeshFromFile}
+        title="Load Mesh from File"
+      >
+        {availableMeshFiles.length > 0 ? (
+          availableMeshFiles.map(meshFile => (
+            <Menu.Item className="node-context-menu-item" key={meshFile}>
+              {meshFile}
+            </Menu.Item>
+          ))
+        ) : (
+          <Menu.Item className="node-context-menu-item" key="no-files-available">
+            No Meshfiles Available
+          </Menu.Item>
+        )}
+      </SubMenu>
     </Menu>
   );
 }
@@ -302,12 +393,19 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   createTree() {
     dispatch(createTreeAction());
   },
+  createMesh(cellId, seedPosition) {
+    if (cellId == null) return;
+    dispatch(addIsosurfaceAction(cellId, seedPosition, true));
+  },
 });
 
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     skeletonTracing: state.tracing.skeleton,
     datasetScale: state.dataset.dataSource.scale,
+    dataset: state.dataset,
+    segmentationLayer: getSegmentationLayer(state.dataset),
+    zoomStep: getRequestLogZoomStep(state),
   };
 }
 

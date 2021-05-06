@@ -198,6 +198,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           type="text"
           icon={<EditOutlined />}
           href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+          className="transparent-background-on-hover"
           target="_blank"
         />
       </Tooltip>

@@ -9,6 +9,7 @@ import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import features from "features";
 import * as Utils from "libs/utils";
+import { useSelector } from "react-redux";
 
 type Props = {
   destroy: () => void,
@@ -25,6 +26,9 @@ type LayerInfos = {
   annotationType: ?AnnotationType,
   tracingVersion: ?number,
   hasMag1: boolean,
+  mappingName: ?string,
+  mappingType: ?string,
+  hideUnmappedIds: ?boolean,
 };
 
 const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Props) => {
@@ -32,6 +36,15 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
   const volumeTracing = tracing != null ? tracing.volume : null;
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
+  const isMappingEnabled = useSelector(
+    state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
+  );
+  const hideUnmappedIds = useSelector(
+    state => state.temporaryConfiguration.activeMapping.hideUnmappedIds,
+  );
+  const mappingName = useSelector(state => state.temporaryConfiguration.activeMapping.mappingName);
+  const mappingType = useSelector(state => state.temporaryConfiguration.activeMapping.mappingType);
+  const existsActiveMapping = mappingName && isMappingEnabled;
 
   const handleClose = () => {
     destroy();
@@ -53,6 +66,9 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
       layerInfos.tracingId,
       layerInfos.annotationId,
       layerInfos.annotationType,
+      layerInfos.mappingName,
+      layerInfos.mappingType,
+      layerInfos.hideUnmappedIds,
     );
   };
 
@@ -68,6 +84,9 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
         annotationType: null,
         tracingVersion: null,
         hasMag1: hasMag1(layer),
+        hideUnmappedIds: existsActiveMapping ? hideUnmappedIds : null,
+        mappingName: existsActiveMapping ? mappingName : null,
+        mappingType: existsActiveMapping ? mappingType : null,
       };
     if (layer.fallbackLayerInfo != null)
       return {
@@ -78,6 +97,9 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
         annotationType,
         tracingVersion: volumeTracing.version,
         hasMag1: hasMag1(layer),
+        hideUnmappedIds: existsActiveMapping ? hideUnmappedIds : null,
+        mappingName: existsActiveMapping ? mappingName : null,
+        mappingType: existsActiveMapping ? mappingType : null,
       };
     return {
       displayName: "Volume annotation",
@@ -87,6 +109,9 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
       annotationType,
       tracingVersion: volumeTracing.version,
       hasMag1: hasMag1(layer),
+      hideUnmappedIds: null,
+      mappingName: null,
+      mappingType: null,
     };
   });
 
@@ -143,6 +168,10 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
     ) : null;
 
   const bboxText = Utils.computeArrayFromBoundingBox(boundingBox).join(", ");
+  const activeMappingMessage =
+    mappingName && isMappingEnabled
+      ? `The active mapping ${mappingName} will be applied to the exported data.`
+      : null;
 
   return (
     <Modal
@@ -154,7 +183,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
     >
       <p>
         Data from the selected bounding box at {bboxText} will be exported as a tiff stack zip
-        archive.
+        archive. {activeMappingMessage}
       </p>
 
       {volumeExceededMessage}

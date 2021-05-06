@@ -48,7 +48,6 @@ import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxa
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
-import renderIndependently from "libs/render_independently";
 import ExportBoundingBoxModal from "oxalis/view/settings/export_bounding_box_modal";
 
 const { Panel } = Collapse;
@@ -75,8 +74,13 @@ type UserSettingsViewProps = {
   dataset: APIDataset,
 };
 
-class UserSettingsView extends PureComponent<UserSettingsViewProps> {
+type State = {
+  exportBoundingBoxModalId: ?number,
+};
+
+class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
+  state = { exportBoundingBoxModalId: null };
 
   componentWillMount() {
     // cache onChange handler
@@ -141,18 +145,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   };
 
   handleExportUserBoundingBox = (id: number) => {
-    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
-    const selectedBoundingBox = userBoundingBoxes.find(boundingBox => boundingBox.id === id);
-    if (selectedBoundingBox) {
-      renderIndependently(destroy => (
-        <ExportBoundingBoxModal
-          dataset={this.props.dataset}
-          tracing={this.props.tracing}
-          boundingBox={selectedBoundingBox.boundingBox}
-          destroy={destroy}
-        />
-      ));
-    }
+    this.setState({ exportBoundingBoxModalId: id });
   };
 
   getViewportOptions = () => {
@@ -404,6 +397,16 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
 
   render() {
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+    const exportedUserBoundingBox =
+      this.state.exportBoundingBoxModalId !== null &&
+      this.state.exportBoundingBoxModalId !== undefined
+        ? userBoundingBoxes.find(
+            boundingBox => boundingBox.id === this.state.exportBoundingBoxModalId,
+          )
+        : null;
+    const exportedBoundingBox = exportedUserBoundingBox
+      ? exportedUserBoundingBox.boundingBox
+      : null;
 
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
@@ -462,6 +465,16 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onExport={_.partial(this.handleExportUserBoundingBox, bb.id)}
             />
           ))}
+          {exportedBoundingBox !== null ? (
+            <ExportBoundingBoxModal
+              dataset={this.props.dataset}
+              tracing={this.props.tracing}
+              boundingBox={exportedBoundingBox}
+              destroy={() => {
+                this.setState({ exportBoundingBoxModalId: null });
+              }}
+            />
+          ) : null}
           <div style={{ display: "inline-block", width: "100%" }}>
             <Tooltip title="Click to add another bounding box.">
               <PlusOutlined

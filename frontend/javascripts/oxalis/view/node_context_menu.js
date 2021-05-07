@@ -22,6 +22,7 @@ import Clipboard from "clipboard-js";
 import messages from "messages";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import Model from "oxalis/model";
 import { roundTo } from "libs/utils";
 
 /* eslint-disable react/no-unused-prop-types */
@@ -87,6 +88,26 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string) {
     ),
     icon: <i className="fas fa-ruler" />,
   });
+}
+
+function maybeHoveredCellMenuItem(globalPosition: Vector3) {
+  const hoveredCellInfo = Model.getHoveredCellId(globalPosition);
+  if (!hoveredCellInfo) {
+    return null;
+  }
+  const cellIdAsString = hoveredCellInfo.isMapped
+    ? `${hoveredCellInfo.id} (mapped)`
+    : hoveredCellInfo.id;
+
+  return (
+    <div className="node-context-menu-item">
+      <i className="fas fa-ruler" /> Hovered Cell: {cellIdAsString}
+      {copyIconWithTooltip(
+        hoveredCellInfo.id,
+        `Copy ${hoveredCellInfo.isMapped ? "mapped" : ""} cell id`,
+      )}
+    </div>
+  );
 }
 
 function NodeContextMenuOptions({
@@ -278,6 +299,7 @@ function NodeContextMenu(props: Props) {
             {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
           </div>
         ) : null}
+        {maybeHoveredCellMenuItem(globalPosition)}
       </div>
     </React.Fragment>
   );

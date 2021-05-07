@@ -19,9 +19,7 @@ import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
-import api from "oxalis/api/internal_api";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
@@ -60,14 +58,7 @@ const lineColor = "rgba(255, 255, 255, 0.67)";
 
 const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
 
-const hasSegmentation = () => Model.getSegmentationLayer() != null;
-
 class Statusbar extends React.PureComponent<Props, State> {
-  getSegmentationCube(): Cube {
-    const segmentationLayer = Model.getSegmentationLayer();
-    return segmentationLayer.cube;
-  }
-
   getPosString(pos: Vector3) {
     return V3.floor(pos).join(",");
   }
@@ -208,21 +199,12 @@ class Statusbar extends React.PureComponent<Props, State> {
   }
 
   getCellInfo(globalMousePosition: ?Vector3) {
-    if (!hasSegmentation()) return null;
-    const segmentationLayerName = Model.getSegmentationLayer().name;
-    const cube = this.getSegmentationCube();
-    const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      globalMousePosition,
-    );
-    const getIdForPos = (pos, usableZoomStep) => {
-      const id = cube.getDataValue(pos, null, usableZoomStep);
-      return cube.mapId(id);
-    };
     const getSegmentIdString = () => {
-      if (!globalMousePosition) return "-";
-      const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
-      return cube.isMappingEnabled() ? `${id} (mapped)` : id;
+      const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
+      if (!hoveredCellInfo) {
+        return "-";
+      }
+      return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : hoveredCellInfo.id;
     };
 
     return (

@@ -123,7 +123,7 @@ class JobService @Inject()(wkConf: WkConf,
         celeryInfoJson <- flowerRpc("/api/tasks?offset=0").getWithJsonResponse[JsObject]
         celeryInfoMap <- celeryInfoJson
           .validate[Map[String, JsObject]] ?~> "Could not validate celery response as json map"
-        _ = trackAllNewlyFailed(celeryInfoMap)
+        _ = trackAllNewlyDone(celeryInfoMap)
         _ <- Fox.serialCombined(celeryInfoMap.keys.toList)(jobId =>
           jobDAO.updateCeleryInfoByCeleryId(jobId, celeryInfoMap(jobId)))
       } yield ()
@@ -134,37 +134,40 @@ class JobService @Inject()(wkConf: WkConf,
       }
     }
 
-  private def trackAllNewlyFailed(celeryInfoMap: Map[String, JsObject]): Fox[Unit] =
+  private def trackAllNewlyDone(celeryInfoMap: Map[String, JsObject]): Fox[Unit] =
     for {
       oldJobs <- jobDAO.getAllByCeleryIds(celeryInfoMap.keys.toList)
-      nowFailedJobInfos = filterFailed(celeryInfoMap: Map[String, JsObject])
-      newlyFailedJobs = getNewlyFailedJobs(oldJobs, nowFailedJobInfos)
+      nowFailedJobInfos = filterByStatus(celeryInfoMap: Map[String, JsObject], "FAILURE")
+      newlyFailedJobs = getNewlyDoneJobs(oldJobs, nowFailedJobInfos)
       _ = newlyFailedJobs.map(trackNewlyFailed)
+      nowSuccessfulJobInfos = filterByStatus(celeryInfoMap: Map[String, JsObject], "SUCCESS")
+      newlySuccessfulJobs = getNewlyDoneJobs(oldJobs, nowSuccessfulJobInfos)
+      _ = newlySuccessfulJobs.map(trackNewlySuccessful)
     } yield ()
 
-  private def filterFailed(celeryInfoMap: Map[String, JsObject]): Map[String, JsObject] =
+  private def filterByStatus(celeryInfoMap: Map[String, JsObject], statusToFilter: String): Map[String, JsObject] =
     celeryInfoMap.filter(tuple => {
       val statusOpt = (tuple._2 \ "state").validate[String]
       statusOpt match {
         case JsSuccess(status, _) =>
-          if (status == "FAILURE") true
+          if (status == statusToFilter) true
           else false
         case _ => false
       }
     })
 
-  private def getNewlyFailedJobs(oldJobs: List[Job], nowFailedJobInfos: Map[String, JsObject]): List[Job] = {
-    val failableStates = List("STARTED", "PENDING", "RETRY")
-    val previouslyFailableJobs = oldJobs.filter(job => {
+  private def getNewlyDoneJobs(oldJobs: List[Job], nowDoneJobInfos: Map[String, JsObject]): List[Job] = {
+    val incompleteStates = List("STARTED", "PENDING", "RETRY")
+    val previouslyIncompleteJobs = oldJobs.filter(job => {
       val oldSatusOpt = (job.celeryInfo \ "state").validate[String]
       oldSatusOpt match {
-        case JsSuccess(status, _) => failableStates.contains(status)
+        case JsSuccess(status, _) => incompleteStates.contains(status)
         case _                    => true
       }
     })
-    val newlyFailedJobs = previouslyFailableJobs.filter(job => nowFailedJobInfos.contains(job.celeryJobId))
-    newlyFailedJobs.map { job =>
-      job.copy(celeryInfo = nowFailedJobInfos(job.celeryJobId))
+    val newlyDoneJobs = previouslyIncompleteJobs.filter(job => nowDoneJobInfos.contains(job.celeryJobId))
+    newlyDoneJobs.map { job =>
+      job.copy(celeryInfo = nowDoneJobInfos(job.celeryJobId))
     }
   }
 
@@ -178,6 +181,12 @@ class JobService @Inject()(wkConf: WkConf,
     } yield ()
     ()
   }
+
+  private def trackNewlySuccessful(job: Job): Unit =
+    slackNotificationService.info(
+      "Successful job",
+      s"Job ${job._id} succeeded. Command ${job.command}, celery job id: ${job.celeryJobId}."
+    )
 
   def publicWrites(job: Job): Fox[JsObject] =
     Fox.successful(
@@ -245,10 +254,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-            organizationName)
+                                                                                       organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
           command = "convert_to_wkw"
-          commandArgs = Json.obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale)
+          commandArgs = Json.obj("organization_name" -> organizationName,
+                                 "dataset_name" -> dataSetName,
+                                 "scale" -> scale)
 
           job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
@@ -268,7 +279,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-            organizationName)
+                                                                                       organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
           command = "export_tiff"

@@ -1,5 +1,5 @@
 // @flow
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import type { Vector3, OrthoView } from "oxalis/constants";
@@ -207,23 +207,27 @@ function NoNodeContextMenuOptions({
   zoomStep,
 }: NoNodeContextMenuProps) {
   const [availableMeshFiles, setAvailableMeshFiles] = useState([]);
+  const [currentMeshFile, setCurrentMeshFile] = useState("");
 
-  const updateAvailableMeshFiles = async () => {
-    if (segmentationLayer) {
-      const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
-      setAvailableMeshFiles(
-        await getMeshfilesForDatasetLayer(dataset.dataStore.url, dataset, layerName),
-      );
-    }
-  };
+  useEffect(() => {
+    (async () => {
+      if (segmentationLayer) {
+        const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
+        const files = await getMeshfilesForDatasetLayer(dataset.dataStore.url, dataset, layerName);
+        setAvailableMeshFiles(files);
+        setCurrentMeshFile(files[0]);
+      }
+    })();
+  }, []);
 
-  const loadMeshFromFile = async meshFileItem => {
+  const loadMeshFromFile = async meshFile => {
     const layer = Model.getSegmentationLayer();
     if (!layer) {
       throw new Error("No segmentation layer found");
     }
     const segmentationCube = layer.cube;
-    const fileName = meshFileItem.key;
+    const fileName = meshFile;
+
     const id = segmentationCube.getDataValue(globalPosition, null, zoomStep);
     if (segmentationLayer == null) return;
     const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
@@ -249,14 +253,39 @@ function NoNodeContextMenuOptions({
     }
     createMesh(id, globalPosition);
   };
+  const getLoadMeshMenuItem = () => {
+    const hasMeshFiles = availableMeshFiles.length > 0;
+    if (availableMeshFiles.length <= 1) {
+      return (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="load-mesh-file"
+          onClick={() => loadMeshFromFile(currentMeshFile)}
+          disabled={!hasMeshFiles}
+        >
+          Load Mesh from File
+        </Menu.Item>
+      );
+    } else {
+      return (
+        <SubMenu
+          className="node-context-menu-sub"
+          key="load-mesh-from-file"
+          onClick={item => loadMeshFromFile(item.key)}
+          title="Load Mesh from File"
+        >
+          {availableMeshFiles.map(meshFile => (
+            <Menu.Item className="node-context-menu-item" key={meshFile}>
+              {meshFile}
+            </Menu.Item>
+          ))}
+        </SubMenu>
+      );
+    }
+  };
 
   return (
-    <Menu
-      onClick={hideNodeContextMenu}
-      style={{ borderRadius: 6 }}
-      mode="vertical"
-      onOpenChange={updateAvailableMeshFiles}
-    >
+    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       <Menu.Item
         className="node-context-menu-item"
         key="create-node"
@@ -274,24 +303,7 @@ function NoNodeContextMenuOptions({
       >
         Create new Tree here
       </Menu.Item>
-      <SubMenu
-        className="node-context-menu-sub"
-        key="load-mesh-from-file"
-        onClick={loadMeshFromFile}
-        title="Load Mesh from File"
-      >
-        {availableMeshFiles.length > 0 ? (
-          availableMeshFiles.map(meshFile => (
-            <Menu.Item className="node-context-menu-item" key={meshFile}>
-              {meshFile}
-            </Menu.Item>
-          ))
-        ) : (
-          <Menu.Item className="node-context-menu-item" key="no-files-available">
-            No Meshfiles Available
-          </Menu.Item>
-        )}
-      </SubMenu>
+      {getLoadMeshMenuItem()}
     </Menu>
   );
 }

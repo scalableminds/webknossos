@@ -129,6 +129,21 @@ class MeshesView extends React.Component<
     currentMeshFile: "",
   };
 
+  componentDidMount() {
+    this.getMeshFileList();
+  }
+
+  async getMeshFileList(): Promise<void> {
+    const layerName =
+      this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name;
+    const availableMeshFiles = await getMeshfilesForDatasetLayer(
+      this.props.dataset.dataStore.url,
+      this.props.dataset,
+      layerName,
+    );
+    this.setState({ meshFiles: availableMeshFiles, currentMeshFile: availableMeshFiles[0] });
+  }
+
   render() {
     const hasSegmentation = Model.getSegmentationLayer() != null;
     const getSegmentationCube = () => {
@@ -227,17 +242,6 @@ class MeshesView extends React.Component<
       </Button>
     );
 
-    const updateMeshFileList = async () => {
-      const layerName =
-        this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name;
-      const availableMeshFiles = await getMeshfilesForDatasetLayer(
-        this.props.dataset.dataStore.url,
-        this.props.dataset,
-        layerName,
-      );
-      this.setState({ meshFiles: availableMeshFiles });
-    };
-
     const loadMeshFromFile = async fileName => {
       if (fileName === "") {
         Toast.error("Please select a mesh file.");
@@ -267,7 +271,7 @@ class MeshesView extends React.Component<
         const geometry = parseStlBuffer(stlData);
         getSceneController().addIsosurfaceFromGeometry(geometry, id);
       }
-      this.props.addPrecomputedMesh(id, pos, fileName);
+      this.props.addPrecomputedMesh(id, pos);
     };
 
     const handleMeshFileSelected = async mesh => {
@@ -292,7 +296,7 @@ class MeshesView extends React.Component<
     const getLoadPrecomputedMeshButton = () => (
       <DropdownButton
         size="small"
-        onVisibleChange={updateMeshFileList}
+        /* onVisibleChange={this.updateMeshFileList} */
         onClick={() => loadMeshFromFile(this.state.currentMeshFile)}
         overlay={getMeshFilesDropdown()}
         icon={<DownOutlined />}
@@ -314,7 +318,7 @@ class MeshesView extends React.Component<
           }),
         ]}
       >
-        Load from Meshfile
+        Load precomputed meshfile
       </DropdownButton>
     );
 

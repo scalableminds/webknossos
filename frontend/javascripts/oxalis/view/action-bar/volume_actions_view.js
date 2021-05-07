@@ -454,7 +454,11 @@ export default function VolumeActionsView() {
             style={{ cursor: "pointer" }}
           >
             <ButtonComponent style={{ width: 36, padding: 0 }} value="active">
-              <img src="/assets/images/brush-size-icon.svg" alt="Merger Mode" />
+              <img
+                src="/assets/images/brush-size-icon.svg"
+                alt="Merger Mode"
+                style={{ width: 20, height: 20 }}
+              />
             </ButtonComponent>
           </Popover>
         </Tooltip>

@@ -18,8 +18,8 @@ export default function SkeletonActionsView() {
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
   const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
   const imgStyle = {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     lineHeight: 10,
     marginTop: -2,
   };

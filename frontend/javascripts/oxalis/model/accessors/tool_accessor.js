@@ -8,6 +8,7 @@ import {
   getSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
+import memoizeOne from "memoize-one";
 
 const zoomInToUseToolMessage =
   "Your zoom is too low to use this tool. Please zoom in further to use it.";
@@ -52,69 +53,43 @@ export function isTraceTool(activeTool: AnnotationTool): boolean {
   return activeTool === AnnotationToolEnum.TRACE || activeTool === AnnotationToolEnum.ERASE_TRACE;
 }
 
-export function getDisabledInfoForTools(
-  state: OxalisState,
-): { [key: AnnotationTool]: { isDisabled: boolean, explanation: string } } {
-  const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
-  const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentation(state);
-  const labeledResolution =
-    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
-  const isSegmentationVisibleForMag = labeledResolution != null;
+const disabledSkeletonExplanation =
+  "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
 
-  const hasVolume = state.tracing.volume != null;
-  const hasSkeleton = state.tracing.skeleton != null;
-  const isSegmentationActivated = (() => {
-    const segmentationLayer = getSegmentationLayer(state.dataset);
-    if (segmentationLayer == null) {
-      return false;
-    }
-    return isLayerVisible(
-      state.dataset,
-      segmentationLayer.name,
-      state.datasetConfiguration,
-      state.temporaryConfiguration.viewMode,
-    );
-  })();
+function _getDisabledInfoWhenVolumeIsDisabled(
+  genericDisabledExplanation: string,
+  hasSkeleton: boolean,
+) {
+  const disabledInfo = {
+    isDisabled: true,
+    explanation: genericDisabledExplanation,
+  };
+  return {
+    [AnnotationToolEnum.MOVE]: {
+      isDisabled: false,
+      explanation: "",
+    },
+    [AnnotationToolEnum.SKELETON]: {
+      isDisabled: !hasSkeleton,
+      explanation: disabledSkeletonExplanation,
+    },
+    [AnnotationToolEnum.BRUSH]: disabledInfo,
+    [AnnotationToolEnum.ERASE_BRUSH]: disabledInfo,
+    [AnnotationToolEnum.TRACE]: disabledInfo,
+    [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
+    [AnnotationToolEnum.FILL_CELL]: disabledInfo,
+    [AnnotationToolEnum.PICK_CELL]: disabledInfo,
+  };
+}
+const getDisabledInfoWhenVolumeIsDisabled = memoizeOne(_getDisabledInfoWhenVolumeIsDisabled);
 
-  const genericDisabledExplanation = getExplanationForDisabledVolume(
-    isSegmentationActivated,
-    isInMergerMode,
-    isSegmentationVisibleForMag,
-    isZoomInvalidForTracing,
-  );
-
-  const disabledSkeletonExplanation =
-    "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
-
-  if (!hasVolume || !isSegmentationActivated || !isSegmentationVisibleForMag || isInMergerMode) {
-    // All segmentation-related tools are disabled.
-    const disabledInfo = {
-      isDisabled: true,
-      explanation: genericDisabledExplanation,
-    };
-    return {
-      [AnnotationToolEnum.MOVE]: {
-        isDisabled: false,
-        explanation: "",
-      },
-      [AnnotationToolEnum.SKELETON]: {
-        isDisabled: !hasSkeleton,
-        explanation: disabledSkeletonExplanation,
-      },
-      [AnnotationToolEnum.BRUSH]: disabledInfo,
-      [AnnotationToolEnum.ERASE_BRUSH]: disabledInfo,
-      [AnnotationToolEnum.TRACE]: disabledInfo,
-      [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
-      [AnnotationToolEnum.FILL_CELL]: disabledInfo,
-      [AnnotationToolEnum.PICK_CELL]: disabledInfo,
-    };
-  }
-
-  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
-  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
-  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
-
+function _getDisabledInfoFromArgs(
+  hasSkeleton: boolean,
+  isZoomStepTooHighForBrushing: boolean,
+  isZoomStepTooHighForTracing: boolean,
+  isZoomStepTooHighForFilling: boolean,
+  genericDisabledExplanation: string,
+) {
   return {
     [AnnotationToolEnum.MOVE]: {
       isDisabled: false,
@@ -149,4 +124,55 @@ export function getDisabledInfoForTools(
       explanation: genericDisabledExplanation,
     },
   };
+}
+const getDisabledInfoFromArgs = memoizeOne(_getDisabledInfoFromArgs);
+
+export function getDisabledInfoForTools(
+  state: OxalisState,
+): { [key: AnnotationTool]: { isDisabled: boolean, explanation: string } } {
+  const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
+  const isZoomInvalidForTracing = isMagRestrictionViolated(state);
+  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentation(state);
+  const labeledResolution =
+    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
+  const isSegmentationVisibleForMag = labeledResolution != null;
+
+  const hasVolume = state.tracing.volume != null;
+  const hasSkeleton = state.tracing.skeleton != null;
+  const isSegmentationActivated = (() => {
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+    if (segmentationLayer == null) {
+      return false;
+    }
+    return isLayerVisible(
+      state.dataset,
+      segmentationLayer.name,
+      state.datasetConfiguration,
+      state.temporaryConfiguration.viewMode,
+    );
+  })();
+
+  const genericDisabledExplanation = getExplanationForDisabledVolume(
+    isSegmentationActivated,
+    isInMergerMode,
+    isSegmentationVisibleForMag,
+    isZoomInvalidForTracing,
+  );
+
+  if (!hasVolume || !isSegmentationActivated || !isSegmentationVisibleForMag || isInMergerMode) {
+    // All segmentation-related tools are disabled.
+    return getDisabledInfoWhenVolumeIsDisabled(genericDisabledExplanation, hasSkeleton);
+  }
+
+  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(state, AnnotationToolEnum.BRUSH);
+  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(state, AnnotationToolEnum.TRACE);
+  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(state, AnnotationToolEnum.FILL_CELL);
+
+  return getDisabledInfoFromArgs(
+    hasSkeleton,
+    isZoomStepTooHighForBrushing,
+    isZoomStepTooHighForTracing,
+    isZoomStepTooHighForFilling,
+    genericDisabledExplanation,
+  );
 }

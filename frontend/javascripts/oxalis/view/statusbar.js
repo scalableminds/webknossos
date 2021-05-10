@@ -49,6 +49,9 @@ const statusbarStyle: Object = {
 const defaultIconStyle = { height: fontSize, marginTop: 2 };
 const defaultInfoStyle = { display: "inline-block", textAlign: "left" };
 const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
+const spaceStyle = { display: "flex", flexWrap: "wrap" };
+const moreIconStyle = { height: 14, color: lineColor };
+const moreLinkStyle = { marginLeft: 10 };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -153,7 +156,7 @@ class Statusbar extends React.PureComponent<Props, State> {
         target="_blank"
         href="https://docs.webknossos.org/reference/keyboard_shortcuts"
         rel="noopener noreferrer"
-        style={{ marginLeft: 10 }}
+        style={moreLinkStyle}
       >
         <Tooltip title="More Shortcuts">
           <MoreOutlined rotate={90} style={{ height: 14, color: lineColor }} />
@@ -253,11 +256,11 @@ class Statusbar extends React.PureComponent<Props, State> {
     }
 
     return (
-      <Space size={spaceBetweenItems} style={{ display: "flex", flexWrap: "wrap" }}>
+      <Space size={spaceBetweenItems} style={spaceStyle}>
         <span>
           <img
             src="/assets/images/icon-statusbar-downsampling.svg"
-            style={{ height: 14, marginTop: -2 }}
+            className="resolution-status-bar-icon"
             alt="Resolution"
           />{" "}
           {activeResolution.join("-")}{" "}

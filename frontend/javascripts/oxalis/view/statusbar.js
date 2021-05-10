@@ -159,7 +159,7 @@ class Statusbar extends React.PureComponent<Props, State> {
         style={moreLinkStyle}
       >
         <Tooltip title="More Shortcuts">
-          <MoreOutlined rotate={90} style={{ height: 14, color: lineColor }} />
+          <MoreOutlined rotate={90} style={moreIconStyle} />
         </Tooltip>
       </a>
     );

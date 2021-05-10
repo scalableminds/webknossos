@@ -209,6 +209,7 @@ export default function ToolbarView() {
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
   const viewMode = useSelector(state => state.temporaryConfiguration.viewMode);
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
+  const useLegacyBindings = useSelector(state => state.userConfiguration.useLegacyBindings);
 
   const activeTool = useSelector(state => state.uiInformation.activeTool);
 
@@ -248,9 +249,10 @@ export default function ToolbarView() {
     isAltPressed,
   );
 
-  const skeletonToolHint = hasSkeleton
-    ? getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
-    : null;
+  const skeletonToolHint =
+    hasSkeleton && useLegacyBindings
+      ? getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
+      : null;
   const previousSkeletonToolHint = usePrevious(skeletonToolHint);
 
   const moveToolDescription =

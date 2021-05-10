@@ -3,8 +3,8 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Tooltip, Button } from "antd";
+import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -192,12 +192,24 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       description: datasetDescription,
       owningOrganization,
     } = this.props.dataset;
+    const getEditSettingsIcon = () => (
+      <Tooltip title="Edit dataset settings">
+        <Button
+          type="text"
+          icon={<EditOutlined />}
+          href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+          className="transparent-background-on-hover"
+          target="_blank"
+        />
+      </Tooltip>
+    );
 
     if (isDatasetViewMode) {
       return (
         <div>
           <p style={{ wordWrap: "break-word" }}>
             <strong>{displayName || datasetName}</strong>
+            {getEditSettingsIcon()}
           </p>
           {datasetDescription ? (
             <div style={{ fontSize: 14 }}>
@@ -221,6 +233,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         >
           {datasetName}
         </Link>
+        {getEditSettingsIcon()}
       </p>
     );
   }

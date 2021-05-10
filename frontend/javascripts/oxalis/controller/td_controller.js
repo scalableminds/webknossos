@@ -211,16 +211,15 @@ class TDController extends React.PureComponent<Props> {
     return controls;
   }
 
-  setTargetAndFixPosition(position?: Vector3): void {
+  setTargetAndFixPosition = (position?: Vector3): void => {
     const { controls } = this;
-    if (controls == null) {
-      return;
-    }
     position = position || getPosition(this.props.flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
 
-    controls.target.set(...nmPosition);
-    controls.update();
+    if (controls != null) {
+      controls.target.set(...nmPosition);
+      controls.update();
+    }
 
     // The following code is a dirty hack. If someone figures out
     // how the trackball control's target can be set without affecting
@@ -251,7 +250,7 @@ class TDController extends React.PureComponent<Props> {
     nmVector.applyEuler(rotation);
 
     Store.dispatch(moveTDViewByVectorWithoutTimeTrackingAction(nmVector.x, nmVector.y));
-  }
+  };
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {
     let zoomToPosition;
@@ -273,6 +272,7 @@ class TDController extends React.PureComponent<Props> {
       <CameraController
         cameras={this.props.cameras}
         onCameraPositionChanged={this.updateControls}
+        setTargetAndFixPosition={this.setTargetAndFixPosition}
       />
     );
   }

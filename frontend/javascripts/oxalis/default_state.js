@@ -1,7 +1,12 @@
 // @flow
 
 import type { OxalisState } from "oxalis/store";
-import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
+import Constants, {
+  ControlModeEnum,
+  OrthoViews,
+  OverwriteModeEnum,
+  TDViewDisplayModeEnum,
+} from "oxalis/constants";
 import { document } from "libs/window";
 
 const defaultViewportRect = {
@@ -72,7 +77,8 @@ const defaultState: OxalisState = {
     sortCommentsAsc: true,
     sortTreesByName: false,
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
-    tdViewDisplayPlanes: true,
+    tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
+    tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
   },

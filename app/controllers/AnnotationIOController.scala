@@ -173,14 +173,12 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[VolumeTracing]): Fox[Option[String]] =
+    // Note that organizationNames are optional. Tracings with no organization attribute are ignored here
     for {
-      organizationName: Option[String] <- volumes.headOption
-        .map(_.organizationName)
-        .orElse(skeletons.headOption.map(_.organizationName))
-        .toFox
-      _ <- bool2Fox(skeletons.forall(_.organizationName == organizationName))
-      _ <- bool2Fox(volumes.forall(_.organizationName == organizationName))
-    } yield organizationName
+      _ <- Fox.successful(())
+      organizationNames = skeletons.flatMap(_.organizationName) ::: volumes.flatMap(_.organizationName)
+      _ <- bool2Fox(organizationNames.forall(_ == organizationNames.head))
+    } yield organizationNames.headOption
 
   private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet): Fox[VolumeTracing] =
     for {

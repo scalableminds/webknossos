@@ -15,10 +15,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added an icon to the info tab of a tracing that links to the dataset settings. It's located next to the dataset name. [#4772](https://github.com/scalableminds/webknossos/pull/5462)
 
 ### Changed
-- 
+-
 
 ### Fixed
 - Fixed a bug where histograms generation failed for tiny datasets. [#5458](https://github.com/scalableminds/webknossos/pull/5458)
+- Fixed a bug where NMLs with huge tree IDs uploaded via back-end produced broken annotations. [#5484](https://github.com/scalableminds/webknossos/pull/5484)
 
 ### Removed
 - Removed the button to load or refresh the isosurface of the centered cell from the 3D view. Instead, this action can be triggered from the "Meshes" tab. [#5440](https://github.com/scalableminds/webknossos/pull/5440)

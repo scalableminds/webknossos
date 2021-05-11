@@ -93,7 +93,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
     }
 
-    positionCreationIter((1 to iterationCount).toList, List[Point3D]())
+    Point3D(0, 0, 0) +: positionCreationIter((1 to iterationCount).toList, List[Point3D]())
   }
 
   private def checkAllPositionsForData(dataSource: DataSource,

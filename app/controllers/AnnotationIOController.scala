@@ -63,7 +63,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>
-      log {
+      log() {
         val shouldCreateGroupForEachFile: Boolean =
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDataSetName: Option[String] =

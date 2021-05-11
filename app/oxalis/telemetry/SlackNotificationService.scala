@@ -25,6 +25,18 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
       msg = msg
     )
 
+  def info(title: String, msg: String): Unit =
+    slackClient.info(
+      title = title,
+      msg = msg
+    )
+
+  def noticeFailedJobRequest(msg: String): Unit =
+    slackClient.warn(
+      title = "Failed job request",
+      msg = msg
+    )
+
   def noticeBaseAnnotationTaskCreation(taskType: List[String], numberOfTasks: Int): Unit =
     slackClient.info(
       title = "Task creation with base",

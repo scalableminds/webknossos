@@ -269,6 +269,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
+      preserveSelectedRowKeys: true,
       onChange: selectedUserIds => {
         this.setState({ selectedUserIds });
       },

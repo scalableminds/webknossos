@@ -14,7 +14,7 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Red
     extends Controller {
 
   def health: Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       AllowRemoteOrigin {
         for {
           before <- Fox.successful(System.currentTimeMillis())

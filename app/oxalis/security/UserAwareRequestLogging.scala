@@ -10,18 +10,12 @@ trait UserAwareRequestLogging extends AbstractRequestLogging {
 
   case class RequesterIdOpt(id: Option[String]) //forcing implicit conversion
 
-  def log(block: => Result)(implicit request: Request[_], requesterIdOpt: RequesterIdOpt): Result = {
-    val result: Result = block
-    logRequestFormatted(request, result, requesterIdOpt.id)
-    result
-  }
-
-  def log(block: => Future[Result])(implicit request: Request[_],
-                                    userIdOpt: RequesterIdOpt,
-                                    ec: ExecutionContext): Future[Result] =
+  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[_],
+                                                                             requesterIdOpt: RequesterIdOpt,
+                                                                             ec: ExecutionContext): Future[Result] =
     for {
       result: Result <- block
-      _ = logRequestFormatted(request, result, userIdOpt.id)
+      _ = logRequestFormatted(request, result, notifier, requesterIdOpt.id)
     } yield result
 
   implicit def userAwareRequestToRequesterIdOpt(implicit request: UserAwareRequest[WkEnv, _]): RequesterIdOpt =

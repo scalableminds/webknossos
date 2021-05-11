@@ -172,13 +172,13 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     } yield dataSetName
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
-                                          volumes: List[VolumeTracing]): Fox[Option[String]] =
+                                          volumes: List[VolumeTracing]): Fox[Option[String]] = {
     // Note that organizationNames are optional. Tracings with no organization attribute are ignored here
+    val organizationNames = skeletons.flatMap(_.organizationName) ::: volumes.flatMap(_.organizationName)
     for {
-      _ <- Fox.successful(())
-      organizationNames = skeletons.flatMap(_.organizationName) ::: volumes.flatMap(_.organizationName)
-      _ <- bool2Fox(organizationNames.forall(_ == organizationNames.head))
+      _ <- Fox.runOptional(organizationNames.headOption)(name => bool2Fox(organizationNames.forall(_ == name)))
     } yield organizationNames.headOption
+  }
 
   private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet): Fox[VolumeTracing] =
     for {

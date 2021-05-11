@@ -33,7 +33,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
 
   def mergedFromContents(persist: Boolean): Action[SkeletonTracings] = Action.async(validateProto[SkeletonTracings]) {
     implicit request =>
-      log {
+      log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             val tracings: List[Option[SkeletonTracing]] = request.body
@@ -49,7 +49,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
 
   def duplicate(tracingId: String, version: Option[Long], fromTask: Option[Boolean]): Action[AnyContent] =
     Action.async { implicit request =>
-      log {
+      log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {
@@ -64,7 +64,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
 
   def updateActionLog(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -78,7 +78,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
   }
 
   def updateActionStatistics(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {

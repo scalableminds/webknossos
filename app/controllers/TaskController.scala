@@ -147,7 +147,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   }
 
   def request: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log {
+    log() {
       val user = request.identity
       for {
         teams <- taskService.getAllowedTeamsForNextTask(user)

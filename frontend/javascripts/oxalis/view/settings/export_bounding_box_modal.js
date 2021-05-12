@@ -29,6 +29,7 @@ type LayerInfos = {
   mappingName: ?string,
   mappingType: ?string,
   hideUnmappedIds: ?boolean,
+  isColorLayer: ?boolean,
 };
 
 const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Props) => {
@@ -44,7 +45,10 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
   );
   const mappingName = useSelector(state => state.temporaryConfiguration.activeMapping.mappingName);
   const mappingType = useSelector(state => state.temporaryConfiguration.activeMapping.mappingType);
-  const existsActiveMapping = mappingName && isMappingEnabled;
+  const isMergerModeEnabled = useSelector(
+    state => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
 
   const handleClose = () => {
     destroy();
@@ -84,9 +88,10 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
         annotationType: null,
         tracingVersion: null,
         hasMag1: hasMag1(layer),
-        hideUnmappedIds: existsActiveMapping ? hideUnmappedIds : null,
-        mappingName: existsActiveMapping ? mappingName : null,
-        mappingType: existsActiveMapping ? mappingType : null,
+        hideUnmappedIds: existsActivePersistentMapping ? hideUnmappedIds : null,
+        mappingName: existsActivePersistentMapping ? mappingName : null,
+        mappingType: existsActivePersistentMapping ? mappingType : null,
+        isColorLayer: layer.category === "color",
       };
     if (layer.fallbackLayerInfo != null)
       return {
@@ -97,9 +102,10 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
         annotationType,
         tracingVersion: volumeTracing.version,
         hasMag1: hasMag1(layer),
-        hideUnmappedIds: existsActiveMapping ? hideUnmappedIds : null,
-        mappingName: existsActiveMapping ? mappingName : null,
-        mappingType: existsActiveMapping ? mappingType : null,
+        hideUnmappedIds: existsActivePersistentMapping ? hideUnmappedIds : null,
+        mappingName: existsActivePersistentMapping ? mappingName : null,
+        mappingType: existsActivePersistentMapping ? mappingType : null,
+        isColorLayer: false,
       };
     return {
       displayName: "Volume annotation",
@@ -112,6 +118,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
       hideUnmappedIds: null,
       mappingName: null,
       mappingType: null,
+      isColorLayer: false,
     };
   });
 
@@ -121,7 +128,11 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
         <Button
           key={exportKey(layerInfos)}
           onClick={() => handleStartExport(layerInfos)}
-          disabled={startedExports.includes(exportKey(layerInfos)) || !layerInfos.hasMag1}
+          disabled={
+            startedExports.includes(exportKey(layerInfos)) ||
+            !layerInfos.hasMag1 ||
+            (isMergerModeEnabled && !layerInfos.isColorLayer)
+          }
         >
           {layerInfos.displayName}
           {!layerInfos.hasMag1 ? " (resolution 1 missing)" : ""}
@@ -168,10 +179,13 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
     ) : null;
 
   const bboxText = Utils.computeArrayFromBoundingBox(boundingBox).join(", ");
-  const activeMappingMessage =
-    mappingName && isMappingEnabled
-      ? `The active mapping ${mappingName} will be applied to the exported data.`
-      : null;
+  let activeMappingMessage = null;
+  if (isMergerModeEnabled) {
+    activeMappingMessage =
+      "Exporting a volume layer does not export merger mode currently. Please disable merger mode before exporting data.";
+  } else if (isMappingEnabled) {
+    activeMappingMessage = `The active mapping ${mappingName} will be applied to the exported data.`;
+  }
 
   return (
     <Modal

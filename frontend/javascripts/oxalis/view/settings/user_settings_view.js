@@ -397,16 +397,12 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
 
   render() {
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
-    const exportedUserBoundingBox =
-      this.state.exportBoundingBoxModalId !== null &&
-      this.state.exportBoundingBoxModalId !== undefined
+    const exportUserBoundingBox =
+      this.state.exportBoundingBoxModalId != null
         ? userBoundingBoxes.find(
             boundingBox => boundingBox.id === this.state.exportBoundingBoxModalId,
           )
         : null;
-    const exportedBoundingBox = exportedUserBoundingBox
-      ? exportedUserBoundingBox.boundingBox
-      : null;
 
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
@@ -465,11 +461,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
               onExport={_.partial(this.handleExportUserBoundingBox, bb.id)}
             />
           ))}
-          {exportedBoundingBox !== null ? (
+          {exportUserBoundingBox != null ? (
             <ExportBoundingBoxModal
               dataset={this.props.dataset}
               tracing={this.props.tracing}
-              boundingBox={exportedBoundingBox}
+              boundingBox={exportUserBoundingBox.boundingBox}
               destroy={() => {
                 this.setState({ exportBoundingBoxModalId: null });
               }}

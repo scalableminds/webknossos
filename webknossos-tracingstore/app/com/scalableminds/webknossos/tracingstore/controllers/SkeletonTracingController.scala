@@ -38,9 +38,10 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
           AllowRemoteOrigin {
             val tracings: List[Option[SkeletonTracing]] = request.body
             val mergedTracing = tracingService.merge(tracings.flatten)
-            tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
-              Ok(Json.toJson(newId))
-            }
+            val processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
+            for {
+              newId <- tracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
+            } yield Ok(Json.toJson(newId))
           }
         }
       }

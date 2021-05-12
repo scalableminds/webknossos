@@ -176,6 +176,13 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     )
   }
 
+  // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
+  override def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
+    if (skeletonTracing.trees.exists(_.treeId > 1048576)) {
+      val newTrees = for ((tree, index) <- skeletonTracing.trees.zipWithIndex) yield tree.withTreeId(index + 1)
+      skeletonTracing.withTrees(newTrees)
+    } else skeletonTracing
+
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[SkeletonTracing],
                       newId: String,

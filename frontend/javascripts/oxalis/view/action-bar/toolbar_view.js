@@ -86,8 +86,12 @@ function adaptActiveToolToShortcuts(
   }
 
   if (isControlPressed && isShiftPressed && !isAltPressed) {
-    // Control and shift invoke the fill cell tool
-    return AnnotationToolEnum.FILL_CELL;
+    // Control and shift switch to the eraser
+    if (activeTool === AnnotationToolEnum.BRUSH) {
+      return AnnotationToolEnum.ERASE_BRUSH;
+    } else if (activeTool === AnnotationToolEnum.TRACE) {
+      return AnnotationToolEnum.ERASE_TRACE;
+    }
   }
 
   if (isAltPressed) {
@@ -139,16 +143,41 @@ const RadioButtonWithTooltip = ({
   </Tooltip>
 );
 
-function OverwriteModeSwitch({ isControlPressed }) {
+function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
+  // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
+  // erase tool, which should not affect the default overwrite mode.
   const overwriteMode = useSelector(state => state.userConfiguration.overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
-  const didControlChange =
-    previousIsControlPressed != null && isControlPressed !== previousIsControlPressed;
+  const previousIsShiftPressed = usePrevious(isShiftPressed);
+
   useEffect(() => {
-    if (didControlChange) {
+    // There are four possible states:
+    // (1) no modifier is pressed
+    // (2) CTRL is pressed
+    // (3) Shift is pressed
+    // (4) CTRL + Shift is pressed
+    // The overwrite mode needs to be toggled when
+    // - switching from state (1) to (2) (or vice versa)
+    // - switching from state (2) to (4) (or vice versa)
+    // Consequently, the mode is only toggled effectively, when CTRL is pressed.
+    // Alternatively, we could store the selected value and the overriden value
+    // separately in the store. However, this solution works, too.
+    const needsModeToggle =
+      (!isShiftPressed &&
+        isControlPressed &&
+        previousIsControlPressed === previousIsShiftPressed) ||
+      (isShiftPressed === isControlPressed && !previousIsShiftPressed && previousIsControlPressed);
+    if (needsModeToggle) {
       Store.dispatch(updateUserSettingAction("overwriteMode", toggleOverwriteMode(overwriteMode)));
     }
-  }, [didControlChange]);
+  }, [isControlPressed, isShiftPressed, previousIsControlPressed, previousIsShiftPressed]);
+
+  if (!visible) {
+    // This component's hooks should still be active, even when the component is invisible.
+    // Otherwise, the toggling of the overwrite mode via "CTRL" wouldn't work consistently
+    // when being combined with other modifiers, which hide the component.
+    return null;
+  }
 
   return (
     <Radio.Group value={overwriteMode} onChange={handleSetOverwriteMode} style={{ marginLeft: 10 }}>
@@ -430,9 +459,11 @@ export default function ToolbarView() {
         ) : null}
       </Radio.Group>
 
-      {ToolsWithOverwriteCapabilities.includes(adaptedActiveTool) ? (
-        <OverwriteModeSwitch isControlPressed={isControlPressed} />
-      ) : null}
+      <OverwriteModeSwitch
+        isControlPressed={isControlPressed}
+        isShiftPressed={isShiftPressed}
+        visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
+      />
 
       <Space size={0} style={{ marginLeft: 12 }}>
         {isVolumeSupported ? <CreateCellButton /> : null}

@@ -240,7 +240,8 @@ export class DrawTool {
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        if (event.shiftKey) {
+        if (event.shiftKey && !event.ctrlKey) {
+          // Select cell.
           return;
         }
         if (event.ctrlKey && VolumeHandlers.isAutomaticBrushEnabled()) {
@@ -293,12 +294,12 @@ export class DrawTool {
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         const shouldPickCell = event.shiftKey && !event.ctrlKey;
-        const shouldFillCell = event.shiftKey && event.ctrlKey;
+        const shouldErase = event.shiftKey && event.ctrlKey;
 
         if (shouldPickCell) {
           VolumeHandlers.handlePickCell(pos);
-        } else if (shouldFillCell) {
-          VolumeHandlers.handleFloodFill(pos, plane);
+        } else if (shouldErase) {
+          // Do nothing. This case is covered by leftMouseDown.
         } else if (event.metaKey) {
           VolumeHandlers.handleAutoBrush(pos);
         }

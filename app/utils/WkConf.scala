@@ -91,7 +91,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val user: String = get[String]("mail.smtp.user")
       val pass: String = get[String]("mail.smtp.pass")
     }
-    val demoSender: String = get[String]("mail.demoSender")
     val defaultSender: String = get[String]("mail.defaultSender")
     object Mailchimp {
       val host: String = get[String]("mail.mailchimp.host")

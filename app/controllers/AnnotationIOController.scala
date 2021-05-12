@@ -63,7 +63,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>
-      log {
+      log() {
         val shouldCreateGroupForEachFile: Boolean =
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDataSetName: Option[String] =
@@ -172,15 +172,13 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     } yield dataSetName
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
-                                          volumes: List[VolumeTracing]): Fox[Option[String]] =
+                                          volumes: List[VolumeTracing]): Fox[Option[String]] = {
+    // Note that organizationNames are optional. Tracings with no organization attribute are ignored here
+    val organizationNames = skeletons.flatMap(_.organizationName) ::: volumes.flatMap(_.organizationName)
     for {
-      organizationName: Option[String] <- volumes.headOption
-        .map(_.organizationName)
-        .orElse(skeletons.headOption.map(_.organizationName))
-        .toFox
-      _ <- bool2Fox(skeletons.forall(_.organizationName == organizationName))
-      _ <- bool2Fox(volumes.forall(_.organizationName == organizationName))
-    } yield organizationName
+      _ <- Fox.runOptional(organizationNames.headOption)(name => bool2Fox(organizationNames.forall(_ == name)))
+    } yield organizationNames.headOption
+  }
 
   private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet): Fox[VolumeTracing] =
     for {

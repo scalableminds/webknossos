@@ -36,7 +36,7 @@ class UserController @Inject()(userService: UserService,
   private val DefaultAnnotationListLimit = 1000
 
   def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log {
+    log() {
       for {
         userJs <- userService.publicWrites(request.identity, request.identity)
       } yield Ok(userJs)
@@ -44,7 +44,7 @@ class UserController @Inject()(userService: UserService,
   }
 
   def user(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log {
+    log() {
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND

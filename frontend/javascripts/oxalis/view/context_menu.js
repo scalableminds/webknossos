@@ -2,6 +2,7 @@
 import * as React from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
+import { AnnotationToolEnum } from "oxalis/constants";
 import type { Vector3, OrthoView } from "oxalis/constants";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
@@ -48,12 +49,20 @@ type DispatchProps = {|
   createTree: () => void,
 |};
 
-type StateProps = {| skeletonTracing: ?SkeletonTracing, datasetScale: Vector3 |};
+type StateProps = {|
+  skeletonTracing: ?SkeletonTracing,
+  datasetScale: Vector3,
+  isSkeletonToolActive: boolean,
+|};
 /* eslint-enable react/no-unused-prop-types */
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
-type NoNodeContextMenuProps = {| ...Props, cellIdAtPosition: number |};
+type NoNodeContextMenuProps = {|
+  ...Props,
+  cellIdAtPosition: number,
+  isSkeletonToolActive: boolean,
+|};
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -182,47 +191,57 @@ function NodeContextMenuOptions({
 }
 
 function NoNodeContextMenuOptions({
+  isSkeletonToolActive,
   hideNodeContextMenu,
   globalPosition,
   viewport,
   createTree,
   cellIdAtPosition,
 }: NoNodeContextMenuProps) {
+  const skeletonActions = [
+    <Menu.Item
+      className="node-context-menu-item"
+      key="create-node"
+      onClick={() => setWaypoint(globalPosition, viewport, false)}
+    >
+      Create Node here
+    </Menu.Item>,
+    <Menu.Item
+      className="node-context-menu-item"
+      key="create-node-with-tree"
+      onClick={() => {
+        createTree();
+        setWaypoint(globalPosition, viewport, false);
+      }}
+    >
+      Create new Tree here
+    </Menu.Item>,
+  ];
+  const nonSkeletonActions = [
+    <Menu.Item
+      className="node-context-menu-item"
+      key="select-cell"
+      onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
+    >
+      Select Cell ({cellIdAtPosition})
+    </Menu.Item>,
+
+    <Menu.Item
+      className="node-context-menu-item"
+      key="fill-cell"
+      onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
+    >
+      Fill Cell (flood-fill region)
+    </Menu.Item>,
+  ];
+
+  const allActions = isSkeletonToolActive
+    ? skeletonActions.concat(nonSkeletonActions)
+    : nonSkeletonActions.concat(skeletonActions);
+
   return (
     <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="select-cell"
-        onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
-      >
-        Select Cell ({cellIdAtPosition})
-      </Menu.Item>
-
-      <Menu.Item
-        className="node-context-menu-item"
-        key="fill-cell"
-        onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
-      >
-        Fill Cell (flood-fill region)
-      </Menu.Item>
-
-      <Menu.Item
-        className="node-context-menu-item"
-        key="create-node"
-        onClick={() => setWaypoint(globalPosition, viewport, false)}
-      >
-        Create Node here
-      </Menu.Item>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="create-node-with-tree"
-        onClick={() => {
-          createTree();
-          setWaypoint(globalPosition, viewport, false);
-        }}
-      >
-        Create new Tree here
-      </Menu.Item>
+      {allActions}
     </Menu>
   );
 }
@@ -230,6 +249,7 @@ function NoNodeContextMenuOptions({
 function ContextMenu(props: Props) {
   const {
     skeletonTracing,
+    isSkeletonToolActive,
     clickedNodeId,
     nodeContextMenuPosition,
     hideNodeContextMenu,
@@ -320,7 +340,7 @@ function ContextMenu(props: Props) {
       >
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ cellIdAtPosition, ...props })}
+          : NoNodeContextMenuOptions({ isSkeletonToolActive, cellIdAtPosition, ...props })}
         {infoRows.length > 0 ? <Divider style={{ margin: "4px 0px" }} /> : null}
         {infoRows}
       </div>
@@ -353,6 +373,7 @@ function mapStateToProps(state: OxalisState): StateProps {
   return {
     skeletonTracing: state.tracing.skeleton,
     datasetScale: state.dataset.dataSource.scale,
+    isSkeletonToolActive: state.uiInformation.activeTool === AnnotationToolEnum.SKELETON,
   };
 }
 

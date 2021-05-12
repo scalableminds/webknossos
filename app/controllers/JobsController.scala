@@ -257,9 +257,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
           command = "convert_to_wkw"
-          commandArgs = Json.obj("organization_name" -> organizationName,
-                                 "dataset_name" -> dataSetName,
-                                 "scale" -> scale)
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "scale" -> scale,
+            "webknossos_token" -> TracingStoreRpcClient.webKnossosToken
+          )
 
           job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)

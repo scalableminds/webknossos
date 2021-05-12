@@ -79,7 +79,12 @@ export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
 }
 
 export function handleFloodFill(pos: Point2, plane: OrthoView) {
-  Store.dispatch(floodFillAction(calculateGlobalPos(Store.getState(), pos), plane));
+  const globalPos = calculateGlobalPos(Store.getState(), pos);
+  handleFloodFillFromGlobalPosition(globalPos, plane);
+}
+
+export function handleFloodFillFromGlobalPosition(globalPos: Vector3, plane: OrthoView) {
+  Store.dispatch(floodFillAction(globalPos, plane));
 }
 
 export function handleAutoBrush(pos: Point2) {

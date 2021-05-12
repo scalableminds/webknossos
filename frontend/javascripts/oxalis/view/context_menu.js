@@ -19,6 +19,7 @@ import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import {
   getCellFromGlobalPosition,
   handlePickCellFromGlobalPosition,
+  handleFloodFillFromGlobalPosition,
 } from "oxalis/controller/combinations/volume_handlers";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
@@ -195,6 +196,14 @@ function NoNodeContextMenuOptions({
         onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
       >
         Select Cell ({cellIdAtPosition})
+      </Menu.Item>
+
+      <Menu.Item
+        className="node-context-menu-item"
+        key="fill-cell"
+        onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
+      >
+        Fill Cell (flood-fill region)
       </Menu.Item>
 
       <Menu.Item

@@ -14,7 +14,7 @@ import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.annotation.TracingStoreRpcClient
 import models.organization.OrganizationDAO
-import models.user.{User, UserDAO}
+import models.user.{MultiUserDAO, User, UserDAO}
 import net.liftweb.common.{Failure, Full}
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
@@ -104,6 +104,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
 class JobService @Inject()(wkConf: WkConf,
                            userDAO: UserDAO,
+                           multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
                            rpc: RPC,
                            analyticsService: AnalyticsService,
@@ -174,19 +175,28 @@ class JobService @Inject()(wkConf: WkConf,
   private def trackNewlyFailed(job: Job): Unit = {
     for {
       user <- userDAO.findOne(job._owner)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = analyticsService.track(FailedJobEvent(user, job.command))
       _ = slackNotificationService.warn(
-        "Failed job",
+        s"Failed job$superUserLabel",
         s"Job ${job._id} failed. Command ${job.command}, celery job id: ${job.celeryJobId}.")
     } yield ()
     ()
   }
 
-  private def trackNewlySuccessful(job: Job): Unit =
-    slackNotificationService.info(
-      "Successful job",
-      s"Job ${job._id} succeeded. Command ${job.command}, celery job id: ${job.celeryJobId}."
-    )
+  private def trackNewlySuccessful(job: Job): Unit = {
+    for {
+      user <- userDAO.findOne(job._owner)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
+      _ = slackNotificationService.info(
+        s"Successful job$superUserLabel",
+        s"Job ${job._id} succeeded. Command ${job.command}, celery job id: ${job.celeryJobId}."
+      )
+    } yield ()
+    ()
+  }
 
   def publicWrites(job: Job): Fox[JsObject] =
     Fox.successful(

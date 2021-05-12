@@ -45,7 +45,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]): Action[AnyContent] =
     Action.async { implicit request =>
-      log {
+      log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.webknossos) {
             AllowRemoteOrigin {
@@ -66,7 +66,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def mergedFromContents(persist: Boolean): Action[VolumeTracings] = Action.async(validateProto[VolumeTracings]) {
     implicit request =>
-      log {
+      log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             val tracings: List[Option[VolumeTracing]] = request.body
@@ -80,7 +80,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   }
 
   def initialDataMultiple(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
@@ -97,7 +97,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   }
 
   def allData(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -112,7 +112,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   }
 
   def allDataBlocking(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -127,7 +127,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def data(tracingId: String): Action[List[WebKnossosDataRequest]] =
     Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
-      log {
+      log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
           AllowRemoteOrigin {
             for {
@@ -150,7 +150,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
                 minResolution: Option[Int],
                 maxResolution: Option[Int],
                 downsample: Option[Boolean]): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
@@ -173,7 +173,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def unlinkFallback(tracingId: String): Action[DataSourceLike] = Action.async(validateJson[DataSourceLike]) {
     implicit request =>
-      log {
+      log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.webknossos) {
             AllowRemoteOrigin {
@@ -190,7 +190,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
-      log {
+      log() {
         accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
           AllowRemoteOrigin {
             for {
@@ -205,7 +205,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
 
   def updateActionLog(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {

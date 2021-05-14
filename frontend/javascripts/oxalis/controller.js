@@ -110,7 +110,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     this.props.setControllerStatus("loading");
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
-    console.log("trying model fetch");
     Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch(error => {

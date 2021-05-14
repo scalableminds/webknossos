@@ -129,7 +129,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Segmentation data which is mapped using an agglomerate file cannot be rendered in this resolution. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.compound_project_not_found":
-    "It look like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
+    "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",

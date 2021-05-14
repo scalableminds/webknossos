@@ -3,7 +3,7 @@
  * @flow
  */
 import { Tooltip } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusSquareOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
@@ -111,7 +111,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
       )}
       <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
         <Tooltip title="Click to add another bounding box.">
-          <PlusOutlined
+          <PlusSquareOutlined
             onClick={handleAddNewUserBoundingBox}
             style={{
               cursor: "pointer",

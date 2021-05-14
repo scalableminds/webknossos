@@ -321,7 +321,7 @@ class MeshesView extends React.Component<
     const getMeshesHeader = () => (
       <React.Fragment>
         Meshes{" "}
-        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They are imported from STL or hdf5 files. They can also be computed.">
+        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They can be computed ad-hoc or pre-computed.">
           <InfoCircleOutlined />
         </Tooltip>
         {getImportButton()}

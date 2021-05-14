@@ -99,11 +99,9 @@ type DatasetSettingsProps = {|
   onUnlinkFallbackLayer: Tracing => Promise<void>,
   tracing: Tracing,
   task: ?Task,
-  onChangeBrushSize: (value: any) => void,
   onChangeEnableAutoBrush: (active: boolean) => void,
   isAutoBrushEnabled: boolean,
   controlMode: ControlMode,
-  brushSize: number,
 |};
 
 function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDownsample }) {
@@ -495,31 +493,26 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getVolumeAnnotationSpecificSettings = () => {
     const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
-    const { tracing, brushSize, onChangeBrushSize } = this.props;
+    const { tracing } = this.props;
+
+    const segmentationOpacitySetting = (
+      <NumberSliderSetting
+        label={settings.segmentationPatternOpacity}
+        min={0}
+        max={100}
+        step={1}
+        value={this.props.datasetConfiguration.segmentationPatternOpacity}
+        onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+      />
+    );
 
     if (isPublicViewMode || tracing.volume == null) {
-      return null;
+      return <div>{segmentationOpacitySetting}</div>;
     }
 
     return (
       <div>
-        <NumberSliderSetting
-          label={settings.segmentationPatternOpacity}
-          min={0}
-          max={100}
-          step={1}
-          value={this.props.datasetConfiguration.segmentationPatternOpacity}
-          onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
-        />
-        <LogSliderSetting
-          label={settings.brushSize}
-          roundTo={0}
-          min={userSettings.brushSize.minimum}
-          max={userSettings.brushSize.maximum}
-          step={5}
-          value={brushSize}
-          onChange={onChangeBrushSize}
-        />
+        {segmentationOpacitySetting}
         {this.maybeGetAutoBrushUi()}
         <MappingSettingsView />
       </div>
@@ -833,7 +826,6 @@ const mapStateToProps = (state: OxalisState) => ({
   tracing: state.tracing,
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
-  brushSize: state.userConfiguration.brushSize,
   isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
 });
 
@@ -855,9 +847,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeEnableAutoBrush(active: boolean) {
     dispatch(updateTemporarySettingAction("isAutoBrushEnabled", active));
-  },
-  onChangeBrushSize(value) {
-    dispatch(updateUserSettingAction("brushSize", value));
   },
   onChangeShowSkeletons(showSkeletons: boolean) {
     dispatch(setShowSkeletonsAction(showSkeletons));

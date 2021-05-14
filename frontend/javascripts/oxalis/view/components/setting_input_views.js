@@ -400,7 +400,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const nameColSpan = exportColumn == null ? 17 : 15;
     return (
       <React.Fragment>
-        <Row style={{ marginBottom: 16 }}>
+        <Row style={{ marginBottom: 10 }}>
           <Col span={5}>
             <Switch
               size="small"
@@ -429,7 +429,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             </Tooltip>
           </Col>
         </Row>
-        <Row className="margin-bottom" align="top">
+        <Row style={{ marginBottom: 20 }} align="top">
           <Col span={5}>
             <label className="settings-label"> Bounds: </label>
           </Col>

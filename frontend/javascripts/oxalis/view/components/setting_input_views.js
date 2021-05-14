@@ -392,16 +392,16 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const iconStyle = { margin: "auto 0px auto 6px" };
     const exportColumn = features().jobsEnabled ? (
       <Col span={2}>
-        <Tooltip title="Export data from this bouding box.">
+        <Tooltip title="Export data from this bounding box.">
           <DownloadOutlined onClick={onExport} style={iconStyle} />
         </Tooltip>
       </Col>
     ) : null;
-    const visibilityColSpan = exportColumn == null ? 22 : 20;
+    const nameColSpan = exportColumn == null ? 17 : 15;
     return (
       <React.Fragment>
         <Row style={{ marginBottom: 16 }}>
-          <Col span={visibilityColSpan}>
+          <Col span={5}>
             <Switch
               size="small"
               onChange={this.handleVisibilityChange}
@@ -409,18 +409,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               style={{ margin: "auto 0px" }}
             />
           </Col>
-          {exportColumn}
-          <Col span={2}>
-            <Tooltip title="Delete this bounding box.">
-              <DeleteOutlined onClick={onDelete} style={iconStyle} />
-            </Tooltip>
-          </Col>
-        </Row>
-        <Row className="margin-bottom" align="top">
-          <Col span={5}>
-            <label className="settings-label"> Name: </label>
-          </Col>
-          <Col span={17}>
+          <Col span={nameColSpan}>
             <Input
               defaultValue={name}
               placeholder="Bounding Box Name"
@@ -433,20 +422,18 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               onBlur={this.handleNameChanged}
             />
           </Col>
+          {exportColumn}
           <Col span={2}>
-            <ColorSetting
-              value={Utils.rgbToHex(upscaledColor)}
-              onChange={this.handleColorChange}
-              className="ant-btn"
-              style={iconStyle}
-            />
+            <Tooltip title="Delete this bounding box.">
+              <DeleteOutlined onClick={onDelete} style={iconStyle} />
+            </Tooltip>
           </Col>
         </Row>
         <Row className="margin-bottom" align="top">
           <Col span={5}>
             <label className="settings-label"> Bounds: </label>
           </Col>
-          <Col span={17}>
+          <Col span={nameColSpan}>
             <Tooltip
               trigger={["focus"]}
               title={tooltipTitle}
@@ -462,6 +449,14 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                 size="small"
               />
             </Tooltip>
+          </Col>
+          <Col span={2}>
+            <ColorSetting
+              value={Utils.rgbToHex(upscaledColor)}
+              onChange={this.handleColorChange}
+              className="ant-btn"
+              style={iconStyle}
+            />
           </Col>
         </Row>
       </React.Fragment>

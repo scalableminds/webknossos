@@ -14,7 +14,7 @@ import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
 import type { APIMaybeUnimportedDataset, APIDataset, APIDatasetId } from "types/api_flow_types";
-import { clearCache } from "admin/admin_rest_api";
+import { clearCache, sendAnalyticsEvent } from "admin/admin_rest_api";
 import {
   getSegmentationLayer,
   doesSupportVolumeWithFallback,
@@ -139,9 +139,11 @@ type State = {
 
 function LinkWithDisabled({
   disabled,
+  onClick,
   ...rest
 }: {
   disabled?: boolean,
+  onClick?: () => void,
   style?: Object,
   to: string,
 }) {
@@ -153,9 +155,12 @@ function LinkWithDisabled({
           ...maybeDisabledStyle,
         }
       : maybeDisabledStyle;
+  if (!onClick) {
+    onClick = () => {};
+  }
 
   return (
-    <Link {...rest} style={adaptedStyle} onClick={e => (disabled ? e.preventDefault() : null)} />
+    <Link {...rest} style={adaptedStyle} onClick={e => (disabled ? e.preventDefault() : onClick)} />
   );
 }
 
@@ -237,6 +242,9 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
                   title="Open Dataset Settings"
                   disabled={isReloading}
+                  onClick={() =>
+                    sendAnalyticsEvent("open_dataset_settings", { datasetName: dataset.name })
+                  }
                 >
                   <SettingOutlined />
                   Settings

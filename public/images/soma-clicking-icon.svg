@@ -51,28 +51,28 @@
      id="namedview5"
      showgrid="false"
      inkscape:zoom="19.666667"
-     inkscape:cx="8.4190853"
-     inkscape:cy="14.094015"
+     inkscape:cx="-1.6995586"
+     inkscape:cy="13.890625"
      inkscape:window-x="0"
      inkscape:window-y="27"
      inkscape:window-maximized="1"
      inkscape:current-layer="mdi-table-merge-cells" />
   <rect
-     style="fill:#005266;fill-opacity:1;stroke:#69d408;stroke-width:4.50999737;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#f1f1f1;fill-opacity:1;stroke:#f1f1f1;stroke-width:4.50999737;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect4575-5-3"
      width="4.9810023"
      height="4.4160028"
      x="15.281714"
      y="15.84574" />
   <rect
-     style="fill:#72f6ff;fill-opacity:1;stroke:#72f6ff;stroke-width:4.50995207;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#f1f1f1;fill-opacity:1;stroke:#f1f1f1;stroke-width:4.50995207;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect4575-5-3-3"
      width="4.9811559"
      height="4.4157767"
      x="15.331455"
      y="4.0433202" />
   <rect
-     style="fill:#005266;fill-opacity:1;stroke:#f61261;stroke-width:4.50999784;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#f1f1f1;fill-opacity:1;stroke:#f1f1f1;stroke-width:4.50999784;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect4575-5-3-67"
      width="4.9810023"
      height="4.4160018"
@@ -80,7 +80,7 @@
      y="15.845741" />
   <text
      xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:45.01622772px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#f9f9f9;fill-opacity:1;stroke:none;stroke-width:1.12540567;"
+     style="font-style:normal;font-weight:normal;font-size:45.01622772px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#f1f1f1;fill-opacity:1;stroke:none;stroke-width:1.12540567;"
      x="1.446422"
      y="10.12004"
      id="text4551"
@@ -89,5 +89,5 @@
        id="tspan4549"
        x="1.446422"
        y="10.12004"
-       style="font-size:12px;fill:#f9f9f9;stroke-width:1.12540567;">+</tspan></text>
+       style="font-size:12px;fill:#f1f1f1;stroke-width:1.12540567;fill-opacity:1;">+</tspan></text>
 </svg>

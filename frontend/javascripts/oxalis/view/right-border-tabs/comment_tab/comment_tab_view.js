@@ -410,7 +410,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
             return (
               <React.Fragment>
                 {this.renderMarkdownModal()}
-                <InputGroup compact>
+                <InputGroup compact className="compact-items compact-icons">
                   <AdvancedSearchPopover
                     onSelect={comment => this.props.setActiveNode(comment.nodeId)}
                     data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}

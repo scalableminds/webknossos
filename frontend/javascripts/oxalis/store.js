@@ -214,6 +214,7 @@ export type SkeletonTracing = {|
   +activeGroupId: ?number,
   +cachedMaxNodeId: number,
   +navigationList: NavigationList,
+  +showSkeletons: boolean,
 |};
 
 export type VolumeTracing = {|

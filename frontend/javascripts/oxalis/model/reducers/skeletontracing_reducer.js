@@ -100,6 +100,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,
         navigationList: { list: [], activeIndex: -1 },
+        showSkeletons: true,
       };
 
       return update(state, { tracing: { skeleton: { $set: skeletonTracing } } });
@@ -253,6 +254,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               });
             })
             .getOrElse(state);
+        }
+
+        case "SET_SHOW_SKELETONS": {
+          const { showSkeletons } = action;
+          return update(state, {
+            tracing: {
+              skeleton: {
+                showSkeletons: { $set: showSkeletons },
+              },
+            },
+          });
         }
 
         case "SET_NODE_POSITION": {

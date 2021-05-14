@@ -656,6 +656,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (!skeletonTracing) {
       return null;
     }
+    const { showSkeletons } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)
       .map(activeTree => activeTree.name)
       .getOrElse("");
@@ -691,7 +692,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <div className="antd-legacy-group">
+                <InputGroup compact className="compact-icons">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -705,23 +706,23 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       </ButtonComponent>
                     </Tooltip>
                   </AdvancedSearchPopover>
-                  <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
-                    <i className="fas fa-plus" /> Create
+                  <ButtonComponent onClick={this.props.onCreateTree} title="Create new Tree">
+                    <i className="fas fa-plus" />
                   </ButtonComponent>
-                  <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
-                    <i className="far fa-trash-alt" /> Delete
+                  <ButtonComponent onClick={this.handleDelete} title="Delete Selected Trees">
+                    <i className="far fa-trash-alt" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
                     title="Toggle Visibility of All Trees"
                   >
-                    <i className="fas fa-toggle-on" /> Toggle All
+                    <i className="fas fa-toggle-on" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
                     title="Toggle Visibility of Inactive Trees"
                   >
-                    <i className="fas fa-toggle-off" /> Toggle Inactive
+                    <i className="fas fa-toggle-off" />
                   </ButtonComponent>
                   <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent>
@@ -729,8 +730,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </div>
-                <InputGroup compact>
+                </InputGroup>
+                <InputGroup compact className="compact-icons">
                   <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
@@ -749,6 +750,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     </ButtonComponent>
                   </Dropdown>
                 </InputGroup>
+                {!showSkeletons ? (
+                  <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
+                    <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+                  </Tooltip>
+                ) : null}
                 {noTreesAndGroups ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}

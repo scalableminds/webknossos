@@ -294,7 +294,7 @@ class SceneController {
 
     if (Store.getState().tracing.skeleton != null) {
       this.skeleton = new Skeleton();
-      this.rootNode.add(this.skeleton.getRootNode());
+      this.rootNode.add(this.skeleton.getRootGroup());
     }
 
     this.planes = {
@@ -463,6 +463,12 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
   }
 
+  setSkeletonGroupVisibility(isVisible: boolean) {
+    if (this.skeleton) {
+      this.skeleton.getRootGroup().visible = isVisible;
+    }
+  }
+
   stopPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
@@ -508,6 +514,13 @@ class SceneController {
     listenToStoreProperty(
       storeState => getSomeTracing(storeState.tracing).boundingBox,
       bb => this.buildTaskingBoundingBox(bb),
+    );
+
+    listenToStoreProperty(
+      storeState =>
+        storeState.tracing.skeleton ? storeState.tracing.skeleton.showSkeletons : false,
+      showSkeletons => this.setSkeletonGroupVisibility(showSkeletons),
+      true,
     );
   }
 }

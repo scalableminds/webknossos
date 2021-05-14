@@ -117,6 +117,7 @@ type DeleteCommentAction = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: n
 type SetTracingAction = { type: "SET_TRACING", tracing: SkeletonTracing };
 type SetTreeGroupsAction = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroup> };
 type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
+type SetShowSkeletonsAction = { type: "SET_SHOW_SKELETONS", showSkeletons: boolean };
 type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
 type UpdateNavigationListAction = {
   type: "UPDATE_NAVIGATION_LIST",
@@ -164,6 +165,7 @@ export type SkeletonTracingAction =
   | SetTracingAction
   | SetTreeGroupsAction
   | SetTreeGroupAction
+  | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction;
 
@@ -466,6 +468,11 @@ export const setTreeGroupAction = (groupId: ?number, treeId?: number): SetTreeGr
   type: "SET_TREE_GROUP",
   groupId,
   treeId,
+});
+
+export const setShowSkeletonsAction = (showSkeletons: boolean): SetShowSkeletonsAction => ({
+  type: "SET_SHOW_SKELETONS",
+  showSkeletons,
 });
 
 export const setMergerModeEnabledAction = (active: boolean): SetMergerModeEnabledAction => ({

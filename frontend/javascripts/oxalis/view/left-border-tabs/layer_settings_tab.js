@@ -73,7 +73,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setNodeRadiusAction,
-  toggleAllTreesAction,
+  setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages, { settings } from "messages";
 import MappingSettingsView from "./mapping_settings_view";
@@ -91,8 +91,8 @@ type DatasetSettingsProps = {|
     value: any,
   ) => void,
   histogramData: HistogramDataForAllLayers,
-  onToggleAllTrees: boolean => void,
   onChangeRadius: (value: number) => void,
+  onChangeShowSkeletons: boolean => void,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
@@ -703,35 +703,41 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getSkeletonLayer = () => {
-    const { controlMode, tracing, onChangeRadius, userConfiguration } = this.props;
+    const {
+      controlMode,
+      tracing,
+      onChangeRadius,
+      userConfiguration,
+      onChangeShowSkeletons,
+    } = this.props;
     const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
 
     if (isPublicViewMode || tracing.skeleton == null) {
       return null;
     }
     const skeletonTracing = enforceSkeletonTracing(tracing);
+    const { showSkeletons } = skeletonTracing;
     const activeNodeRadius = getActiveNode(skeletonTracing)
       .map(activeNode => activeNode.radius)
       .getOrElse(0);
-    const isSomeTreeVisible = _.values(skeletonTracing.trees).some(tree => tree.isVisible);
 
     return (
       <React.Fragment>
         <Tooltip
-          title={isSomeTreeVisible ? "Hide all Skeletons" : "Show all skeletons"}
+          title={showSkeletons ? "Hide all Skeletons" : "Show all skeletons"}
           placement="top"
         >
           {/* This div is necessary for the tooltip to be displayed */}
           <div style={{ display: "inline-block", marginRight: 8 }}>
             <Switch
               size="small"
-              onChange={() => this.props.onToggleAllTrees(!isSomeTreeVisible)}
-              checked={isSomeTreeVisible}
+              onChange={() => onChangeShowSkeletons(!showSkeletons)}
+              checked={showSkeletons}
             />
           </div>
         </Tooltip>
         <span style={{ fontWeight: 700, wordWrap: "break-word" }}>Skeletons</span>
-        {isSomeTreeVisible ? (
+        {showSkeletons ? (
           <React.Fragment>
             <LogSliderSetting
               label={settings.nodeRadius}
@@ -853,8 +859,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeBrushSize(value) {
     dispatch(updateUserSettingAction("brushSize", value));
   },
-  onToggleAllTrees(isVisible: boolean) {
-    dispatch(toggleAllTreesAction(isVisible));
+  onChangeShowSkeletons(showSkeletons: boolean) {
+    dispatch(setShowSkeletonsAction(showSkeletons));
   },
   onZoomToResolution(resolution) {
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);

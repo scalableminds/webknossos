@@ -242,7 +242,7 @@ class MeshesView extends React.Component<
           const pos = getPosition(this.props.flycam);
           const id = getIdForPos(pos);
           if (id === 0) {
-            Toast.info("No cell found at centered position");
+            Toast.info("No segment found at centered position");
           }
           this.props.changeActiveIsosurfaceId(id, pos);
         }}
@@ -250,13 +250,13 @@ class MeshesView extends React.Component<
         size="small"
         type="primary"
       >
-        Load Isosurface for centered Cell
+        Load Isosurface for centered Segment
       </Button>
     );
     const getIsosurfacesHeader = () => (
       <React.Fragment>
         Isosurfaces{" "}
-        <Tooltip title="Isosurfaces are the 3D representation of a cell. They are computed ad-hoc by webKnossos.">
+        <Tooltip title="Isosurfaces are the 3D representation of a segment. They are computed ad-hoc by webKnossos.">
           <InfoCircleOutlined />
         </Tooltip>
         {getImportButton()}
@@ -365,7 +365,7 @@ class MeshesView extends React.Component<
           locale={{
             emptyText: `There are no Isosurfaces.${
               this.props.allowUpdate
-                ? " You can render an isosurface for the currently centered cell by clicking the button above."
+                ? " You can render an isosurface for the currently centered segment by clicking the button above."
                 : ""
             }`,
           }}

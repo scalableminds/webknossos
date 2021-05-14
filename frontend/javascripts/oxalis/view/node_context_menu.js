@@ -101,10 +101,10 @@ function maybeHoveredCellMenuItem(globalPosition: Vector3) {
 
   return (
     <div className="node-context-menu-item">
-      <i className="fas fa-ruler" /> Hovered Cell: {cellIdAsString}
+      <i className="fas fa-ruler" /> Hovered Segment: {cellIdAsString}
       {copyIconWithTooltip(
         hoveredCellInfo.id,
-        `Copy ${hoveredCellInfo.isMapped ? "mapped" : ""} cell id`,
+        `Copy ${hoveredCellInfo.isMapped ? "mapped" : ""} segment id`,
       )}
     </div>
   );

@@ -263,8 +263,8 @@ class Statusbar extends React.PureComponent<Props, State> {
           <span className="info-element" style={{ minWidth: 120 }}>
             <NumberInputPopoverSetting
               value={activeCellId}
-              label={this.maybeLabelWitSegmentationWarning("Active Cell")}
-              detailedLabel={this.maybeLabelWitSegmentationWarning("Change Active Cell ID")}
+              label={this.maybeLabelWitSegmentationWarning("Active Segment")}
+              detailedLabel={this.maybeLabelWitSegmentationWarning("Change Active Segment ID")}
               onChange={this.props.onChangeActiveCellId}
             />
           </span>

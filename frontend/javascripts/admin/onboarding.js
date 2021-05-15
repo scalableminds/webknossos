@@ -24,6 +24,7 @@ import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api"
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
+import CreditsFooter from "components/credits_footer";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import Toast from "libs/toast";
 import features from "features";
@@ -114,16 +115,16 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-around",
-          boxShadow: "0px 0px 4px rgba(0, 0, 0, 0.25)",
+          boxShadow: "var(--ant-box-shadow-base)",
           borderRadius: 3,
           border: 0,
         }}
       >
         <div
-          className="withoutIconMargin"
+          className="without-icon-margin"
           style={{
             fontSize: 32,
-            background: "#1790ff",
+            background: "var(--ant-primary)",
             borderRadius: "30px",
             padding: "6px 14px",
             color: "white",
@@ -139,13 +140,21 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           style={{
             fontSize: 20,
             lineHeight: "22px",
-            color: "#0d232d",
             marginBottom: 0,
           }}
         >
           {header}
         </h1>
-        <p style={{ fontSize: 14, lineHeight: "18px", color: "#6b7280", margin: 0 }}>{children}</p>
+        <p
+          style={{
+            fontSize: 14,
+            lineHeight: "18px",
+            color: "var(--ant-text-secondary)",
+            margin: 0,
+          }}
+        >
+          {children}
+        </p>
         <p>{action}</p>
       </Card>
     </div>
@@ -527,33 +536,29 @@ class OnboardingView extends React.PureComponent<Props, State> {
     const currentStepContent = availableSteps[this.state.currentStep].component();
 
     return (
-      <div
-        style={{
-          minHeight: "calc(100vh - 48px)",
-          display: "flex",
-          flexDirection: "column",
-          paddingBottom: 50,
-        }}
-      >
-        <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
-          <Col span={18}>
-            <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
-              {availableSteps.map(({ title }) => (
-                <Step title={title} key={title} />
-              ))}
-            </Steps>
-          </Col>
-        </Row>
-        <div style={{ flex: "1 1 auto", display: "flex" }}>
-          <Row type="flex" justify="center" style={{ flex: "1 1 auto" }} align="middle">
+      <>
+        <div className="onboarding">
+          <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
             <Col span={18}>
-              <Row type="flex" justify="center" align="middle">
-                <Col span={24}>{currentStepContent}</Col>
-              </Row>
+              <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
+                {availableSteps.map(({ title }) => (
+                  <Step title={title} key={title} />
+                ))}
+              </Steps>
             </Col>
           </Row>
+          <div style={{ flex: "1 1 auto", display: "flex" }}>
+            <Row type="flex" justify="center" style={{ flex: "1 1 auto" }} align="middle">
+              <Col span={18}>
+                <Row type="flex" justify="center" align="middle">
+                  <Col span={24}>{currentStepContent}</Col>
+                </Row>
+              </Col>
+            </Row>
+          </div>
         </div>
-      </div>
+        <CreditsFooter />
+      </>
     );
   };
 }

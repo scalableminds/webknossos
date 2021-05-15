@@ -3,8 +3,8 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Tooltip, Button } from "antd";
+import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -28,10 +28,6 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
@@ -44,7 +40,7 @@ type DispatchProps = {|
   setAnnotationDescription: string => void,
 |};
 
-type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
+type Props = {| ...StateProps, ...DispatchProps |};
 
 const shortcuts = [
   {
@@ -153,13 +149,10 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
       <div style={{ marginBottom: 25 }}>
-        <table style={{ marginRight: 20, marginTop: 25, maxWidth: 500, fontSize: 14 }}>
+        <table className="shortcut-table">
           <tbody>
             {shortcuts.map(shortcut => (
-              <tr
-                key={shortcut.key}
-                style={{ borderBottom: "1px solid #e8e8e8", borderTop: "1px solid #e8e8e8" }}
-              >
+              <tr key={shortcut.key}>
                 <td style={{ width: 200 }}>{shortcut.keybinding}</td>
                 <td>{shortcut.action}</td>
               </tr>
@@ -199,12 +192,24 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       description: datasetDescription,
       owningOrganization,
     } = this.props.dataset;
+    const getEditSettingsIcon = () => (
+      <Tooltip title="Edit dataset settings">
+        <Button
+          type="text"
+          icon={<EditOutlined />}
+          href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+          className="transparent-background-on-hover"
+          target="_blank"
+        />
+      </Tooltip>
+    );
 
     if (isDatasetViewMode) {
       return (
         <div>
           <p style={{ wordWrap: "break-word" }}>
             <strong>{displayName || datasetName}</strong>
+            {getEditSettingsIcon()}
           </p>
           {datasetDescription ? (
             <div style={{ fontSize: 14 }}>
@@ -228,6 +233,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         >
           {datasetName}
         </Link>
+        {getEditSettingsIcon()}
       </p>
     );
   }
@@ -292,7 +298,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     }
 
     return (
-      <div className="flex-overflow">
+      <div>
         <div>{annotationTypeLabel}</div>
         <div>{descriptionEditField}</div>
       </div>
@@ -392,8 +398,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           <tr>
             <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
               <img
+                className="info-tab-icon"
                 src="/assets/images/icon-downsampling.svg"
-                style={{ width: 24, height: 24 }}
                 alt="Resolution"
               />
             </td>
@@ -405,7 +411,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       ) : null;
 
     return (
-      <div className="flex-overflow padded-tab-content" style={{ padding: 8, paddingLeft: 20 }}>
+      <div className="flex-overflow padded-tab-content">
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
           {this.getTracingType(isDatasetViewMode)}
@@ -420,8 +426,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-voxelsize.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Voxel size"
                     />
                   </td>
@@ -432,8 +438,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-extent.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Dataset extent"
                     />
                   </td>
@@ -473,7 +479,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(DatasetInfoTabView);

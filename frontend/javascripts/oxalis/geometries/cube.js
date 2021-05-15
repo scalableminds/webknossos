@@ -3,7 +3,6 @@
  * @flow
  */
 
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import _ from "lodash";
 
@@ -37,9 +36,6 @@ class Cube {
   initialized: boolean;
   visible: boolean;
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-
   constructor(properties: Properties) {
     // min/max should denote a half-open interval.
     this.min = properties.min || [0, 0, 0];
@@ -47,8 +43,6 @@ class Cube {
     const lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
     const color = properties.color || 0x000000;
     this.showCrossSections = properties.showCrossSections || false;
-
-    _.extend(this, BackboneEvents);
 
     this.initialized = false;
     this.visible = true;

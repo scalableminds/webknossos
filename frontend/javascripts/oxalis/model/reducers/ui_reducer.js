@@ -39,6 +39,14 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", { isRefreshingIsosurfaces: false });
     }
 
+    case "SET_BORDER_OPEN_STATUS": {
+      return updateKey(state, "uiInformation", { borderOpenStatus: action.borderOpenStatus });
+    }
+
+    case "SET_THEME": {
+      return updateKey(state, "uiInformation", { theme: action.value });
+    }
+
     default:
       return state;
   }

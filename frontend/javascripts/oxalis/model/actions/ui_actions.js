@@ -1,5 +1,7 @@
 // @flow
 
+import { type BorderOpenStatus, type Theme } from "oxalis/store";
+
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",
   visible: boolean,
@@ -13,6 +15,11 @@ type SetVersionRestoreVisibilityAction = {
 type SetStoredLayoutsAction = {
   type: "SET_STORED_LAYOUTS",
   storedLayouts: Object,
+};
+
+type SetBorderOpenStatusAction = {
+  type: "SET_BORDER_OPEN_STATUS",
+  borderOpenStatus: BorderOpenStatus,
 };
 
 type SetImportingMeshStateAction = {
@@ -30,13 +37,20 @@ type SetHasOrganizationsAction = {
   value: boolean,
 };
 
+type SetThemeAction = {
+  type: "SET_THEME",
+  value: Theme,
+};
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
   | SetImportingMeshStateAction
+  | SetBorderOpenStatusAction
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
-  | SetHasOrganizationsAction;
+  | SetHasOrganizationsAction
+  | SetThemeAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -57,6 +71,13 @@ export const setStoredLayoutsAction = (storedLayouts: Object): SetStoredLayoutsA
   storedLayouts,
 });
 
+export const setBorderOpenStatusAction = (
+  borderOpenStatus: BorderOpenStatus,
+): SetBorderOpenStatusAction => ({
+  type: "SET_BORDER_OPEN_STATUS",
+  borderOpenStatus,
+});
+
 export const setImportingMeshStateAction = (isImporting: boolean): SetImportingMeshStateAction => ({
   type: "SET_IMPORTING_MESH_STATE",
   isImporting,
@@ -69,5 +90,10 @@ export const setIsInAnnotationViewAction = (value: boolean): SetIsInAnnotationVi
 
 export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAction => ({
   type: "SET_HAS_ORGANIZATIONS",
+  value,
+});
+
+export const setThemeAction = (value: Theme): SetThemeAction => ({
+  type: "SET_THEME",
   value,
 });

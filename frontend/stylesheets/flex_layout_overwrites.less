@@ -1,0 +1,123 @@
+.flexlayout__tab,
+.flexlayout__tabset,
+.flexlayout__tabset_tabbar_outer,
+.flexlayout__border {
+  background-color: transparent;
+  color: unset;
+}
+.flexlayout__tab_border,
+.flexlayout__tabset-selected {
+  background-color: @body-background !important;
+}
+
+.flexlayout__tabset_tabbar_outer_top {
+  border-color: @border-color-base;
+}
+
+.flexlayout__border_left {
+  border-right: none;
+}
+.flexlayout__border_right {
+  border-left: none;
+}
+
+.flexlayout__tabset_tabbar_inner_tab_container_top {
+  border: none !important;
+}
+
+.flexlayout__splitter:hover,
+.flexlayout__splitter_drag {
+  background-color: rgba(@text-color, 0.4);
+}
+.flexlayout__splitter {
+  z-index: 21;
+  background-color: rgba(@text-color, 0.1);
+  &::before {
+    content: "";
+    background-color: rgba(@text-color, 0);
+  }
+}
+
+.flexlayout__splitter_vert::before {
+  width: 11px;
+  display: inline-block;
+  height: 100%;
+  position: relative;
+  left: -5px;
+}
+
+.flexlayout__splitter_horz::before {
+  height: 11px;
+  display: inline-block;
+  width: 100%;
+  position: relative;
+  // Somehow the before content is 10px below the splitter.
+  top: -15px;
+}
+
+.flexlayout__tab_button_content {
+  // On Safari, this ensures that the button is easily clickable
+  // (otherwise, the resizer becomes the default target for some reason).
+  z-index: 100;
+}
+
+.flexlayout__tab_button {
+  margin: 0;
+  padding: 0px 5px;
+  line-height: 1;
+  // These properties are copied from antd's styling:
+  font-size: 14px;
+  font-weight: 400;
+  font-family: @font-family;
+  &:hover {
+    cursor: move;
+  }
+  background-color: @body-background;
+
+  .flexlayout__tab_button_content {
+    background-color: @body-background;
+    color: rgba(@text-color, 0.65);
+    border-bottom: 1px solid transparent;
+  }
+  &.flexlayout__tab_button--selected {
+    background-color: @body-background;
+    .flexlayout__tab_button_content {
+      background-color: @body-background;
+      color: @link-color;
+    }
+  }
+  &:hover {
+    background-color: @body-background;
+    .flexlayout__tab_button_content {
+      background-color: @body-background;
+      color: @link-color;
+      border-bottom: 1px solid @link-color;
+    }
+  }
+}
+
+.flexlayout-dont-overflow {
+  overflow: hidden;
+  height: 100%;
+}
+
+.flexlayout__outline_rect,
+.flexlayout__outline_rect_edge {
+  border-color: rgba(24, 144, 255, 0.85) !important;
+}
+
+// Reverse the direction of the buttons in the tabset bar to be able to position elements on the right.
+.flexlayout__tab_toolbar {
+  flex-direction: row-reverse;
+}
+
+// Select the first vertical border splitter and ignore all its pointer events to disable resizing of the border.
+// This is only active when the left border is open and therefore only disables the splitter of the left border.
+// More info about this css trick: https://stackoverflow.com/questions/2717480/css-selector-for-first-element-with-class.
+.hide_first_splitter_border {
+  pointer-events: none;
+}
+// This re-enables all pointer event for all other border splitters that are not the first (left most).
+.hide_first_splitter_border ~ .hide_first_splitter_border {
+  pointer-events: all;
+}

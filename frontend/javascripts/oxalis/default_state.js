@@ -1,7 +1,13 @@
 // @flow
 
 import type { OxalisState } from "oxalis/store";
-import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
+import Constants, {
+  ControlModeEnum,
+  OrthoViews,
+  OverwriteModeEnum,
+  TDViewDisplayModeEnum,
+} from "oxalis/constants";
+import { document } from "libs/window";
 
 const defaultViewportRect = {
   top: 0,
@@ -36,6 +42,8 @@ const initialAnnotationInfo = {
   meshes: [],
 };
 
+const primaryStylesheetElement: ?HTMLLinkElement = document.getElementById("primary-stylesheet");
+
 const defaultState: OxalisState = {
   datasetConfiguration: {
     fourBit: false,
@@ -58,7 +66,6 @@ const defaultState: OxalisState = {
     hideTreeRemovalWarning: false,
     highlightCommentedNodes: false,
     keyboardDelay: 200,
-    layoutScaleValue: 1,
     mouseRotateValue: 0.004,
     moveValue3d: 300,
     moveValue: 300,
@@ -70,7 +77,8 @@ const defaultState: OxalisState = {
     sortCommentsAsc: true,
     sortTreesByName: false,
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
-    tdViewDisplayPlanes: true,
+    tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
+    tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
   },
@@ -204,6 +212,11 @@ const defaultState: OxalisState = {
     isInAnnotationView: false,
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
+    borderOpenStatus: { right: false, left: false },
+    theme:
+      primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
+        ? "dark"
+        : "light",
   },
   isosurfaces: {},
 };

@@ -56,7 +56,7 @@ class AnnotationController @Inject()(
 
   def info(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
-      log {
+      log() {
         val notFoundMessage =
           if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
         for {
@@ -211,7 +211,7 @@ class AnnotationController @Inject()(
 
   def finish(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
-      log {
+      log() {
         for {
           (updated, message) <- finishAnnotation(typ, id, request.identity, timestamp) ?~> "annotation.finish.failed"
           restrictions <- provider.restrictionsFor(typ, id)
@@ -222,7 +222,7 @@ class AnnotationController @Inject()(
 
   def finishAll(typ: String, timestamp: Long): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
-      log {
+      log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
           val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
             jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, timestamp))

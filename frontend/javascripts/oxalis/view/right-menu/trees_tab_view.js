@@ -107,10 +107,6 @@ type TreeOrTreeGroup = {
   type: string,
 };
 
-type OwnProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
-  portalKey: string,
-|};
 type StateProps = {|
   onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,
@@ -130,7 +126,7 @@ type StateProps = {|
   onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 type State = {
   isUploading: boolean,
@@ -840,7 +836,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(TreesTabView);

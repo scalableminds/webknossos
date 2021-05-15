@@ -48,6 +48,7 @@ GET           /users/:id                                                       c
 PATCH         /users/:id                                                       controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                            controllers.UserController.updateLastTaskTypeId(id: String)
 PUT           /users/:id/novelUserExperienceInfos                              controllers.UserController.updateNovelUserExperienceInfos(id: String)
+PUT           /users/:id/selectedTheme                                         controllers.UserController.updateSelectedTheme(id: String)
 GET           /users/:id/tasks                                                 controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/loggedTime                                            controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                controllers.UserController.usersLoggedTime

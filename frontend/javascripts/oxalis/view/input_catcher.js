@@ -8,6 +8,14 @@ import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
+import { waitForCondition } from "libs/utils";
+
+const emptyViewportRect = {
+  top: 0,
+  left: 0,
+  width: 0,
+  height: 0,
+};
 
 type Props = {
   viewportID: Viewport,
@@ -23,38 +31,48 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
 // Is able to make the input catcher a square (if makeQuadratic is true)
 // and returns its position within the document relative to the rendering canvas
 function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean): Rect {
-  const noneOverflowWrapper = inputCatcherDOM.closest(".gl-dont-overflow");
+  const noneOverflowWrapper = inputCatcherDOM.closest(".flexlayout-dont-overflow");
   if (!noneOverflowWrapper) {
     return { top: 0, left: 0, width: 0, height: 0 };
   }
-
-  const getExtent = () => {
-    let { width, height } = noneOverflowWrapper.getBoundingClientRect();
-    // These values should be floored, so that the rendered area does not overlap
-    // with the golden layout containers
-    width = Math.floor(width);
-    height = Math.floor(height);
-
-    if (makeQuadratic) {
+  // If the inputcatcher does not need to be quadratic, the extent is handled by css automatically.
+  if (makeQuadratic) {
+    const getQuadraticExtent = () => {
+      let { width, height } = noneOverflowWrapper.getBoundingClientRect();
+      // These values should be floored, so that the rendered area does not overlap
+      // with the containers.
+      width = Math.floor(width);
+      height = Math.floor(height);
       const extent = Math.min(width, height);
       return [extent, extent];
-    } else {
-      return [width, height];
-    }
-  };
-  const [width, height] = getExtent();
-  inputCatcherDOM.style.width = `${width}px`;
-  inputCatcherDOM.style.height = `${height}px`;
-
+    };
+    const [width, height] = getQuadraticExtent();
+    inputCatcherDOM.style.width = `${width}px`;
+    inputCatcherDOM.style.height = `${height}px`;
+  }
   return makeRectRelativeToCanvas(inputCatcherDOM.getBoundingClientRect());
 }
 
 const renderedInputCatchers = new Map();
 
+export async function initializeInputCatcherSizes() {
+  // In an interval of 100 ms we check whether the input catchers can be initialized
+  const pollInterval = 100;
+  await waitForCondition(() => renderedInputCatchers.size > 0, pollInterval);
+  recalculateInputCatcherSizes();
+}
+
 export function recalculateInputCatcherSizes() {
-  const viewportRects = {};
+  const viewportRects: Object = {
+    PLANE_XY: emptyViewportRect,
+    PLANE_YZ: emptyViewportRect,
+    PLANE_XZ: emptyViewportRect,
+    TDView: emptyViewportRect,
+  };
+
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
-    const rect = adaptInputCatcher(inputCatcher, viewportID === ArbitraryViewport);
+    const makeQuadratic = viewportID === ArbitraryViewport;
+    const rect = adaptInputCatcher(inputCatcher, makeQuadratic);
     viewportRects[viewportID] = rect;
   }
   Store.dispatch(setInputCatcherRects(viewportRects));
@@ -79,7 +97,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
     const { viewportID } = this.props;
 
     return (
-      <div className="gl-dont-overflow">
+      <div className="flexlayout-dont-overflow">
         <div
           id={`inputcatcher_${viewportID}`}
           ref={domElement => {

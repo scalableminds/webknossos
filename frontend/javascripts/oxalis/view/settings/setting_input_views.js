@@ -133,7 +133,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row type="flex" align="top">
+      <Row type="flex" align="middle">
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -489,10 +489,10 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
     const { onChange, label, value } = this.props;
     return (
       <Row className="margin-bottom" align="top">
-        <Col span={8}>
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={16}>
+        <Col span={15}>
           <Select
             onChange={onChange}
             value={value.toString()}

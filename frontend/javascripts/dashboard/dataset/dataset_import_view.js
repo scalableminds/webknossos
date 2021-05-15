@@ -673,13 +673,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     const errorIcon = (
       <Tooltip title="Some fields in this tab require your attention.">
-        <ExclamationCircleOutlined style={{ color: "#f5222d", marginLeft: 4 }} />
+        <ExclamationCircleOutlined style={{ marginLeft: 4, color: "var(--ant-error)" }} />
       </Tooltip>
     );
     const { hasNoAllowedTeams } = this.state;
     const hasNoAllowedTeamsWarning = hasNoAllowedTeams ? (
       <Tooltip title="Please double-check some fields here.">
-        <ExclamationCircleOutlined style={{ color: "#faad14", marginLeft: 4 }} />
+        <ExclamationCircleOutlined style={{ marginLeft: 4, color: "var(--ant-warning)" }} />
       </Tooltip>
     ) : null;
 

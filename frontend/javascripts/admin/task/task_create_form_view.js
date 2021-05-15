@@ -221,7 +221,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         ) : null}
       </div>
     ),
-    width: 600,
+    width: 800,
   });
 }
 

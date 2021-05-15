@@ -79,11 +79,6 @@ type State = {
   isFetchingData: boolean,
 };
 
-export function taskToShortText(task: APITask) {
-  const { id, creationInfo, editPosition } = task;
-  return `${id},${creationInfo || "null"},(${editPosition.join(",")})`;
-}
-
 export function taskToText(task: APITask) {
   const {
     id,
@@ -113,6 +108,12 @@ export function taskToText(task: APITask) {
   return taskAsString;
 }
 
+function tasksToCSVString(tasks: Array<APITask>) {
+  const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
+  const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
+  return csv;
+}
+
 export function downloadTasksAsCSV(tasks: Array<APITask>) {
   if (tasks.length < 0) {
     return;
@@ -122,9 +123,12 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime);
   const allTeamNames = _.uniq(tasks.map(task => task.team));
   const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
-  const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
-  const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
-  const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
+  const allProjectNames = _.uniq(tasks.map(task => task.projectName));
+  const projectName = allProjectNames.length > 1 ? "multiple_projects" : allProjectNames[0];
+  const taskIds = _.uniq(tasks.map(task => task.id));
+  const taskIdsString = taskIds.length < 4 ? taskIds.join("_") : "multiple_ids";
+  const csv = tasksToCSVString(tasks);
+  const filename = `${teamName}-${maybeTaskPlural}-${taskIdsString}-${projectName}-${currentDateAsString}.csv`;
   const blob = new Blob([csv], { type: "text/plain;charset=utf-8" });
   saveAs(blob, filename);
 }
@@ -159,11 +163,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
   const failedTasksAsString = failedTasks.join("");
   const successfulTasksContent =
     successfulTasks.length <= maxDisplayedTasksCount ? (
-      <pre>
-        taskId,filename,position
-        <br />
-        {successfulTasks.map(task => taskToShortText(task)).join("\n")}
-      </pre>
+      <pre>{tasksToCSVString(successfulTasks)}</pre>
     ) : (
       "Too many tasks to show, please use CSV download for a full list."
     );

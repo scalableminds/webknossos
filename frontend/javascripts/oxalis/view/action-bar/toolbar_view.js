@@ -21,7 +21,10 @@ import { usePrevious, useKeyPress } from "libs/react_hooks";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import {
+  getDisabledInfoForTools,
+  adaptActiveToolToShortcuts,
+} from "oxalis/model/accessors/tool_accessor";
 
 function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
@@ -49,57 +52,6 @@ function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAlt
   }
 
   return null;
-}
-
-function adaptActiveToolToShortcuts(
-  activeTool,
-  isShiftPressed,
-  isControlPressed,
-  isAltPressed,
-): AnnotationTool {
-  if (!isShiftPressed && !isControlPressed && !isAltPressed) {
-    // No modifier is pressed
-    return activeTool;
-  }
-
-  if (
-    activeTool === AnnotationToolEnum.MOVE ||
-    activeTool === AnnotationToolEnum.ERASE_BRUSH ||
-    activeTool === AnnotationToolEnum.ERASE_TRACE
-  ) {
-    // These tools do not have any modifier-related behavior currently.
-    return activeTool;
-  }
-
-  if (activeTool === AnnotationToolEnum.SKELETON) {
-    // The "skeleton" tool is not changed right now (since actions such as moving a node
-    // don't have a dedicated tool). The only exception is "Alt" which switches to the move tool.
-    if (isAltPressed) {
-      return AnnotationToolEnum.MOVE;
-    }
-    return activeTool;
-  }
-
-  if (isShiftPressed && !isControlPressed && !isAltPressed) {
-    // Only shift is pressed. Switch to the picker
-    return AnnotationToolEnum.PICK_CELL;
-  }
-
-  if (isControlPressed && isShiftPressed && !isAltPressed) {
-    // Control and shift switch to the eraser
-    if (activeTool === AnnotationToolEnum.BRUSH) {
-      return AnnotationToolEnum.ERASE_BRUSH;
-    } else if (activeTool === AnnotationToolEnum.TRACE) {
-      return AnnotationToolEnum.ERASE_TRACE;
-    }
-  }
-
-  if (isAltPressed) {
-    // Alt switches to the move tool
-    return AnnotationToolEnum.MOVE;
-  }
-
-  return activeTool;
 }
 
 function toggleOverwriteMode(overwriteMode) {
@@ -189,7 +141,7 @@ function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
         <img src="/assets/images/overwrite-all.svg" alt="Overwrite All Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
-        title="Only overwrite empty areas. In case of deleting (via right-click), only the current cell ID is overwritten. This setting can be toggled by holding CTRL."
+        title="Only overwrite empty areas. In case of erasing, only the current cell ID is overwritten. This setting can be toggled by holding CTRL."
         style={narrowButtonStyle}
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >

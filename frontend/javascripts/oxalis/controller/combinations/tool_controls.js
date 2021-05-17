@@ -6,6 +6,8 @@ import {
   type Point2,
   ContourModeEnum,
   type ShowContextMenuFunction,
+  type AnnotationTool,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import {
   getContourTracingMode,
@@ -101,6 +103,19 @@ export class MoveTool {
         event,
         showNodeContextMenuAt,
       );
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    return {
+      leftDrag: "Move",
+      rightClick: "Context Menu",
+    };
   }
 }
 
@@ -226,6 +241,19 @@ export class SkeletonTool {
       SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
     }
   }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    useLegacyBindings: boolean,
+    shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    return {
+      leftDrag: useLegacyBindings ? "Move" : "Place Node",
+      rightClick: useLegacyBindings && !shiftKey ? "Place Node" : "Context Menu",
+    };
+  }
 }
 
 export class DrawTool {
@@ -327,6 +355,26 @@ export class DrawTool {
       },
     };
   }
+
+  static getActionDescriptors(
+    activeTool: AnnotationTool,
+    useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    let rightClick;
+    if (!useLegacyBindings) {
+      rightClick = "Context Menu";
+    } else {
+      rightClick = `Erase (${activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace"})`;
+    }
+
+    return {
+      leftDrag: activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace",
+      rightClick,
+    };
+  }
 }
 
 export class EraseTool {
@@ -364,6 +412,19 @@ export class EraseTool {
       },
     };
   }
+
+  static getActionDescriptors(
+    activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    return {
+      leftDrag: `Erase (${activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace"})`,
+      rightClick: "Context Menu",
+    };
+  }
 }
 
 export class PickCellTool {
@@ -372,6 +433,19 @@ export class PickCellTool {
       leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         VolumeHandlers.handlePickCell(pos);
       },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    return {
+      leftClick: "Pick Cell",
+      rightClick: "Context Menu",
     };
   }
 }
@@ -393,4 +467,32 @@ export class FillCellTool {
       },
     };
   }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    return {
+      leftClick: "Fill Cell",
+      rightClick: "Context Menu",
+    };
+  }
+}
+
+const toolToToolClass = {
+  [AnnotationToolEnum.MOVE]: MoveTool,
+  [AnnotationToolEnum.SKELETON]: SkeletonTool,
+  [AnnotationToolEnum.BRUSH]: DrawTool,
+  [AnnotationToolEnum.TRACE]: DrawTool,
+  [AnnotationToolEnum.ERASE_TRACE]: EraseTool,
+  [AnnotationToolEnum.ERASE_BRUSH]: EraseTool,
+  [AnnotationToolEnum.FILL_CELL]: FillCellTool,
+  [AnnotationToolEnum.PICK_CELL]: PickCellTool,
+};
+
+export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
+  return toolToToolClass[activeTool];
 }

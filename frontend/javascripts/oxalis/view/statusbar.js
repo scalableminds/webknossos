@@ -1,37 +1,22 @@
 // @flow
 import { Space, Tooltip } from "antd";
-import _ from "lodash";
-import { connect } from "react-redux";
+import { useSelector } from "react-redux";
 import React from "react";
-
-import Store, { type OxalisState } from "oxalis/store";
-import {
-  type Vector2,
-  type Vector3,
-  type OrthoView,
-  OrthoViews,
-  type AnnotationTool,
-  AnnotationToolEnum,
-} from "oxalis/constants";
+import { useKeyPress } from "libs/react_hooks";
+import Store from "oxalis/store";
+import { type Vector3, OrthoViews } from "oxalis/constants";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
-import { calculateGlobalPos, isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
+import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import {
+  calculateGlobalPos,
+  isPlaneMode as getIsPlaneMode,
+} from "oxalis/model/accessors/view_mode_accessor";
+import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import api from "oxalis/api/internal_api";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import { MoreOutlined } from "@ant-design/icons";
-
-type OwnProps = {||};
-type StateProps = {|
-  activeResolution: Vector3,
-  activeViewport: OrthoView,
-  mousePosition: ?Vector2,
-  activeTool: AnnotationTool,
-  isPlaneMode: boolean,
-  useLegacyBindings: boolean,
-|};
-type Props = {| ...OwnProps, ...StateProps |};
-type State = {||};
 
 const borderToggleButtonMargin = 40;
 const fontSize = 14;
@@ -55,51 +40,41 @@ const moreLinkStyle = { marginLeft: 10 };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
-class Statusbar extends React.PureComponent<Props, State> {
-  getSegmentationCube(): Cube {
-    const segmentationLayer = Model.getSegmentationLayer();
-    return segmentationLayer.cube;
-  }
+function getSegmentationCube(): Cube {
+  const segmentationLayer = Model.getSegmentationLayer();
+  return segmentationLayer.cube;
+}
 
-  getPosString(pos: Vector3) {
-    return V3.floor(pos).join(",");
-  }
+function getPosString(pos: Vector3) {
+  return V3.floor(pos).join(",");
+}
 
-  getZoomShortcut() {
-    return (
-      <span key="zoom" style={defaultShortcutStyle}>
-        <span
-          key="zoom-i"
-          className="keyboard-key-icon-small"
-          style={{ borderColor: lineColor, marginTop: -1 }}
-        >
-          {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-          <span style={{ position: "relative", top: -2 }}>Alt</span>
-        </span>{" "}
-        +
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-wheel.svg"
-          alt="Mouse Wheel"
-          style={defaultIconStyle}
-        />
-        Zoom in/out
-      </span>
-    );
-  }
+function ZoomShortcut() {
+  return (
+    <span key="zoom" style={defaultShortcutStyle}>
+      <span
+        key="zoom-i"
+        className="keyboard-key-icon-small"
+        style={{ borderColor: lineColor, marginTop: -1 }}
+      >
+        {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+        <span style={{ position: "relative", top: -2 }}>Alt</span>
+      </span>{" "}
+      +
+      <img
+        className="keyboard-mouse-icon"
+        src="/assets/images/icon-statusbar-mouse-wheel.svg"
+        alt="Mouse Wheel"
+        style={defaultIconStyle}
+      />
+      Zoom in/out
+    </span>
+  );
+}
 
-  getLeftClickShortcut() {
-    const leftClickToLabel = {
-      MOVE: "Move",
-      SKELETON: this.props.useLegacyBindings ? "Move" : "Place Node",
-      BRUSH: "Brush",
-      ERASE_BRUSH: "Erase (Brush)",
-      TRACE: "Trace",
-      ERASE_TRACE: "Erase (Trace)",
-      FILL_CELL: "Fill Cell",
-      PICK_CELL: "Pick Cell",
-    };
-    return (
+function LeftClickShortcut({ actionInfos }) {
+  const leftClick =
+    actionInfos.leftClick != null ? (
       <span
         style={{
           marginLeft: "auto",
@@ -107,191 +82,231 @@ class Statusbar extends React.PureComponent<Props, State> {
       >
         <img
           className="keyboard-mouse-icon"
-          src={
-            this.props.activeTool === AnnotationToolEnum.PICK_CELL ||
-            this.props.activeTool === AnnotationToolEnum.FILL_CELL
-              ? "/assets/images/icon-statusbar-mouse-left.svg"
-              : "/assets/images/icon-statusbar-mouse-left-drag.svg"
-          }
+          src="/assets/images/icon-statusbar-mouse-left.svg"
+          alt="Mouse Left Click"
+          style={defaultIconStyle}
+        />
+        {actionInfos.leftClick}
+      </span>
+    ) : null;
+
+  const leftDrag =
+    actionInfos.leftDrag != null ? (
+      <span
+        style={{
+          marginLeft: "auto",
+        }}
+      >
+        <img
+          className="keyboard-mouse-icon"
+          src="/assets/images/icon-statusbar-mouse-left-drag.svg"
           alt="Mouse Left Drag"
           style={defaultIconStyle}
         />
-        {leftClickToLabel[this.props.activeTool]}
+        {actionInfos.leftDrag}
       </span>
-    );
-  }
+    ) : null;
 
-  getRightClickShortcut() {
-    const contextMenu = "Context Menu";
-    const { useLegacyBindings } = this.props;
-    const rightClickToLabel = {
-      MOVE: contextMenu,
-      SKELETON: useLegacyBindings ? "Place Node" : contextMenu,
-      BRUSH: useLegacyBindings ? "Erase" : contextMenu,
-      ERASE_BRUSH: contextMenu,
-      TRACE: useLegacyBindings ? "Erase" : contextMenu,
-      ERASE_TRACE: contextMenu,
-      FILL_CELL: contextMenu,
-      PICK_CELL: contextMenu,
-    };
-    const label = rightClickToLabel[this.props.activeTool];
-    return (
-      label && (
-        <span style={defaultShortcutStyle}>
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-right.svg"
-            alt="Mouse Left"
-            style={defaultIconStyle}
-          />
-          {label}
-        </span>
-      )
-    );
-  }
+  return (
+    <React.Fragment>
+      {leftClick}
+      {leftDrag}
+    </React.Fragment>
+  );
+}
 
-  getShortcuts() {
-    const moreShortcutsLink = (
-      <a
-        target="_blank"
-        href="https://docs.webknossos.org/reference/keyboard_shortcuts"
-        rel="noopener noreferrer"
-        style={moreLinkStyle}
-      >
-        <Tooltip title="More Shortcuts">
-          <MoreOutlined rotate={90} style={moreIconStyle} />
-        </Tooltip>
-      </a>
-    );
-    if (!this.props.isPlaneMode) {
-      return (
-        <React.Fragment>
-          <span
-            style={{
-              marginLeft: "auto",
-              textTransform: "capitalize",
-            }}
-          >
-            <img
-              className="keyboard-mouse-icon"
-              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-              alt="Mouse Left Drag"
-              style={defaultIconStyle}
-            />
-            Move
-          </span>
-          <span key="zoom" style={defaultShortcutStyle}>
-            <span
-              key="zoom-i"
-              className="keyboard-key-icon-small"
-              style={{ borderColor: lineColor, marginTop: -1 }}
-            >
-              {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-              <span style={{ position: "relative", top: -2 }}>Space</span>
-            </span>{" "}
-            Trace forward
-          </span>
-          {moreShortcutsLink}
-        </React.Fragment>
-      );
-    }
+function RightClickShortcut({ actionInfos }) {
+  const rightClick =
+    actionInfos.rightClick != null ? (
+      <span style={defaultShortcutStyle}>
+        <img
+          className="keyboard-mouse-icon"
+          src="/assets/images/icon-statusbar-mouse-right.svg"
+          alt="Mouse Right Click"
+          style={defaultIconStyle}
+        />
+        {actionInfos.rightClick}
+      </span>
+    ) : null;
 
+  const rightDrag =
+    actionInfos.rightDrag != null ? (
+      <span style={defaultShortcutStyle}>
+        <img
+          className="keyboard-mouse-icon"
+          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
+          alt="Mouse Right Drag"
+          style={defaultIconStyle}
+        />
+        {actionInfos.rightDrag}
+      </span>
+    ) : null;
+
+  return (
+    <React.Fragment>
+      {rightClick}
+      {rightDrag}
+    </React.Fragment>
+  );
+}
+
+function ShortcutsInfo() {
+  const activeTool = useSelector(state => state.uiInformation.activeTool);
+  const useLegacyBindings = useSelector(state => state.userConfiguration.useLegacyBindings);
+  const isPlaneMode = useSelector(state => getIsPlaneMode(state));
+
+  const isShiftPressed = useKeyPress("Shift");
+  const isControlPressed = useKeyPress("Control");
+  const isAltPressed = useKeyPress("Alt");
+
+  const adaptedTool = adaptActiveToolToShortcuts(
+    activeTool,
+    isShiftPressed,
+    isControlPressed,
+    isAltPressed,
+  );
+  const actionInfos = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+    adaptedTool,
+    useLegacyBindings,
+    isShiftPressed,
+    isControlPressed,
+    isAltPressed,
+  );
+
+  const moreShortcutsLink = (
+    <a
+      target="_blank"
+      href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+      rel="noopener noreferrer"
+      style={moreLinkStyle}
+    >
+      <Tooltip title="More Shortcuts">
+        <MoreOutlined rotate={90} style={moreIconStyle} />
+      </Tooltip>
+    </a>
+  );
+  if (!isPlaneMode) {
     return (
       <React.Fragment>
-        {this.getLeftClickShortcut()}
-        {this.getRightClickShortcut()}
-        <span style={defaultShortcutStyle}>
+        <span
+          style={{
+            marginLeft: "auto",
+            textTransform: "capitalize",
+          }}
+        >
           <img
             className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-wheel.svg"
-            alt="Mouse Wheel"
+            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+            alt="Mouse Left Drag"
             style={defaultIconStyle}
           />
-          Move along 3rd axis
+          Move
         </span>
-        <span style={defaultShortcutStyle}>
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-right-drag.svg"
-            alt="Mouse Right"
-            style={defaultIconStyle}
-          />
-          Rotate 3D View
+        <span key="zoom" style={defaultShortcutStyle}>
+          <span
+            key="zoom-i"
+            className="keyboard-key-icon-small"
+            style={{ borderColor: lineColor, marginTop: -1 }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span style={{ position: "relative", top: -2 }}>Space</span>
+          </span>{" "}
+          Trace forward
         </span>
-        {this.getZoomShortcut()}
         {moreShortcutsLink}
       </React.Fragment>
     );
   }
 
-  getCellInfo(globalMousePosition: ?Vector3) {
-    if (!hasSegmentation()) return null;
-    const segmentationLayerName = Model.getSegmentationLayer().name;
-    const cube = this.getSegmentationCube();
-    const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      globalMousePosition,
-    );
-    const getIdForPos = (pos, usableZoomStep) => {
-      const id = cube.getDataValue(pos, null, usableZoomStep);
-      return cube.mapId(id);
-    };
-    const getSegmentIdString = () => {
-      if (!globalMousePosition) return "-";
-      const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
-      return cube.isMappingEnabled() ? `${id} (mapped)` : id;
-    };
+  return (
+    <React.Fragment>
+      <LeftClickShortcut actionInfos={actionInfos} />
+      <RightClickShortcut actionInfos={actionInfos} />
+      <span style={defaultShortcutStyle}>
+        <img
+          className="keyboard-mouse-icon"
+          src="/assets/images/icon-statusbar-mouse-wheel.svg"
+          alt="Mouse Wheel"
+          style={defaultIconStyle}
+        />
+        Move along 3rd axis
+      </span>
+      <span style={defaultShortcutStyle}>
+        <img
+          className="keyboard-mouse-icon"
+          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
+          alt="Mouse Right"
+          style={defaultIconStyle}
+        />
+        Rotate 3D View
+      </span>
+      <ZoomShortcut />
+      {moreShortcutsLink}
+    </React.Fragment>
+  );
+}
 
-    return (
-      <span style={{ minWidth: 180, ...defaultInfoStyle }}>Segment {getSegmentIdString()}</span>
-    );
+function getCellInfo(globalMousePosition: ?Vector3) {
+  if (!hasSegmentation()) return null;
+  const segmentationLayerName = Model.getSegmentationLayer().name;
+  const cube = getSegmentationCube();
+  const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
+    segmentationLayerName,
+    globalMousePosition,
+  );
+  const getIdForPos = (pos, usableZoomStep) => {
+    const id = cube.getDataValue(pos, null, usableZoomStep);
+    return cube.mapId(id);
+  };
+  const getSegmentIdString = () => {
+    if (!globalMousePosition) return "-";
+    const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
+    return cube.isMappingEnabled() ? `${id} (mapped)` : id;
+  };
+
+  return <span style={{ minWidth: 180, ...defaultInfoStyle }}>Segment {getSegmentIdString()}</span>;
+}
+
+function Infos() {
+  const activeResolution = useSelector(state => getCurrentResolution(state));
+  const mousePosition = useSelector(state => state.temporaryConfiguration.mousePosition);
+  const activeViewport = useSelector(state => state.viewModeData.plane.activeViewport);
+  const isPlaneMode = useSelector(state => getIsPlaneMode(state));
+
+  let globalMousePosition;
+  if (mousePosition && activeViewport !== OrthoViews.TDView) {
+    const [x, y] = mousePosition;
+    globalMousePosition = calculateGlobalPos(Store.getState(), { x, y });
   }
 
-  getInfos() {
-    const { activeViewport, mousePosition, activeResolution } = this.props;
-    let globalMousePosition;
-    if (mousePosition && activeViewport !== OrthoViews.TDView) {
-      const [x, y] = mousePosition;
-      globalMousePosition = calculateGlobalPos(Store.getState(), { x, y });
-    }
-
-    return (
-      <Space size={spaceBetweenItems} style={spaceStyle}>
-        <span>
-          <img
-            src="/assets/images/icon-statusbar-downsampling.svg"
-            className="resolution-status-bar-icon"
-            alt="Resolution"
-          />{" "}
-          {activeResolution.join("-")}{" "}
+  return (
+    <Space size={spaceBetweenItems} style={spaceStyle}>
+      <span>
+        <img
+          src="/assets/images/icon-statusbar-downsampling.svg"
+          className="resolution-status-bar-icon"
+          alt="Resolution"
+        />{" "}
+        {activeResolution.join("-")}{" "}
+      </span>
+      {isPlaneMode ? (
+        <span style={{ minWidth: 140, ...defaultInfoStyle }}>
+          Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
         </span>
-        {this.props.isPlaneMode ? (
-          <span style={{ minWidth: 140, ...defaultInfoStyle }}>
-            Pos [{globalMousePosition ? this.getPosString(globalMousePosition) : "-,-,-"}]
-          </span>
-        ) : null}
-        {this.props.isPlaneMode ? this.getCellInfo(globalMousePosition) : null}
-      </Space>
-    );
-  }
+      ) : null}
+      {isPlaneMode ? getCellInfo(globalMousePosition) : null}
+    </Space>
+  );
+}
 
+class Statusbar extends React.PureComponent<{}, {}> {
   render() {
     return (
       <span style={statusbarStyle}>
-        {this.getInfos()}
-        {this.getShortcuts()}
+        <Infos />
+        <ShortcutsInfo />
       </span>
     );
   }
 }
-
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeResolution: getCurrentResolution(state),
-  mousePosition: state.temporaryConfiguration.mousePosition,
-  activeViewport: state.viewModeData.plane.activeViewport,
-  activeTool: state.uiInformation.activeTool,
-  isPlaneMode: isPlaneMode(state),
-  useLegacyBindings: state.userConfiguration.useLegacyBindings,
-});
-
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Statusbar);
+export default Statusbar;

@@ -8,7 +8,7 @@ import type {
   Vector3,
   Vector4,
   OrthoView,
-  VolumeTool,
+  AnnotationTool,
   ContourMode,
 } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
@@ -23,7 +23,7 @@ type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
 type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
 type FinishEditingAction = { type: "FINISH_EDITING" };
 type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
-type SetToolAction = { type: "SET_TOOL", tool: VolumeTool };
+type SetToolAction = { type: "SET_TOOL", tool: AnnotationTool };
 type CycleToolAction = { type: "CYCLE_TOOL" };
 export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
@@ -116,7 +116,7 @@ export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
   cellId,
 });
 
-export const setToolAction = (tool: VolumeTool): SetToolAction => ({
+export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
   type: "SET_TOOL",
   tool,
 });

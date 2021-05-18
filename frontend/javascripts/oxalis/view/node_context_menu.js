@@ -189,7 +189,7 @@ function NoNodeContextMenuOptions({
         key="create-node"
         onClick={() => setWaypoint(globalPosition, viewport, false)}
       >
-        Create Node here (Right Click)
+        Create Node here
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -245,6 +245,35 @@ function NodeContextMenu(props: Props) {
     nodeContextMenuNode != null
       ? nodeContextMenuNode.position.map(value => roundTo(value, 2)).join(", ")
       : "";
+
+  const infoRows = [];
+
+  if (clickedNodeId != null && nodeContextMenuTree != null) {
+    infoRows.push(
+      <div key="nodeInfo" className="node-context-menu-item">
+        Node with Id {clickedNodeId} in Tree {nodeContextMenuTree.treeId}
+      </div>,
+    );
+  }
+  if (nodeContextMenuNode != null) {
+    infoRows.push(
+      <div key="positionInfo" className="node-context-menu-item">
+        Position: {nodePositionAsString}
+        {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
+      </div>,
+    );
+  }
+
+  if (distanceToSelection != null) {
+    infoRows.push(
+      <div key="distanceInfo" className="node-context-menu-item">
+        <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
+        {clickedNodeId != null ? "Node" : "Position"}
+        {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+      </div>,
+    );
+  }
+
   return (
     <React.Fragment>
       <div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />
@@ -259,25 +288,8 @@ function NodeContextMenu(props: Props) {
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
           : NoNodeContextMenuOptions({ ...props })}
-        <Divider style={{ margin: "4px 0px" }} />
-        {clickedNodeId != null && nodeContextMenuTree != null ? (
-          <div className="node-context-menu-item">
-            Node with Id {clickedNodeId} in Tree {nodeContextMenuTree.treeId}
-          </div>
-        ) : null}
-        {nodeContextMenuNode != null ? (
-          <div className="node-context-menu-item">
-            Position: {nodePositionAsString}
-            {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-          </div>
-        ) : null}
-        {distanceToSelection != null ? (
-          <div className="node-context-menu-item">
-            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
-            this {clickedNodeId != null ? "Node" : "Position"}
-            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-          </div>
-        ) : null}
+        {infoRows.length > 0 ? <Divider style={{ margin: "4px 0px" }} /> : null}
+        {infoRows}
       </div>
     </React.Fragment>
   );

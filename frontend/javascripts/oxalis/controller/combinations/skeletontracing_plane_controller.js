@@ -9,7 +9,7 @@ import {
   OrthoViews,
   type Point2,
   type Vector3,
-  VolumeToolEnum,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { movePlane, calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -286,10 +286,14 @@ function maybeGetNodeIdFromPosition(
   isTouch: boolean,
 ): ?number {
   const SceneController = getSceneController();
+  const { skeleton } = SceneController;
+  if (!skeleton) {
+    return null;
+  }
 
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
-  const pickingNode = SceneController.skeleton.startPicking(isTouch);
+  const pickingNode = skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
   const camera = planeView.getCameras()[plane];
@@ -308,7 +312,7 @@ function maybeGetNodeIdFromPosition(
   const index = (x + (height - y) * width) * 4;
   // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
   const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
-  SceneController.skeleton.stopPicking();
+  skeleton.stopPicking();
 
   // prevent flickering sometimes caused by picking
   planeView.renderFunction(true);
@@ -376,8 +380,8 @@ function onRightClick(
     return;
   }
 
-  const { volume } = state.tracing;
-  if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
+  const { activeTool } = state.tracing;
+  if (activeTool === AnnotationToolEnum.SKELETON) {
     // We avoid creating nodes when in brushing mode.
     const nodeId = event.shiftKey
       ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)
@@ -389,6 +393,24 @@ function onRightClick(
       setWaypoint(globalPosition, activeViewport, ctrlPressed);
     }
   }
+}
+
+export function onContextMenu(
+  planeView: PlaneView,
+  position: Point2,
+  plane: OrthoView,
+  isTouch: boolean,
+  event: MouseEvent,
+  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
+) {
+  const { activeViewport } = Store.getState().viewModeData.plane;
+  if (activeViewport === OrthoViews.TDView) {
+    return;
+  }
+
+  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const globalPosition = calculateGlobalPos(position);
+  showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
 }
 
 export function setWaypoint(

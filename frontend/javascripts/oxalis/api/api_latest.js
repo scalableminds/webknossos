@@ -14,8 +14,8 @@ import Constants, {
   OrthoViews,
   type Vector3,
   type Vector4,
-  type VolumeTool,
-  VolumeToolEnum,
+  type AnnotationTool,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
@@ -45,7 +45,7 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
   getLayerByName,
@@ -832,29 +832,44 @@ class TracingApi {
   }
 
   /**
-   * Returns the active volume tool which is either
-   * "MOVE", "TRACE" or "BRUSH".
-   * _Volume tracing only!_
+   * Returns the active tool which is either
+   * "MOVE", "SKELETON", TRACE", "BRUSH",  FILL_CELL or PICK_CELL
    */
-  getVolumeTool(): ?VolumeTool {
-    const tracing = assertVolume(Store.getState().tracing);
-    return getVolumeTool(tracing);
+  getAnnotationTool(): AnnotationTool {
+    return Store.getState().tracing.activeTool;
   }
 
   /**
-   * Sets the active volume tool which should be either
-   * "MOVE", "TRACE" or "BRUSH".
+   * Sets the active tool which should be either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
    * _Volume tracing only!_
    */
-  setVolumeTool(tool: VolumeTool) {
+  setAnnotationTool(tool: AnnotationTool) {
     assertVolume(Store.getState().tracing);
-    assertExists(tool, "Volume tool is missing.");
-    if (VolumeToolEnum[tool] == null) {
+    if (AnnotationToolEnum[tool] == null) {
       throw new Error(
-        `Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`,
+        `Annotation tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
     Store.dispatch(setToolAction(tool));
+  }
+
+  /**
+   * Returns the active tool which is either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use getAnnotationTool instead.
+   */
+  getVolumeTool(): AnnotationTool {
+    return this.getAnnotationTool();
+  }
+
+  /**
+   * Sets the active tool which should be either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use setAnnotationTool instead.
+   */
+  setVolumeTool(tool: AnnotationTool) {
+    this.setAnnotationTool(tool);
   }
 
   /**

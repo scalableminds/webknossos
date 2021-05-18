@@ -19,7 +19,6 @@ import {
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
-import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   movePlaneFlycamOrthoAction,
@@ -44,7 +43,7 @@ import constants, {
   OrthoViews,
   type Point2,
   type Vector3,
-  VolumeToolEnum,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
@@ -155,6 +154,22 @@ class PlaneController extends React.PureComponent<Props> {
 
   getPlaneMouseControls(planeId: OrthoView): Object {
     const defaultDragHandler = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
+    const rightClickHandler = (
+      pos: Point2,
+      plane: OrthoView,
+      event: MouseEvent,
+      isTouch: boolean,
+    ) => {
+      console.log("skeletonController.onContextMenu");
+      skeletonController.onContextMenu(
+        this.planeView,
+        pos,
+        plane,
+        isTouch,
+        event,
+        this.props.showNodeContextMenuAt,
+      );
+    };
     const baseControls = {
       scroll: this.scrollPlanes.bind(this),
       over: () => {
@@ -171,9 +186,10 @@ class PlaneController extends React.PureComponent<Props> {
       middleDownMove: defaultDragHandler,
     };
     // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = { leftClick: null, leftDownMove: null };
+    const emptyDefaultHandler = { leftClick: null, leftDownMove: null, rightClick: null };
     const {
       leftClick: maybeSkeletonLeftClick,
+      rightClick: maybeSkeletonRightClick,
       leftDownMove: maybeSkeletonLeftDownMove,
       ...skeletonControls
     } =
@@ -203,6 +219,7 @@ class PlaneController extends React.PureComponent<Props> {
         maybeVolumeLeftDownMove,
         defaultDragHandler,
       ),
+      rightClick: this.createToolDependentHandler(maybeSkeletonRightClick, null, rightClickHandler),
     };
   }
 
@@ -472,9 +489,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   changeBrushSizeIfBrushIsActiveBy(factor: number) {
-    const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
-      .map(tool => tool === VolumeToolEnum.BRUSH)
-      .getOrElse(false);
+    const isBrushActive = this.props.tracing.activeTool === AnnotationToolEnum.BRUSH;
     if (isBrushActive) {
       const currentBrushSize = Store.getState().userConfiguration.brushSize;
       const newBrushSize =
@@ -497,9 +512,7 @@ class PlaneController extends React.PureComponent<Props> {
         break;
       }
       case "shift": {
-        const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
-          .map(tool => tool === VolumeToolEnum.BRUSH)
-          .getOrElse(false);
+        const isBrushActive = this.props.tracing.activeTool === AnnotationToolEnum.BRUSH;
         if (isBrushActive) {
           // Different browsers send different deltas, this way the behavior is comparable
           if (delta > 0) {
@@ -539,22 +552,22 @@ class PlaneController extends React.PureComponent<Props> {
     viewHandler?: ?Function,
   ): Function {
     return (...args) => {
-      if (skeletonHandler && volumeHandler) {
-        // Deal with both modes
-        const tool = Utils.enforce(getVolumeTool)(this.props.tracing.volume);
-        if (tool === VolumeToolEnum.MOVE) {
+      const tool = this.props.tracing.activeTool;
+      if (tool === AnnotationToolEnum.MOVE) {
+        if (viewHandler != null) {
+          viewHandler(...args);
+        } else if (skeletonHandler != null) {
           skeletonHandler(...args);
-        } else {
+        }
+      } else if (tool === AnnotationToolEnum.SKELETON) {
+        if (skeletonHandler != null) {
+          skeletonHandler(...args);
+        }
+      } else {
+        // eslint-disable-next-line no-lonely-if
+        if (volumeHandler != null) {
           volumeHandler(...args);
         }
-      } else if (skeletonHandler) {
-        skeletonHandler(...args);
-      } else if (volumeHandler) {
-        volumeHandler(...args);
-      } else if (viewHandler != null) {
-        // At this point, neither skeletonHandler nor volumeHandler is defined.
-        // Instead, use the viewHandler, if it's defined.
-        viewHandler(...args);
       }
     };
   }

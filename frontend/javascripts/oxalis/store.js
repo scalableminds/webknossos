@@ -41,7 +41,7 @@ import {
   type Rect,
   type Vector2,
   type Vector3,
-  type VolumeTool,
+  type AnnotationTool,
 } from "oxalis/constants";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import DiffableMap from "libs/diffable_map";
@@ -186,6 +186,7 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +annotationType: AnnotationType,
+  +activeTool: AnnotationTool,
   +meshes: Array<MeshMetaData>,
   +user: ?APIUserBase,
 |};
@@ -219,7 +220,6 @@ export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
   +maxCellId: number,
-  +activeTool: VolumeTool,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,

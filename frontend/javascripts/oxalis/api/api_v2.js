@@ -29,8 +29,8 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeTool, ControlMode } from "oxalis/constants";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
 import type {
   Node,
   UserConfiguration,
@@ -46,7 +46,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import Toast from "libs/toast";
 import window, { location } from "libs/window";
 import * as Utils from "libs/utils";
-import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
+import { ControlModeEnum, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import TWEEN from "tween.js";
@@ -494,9 +494,8 @@ class TracingApi {
    * "MOVE", "TRACE" or "BRUSH".
    * _Volume tracing only!_
    */
-  getVolumeTool(): ?VolumeTool {
-    const tracing = assertVolume(Store.getState().tracing);
-    return getVolumeTool(tracing);
+  getAnnotationTool(): AnnotationTool {
+    return Store.getState().tracing.activeTool;
   }
 
   /**
@@ -504,15 +503,33 @@ class TracingApi {
    * "MOVE", "TRACE" or "BRUSH".
    * _Volume tracing only!_
    */
-  setVolumeTool(tool: VolumeTool) {
+  setAnnotationTool(tool: AnnotationTool) {
     assertVolume(Store.getState().tracing);
     assertExists(tool, "Volume tool is missing.");
-    if (VolumeToolEnum[tool] == null) {
+    if (AnnotationToolEnum[tool] == null) {
       throw new Error(
-        `Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`,
+        `Volume tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
     Store.dispatch(setToolAction(tool));
+  }
+
+  /**
+   * Returns the active tool which is either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use getAnnotationTool instead.
+   */
+  getVolumeTool(): AnnotationTool {
+    return this.getAnnotationTool();
+  }
+
+  /**
+   * Sets the active tool which should be either
+   * "MOVE", "SKELETON", TRACE", "BRUSH", FILL_CELL or PICK_CELL
+   * Deprecated! Use setAnnotationTool instead.
+   */
+  setVolumeTool(tool: AnnotationTool) {
+    this.setAnnotationTool(tool);
   }
 }
 

@@ -124,18 +124,25 @@ export const ControlModeEnum = {
 };
 export type ControlMode = $Keys<typeof ControlModeEnum>;
 
-export const VolumeToolEnum = {
+export const AnnotationToolEnum = {
   MOVE: "MOVE",
+  SKELETON: "SKELETON",
   BRUSH: "BRUSH",
   TRACE: "TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
 };
-export const ToolsWithOverwriteCapabilities = [VolumeToolEnum.TRACE, VolumeToolEnum.BRUSH];
-export type VolumeTool = $Keys<typeof VolumeToolEnum>;
+export const VolumeTools = [
+  AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.FILL_CELL,
+  AnnotationToolEnum.PICK_CELL,
+];
+export const ToolsWithOverwriteCapabilities = [AnnotationToolEnum.TRACE, AnnotationToolEnum.BRUSH];
+export type AnnotationTool = $Keys<typeof AnnotationToolEnum>;
 
-export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
-  return Object.keys(VolumeToolEnum).indexOf(volumeTool);
+export function annotationToolEnumToIndex(annotationTool: ?AnnotationTool): number {
+  return Object.keys(AnnotationToolEnum).indexOf(annotationTool);
 }
 
 export const ContourModeEnum = {

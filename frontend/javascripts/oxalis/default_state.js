@@ -34,6 +34,7 @@ const initialAnnotationInfo = {
   },
   annotationType: "View",
   meshes: [],
+  activeTool: "MOVE",
 };
 
 const defaultState: OxalisState = {

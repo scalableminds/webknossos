@@ -10,8 +10,8 @@ import {
   type Vector3,
   type OrthoView,
   OrthoViews,
-  type VolumeTool,
-  VolumeToolEnum,
+  type AnnotationTool,
+  AnnotationToolEnum,
 } from "oxalis/constants";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
@@ -28,7 +28,7 @@ type StateProps = {|
   activeViewport: OrthoView,
   mousePosition: ?Vector2,
   isSkeletonAnnotation: boolean,
-  activeTool: ?VolumeTool,
+  activeTool: AnnotationTool,
   isPlaneMode: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
@@ -88,15 +88,14 @@ class Statusbar extends React.PureComponent<Props, State> {
 
   getRightClickShortcut() {
     const rightClickToLabel = {
-      MOVE: this.props.isSkeletonAnnotation ? "Place Node" : null,
+      MOVE: "Context Menu",
+      SKELETON: "Place Node",
       BRUSH: "Erase",
       TRACE: "Erase",
       FILL_CELL: null,
       PICK_CELL: null,
     };
-    const label = this.props.activeTool
-      ? rightClickToLabel[this.props.activeTool]
-      : rightClickToLabel[VolumeToolEnum.MOVE];
+    const label = rightClickToLabel[this.props.activeTool];
     return (
       label && (
         <span style={defaultShortcutStyle}>
@@ -169,15 +168,15 @@ class Statusbar extends React.PureComponent<Props, State> {
           <img
             className="keyboard-mouse-icon"
             src={
-              this.props.activeTool === VolumeToolEnum.PICK_CELL ||
-              this.props.activeTool === VolumeToolEnum.FILL_CELL
+              this.props.activeTool === AnnotationToolEnum.PICK_CELL ||
+              this.props.activeTool === AnnotationToolEnum.FILL_CELL
                 ? "/assets/images/icon-statusbar-mouse-left.svg"
                 : "/assets/images/icon-statusbar-mouse-left-drag.svg"
             }
             alt="Mouse Left Drag"
             style={defaultIconStyle}
           />
-          {this.props.activeTool ? this.props.activeTool.replace("_", " ").toLowerCase() : "Move"}
+          {this.props.activeTool.replace("_", " ").toLowerCase()}
         </span>
         {this.getRightClickShortcut()}
         <span style={defaultShortcutStyle}>
@@ -270,7 +269,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   mousePosition: state.temporaryConfiguration.mousePosition,
   activeViewport: state.viewModeData.plane.activeViewport,
   isSkeletonAnnotation: state.tracing.skeleton != null,
-  activeTool: state.tracing.volume ? state.tracing.volume.activeTool : null,
+  activeTool: state.tracing.activeTool,
   isPlaneMode: isPlaneMode(state),
 });
 

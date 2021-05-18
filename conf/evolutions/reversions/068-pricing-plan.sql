@@ -3,8 +3,8 @@ START TRANSACTION;
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.organizations_;
 
-ALTER TABLE webknossos.organizations DROP COLUMN;
-DROP TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
+ALTER TABLE webknossos.organizations DROP COLUMN pricingPlan;
+DROP TYPE webknossos.PRICING_PLANS;
 
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 

@@ -1,9 +1,22 @@
 // @flow
-import { Avatar, Form, Button, Col, Row, Tooltip, Modal, Progress, Alert, List } from "antd";
-import { FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
+import {
+  Popover,
+  Avatar,
+  Form,
+  Button,
+  Col,
+  Row,
+  Tooltip,
+  Modal,
+  Progress,
+  Alert,
+  List,
+} from "antd";
+import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { useMemo } from "react";
+import React from "react";
 import moment from "moment";
+import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone } from "react-dropzone";
 
@@ -56,6 +69,68 @@ type State = {
   uploadProgress: number,
   selectedTeams: APITeam | Array<APITeam>,
 };
+
+function WkwExample() {
+  const description = `
+  great_dataset          # Root folder
+  ├─ color               # Dataset layer (e.g., color, segmentation)
+  │  ├─ 1                # Magnification step (1, 2, 4, 8, 16 etc.)
+  │  │  ├─ header.wkw    # Header wkw file
+  │  │  ├─ z0
+  │  │  │  ├─ y0
+  │  │  │  │  ├─ x0.wkw  # Actual data wkw file
+  │  │  │  │  └─ x1.wkw  # Actual data wkw file
+  │  │  │  └─ y1/...
+  │  │  └─ z1/...
+  │  └─ 2/...
+  ├─ segmentation/...
+  └─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existent)
+  `;
+
+  return (
+    <div>
+      <h4>A typical WKW dataset looks like this:</h4>
+      <pre className="dataset-import-folder-structure-hint">{description}</pre>
+    </div>
+  );
+}
+
+function SingleLayerImageStackExample() {
+  const description = `
+  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  ├─ file1.tif           # The files don't have to follow a certain naming pattern.
+  ├─ file2.tif           # However, the files are sorted to obtain the final z-order.
+  └─ file3.tif
+  `;
+
+  return (
+    <div>
+      <h4>For example, a flat list of (sorted) image files can be imported:</h4>
+      <pre className="dataset-import-folder-structure-hint">{description}</pre>
+    </div>
+  );
+}
+
+function MultiLayerImageStackExample() {
+  const description = `
+  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  ├─ color               # 1st dataset layer (name may be arbitrary, e.g., color or segmentation)
+  │  ├─ file1.tif        # The files don't have to follow a certain naming pattern.
+  │  ├─ file2.tif        # However, the files are sorted to obtain the final z-order.
+  │  └─ file3.tif
+  └─ segmentation        # 2nd dataset layer
+     ├─ file1.tif
+     ├─ file2.tif
+     └─ file3.tif
+  `;
+
+  return (
+    <div>
+      <h4>Uploading multiple image stacks (one per folder) will create a multi-layer dataset:</h4>
+      <pre className="dataset-import-folder-structure-hint">{description}</pre>
+    </div>
+  );
+}
 
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state = {
@@ -522,6 +597,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         "jpg",
                         "jpeg",
                         "png",
+                        "czi",
+                        "dm3",
+                        "dm4",
+                        "nifti",
+                        "raw",
                       ]),
                     );
                     return wkwFiles.length === 0 || imageFiles.length === 0;
@@ -551,36 +631,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   }
 }
 
-const baseStyle: Object = {
-  flex: 1,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  padding: "20px",
-  borderWidth: 2,
-  borderRadius: 2,
-  borderColor: "#eeeeee",
-  borderStyle: "dashed",
-  backgroundColor: "#fafafa",
-  color: "rgba(0, 0, 0, 0.85)",
-  fontSize: 16,
-  outline: "none",
-  transition: "border .24s ease-in-out",
-  cursor: "pointer",
-};
-
-const activeStyle: Object = {
-  borderColor: "#2196f3",
-};
-
-const acceptStyle: Object = {
-  borderColor: "#00e676",
-};
-
-const rejectStyle: Object = {
-  borderColor: "#ff1744",
-};
-
 function FileUploadArea({ fileList, onChange }) {
   const onDropAccepted = acceptedFiles => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -593,16 +643,6 @@ function FileUploadArea({ fileList, onChange }) {
     onDropAccepted,
   });
   const acceptedFiles = fileList;
-
-  const style: Object = useMemo(
-    () => ({
-      ...baseStyle,
-      ...(isDragActive ? activeStyle : {}),
-      ...(isDragAccept ? acceptStyle : {}),
-      ...(isDragReject ? rejectStyle : {}),
-    }),
-    [isDragActive, isDragReject, isDragAccept],
-  );
 
   const files = acceptedFiles.map(file => <li key={file.path}>{file.path}</li>);
 
@@ -646,15 +686,60 @@ function FileUploadArea({ fileList, onChange }) {
 
   return (
     <div>
-      <div {...getRootProps({ style })}>
+      <div
+        {...getRootProps({
+          className: classnames("dataset-upload-dropzone", {
+            "dataset-upload-dropzone-active": isDragActive,
+            "dataset-upload-dropzone-accept": isDragAccept,
+            "dataset-upload-dropzone-rejct": isDragReject,
+          }),
+        })}
+      >
         <input {...getInputProps()} />
-        <InboxOutlined style={{ fontSize: 48, color: "#41a9ff" }} />
+        <InboxOutlined style={{ fontSize: 48, color: "var(--ant-primary)" }} />
         <p style={{ maxWidth: 800, textAlign: "center", marginTop: 8 }}>
           Drag your file(s) to this area to upload them. Either add individual image files, a zip
-          archive or a folder. Alternatively, click to select your files via a file picker.{" "}
-          {features().jobsEnabled
-            ? "Your data is automatically converted to WKW after upload if necessary."
-            : null}
+          archive or a folder.{" "}
+          {features().jobsEnabled ? (
+            <>
+              <br />
+              <br />
+              <div style={{ textAlign: "left", display: "inline-block" }}>
+                The following file formats are supported:
+                <ul>
+                  <li>
+                    <Popover content={<WkwExample />} trigger="hover">
+                      WKW dataset
+                      <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                    </Popover>
+                  </li>
+
+                  <li>
+                    <Popover content={<SingleLayerImageStackExample />} trigger="hover">
+                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4)
+                      <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                    </Popover>
+                  </li>
+
+                  <li>
+                    <Popover content={<MultiLayerImageStackExample />} trigger="hover">
+                      Multi-Layer Image File Sequence
+                      <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                    </Popover>
+                  </li>
+
+                  <li>Single-file images (tif, czi, nifti, raw)</li>
+
+                  <li>KNOSSOS file hierarchy</li>
+                </ul>
+                Have a look at{" "}
+                <a href="https://docs.webknossos.org/reference/data_formats#conversion-with-webknossos-org">
+                  our documentation
+                </a>{" "}
+                to learn more.
+              </div>
+            </>
+          ) : null}
         </p>
       </div>
 

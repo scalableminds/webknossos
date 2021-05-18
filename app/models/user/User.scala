@@ -2,12 +2,12 @@ package models.user
 
 import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.JsonHelper.parseJsonToFox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.configuration.UserConfiguration
 import models.team._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
@@ -28,7 +28,7 @@ case class User(
     firstName: String,
     lastName: String,
     lastActivity: Long = System.currentTimeMillis(),
-    userConfiguration: JsValue,
+    userConfiguration: JsObject,
     loginInfo: LoginInfo,
     isAdmin: Boolean,
     isDatasetManager: Boolean,
@@ -48,9 +48,6 @@ case class User(
   val abreviatedName: String =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
-  def userConfigurationStructured: Fox[UserConfiguration] =
-    JsonHelper.jsResultToFox(userConfiguration.validate[Map[String, JsValue]]).map(UserConfiguration(_))
-
   def isAdminOf(_organization: ObjectId): Boolean =
     isAdmin && _organization == this._organization
 
@@ -67,7 +64,9 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def isDeletedColumn(x: Users): Rep[Boolean] = x.isdeleted
 
   def parse(r: UsersRow): Fox[User] =
-    Fox.successful(
+    for {
+      userConfiguration <- parseJsonToFox[JsObject](r.userconfiguration)
+    } yield {
       User(
         ObjectId(r._Id),
         ObjectId(r._Multiuser),
@@ -75,7 +74,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.firstname,
         r.lastname,
         r.lastactivity.getTime,
-        Json.parse(r.userconfiguration),
+        userConfiguration,
         LoginInfo(User.default_login_provider_id, r._Id),
         r.isadmin,
         r.isdatasetmanager,
@@ -84,7 +83,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.created.getTime,
         r.lasttasktypeid.map(ObjectId(_)),
         r.isdeleted
-      ))
+      )
+    }
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '$requestingUserId' and isTeamManager)))
@@ -203,12 +203,11 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def updateLastActivity(userId: ObjectId, lastActivity: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateTimestampCol(userId, _.lastactivity, new java.sql.Timestamp(lastActivity))
 
-  def updateUserConfiguration(userId: ObjectId, userConfiguration: UserConfiguration)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUserConfiguration(userId: ObjectId, userConfiguration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(sqlu"""update webknossos.users
-               set userConfiguration = '#${sanitize(Json.toJson(userConfiguration.configuration).toString)}'
+               set userConfiguration = '#${sanitize(Json.toJson(userConfiguration).toString)}'
                where _id = $userId""")
     } yield ()
 

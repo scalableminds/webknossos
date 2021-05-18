@@ -2,15 +2,14 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import javax.inject.Inject
 import models.binary.{DataSetDAO, DataSetService}
-import models.configuration.{DataSetConfigurationService, UserConfiguration}
+import models.configuration.DataSetConfigurationService
 import models.user.UserService
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.Messages
-import play.api.libs.json.{JsObject, JsValue}
-import play.api.libs.json.Json._
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
@@ -22,19 +21,15 @@ class ConfigurationController @Inject()(
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def read: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    request.identity.toFox.flatMap { user =>
-      for {
-        userConfig <- user.userConfigurationStructured
-      } yield userConfig.configurationOrDefaults
-    }.getOrElse(UserConfiguration.default.configuration).map(configuration => Ok(toJson(configuration)))
+  def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>
+    val config = request.identity.map(_.userConfiguration).getOrElse(Json.obj())
+    Ok(Json.toJson(config))
   }
 
   def update: Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.invalid"
-      conf = jsConfiguration.fields.toMap
-      _ <- userService.updateUserConfiguration(request.identity, UserConfiguration(conf))
+      configuration <- request.body.asOpt[JsObject] ?~> "user.configuration.invalid"
+      _ <- userService.updateUserConfiguration(request.identity, configuration)
     } yield JsonOk(Messages("user.configuration.updated"))
   }
 
@@ -55,7 +50,7 @@ class ConfigurationController @Inject()(
                                                                             organizationName)(ctx)
         )
         .getOrElse(Map.empty)
-        .map(configuration => Ok(toJson(configuration)))
+        .map(configuration => Ok(Json.toJson(configuration)))
     }
 
   def updateDataSetViewConfiguration(organizationName: String, dataSetName: String): Action[JsValue] =
@@ -77,7 +72,7 @@ class ConfigurationController @Inject()(
     sil.SecuredAction.async { implicit request =>
       dataSetConfigurationService
         .getCompleteAdminViewConfiguration(dataSetName, organizationName)
-        .map(configuration => Ok(toJson(configuration)))
+        .map(configuration => Ok(Json.toJson(configuration)))
     }
 
   def updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String): Action[JsValue] =

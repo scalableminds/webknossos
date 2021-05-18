@@ -1,4 +1,3 @@
-@import "../../node_modules/antd/dist/antd.less";
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.min.css";
 @import "../../node_modules/react-sortable-tree/style.css";
 @import "../../node_modules/flexlayout-react/style/light.css";
@@ -13,8 +12,9 @@
 @icon-url: "../../../../../frontend/stylesheets/iconfont/iconfont";
 
 @import "_variables.less";
-@import "_general.less";
+@import "_utils.less";
 @import "_dashboard.less";
+@import "_spotlight.less";
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_user_settings_view.less";
 @import "trace_view/_action_bar.less";
@@ -27,11 +27,12 @@
 @import "flex_layout_overwrites.less";
 
 // ----------------------- MAIN STYLES
+@font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+  sans-serif;
+
 body {
-  color: @mainColor;
-  font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
+  font-family: @font-family;
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
@@ -46,7 +47,7 @@ body {
 .save-error {
   .ant-layout-header,
   .ant-menu {
-    background-color: #c00 !important;
+    background-color: @error-color !important;
   }
 }
 
@@ -74,19 +75,6 @@ body {
   }
 }
 
-.bold {
-  font-weight: bold;
-}
-
-// Only affect child items in tables
-td.nowrap * {
-  white-space: nowrap;
-}
-
-.nowrap {
-  white-space: nowrap;
-}
-
 .fa-random {
   width: 14px;
   background-position: -217px -120px;
@@ -104,39 +92,22 @@ td.nowrap * {
 }
 
 #credits {
-  max-width: 600px;
-  img {
-    margin-right: 10px;
-    width: 25%;
-    max-width: 100px;
+  background-color: @layout-footer-background;
+  & > div {
+    max-width: 600px;
+    img {
+      margin-right: 10px;
+      width: 25%;
+      max-width: 100px;
+    }
   }
 }
 
-#oxalis-header {
-  margin-bottom: 20px;
-  margin-top: 20px;
-  text-align: center;
-  height: 100px;
-  vertical-align: middle;
-  display: inline-block;
-  font-size: 80px;
-  line-height: normal;
-  color: #000;
-  margin-left: 30px;
-
-  img {
-    height: 100px;
-    width: 100px;
-  }
-
-  @media @smartphones {
-    font-size: 2rem;
-
-    img {
-      height: 60px;
-      width: 60px;
-    }
-  }
+.onboarding {
+  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 50px;
 }
 
 .centered-content {
@@ -146,44 +117,10 @@ td.nowrap * {
   margin: auto;
 }
 
-.container-with-hidden-icon {
-  .hidden-icon {
-    visibility: hidden;
-  }
-  &:hover {
-    .hidden-icon {
-      visibility: visible;
-    }
-  }
-}
-
-#spotlight-footnote {
-  text-align: center;
-  margin: 30px 0;
-}
-
-.spotlight-registration-form {
-  background-color: white;
-  padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.38);
-
-  @media (max-width: 992px) {
-    margin: 12px;
-  }
-}
-
 #impressum {
   h5 {
     margin-top: 2em;
   }
-}
-
-.pull-right {
-  float: right !important;
-}
-
-.pull-left {
-  float: left !important;
 }
 
 // Fixing font awesome
@@ -221,21 +158,6 @@ i.without-icon-margin,
   margin-right: 0;
 }
 
-.flex-column {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-.flex-column-for-ant-tabs-container > div.ant-tabs-content {
-  flex-grow: 1;
-}
-
-.flex-overflow {
-  overflow-y: auto;
-  flex-grow: 1;
-}
-
 .monospace-id {
   // break long IDs
   word-wrap: break-word;
@@ -245,66 +167,29 @@ i.without-icon-margin,
   width: 135px;
 }
 
-img.img-50 {
-  width: 47%;
-}
-
-@media (min-width: 1200px) {
-  .container {
-    width: 1170px;
-  }
-}
-@media (min-width: 992px) {
-  .container {
-    width: 970px;
-  }
-}
-@media (min-width: 768px) {
-  .container {
-    width: 750px;
-  }
-}
-
-@media screen and (max-width: 968px) {
-  .container {
-    width: auto;
-    margin: 0 10px;
-  }
-}
-
-@media screen and (max-width: 1024px) {
-  .hide-on-small-screen {
+.hide-on-small-screen {
+  @media (max-width: 1024px) {
     display: none !important;
   }
 }
 
 .container {
   padding-top: 20px;
-  margin-left: 20px;
-  margin-right: 20px;
+  margin-left: 10px;
+  margin-right: 10px;
   width: auto;
   padding-left: 15px;
   padding-right: 15px;
-}
 
-.text {
-  padding: 2em 0;
-  ul {
-    padding: 1.5em;
-    list-style: square;
-    li {
-      padding-bottom: 10px;
-    }
+  @media (min-width: 970px) {
+    margin-left: 20px;
+    margin-right: 20px;
   }
 }
 
 .icon-big {
   font-size: 180px;
   color: rgb(58, 144, 255);
-}
-
-.errorChainCollapse .ant-collapse-header {
-  padding: 12px 0 0 32px !important;
 }
 
 @keyframes highlight-background {
@@ -315,95 +200,47 @@ img.img-50 {
   }
 }
 
-.nice-scrollbar {
-  // These only work in chrome
-  &::-webkit-scrollbar-button {
-    display: block;
-    height: 5px;
-    border-radius: 0px;
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar-button:hover {
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: #ccc;
-    border-radius: 5px;
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background-color: #9c9c9c;
-    border-radius: 5px;
-  }
-  &::-webkit-scrollbar-track {
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar-track:hover {
-    background-color: rgba(255, 255, 255, 0);
-  }
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  // This is for firefox, to avoid showing a white line next to the scrollbar
-  scrollbar-width: thin;
-}
-
-#retoggle-mount-root > div {
-  top: 500px !important;
-}
-
-.cover-whole-screen {
+// Brain loading spinner
+.brain-loading {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgb(252, 252, 252);
+  background: @body-background;
   z-index: 300;
 }
 
-// Flex helper
-
-.Aligner {
+.brain-loading-container {
   display: flex;
   align-items: center;
   min-height: 24em;
   justify-content: center;
+  height: 80%;
 }
 
-.Aligner-item {
+.brain-loading-content {
   flex: 1;
-}
-
-.Aligner-item--top {
-  align-self: flex-start;
-}
-
-.Aligner-item--bottom {
-  align-self: flex-end;
-}
-
-.Aligner-item--fixed {
   flex: none;
   max-width: 50%;
+  width: 375px;
 }
 
-// Minimalistic progress bar
-.loader {
+.brain-loading-bar {
   height: 2px;
   width: 100%;
   position: relative;
   overflow: hidden;
-  background-color: #ddd;
+  background-color: @border-color-base;
 }
-.loader:before {
+.brain-loading-bar:before {
   display: block;
   position: absolute;
   content: "";
   left: -200px;
   width: 200px;
   height: 2px;
-  background-color: #9f9f9f; // gray
+  background-color: @text-color-secondary;
   animation: loading 1.5s ease infinite;
 }
 
@@ -437,28 +274,12 @@ img.img-50 {
   }
 }
 
-.highlight-togglable-button.ant-btn {
-  background-color: #2373c1 !important;
-  &:not(:hover) {
-    border-color: #2098de !important;
-  }
-}
-
-.feature-highlight-row {
-  flex-direction: row-reverse;
-}
-
-@smartphones .feature-highlight-row {
-  flex-direction: row;
-  float: none;
-}
-
 .link-in-progress {
   cursor: wait;
 }
 
 .keyboard-key-icon {
-  border: 2px solid #888;
+  border: 2px solid @border-color-base;
   border-radius: 2px;
   min-width: 26px;
   min-height: 26px;
@@ -493,4 +314,56 @@ img.img-50 {
 span.keyboard-key-icon:first-child,
 img.keyboard-mouse-icon:first-child {
   margin-left: 0px;
+}
+
+.nml-upload-zone-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 2.5em 0;
+  background: @modal-mask-bg;
+  text-align: center;
+  z-index: 1000;
+}
+.nml-upload-zone-modal {
+  position: relative;
+  top: 100px;
+  width: 400px;
+  height: 250px;
+  background: @modal-header-bg;
+  border-radius: 4px;
+  margin: 0 auto;
+}
+.dataset-upload-dropzone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  border-width: 2px;
+  border-radius: 2px;
+  border-color: fade(@text-color-secondary, 30%);
+  border-style: dashed;
+  background-color: @component-background;
+  color: @text-color;
+  font-size: 16px;
+  outline: none;
+  transition: border 0.24s ease-in-out;
+  cursor: pointer;
+
+  &.dataset-upload-dropzone-active {
+    border-color: @primary-color;
+  }
+  &.dataset-upload-dropzone-accept {
+    border-color: @success-color;
+  }
+  &.dataset-upload-dropzone-reject {
+    border-color: @error-color;
+  }
+}
+
+.transparent-background-on-hover:hover {
+  background: transparent;
 }

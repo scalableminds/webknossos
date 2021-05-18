@@ -167,6 +167,14 @@ export const OverwriteModeEnum = {
 
 export type OverwriteMode = $Keys<typeof OverwriteModeEnum>;
 
+export const TDViewDisplayModeEnum = {
+  NONE: "NONE",
+  WIREFRAME: "WIREFRAME",
+  DATA: "DATA",
+};
+
+export type TDViewDisplayMode = $Keys<typeof TDViewDisplayModeEnum>;
+
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 

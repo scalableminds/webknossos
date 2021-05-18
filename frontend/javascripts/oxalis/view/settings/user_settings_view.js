@@ -482,13 +482,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             </Tooltip>
           </div>
         </Panel>
-        <Panel header="Other" key="5">
-          <SwitchSetting
-            label={settingsLabels.tdViewDisplayPlanes}
-            value={this.props.userConfiguration.tdViewDisplayPlanes}
-            onChange={this.onChangeUser.tdViewDisplayPlanes}
-          />
-        </Panel>
       </Collapse>
     );
   }

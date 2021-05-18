@@ -46,7 +46,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
       const users = await getUsers();
       const activeUsers = users.filter(u => u.isActive);
       const usersWithActiveTasks = this.props.project
-        ? await getUsersWithActiveTasks(this.props.project.name)
+        ? await getUsersWithActiveTasks(this.props.project.id)
         : [];
       const sortedUsers = _.sortBy(activeUsers, "lastName");
       this.setState({
@@ -66,7 +66,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     }
     try {
       const selectedUser = this.state.selectedUser;
-      await transferActiveTasksOfProject(this.props.project.name, selectedUser.id);
+      await transferActiveTasksOfProject(this.props.project.id, selectedUser.id);
       if (selectedUser) {
         Toast.success(
           `${messages["project.successful_active_tasks_transfer"]} ${selectedUser.lastName}, ${

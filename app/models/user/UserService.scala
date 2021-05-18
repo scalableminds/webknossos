@@ -6,16 +6,14 @@ import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.DataSetDAO
-import models.configuration.UserConfiguration
 import models.team._
-import oxalis.mail.DefaultMails
+import oxalis.mail.{DefaultMails, Send}
 import oxalis.security.TokenDAO
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
@@ -47,9 +45,6 @@ class UserService @Inject()(conf: WkConf,
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
-
-  def defaultUser: Fox[User] =
-    userFromMultiUserEmail(conf.Application.Authentication.DefaultUser.email)(GlobalAccessContext)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
@@ -109,7 +104,7 @@ class UserService @Inject()(conf: WkConf,
         firstName,
         lastName,
         System.currentTimeMillis(),
-        Json.toJson(UserConfiguration.default),
+        Json.obj(),
         LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
         isDatasetManager = false,
@@ -205,7 +200,7 @@ class UserService @Inject()(conf: WkConf,
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo
 
-  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
       userCache.invalidateUser(user._id)
       result
@@ -331,6 +326,7 @@ class UserService @Inject()(conf: WkConf,
         "isEditable" -> isEditable,
         "organization" -> organization.name,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
+        "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
       )

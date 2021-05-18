@@ -44,6 +44,7 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+import classnames from "classnames";
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -146,14 +147,6 @@ type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
 
-const getCheckboxStyle = isLoaded =>
-  isLoaded
-    ? {}
-    : {
-        fontStyle: "italic",
-        color: "#989898",
-      };
-
 class MeshesView extends React.Component<
   Props,
   { currentlyEditedMesh: ?MeshMetaData, hoveredListItem: ?number },
@@ -232,7 +225,7 @@ class MeshesView extends React.Component<
             this.props.onStlUpload(file);
           }}
           showUploadList={false}
-          style={{ fontSize: 16, color: "#2a3a48", cursor: "pointer" }}
+          style={{ fontSize: 16, cursor: "pointer" }}
           disabled={!this.props.allowUpdate || this.props.isImporting}
         >
           <Tooltip
@@ -301,13 +294,9 @@ class MeshesView extends React.Component<
         >
           <div style={{ display: "flex" }}>
             <div
-              className="isosurface-list-item"
-              style={{
-                paddingLeft: 5,
-                paddingRight: 5,
-                backgroundColor: segmentId === isCenteredCell ? "#91d5ff" : "white",
-                borderRadius: 2,
-              }}
+              className={classnames("isosurface-list-item", {
+                "is-centered-cell": segmentId === isCenteredCell,
+              })}
               onClick={() => {
                 this.props.changeActiveIsosurfaceId(segmentId);
                 moveTo(seedPosition);
@@ -341,7 +330,9 @@ class MeshesView extends React.Component<
               this.props.onChangeVisibility(mesh, event.target.checked);
             }}
             disabled={isLoading}
-            style={getCheckboxStyle(mesh.isLoaded)}
+            style={
+              mesh.isLoaded ? null : { fontStyle: "italic", color: "var(--ant-text-secondary)" }
+            }
           >
             {mesh.description}
           </Checkbox>

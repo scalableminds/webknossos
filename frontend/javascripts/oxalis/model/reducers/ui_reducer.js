@@ -79,6 +79,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return state;
     }
 
+    case "SET_THEME": {
+      return updateKey(state, "uiInformation", { theme: action.value });
+    }
+
     default:
       return state;
   }

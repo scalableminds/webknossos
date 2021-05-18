@@ -31,7 +31,7 @@ class DemoProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[
 
   private def matchesProxyPage(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =
     conf.Features.isDemoInstance && conf.Proxy.routes
-      .exists(route => matchesPageWithWildcard(route, request.uri)) && (request.identity.isEmpty || request.uri != "/")
+      .exists(route => matchesPageWithWildcard(route, request.path)) && (request.identity.isEmpty || request.uri != "/")
 
   private def matchesPageWithWildcard(routeWithWildcard: String, actualRequest: String): Boolean = {
     val wildcardRegex = "^" + Regex.quote(routeWithWildcard).replace("*", "\\E.*\\Q") + "$"

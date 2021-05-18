@@ -52,7 +52,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   implicit val bodyParsers: PlayBodyParsers
 
   def save: Action[T] = Action.async(validateProto[T]) { implicit request =>
-    log {
+    log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
@@ -67,7 +67,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   }
 
   def saveMultiple: Action[Ts] = Action.async(validateProto[Ts]) { implicit request =>
-    log {
+    log() {
       logTime(slackNotificationService.noticeSlowRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
@@ -85,7 +85,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   }
 
   def get(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
-    log {
+    log() {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -100,7 +100,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def getMultiple: Action[List[Option[TracingSelector]]] = Action.async(validateJson[List[Option[TracingSelector]]]) {
     implicit request =>
-      log {
+      log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {
@@ -115,7 +115,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def update(tracingId: String): Action[List[UpdateActionGroup[T]]] =
     Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
-      log {
+      log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
             AllowRemoteOrigin {
@@ -226,7 +226,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def mergedFromIds(persist: Boolean): Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
-      log {
+      log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {

@@ -178,11 +178,11 @@ class Plane {
     }
   };
 
-  setVisible = (visible: boolean): void => {
-    this.plane.visible = visible;
-    this.TDViewBorders.visible = visible;
-    this.crosshair[0].visible = visible && this.displayCrosshair;
-    this.crosshair[1].visible = visible && this.displayCrosshair;
+  setVisible = (isVisible: boolean, isDataVisible?: boolean): void => {
+    this.plane.visible = isDataVisible != null ? isDataVisible : isVisible;
+    this.TDViewBorders.visible = isVisible;
+    this.crosshair[0].visible = isVisible && this.displayCrosshair;
+    this.crosshair[1].visible = isVisible && this.displayCrosshair;
   };
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];

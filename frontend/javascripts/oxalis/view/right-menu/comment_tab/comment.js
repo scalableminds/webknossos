@@ -58,34 +58,35 @@ export function Comment({ comment, isActive, style }: CommentProps) {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
   };
 
-  const liClassName = classNames("markdown", "markdown-small", "nowrap", {
+  const liClassName = classNames("markdown", "markdown-small", "nowrap", "comment", {
     "comment-active": isActive,
   });
   const iClassName = classNames("fa", "fa-fw", {
     "fa-angle-right": isActive,
   });
-  const { width, ...liStyle } = style;
   const isMultiLine = comment.content.indexOf("\n") !== -1;
 
   return (
-    <li className={liClassName} style={liStyle}>
-      <span>
-        <i className={iClassName} />
-        <a onClick={handleClick}>{comment.nodeId}</a>
-        {" - "}
-      </span>
-      <span style={{ display: "inline-block" }}>
-        <MarkdownWrapper source={linkify(comment.content)} singleLine />
-      </span>
-      {isMultiLine ? (
-        <ActiveCommentPopover comment={comment} isActive={isActive}>
-          <span style={{ marginLeft: 5 }}>
-            <a onClick={handleClick}>
-              <i className="far fa-comment-dots" />
-            </a>
-          </span>
-        </ActiveCommentPopover>
-      ) : null}
+    <li style={style}>
+      <div className={liClassName}>
+        <span>
+          <i className={iClassName} />
+          <a onClick={handleClick}>{comment.nodeId}</a>
+          {" - "}
+        </span>
+        <span style={{ display: "inline-block" }}>
+          <MarkdownWrapper source={linkify(comment.content)} singleLine />
+        </span>
+        {isMultiLine ? (
+          <ActiveCommentPopover comment={comment} isActive={isActive}>
+            <span style={{ marginLeft: 5 }}>
+              <a onClick={handleClick}>
+                <i className="far fa-comment-dots" />
+              </a>
+            </span>
+          </ActiveCommentPopover>
+        ) : null}
+      </div>
     </li>
   );
 }

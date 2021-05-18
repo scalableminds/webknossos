@@ -17,19 +17,20 @@ function TreeWithComments(props: Props) {
     props.onExpand(props.tree.treeId);
   };
 
-  const liClassName = classNames("nowrap", { "comment-active": props.isActive });
+  const liClassName = classNames("nowrap", "comment-tree", { "comment-active": props.isActive });
   const iClassName = classNames("fa", "fa-fw", {
     "fa-chevron-right": props.collapsed,
     "fa-chevron-down": !props.collapsed,
   });
-  const { width, ...liStyle } = props.style;
 
   return (
-    <li style={liStyle} className={liClassName}>
-      <a onClick={handleToggleComment}>
-        <i className={iClassName} />
-      </a>
-      {props.tree.treeId} - {props.tree.name}
+    <li style={props.style}>
+      <div className={liClassName}>
+        <a onClick={handleToggleComment}>
+          <i className={iClassName} />
+        </a>
+        {props.tree.treeId} - {props.tree.name}
+      </div>
     </li>
   );
 }

@@ -79,6 +79,7 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
   const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
   const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
+    const isColorLayer = layer.category === "color";
     if (layer.category === "color" || volumeTracing == null)
       return {
         displayName: layer.name,
@@ -88,10 +89,10 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
         annotationType: null,
         tracingVersion: null,
         hasMag1: hasMag1(layer),
-        hideUnmappedIds: existsActivePersistentMapping ? hideUnmappedIds : null,
-        mappingName: existsActivePersistentMapping ? mappingName : null,
-        mappingType: existsActivePersistentMapping ? mappingType : null,
-        isColorLayer: layer.category === "color",
+        hideUnmappedIds: !isColorLayer && existsActivePersistentMapping ? hideUnmappedIds : null,
+        mappingName: !isColorLayer && existsActivePersistentMapping ? mappingName : null,
+        mappingType: !isColorLayer && existsActivePersistentMapping ? mappingType : null,
+        isColorLayer,
       };
     if (layer.fallbackLayerInfo != null)
       return {

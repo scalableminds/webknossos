@@ -9,12 +9,12 @@ import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach(t => __setupOxalis(t, "volume"));
 
-test("getActiveCellId should get the id of the active cell", t => {
+test("getActiveCellId should get the id of the active segment", t => {
   const { api } = t.context;
   t.is(api.tracing.getActiveCellId(), TRACING.activeSegmentId);
 });
 
-test("setActiveCell should set the active cell id", t => {
+test("setActiveCell should set the active segment id", t => {
   const { api } = t.context;
   api.tracing.setActiveCell(27);
   t.is(api.tracing.getActiveCellId(), 27);

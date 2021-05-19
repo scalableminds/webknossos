@@ -444,7 +444,7 @@ export class PickCellTool {
     _altKey: boolean,
   ): Object {
     return {
-      leftClick: "Pick Cell",
+      leftClick: "Pick Segment",
       rightClick: "Context Menu",
     };
   }
@@ -476,7 +476,7 @@ export class FillCellTool {
     _altKey: boolean,
   ): Object {
     return {
-      leftClick: "Fill Cell",
+      leftClick: "Fill Segment",
       rightClick: "Context Menu",
     };
   }

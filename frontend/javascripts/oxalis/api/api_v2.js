@@ -476,7 +476,7 @@ class TracingApi {
   //  VOLUMETRACING API
 
   /**
-   * Returns the id of the current active cell.
+   * Returns the id of the current active segment.
    * _Volume tracing only!_
    */
   getActiveCellId(): number {
@@ -485,13 +485,13 @@ class TracingApi {
   }
 
   /**
-   * Sets the active cell given a cell id.
-   * If a cell with the given id doesn't exist, it is created.
+   * Sets the active segment given a segment id.
+   * If a segment with the given id doesn't exist, it is created.
    * _Volume tracing only!_
    */
   setActiveCell(id: number) {
     assertVolume(Store.getState().tracing);
-    assertExists(id, "Cell id is missing.");
+    assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
   }
 

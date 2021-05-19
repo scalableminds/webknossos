@@ -354,7 +354,7 @@ class MappingInfoView extends React.Component<Props, State> {
             disabled={isDisabled}
             style={isDisabled ? { pointerEvents: "none" } : {}}
           >
-            Import Skeleton for Centered Cell
+            Import Skeleton for Centered Segment
           </AsyncButton>
         </span>
       </Tooltip>

@@ -141,7 +141,7 @@ function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
         <img src="/assets/images/overwrite-all.svg" alt="Overwrite All Icon" />
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
-        title="Only overwrite empty areas. In case of erasing, only the current cell ID is overwritten. This setting can be toggled by holding CTRL."
+        title="Only overwrite empty areas. In case of erasing, only the current segment ID is overwritten. This setting can be toggled by holding CTRL."
         style={narrowButtonStyle}
         value={OverwriteModeEnum.OVERWRITE_EMPTY}
       >
@@ -175,10 +175,10 @@ function CreateCellButton() {
   return (
     <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
       <Tooltip
-        title={`Create a new Cell ID – The active cell id is ${unmappedActiveCellId}${mappedIdInfo}.`}
+        title={`Create a new Segment ID – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
         <ButtonComponent onClick={handleCreateCell} style={{ width: 36, paddingLeft: 10 }}>
-          <img src="/assets/images/new-cell.svg" alt="New Cell Icon" />
+          <img src="/assets/images/new-cell.svg" alt="New Segment Icon" />
         </ButtonComponent>
       </Tooltip>
     </Badge>
@@ -394,7 +394,7 @@ export default function ToolbarView() {
                 : null}
             </RadioButtonWithTooltip>
             <RadioButtonWithTooltip
-              title="Cell Picker – Click on a voxel to make its cell id the active cell id."
+              title="Segment Picker – Click on a voxel to make its segment id the active segment id."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.PICK_CELL].isDisabled}
               style={narrowButtonStyle}

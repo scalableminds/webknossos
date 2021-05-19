@@ -367,7 +367,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           />
           {this.maybeGetAutoBrushUi()}
           <NumberInputSetting
-            label="Active Cell ID"
+            label="Active Segment ID"
             value={volumeTracing.activeCellId}
             onChange={this.props.onChangeActiveCellId}
           />

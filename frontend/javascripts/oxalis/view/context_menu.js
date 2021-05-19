@@ -223,7 +223,7 @@ function NoNodeContextMenuOptions({
       key="select-cell"
       onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
     >
-      Select Cell ({cellIdAtPosition})
+      Select Segment ({cellIdAtPosition})
     </Menu.Item>,
 
     <Menu.Item
@@ -231,7 +231,7 @@ function NoNodeContextMenuOptions({
       key="fill-cell"
       onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
     >
-      Fill Cell (flood-fill region)
+      Fill Segment (flood-fill region)
     </Menu.Item>,
   ];
 
@@ -321,8 +321,8 @@ function ContextMenu(props: Props) {
   if (cellIdAtPosition > 0) {
     infoRows.push(
       <div key="copy-cell" className="node-context-menu-item">
-        <img src="/assets/images/cell.svg" className="cell-context-icon" alt="Cell Icon" />
-        Cell ID: {cellIdAtPosition} {copyIconWithTooltip(cellIdAtPosition, "Copy Cell ID")}
+        <img src="/assets/images/cell.svg" className="cell-context-icon" alt="Segment Icon" />
+        Segment ID: {cellIdAtPosition} {copyIconWithTooltip(cellIdAtPosition, "Copy Segment ID")}
       </div>,
     );
   }

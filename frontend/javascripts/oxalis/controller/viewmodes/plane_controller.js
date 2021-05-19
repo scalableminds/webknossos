@@ -354,10 +354,10 @@ class PlaneController extends React.PureComponent<Props> {
             getRequestLogZoomStep(Store.getState()),
           );
           Clipboard.copy(String(hoveredId)).then(() =>
-            Toast.success(`Cell id ${hoveredId} copied to clipboard.`),
+            Toast.success(`Segment id ${hoveredId} copied to clipboard.`),
           );
         } else {
-          Toast.warning("No cell under cursor.");
+          Toast.warning("No segment under cursor.");
         }
       },
       q: downloadScreenshot,

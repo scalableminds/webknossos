@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added an icon to the info tab of a tracing that links to the dataset settings. It's located next to the dataset name. [#4772](https://github.com/scalableminds/webknossos/pull/5462)
 
 ### Changed
--
+- Active nodes and trees are now highlighted with a background color in the comments tab. [#5461](https://github.com/scalableminds/webknossos/pull/5461)
 
 ### Fixed
 - Fixed that the row selection in the user table wasn't properly preserved when filtering the table and (un)selecting rows. [#5486](https://github.com/scalableminds/webknossos/pull/5486)

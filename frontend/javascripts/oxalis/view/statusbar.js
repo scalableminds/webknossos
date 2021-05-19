@@ -229,7 +229,7 @@ function ShortcutsInfo() {
           alt="Mouse Wheel"
           style={defaultIconStyle}
         />
-        Move along 3rd axis
+        {isAltPressed || isControlPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
       <span style={defaultShortcutStyle}>
         <img

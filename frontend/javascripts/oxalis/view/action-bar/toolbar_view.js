@@ -238,8 +238,9 @@ export default function ToolbarView() {
 
   const moveToolDescription =
     "Move – Use left-click to move around and right-click to open a contextmenu.";
-  const skeletonToolDescription =
-    "Skeleton – Use left-click to move around and right-click to create new skeleton nodes";
+  const skeletonToolDescription = useLegacyBindings
+    ? "Skeleton – Use left-click to move around and right-click to create new skeleton nodes"
+    : "Skeleton – Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
 
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationToolEnum.TRACE ||

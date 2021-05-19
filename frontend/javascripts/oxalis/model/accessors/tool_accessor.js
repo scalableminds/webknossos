@@ -10,8 +10,7 @@ import {
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import memoizeOne from "memoize-one";
 
-const zoomInToUseToolMessage =
-  "Your zoom is too low to use this tool. Please zoom in further to use it.";
+const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
 const isZoomStepTooHighFor = (state, tool) => isVolumeAnnotationDisallowedForZoom(tool, state);
 

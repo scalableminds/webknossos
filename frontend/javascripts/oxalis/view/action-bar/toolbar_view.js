@@ -1,6 +1,6 @@
 // @flow
 import { Radio, Tooltip, Badge, Space } from "antd";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect } from "react";
 
 import Constants, {
@@ -25,6 +25,9 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
+import { createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import { toNullable } from "libs/utils";
 
 function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
@@ -185,6 +188,35 @@ function CreateCellButton() {
   );
 }
 
+function CreateTreeButton() {
+  const dispatch = useDispatch();
+  const activeTree = useSelector(state => toNullable(getActiveTree(state.tracing.skeleton)));
+  const rgbColorString =
+    activeTree != null
+      ? `rgb(${activeTree.color.map(c => Math.round(c * 255)).join(",")})`
+      : "transparent";
+
+  const activeTreeHint =
+    activeTree != null
+      ? `The active tree id is ${activeTree.treeId}.`
+      : "No tree is currently selected";
+
+  const handleCreateTree = () => dispatch(createTreeAction());
+  return (
+    <Badge dot style={{ boxShadow: "none", background: rgbColorString }}>
+      <Tooltip title={`Create a new Tree – ${activeTreeHint}`}>
+        <ButtonComponent onClick={handleCreateTree} style={{ width: 36, paddingLeft: 10 }}>
+          <img
+            src="/assets/images/new-tree.svg"
+            alt="New Tree Icon"
+            style={{ width: 16, height: 16 }}
+          />
+        </ButtonComponent>
+      </Tooltip>
+    </Badge>
+  );
+}
+
 export default function ToolbarView() {
   const hasVolume = useSelector(state => state.tracing.volume != null);
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
@@ -247,6 +279,10 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
 
+  const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
+  const showCreateCellButton =
+    isVolumeSupported && !showCreateTreeButton && adaptedActiveTool !== AnnotationToolEnum.MOVE;
+
   return (
     <div
       onClick={() => {
@@ -273,10 +309,10 @@ export default function ToolbarView() {
             value={AnnotationToolEnum.SKELETON}
           >
             {/*
-                    When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
-                    will be null, too, which means the tooltip text would immediately change to an empty string.
-                    To avoid this, we fallback to previousSkeletonToolHint.
-                  */}
+              When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
+              will be null, too, which means the tooltip text would immediately change to an empty string.
+              To avoid this, we fallback to previousSkeletonToolHint.
+            */}
             <Tooltip
               title={skeletonToolHint || previousSkeletonToolHint}
               visible={skeletonToolHint != null}
@@ -419,7 +455,8 @@ export default function ToolbarView() {
       />
 
       <Space size={0} style={{ marginLeft: 12 }}>
-        {isVolumeSupported ? <CreateCellButton /> : null}
+        {showCreateCellButton ? <CreateCellButton /> : null}
+        {showCreateTreeButton ? <CreateTreeButton /> : null}
       </Space>
     </div>
   );

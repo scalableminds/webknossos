@@ -1,6 +1,5 @@
 package models.user.time
 
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -11,7 +10,7 @@ import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.mail.DefaultMails
+import oxalis.mail.{DefaultMails, Send}
 import oxalis.thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 
@@ -31,8 +30,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-  private val MaxTracingPause =
-    conf.WebKnossos.User.Time.tracingPauseInSeconds.toMillis
+  private val MaxTracingPauseMillis =
+    conf.WebKnossos.User.timeTrackingPause.toMillis
 
   def logUserInteraction(timestamp: Long, user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -135,7 +134,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       val start = pair.head
       val end = pair.last
       val duration = end - start
-      if (duration >= MaxTracingPause) {
+      if (duration >= MaxTracingPauseMillis) {
         updateTimeSpan(current, start)
         current = createNewTimeSpan(end, _user, annotation)
       }
@@ -152,7 +151,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       logger.info(
         s"Negative timespan duration $duration ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=$this)")
     }
-    duration < MaxTracingPause
+    duration < MaxTracingPauseMillis
   }
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =

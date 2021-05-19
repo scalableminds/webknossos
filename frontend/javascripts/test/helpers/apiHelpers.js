@@ -67,6 +67,7 @@ mockRequire(
     open: sinon.spy(),
     document: {
       createElement: () => ({}),
+      getElementById: () => null,
     },
   }),
 );

@@ -27,8 +27,6 @@ class TaskService @Inject()(conf: WkConf,
                             projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  private val MAX_OPEN_TASKS: Int = conf.WebKnossos.Tasks.maxOpenPerUser
-
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       annotationBase <- annotationBaseFor(task._id)
@@ -65,7 +63,7 @@ class TaskService @Inject()(conf: WkConf,
     if (user.isAdmin) return teamDAO.findAllIdsByOrganization(user._organization)
     for {
       numberOfOpen <- countOpenNonAdminTasks(user)
-      teams <- if (numberOfOpen < MAX_OPEN_TASKS) userService.teamIdsFor(user._id)
+      teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
       else userService.teamManagerTeamIdsFor(user._id)
       _ <- bool2Fox(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
     } yield teams

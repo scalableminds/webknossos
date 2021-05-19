@@ -336,13 +336,15 @@ class TimeLineView extends React.PureComponent<Props, State> {
         <div style={{ marginTop: 20 }} />
         <Spin size="large" spinning={isLoading}>
           {timeTrackingData.length > 0 ? (
-            <TimeTrackingChart
-              columns={columns}
-              rows={rows}
-              timeAxisFormat={timeAxisFormat}
-              dateRange={dateRange}
-              timeTrackingData={timeTrackingData}
-            />
+            <div style={{ backgroundColor: "white" }}>
+              <TimeTrackingChart
+                columns={columns}
+                rows={rows}
+                timeAxisFormat={timeAxisFormat}
+                dateRange={dateRange}
+                timeTrackingData={timeTrackingData}
+              />
+            </div>
           ) : (
             <div style={{ textAlign: "center" }}>
               No Time Tracking Data for the Selected User or Date Range.

@@ -1,17 +1,17 @@
 package com.scalableminds.webknossos.datastore.rpc
 
+import java.io.File
+
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
-import play.api.http.HeaderNames
-import play.api.http.Status._
+import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
-import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -165,7 +165,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     request
       .execute()
       .map { result =>
-        if (result.status == OK) {
+        if (Status.isSuccessful(result.status)) {
           Full(result)
         } else {
           val errorMsg = s"Unsuccessful WS request to $url (ID: $id)." +
@@ -185,7 +185,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   private def extractBytesResponse(r: Fox[WSResponse]): Fox[Array[Byte]] =
     r.flatMap { response =>
-      if (response.status == OK) {
+      if (Status.isSuccessful(response.status)) {
         val responseBytes = response.bodyAsBytes
         if (verbose) {
           logger.debug(
@@ -204,7 +204,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   private def parseJsonResponse[T: Reads](r: Fox[WSResponse]): Fox[T] =
     r.flatMap { response =>
-      if (response.status == OK) {
+      if (Status.isSuccessful(response.status)) {
         if (verbose) {
           logger.debug(
             s"Successful request (ID: $id). " +
@@ -229,7 +229,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   private def parseProtoResponse[T <: GeneratedMessage with Message[T]](r: Fox[WSResponse])(
       companion: GeneratedMessageCompanion[T]) =
     r.flatMap { response =>
-      if (response.status == OK) {
+      if (Status.isSuccessful(response.status)) {
         if (verbose) {
           logger.debug(
             s"Successful request (ID: $id). " +

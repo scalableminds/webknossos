@@ -1,5 +1,5 @@
 // @flow
-import { OverwriteModeEnum } from "oxalis/constants";
+import { OverwriteModeEnum, TDViewDisplayModeEnum } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 
 export const userSettings = {
@@ -26,7 +26,11 @@ export const userSettings = {
   sortCommentsAsc: { type: "boolean" },
   sortTreesByName: { type: "boolean" },
   sphericalCapRadius: { type: "number", minimum: 50, maximum: 500 },
-  tdViewDisplayPlanes: { type: "boolean" },
+  tdViewDisplayPlanes: {
+    type: "string",
+    enum: Object.values(TDViewDisplayModeEnum),
+  },
+  tdViewDisplayDatasetBorders: { type: "boolean" },
   hideTreeRemovalWarning: { type: "boolean" },
   brushSize: { type: "number", minimum: 1, maximum: 300 },
   autoSaveLayouts: { type: "boolean" },
@@ -34,7 +38,7 @@ export const userSettings = {
   segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },
   overwriteMode: {
     type: "string",
-    enum: [OverwriteModeEnum.OVERWRITE_ALL, OverwriteModeEnum.OVERWRITE_EMPTY],
+    enum: Object.values(OverwriteModeEnum),
   },
   useLegacyBindings: { type: "boolean" },
   ...baseDatasetViewConfiguration,

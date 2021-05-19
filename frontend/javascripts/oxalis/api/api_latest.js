@@ -16,6 +16,7 @@ import Constants, {
   type Vector4,
   type AnnotationTool,
   AnnotationToolEnum,
+  TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
@@ -1430,6 +1431,7 @@ class UserApi {
     - displayScalebars
     - scale
     - tdViewDisplayPlanes
+    - tdViewDisplayDatasetBorders
     - newNodeNewTree
     - centerNewNode
     - highlightCommentedNodes
@@ -1445,7 +1447,14 @@ class UserApi {
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
   getConfiguration(key: $Keys<UserConfiguration>) {
-    return Store.getState().userConfiguration[key];
+    const value = Store.getState().userConfiguration[key];
+
+    // Backwards compatibility
+    if (key === "tdViewDisplayPlanes") {
+      return value === TDViewDisplayModeEnum.DATA;
+    }
+
+    return value;
   }
 
   /**
@@ -1456,6 +1465,11 @@ class UserApi {
    * api.user.setConfiguration("keyboardDelay", 20);
    */
   setConfiguration(key: $Keys<UserConfiguration>, value: any) {
+    // Backwards compatibility
+    if (key === "tdViewDisplayPlanes") {
+      value = value ? TDViewDisplayModeEnum.DATA : TDViewDisplayModeEnum.WIREFRAME;
+    }
+
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }

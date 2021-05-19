@@ -46,7 +46,12 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import Toast from "libs/toast";
 import window, { location } from "libs/window";
 import * as Utils from "libs/utils";
-import { ControlModeEnum, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
+import {
+  ControlModeEnum,
+  OrthoViews,
+  AnnotationToolEnum,
+  TDViewDisplayModeEnum,
+} from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
@@ -755,7 +760,14 @@ class UserApi {
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
   getConfiguration(key: $Keys<UserConfiguration>) {
-    return Store.getState().userConfiguration[key];
+    const value = Store.getState().userConfiguration[key];
+
+    // Backwards compatibility
+    if (key === "tdViewDisplayPlanes") {
+      return value === TDViewDisplayModeEnum.DATA;
+    }
+
+    return value;
   }
 
   /**
@@ -766,6 +778,11 @@ class UserApi {
    * api.user.setConfiguration("keyboardDelay", 20);
    */
   setConfiguration(key: $Keys<UserConfiguration>, value: any) {
+    // Backwards compatibility
+    if (key === "tdViewDisplayPlanes") {
+      value = value ? TDViewDisplayModeEnum.DATA : TDViewDisplayModeEnum.WIREFRAME;
+    }
+
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }

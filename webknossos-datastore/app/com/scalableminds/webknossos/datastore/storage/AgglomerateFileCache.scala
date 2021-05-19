@@ -122,7 +122,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
 
     var x = initialBoundingBox._1
     var y = initialBoundingBox._2
-    var z = initialBoundingBox._3 + currDimensions._3
+    var z = initialBoundingBox._3
 
     while (x < requestedCuboid.x && x < dataLayerBox.x) {
       val nextBBinX = (x + currDimensions._1, y, z)

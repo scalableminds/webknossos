@@ -287,7 +287,10 @@ class JobsController @Inject()(jobDAO: JobDAO,
                        tracingId: Option[String],
                        tracingVersion: Option[String],
                        annotationId: Option[String],
-                       annotationType: Option[String]): Action[AnyContent] =
+                       annotationType: Option[String],
+                       hideUnmappedIds: Option[Boolean],
+                       mappingName: Option[String],
+                       mappingType: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -307,7 +310,10 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "volume_tracing_id" -> tracingId,
             "volume_tracing_version" -> tracingVersion,
             "annotation_id" -> annotationId,
-            "annotation_type" -> annotationType
+            "annotation_type" -> annotationType,
+            "mapping_name" -> mappingName,
+            "mapping_type" -> mappingType,
+            "hide_unmapped_ids" -> hideUnmappedIds
           )
           job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
           js <- jobService.publicWrites(job)

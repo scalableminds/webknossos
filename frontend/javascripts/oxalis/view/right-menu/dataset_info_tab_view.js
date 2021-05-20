@@ -3,8 +3,8 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Tooltip, Button } from "antd";
+import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -149,13 +149,10 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
       <div style={{ marginBottom: 25 }}>
-        <table style={{ marginRight: 20, marginTop: 25, maxWidth: 500, fontSize: 14 }}>
+        <table className="shortcut-table">
           <tbody>
             {shortcuts.map(shortcut => (
-              <tr
-                key={shortcut.key}
-                style={{ borderBottom: "1px solid #e8e8e8", borderTop: "1px solid #e8e8e8" }}
-              >
+              <tr key={shortcut.key}>
                 <td style={{ width: 200 }}>{shortcut.keybinding}</td>
                 <td>{shortcut.action}</td>
               </tr>
@@ -195,12 +192,24 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       description: datasetDescription,
       owningOrganization,
     } = this.props.dataset;
+    const getEditSettingsIcon = () => (
+      <Tooltip title="Edit dataset settings">
+        <Button
+          type="text"
+          icon={<EditOutlined />}
+          href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+          className="transparent-background-on-hover"
+          target="_blank"
+        />
+      </Tooltip>
+    );
 
     if (isDatasetViewMode) {
       return (
         <div>
           <p style={{ wordWrap: "break-word" }}>
             <strong>{displayName || datasetName}</strong>
+            {getEditSettingsIcon()}
           </p>
           {datasetDescription ? (
             <div style={{ fontSize: 14 }}>
@@ -224,6 +233,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         >
           {datasetName}
         </Link>
+        {getEditSettingsIcon()}
       </p>
     );
   }
@@ -388,8 +398,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           <tr>
             <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
               <img
+                className="info-tab-icon"
                 src="/assets/images/icon-downsampling.svg"
-                style={{ width: 24, height: 24 }}
                 alt="Resolution"
               />
             </td>
@@ -416,8 +426,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-voxelsize.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Voxel size"
                     />
                   </td>
@@ -428,8 +438,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <tr>
                   <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
                     <img
+                      className="info-tab-icon"
                       src="/assets/images/icon-extent.svg"
-                      style={{ width: 24, height: 24 }}
                       alt="Dataset extent"
                     />
                   </td>

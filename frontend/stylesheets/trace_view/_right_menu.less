@@ -5,6 +5,8 @@
   flex-grow: 1;
   min-height: 600px;
   width: 100%;
+  // No dark mode
+  background-color: white;
 }
 
 .flex-center {
@@ -13,6 +15,29 @@
   align-items: center;
   flex-direction: column;
   height: 100%;
+}
+
+.isosurface-list-item {
+  padding-left: 5px;
+  padding-right: 5px;
+  border-radius: 2px;
+  &.is-centered-cell {
+    background-color: @blue-3;
+  }
+  &:hover {
+    background-color: @blue-1;
+  }
+}
+
+#commentList {
+  .comment,
+  .comment-tree {
+    height: 24px;
+    line-height: 24px;
+  }
+  .comment-active {
+    background-color: @blue-3;
+  }
 }
 
 #tree-list {
@@ -29,7 +54,6 @@
   }
 
   .tree-hierarchy-header {
-    color: rgba(24, 144, 255, 0.9);
     margin-left: 16px;
     margin-right: auto;
     position: absolute;
@@ -43,7 +67,7 @@
   }
 
   .selected-tree-node {
-    background-color: rgba(148, 247, 153, 0.9);
+    background-color: rgba(@green-7, 0.8);
   }
 
   .rst__rowLabel {
@@ -53,7 +77,7 @@
     }
   }
   .rst__rowSearchMatch .rst__rowLabel {
-    background-color: rgb(135, 213, 255);
+    background-color: @blue-3;
   }
 }
 
@@ -69,9 +93,9 @@
   h5 {
     font-size: 16px;
     margin-bottom: 0;
-    color: rgba(0, 0, 0, 0.65);
+    color: @text-color;
   }
-  max-height: 21px;
+  max-height: 24px;
   overflow: hidden;
 }
 

@@ -38,6 +38,7 @@ import {
   APIAnnotationTypeEnum,
   type APIUpdateActionBatch,
   type APIUser,
+  type APIUserTheme,
   type APIUserLoggedTime,
   type ExperienceDomainList,
   type HybridServerTracing,
@@ -223,6 +224,16 @@ export function updateLastTaskTypeIdOfUser(
   return Request.sendJSONReceiveJSON(`/api/users/${userId}/taskTypeId`, {
     method: "PUT",
     data: { lastTaskTypeId },
+  });
+}
+
+export function updateSelectedThemeOfUser(
+  userId: string,
+  selectedTheme: APIUserTheme,
+): Promise<APIUser> {
+  return Request.sendJSONReceiveJSON(`/api/users/${userId}/selectedTheme`, {
+    method: "PUT",
+    data: JSON.stringify(selectedTheme),
   });
 }
 
@@ -505,10 +516,10 @@ export function transferTask(annotationId: string, userId: string): Promise<APIA
 }
 
 export async function transferActiveTasksOfProject(
-  projectName: string,
+  projectId: string,
   userId: string,
 ): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}/transferActiveTasks`, {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}/transferActiveTasks`, {
     data: {
       userId,
     },
@@ -516,8 +527,8 @@ export async function transferActiveTasksOfProject(
   });
 }
 
-export async function getUsersWithActiveTasks(projectName: string): Promise<Array<APIActiveUser>> {
-  return Request.receiveJSON(`/api/projects/${projectName}/usersWithActiveTasks`);
+export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
+  return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
 // ### Annotations

@@ -6,8 +6,8 @@ import * as React from "react";
 const { Footer } = Layout;
 
 const creditsFooter = () => (
-  <Footer style={{ backgroundColor: "#ececec" }}>
-    <div id="credits">
+  <Footer id="credits">
+    <div>
       <div className="container">
         <h3>webKnossos Credits</h3>
         <p>

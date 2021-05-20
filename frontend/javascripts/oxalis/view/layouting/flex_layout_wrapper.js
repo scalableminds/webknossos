@@ -326,7 +326,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   };
 
   toggleBorder(side: string, toggleInternalState: boolean = true) {
-    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     // The most recent version of borderOpenStatus is needed as two border toggles might be executed directly after another.
     // If borderOpenStatus was passed via props, the first update  of borderOpenStatus will overwritten by the second update.
     const borderOpenStatusCopy = _.cloneDeep(Store.getState().uiInformation.borderOpenStatus);
@@ -336,6 +335,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       // Only adjust the internal state if the toggle is not automated and no tab is maximized.
       this.borderOpenStatusWhenNotMaximized[side] = !this.borderOpenStatusWhenNotMaximized[side];
     }
+    this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     this.onLayoutChange();
   }
 
@@ -396,7 +396,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             classNameMapper={this.classNameMapper}
           />
         </div>
-        <Footer className="footer">
+        <Footer className="statusbar-footer">
           <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
           <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
           <Statusbar />

@@ -42,7 +42,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     extends FoxImplicits
     with LazyLogging {
 
-  private val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+  private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
   private val meshesDir = "meshes"
   private val meshFileExtension = "hdf5"
   private val defaultLevelOfDetail = 0

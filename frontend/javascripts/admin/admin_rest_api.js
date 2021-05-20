@@ -1247,20 +1247,6 @@ export async function getAgglomeratesForDatasetLayer(
   );
 }
 
-export async function getMeshFilesForDatasetLayer(
-  datastoreUrl: string,
-  datasetId: APIDatasetId,
-  layerName: string,
-): Promise<Array<string>> {
-  return doWithToken(token =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-        datasetId.name
-      }/layers/${layerName}/meshes?token=${token}`,
-    ),
-  );
-}
-
 export function getSampleDatasets(
   datastoreUrl: string,
   organizationName: string,

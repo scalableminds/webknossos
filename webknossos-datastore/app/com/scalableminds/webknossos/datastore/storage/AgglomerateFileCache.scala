@@ -97,6 +97,10 @@ case class BoundingBoxFinder(
   }
 }
 
+// This bounding box cache uses the cumsum.json to speed up the agglomerate mapping. The cumsum.json contains information about all bounding boxes of the dataset and the contained segment ids.
+// Thus, we can load the correct part from the AgglomerateFile without having to maintain a cache because we can translate the whole input array.
+// One special case is an input value of 0, which is automatically mapped to 0.
+
 class BoundingBoxCache(
     val cache: mutable.HashMap[(Long, Long, Long), BoundingBoxValues], // maps bounding box top left to range and bb dimensions
     val boundingBoxFinder: BoundingBoxFinder, // saves the bb top left positions

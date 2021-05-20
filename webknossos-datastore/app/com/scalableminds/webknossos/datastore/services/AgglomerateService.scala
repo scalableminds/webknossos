@@ -81,6 +81,10 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
     reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
 
+  // An agglomerate file holds information about a specific mapping. wK translates the segment ids to agglomerate ids by looking at the HDF5 dataset "/segment_to_agglomerate".
+  // In this array, the agglomerate id is found by using the segment id as index.
+  // There are two ways of how we prevent a file lookup for every input element. When present, we use the cumsum.json to initialize a BoundingBoxCache (see comment there).
+  // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
   private def initHDFReader(request: DataServiceDataRequest) = {
     val hdfFile =
       dataBaseDir

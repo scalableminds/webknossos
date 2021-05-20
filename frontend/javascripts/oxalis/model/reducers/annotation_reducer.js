@@ -152,13 +152,11 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_MESH_FILE_LIST": {
       const { meshFiles } = action;
-      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
       return update(state, { availableMeshFiles: { $set: meshFiles } });
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
       const { meshFile } = action;
-      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
       return update(state, { currentMeshFile: { $set: meshFile } });
     }
 

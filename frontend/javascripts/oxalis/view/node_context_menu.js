@@ -46,7 +46,6 @@ type DispatchProps = {|
   setActiveNode: number => void,
   hideTree: number => void,
   createTree: () => void,
-  createMesh: (number, Vector3) => void,
 |};
 
 type StateProps = {|

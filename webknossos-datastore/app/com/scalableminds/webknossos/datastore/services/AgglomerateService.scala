@@ -51,12 +51,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
       val agglomerateIds = cachedAgglomerateFile.cache match {
         case Left(agglomerateIdCache) =>
-          input.map(
-            el =>
-              agglomerateIdCache.withCache(el,
-                                           cachedAgglomerateFile.reader,
-                                           cachedAgglomerateFile.dataset,
-                                           cachedAgglomerateFile.size)(readHDF))
+          input.map(el =>
+            agglomerateIdCache.withCache(el, cachedAgglomerateFile.reader, cachedAgglomerateFile.dataset)(readHDF))
         case Right(boundingBoxCache) =>
           boundingBoxCache.withCache(request, input, cachedAgglomerateFile.reader)(readHDF)
       }
@@ -114,10 +110,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
                                  config.Datastore.Cache.AgglomerateFile.blockSize))
       }
 
-    CachedAgglomerateFile(reader,
-                          reader.`object`().openDataSet(datasetName),
-                          ULong(reader.getDataSetInformation(datasetName).getNumberOfElements),
-                          cache)
+    CachedAgglomerateFile(reader, reader.`object`().openDataSet(datasetName), cache)
   }
 
   def generateSkeleton(organizationName: String,

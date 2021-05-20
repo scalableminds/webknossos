@@ -191,6 +191,7 @@ function NodeContextMenuOptions({
 }
 
 function NoNodeContextMenuOptions({
+  skeletonTracing,
   isSkeletonToolActive,
   hideNodeContextMenu,
   globalPosition,
@@ -198,25 +199,28 @@ function NoNodeContextMenuOptions({
   createTree,
   cellIdAtPosition,
 }: NoNodeContextMenuProps) {
-  const skeletonActions = [
-    <Menu.Item
-      className="node-context-menu-item"
-      key="create-node"
-      onClick={() => setWaypoint(globalPosition, viewport, false)}
-    >
-      Create Node here
-    </Menu.Item>,
-    <Menu.Item
-      className="node-context-menu-item"
-      key="create-node-with-tree"
-      onClick={() => {
-        createTree();
-        setWaypoint(globalPosition, viewport, false);
-      }}
-    >
-      Create new Tree here
-    </Menu.Item>,
-  ];
+  const skeletonActions =
+    skeletonTracing != null
+      ? [
+          <Menu.Item
+            className="node-context-menu-item"
+            key="create-node"
+            onClick={() => setWaypoint(globalPosition, viewport, false)}
+          >
+            Create Node here
+          </Menu.Item>,
+          <Menu.Item
+            className="node-context-menu-item"
+            key="create-node-with-tree"
+            onClick={() => {
+              createTree();
+              setWaypoint(globalPosition, viewport, false);
+            }}
+          >
+            Create new Tree here
+          </Menu.Item>,
+        ]
+      : [];
   const nonSkeletonActions = [
     // Segment 0 cannot/shouldn't be made active (as this
     // would be an eraser effectively).
@@ -260,13 +264,12 @@ function ContextMenu(props: Props) {
     datasetScale,
     globalPosition,
   } = props;
-  if (!skeletonTracing) {
-    return null;
-  }
-  const { activeTreeId, activeNodeId } = skeletonTracing;
+  const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
+  const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
+
   let nodeContextMenuTree = null;
   let nodeContextMenuNode = null;
-  if (clickedNodeId != null) {
+  if (skeletonTracing != null && clickedNodeId != null) {
     getNodeAndTree(skeletonTracing, clickedNodeId).map(([tree, node]) => {
       nodeContextMenuNode = node;
       nodeContextMenuTree = tree;
@@ -275,7 +278,7 @@ function ContextMenu(props: Props) {
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
   const activeNode =
-    activeNodeId != null
+    activeNodeId != null && skeletonTracing != null
       ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
       : null;
   const distanceToSelection =

@@ -165,7 +165,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && this.props.viewMode === constants.MODE_PLANE_TRACING ? (
+          {!isReadOnly && constants.MODES_PLANE.indexOf(this.props.viewMode) > -1 ? (
             <ToolbarView />
           ) : null}
           {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}

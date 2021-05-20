@@ -1,5 +1,5 @@
 // @flow
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import type { Vector3, OrthoView } from "oxalis/constants";
@@ -16,14 +16,8 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { addIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import { loadMeshFromFile, maybeFetchMeshFiles } from "oxalis/view/right-menu/meshes_view_helper";
 import Model from "oxalis/model";
-import {
-  getMeshfileChunksForSegment,
-  getMeshfileChunkData,
-  getMeshfilesForDatasetLayer,
-} from "admin/admin_rest_api";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 import { setWaypoint } from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
@@ -33,9 +27,7 @@ import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { roundTo } from "libs/utils";
-import parseStlBuffer from "libs/parse_stl_buffer";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import SubMenu from "antd/lib/menu/SubMenu";
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
@@ -63,6 +55,7 @@ type StateProps = {|
   segmentationLayer: ?APIDataLayer,
   dataset: APIDataset,
   zoomStep: number,
+  currentMeshFile: ?string,
 |};
 /* eslint-enable react/no-unused-prop-types */
 
@@ -203,86 +196,42 @@ function NoNodeContextMenuOptions({
   createTree,
   segmentationLayer,
   dataset,
-  createMesh,
   zoomStep,
+  currentMeshFile,
 }: NoNodeContextMenuProps) {
-  const [availableMeshFiles, setAvailableMeshFiles] = useState([]);
-  const [currentMeshFile, setCurrentMeshFile] = useState("");
-
   useEffect(() => {
     (async () => {
       if (segmentationLayer) {
-        const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
-        const files = await getMeshfilesForDatasetLayer(dataset.dataStore.url, dataset, layerName);
-        setAvailableMeshFiles(files);
-        setCurrentMeshFile(files[0]);
+        await maybeFetchMeshFiles(segmentationLayer, dataset, false);
       }
     })();
   }, []);
 
-  const loadMeshFromFile = async meshFile => {
-    const layer = Model.getSegmentationLayer();
-    if (!layer) {
-      throw new Error("No segmentation layer found");
-    }
-    const segmentationCube = layer.cube;
-    const fileName = meshFile;
+  const loadMesh = async () => {
+    if (!currentMeshFile) return;
 
-    const id = segmentationCube.getDataValue(globalPosition, null, zoomStep);
-    if (segmentationLayer == null) return;
-    const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
-    const availableChunks = await getMeshfileChunksForSegment(
-      dataset.dataStore.url,
-      dataset,
-      layerName,
-      fileName,
-      id,
-    );
-    for (const chunkPos of availableChunks) {
-      // eslint-disable-next-line no-await-in-loop
-      const stlData = await getMeshfileChunkData(
-        dataset.dataStore.url,
-        dataset,
-        layerName,
-        fileName,
-        id,
-        chunkPos,
-      );
-      const geometry = parseStlBuffer(stlData);
-      getSceneController().addIsosurfaceFromGeometry(geometry, id);
-    }
-    createMesh(id, globalPosition);
-  };
-  const getLoadMeshMenuItem = () => {
-    const hasMeshFiles = availableMeshFiles.length > 0;
-    if (availableMeshFiles.length <= 1) {
-      return (
-        <Menu.Item
-          className="node-context-menu-item"
-          key="load-mesh-file"
-          onClick={() => loadMeshFromFile(currentMeshFile)}
-          disabled={!hasMeshFiles}
-        >
-          Load Mesh from File
-        </Menu.Item>
-      );
-    } else {
-      return (
-        <SubMenu
-          className="node-context-menu-sub"
-          key="load-mesh-from-file"
-          onClick={item => loadMeshFromFile(item.key)}
-          title="Load Mesh from File"
-        >
-          {availableMeshFiles.map(meshFile => (
-            <Menu.Item className="node-context-menu-item" key={meshFile}>
-              {meshFile}
-            </Menu.Item>
-          ))}
-        </SubMenu>
-      );
+    if (segmentationLayer) {
+      const layer = Model.getSegmentationLayer();
+      if (!layer) {
+        throw new Error("No segmentation layer found");
+      }
+      const segmentationCube = layer.cube;
+      const id = segmentationCube.getDataValue(globalPosition, null, zoomStep);
+
+      await loadMeshFromFile(id, globalPosition, currentMeshFile, segmentationLayer, dataset);
     }
   };
+
+  const getLoadMeshMenuItem = () => (
+    <Menu.Item
+      className="node-context-menu-item"
+      key="load-mesh-file"
+      onClick={loadMesh}
+      disabled={!currentMeshFile}
+    >
+      Load Mesh from File
+    </Menu.Item>
+  );
 
   return (
     <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
@@ -405,10 +354,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   createTree() {
     dispatch(createTreeAction());
   },
-  createMesh(cellId, seedPosition) {
-    if (cellId == null) return;
-    dispatch(addIsosurfaceAction(cellId, seedPosition, true));
-  },
 });
 
 function mapStateToProps(state: OxalisState): StateProps {
@@ -418,6 +363,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     dataset: state.dataset,
     segmentationLayer: getSegmentationLayer(state.dataset),
     zoomStep: getRequestLogZoomStep(state),
+    currentMeshFile: state.currentMeshFile,
   };
 }
 

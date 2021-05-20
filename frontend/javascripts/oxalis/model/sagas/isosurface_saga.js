@@ -15,8 +15,8 @@ import {
   removeIsosurfaceAction,
   addIsosurfaceAction,
   finishedRefreshingIsosurfacesAction,
-  startRefreshingIsosurfaceAction,
-  finishedRefreshingIsosurfaceAction,
+  finishedLoadingIsosurfaceAction,
+  startedLoadingIsosurfaceAction,
   type ImportIsosurfaceFromStlAction,
   type UpdateIsosurfaceVisibilityAction,
   type RemoveIsosurfaceAction,
@@ -157,10 +157,14 @@ function* ensureSuitableIsosurface(
 ): Saga<void> {
   const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
   const layer = Model.getSegmentationLayer();
+
+  // we need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
+  if (maybeFlycamAction && maybeFlycamAction.shouldRefreshIsosurface === false) {
+    return;
+  }
   if (segmentId === 0 || layer == null) {
     return;
   }
-
   yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
 }
 
@@ -222,7 +226,7 @@ function* loadIsosurfaceWithNeighbors(
   if (!hasIsosurface) {
     yield* put(addIsosurfaceAction(segmentId, position, false));
   }
-  yield* put(startRefreshingIsosurfaceAction(segmentId));
+  yield* put(startedLoadingIsosurfaceAction(segmentId));
 
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
@@ -241,7 +245,7 @@ function* loadIsosurfaceWithNeighbors(
     positionsToRequest = positionsToRequest.concat(neighbors);
   }
 
-  yield* put(finishedRefreshingIsosurfaceAction(segmentId));
+  yield* put(finishedLoadingIsosurfaceAction(segmentId));
 }
 
 function hasBatchCounterExceededLimit(segmentId: number): boolean {
@@ -452,7 +456,7 @@ function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   if (isosurfacePositions.length === 0) {
     return;
   }
-  yield* put(startRefreshingIsosurfaceAction(cellId));
+  yield* put(startedLoadingIsosurfaceAction(cellId));
   // Removing Isosurface from cache.
   yield* call(removeIsosurface, removeIsosurfaceAction(cellId), false);
   // The isosurface should only be removed once after re-fetching the isosurface first position.
@@ -463,13 +467,13 @@ function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
     yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
     shouldBeRemoved = false;
   }
-  yield* put(finishedRefreshingIsosurfaceAction(cellId));
+  yield* put(finishedLoadingIsosurfaceAction(cellId));
 }
 
 function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
   const { id, visibility } = action;
   const SceneController = yield* call(getSceneController);
-  SceneController.setIsoVisibility(id, visibility);
+  SceneController.setIsosurfaceVisibility(id, visibility);
 }
 
 export default function* isosurfaceSaga(): Saga<void> {

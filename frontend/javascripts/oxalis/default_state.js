@@ -206,6 +206,8 @@ const defaultState: OxalisState = {
     borderOpenStatus: { right: false, left: false },
   },
   isosurfaces: {},
+  currentMeshFile: null,
+  availableMeshFiles: null,
 };
 
 export default defaultState;

@@ -97,13 +97,22 @@ export type RefreshIsosurfaceAction = {
   type: "REFRESH_ISOSURFACE",
   cellId: number,
 };
-export type StartRefreshingIsosurfaceAction = {
-  type: "START_REFRESHING_ISOSURFACE",
+export type StartedLoadingIsosurfaceAction = {
+  type: "STARTED_LOADING_ISOSURFACE",
   cellId: number,
 };
-export type FinishedRefreshingIsosurfaceAction = {
-  type: "FINISHED_REFRESHING_ISOSURFACE",
+export type FinishedLoadingIsosurfaceAction = {
+  type: "FINISHED_LOADING_ISOSURFACE",
   cellId: number,
+};
+
+export type UpdateMeshFileListAction = {
+  type: "UPDATE_MESH_FILE_LIST",
+  meshFiles: Array<string>,
+};
+export type UpdateCurrentMeshFileAction = {
+  type: "UPDATE_CURRENT_MESH_FILE",
+  meshFile: string,
 };
 
 export type ImportIsosurfaceFromStlAction = {
@@ -142,8 +151,10 @@ export type AnnotationActionTypes =
   | RefreshIsosurfacesAction
   | FinishedRefreshingIsosurfacesAction
   | RefreshIsosurfaceAction
-  | StartRefreshingIsosurfaceAction
-  | FinishedRefreshingIsosurfaceAction
+  | StartedLoadingIsosurfaceAction
+  | FinishedLoadingIsosurfaceAction
+  | UpdateMeshFileListAction
+  | UpdateCurrentMeshFileAction
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction
   | AddIsosurfaceAction;
@@ -265,18 +276,26 @@ export const refreshIsosurfaceAction = (cellId: number): RefreshIsosurfaceAction
   cellId,
 });
 
-export const startRefreshingIsosurfaceAction = (
-  cellId: number,
-): StartRefreshingIsosurfaceAction => ({
-  type: "START_REFRESHING_ISOSURFACE",
+export const startedLoadingIsosurfaceAction = (cellId: number): StartedLoadingIsosurfaceAction => ({
+  type: "STARTED_LOADING_ISOSURFACE",
   cellId,
 });
 
-export const finishedRefreshingIsosurfaceAction = (
+export const finishedLoadingIsosurfaceAction = (
   cellId: number,
-): FinishedRefreshingIsosurfaceAction => ({
-  type: "FINISHED_REFRESHING_ISOSURFACE",
+): FinishedLoadingIsosurfaceAction => ({
+  type: "FINISHED_LOADING_ISOSURFACE",
   cellId,
+});
+
+export const updateMeshFileListAction = (meshFiles: Array<string>): UpdateMeshFileListAction => ({
+  type: "UPDATE_MESH_FILE_LIST",
+  meshFiles,
+});
+
+export const updateCurrentMeshFileAction = (meshFile: string): UpdateCurrentMeshFileAction => ({
+  type: "UPDATE_CURRENT_MESH_FILE",
+  meshFile,
 });
 
 export const importIsosurfaceFromStlAction = (

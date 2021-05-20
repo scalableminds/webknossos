@@ -259,7 +259,7 @@ class SceneController {
     this.stlMeshes[id].visible = visibility;
   }
 
-  setIsoVisibility(id: number, visibility: boolean): void {
+  setIsosurfaceVisibility(id: number, visibility: boolean): void {
     this.isosurfacesGroupsPerSegmentationId[id].visible = visibility;
   }
 

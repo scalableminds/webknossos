@@ -218,13 +218,17 @@ function NoNodeContextMenuOptions({
     </Menu.Item>,
   ];
   const nonSkeletonActions = [
-    <Menu.Item
-      className="node-context-menu-item"
-      key="select-cell"
-      onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
-    >
-      Select Segment ({cellIdAtPosition})
-    </Menu.Item>,
+    // Segment 0 cannot/shouldn't be made active (as this
+    // would be an eraser effectively).
+    cellIdAtPosition > 0 ? (
+      <Menu.Item
+        className="node-context-menu-item"
+        key="select-cell"
+        onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
+      >
+        Select Segment ({cellIdAtPosition})
+      </Menu.Item>
+    ) : null,
 
     <Menu.Item
       className="node-context-menu-item"

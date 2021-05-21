@@ -300,7 +300,7 @@ class MeshesView extends React.Component<Props, State> {
               React.cloneElement(rightButton, { style: { borderLeftStyle: "dashed" } }),
             ]}
           >
-            Load precomputed meshfile
+            Load Precomputed Mesh
           </DropdownButton>
         </Tooltip>
       );

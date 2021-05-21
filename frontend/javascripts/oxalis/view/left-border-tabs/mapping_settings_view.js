@@ -241,7 +241,7 @@ class MappingSettingsView extends React.Component<Props, State> {
             Show mapping-select even when the mapping is disabled but the UI was used before
             (i.e., mappingName != null)
           */}
-            {shouldMappingBeEnabled || this.props.mappingName != null ? (
+            {shouldMappingBeEnabled ? (
               <Select
                 placeholder="Select mapping"
                 defaultActiveFirstOption={false}

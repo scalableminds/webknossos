@@ -203,14 +203,18 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      q = sql"""select #${columnsWithPrefix("t.")}
-                from webknossos.tasks_ t
-                #$userJoin
-                where #$projectFilter
-                and #$taskTypeFilter
-                and #$taskIdsFilter
-                and #$userFilter
-                and #$accessQuery
+      q = sql"""select #${columns}
+                from webknossos.tasks_
+                where _id in
+                (select distinct t._id
+                 from webknossos.tasks_ t
+                 #$userJoin
+                 where #$projectFilter
+                 and #$taskTypeFilter
+                 and #$taskIdsFilter
+                 and #$userFilter
+                 and #$accessQuery
+                )
                 #$orderRandom
                 limit 1000
                 offset #${pageNumber * 1000}"""

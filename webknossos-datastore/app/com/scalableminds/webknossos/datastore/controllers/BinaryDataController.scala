@@ -45,10 +45,8 @@ class BinaryDataController @Inject()(
     extends Controller {
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
-  isosurfaceServiceHolder.dataStoreIsosurfaceConfig = (binaryDataService,
-                                                       mappingService,
-                                                       config.Braingames.Binary.isosurfaceTimeout,
-                                                       config.Braingames.Binary.isosurfaceActorPoolSize)
+  isosurfaceServiceHolder.dataStoreIsosurfaceConfig =
+    (binaryDataService, mappingService, config.Datastore.Isosurface.timeout, config.Datastore.Isosurface.actorPoolSize)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.dataStoreIsosurfaceService
 
   /**

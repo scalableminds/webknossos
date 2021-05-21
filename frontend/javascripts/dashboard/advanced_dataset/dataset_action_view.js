@@ -84,7 +84,7 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
   }
 };
 
-const disabledStyle = { pointerEvents: "none", color: "rgba(0, 0, 0, 0.25)" };
+const disabledStyle = { pointerEvents: "none", color: "var(--ant-disabled)" };
 function getDisabledWhenReloadingStyle(isReloading) {
   return isReloading ? disabledStyle : null;
 }
@@ -110,16 +110,16 @@ function NewAnnotationLink({ dataset, isReloading }) {
           </LinkWithDisabled>
           <span
             style={{
-              color: "#abadaf",
               marginLeft: 8,
               marginRight: 8,
+              color: "var(--ant-border-base)",
             }}
           >
             |
           </span>
           <Dropdown overlay={newTracingMenu}>
             <a className="ant-dropdown-link" onClick={e => e.preventDefault()}>
-              <DownOutlined style={{ color: "#56a1e7" }} />
+              <DownOutlined style={{ color: "var(--ant-link)" }} />
             </a>
           </Dropdown>
         </div>

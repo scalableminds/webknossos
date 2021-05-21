@@ -7,7 +7,6 @@ import { getDatasets } from "admin/admin_rest_api";
 import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
-import { SimpleHeader } from "dashboard/spotlight_view";
 import { Link } from "react-router-dom";
 
 const { Content } = Layout;
@@ -20,6 +19,17 @@ type State = {
   datasets: Array<APIMaybeUnimportedDataset>,
   isLoading: boolean,
 };
+
+export const SimpleHeader = () => (
+  <div id="oxalis-header">
+    <img
+      src="/assets/images/oxalis.svg"
+      alt="webKnossos Logo"
+      style={{ verticalAlign: "middle" }}
+    />
+    webKnossos
+  </div>
+);
 
 class PublicationDetailView extends React.PureComponent<Props, State> {
   state = {

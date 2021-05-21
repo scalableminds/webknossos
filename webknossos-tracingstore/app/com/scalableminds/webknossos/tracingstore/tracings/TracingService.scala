@@ -172,6 +172,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def merge(tracings: Seq[T]): T
 
+  def remapTooLargeTreeIds(tracing: T): T = tracing
+
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[T],
                       newId: String,

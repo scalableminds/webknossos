@@ -134,6 +134,7 @@ class PlaneController extends React.PureComponent<Props> {
     // catchers (only necessary for HammerJS). We should refactor the
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
+
     OrthoViewValuesWithoutTDView.forEach(id => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
       Utils.waitForElementWithId(inputcatcherId).then(el => {

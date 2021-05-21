@@ -1,243 +1,3 @@
-@smartphones: ~"only screen and (max-width: 600px)";
-
-.publication-description :first-child {
-  margin-top: 0px;
-}
-
-.gallery-dataset-col {
-  padding-bottom: 24px;
-  width: 100%;
-
-  @media @smartphones {
-    padding-bottom: 32px;
-  }
-}
-
-.not-highlighted-link {
-  &:link,
-  &:visited,
-  &:hover,
-  &:active {
-    text-decoration: none !important;
-  }
-}
-
-.absolute {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.dataset-thumbnail {
-  flex: 3;
-  display: inline-block;
-  background-color: black;
-
-  @media @smartphones {
-    height: 55%;
-    width: 100%;
-    display: block;
-  }
-}
-
-.dataset-thumbnail-image {
-  transition: transform 0.3s ease-in-out;
-  background-size: cover;
-  background-position: center;
-  &.segmentation {
-    opacity: 0.2;
-  }
-}
-
-.dataset-thumbnail-overlay {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  height: 100px;
-  margin: 10px;
-  border-radius: 3px;
-  background-color: rgba(35, 33, 33, 0.77);
-  padding: 5px 15px;
-  color: rgba(255, 255, 255, 0.95);
-  z-index: 101;
-}
-
-.datasets-scrollbar-spacer {
-  background: linear-gradient(
-    to left,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.7) 70%,
-    rgba(0, 0, 0, 0) 100%
-  );
-  width: 108px;
-  height: 100%;
-  z-index: 101;
-}
-
-.dataset-published-grid {
-  position: absolute;
-  padding: 4px;
-  margin-right: 7px;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  justify-content: center;
-}
-
-.dataset-click-hint {
-  opacity: 0;
-  text-align: center;
-  color: white;
-  z-index: 100;
-  line-height: 400px;
-  font-size: 20px;
-
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.6);
-    opacity: 1;
-  }
-}
-
-.publication-description {
-  display: flex;
-  flex-direction: column;
-  flex: 2;
-  height: 100%;
-  padding: 24px;
-  overflow-y: auto;
-  background-color: white;
-  z-index: 1;
-
-  @media @smartphones {
-    height: 45%;
-    width: 100%;
-    display: block;
-  }
-
-  h3 {
-    font-size: 20px;
-    margin-bottom: 0px;
-    padding-bottom: 16px;
-    padding-right: 16px;
-    word-wrap: break-word;
-    @media @smartphones {
-      font-size: 32px;
-      padding-bottom: 24px;
-    }
-  }
-
-  .publication-description-body {
-    width: 100%;
-    overflow-y: auto;
-    @media @smartphones {
-      height: 243px;
-    }
-  }
-
-  p {
-    font-size: 14px;
-
-    @media @smartphones {
-      font-size: 18px;
-    }
-  }
-}
-
-#add-missing-dataset-image {
-  background-image: url("/assets/images/add-missing-dataset-thumbnail.jpg");
-}
-
-.antd-spotlight-popover-card {
-  .ant-popover-inner-content {
-    padding: 0;
-  }
-  .ant-popover-inner {
-    overflow: hidden;
-  }
-
-  .ant-popover-inner,
-  .ant-popover-arrow {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
-  }
-
-  h3 {
-    font-size: 18px;
-  }
-  .publication-description-body {
-    font-size: 10px;
-  }
-  .publication-description {
-    padding: 4px;
-  }
-}
-
-.spotlight-popover-card {
-  height: 200px;
-  width: 400px;
-  position: relative;
-  overflow: hidden;
-}
-
-.spotlight-item-card {
-  height: 400px;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  transform: translateZ(0);
-
-  &:hover {
-    box-shadow: 0 4px 6px hsla(0, 0%, 0%, 0.22), 0 5px 15px hsla(0, 0%, 0%, 0.1);
-    transform: translateY(-2px) translateZ(0);
-
-    .dataset-thumbnail-image {
-      transform: scale(1.1);
-      filter: contrast(1.1);
-    }
-  }
-
-  @media @smartphones {
-    height: 700px;
-
-    & > div > div {
-      flex-direction: column;
-    }
-  }
-
-  .ant-card-body {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.mini-dataset-thumbnail-grid {
-  display: grid;
-  grid-gap: 10px;
-  padding: 5px;
-  margin-top: auto;
-}
-
-.mini-dataset-thumbnail {
-  opacity: 0.5;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  background-size: cover;
-
-  &.segmentation {
-    opacity: 0.2 !important;
-  }
-  &:hover,
-  &.active {
-    opacity: 1;
-  }
-  &:active {
-    transform: scale(1.05);
-  }
-}
-
 .dataset-actions {
   & > a {
     display: block;
@@ -267,17 +27,10 @@
   }
 }
 
-.spotlight-hero-button {
-  margin-right: 50px;
-  margin-bottom: 30px;
-  display: inline-block;
-  color: rgba(255, 255, 255, 0.8);
-
-  &:hover {
-    color: rgba(255, 255, 255, 1);
-  }
+.welcome-header-wrapper {
+  background-color: @component-background;
+  background-image: linear-gradient(0deg, @body-background 0%, @blue-1 70%);
 }
-
 .welcome-header-content {
   max-width: 1600px;
   margin: auto;
@@ -299,6 +52,23 @@
     max-width: 1000px;
     margin: auto;
     display: inline-block;
+
+    h1 {
+      color: @text-color;
+      margin-left: 56px;
+      font-weight: 200;
+      font-size: 64px;
+      line-height: 150%;
+      margin-bottom: 0;
+    }
+
+    .subtitle {
+      margin: 0 20px 0px 60px;
+      font-weight: 300;
+      font-size: 20px;
+      line-height: 150%;
+      color: @text-color-secondary;
+    }
 
     .whats-next-actions-grid {
       display: flex;
@@ -326,17 +96,17 @@
           margin-left: 12px;
         }
 
-        h1 {
+        h2 {
           font-size: 16px;
           line-height: 18px;
-          color: #0d232d;
+          color: @text-color;
           margin-bottom: 4px;
         }
 
         p {
           font-size: 14px;
           line-height: 18px;
-          color: #6b7280;
+          color: @text-color-secondary;
           margin: 0;
         }
 
@@ -346,25 +116,25 @@
           margin: 8px;
         }
 
-        background: #ffffff;
-        box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+        background: @component-background;
+        box-shadow: @box-shadow-base;
         border-radius: 3px;
       }
 
       a:hover {
-        background: #3b82f6;
+        background: darken(@primary-color, 10%);
 
         .chevron,
         .action-icon {
-          color: #eff6ff;
+          color: @text-color-dark;
         }
 
-        h1 {
-          color: #eff6ff;
+        h2 {
+          color: @text-color-dark;
         }
 
         p {
-          color: #bfdbfe;
+          color: @text-color-secondary-dark;
         }
       }
     }
@@ -380,4 +150,8 @@ pre.dataset-import-folder-structure-hint {
   border-radius: 2px;
   box-shadow: inset 0em 0em 4px 0px #9e9e9e6b;
   padding: 4px;
+}
+
+.incognito-link {
+  color: @text-color;
 }

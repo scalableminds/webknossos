@@ -48,6 +48,7 @@ GET           /users/:id                                                       c
 PATCH         /users/:id                                                       controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                            controllers.UserController.updateLastTaskTypeId(id: String)
 PUT           /users/:id/novelUserExperienceInfos                              controllers.UserController.updateNovelUserExperienceInfos(id: String)
+PUT           /users/:id/selectedTheme                                         controllers.UserController.updateSelectedTheme(id: String)
 GET           /users/:id/tasks                                                 controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/loggedTime                                            controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                controllers.UserController.usersLoggedTime
@@ -197,4 +198,4 @@ GET           /jobs                                                            c
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
 GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String)
-GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String])
+GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])

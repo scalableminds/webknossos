@@ -8,6 +8,7 @@
   -webkit-box-shadow: none;
   box-shadow: none;
   border: none;
+  background-color: transparent;
 }
 
 .rst__row {
@@ -50,7 +51,7 @@
 .rst__row.group-type,
 .rst__row.tree-type {
   &:hover:before {
-    color: rgba(0, 0, 0, 0.65);
+    color: @text-color;
     content: "\f0b2";
     font-family: "Font Awesome 5 Free";
     font-weight: 900;
@@ -68,14 +69,15 @@
 // Highlight the row when hovering and show the group settings icon for groups
 .rst__rowLabel {
   border-radius: 2px;
-  color: rgba(0, 0, 0, 0.65);
+  color: @text-color;
   height: 24px;
+  line-height: 24px;
   .group-actions-icon {
     display: none;
   }
   &:hover {
-    background-color: #e6f7ff;
-    color: #40a9ff;
+    background-color: @body-background;
+    color: @link-color;
     cursor: pointer;
     .group-actions-icon {
       display: inline-block;
@@ -86,7 +88,7 @@
 .rst__rowSearchMatch {
   outline: none;
   .rst__rowLabel {
-    background-color: #bae7ff;
+    background-color: @blue-2;
   }
 }
 
@@ -94,7 +96,7 @@
 .rst__collapseButton,
 .rst__expandButton {
   background: none;
-  background-color: white;
+  background-color: @body-background;
   -webkit-box-shadow: none;
   box-shadow: none;
   &:before {
@@ -129,10 +131,8 @@
 // Show the hierarchy lines less prominently
 .rst__lineBlock,
 .rst__lineChildren {
-  &:before {
-    background-color: rgba(0, 0, 0, 0.25);
-  }
+  &:before,
   &:after {
-    background-color: rgba(0, 0, 0, 0.25);
+    background-color: @border-color-base;
   }
 }

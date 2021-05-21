@@ -8,6 +8,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 
+import * as Utils from "libs/utils";
 import {
   type OrthoView,
   type OrthoViewMap,
@@ -35,6 +36,7 @@ import api from "oxalis/api/internal_api";
 type Props = {
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
+  setTargetAndFixPosition: () => void,
 };
 
 function getQuaternionFromCamera(_up, position, center) {
@@ -93,15 +95,26 @@ class CameraController extends React.PureComponent<Props> {
       cam.far = far;
     }
 
-    Store.dispatch(
-      setTDCameraWithoutTimeTrackingAction({
-        near: 0,
-        far,
-      }),
-    );
-
+    const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
-    api.tracing.rotate3DViewToDiagonal(false);
+
+    Utils.waitForElementWithId(tdId).then(() => {
+      // Without this setTimeout, the initial camera angle/position
+      // within the 3D viewport is incorrect.
+      // Also see #5455.
+      setTimeout(() => {
+        this.props.setTargetAndFixPosition();
+
+        Store.dispatch(
+          setTDCameraWithoutTimeTrackingAction({
+            near: 0,
+            far,
+          }),
+        );
+        api.tracing.rotate3DViewToDiagonal(false);
+        this.updateTDCamera(Store.getState().viewModeData.plane.tdCamera);
+      }, 0);
+    });
   }
 
   componentWillUnmount() {

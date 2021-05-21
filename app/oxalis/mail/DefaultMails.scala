@@ -2,7 +2,6 @@ package oxalis.mail
 
 import java.net.URL
 
-import com.scalableminds.util.mail.Mail
 import javax.inject.Inject
 import models.organization.Organization
 import models.user.User
@@ -16,10 +15,7 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   private val uri = conf.Http.uri
   private val defaultSender = conf.Mail.defaultSender
-  private val wkOrgSender = conf.Mail.demoSender
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
-  private val demoDatasetUrl = conf.Features.publicDemoDatasetUrl
-  private val tutorialVideoUrl = "https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
 
   def registerAdminNotifyerMail(name: String,
                                 email: String,
@@ -52,22 +48,6 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = "Welcome to webKnossos",
       bodyHtml = html.mail.newUser(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
-      recipients = List(receiver)
-    )
-
-  def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean): Mail =
-    Mail(
-      from = wkOrgSender,
-      subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.newUserWKOrg(name, enableAutoVerify, demoDatasetUrl, tutorialVideoUrl).body,
-      recipients = List(receiver)
-    )
-
-  def newAdminWKOrgMail(name: String, receiver: String): Mail =
-    Mail(
-      from = wkOrgSender,
-      subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.newAdminWKOrg(name, demoDatasetUrl, tutorialVideoUrl).body,
       recipients = List(receiver)
     )
 

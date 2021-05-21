@@ -1,4 +1,4 @@
-# webKnossos
+# [webKnossos](https://webknossos.org/)
 <img align="right" src="https://static.webknossos.org/images/oxalis.svg" alt="webKnossos Logo" />
 webKnossos is an open-source tool for annotating and exploring large 3D image datasets.
 

@@ -35,7 +35,7 @@ function Hint({ children, style }) {
         ...style,
         marginBottom: 12,
         fontSize: 12,
-        color: "rgb(118, 118, 118)",
+        color: "var(--ant-text-secondary)",
       }}
     >
       {children}
@@ -172,7 +172,7 @@ export default function ShareModalView(props: Props) {
           </Hint>
         </Col>
       </Row>
-      <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
+      <Divider style={{ margin: "18px 0" }}>
         <i className={`fas fa-${iconMap[visibility]}`} />
         Visibility
       </Divider>
@@ -208,7 +208,7 @@ export default function ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
-      <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
+      <Divider style={{ margin: "18px 0" }}>
         <ShareAltOutlined />
         Team Sharing
       </Divider>

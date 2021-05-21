@@ -14,7 +14,7 @@ const formatToChannelCount = new Map([
 global.performance = {
   now: () => Date.now(),
 };
-mock("libs/window", { requestAnimationFrame: () => {} });
+mock("libs/window", { requestAnimationFrame: () => {}, document: { getElementById: () => null } });
 mock(
   "libs/UpdatableTexture",
   class UpdatableTexture {

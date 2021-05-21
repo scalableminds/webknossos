@@ -22,9 +22,9 @@ function BorderToggleButton(props: Props) {
   const className = `${side}-border-button no-hover-highlighting ${
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;
-  const imageSrc = `/assets/images/icon-sidebar-${iconKind}-${side}-${
+  const imageClass = `center-item-using-flex icon-sidebar-toggle icon-sidebar-${iconKind}-${side}-${
     inFooter ? "dark" : "bright"
-  }.svg`;
+  }`;
 
   return (
     <Tooltip title={tooltipTitle} placement={placement}>
@@ -40,7 +40,7 @@ function BorderToggleButton(props: Props) {
         onMouseDown={evt => evt.stopPropagation()}
         onTouchStart={evt => evt.preventDefault()}
       >
-        <img className="center-item-using-flex" src={imageSrc} alt="Border Toggle Button" />
+        <div className={imageClass} />
       </Button>
     </Tooltip>
   );

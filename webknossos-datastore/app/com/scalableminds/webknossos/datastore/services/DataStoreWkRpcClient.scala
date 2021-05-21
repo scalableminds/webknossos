@@ -43,7 +43,7 @@ class DataStoreWkRpcClient @Inject()(
 
   private val webKnossosUri: String = config.Datastore.WebKnossos.uri
 
-  protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingIntervalMinutes
+  protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingInterval
 
   def tick(): Unit = reportStatus(ok = true)
 

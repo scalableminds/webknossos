@@ -36,6 +36,7 @@ import {
   type OverwriteMode,
   type ControlMode,
   ControlModeEnum,
+  type TDViewDisplayMode,
   type ViewMode,
   type OrthoView,
   type Rect,
@@ -306,7 +307,8 @@ export type UserConfiguration = {|
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
-  +tdViewDisplayPlanes: boolean,
+  +tdViewDisplayPlanes: TDViewDisplayMode,
+  +tdViewDisplayDatasetBorders: boolean,
   +gpuMemoryFactor: number,
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -448,6 +450,8 @@ export type BorderOpenStatus = {
   right: boolean,
 };
 
+export type Theme = "light" | "dark";
+
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
@@ -457,6 +461,7 @@ type UiInformation = {
   +hasOrganizations: boolean,
   +isRefreshingIsosurfaces: boolean,
   +borderOpenStatus: BorderOpenStatus,
+  +theme: Theme,
 };
 
 export type IsosurfaceInformation = {|

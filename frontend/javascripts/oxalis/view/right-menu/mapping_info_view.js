@@ -70,7 +70,7 @@ type State = {
 
 const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 export const convertCellIdToCSS = (id: number, customColors: ?Array<number>, alpha?: number) =>
-  convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
+  id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -248,7 +248,7 @@ class MappingInfoView extends React.Component<Props, State> {
         <React.Fragment>
           {title}{" "}
           <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
-            <WarningOutlined style={{ color: "rgb(255, 155, 85)" }} />
+            <WarningOutlined style={{ color: "var(--ant-warning)" }} />
           </Tooltip>
         </React.Fragment>
       ) : (
@@ -363,7 +363,7 @@ class MappingInfoView extends React.Component<Props, State> {
 
   render() {
     if (!hasSegmentation()) {
-      return "No segmentation available";
+      return <div className="padded-tab-content">No segmentation available</div>;
     }
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null

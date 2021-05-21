@@ -228,7 +228,7 @@ function NoNodeContextMenuOptions({
       onClick={loadMesh}
       disabled={!currentMeshFile}
     >
-      Load Mesh from File
+      Load Precomputed Mesh
     </Menu.Item>
   );
 

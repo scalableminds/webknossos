@@ -700,11 +700,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     provideShortcut
                     targetId={treeTabId}
                   >
-                    <Tooltip title="Open the search via CTRL + Shift + F">
-                      <ButtonComponent>
-                        <SearchOutlined />
-                      </ButtonComponent>
-                    </Tooltip>
+                    <ButtonComponent title="Open the search via CTRL + Shift + F">
+                      <SearchOutlined />
+                    </ButtonComponent>
                   </AdvancedSearchPopover>
                   <ButtonComponent onClick={this.props.onCreateTree} title="Create new Tree">
                     <i className="fas fa-plus" />

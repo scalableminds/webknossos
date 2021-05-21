@@ -10,8 +10,12 @@ const defaultTimeFormat = "YYYY-MM-DD HH:mm";
  * a pure string representation. In all other cases, please prefer the
  * <FormattedDate /> component below.
  */
-export function formatDateInLocalTimeZone(date?: number = Date.now()): string {
-  return moment(date).format(defaultTimeFormat);
+export function formatDateInLocalTimeZone(
+  date?: number = Date.now(),
+  format?: ?string = null,
+): string {
+  format = format || defaultTimeFormat;
+  return moment(date).format(format);
 }
 
 export default function FormattedDate({

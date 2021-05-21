@@ -159,7 +159,7 @@ function* ensureSuitableIsosurface(
   const layer = Model.getSegmentationLayer();
 
   // we need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
-  if (maybeFlycamAction && maybeFlycamAction.shouldRefreshIsosurface === false) {
+  if (maybeFlycamAction && !maybeFlycamAction.shouldRefreshIsosurface) {
     return;
   }
   if (segmentId === 0 || layer == null) {

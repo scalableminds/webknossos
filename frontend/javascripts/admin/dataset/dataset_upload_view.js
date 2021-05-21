@@ -355,9 +355,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
     let needsConversion = true;
+    const fileExtensions = [];
     for (const file of files) {
       const filenameParts = file.name.split(".");
       const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
+      fileExtension.push(fileExtension);
       sendAnalyticsEvent("add_files_to_upload", { fileExtension });
       if (fileExtension === "zip") {
         createReader(
@@ -388,6 +390,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         needsConversion = false;
       }
     }
+    const countedFileExtensions = _.countBy(fileExtensions, str => str);
+    Object.entries(countedFileExtensions).map(([fileExtension, count]) =>
+      sendAnalyticsEvent("add_files_to_upload", { fileExtension, count }),
+    );
 
     this.handleNeedsConversionInfo(needsConversion);
   };

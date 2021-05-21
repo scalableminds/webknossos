@@ -128,7 +128,7 @@ function NodeContextMenuOptions({
     );
   }
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+    <Menu onClick={hideNodeContextMenu} onBlur={hideNodeContextMenu} style={{ borderRadius: 6 }}>
       <Menu.Item
         className="node-context-menu-item"
         key="set-node-active"
@@ -248,7 +248,7 @@ function NoNodeContextMenuOptions({
     : nonSkeletonActions.concat(skeletonActions);
 
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+    <Menu onClick={hideNodeContextMenu} onBlur={hideNodeContextMenu} style={{ borderRadius: 6 }}>
       {allActions}
     </Menu>
   );
@@ -334,9 +334,11 @@ function ContextMenu(props: Props) {
     );
   }
 
+  {
+    /*<div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />*/
+  }
   return (
     <React.Fragment>
-      <div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />
       <div
         style={{
           position: "absolute",

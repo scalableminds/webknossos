@@ -37,7 +37,11 @@ import {
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRequestLogZoomStep,
+  getCurrentResolution,
+} from "oxalis/model/accessors/flycam_accessor";
 import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
@@ -45,6 +49,7 @@ import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
+import { startComputeMeshFileJob } from "admin/admin_rest_api";
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -103,6 +108,9 @@ const mapStateToProps = (state: OxalisState) => ({
   segmentationLayer: getSegmentationLayer(state.dataset),
   zoomStep: getRequestLogZoomStep(state),
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  activeResolution: getCurrentResolution(state),
+  organization: state.dataset.owningOrganization,
+  datasetName: state.dataset.name,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -170,6 +178,21 @@ class MeshesView extends React.Component<
     const moveTo = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition));
     };
+
+    const getComputeMeshFileButton = () => (
+      <Button
+        onClick={() => {
+          startComputeMeshFileJob(
+            this.props.organization,
+            this.props.datasetName,
+            this.props.segmentationLayer.name,
+            this.props.activeResolution,
+          );
+        }}
+      >
+        Compute Mesh File
+      </Button>
+    );
 
     const getDownloadButton = (segmentId: number) => (
       <Tooltip title="Download Isosurface">
@@ -356,6 +379,7 @@ class MeshesView extends React.Component<
     return (
       <div className="padded-tab-content">
         {getIsosurfacesHeader()}
+        {getComputeMeshFileButton()}
         <List
           dataSource={Object.values(this.props.isosurfaces)}
           size="small"

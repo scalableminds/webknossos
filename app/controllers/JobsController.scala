@@ -3,10 +3,12 @@ package controllers
 import java.nio.file.{Files, Paths}
 import java.util.Date
 
+import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
 import com.typesafe.scalalogging.LazyLogging
@@ -19,12 +21,14 @@ import net.liftweb.common.{Failure, Full}
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class Job(
@@ -108,9 +112,20 @@ class JobService @Inject()(wkConf: WkConf,
                            jobDAO: JobDAO,
                            rpc: RPC,
                            analyticsService: AnalyticsService,
-                           slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
+                           slackNotificationService: SlackNotificationService,
+                           val lifecycle: ApplicationLifecycle,
+                           val system: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
+    with IntervalScheduler
     with LazyLogging {
+
+  override protected lazy val enabled: Boolean = wkConf.Features.jobsEnabled
+  protected lazy val tickerInterval: FiniteDuration = 5 minutes // note that user requests can trigger more frequent checking
+
+  def tick(): Unit = {
+    updateCeleryInfos()
+    ()
+  }
 
   private var celeryInfosLastUpdated: Long = 0
   private val celeryInfosMinIntervalMillis = 3 * 1000 // do not fetch new status more often than once every 3s

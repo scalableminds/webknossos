@@ -352,7 +352,7 @@ export default function ToolbarView() {
             </RadioButtonWithTooltip>
 
             <RadioButtonWithTooltip
-              title="Erase – Draw outlines around the voxel you would like to erase."
+              title="Erase – Draw outlines around the voxels you would like to erase."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_TRACE].isDisabled}
               style={{

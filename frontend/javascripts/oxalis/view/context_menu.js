@@ -271,7 +271,6 @@ function ContextMenu(props: Props) {
 
   const {
     skeletonTracing,
-    volumeTracing,
     isSkeletonToolActive,
     clickedNodeId,
     nodeContextMenuPosition,

@@ -39,13 +39,12 @@ export function handleEraseStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(startEditingAction(calculateGlobalPos(Store.getState(), pos), plane));
 }
 
-export function handleDrawDeleteMove(pos: Point2) {
+export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
-  Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos)));
   Store.dispatch(addToLayerAction(calculateGlobalPos(state, pos)));
 }
 
-export function handleDrawEraseEnd() {
+export function handleEndForDrawOrErase() {
   Store.dispatch(finishEditingAction());
   Store.dispatch(resetContourAction());
 }

@@ -31,6 +31,16 @@ import api from "oxalis/api/internal_api";
 
   If a tool does not define a specific mouse binding, the bindings of the MoveTool are used as a fallback.
   See `createToolDependentMouseHandler` in plane_controller.js
+
+  In general, each tool has to check the pressed modifiers and delegate to another tool if necessary.
+  For example, the drawing tool delegates to the pick-cell-tool if shift is pressed.
+  In other modules, we usually use `adaptActiveToolToShortcuts` to know which tool should be active
+  when pressing a modifier, but in this module we keep explicit control over which tool is really active
+  and delegate manually.
+
+  Note that `getActionDescriptors` must not delegate to other tools. Instead, the semantic is always
+  so that the returned hint of class X is only rendered if `adaptActiveToolToShortcuts` returns X.
+  Therefore, the returned actions of a tool class should only refer to the actions of that tool class.
 */
 
 export class MoveTool {
@@ -273,12 +283,12 @@ export class DrawTool {
   ): * {
     return {
       leftDownMove: (delta: Point2, pos: Point2) => {
-        VolumeHandlers.handleDrawDeleteMove(pos);
+        VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey && !event.ctrlKey) {
-          // Select cell.
+          // Should select cell. Do nothing, since case is covered by leftClick.
           return;
         }
         if (event.ctrlKey && VolumeHandlers.isAutomaticBrushEnabled()) {
@@ -292,7 +302,7 @@ export class DrawTool {
       },
 
       leftMouseUp: () => {
-        VolumeHandlers.handleDrawEraseEnd();
+        VolumeHandlers.handleEndForDrawOrErase();
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
@@ -305,7 +315,7 @@ export class DrawTool {
         const contourTracingMode = getContourTracingMode(volumeTracing);
 
         if (contourTracingMode === ContourModeEnum.DELETE) {
-          VolumeHandlers.handleDrawDeleteMove(pos);
+          VolumeHandlers.handleMoveForDrawOrErase(pos);
         }
       },
 
@@ -326,7 +336,7 @@ export class DrawTool {
           return;
         }
 
-        VolumeHandlers.handleDrawEraseEnd();
+        VolumeHandlers.handleEndForDrawOrErase();
       },
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -394,7 +404,7 @@ export class EraseTool {
   ): * {
     return {
       leftDownMove: (delta: Point2, pos: Point2) => {
-        VolumeHandlers.handleDrawDeleteMove(pos);
+        VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
@@ -402,7 +412,7 @@ export class EraseTool {
       },
 
       leftMouseUp: () => {
-        VolumeHandlers.handleDrawEraseEnd();
+        VolumeHandlers.handleEndForDrawOrErase();
       },
 
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

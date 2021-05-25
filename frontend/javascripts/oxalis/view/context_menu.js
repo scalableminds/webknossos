@@ -4,7 +4,7 @@ import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { Vector3, OrthoView } from "oxalis/constants";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { V3 } from "libs/mjs";
@@ -52,6 +52,7 @@ type DispatchProps = {|
 
 type StateProps = {|
   skeletonTracing: ?SkeletonTracing,
+  volumeTracing: ?VolumeTracing,
   datasetScale: Vector3,
   isSkeletonToolActive: boolean,
 |};
@@ -193,6 +194,7 @@ function NodeContextMenuOptions({
 
 function NoNodeContextMenuOptions({
   skeletonTracing,
+  volumeTracing,
   isSkeletonToolActive,
   hideNodeContextMenu,
   globalPosition,
@@ -222,27 +224,30 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
-  const nonSkeletonActions = [
-    // Segment 0 cannot/shouldn't be made active (as this
-    // would be an eraser effectively).
-    cellIdAtPosition > 0 ? (
-      <Menu.Item
-        className="node-context-menu-item"
-        key="select-cell"
-        onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
-      >
-        Select Segment ({cellIdAtPosition})
-      </Menu.Item>
-    ) : null,
+  const nonSkeletonActions =
+    volumeTracing != null
+      ? [
+          // Segment 0 cannot/shouldn't be made active (as this
+          // would be an eraser effectively).
+          cellIdAtPosition > 0 ? (
+            <Menu.Item
+              className="node-context-menu-item"
+              key="select-cell"
+              onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
+            >
+              Select Segment ({cellIdAtPosition})
+            </Menu.Item>
+          ) : null,
 
-    <Menu.Item
-      className="node-context-menu-item"
-      key="fill-cell"
-      onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
-    >
-      Fill Segment (flood-fill region)
-    </Menu.Item>,
-  ];
+          <Menu.Item
+            className="node-context-menu-item"
+            key="fill-cell"
+            onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
+          >
+            Fill Segment (flood-fill region)
+          </Menu.Item>,
+        ]
+      : [];
 
   const allActions = isSkeletonToolActive
     ? skeletonActions.concat(nonSkeletonActions)
@@ -266,6 +271,7 @@ function ContextMenu(props: Props) {
 
   const {
     skeletonTracing,
+    volumeTracing,
     isSkeletonToolActive,
     clickedNodeId,
     nodeContextMenuPosition,
@@ -391,6 +397,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     skeletonTracing: state.tracing.skeleton,
+    volumeTracing: state.tracing.volume,
     datasetScale: state.dataset.dataSource.scale,
     isSkeletonToolActive: state.uiInformation.activeTool === AnnotationToolEnum.SKELETON,
   };

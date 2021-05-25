@@ -1,9 +1,7 @@
 // @flow
-import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
+import type { Point2, Vector3 } from "oxalis/constants";
 import Model from "oxalis/model";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -84,22 +82,4 @@ export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
   }
 
   await progressCallback(true, "Skeleton generation done.");
-}
-
-export function isosurfaceLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
-  if (!event.shiftKey) {
-    return;
-  }
-
-  let cellId = 0;
-  const position = calculateGlobalPos(pos);
-  const segmentation = Model.getSegmentationLayer();
-  if (!segmentation) {
-    return;
-  }
-  cellId = segmentation.cube.getMappedDataValue(position, getRequestLogZoomStep(Store.getState()));
-
-  if (cellId > 0) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
-  }
 }

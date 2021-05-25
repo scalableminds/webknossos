@@ -242,12 +242,15 @@ export class SkeletonTool {
     plane: OrthoView,
     isTouch: boolean,
   ): void {
+    const { useLegacyBindings } = Store.getState().userConfiguration;
+
     // The following functions are all covered by the context menu, too.
+    // (At least, in the XY/XZ/YZ viewports).
     if (shiftPressed && altPressed) {
       SkeletonHandlers.handleMergeTrees(planeView, position, plane, isTouch);
     } else if (shiftPressed && ctrlPressed) {
       SkeletonHandlers.handleDeleteEdge(planeView, position, plane, isTouch);
-    } else if (shiftPressed || isTouch) {
+    } else if (shiftPressed || !useLegacyBindings) {
       SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
     }
   }

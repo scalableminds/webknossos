@@ -75,11 +75,7 @@ function ZoomShortcut() {
 function LeftClickShortcut({ actionInfos }) {
   const leftClick =
     actionInfos.leftClick != null ? (
-      <span
-        style={{
-          marginLeft: "auto",
-        }}
-      >
+      <span style={defaultShortcutStyle}>
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left.svg"
@@ -92,11 +88,7 @@ function LeftClickShortcut({ actionInfos }) {
 
   const leftDrag =
     actionInfos.leftDrag != null ? (
-      <span
-        style={{
-          marginLeft: "auto",
-        }}
-      >
+      <span style={defaultShortcutStyle}>
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left-drag.svg"
@@ -108,10 +100,10 @@ function LeftClickShortcut({ actionInfos }) {
     ) : null;
 
   return (
-    <React.Fragment>
+    <div style={{ display: "inline-block", marginLeft: "auto" }}>
       {leftClick}
       {leftDrag}
-    </React.Fragment>
+    </div>
   );
 }
 

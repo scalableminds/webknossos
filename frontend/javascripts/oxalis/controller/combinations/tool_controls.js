@@ -249,8 +249,17 @@ export class SkeletonTool {
     _ctrlKey: boolean,
     _altKey: boolean,
   ): Object {
+    // In legacy mode, don't display a hint for
+    // left click as it would be equal to left drag
+    const leftClickInfo = useLegacyBindings
+      ? {}
+      : {
+          leftClick: "Place Node",
+        };
+
     return {
-      leftDrag: useLegacyBindings ? "Move" : "Place Node",
+      ...leftClickInfo,
+      leftDrag: "Move",
       rightClick: useLegacyBindings && !shiftKey ? "Place Node" : "Context Menu",
     };
   }

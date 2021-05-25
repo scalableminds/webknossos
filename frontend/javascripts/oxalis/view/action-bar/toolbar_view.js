@@ -347,7 +347,7 @@ export default function ToolbarView() {
             </RadioButtonWithTooltip>
 
             <RadioButtonWithTooltip
-              title="Erase (via Brush) – Erase the voxel by brushing over them. Adjust the brush size with Shift + Mousewheel."
+              title="Erase (via Brush) – Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
               style={{
@@ -372,7 +372,7 @@ export default function ToolbarView() {
             </RadioButtonWithTooltip>
 
             <RadioButtonWithTooltip
-              title="Trace – Draw outlines around the voxel you would like to label."
+              title="Trace – Draw outlines around the voxels you would like to label."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.TRACE].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.TRACE].isDisabled}
               style={narrowButtonStyle}

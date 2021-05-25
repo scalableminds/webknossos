@@ -222,7 +222,7 @@ class DataSetController @Inject()(userService: UserService,
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataSet))
-            if (dataSet.isPublic && dataSet._organization != user._organization) {
+            if (dataSet.isPublic) {
               mailchimpClient.tagUser(user, MailchimpTag.HasViewedPublishedDataset)
             }
           }

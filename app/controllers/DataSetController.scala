@@ -18,6 +18,7 @@ import utils.ObjectId
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.organization.OrganizationDAO
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.duration._
@@ -34,6 +35,7 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   analyticsService: AnalyticsService,
+                                  mailchimpClient: MailchimpClient,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with RemoteOriginHelpers {
@@ -220,6 +222,9 @@ class DataSetController @Inject()(userService: UserService,
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataSet))
+            if (dataSet.isPublic && dataSet._organization != user._organization) {
+              mailchimpClient.tagUser(user, MailchimpTag.HasViewedPublishedDataset)
+            }
           }
         } yield {
           Ok(Json.toJson(js))

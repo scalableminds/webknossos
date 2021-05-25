@@ -310,7 +310,7 @@ export default function ToolbarView() {
             </RadioButtonWithTooltip>
 
             <RadioButtonWithTooltip
-              title="Erase (via Brush) – Erase the voxel by brushing over them. Adjust the brush size with Shift + Mousewheel."
+              title="Erase (via Brush) – Erase voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
               disabledTitle={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].explanation}
               disabled={disabledInfosForTools[AnnotationToolEnum.ERASE_BRUSH].isDisabled}
               style={{

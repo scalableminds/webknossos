@@ -29,6 +29,7 @@ import messages from "messages";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { roundTo } from "libs/utils";
+import Shortcut from "libs/shortcut_component";
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
@@ -128,7 +129,7 @@ function NodeContextMenuOptions({
     );
   }
   return (
-    <Menu onClick={hideNodeContextMenu} onBlur={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
       <Menu.Item
         className="node-context-menu-item"
         key="set-node-active"
@@ -248,13 +249,21 @@ function NoNodeContextMenuOptions({
     : nonSkeletonActions.concat(skeletonActions);
 
   return (
-    <Menu onClick={hideNodeContextMenu} onBlur={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
       {allActions}
     </Menu>
   );
 }
 
 function ContextMenu(props: Props) {
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (inputRef.current != null) {
+      inputRef.current.focus();
+    }
+  }, [inputRef.current]);
+
   const {
     skeletonTracing,
     isSkeletonToolActive,
@@ -334,9 +343,6 @@ function ContextMenu(props: Props) {
     );
   }
 
-  {
-    /*<div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />*/
-  }
   return (
     <React.Fragment>
       <div
@@ -346,7 +352,11 @@ function ContextMenu(props: Props) {
           top: nodeContextMenuPosition[1],
         }}
         className="node-context-menu"
+        tabIndex={-1}
+        onBlur={hideNodeContextMenu}
+        ref={inputRef}
       >
+        <Shortcut supportInputElements keys="escape" onTrigger={hideNodeContextMenu} />
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
           : NoNodeContextMenuOptions({ isSkeletonToolActive, cellIdAtPosition, ...props })}

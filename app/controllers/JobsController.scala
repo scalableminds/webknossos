@@ -120,7 +120,8 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging {
 
   override protected lazy val enabled: Boolean = wkConf.Features.jobsEnabled
-  protected lazy val tickerInterval: FiniteDuration = 5 minutes // note that user requests can trigger more frequent checking
+  protected lazy val tickerInterval
+    : FiniteDuration = 5 minutes // note that user requests can trigger more frequent checking
 
   def tick(): Unit = {
     updateCeleryInfos()

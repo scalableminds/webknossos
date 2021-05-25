@@ -347,6 +347,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.isMergerModeEnabled}
             onChange={this.props.onChangeEnableMergerMode}
             disabled={!isMergerModeSupported || this.props.isMergerModeTask}
+            tooltipText={
+              !isMergerModeSupported
+                ? "The merger mode is only available for datasets with a segmentation layer."
+                : null
+            }
           />
         </Panel>,
       );

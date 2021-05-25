@@ -9,7 +9,9 @@ object MailchimpTag extends ExtendedEnumeration {
   HasViewedPublishedDataset = Value
 
   def format(tag: MailchimpTag): String =
-    "[A-Z]".r.replaceAllIn(tag.toString, { m =>
-      "_" + m.group(0).toLowerCase()
-    })
+    "[A-Z]".r
+      .replaceAllIn(tag.toString, { m =>
+        "_" + m.group(0).toLowerCase()
+      })
+      .drop(1)
 }

@@ -73,8 +73,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     parseJsonResponse(performRequest)
   }
 
-  def postWithProtoResponse[T <: GeneratedMessage](file: File)(
-      companion: GeneratedMessageCompanion[T]): Fox[T] = {
+  def postWithProtoResponse[T <: GeneratedMessage](file: File)(companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request.withBody(file).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
   }
@@ -226,8 +225,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       }
     }
 
-  private def parseProtoResponse[T <: GeneratedMessage](r: Fox[WSResponse])(
-      companion: GeneratedMessageCompanion[T]) =
+  private def parseProtoResponse[T <: GeneratedMessage](r: Fox[WSResponse])(companion: GeneratedMessageCompanion[T]) =
     r.flatMap { response =>
       if (Status.isSuccessful(response.status)) {
         if (verbose) {

@@ -44,8 +44,8 @@ trait ValidationHelpers {
     )
 
   def validateProto[A <: GeneratedMessage](implicit bodyParsers: PlayBodyParsers,
-                                                           companion: GeneratedMessageCompanion[A],
-                                                           ec: ExecutionContext): BodyParser[A] =
+                                           companion: GeneratedMessageCompanion[A],
+                                           ec: ExecutionContext): BodyParser[A] =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
         Box(raw.asBytes())

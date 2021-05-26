@@ -136,7 +136,7 @@ class JobService @Inject()(wkConf: WkConf,
     } yield celeryInfoMap
 
   def fetchWorkerStatus(): Fox[JsObject] =
-    flowerRpc(s"/api/workers?refresh=true&status=true").getWithJsonResponse[JsObject]
+    flowerRpc("/api/workers?refresh=true&status=true").getWithJsonResponse[JsObject]
 
   private def trackAllNewlyDone(celeryInfoMap: Map[String, JsObject]): Fox[Unit] =
     for {

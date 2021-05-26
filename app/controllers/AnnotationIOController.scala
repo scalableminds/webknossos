@@ -320,7 +320,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       zip <- annotationService.zipAnnotations(annotations, project.name, skipVolumeData)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(project.name + "_nmls.zip"))
+      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
     }
 
   private def downloadTask(taskId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
@@ -338,7 +338,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       zip <- createTaskZip(task)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(task._id.toString + "_nmls.zip"))
+      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip")))
     }
   }
 
@@ -362,7 +362,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       zip <- createTaskTypeZip(taskType)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(taskType.summary + "_nmls.zip"))
+      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip")))
     }
   }
 }

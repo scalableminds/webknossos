@@ -54,7 +54,7 @@ trait RequestLogging extends AbstractRequestLogging {
     for {
       result: Result <- block
       executionTime = System.nanoTime() - start
-      _ = if (executionTime > 5e9) logTimeFormatted(executionTime, request, result)
+      _ = if (executionTime > 1.2e10) logTimeFormatted(executionTime, request, result)
     } yield result
   }
 

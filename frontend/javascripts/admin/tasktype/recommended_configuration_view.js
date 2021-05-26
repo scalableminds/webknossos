@@ -10,61 +10,68 @@ import { jsonStringify } from "libs/utils";
 import { settings } from "messages";
 import { validateUserSettingsJSON } from "types/validation";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
+import features from "features";
 
 const FormItem = Form.Item;
 const { Panel } = Collapse;
 
-const recommendedConfigByCategory = {
-  orthogonal: {
-    clippingDistance: 80,
-    moveValue: 500,
-    displayScalebars: false,
-    newNodeNewTree: false,
-    centerNewNode: true,
-    tdViewDisplayPlanes: TDViewDisplayModeEnum.WIREFRAME,
-    tdViewDisplayDatasetBorders: true,
-  },
-  all: {
-    dynamicSpaceDirection: true,
-    highlightCommentedNodes: false,
-    overrideNodeRadius: true,
-    particleSize: 5,
-    keyboardDelay: 0,
-    displayCrosshair: true,
-  },
-  dataset: {
-    fourBit: false,
-    interpolation: true,
-    segmentationOpacity: 0,
-    highlightHoveredCellId: false,
-    segmentationPatternOpacity: 40,
-    zoom: 0.8,
-    renderMissingDataBlack: false,
-    loadingStrategy: "BEST_QUALITY_FIRST",
-  },
-  flight: {
-    clippingDistanceArbitrary: 60,
-    moveValue3d: 600,
-    mouseRotateValue: 0.001,
-    rotateValue: 0.01,
-    sphericalCapRadius: 500,
-  },
-  volume: {
-    brushSize: 50,
-  },
-};
+function getRecommendedConfigByCategory() {
+  return {
+    orthogonal: {
+      clippingDistance: 80,
+      moveValue: 500,
+      displayScalebars: false,
+      newNodeNewTree: false,
+      centerNewNode: true,
+      tdViewDisplayPlanes: TDViewDisplayModeEnum.WIREFRAME,
+      tdViewDisplayDatasetBorders: true,
+    },
+    all: {
+      dynamicSpaceDirection: true,
+      highlightCommentedNodes: false,
+      overrideNodeRadius: true,
+      particleSize: 5,
+      keyboardDelay: 0,
+      displayCrosshair: true,
+      useLegacyBindings: features().defaultToLegacyBindings || false,
+    },
+    dataset: {
+      fourBit: false,
+      interpolation: true,
+      segmentationOpacity: 0,
+      highlightHoveredCellId: false,
+      segmentationPatternOpacity: 40,
+      zoom: 0.8,
+      renderMissingDataBlack: false,
+      loadingStrategy: "BEST_QUALITY_FIRST",
+    },
+    flight: {
+      clippingDistanceArbitrary: 60,
+      moveValue3d: 600,
+      mouseRotateValue: 0.001,
+      rotateValue: 0.01,
+      sphericalCapRadius: 500,
+    },
+    volume: {
+      brushSize: 50,
+    },
+  };
+}
 
-export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
+export function getDefaultRecommendedConfiguration(): $Shape<{|
   ...UserConfiguration,
   ...DatasetConfiguration,
   segmentationOpacity: number,
-|}> = {
-  ...recommendedConfigByCategory.orthogonal,
-  ...recommendedConfigByCategory.all,
-  ...recommendedConfigByCategory.dataset,
-  ...recommendedConfigByCategory.flight,
-  ...recommendedConfigByCategory.volume,
-};
+|}> {
+  const recommendedConfigByCategory = getRecommendedConfigByCategory();
+  return {
+    ...recommendedConfigByCategory.orthogonal,
+    ...recommendedConfigByCategory.all,
+    ...recommendedConfigByCategory.dataset,
+    ...recommendedConfigByCategory.flight,
+    ...recommendedConfigByCategory.volume,
+  };
+}
 
 export const settingComments = {
   clippingDistance: "orthogonal mode",
@@ -100,7 +107,7 @@ const removeSettings = (form, settingsKey: string) => {
     const settingsObject = JSON.parse(settingsString);
     const newSettings = _.omit(
       settingsObject,
-      Object.keys(recommendedConfigByCategory[settingsKey]),
+      Object.keys(getRecommendedConfigByCategory()[settingsKey]),
     );
     form.setFieldsValue({ recommendedConfiguration: jsonStringify(newSettings) });
   } catch (e) {
@@ -170,7 +177,7 @@ export default function RecommendedConfigurationView({
             <br />
             <Table
               columns={columns}
-              dataSource={_.map(DEFAULT_RECOMMENDED_CONFIGURATION, (value, key) => ({
+              dataSource={_.map(getDefaultRecommendedConfiguration(), (value, key) => ({
                 name: settings[key],
                 key,
                 value: value.toString(),

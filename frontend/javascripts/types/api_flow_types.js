@@ -548,6 +548,7 @@ export type APIFeatureToggles = {
   +publicDemoDatasetUrl: string,
   +exportTiffMaxVolumeMVx: number,
   +exportTiffMaxEdgeLengthVx: number,
+  +defaultToLegacyBindings: boolean,
 };
 
 export type APIJob = {

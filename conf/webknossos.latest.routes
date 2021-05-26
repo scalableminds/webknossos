@@ -195,6 +195,7 @@ GET           /time/user/:userId                                               c
 
 # Long-Running Jobs
 GET           /jobs                                                            controllers.JobsController.list
+GET           /jobs/status                                                     controllers.JobsController.status
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
 GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String)

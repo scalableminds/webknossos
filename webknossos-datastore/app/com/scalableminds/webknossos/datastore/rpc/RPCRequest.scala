@@ -10,7 +10,7 @@ import net.liftweb.common.{Failure, Full}
 import play.api.http.{HeaderNames, Status}
 import play.api.libs.json._
 import play.api.libs.ws._
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -53,7 +53,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     parseJsonResponse(performRequest)
   }
 
-  def getWithProtoResponse[T <: GeneratedMessage with Message[T]](companion: GeneratedMessageCompanion[T]): Fox[T] = {
+  def getWithProtoResponse[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request.withMethod("GET")
     parseProtoResponse(performRequest)(companion)
   }
@@ -73,7 +73,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     parseJsonResponse(performRequest)
   }
 
-  def postWithProtoResponse[T <: GeneratedMessage with Message[T]](file: File)(
+  def postWithProtoResponse[T <: GeneratedMessage](file: File)(
       companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request.withBody(file).withMethod("POST")
     parseProtoResponse(performRequest)(companion)
@@ -111,7 +111,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     parseJsonResponse(performRequest)
   }
 
-  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage with Message[T]](body: J = Json.obj())(
+  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage](body: J = Json.obj())(
       companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request
       .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
@@ -128,7 +128,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     performRequest
   }
 
-  def postProtoWithJsonResponse[T <: GeneratedMessage with Message[T], J: Reads](body: T): Fox[J] = {
+  def postProtoWithJsonResponse[T <: GeneratedMessage, J: Reads](body: T): Fox[J] = {
     request = request
       .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")
       .withBody(body.toByteArray)
@@ -226,7 +226,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       }
     }
 
-  private def parseProtoResponse[T <: GeneratedMessage with Message[T]](r: Fox[WSResponse])(
+  private def parseProtoResponse[T <: GeneratedMessage](r: Fox[WSResponse])(
       companion: GeneratedMessageCompanion[T]) =
     r.flatMap { response =>
       if (Status.isSuccessful(response.status)) {

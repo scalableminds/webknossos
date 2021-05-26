@@ -5,26 +5,17 @@ import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  TracingSelector,
-  TracingService,
-  UpdateAction,
-  UpdateActionGroup
-}
-import com.scalableminds.webknossos.tracingstore.{
-  TracingStoreAccessTokenService,
-  TracingStoreWkRpcClient,
-  TracingUpdatesReport
-}
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient, TracingUpdatesReport}
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]]
+trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage]
     extends Controller {
 
   def tracingService: TracingService[T]

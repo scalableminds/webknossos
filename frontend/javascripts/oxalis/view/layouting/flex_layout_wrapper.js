@@ -10,6 +10,11 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
 import { InputKeyboardNoLoop } from "libs/input";
+import {
+  DEFAULT_LAYOUT_NAME,
+  type LayoutKeys,
+  resetDefaultLayouts,
+} from "oxalis/view/layouting/default_layout_configs";
 
 import { OrthoViews, ArbitraryViews } from "oxalis/constants";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
@@ -24,9 +29,9 @@ import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import TDViewControls from "oxalis/view/td_view_controls";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import Statusbar from "oxalis/view/statusbar";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
-import { type LayoutKeys, resetDefaultLayouts } from "./default_layout_configs";
 import {
   getMaximizedItemId,
   getBorderOpenStatus,
@@ -106,6 +111,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
+    if (layoutName !== DEFAULT_LAYOUT_NAME) {
+      sendAnalyticsEvent("load_custom_layout", { viewMode: this.props.layoutKey });
+    }
     const layout = getLayoutConfig(layoutKey, layoutName);
     const model = FlexLayout.Model.fromJson(layout);
     return model;
@@ -294,6 +302,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
+    sendAnalyticsEvent("change_tracing_layout", { viewMode: this.props.layoutKey });
     const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.

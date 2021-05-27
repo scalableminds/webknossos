@@ -20,6 +20,8 @@ import type { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
 
+const PARALLEL_MESH_LOADING_COUNT = 6;
+
 export async function maybeFetchMeshFiles(
   segmentationLayer: APIDataLayer,
   dataset: APIDataset,
@@ -72,8 +74,12 @@ export async function loadMeshFromFile(
     return;
   }
 
-  for (const chunkPos of availableChunks) {
-    // eslint-disable-next-line no-await-in-loop
+  const tasks = availableChunks.map(chunkPos => async () => {
+    if (Store.getState().isosurfaces[id] == null) {
+      // Don't load chunk, since the mesh seems to have been deleted in the meantime (e.g., by the user).
+      return;
+    }
+
     const stlData = await getMeshfileChunkData(
       dataset.dataStore.url,
       dataset,
@@ -83,12 +89,46 @@ export async function loadMeshFromFile(
       chunkPos,
     );
     if (Store.getState().isosurfaces[id] == null) {
-      // Don't add chunks and also don't load next chunks, since the mesh seems
-      // to have been deleted in the meantime (e.g., by the user).
+      // Don't add chunks, since the mesh seems to have been deleted in the meantime (e.g., by the user).
       return;
     }
     const geometry = parseStlBuffer(stlData);
     getSceneController().addIsosurfaceFromGeometry(geometry, id);
-  }
+  });
+
+  await processTaskWithPool(tasks, PARALLEL_MESH_LOADING_COUNT);
+
   Store.dispatch(finishedLoadingIsosurfaceAction(id));
+}
+
+function processTaskWithPool(tasks, poolSize) {
+  return new Promise((resolve, reject) => {
+    const promises = [];
+    let isFinalResolveScheduled = false;
+
+    const startNextTask = () => {
+      if (tasks.length === 0) {
+        if (!isFinalResolveScheduled) {
+          isFinalResolveScheduled = true;
+
+          // All tasks were kicked off, which is why all promises can be
+          // awaited now together.
+          Promise.all(promises).then(resolve, reject);
+        }
+        return;
+      }
+
+      const task = tasks.shift();
+      const newPromise = task();
+      promises.push(newPromise);
+
+      // If that promise is done, process a new one (that way,
+      // the pool size stays constant until the queue is almost empty.)
+      newPromise.then(startNextTask);
+    };
+
+    for (let i = 0; i < poolSize; i++) {
+      startNextTask();
+    }
+  });
 }

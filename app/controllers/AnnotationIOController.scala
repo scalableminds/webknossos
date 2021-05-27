@@ -3,7 +3,7 @@ package controllers
 import java.io.File
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
@@ -39,27 +39,27 @@ import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
-                                       annotationDAO: AnnotationDAO,
-                                       projectDAO: ProjectDAO,
-                                       dataSetDAO: DataSetDAO,
-                                       organizationDAO: OrganizationDAO,
-                                       dataSetService: DataSetService,
-                                       userService: UserService,
-                                       taskDAO: TaskDAO,
-                                       taskTypeDAO: TaskTypeDAO,
-                                       tracingStoreService: TracingStoreService,
-                                       annotationService: AnnotationService,
-                                       analyticsService: AnalyticsService,
-                                       sil: Silhouette[WkEnv],
-                                       provider: AnnotationInformationProvider,
-                                       nmlService: NmlService)(implicit ec: ExecutionContext)
+class AnnotationIOController @Inject()(
+    nmlWriter: NmlWriter,
+    annotationDAO: AnnotationDAO,
+    projectDAO: ProjectDAO,
+    dataSetDAO: DataSetDAO,
+    organizationDAO: OrganizationDAO,
+    dataSetService: DataSetService,
+    userService: UserService,
+    taskDAO: TaskDAO,
+    taskTypeDAO: TaskTypeDAO,
+    tracingStoreService: TracingStoreService,
+    annotationService: AnnotationService,
+    analyticsService: AnalyticsService,
+    sil: Silhouette[WkEnv],
+    provider: AnnotationInformationProvider,
+    nmlService: NmlService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>

@@ -5,7 +5,7 @@ import org.scalatestplus.play.guice._
 import org.specs2.main.Arguments
 import org.specs2.mutable._
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.test.WithServer
 
 import scala.concurrent.Await
@@ -14,14 +14,14 @@ import scala.sys.process._
 
 class End2EndSpec (arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
 
-  val argumentMapRead = parseCustomJavaArgs(arguments)
-  val testPort = 9000
-  val argumentMap = argumentMapRead +
+  private val argumentMapRead = parseCustomJavaArgs(arguments)
+  private val testPort = 9000
+  private val argumentMap = argumentMapRead +
                  ("http.port"    -> testPort)
 
-  val application = new GuiceApplicationBuilder().configure(argumentMap).build()
+  private val application = new GuiceApplicationBuilder().configure(argumentMap).build()
 
-  val ws: WSClient = application.injector.instanceOf[WSClient]
+  private val ws: WSClient = application.injector.instanceOf[WSClient]
 
   "my application" should {
 
@@ -29,7 +29,7 @@ class End2EndSpec (arguments: Arguments) extends Specification with GuiceFakeApp
       app = application,
       port = testPort) {
 
-      val resp = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)
+      val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 
       runWebdriverTests === 0

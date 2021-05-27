@@ -28,8 +28,7 @@ object Dependencies {
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.12.7"
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.7"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
-  val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-  val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test"
+  val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "6.0.0"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.7" % "test"
   val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
@@ -88,7 +87,6 @@ object Dependencies {
     akkaTest,
     commonsCodec,
     scalaAsync,
-    scalaTest,
     scalaTestPlusPlay,
     silhouette,
     silhouetteTestkit,

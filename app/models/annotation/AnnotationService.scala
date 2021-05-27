@@ -3,21 +3,21 @@ package models.annotation
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox}
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ResolutionRestrictions,
@@ -56,35 +56,35 @@ case class DownloadAnnotation(skeletonTracingOpt: Option[SkeletonTracing],
                               taskOpt: Option[Task],
                               organizationName: String)
 
-class AnnotationService @Inject()(annotationInformationProvider: AnnotationInformationProvider,
-                                  savedTracingInformationHandler: SavedTracingInformationHandler,
-                                  annotationDAO: AnnotationDAO,
-                                  userDAO: UserDAO,
-                                  taskTypeDAO: TaskTypeDAO,
-                                  taskService: TaskService,
-                                  dataSetService: DataSetService,
-                                  dataSetDAO: DataSetDAO,
-                                  dataStoreService: DataStoreService,
-                                  tracingStoreService: TracingStoreService,
-                                  tracingStoreDAO: TracingStoreDAO,
-                                  taskDAO: TaskDAO,
-                                  teamDAO: TeamDAO,
-                                  userService: UserService,
-                                  dataStoreDAO: DataStoreDAO,
-                                  projectDAO: ProjectDAO,
-                                  organizationDAO: OrganizationDAO,
-                                  annotationRestrictionDefults: AnnotationRestrictionDefaults,
-                                  nmlWriter: NmlWriter,
-                                  temporaryFileCreator: TemporaryFileCreator,
-                                  meshDAO: MeshDAO,
-                                  meshService: MeshService,
-                                  sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext)
+class AnnotationService @Inject()(
+    annotationInformationProvider: AnnotationInformationProvider,
+    savedTracingInformationHandler: SavedTracingInformationHandler,
+    annotationDAO: AnnotationDAO,
+    userDAO: UserDAO,
+    taskTypeDAO: TaskTypeDAO,
+    taskService: TaskService,
+    dataSetService: DataSetService,
+    dataSetDAO: DataSetDAO,
+    dataStoreService: DataStoreService,
+    tracingStoreService: TracingStoreService,
+    tracingStoreDAO: TracingStoreDAO,
+    taskDAO: TaskDAO,
+    teamDAO: TeamDAO,
+    userService: UserService,
+    dataStoreDAO: DataStoreDAO,
+    projectDAO: ProjectDAO,
+    organizationDAO: OrganizationDAO,
+    annotationRestrictionDefults: AnnotationRestrictionDefaults,
+    nmlWriter: NmlWriter,
+    temporaryFileCreator: TemporaryFileCreator,
+    meshDAO: MeshDAO,
+    meshService: MeshService,
+    sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
     with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {

@@ -82,6 +82,11 @@ export async function loadMeshFromFile(
       id,
       chunkPos,
     );
+    if (Store.getState().isosurfaces[id] == null) {
+      // Don't add chunks and also don't load next chunks, since the mesh seems
+      // to have been deleted in the meantime (e.g., by the user).
+      return;
+    }
     const geometry = parseStlBuffer(stlData);
     getSceneController().addIsosurfaceFromGeometry(geometry, id);
   }

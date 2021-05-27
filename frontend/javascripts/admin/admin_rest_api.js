@@ -855,6 +855,9 @@ export async function startExportTiffJob(
   tracingId: ?string,
   annotationId: ?string,
   annotationType: ?APIAnnotationType,
+  mappingName: ?string,
+  mappingType: ?string,
+  hideUnmappedIds: ?boolean,
   tracingVersion: ?number = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
@@ -862,10 +865,14 @@ export async function startExportTiffJob(
   const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
   const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
   const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
+  const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
+  const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
+  const hideUnmappedIdsSuffix =
+    hideUnmappedIds != null ? `&hideUnmappedIds=${hideUnmappedIds.toString()}` : "";
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}`,
+    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
   );
 }
 
@@ -1563,4 +1570,66 @@ export function getAgglomerateSkeleton(
       { useWebworkerForArrayBuffer: false },
     ),
   );
+}
+
+export function getMeshfilesForDatasetLayer(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<Array<string>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes?token=${token}`,
+    ),
+  );
+}
+
+export function getMeshfileChunksForSegment(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+): Promise<Array<Vector3>> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+        },
+      },
+    ),
+  );
+}
+
+export function getMeshfileChunkData(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+  position: Vector3,
+): Promise<ArrayBuffer> {
+  return doWithToken(async token => {
+    const data = await Request.sendJSONReceiveArraybufferWithHeaders(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks/data?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+          position,
+        },
+        useWebworkerForArrayBuffer: false,
+      },
+    );
+    return data;
+  });
 }

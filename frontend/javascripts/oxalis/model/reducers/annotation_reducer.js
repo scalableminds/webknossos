@@ -96,6 +96,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "tracing", { meshes: newMeshes });
     }
 
+    case "UPDATE_ISOSURFACE_VISIBILITY": {
+      const { id, visibility } = action;
+      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+      return updateKey2(state, "isosurfaces", id, {
+        isVisible: visibility,
+      });
+    }
+
     case "ADD_MESH_METADATA": {
       const newMeshes = state.tracing.meshes.concat(action.mesh);
       return updateKey(state, "tracing", { meshes: newMeshes });
@@ -115,16 +123,18 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_ISOSURFACE": {
-      const { cellId, seedPosition } = action;
+      const { cellId, seedPosition, isPrecomputed } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
       return updateKey2(state, "isosurfaces", cellId, {
         segmentId: cellId,
         seedPosition,
         isLoading: false,
+        isVisible: true,
+        isPrecomputed,
       });
     }
 
-    case "START_REFRESHING_ISOSURFACE": {
+    case "STARTED_LOADING_ISOSURFACE": {
       const { cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
       return updateKey2(state, "isosurfaces", cellId, {
@@ -132,12 +142,22 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "FINISHED_REFRESHING_ISOSURFACE": {
+    case "FINISHED_LOADING_ISOSURFACE": {
       const { cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
       return updateKey2(state, "isosurfaces", cellId, {
         isLoading: false,
       });
+    }
+
+    case "UPDATE_MESH_FILE_LIST": {
+      const { meshFiles } = action;
+      return update(state, { availableMeshFiles: { $set: meshFiles } });
+    }
+
+    case "UPDATE_CURRENT_MESH_FILE": {
+      const { meshFile } = action;
+      return update(state, { currentMeshFile: { $set: meshFile } });
     }
 
     default:

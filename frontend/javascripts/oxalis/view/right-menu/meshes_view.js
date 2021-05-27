@@ -1,9 +1,7 @@
 // @flow
-
-import { Button, Checkbox, Input, List, Modal, Spin, Tooltip, Upload } from "antd";
+import { Button, List, Tooltip, Upload, Dropdown, Menu } from "antd";
 import {
   DeleteOutlined,
-  EditOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
   PlusSquareOutlined,
@@ -17,23 +15,25 @@ import _ from "lodash";
 
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
-import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
+import type { RemoteMeshMetaData } from "types/api_flow_types";
 import type { OxalisState, IsosurfaceInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
-import { Vector3Input } from "libs/vector_input";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
   importIsosurfaceFromStlAction,
   triggerActiveIsosurfaceDownloadAction,
   triggerIsosurfaceDownloadAction,
-  updateLocalMeshMetaDataAction,
+  updateIsosurfaceVisibilityAction,
   updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
+  addIsosurfaceAction,
+  updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
+import { loadMeshFromFile, maybeFetchMeshFiles } from "oxalis/view/right-menu/meshes_view_helper";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -45,64 +45,33 @@ import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
+import Checkbox from "antd/lib/checkbox/Checkbox";
+import MenuItem from "antd/lib/menu/MenuItem";
+
+// $FlowIgnore[prop-missing] flow does not know that Dropdown has a Button
+const DropdownButton = Dropdown.Button;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
   cellIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
 
-// This file defines the components EditMeshModal and MeshesView.
-
-class EditMeshModal extends React.PureComponent<
-  {
-    initialMesh: MeshMetaData,
-    onOk: (string, string, Vector3) => void,
-    onCancel: () => void,
-  },
-  { description: string, position: Vector3 },
-> {
-  state = {
-    description: this.props.initialMesh.description,
-    position: this.props.initialMesh.position,
-  };
-
-  render() {
-    return (
-      <Modal
-        title="Edit Mesh Meta Data"
-        visible
-        onOk={() =>
-          this.props.onOk(this.props.initialMesh.id, this.state.description, this.state.position)
-        }
-        onCancel={this.props.onCancel}
-      >
-        Description:{" "}
-        <Input
-          autoFocus
-          value={this.state.description}
-          onChange={evt => this.setState({ description: evt.target.value })}
-        />
-        Position:{" "}
-        <Vector3Input
-          value={this.state.position}
-          onChange={position => this.setState({ position })}
-        />
-      </Modal>
-    );
-  }
-}
+// This file defines the component MeshesView.
 
 const mapStateToProps = (state: OxalisState) => ({
   meshes: state.tracing != null ? state.tracing.meshes : [],
   isImporting: state.uiInformation.isImportingMesh,
   isosurfaces: state.isosurfaces,
   datasetConfiguration: state.datasetConfiguration,
+  dataset: state.dataset,
   mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
   flycam: state.flycam,
   activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
   segmentationLayer: getSegmentationLayer(state.dataset),
   zoomStep: getRequestLogZoomStep(state),
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  availableMeshFiles: state.availableMeshFiles,
+  currentMeshFile: state.currentMeshFile,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -115,8 +84,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   deleteMesh(id: string) {
     dispatch(deleteMeshAction(id));
   },
-  onChangeVisibility(mesh: MeshMetaData, isVisible: boolean) {
-    dispatch(updateLocalMeshMetaDataAction(mesh.id, { isVisible }));
+  onChangeVisibility(id, isVisible: boolean) {
+    dispatch(updateIsosurfaceVisibilityAction(id, isVisible));
   },
   async onStlUpload(info) {
     dispatch(setImportingMeshStateAction(true));
@@ -133,28 +102,37 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   downloadIsosurface() {
     dispatch(triggerActiveIsosurfaceDownloadAction());
   },
-  changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3) {
-    if (cellId == null) return;
-    dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition));
+  changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3, shouldReload: boolean) {
+    if (cellId == null) {
+      return;
+    }
+    dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
+  },
+  addPrecomputedMesh(cellId, seedPosition) {
+    if (cellId == null) {
+      return;
+    }
+    dispatch(addIsosurfaceAction(cellId, seedPosition, true));
+  },
+  setCurrentMeshFile(fileName) {
+    dispatch(updateCurrentMeshFileAction(fileName));
   },
 });
 
-type StateProps = {|
-  meshes: Array<MeshMetaData>,
-  isImporting: boolean,
-|};
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
-type Props = {| ...DispatchProps, ...StateProps |};
+type Props = {| ...DispatchProps |};
 
-class MeshesView extends React.Component<
-  Props,
-  { currentlyEditedMesh: ?MeshMetaData, hoveredListItem: ?number },
-> {
+type State = { hoveredListItem: ?number };
+
+class MeshesView extends React.Component<Props, State> {
   state = {
-    currentlyEditedMesh: null,
     hoveredListItem: null,
   };
+
+  componentDidMount() {
+    maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, false);
+  }
 
   render() {
     const hasSegmentation = Model.getSegmentationLayer() != null;
@@ -168,7 +146,7 @@ class MeshesView extends React.Component<
     const getIdForPos = pos => getSegmentationCube().getDataValue(pos, null, this.props.zoomStep);
 
     const moveTo = (seedPosition: Vector3) => {
-      Store.dispatch(setPositionAction(seedPosition));
+      Store.dispatch(setPositionAction(seedPosition, null, false));
     };
 
     const getDownloadButton = (segmentId: number) => (
@@ -179,25 +157,29 @@ class MeshesView extends React.Component<
         />
       </Tooltip>
     );
-    const getRefreshButton = (segmentId: number, isLoading: boolean) => (
-      <Tooltip title="Refresh Isosurface">
-        {isLoading ? (
+    const getRefreshButton = (segmentId: number, isPrecomputed: boolean, isLoading: boolean) => {
+      if (isLoading) {
+        return (
           <LoadingOutlined
             key="refresh-button"
             onClick={() => {
               Store.dispatch(refreshIsosurfaceAction(segmentId));
             }}
           />
-        ) : (
-          <ReloadOutlined
-            key="refresh-button"
-            onClick={() => {
-              Store.dispatch(refreshIsosurfaceAction(segmentId));
-            }}
-          />
-        )}
-      </Tooltip>
-    );
+        );
+      } else {
+        return isPrecomputed ? null : (
+          <Tooltip title="Refresh Isosurface">
+            <ReloadOutlined
+              key="refresh-button"
+              onClick={() => {
+                Store.dispatch(refreshIsosurfaceAction(segmentId));
+              }}
+            />
+          </Tooltip>
+        );
+      }
+    };
     const getDeleteButton = (segmentId: number) => (
       <Tooltip title="Delete Isosurface">
         <DeleteOutlined
@@ -206,7 +188,7 @@ class MeshesView extends React.Component<
             // does not work properly for imported isosurfaces
             Store.dispatch(removeIsosurfaceAction(segmentId));
             // reset the active isosurface id so the deleted one is not reloaded immediately
-            this.props.changeActiveIsosurfaceId(0, [0, 0, 0]);
+            this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
           }}
         />
       </Tooltip>
@@ -236,7 +218,8 @@ class MeshesView extends React.Component<
         </Upload>
       </React.Fragment>
     );
-    const getLoadIsosurfaceCellButton = () => (
+
+    const getLoadMeshCellButton = () => (
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
@@ -244,41 +227,116 @@ class MeshesView extends React.Component<
           if (id === 0) {
             Toast.info("No cell found at centered position");
           }
-          this.props.changeActiveIsosurfaceId(id, pos);
+          this.props.changeActiveIsosurfaceId(id, pos, true);
         }}
         disabled={!hasSegmentation}
         size="small"
-        type="primary"
       >
-        Load Isosurface for centered Cell
+        Compute Mesh
       </Button>
     );
-    const getIsosurfacesHeader = () => (
-      <React.Fragment>
-        Isosurfaces{" "}
-        <Tooltip title="Isosurfaces are the 3D representation of a cell. They are computed ad-hoc by webKnossos.">
-          <InfoCircleOutlined />
-        </Tooltip>
-        {getImportButton()}
-        {getLoadIsosurfaceCellButton()}
-        <br />
-      </React.Fragment>
-    );
-    const getMeshesHeader = () => (
-      <div style={{ marginTop: 10 }}>
-        Meshes{" "}
-        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They are imported from STL files.">
-          <InfoCircleOutlined />
-        </Tooltip>
-        {getImportButton()}
-      </div>
+
+    const loadPrecomputedMesh = async () => {
+      const pos = getPosition(this.props.flycam);
+      const id = getIdForPos(pos);
+      await loadMeshFromFile(
+        id,
+        pos,
+        this.props.currentMeshFile,
+        this.props.segmentationLayer,
+        this.props.dataset,
+      );
+    };
+
+    const handleMeshFileSelected = async mesh => {
+      if (mesh.key === "refresh") {
+        maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, true);
+      } else {
+        this.props.setCurrentMeshFile(mesh.key);
+        loadPrecomputedMesh();
+      }
+    };
+
+    const getMeshFilesDropdown = () => (
+      <Menu onClick={handleMeshFileSelected}>
+        <MenuItem key="refresh" icon={<ReloadOutlined />}>
+          Reload from Server.
+        </MenuItem>
+        {this.props.availableMeshFiles ? (
+          this.props.availableMeshFiles.map(meshFile => (
+            <Menu.Item key={meshFile} value={meshFile}>
+              {meshFile}
+            </Menu.Item>
+          ))
+        ) : (
+          <MenuItem key="no files" disabled>
+            No files available.
+          </MenuItem>
+        )}
+      </Menu>
     );
 
-    const renderIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
-      const { segmentId, seedPosition, isLoading } = isosurface;
+    const getLoadPrecomputedMeshButton = () => {
+      const hasCurrenMeshFile = this.props.currentMeshFile;
+      return (
+        <Tooltip
+          key="tooltip"
+          title={
+            hasCurrenMeshFile
+              ? `Load mesh for centered cell from file ${this.props.currentMeshFile}`
+              : "There is no mesh file."
+          }
+        >
+          <DropdownButton
+            size="small"
+            trigger="click"
+            onClick={loadPrecomputedMesh}
+            overlay={getMeshFilesDropdown()}
+            buttonsRender={([leftButton, rightButton]) => [
+              React.cloneElement(leftButton, {
+                disabled: !hasCurrenMeshFile,
+                style: { borderRightStyle: "dashed" },
+              }),
+              React.cloneElement(rightButton, { style: { borderLeftStyle: "dashed" } }),
+            ]}
+          >
+            Load Precomputed Mesh
+          </DropdownButton>
+        </Tooltip>
+      );
+    };
+
+    const getMeshesHeader = () => (
+      <React.Fragment>
+        Meshes{" "}
+        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They can be computed ad-hoc or pre-computed.">
+          <InfoCircleOutlined />
+        </Tooltip>
+        {getImportButton()}
+        <div className="antd-legacy-group">
+          {getLoadMeshCellButton()}
+          {getLoadPrecomputedMeshButton()}
+        </div>
+      </React.Fragment>
+    );
+    const getToggleVisibilityCheckbox = (segmentId: number, isVisible: boolean) => (
+      <Tooltip title="Change visibility">
+        <Checkbox
+          checked={isVisible}
+          onChange={(event: SyntheticInputEvent<>) => {
+            this.props.onChangeVisibility(segmentId, event.target.checked);
+          }}
+        />
+      </Tooltip>
+    );
+
+    const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
+      const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
       const isCenteredCell = hasSegmentation ? getIdForPos(getPosition(this.props.flycam)) : false;
-      const actionVisibility =
-        isLoading || segmentId === this.state.hoveredListItem ? "visible" : "hidden";
+      const isHoveredItem = segmentId === this.state.hoveredListItem;
+      const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
+
+      const textStyle = isVisible ? {} : { fontStyle: "italic", color: "#989898" };
       return (
         <List.Item
           style={{
@@ -291,107 +349,66 @@ class MeshesView extends React.Component<
           onMouseLeave={() => {
             this.setState({ hoveredListItem: null });
           }}
+          key={segmentId}
         >
           <div style={{ display: "flex" }}>
             <div
               className={classnames("isosurface-list-item", {
                 "is-centered-cell": segmentId === isCenteredCell,
               })}
-              onClick={() => {
-                this.props.changeActiveIsosurfaceId(segmentId);
-                moveTo(seedPosition);
-              }}
             >
+              {isHoveredItem ? (
+                getToggleVisibilityCheckbox(segmentId, isVisible)
+              ) : (
+                <span
+                  className="circle"
+                  style={{
+                    paddingLeft: "10px",
+                    backgroundColor: convertCellIdToCSS(segmentId),
+                  }}
+                />
+              )}{" "}
               <span
-                className="circle"
-                style={{
-                  paddingLeft: "10px",
-                  backgroundColor: convertCellIdToCSS(segmentId),
+                onClick={() => {
+                  this.props.changeActiveIsosurfaceId(segmentId, seedPosition, !isPrecomputed);
+                  moveTo(seedPosition);
                 }}
-              />{" "}
-              Segment {segmentId}
+                style={textStyle}
+              >
+                Segment {segmentId}
+              </span>
             </div>
             <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
+              {getRefreshButton(segmentId, isPrecomputed, isLoading)}
               {getDownloadButton(segmentId)}
-              {getRefreshButton(segmentId, isLoading)}
               {getDeleteButton(segmentId)}
             </div>
           </div>
         </List.Item>
       );
     };
-    const renderMeshListItem = (mesh: Object) => {
-      const isLoading = mesh.isLoading === true;
-      return (
-        <div key={mesh.id}>
-          <Checkbox
-            checked={mesh.isVisible}
-            onChange={(event: SyntheticInputEvent<>) => {
-              this.props.onChangeVisibility(mesh, event.target.checked);
-            }}
-            disabled={isLoading}
-            style={
-              mesh.isLoaded ? null : { fontStyle: "italic", color: "var(--ant-text-secondary)" }
-            }
-          >
-            {mesh.description}
-          </Checkbox>
-          {mesh.isLoaded ? (
-            <React.Fragment>
-              <EditOutlined
-                onClick={() => this.setState({ currentlyEditedMesh: mesh })}
-                style={{ cursor: "pointer" }}
-              />
-              <DeleteOutlined
-                onClick={() => this.props.deleteMesh(mesh.id)}
-                style={{ cursor: "pointer" }}
-              />
-            </React.Fragment>
-          ) : null}
-          <Spin size="small" spinning={isLoading} />
-        </div>
-      );
-    };
+
+    const getIsosurfaceList = () =>
+      // $FlowIgnore[incompatible-call] flow does not know that the values passed as isosurfaces are indeed from the type IsosurfaceInformation
+      Object.values(this.props.isosurfaces).map(isosurface => getIsosurfaceListItem(isosurface));
 
     return (
       <div className="padded-tab-content">
-        {getIsosurfacesHeader()}
+        {getMeshesHeader()}
         <List
-          dataSource={Object.values(this.props.isosurfaces)}
           size="small"
           split={false}
           style={{ marginTop: 12 }}
-          renderItem={renderIsosurfaceListItem}
           locale={{
-            emptyText: `There are no Isosurfaces.${
+            emptyText: `There are no Meshes.${
               this.props.allowUpdate
-                ? " You can render an isosurface for the currently centered cell by clicking the button above."
+                ? " You can render a mesh for the currently centered cell by clicking the button above."
                 : ""
             }`,
           }}
-        />
-        {this.state.currentlyEditedMesh != null ? (
-          <EditMeshModal
-            initialMesh={this.state.currentlyEditedMesh}
-            onOk={(id, description, position) => {
-              this.props.updateRemoteMeshMetadata(id, { description, position });
-              this.setState({ currentlyEditedMesh: null });
-            }}
-            onCancel={() => this.setState({ currentlyEditedMesh: null })}
-          />
-        ) : null}
-        {getMeshesHeader()}
-        <List
-          dataSource={this.props.meshes}
-          size="small"
-          split={false}
-          renderItem={renderMeshListItem}
-          locale={{
-            emptyText: `There are no meshes.${
-              this.props.allowUpdate ? " You can import an STL file to change this." : ""
-            } `,
-          }}
-        />
+        >
+          {getIsosurfaceList()}
+        </List>
       </div>
     );
   }

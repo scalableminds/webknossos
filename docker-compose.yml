@@ -20,19 +20,16 @@ services:
     command:
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
-      - -Dhttp.address=0.0.0.0
       - -Dtracingstore.fossildb.address=fossildb
       - -Dtracingstore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
-      - -Dapplication.insertInitialData=false
-      - -Dapplication.authentication.enableDevAutoLogin=false
+      - -DwebKnossos.sampleOrganization.enabled=false
       # the following lines need to be adapted for non-localhost deployments
       # - -Dhttp.uri=http://example.org:9000
       # - -Dtracingstore.publicUri=http://example.org:9000
       # - -Ddatastore.publicUri=http://example.org:9000
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
-      # - -Ddatastore.enabled=false
       # - -Dplay.http.router="noDS.Routes"
     volumes:
       - ./binaryData:/srv/webknossos/binaryData
@@ -53,9 +50,8 @@ services:
       - -J-Xms1G
       - -Dconfig.file=conf/standalone-datastore.conf
       - -Dhttp.port=9090
-      - -Dhttp.address=0.0.0.0
       - -Dhttp.uri=http://webknossos-datastore:9090
-      - -Ddatastore.oxalis.uri=webknossos:9000
+      - -Ddatastore.webKnossos.uri=webknossos:9000
 
   webknossos-tracingstore:
     build: webknossos-tracingstore
@@ -68,11 +64,10 @@ services:
       - -J-Xms1G
       - -Dconfig.file=conf/standalone-tracingstore.conf
       - -Dhttp.port=9050
-      - -Dhttp.address=0.0.0.0
       - -Dhttp.uri=http://webknossos-datastore:9050
       - -Dtracingstore.fossildb.address=fossildb
       - -Dtracingstore.redis.address=redis
-      - -Ddatastore.oxalis.uri=webknossos:9000
+      - -Ddatastore.webknossos.uri=webknossos:9000
     links:
       - "fossildb-persisted:fossildb"
     depends_on:
@@ -142,7 +137,6 @@ services:
         -v -d -jvm-debug 5005
         "run
           -Djava.net.preferIPv4Stack=true
-          -Dhttp.address=0.0.0.0
           -Dtracingstore.fossildb.address=fossildb
           -Dtracingstore.redis.address=redis"
     stdin_open: true

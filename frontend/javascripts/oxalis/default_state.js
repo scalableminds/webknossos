@@ -219,6 +219,8 @@ const defaultState: OxalisState = {
         : "light",
   },
   isosurfaces: {},
+  currentMeshFile: null,
+  availableMeshFiles: null,
 };
 
 export default defaultState;

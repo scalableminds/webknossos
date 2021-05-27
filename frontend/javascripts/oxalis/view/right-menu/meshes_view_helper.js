@@ -12,10 +12,13 @@ import {
   addIsosurfaceAction,
   startedLoadingIsosurfaceAction,
   finishedLoadingIsosurfaceAction,
+  removeIsosurfaceAction,
   updateMeshFileListAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Vector3 } from "oxalis/constants";
+import Toast from "libs/toast";
+import messages from "messages";
 
 export async function maybeFetchMeshFiles(
   segmentationLayer: APIDataLayer,
@@ -51,13 +54,24 @@ export async function loadMeshFromFile(
   Store.dispatch(startedLoadingIsosurfaceAction(id));
 
   const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
-  const availableChunks = await getMeshfileChunksForSegment(
-    dataset.dataStore.url,
-    dataset,
-    layerName,
-    fileName,
-    id,
-  );
+  let availableChunks = null;
+  try {
+    availableChunks = await getMeshfileChunksForSegment(
+      dataset.dataStore.url,
+      dataset,
+      layerName,
+      fileName,
+      id,
+    );
+  } catch (exception) {
+    console.warn("Mesh chunk couldn't be loaded due to", exception);
+    Toast.warning(messages["tracing.mesh_listing_failed"]);
+
+    Store.dispatch(finishedLoadingIsosurfaceAction(id));
+    Store.dispatch(removeIsosurfaceAction(id));
+    return;
+  }
+
   for (const chunkPos of availableChunks) {
     // eslint-disable-next-line no-await-in-loop
     const stlData = await getMeshfileChunkData(

@@ -1603,6 +1603,7 @@ export function getMeshfileChunksForSegment(
           meshFile,
           segmentId,
         },
+        showErrorToast: false,
       },
     ),
   );

@@ -117,7 +117,7 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   if (tasks.length < 0) {
     return;
   }
-  const maybeTaskPlural = tasks.length > 2 ? "task_ids" : "task_id";
+  const maybeTaskPlural = tasks.length > 1 ? "task_ids" : "task_id";
   const lastCreationTime = Math.max(...tasks.map(task => task.created));
   const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime, "YYYY-MM-DD_HH-mm");
   const allProjectNames = _.uniq(tasks.map(task => task.projectName)).join("_");

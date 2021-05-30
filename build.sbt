@@ -1,5 +1,5 @@
 import play.routes.compiler.InjectedRoutesGenerator
-import play.sbt.routes.RoutesKeys.{routesGenerator, routesImport}
+import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
 ThisBuild / version := "wk"
@@ -18,7 +18,7 @@ ThisBuild / scalacOptions ++= Seq(
   "-P:silencer:pathFilters=(.*target/.*/routes/.*/(ReverseRoutes\\.scala|Routes\\.scala|routes\\.java|JavaScriptReverseRoutes.scala)|.*target/.*\\.template\\.scala)"
 )
 
-ThisBuild / routesImport := Seq.empty
+ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
 ThisBuild / libraryDependencies ++= Seq(
   compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.0" cross CrossVersion.full),
@@ -41,10 +41,10 @@ lazy val commonSettings = Seq(
 )
 
 lazy val protocolBufferSettings = Seq(
-  ProtocPlugin.autoImport.PB.targets in Compile := Seq(
-    scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
-  ),
-  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto"))
+  Compile / PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto")),
+  Compile / PB.targets := Seq(
+    scalapb.gen() -> (Compile / sourceManaged).value / "proto"
+  )
 )
 
 lazy val copyConfFilesSetting = {

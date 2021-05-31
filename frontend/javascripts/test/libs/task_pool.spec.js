@@ -27,11 +27,11 @@ test("processTaskWithPool should run tasks sequentially", async t => {
 
   const tasks = [
     async () => {
-      await Utils.sleep(1);
+      await Utils.sleep(3);
       protocol.push(1);
     },
     async () => {
-      await Utils.sleep(1);
+      await Utils.sleep(2);
       protocol.push(2);
     },
     async () => {

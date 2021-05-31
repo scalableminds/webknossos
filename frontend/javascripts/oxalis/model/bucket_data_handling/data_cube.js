@@ -510,24 +510,28 @@ class DataCube {
     this.trigger("volumeLabeled");
   }
 
-  hasDataAtPositionAndZoomStep(voxel: Vector3, zoomStep: number = 0) {
+  isZoomStepRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {
+    // When this method returns false, this means that the next resolution (if it exists)
+    // needs to be examined for rendering.
+
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
 
     if (!(bucket instanceof DataBucket)) {
       // This is a NullBucket (e.g., because it's out of the bounding box or in a not-existing
-      // magnification). Don't assume fallback rendering.
+      // magnification). This zoomstep is as good as all the other zoomsteps (as these will only
+      // hold null buckets, too).
       return true;
     }
 
     if (bucket.hasData() || bucket.isLoaded()) {
       // The data exists or the bucket was loaded at least (the latter case
-      // occurs when fallback rendering is disabled but the bucket is missing.
-      // Then, the bucket has the "isLoaded" state).
+      // occurs when renderMissingDataBlack is *enabled* but the bucket is missing.
+      // Then, the bucket has the "isLoaded" state and should be used for rendering).
       return true;
     }
 
     if (bucket.isMissing()) {
-      // Fallback rendering is active and the bucket doesn't exist.
+      // renderMissingDataBlack is false (--> fallback rendering will happen) and the bucket doesn't exist.
       // Look at next zoom step.
       return false;
     }
@@ -543,7 +547,7 @@ class DataCube {
     while (
       position &&
       usableZoomStep < resolutions.length - 1 &&
-      !this.hasDataAtPositionAndZoomStep(position, usableZoomStep)
+      !this.isZoomStepRenderableForVoxel(position, usableZoomStep)
     ) {
       usableZoomStep++;
     }

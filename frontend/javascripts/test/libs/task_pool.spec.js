@@ -20,6 +20,42 @@ test.serial("processTaskWithPool should run a simple task", async t => {
   t.is(protocol.length, 1);
 });
 
+test.serial("processTaskWithPool should deal with an empty task array", async t => {
+  t.plan(1);
+
+  const tasks = [];
+  await processTaskWithPool(tasks, 1);
+
+  t.pass();
+});
+
+test.serial(
+  "processTaskWithPool should deal with a failing task while the other tasks are still executed",
+  async t => {
+    t.plan(1);
+
+    const protocol = [];
+
+    const tasks = [
+      async () => {
+        await Utils.sleep(0.1);
+        throw new Error("Some Error");
+      },
+      async () => {
+        await Utils.sleep(3);
+        protocol.push(1);
+      },
+    ];
+
+    try {
+      await processTaskWithPool(tasks, 1);
+      t.fail("processTaskWithPool should fail");
+    } catch (exception) {
+      t.deepEqual(protocol, [1]);
+    }
+  },
+);
+
 test.serial("processTaskWithPool should run tasks sequentially", async t => {
   t.plan(1);
 

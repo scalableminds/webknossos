@@ -97,7 +97,11 @@ export async function loadMeshFromFile(
     getSceneController().addIsosurfaceFromGeometry(geometry, id);
   });
 
-  await processTaskWithPool(tasks, PARALLEL_MESH_LOADING_COUNT);
+  try {
+    await processTaskWithPool(tasks, PARALLEL_MESH_LOADING_COUNT);
+  } catch (exception) {
+    Toast.warning("Some mesh objects could not be loaded.");
+  }
 
   if (Store.getState().isosurfaces[id] == null) {
     // The mesh was removed from the store in the mean time. Don't do anything.

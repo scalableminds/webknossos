@@ -26,7 +26,7 @@ export default function processTaskWithPool<T>(
 
       // If that promise is done, process a new one (that way,
       // the pool size stays constant until the queue is almost empty.)
-      newPromise.then(startNextTask);
+      newPromise.then(startNextTask, startNextTask);
     };
 
     for (let i = 0; i < poolSize; i++) {

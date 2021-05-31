@@ -21,6 +21,7 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.organization.OrganizationDAO
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -46,6 +47,7 @@ class AnnotationController @Inject()(
     provider: AnnotationInformationProvider,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     analyticsService: AnalyticsService,
+    mailchimpClient: MailchimpClient,
     conf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -156,6 +158,7 @@ class AnnotationController @Inject()(
           tracingType,
           request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
+        _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasAnnotated)
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }

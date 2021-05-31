@@ -29,6 +29,7 @@ import {
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -164,8 +165,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     },
   };
 
-  componentDidMount() {
-    this.fetchData();
+  async componentDidMount() {
+    await this.fetchData();
+    sendAnalyticsEvent("open_dataset_settings", {
+      datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
+    });
   }
 
   async fetchData(): Promise<void> {

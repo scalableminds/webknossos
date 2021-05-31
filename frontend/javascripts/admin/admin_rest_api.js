@@ -834,6 +834,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     annotationId: job.commandArgs.kwargs.annotation_id,
     annotationType: job.commandArgs.kwargs.annotation_type,
     state: job.celeryInfo.state || "UNKNOWN",
+    manualState: job.manualState,
     createdAt: job.created,
   }));
 }

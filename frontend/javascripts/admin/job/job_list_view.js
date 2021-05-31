@@ -114,7 +114,7 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.type === "convert_to_wkw") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
+          {this.isSuccessful(job) && job.datasetName && this.props.activeUser && (
             <Link
               to={`/datasets/${this.props.activeUser.organization}/${job.datasetName}/view`}
               title="View Dataset"
@@ -128,7 +128,7 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "export_tiff") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
+          {this.isSuccessful(job) && job.exportFileName && this.props.activeUser && (
             <a href={`/api/jobs/${job.id}/downloadExport/${job.exportFileName}`} title="Download">
               <DownOutlined />
               Download
@@ -139,16 +139,30 @@ class JobListView extends React.PureComponent<Props, State> {
     } else return null;
   };
 
+  isManualPassJob = (job: APIJob) => job.type === "convert_to_wkw";
+  isSuccessful = (job: APIJob) => job.state === "SUCCESS" || job.manualState === "SUCCESS";
+
   renderState = (__: any, job: APIJob) => {
-    const stateString = _.capitalize(job.state.toLowerCase());
-    if (job.state === "SUCCESS") return stateString;
-    else {
-      return (
-        <Tooltip title="Something went wrong when executing this job. Feel free to contact us if you need assistance.">
-          {stateString}
-        </Tooltip>
-      );
+    const tooltipMessages = {
+      "":
+        "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
+      SUCCESS: "This job has successfully been executed.",
+      PENDING: "This job will run as soon as a worker becomes available.",
+      STARTED: "This job is currently running.",
+      FAILURE:
+        "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
+      MANUAL:
+        "The automatic job failed, but admins have been notified and will attempt to repair it manually. Please check back here soon.",
+    };
+    let jobState: string = job.state || "";
+    if (job.manualState) {
+      jobState = job.manualState;
+    } else if (job.state === "FAILURE" && this.isManualPassJob(job)) {
+      jobState = "MANUAL";
     }
+    const tooltip: string = tooltipMessages[jobState];
+    const jobStateNormalized = _.capitalize(jobState.toLowerCase());
+    return <Tooltip title={tooltip}>{jobStateNormalized}</Tooltip>;
   };
 
   render() {

@@ -562,6 +562,7 @@ export type APIJob = {
   +boundingBox: ?string,
   +type: string,
   +state: string,
+  +manualState: string,
   +createdAt: number,
 };
 

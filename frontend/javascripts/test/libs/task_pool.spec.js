@@ -61,7 +61,7 @@ test.serial("processTaskWithPool should run tasks in a sliding window manner", a
       protocol.push(4);
     },
     async () => {
-      await Utils.sleep(1);
+      await Utils.sleep(0.1);
       protocol.push(3);
     },
   ];

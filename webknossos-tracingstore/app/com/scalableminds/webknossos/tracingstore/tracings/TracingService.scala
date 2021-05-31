@@ -1,18 +1,18 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json._
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import java.util.UUID
 
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
+import com.typesafe.scalalogging.LazyLogging
+import play.api.libs.json._
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-trait TracingService[T <: GeneratedMessage with Message[T]]
+trait TracingService[T <: GeneratedMessage]
     extends KeyValueStoreImplicits
     with FoxImplicits
     with LazyLogging

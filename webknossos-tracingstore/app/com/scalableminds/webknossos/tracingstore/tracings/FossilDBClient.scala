@@ -12,7 +12,7 @@ import io.grpc.{Status, StatusRuntimeException}
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, Reads, Writes}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -28,7 +28,7 @@ trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def asProto[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  implicit def fromProto[T <: GeneratedMessage with Message[T]](a: Array[Byte])(
+  implicit def fromProto[T <: GeneratedMessage](a: Array[Byte])(
       implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
 }
 

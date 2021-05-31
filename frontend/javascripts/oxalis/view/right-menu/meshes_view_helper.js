@@ -99,5 +99,10 @@ export async function loadMeshFromFile(
 
   await processTaskWithPool(tasks, PARALLEL_MESH_LOADING_COUNT);
 
+  if (Store.getState().isosurfaces[id] == null) {
+    // The mesh was removed from the store in the mean time. Don't do anything.
+    return;
+  }
+
   Store.dispatch(finishedLoadingIsosurfaceAction(id));
 }

@@ -126,19 +126,20 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
   });
 }
 
-export function sendAnalyticsEvent(eventType: string, eventProperties: Object): void {
+export function sendAnalyticsEvent(eventType: string, eventProperties: {} = {}): void {
   // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
   // since failing analytics events should not have an impact on the application logic.
   Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
     method: "POST",
     data: eventProperties,
+    showErrorToast: false,
   });
 }
 
 export function sendFailedRequestAnalyticsEvent(
   requestType: string,
   error: Object,
-  requestProperties: Object,
+  requestProperties: {},
 ): void {
   const eventProperties = {
     request_type: requestType,
@@ -1035,10 +1036,7 @@ export function createResumableUpload(
   );
 }
 
-export function finishDatasetUpload(
-  datastoreHost: string,
-  uploadInformation: Object,
-): Promise<void> {
+export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}): Promise<void> {
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,

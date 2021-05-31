@@ -10,7 +10,7 @@ test.serial("processTaskWithPool should run a simple task", async t => {
 
   const tasks = [
     async () => {
-      await Utils.sleep(1);
+      await Utils.sleep(100);
       protocol.push(1);
     },
   ];
@@ -38,11 +38,11 @@ test.serial(
 
     const tasks = [
       async () => {
-        await Utils.sleep(0.1);
+        await Utils.sleep(10);
         throw new Error("Some Error");
       },
       async () => {
-        await Utils.sleep(3);
+        await Utils.sleep(300);
         protocol.push(1);
       },
     ];
@@ -63,15 +63,15 @@ test.serial("processTaskWithPool should run tasks sequentially", async t => {
 
   const tasks = [
     async () => {
-      await Utils.sleep(3);
+      await Utils.sleep(300);
       protocol.push(1);
     },
     async () => {
-      await Utils.sleep(2);
+      await Utils.sleep(200);
       protocol.push(2);
     },
     async () => {
-      await Utils.sleep(1);
+      await Utils.sleep(100);
       protocol.push(3);
     },
   ];
@@ -88,16 +88,16 @@ test.serial("processTaskWithPool should run tasks in a sliding window manner", a
 
   const tasks = [
     async () => {
-      await Utils.sleep(0.1);
+      await Utils.sleep(10);
       protocol.push(2);
     },
     async () => {
       protocol.push(1);
-      await Utils.sleep(5);
+      await Utils.sleep(500);
       protocol.push(4);
     },
     async () => {
-      await Utils.sleep(0.1);
+      await Utils.sleep(10);
       protocol.push(3);
     },
   ];
@@ -114,16 +114,16 @@ test.serial("processTaskWithPool should cope with too large pool size", async t 
 
   const tasks = [
     async () => {
-      await Utils.sleep(0.1);
+      await Utils.sleep(10);
       protocol.push(2);
     },
     async () => {
       protocol.push(1);
-      await Utils.sleep(5);
+      await Utils.sleep(500);
       protocol.push(4);
     },
     async () => {
-      await Utils.sleep(1);
+      await Utils.sleep(100);
       protocol.push(3);
     },
   ];

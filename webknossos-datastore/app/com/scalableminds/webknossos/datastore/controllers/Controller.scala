@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+import java.io.FileInputStream
+
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.requestlogging.RequestLogging
@@ -9,9 +11,8 @@ import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{JsError, Reads}
 import play.api.mvc.Results._
 import play.api.mvc._
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
-import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
 trait Controller
@@ -42,9 +43,9 @@ trait ValidationHelpers {
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def validateProto[A <: GeneratedMessage with Message[A]](implicit bodyParsers: PlayBodyParsers,
-                                                           companion: GeneratedMessageCompanion[A],
-                                                           ec: ExecutionContext): BodyParser[A] =
+  def validateProto[A <: GeneratedMessage](implicit bodyParsers: PlayBodyParsers,
+                                           companion: GeneratedMessageCompanion[A],
+                                           ec: ExecutionContext): BodyParser[A] =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
         Box(raw.asBytes())

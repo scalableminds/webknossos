@@ -144,7 +144,7 @@ class JobListView extends React.PureComponent<Props, State> {
 
   renderState = (__: any, job: APIJob) => {
     const tooltipMessages = {
-      "":
+      UNKNOWN:
         "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
       SUCCESS: "This job has successfully been executed.",
       PENDING: "This job will run as soon as a worker becomes available.",
@@ -154,7 +154,7 @@ class JobListView extends React.PureComponent<Props, State> {
       MANUAL:
         "The automatic job failed, but admins have been notified and will attempt to repair it manually. Please check back here soon.",
     };
-    let jobState: string = job.state || "";
+    let jobState: string = job.state;
     if (job.manualState) {
       jobState = job.manualState;
     } else if (job.state === "FAILURE" && this.isManualPassJob(job)) {

@@ -360,7 +360,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     for (const file of files) {
       const filenameParts = file.name.split(".");
       const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
-      fileExtension.push(fileExtension);
+      fileExtensions.push(fileExtension);
       sendAnalyticsEvent("add_files_to_upload", { fileExtension });
       if (fileExtension === "zip") {
         createReader(

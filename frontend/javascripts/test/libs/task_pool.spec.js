@@ -3,7 +3,7 @@ import processTaskWithPool from "libs/task_pool";
 import * as Utils from "libs/utils";
 import test from "ava";
 
-test("processTaskWithPool should run a simple task", async t => {
+test.serial("processTaskWithPool should run a simple task", async t => {
   t.plan(1);
 
   const protocol = [];
@@ -20,7 +20,7 @@ test("processTaskWithPool should run a simple task", async t => {
   t.is(protocol.length, 1);
 });
 
-test("processTaskWithPool should run tasks sequentially", async t => {
+test.serial("processTaskWithPool should run tasks sequentially", async t => {
   t.plan(1);
 
   const protocol = [];
@@ -45,7 +45,7 @@ test("processTaskWithPool should run tasks sequentially", async t => {
   t.deepEqual(protocol, [1, 2, 3]);
 });
 
-test("processTaskWithPool should run tasks in a sliding window manner", async t => {
+test.serial("processTaskWithPool should run tasks in a sliding window manner", async t => {
   t.plan(1);
 
   const protocol = [];
@@ -71,7 +71,7 @@ test("processTaskWithPool should run tasks in a sliding window manner", async t 
   t.deepEqual(protocol, [1, 2, 3, 4]);
 });
 
-test("processTaskWithPool should cope with too large pool size", async t => {
+test.serial("processTaskWithPool should cope with too large pool size", async t => {
   t.plan(1);
 
   const protocol = [];

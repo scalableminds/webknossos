@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox => ProtoBox}
 import net.liftweb.common.Full
-import scalapb.{GeneratedMessage, Message}
+import scalapb.GeneratedMessage
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -17,7 +17,7 @@ trait ColorGenerator {
     Color(getRandomComponent, getRandomComponent, getRandomComponent, 1.0)
 }
 
-trait TracingMigrationService[T <: GeneratedMessage with Message[T]] extends FoxImplicits {
+trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   // Each migration transforms a tracing and additionally returns whether the tracing was modified
   def migrations: List[T => Fox[(T, Boolean)]]
 

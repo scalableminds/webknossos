@@ -44,6 +44,7 @@ import {
   getLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
@@ -262,6 +263,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
+        <PresentModernControls />
         {nodeContextMenuPosition != null && nodeContextMenuViewport != null ? (
           <NodeContextMenu
             hideNodeContextMenu={this.hideNodeContextMenu}

@@ -12,10 +12,16 @@ import {
   addIsosurfaceAction,
   startedLoadingIsosurfaceAction,
   finishedLoadingIsosurfaceAction,
+  removeIsosurfaceAction,
   updateMeshFileListAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Vector3 } from "oxalis/constants";
+import Toast from "libs/toast";
+import messages from "messages";
+import processTaskWithPool from "libs/task_pool";
+
+const PARALLEL_MESH_LOADING_COUNT = 6;
 
 export async function maybeFetchMeshFiles(
   segmentationLayer: APIDataLayer,
@@ -51,15 +57,30 @@ export async function loadMeshFromFile(
   Store.dispatch(startedLoadingIsosurfaceAction(id));
 
   const layerName = segmentationLayer.fallbackLayer || segmentationLayer.name;
-  const availableChunks = await getMeshfileChunksForSegment(
-    dataset.dataStore.url,
-    dataset,
-    layerName,
-    fileName,
-    id,
-  );
-  for (const chunkPos of availableChunks) {
-    // eslint-disable-next-line no-await-in-loop
+  let availableChunks = null;
+  try {
+    availableChunks = await getMeshfileChunksForSegment(
+      dataset.dataStore.url,
+      dataset,
+      layerName,
+      fileName,
+      id,
+    );
+  } catch (exception) {
+    console.warn("Mesh chunk couldn't be loaded due to", exception);
+    Toast.warning(messages["tracing.mesh_listing_failed"]);
+
+    Store.dispatch(finishedLoadingIsosurfaceAction(id));
+    Store.dispatch(removeIsosurfaceAction(id));
+    return;
+  }
+
+  const tasks = availableChunks.map(chunkPos => async () => {
+    if (Store.getState().isosurfaces[id] == null) {
+      // Don't load chunk, since the mesh seems to have been deleted in the meantime (e.g., by the user).
+      return;
+    }
+
     const stlData = await getMeshfileChunkData(
       dataset.dataStore.url,
       dataset,
@@ -68,8 +89,24 @@ export async function loadMeshFromFile(
       id,
       chunkPos,
     );
+    if (Store.getState().isosurfaces[id] == null) {
+      // Don't add chunks, since the mesh seems to have been deleted in the meantime (e.g., by the user).
+      return;
+    }
     const geometry = parseStlBuffer(stlData);
     getSceneController().addIsosurfaceFromGeometry(geometry, id);
+  });
+
+  try {
+    await processTaskWithPool(tasks, PARALLEL_MESH_LOADING_COUNT);
+  } catch (exception) {
+    Toast.warning("Some mesh objects could not be loaded.");
   }
+
+  if (Store.getState().isosurfaces[id] == null) {
+    // The mesh was removed from the store in the mean time. Don't do anything.
+    return;
+  }
+
   Store.dispatch(finishedLoadingIsosurfaceAction(id));
 }

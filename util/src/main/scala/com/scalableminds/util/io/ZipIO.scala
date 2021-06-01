@@ -4,7 +4,7 @@ import java.io._
 import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.javadsl.StreamConverters
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
@@ -28,9 +28,8 @@ object ZipIO extends LazyLogging {
     */
   case class OpenZip(stream: ZipOutputStream) {
 
-    def addFileFromSource(name: String, source: Source[ByteString, _])(
-        implicit ec: ExecutionContext,
-        materializer: ActorMaterializer): Future[Unit] = {
+    def addFileFromSource(name: String, source: Source[ByteString, _])(implicit ec: ExecutionContext,
+                                                                       materializer: Materializer): Future[Unit] = {
 
       stream.putNextEntry(new ZipEntry(name))
 

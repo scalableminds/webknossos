@@ -159,6 +159,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There is no isosurface for the active segment id available to download.",
     'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
   ],
+  "tracing.mesh_listing_failed":
+    "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
   "tracing.confirm_remove_fallback_layer.title":
     "Are you sure you want to unlink the dataset's original segmentation layer?",
   "tracing.confirm_remove_fallback_layer.explanation":

@@ -115,7 +115,7 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                 request.mapping,
                 request.cuboid,
                 DataServiceRequestSettings(halfByte = false, request.mapping, None),
-                Vector3I(1, 1, 1)
+                request.voxelDimensions
               )
               agglomerateService.applyAgglomerate(dataRequest)(data)
             case _ =>

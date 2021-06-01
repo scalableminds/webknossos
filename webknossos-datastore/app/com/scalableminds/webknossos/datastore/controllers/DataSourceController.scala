@@ -254,10 +254,15 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
           for {
-            positions <- meshFileService.listMeshChunksForSegment(organizationName,
-                                                                  dataSetName,
-                                                                  dataLayerName,
-                                                                  request.body) ?~> "mesh.listChunks.failed"
+            positions <- meshFileService.listMeshChunksForSegment(
+              organizationName,
+              dataSetName,
+              dataLayerName,
+              request.body) ?~> Messages("mesh.file.listChunks.failed",
+                                         request.body.segmentId.toString,
+                                         request.body.meshFile) ?~> Messages(
+              "mesh.file.load.failed",
+              request.body.segmentId.toString) ~> BAD_REQUEST
           } yield Ok(Json.toJson(positions))
         }
       }

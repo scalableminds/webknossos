@@ -165,7 +165,7 @@ class SceneController {
 
   constructSceneMesh(cellId: number, geometry: typeof THREE.Geometry) {
     const [hue] = jsConvertCellIdToHSLA(cellId);
-    const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
+    const color = new THREE.Color().setHSL(hue, 0.75, 0.05);
     const meshMaterial = new THREE.MeshLambertMaterial({ color });
     meshMaterial.side = THREE.DoubleSide;
     meshMaterial.transparent = true;

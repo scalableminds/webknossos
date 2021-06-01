@@ -139,9 +139,11 @@ type State = {
 
 function LinkWithDisabled({
   disabled,
+  onClick,
   ...rest
 }: {
   disabled?: boolean,
+  onClick?: () => void,
   style?: Object,
   to: string,
 }) {
@@ -153,9 +155,12 @@ function LinkWithDisabled({
           ...maybeDisabledStyle,
         }
       : maybeDisabledStyle;
+  if (!onClick) {
+    onClick = () => {};
+  }
 
   return (
-    <Link {...rest} style={adaptedStyle} onClick={e => (disabled ? e.preventDefault() : null)} />
+    <Link {...rest} style={adaptedStyle} onClick={e => (disabled ? e.preventDefault() : onClick)} />
   );
 }
 

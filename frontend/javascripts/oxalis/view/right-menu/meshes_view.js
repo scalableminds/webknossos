@@ -13,6 +13,7 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
+import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { RemoteMeshMetaData } from "types/api_flow_types";
@@ -143,7 +144,20 @@ class MeshesView extends React.Component<Props, State> {
       }
       return layer.cube;
     };
-    const getIdForPos = pos => getSegmentationCube().getDataValue(pos, null, this.props.zoomStep);
+    const getIdForPos = pos => {
+      const segmentationCube = getSegmentationCube();
+      const segmentationLayerName = Model.getSegmentationLayerName();
+
+      if (!segmentationLayerName) {
+        return 0;
+      }
+
+      const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+        segmentationLayerName,
+        pos,
+      );
+      return segmentationCube.getDataValue(pos, null, renderedZoomStepForCameraPosition);
+    };
 
     const moveTo = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition, null, false));
@@ -239,6 +253,10 @@ class MeshesView extends React.Component<Props, State> {
     const loadPrecomputedMesh = async () => {
       const pos = getPosition(this.props.flycam);
       const id = getIdForPos(pos);
+      if (id === 0) {
+        Toast.info("No cell found at centered position");
+        return;
+      }
       await loadMeshFromFile(
         id,
         pos,

@@ -18,7 +18,7 @@ import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
-import oxalis.mail.{DefaultMails, MailchimpClient, Send}
+import oxalis.mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import play.api.data.Form
@@ -104,7 +104,7 @@ class AuthenticationController @Inject()(
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 if (conf.Features.isDemoInstance) {
-                  mailchimpClient.registerUser(user, multiUser, tag = "registered_as_user")
+                  mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
                 } else {
                   Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
                 }
@@ -206,6 +206,7 @@ class AuthenticationController @Inject()(
         _ <- Fox.serialCombined(request.body.recipients)(recipient =>
           inviteService.inviteOneRecipient(recipient, request.identity, request.body.autoActivate))
         _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
+        _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
       } yield Ok
   }
 
@@ -403,7 +404,7 @@ class AuthenticationController @Inject()(
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      mailchimpClient.registerUser(user, multiUser, tag = "registered_as_admin")
+                      mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }
                     Ok
                   }

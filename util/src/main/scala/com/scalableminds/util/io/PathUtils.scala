@@ -148,10 +148,16 @@ trait PathUtils extends LazyLogging {
     def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
 
     fileNames match {
-      case head :: tl if tl.isEmpty && isFileNameInPrefix(prefix, head) =>
-        prefix.subpath(0, prefix.getNameCount - 1)
+      case head :: tail if tail.isEmpty && isFileNameInPrefix(prefix, head) =>
+        removeOneName(prefix)
       case _ => prefix
     }
+  }
+
+  private def removeOneName(path: Path): Path = {
+    if (path.getNameCount == 1) {
+      Paths.get("")
+    } else path.subpath(0, path.getNameCount - 1)
   }
 
   def deleteDirectoryRecursively(path: Path): Box[Unit] = {

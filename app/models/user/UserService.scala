@@ -307,13 +307,12 @@ class UserService @Inject()(conf: WkConf,
       teamMemberships <- teamMembershipsFor(user._id)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       novelUserExperienceInfos = multiUser.novelUserExperienceInfos
-      email <- emailFor(user)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)
     } yield {
       Json.obj(
         "id" -> user._id.toString,
-        "email" -> email,
+        "email" -> multiUser.email,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName,
         "isAdmin" -> user.isAdmin,

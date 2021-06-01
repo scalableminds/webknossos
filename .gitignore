@@ -72,3 +72,4 @@ frontend/javascripts/test/snapshots/flow-check/*
 .nyc_output
 coverage
 *.vscode
+.bsp

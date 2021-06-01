@@ -4,13 +4,13 @@ import sbt._
 object Dependencies {
   val akkaVersion = "2.6.14"
   val log4jVersion = "2.13.3"
-  val webknossosWrapVersion = "1.1.9"
+  val webknossosWrapVersion = "1.1.10"
 
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
   val commonsCodec = "commons-codec" % "commons-codec" % "1.10"
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.5"
-  val commonsIo = "commons-io" % "commons-io" % "2.4"
+  val commonsIo = "commons-io" % "commons-io" % "2.9.0"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
   val gson = "com.google.code.gson" % "gson" % "1.7.1"
   val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion

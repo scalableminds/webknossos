@@ -114,7 +114,7 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.type === "convert_to_wkw") {
       return (
         <span>
-          {this.isSuccessful(job) && job.datasetName && this.props.activeUser && (
+          {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
             <Link
               to={`/datasets/${this.props.activeUser.organization}/${job.datasetName}/view`}
               title="View Dataset"
@@ -128,7 +128,7 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "export_tiff") {
       return (
         <span>
-          {this.isSuccessful(job) && job.exportFileName && this.props.activeUser && (
+          {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
             <a href={`/api/jobs/${job.id}/downloadExport/${job.exportFileName}`} title="Download">
               <DownOutlined />
               Download
@@ -138,9 +138,6 @@ class JobListView extends React.PureComponent<Props, State> {
       );
     } else return null;
   };
-
-  isManualPassJob = (job: APIJob) => job.type === "convert_to_wkw";
-  isSuccessful = (job: APIJob) => job.state === "SUCCESS" || job.manualState === "SUCCESS";
 
   renderState = (__: any, job: APIJob) => {
     const tooltipMessages = {
@@ -154,14 +151,9 @@ class JobListView extends React.PureComponent<Props, State> {
       MANUAL:
         "The automatic job failed, but admins have been notified and will attempt to repair it manually. Please check back here soon.",
     };
-    let jobState: string = job.state;
-    if (job.manualState) {
-      jobState = job.manualState;
-    } else if (job.state === "FAILURE" && this.isManualPassJob(job)) {
-      jobState = "MANUAL";
-    }
-    const tooltip: string = tooltipMessages[jobState];
-    const jobStateNormalized = _.capitalize(jobState.toLowerCase());
+
+    const tooltip: string = tooltipMessages[job.state];
+    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
     return <Tooltip title={tooltip}>{jobStateNormalized}</Tooltip>;
   };
 

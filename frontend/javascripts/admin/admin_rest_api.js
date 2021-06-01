@@ -833,10 +833,23 @@ export async function getJobs(): Promise<Array<APIJob>> {
     tracingId: job.commandArgs.kwargs.volume_tracing_id,
     annotationId: job.commandArgs.kwargs.annotation_id,
     annotationType: job.commandArgs.kwargs.annotation_type,
-    state: job.celeryInfo.state || "UNKNOWN",
+    state: adaptJobState(job.command, job.celeryInfo.state, job.manualState),
     manualState: job.manualState,
     createdAt: job.created,
   }));
+}
+
+function adaptJobState(command: string, celeryState: string, manualState: ?string): string {
+  if (manualState) {
+    return manualState;
+  } else if (celeryState === "FAILURE" && isManualPassJobType(command)) {
+    return "MANUAL";
+  }
+  return celeryState || "UNKNOWN";
+}
+
+function isManualPassJobType(command: string) {
+  return ["convert_to_wkw"].includes(command);
 }
 
 export async function startConvertToWkwJob(

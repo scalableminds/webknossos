@@ -63,9 +63,25 @@ export default function PresentModernControls() {
 
         <Button onClick={handleKeepClassicControls}>Keep the Classic Controls</Button>
       </div>
-      <p style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
+      <p
+        style={{
+          color: "var(--ant-text-secondary)",
+          fontSize: 12,
+          textAlign: "center",
+          margin: "8px auto",
+          maxWidth: 500,
+        }}
+      >
         Note that you can always change your mind by enabling/disabling &quot;Classic Controls&quot;
-        in the settings sidebar.
+        in the settings sidebar. Read more about the setting{" "}
+        <a
+          href="https://docs.webknossos.org/reference/keyboard_shortcuts#classic-controls"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          here
+        </a>
+        .
       </p>
     </Modal>
   );

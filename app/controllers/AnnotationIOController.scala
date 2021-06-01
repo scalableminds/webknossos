@@ -3,7 +3,7 @@ package controllers
 import java.io.File
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
@@ -39,27 +39,27 @@ import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
-                                       annotationDAO: AnnotationDAO,
-                                       projectDAO: ProjectDAO,
-                                       dataSetDAO: DataSetDAO,
-                                       organizationDAO: OrganizationDAO,
-                                       dataSetService: DataSetService,
-                                       userService: UserService,
-                                       taskDAO: TaskDAO,
-                                       taskTypeDAO: TaskTypeDAO,
-                                       tracingStoreService: TracingStoreService,
-                                       annotationService: AnnotationService,
-                                       analyticsService: AnalyticsService,
-                                       sil: Silhouette[WkEnv],
-                                       provider: AnnotationInformationProvider,
-                                       nmlService: NmlService)(implicit ec: ExecutionContext)
+class AnnotationIOController @Inject()(
+    nmlWriter: NmlWriter,
+    annotationDAO: AnnotationDAO,
+    projectDAO: ProjectDAO,
+    dataSetDAO: DataSetDAO,
+    organizationDAO: OrganizationDAO,
+    dataSetService: DataSetService,
+    userService: UserService,
+    taskDAO: TaskDAO,
+    taskTypeDAO: TaskTypeDAO,
+    tracingStoreService: TracingStoreService,
+    annotationService: AnnotationService,
+    analyticsService: AnalyticsService,
+    sil: Silhouette[WkEnv],
+    provider: AnnotationInformationProvider,
+    nmlService: NmlService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>
@@ -320,7 +320,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       zip <- annotationService.zipAnnotations(annotations, project.name, skipVolumeData)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(project.name + "_nmls.zip"))
+      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
     }
 
   private def downloadTask(taskId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
@@ -338,7 +338,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       zip <- createTaskZip(task)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(task._id.toString + "_nmls.zip"))
+      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip")))
     }
   }
 
@@ -362,7 +362,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       zip <- createTaskTypeZip(taskType)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(taskType.summary + "_nmls.zip"))
+      Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip")))
     }
   }
 }

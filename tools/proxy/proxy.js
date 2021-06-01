@@ -27,7 +27,7 @@ function makeEnv(port, host) {
 const processes = {
   backend: spawnIfNotSpecified(
     "noBackend",
-    'sbt "run 9001" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g -Dlogger.file=conf/logback-dev.xml',
+    'sbt "~run 9001" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g -Dlogger.file=conf/logback-dev.xml',
     [],
     {
       cwd: ROOT,

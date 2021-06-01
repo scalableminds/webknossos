@@ -293,6 +293,10 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               {({ getFieldValue }) => (
                 <div
                   style={{
+                    // These form items are always emitted here and only their visibility
+                    // is changed, since the values are always needed to create/edit
+                    // a task type (its schema requires it even though the fields are
+                    // irrelevant for volume-only tasks).
                     display: getFieldValue(["tracingType"]) === "volume" ? "none" : "block",
                   }}
                 >

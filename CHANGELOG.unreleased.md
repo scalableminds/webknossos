@@ -30,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug in the application of agglomerate files where the `cumsum.json` was not used correctly. [#5499](https://github.com/scalableminds/webknossos/pull/5499)
 - Improve loading of precomputed meshes and fix some issues (e.g., deleting a mesh which was still being loaded) which could produce an invalid state. [#5519](https://github.com/scalableminds/webknossos/issues/5519)
 - Fixed an innocuous error toast when opening the dataset import view. [#5526](https://github.com/scalableminds/webknossos/pull/5526)
+- Fixed a bug where dataset uploads of zips with just one file inside failed. [#5534](https://github.com/scalableminds/webknossos/pull/5534)
 
 ### Removed
 - Removed the button to load or refresh the isosurface of the centered cell from the 3D view. Instead, this action can be triggered from the "Meshes" tab. [#5440](https://github.com/scalableminds/webknossos/pull/5440)

@@ -880,15 +880,14 @@ export async function startExportTiffJob(
 export function startComputeMeshFileJob(
   organizationName: string,
   datasetName: string,
+  layerName: string,
   mag: Vector3,
-  layerName?: string,
   agglomerateView?: string,
 ) {
   return Request.receiveJSON(
-    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName ||
-      "segmentation"}&mag=${mag.join("-")}${
-      agglomerateView ? `&agglomerateView=${agglomerateView}` : ""
-    }`,
+    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
+      "-",
+    )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
   );
 }
 

@@ -173,11 +173,16 @@ class MeshesView extends React.Component<Props, State> {
 
     const getComputeMeshFileButton = () => (
       <Button
-        onClick={() => {
-          startComputeMeshFileJob(
+        size="small"
+        onClick={async () => {
+          await startComputeMeshFileJob(
             this.props.organization,
             this.props.datasetName,
+            this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
             this.props.activeResolution,
+          );
+          Toast.success(
+            "The computation of a mesh file was started successfully. Depending on the dataset's size this may take a bit. You don't need to keep this dataset open for the computation to continue.",
           );
         }}
       >
@@ -432,10 +437,12 @@ class MeshesView extends React.Component<Props, State> {
       // $FlowIgnore[incompatible-call] flow does not know that the values passed as isosurfaces are indeed from the type IsosurfaceInformation
       Object.values(this.props.isosurfaces).map(isosurface => getIsosurfaceListItem(isosurface));
 
+    const hideComputeMeshFileButton = this.props.currentMeshFile;
+
     return (
       <div className="padded-tab-content">
         {getMeshesHeader()}
-        {getComputeMeshFileButton()}
+        {hideComputeMeshFileButton ? null : getComputeMeshFileButton()}
         <List
           size="small"
           split={false}

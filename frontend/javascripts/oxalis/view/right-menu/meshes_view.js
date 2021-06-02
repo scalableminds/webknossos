@@ -2,9 +2,9 @@
 import { Button, List, Tooltip, Upload, Dropdown, Menu } from "antd";
 import {
   DeleteOutlined,
+  EllipsisOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
-  PlusSquareOutlined,
   ReloadOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
@@ -50,12 +50,15 @@ import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
-import { startComputeMeshFileJob } from "admin/admin_rest_api";
+import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
 import Checkbox from "antd/lib/checkbox/Checkbox";
 import MenuItem from "antd/lib/menu/MenuItem";
 
 // $FlowIgnore[prop-missing] flow does not know that Dropdown has a Button
 const DropdownButton = Dropdown.Button;
+
+// Interval to check if there is a running mesh file computation for this dataset
+const refreshInterval = 60000;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -132,15 +135,38 @@ type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
 type Props = {| ...DispatchProps |};
 
-type State = { hoveredListItem: ?number };
+type State = { hoveredListItem: ?number, isComputingMeshfile: boolean };
 
 class MeshesView extends React.Component<Props, State> {
+  intervalID: ?TimeoutID;
+
   state = {
     hoveredListItem: null,
+    isComputingMeshfile: false,
   };
 
   componentDidMount() {
     maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, false);
+    this.fetchJobData();
+  }
+
+  async fetchJobData(): Promise<void> {
+    const jobs = await getJobs();
+    this.setState(
+      {
+        isComputingMeshfile:
+          jobs.filter(
+            job =>
+              job.type === "compute_mesh_file" &&
+              job.datasetName === this.props.datasetName &&
+              job.state === "STARTED",
+          ).length > 0,
+      },
+      // refresh according to the refresh interval
+      () => {
+        this.intervalID = setTimeout(this.fetchJobData.bind(this), refreshInterval);
+      },
+    );
   }
 
   render() {
@@ -171,20 +197,24 @@ class MeshesView extends React.Component<Props, State> {
       Store.dispatch(setPositionAction(seedPosition, null, false));
     };
 
+    const startComputingMeshfile = async () => {
+      await startComputeMeshFileJob(
+        this.props.organization,
+        this.props.datasetName,
+        this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
+        this.props.activeResolution,
+      );
+      this.setState({ isComputingMeshfile: true });
+      Toast.success(
+        "The computation of a mesh file was started successfully. Depending on the dataset's size this may take a bit. You don't need to keep this dataset open for the computation to continue.",
+      );
+    };
+
     const getComputeMeshFileButton = () => (
       <Button
         size="small"
-        onClick={async () => {
-          await startComputeMeshFileJob(
-            this.props.organization,
-            this.props.datasetName,
-            this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
-            this.props.activeResolution,
-          );
-          Toast.success(
-            "The computation of a mesh file was started successfully. Depending on the dataset's size this may take a bit. You don't need to keep this dataset open for the computation to continue.",
-          );
-        }}
+        loading={this.state.isComputingMeshfile}
+        onClick={startComputingMeshfile}
       >
         Compute Mesh File
       </Button>
@@ -226,7 +256,6 @@ class MeshesView extends React.Component<Props, State> {
         <DeleteOutlined
           key="delete-button"
           onClick={() => {
-            // does not work properly for imported isosurfaces
             Store.dispatch(removeIsosurfaceAction(segmentId));
             // reset the active isosurface id so the deleted one is not reloaded immediately
             this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
@@ -239,25 +268,19 @@ class MeshesView extends React.Component<Props, State> {
     const convertCellIdToCSS = id =>
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
-    const getImportButton = () => (
-      <React.Fragment>
-        <Upload
-          accept=".stl"
-          beforeUpload={() => false}
-          onChange={file => {
-            this.props.onStlUpload(file);
-          }}
-          showUploadList={false}
-          style={{ fontSize: 16, cursor: "pointer" }}
-          disabled={!this.props.allowUpdate || this.props.isImporting}
-        >
-          <Tooltip
-            title={this.props.isImporting ? "The import is still in progress." : "Import STL"}
-          >
-            {this.props.isImporting ? <LoadingOutlined /> : <PlusSquareOutlined />}
-          </Tooltip>
-        </Upload>
-      </React.Fragment>
+    const getStlImportItem = () => (
+      <Upload
+        accept=".stl"
+        beforeUpload={() => false}
+        onChange={file => {
+          this.props.onStlUpload(file);
+        }}
+        showUploadList={false}
+        style={{ fontSize: 16, cursor: "pointer" }}
+        disabled={!this.props.allowUpdate || this.props.isImporting}
+      >
+        Import STL
+      </Upload>
     );
 
     const getLoadMeshCellButton = () => (
@@ -351,16 +374,29 @@ class MeshesView extends React.Component<Props, State> {
       );
     };
 
+    const getHeaderDropdownMenu = () => (
+      <Menu>
+        <Menu.Item onClick={startComputingMeshfile}>Compute Mesh File</Menu.Item>
+        <Menu.Item>{getStlImportItem()}</Menu.Item>
+      </Menu>
+    );
+
+    const getHeaderDropdownButton = () => (
+      <Dropdown overlay={getHeaderDropdownMenu()}>
+        <EllipsisOutlined />
+      </Dropdown>
+    );
+
     const getMeshesHeader = () => (
       <React.Fragment>
         Meshes{" "}
         <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They can be computed ad-hoc or pre-computed.">
           <InfoCircleOutlined />
         </Tooltip>
-        {getImportButton()}
+        {getHeaderDropdownButton()}
         <div className="antd-legacy-group">
           {getLoadMeshCellButton()}
-          {getLoadPrecomputedMeshButton()}
+          {this.props.currentMeshFile ? getLoadPrecomputedMeshButton() : getComputeMeshFileButton()}
         </div>
       </React.Fragment>
     );
@@ -437,12 +473,9 @@ class MeshesView extends React.Component<Props, State> {
       // $FlowIgnore[incompatible-call] flow does not know that the values passed as isosurfaces are indeed from the type IsosurfaceInformation
       Object.values(this.props.isosurfaces).map(isosurface => getIsosurfaceListItem(isosurface));
 
-    const hideComputeMeshFileButton = this.props.currentMeshFile;
-
     return (
       <div className="padded-tab-content">
         {getMeshesHeader()}
-        {hideComputeMeshFileButton ? null : getComputeMeshFileButton()}
         <List
           size="small"
           split={false}

@@ -19,13 +19,12 @@ import com.scalableminds.webknossos.tracingstore.{
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]]
-    extends Controller {
+trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends Controller {
 
   def tracingService: TracingService[T]
 

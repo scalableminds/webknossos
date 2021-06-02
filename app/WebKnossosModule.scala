@@ -1,5 +1,6 @@
 import com.google.inject.AbstractModule
-import controllers.{InitialDataService, JobService}
+import controllers.InitialDataService
+import models.job.JobService
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
 import models.task.TaskService

@@ -6,10 +6,10 @@ import com.scalableminds.webknossos.datastore.geometry.{Color, Point3D, Vector3D
 object Dummies {
   val timestamp = 123456789
 
-  def createDummyNode(id: Int) =
+  def createDummyNode(id: Int): Node =
     Node(id, Point3D(id, id + 1, id + 2), Vector3D(id, id + 1, id + 2), id, 1, 10, 8, id % 2 == 0, timestamp)
 
-  val tree1 = Tree(
+  val tree1: Tree = Tree(
     1,
     Seq(createDummyNode(0), createDummyNode(1), createDummyNode(2), createDummyNode(7)),
     Seq(Edge(0, 1), Edge(2, 1), Edge(1, 7)),
@@ -22,7 +22,7 @@ object Dummies {
     Some(true)
   )
 
-  val tree2 = Tree(
+  val tree2: Tree = Tree(
     2,
     Seq(createDummyNode(4), createDummyNode(5), createDummyNode(6)),
     Seq(Edge(4, 5), Edge(5, 6)),
@@ -35,10 +35,10 @@ object Dummies {
     Some(true)
   )
 
-  val treeGroup1 = TreeGroup("Axon 1", 1, Seq(TreeGroup("Blah", 3), TreeGroup("Blah 2", 4)))
-  val treeGroup2 = TreeGroup("Axon 2", 2)
+  val treeGroup1: TreeGroup = TreeGroup("Axon 1", 1, Seq(TreeGroup("Blah", 3), TreeGroup("Blah 2", 4)))
+  val treeGroup2: TreeGroup = TreeGroup("Axon 2", 2)
 
-  val tracing = SkeletonTracing("dummy_dataset",
+  val tracing: SkeletonTracing = SkeletonTracing("dummy_dataset",
                                 Seq(tree1, tree2),
                                 timestamp,
                                 None,
@@ -57,12 +57,12 @@ object Dummies {
   val comp2Nodes = Seq(createDummyNode(20), createDummyNode(21))
   val comp1Edges = Seq(Edge(10, 11), Edge(10, 12), Edge(12, 13))
   val comp2Edges = Seq(Edge(20, 21))
-  val componentTree =
+  val componentTree: Tree =
     Tree(3, comp1Nodes ++ comp2Nodes, comp1Edges ++ comp2Edges, None, Seq(), Seq(), "Test Tree-3", timestamp, None)
 
-  val emptyTree = Tree(4, Seq(), Seq(), None, Seq(), Seq(), "Test Tree-3", timestamp, None)
+  val emptyTree: Tree = Tree(4, Seq(), Seq(), None, Seq(), Seq(), "Test Tree-3", timestamp, None)
 
-  val componentTracing = SkeletonTracing("dummy_dataset",
+  val componentTracing: SkeletonTracing = SkeletonTracing("dummy_dataset",
                                          Seq(componentTree, emptyTree),
                                          timestamp,
                                          None,

@@ -126,19 +126,20 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
   });
 }
 
-export function sendAnalyticsEvent(eventType: string, eventProperties: Object): void {
+export function sendAnalyticsEvent(eventType: string, eventProperties: {} = {}): void {
   // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
   // since failing analytics events should not have an impact on the application logic.
   Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
     method: "POST",
     data: eventProperties,
+    showErrorToast: false,
   });
 }
 
 export function sendFailedRequestAnalyticsEvent(
   requestType: string,
   error: Object,
-  requestProperties: Object,
+  requestProperties: {},
 ): void {
   const eventProperties = {
     request_type: requestType,
@@ -1050,10 +1051,7 @@ export function createResumableUpload(
   );
 }
 
-export function finishDatasetUpload(
-  datastoreHost: string,
-  uploadInformation: Object,
-): Promise<void> {
+export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}): Promise<void> {
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,
@@ -1585,4 +1583,67 @@ export function getAgglomerateSkeleton(
       { useWebworkerForArrayBuffer: false },
     ),
   );
+}
+
+export function getMeshfilesForDatasetLayer(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<Array<string>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes?token=${token}`,
+    ),
+  );
+}
+
+export function getMeshfileChunksForSegment(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+): Promise<Array<Vector3>> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+        },
+        showErrorToast: false,
+      },
+    ),
+  );
+}
+
+export function getMeshfileChunkData(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+  position: Vector3,
+): Promise<ArrayBuffer> {
+  return doWithToken(async token => {
+    const data = await Request.sendJSONReceiveArraybufferWithHeaders(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks/data?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+          position,
+        },
+        useWebworkerForArrayBuffer: false,
+      },
+    );
+    return data;
+  });
 }

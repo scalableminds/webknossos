@@ -185,7 +185,6 @@ class MeshesView extends React.Component<
           startComputeMeshFileJob(
             this.props.organization,
             this.props.datasetName,
-            this.props.segmentationLayer.name,
             this.props.activeResolution,
           );
         }}

@@ -879,17 +879,15 @@ export async function startExportTiffJob(
 export function startComputeMeshFileJob(
   organizationName: string,
   datasetName: string,
-  layerName: string,
   mag: Vector3,
+  layerName?: string,
   agglomerateView?: string,
 ) {
-  // TODO: figure out what's going on with the segmentation layer (only fallback "segmentation" is found by worker)
-  // TODO: figure out why this doesn't work at all... :( Not even with the default example
   return Request.receiveJSON(
-    "/api/jobs/run/computeMeshFile/sample_organization/l4_sample?layerName=segmentation&mag=4-4-1",
-    /* `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=segmentation&mag=${mag.join(
-      ",",
-    )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`, */
+    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName ||
+      "segmentation"}&mag=${mag.join("-")}${
+      agglomerateView ? `&agglomerateView=${agglomerateView}` : ""
+    }`,
   );
 }
 

@@ -485,7 +485,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(
-        projectDAO.findOneByNameAndOrganization(_, requestingUser._organization))
+        projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> "project.notFound"
       dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
       noAccessTeamIds = projects.map(_._team).diff(dataSetTeams.map(_._id))
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>

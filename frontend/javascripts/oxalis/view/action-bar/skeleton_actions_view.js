@@ -12,6 +12,13 @@ export const narrowButtonStyle = {
   paddingRight: 8,
 };
 
+const imgStyle = {
+  width: 20,
+  height: 20,
+  lineHeight: 10,
+  marginTop: -2,
+};
+
 export default function SkeletonActionsView() {
   const dispatch = useDispatch();
   const isMergerModeEnabled = useSelector(
@@ -21,12 +28,6 @@ export default function SkeletonActionsView() {
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
   const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
-  const imgStyle = {
-    width: 20,
-    height: 20,
-    lineHeight: 10,
-    marginTop: -2,
-  };
   const activeButtonStyle = { ...narrowButtonStyle, borderColor: "#1890ff" };
   const newNodeNewTreeModeButtonStyle = isNewNodeNewTreeModeOn
     ? activeButtonStyle

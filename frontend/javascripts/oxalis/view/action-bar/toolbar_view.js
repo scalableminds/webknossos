@@ -219,6 +219,43 @@ function CreateTreeButton() {
   );
 }
 
+function ChangeBrushSizeButton() {
+  const brushSize = useSelector(state => state.userConfiguration.brushSize);
+
+  return (
+    <Tooltip title="Change the brush size">
+      <Popover
+        content={
+          <div style={{ width: 230 }}>
+            <div style={{ marginBottom: 8 }}>Set the brush size:</div>
+            <LogSliderSetting
+              label=""
+              roundTo={0}
+              min={userSettings.brushSize.minimum}
+              max={userSettings.brushSize.maximum}
+              step={5}
+              spans={[0, 14, 10]}
+              value={brushSize}
+              onChange={handleUpdateBrushSize}
+            />
+          </div>
+        }
+        trigger="click"
+        placement="bottom"
+        style={{ cursor: "pointer" }}
+      >
+        <ButtonComponent style={{ width: 36, padding: 0 }} value="active">
+          <img
+            src="/assets/images/brush-size-icon.svg"
+            alt="Merger Mode"
+            style={{ width: 20, height: 20 }}
+          />
+        </ButtonComponent>
+      </Popover>
+    </Tooltip>
+  );
+}
+
 export default function ToolbarView() {
   const hasVolume = useSelector(state => state.tracing.volume != null);
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
@@ -264,8 +301,6 @@ export default function ToolbarView() {
     isAltPressed,
   );
 
-  const brushSize = useSelector(state => state.userConfiguration.brushSize);
-
   const skeletonToolHint =
     hasSkeleton && useLegacyBindings
       ? getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
@@ -286,6 +321,10 @@ export default function ToolbarView() {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showCreateCellButton =
     isVolumeSupported && !showCreateTreeButton && adaptedActiveTool !== AnnotationToolEnum.MOVE;
+  const showChangeBrushSizeButton =
+    isVolumeSupported &&
+    (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
+      adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
 
   return (
     <div
@@ -461,36 +500,7 @@ export default function ToolbarView() {
       <Space size={0} style={{ marginLeft: 12 }} className="tight-button-group">
         {showCreateCellButton ? <CreateCellButton /> : null}
         {showCreateTreeButton ? <CreateTreeButton /> : null}
-        <Tooltip title="Change the brush size">
-          <Popover
-            content={
-              <div style={{ width: 230 }}>
-                <div style={{ marginBottom: 8 }}>Set the brush size:</div>
-                <LogSliderSetting
-                  label=""
-                  roundTo={0}
-                  min={userSettings.brushSize.minimum}
-                  max={userSettings.brushSize.maximum}
-                  step={5}
-                  spans={[0, 14, 10]}
-                  value={brushSize}
-                  onChange={handleUpdateBrushSize}
-                />
-              </div>
-            }
-            trigger="click"
-            placement="bottom"
-            style={{ cursor: "pointer" }}
-          >
-            <ButtonComponent style={{ width: 36, padding: 0 }} value="active">
-              <img
-                src="/assets/images/brush-size-icon.svg"
-                alt="Merger Mode"
-                style={{ width: 20, height: 20 }}
-              />
-            </ButtonComponent>
-          </Popover>
-        </Tooltip>
+        {showChangeBrushSizeButton ? <ChangeBrushSizeButton /> : null}
       </Space>
 
       {hasSkeleton ? <SkeletonActionsView /> : null}

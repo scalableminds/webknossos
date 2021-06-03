@@ -41,7 +41,7 @@ lazy val commonSettings = Seq(
 )
 
 lazy val protocolBufferSettings = Seq(
-  Compile / PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto")),
+  Compile / PB.protoSources := Seq(baseDirectory.value / "proto"),
   Compile / PB.targets := Seq(
     scalapb.gen() -> (Compile / sourceManaged).value / "proto"
   )

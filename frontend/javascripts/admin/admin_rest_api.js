@@ -16,6 +16,9 @@ import {
   type APIFeatureToggles,
   type APIHistogramData,
   type APIJob,
+  type APIJobCeleryState,
+  type APIJobManualState,
+  type APIJobState,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -839,7 +842,11 @@ export async function getJobs(): Promise<Array<APIJob>> {
   }));
 }
 
-function adaptJobState(command: string, celeryState: string, manualState: ?string): string {
+function adaptJobState(
+  command: string,
+  celeryState: APIJobCeleryState,
+  manualState: APIJobManualState,
+): APIJobState {
   if (manualState) {
     return manualState;
   } else if (celeryState === "FAILURE" && isManualPassJobType(command)) {

@@ -9,5 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 -
 
 ### Postgres Evolutions:
-- [071-adapt-td-view-display-planes.sql](conf/evolutions/071-adapt-td-view-display-planes.sql)
 - [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)

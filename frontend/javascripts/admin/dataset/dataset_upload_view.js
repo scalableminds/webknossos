@@ -246,11 +246,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     The conversion for the uploaded dataset was started.
                     <br />
                     Click{" "}
-                    <a
-                      target="_blank"
-                      href="https://github.com/scalableminds/webknossos-cuber/"
-                      rel="noopener noreferrer"
-                    >
+                    <a target="_blank" href="/jobs" rel="noopener noreferrer">
                       here
                     </a>{" "}
                     to see all running jobs.

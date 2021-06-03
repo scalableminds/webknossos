@@ -2,8 +2,9 @@
 import * as React from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
+import { AnnotationToolEnum } from "oxalis/constants";
 import type { Vector3, OrthoView } from "oxalis/constants";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { V3 } from "libs/mjs";
@@ -15,7 +16,12 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setWaypoint } from "oxalis/controller/combinations/skeletontracing_plane_controller";
+import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
+import {
+  getCellFromGlobalPosition,
+  handlePickCellFromGlobalPosition,
+  handleFloodFillFromGlobalPosition,
+} from "oxalis/controller/combinations/volume_handlers";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import Clipboard from "clipboard-js";
@@ -24,6 +30,7 @@ import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeleto
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import Model from "oxalis/model";
 import { roundTo } from "libs/utils";
+import Shortcut from "libs/shortcut_component";
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
@@ -44,12 +51,21 @@ type DispatchProps = {|
   createTree: () => void,
 |};
 
-type StateProps = {| skeletonTracing: ?SkeletonTracing, datasetScale: Vector3 |};
+type StateProps = {|
+  skeletonTracing: ?SkeletonTracing,
+  volumeTracing: ?VolumeTracing,
+  datasetScale: Vector3,
+  isSkeletonToolActive: boolean,
+|};
 /* eslint-enable react/no-unused-prop-types */
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
-type NoNodeContextMenuProps = {| ...Props |};
+type NoNodeContextMenuProps = {|
+  ...Props,
+  cellIdAtPosition: number,
+  isSkeletonToolActive: boolean,
+|};
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -90,7 +106,7 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string) {
   });
 }
 
-function maybeHoveredCellMenuItem(globalPosition: Vector3) {
+function getMaybeHoveredCellMenuItem(globalPosition: Vector3) {
   const hoveredCellInfo = Model.getHoveredCellId(globalPosition);
   if (!hoveredCellInfo) {
     return null;
@@ -198,50 +214,97 @@ function NodeContextMenuOptions({
 }
 
 function NoNodeContextMenuOptions({
+  skeletonTracing,
+  volumeTracing,
+  isSkeletonToolActive,
   hideNodeContextMenu,
   globalPosition,
   viewport,
   createTree,
+  cellIdAtPosition,
 }: NoNodeContextMenuProps) {
+  const skeletonActions =
+    skeletonTracing != null
+      ? [
+          <Menu.Item
+            className="node-context-menu-item"
+            key="create-node"
+            onClick={() => setWaypoint(globalPosition, viewport, false)}
+          >
+            Create Node here
+          </Menu.Item>,
+          <Menu.Item
+            className="node-context-menu-item"
+            key="create-node-with-tree"
+            onClick={() => {
+              createTree();
+              setWaypoint(globalPosition, viewport, false);
+            }}
+          >
+            Create new Tree here
+          </Menu.Item>,
+        ]
+      : [];
+  const nonSkeletonActions =
+    volumeTracing != null
+      ? [
+          // Segment 0 cannot/shouldn't be made active (as this
+          // would be an eraser effectively).
+          cellIdAtPosition > 0 ? (
+            <Menu.Item
+              className="node-context-menu-item"
+              key="select-cell"
+              onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
+            >
+              Select Segment ({cellIdAtPosition})
+            </Menu.Item>
+          ) : null,
+
+          <Menu.Item
+            className="node-context-menu-item"
+            key="fill-cell"
+            onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
+          >
+            Fill Segment (flood-fill region)
+          </Menu.Item>,
+        ]
+      : [];
+
+  const allActions = isSkeletonToolActive
+    ? skeletonActions.concat(nonSkeletonActions)
+    : nonSkeletonActions.concat(skeletonActions);
+
   return (
     <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="create-node"
-        onClick={() => setWaypoint(globalPosition, viewport, false)}
-      >
-        Create Node here (Right Click)
-      </Menu.Item>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="create-node-with-tree"
-        onClick={() => {
-          createTree();
-          setWaypoint(globalPosition, viewport, false);
-        }}
-      >
-        Create new Tree here
-      </Menu.Item>
+      {allActions}
     </Menu>
   );
 }
 
-function NodeContextMenu(props: Props) {
+function ContextMenu(props: Props) {
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (inputRef.current != null) {
+      inputRef.current.focus();
+    }
+  }, [inputRef.current]);
+
   const {
     skeletonTracing,
+    isSkeletonToolActive,
     clickedNodeId,
     nodeContextMenuPosition,
     hideNodeContextMenu,
     datasetScale,
     globalPosition,
   } = props;
-  if (!skeletonTracing) {
-    return null;
-  }
-  const { activeTreeId, activeNodeId } = skeletonTracing;
+  const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
+  const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
+
   let nodeContextMenuTree = null;
   let nodeContextMenuNode = null;
-  if (clickedNodeId != null) {
+  if (skeletonTracing != null && clickedNodeId != null) {
     getNodeAndTree(skeletonTracing, clickedNodeId).map(([tree, node]) => {
       nodeContextMenuNode = node;
       nodeContextMenuTree = tree;
@@ -250,7 +313,7 @@ function NodeContextMenu(props: Props) {
   const positionToMeasureDistanceTo =
     nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
   const activeNode =
-    activeNodeId != null
+    activeNodeId != null && skeletonTracing != null
       ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
       : null;
   const distanceToSelection =
@@ -266,9 +329,53 @@ function NodeContextMenu(props: Props) {
     nodeContextMenuNode != null
       ? nodeContextMenuNode.position.map(value => roundTo(value, 2)).join(", ")
       : "";
+
+  const cellIdAtPosition = getCellFromGlobalPosition(globalPosition);
+
+  const infoRows = [];
+
+  if (clickedNodeId != null && nodeContextMenuTree != null) {
+    infoRows.push(
+      <div key="nodeInfo" className="node-context-menu-item">
+        Node with Id {clickedNodeId} in Tree {nodeContextMenuTree.treeId}
+      </div>,
+    );
+  }
+  if (nodeContextMenuNode != null) {
+    infoRows.push(
+      <div key="positionInfo" className="node-context-menu-item">
+        Position: {nodePositionAsString}
+        {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
+      </div>,
+    );
+  }
+
+  if (distanceToSelection != null) {
+    infoRows.push(
+      <div key="distanceInfo" className="node-context-menu-item">
+        <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
+        {clickedNodeId != null ? "Node" : "Position"}
+        {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+      </div>,
+    );
+  }
+
+  if (cellIdAtPosition > 0) {
+    infoRows.push(
+      <div key="copy-cell" className="node-context-menu-item">
+        <img src="/assets/images/cell.svg" className="cell-context-icon" alt="Segment Icon" />
+        Segment ID: {cellIdAtPosition} {copyIconWithTooltip(cellIdAtPosition, "Copy Segment ID")}
+      </div>,
+    );
+  }
+
+  const maybeHoveredCellMenuItem = getMaybeHoveredCellMenuItem(globalPosition);
+  if (!maybeHoveredCellMenuItem) {
+    infoRows.push(maybeHoveredCellMenuItem);
+  }
+
   return (
     <React.Fragment>
-      <div className="node-context-menu-overlay" onClick={hideNodeContextMenu} />
       <div
         style={{
           position: "absolute",
@@ -276,30 +383,16 @@ function NodeContextMenu(props: Props) {
           top: nodeContextMenuPosition[1],
         }}
         className="node-context-menu"
+        tabIndex={-1}
+        onBlur={hideNodeContextMenu}
+        ref={inputRef}
       >
+        <Shortcut supportInputElements keys="escape" onTrigger={hideNodeContextMenu} />
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ ...props })}
-        <Divider style={{ margin: "4px 0px" }} />
-        {clickedNodeId != null && nodeContextMenuTree != null ? (
-          <div className="node-context-menu-item">
-            Node with Id {clickedNodeId} in Tree {nodeContextMenuTree.treeId}
-          </div>
-        ) : null}
-        {nodeContextMenuNode != null ? (
-          <div className="node-context-menu-item">
-            Position: {nodePositionAsString}
-            {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-          </div>
-        ) : null}
-        {distanceToSelection != null ? (
-          <div className="node-context-menu-item">
-            <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
-            this {clickedNodeId != null ? "Node" : "Position"}
-            {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-          </div>
-        ) : null}
-        {maybeHoveredCellMenuItem(globalPosition)}
+          : NoNodeContextMenuOptions({ isSkeletonToolActive, cellIdAtPosition, ...props })}
+        {infoRows.length > 0 ? <Divider style={{ margin: "4px 0px" }} /> : null}
+        {infoRows}
       </div>
     </React.Fragment>
   );
@@ -329,11 +422,13 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     skeletonTracing: state.tracing.skeleton,
+    volumeTracing: state.tracing.volume,
     datasetScale: state.dataset.dataSource.scale,
+    isSkeletonToolActive: state.uiInformation.activeTool === AnnotationToolEnum.SKELETON,
   };
 }
 
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(NodeContextMenu);
+)(ContextMenu);

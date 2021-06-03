@@ -119,18 +119,34 @@ export const ControlModeEnum = {
 };
 export type ControlMode = $Keys<typeof ControlModeEnum>;
 
-export const VolumeToolEnum = {
+export const AnnotationToolEnum = {
   MOVE: "MOVE",
+  SKELETON: "SKELETON",
   BRUSH: "BRUSH",
+  ERASE_BRUSH: "ERASE_BRUSH",
   TRACE: "TRACE",
+  ERASE_TRACE: "ERASE_TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
 };
-export const ToolsWithOverwriteCapabilities = [VolumeToolEnum.TRACE, VolumeToolEnum.BRUSH];
-export type VolumeTool = $Keys<typeof VolumeToolEnum>;
+export const VolumeTools = [
+  AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.ERASE_BRUSH,
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.ERASE_TRACE,
+  AnnotationToolEnum.FILL_CELL,
+  AnnotationToolEnum.PICK_CELL,
+];
+export const ToolsWithOverwriteCapabilities = [
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.ERASE_TRACE,
+  AnnotationToolEnum.ERASE_BRUSH,
+];
+export type AnnotationTool = $Keys<typeof AnnotationToolEnum>;
 
-export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
-  return Object.keys(VolumeToolEnum).indexOf(volumeTool);
+export function annotationToolEnumToIndex(annotationTool: ?AnnotationTool): number {
+  return Object.keys(AnnotationToolEnum).indexOf(annotationTool);
 }
 
 export const ContourModeEnum = {
@@ -174,6 +190,8 @@ export const Unicode = {
 // are stored in a Uint8Array in a binary way (which cell
 // id the voxels should be changed to is not encoded).
 export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+
+export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoView) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

@@ -27,7 +27,7 @@ import {
 } from "admin/admin_rest_api";
 import { jsonStringify } from "libs/utils";
 import RecommendedConfigurationView, {
-  DEFAULT_RECOMMENDED_CONFIGURATION,
+  getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
 import Toast from "libs/toast";
 
@@ -107,7 +107,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       },
       recommendedConfiguration: hasRecommendedConfiguration
         ? {}
-        : DEFAULT_RECOMMENDED_CONFIGURATION,
+        : getDefaultRecommendedConfiguration(),
     };
     // Use merge which is deep _.extend
     const formValues = _.merge({}, defaultValues, taskType);

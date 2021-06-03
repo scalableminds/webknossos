@@ -18,7 +18,7 @@ import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/sto
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
-import NodeContextMenu from "oxalis/view/node_context_menu";
+import NodeContextMenu from "oxalis/view/context_menu";
 import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
@@ -44,6 +44,7 @@ import {
   getLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
@@ -262,6 +263,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
+        <PresentModernControls />
         {nodeContextMenuPosition != null && nodeContextMenuViewport != null ? (
           <NodeContextMenu
             hideNodeContextMenu={this.hideNodeContextMenu}

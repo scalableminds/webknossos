@@ -134,7 +134,7 @@
 }
 
 .node-context-menu {
-  z-index: 100;
+  z-index: 1000;
   border-radius: 6px;
   color: @text-color;
   background: @component-background;
@@ -148,12 +148,6 @@
   .ant-menu {
     border-right: none;
   }
-}
-.node-context-menu-overlay {
-  width: 100%;
-  height: calc(100% - @navbar-height);
-  position: absolute;
-  z-index: 99;
 }
 
 #version-restore-sider {
@@ -379,14 +373,6 @@ img.keyboard-mouse-icon:first-child {
     }
   }
 
-  .ant-radio-button-wrapper-checked .svg-gray-to-highlighted-blue {
-    // Calculated with https://codepen.io/sosuke/pen/Pjoqqp
-    // Input: background-color: #f1f1f1 for .pixel
-    // Prepended `brightness(50%) invert(39%)` to output
-    filter: brightness(50%) invert(39%) sepia(61%) saturate(2429%) hue-rotate(194deg)
-      brightness(105%) contrast(101%);
-  }
-
   .ant-radio-button-wrapper:not(:first-child)::before {
     background-color: @dark-border;
   }
@@ -520,4 +506,14 @@ img.keyboard-mouse-icon:first-child {
       border-bottom-right-radius: 2px;
     }
   }
+}
+
+.cell-context-icon {
+  margin-right: 12px;
+  height: 12px;
+}
+
+.resolution-status-bar-icon {
+  height: 14px;
+  margin-top: -2px;
 }

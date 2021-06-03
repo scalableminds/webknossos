@@ -47,7 +47,7 @@ import { setSceneController } from "./scene_controller_provider";
 const CUBE_COLOR = 0x999999;
 
 class SceneController {
-  skeleton: Skeleton;
+  skeleton: ?Skeleton;
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;

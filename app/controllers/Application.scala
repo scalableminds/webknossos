@@ -93,7 +93,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       val after = System.currentTimeMillis()
       logger.info(s"Answering ok for wK health check, took ${after - before} ms$localStoresLabelWrapped")
     }
-    log {
+    log() {
       for {
         before <- Fox.successful(System.currentTimeMillis())
         dataStoreDuration <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"

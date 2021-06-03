@@ -667,7 +667,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "TOGGLE_ALL_TREES": {
-          return toggleAllTreesReducer(state, skeletonTracing, action.setVisible);
+          return toggleAllTreesReducer(state, skeletonTracing);
         }
 
         case "TOGGLE_INACTIVE_TREES": {

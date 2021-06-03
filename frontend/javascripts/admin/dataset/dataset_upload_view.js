@@ -49,6 +49,8 @@ import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 
+const retriesUntilAnalyticsEventSent = 20;
+
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
@@ -69,6 +71,7 @@ type State = {
   isRetrying: boolean,
   uploadProgress: number,
   selectedTeams: APITeam | Array<APITeam>,
+  retries: number,
 };
 
 function WkwExample() {
@@ -140,6 +143,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
+    retries: 0,
   };
 
   formRef = React.createRef<typeof FormInstance>();
@@ -305,7 +309,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
 
       resumableUpload.on("fileRetry", () => {
-        this.setState({ isRetrying: true });
+        const currentRetries = this.state.retries;
+        if (currentRetries >= retriesUntilAnalyticsEventSent) {
+          sendAnalyticsEvent("many_upload_retries", { currentRetries });
+        }
+        this.setState(prev => ({ ...prev, isRetrying: true, retries: prev.retries + 1 }));
       });
 
       resumableUpload.addFiles(formValues.zipFile);

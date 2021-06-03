@@ -73,17 +73,17 @@ jobs:
           name: Build webknossos (sbt)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker-compose run compile sbt clean compile stage
+              docker-compose run compile sbt -no-colors clean compile stage
             else
-              docker-compose run compile sbt compile stage
+              docker-compose run compile sbt -no-colors compile stage
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt "project webknossosDatastore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors "project webknossosDatastore" copyMessages compile stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt "project webknossosTracingstore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors "project webknossosTracingstore" copyMessages compile stage
 
       - save_cache:
           name: Save target cache

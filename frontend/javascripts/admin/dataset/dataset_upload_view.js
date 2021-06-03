@@ -20,6 +20,7 @@ import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone } from "react-dropzone";
 
+import ErrorHandling from "libs/error_handling";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -308,9 +309,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         this.setState({ isRetrying: false, uploadProgress: resumableUpload.progress() });
       });
 
-      resumableUpload.on("fileRetry", () => {
+      resumableUpload.on("fileRetry", file => {
         const currentRetries = this.state.retries;
-        if (currentRetries >= retriesUntilAnalyticsEventSent) {
+        if (currentRetries === retriesUntilAnalyticsEventSent) {
+          ErrorHandling.notify(new Error(`Upload of file ${file} was resumed many times.`));
           sendAnalyticsEvent("many_upload_retries", { currentRetries });
         }
         this.setState(prev => ({ ...prev, isRetrying: true, retries: prev.retries + 1 }));

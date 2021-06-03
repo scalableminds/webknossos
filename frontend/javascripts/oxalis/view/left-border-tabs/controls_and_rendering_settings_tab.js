@@ -228,6 +228,18 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             value={this.props.userConfiguration.dynamicSpaceDirection}
             onChange={this.onChangeUser.dynamicSpaceDirection}
           />
+          <SwitchSetting
+            label={
+              <React.Fragment>
+                {settingsLabels.useLegacyBindings}{" "}
+                <Tooltip title="When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.">
+                  <InfoCircleOutlined />
+                </Tooltip>
+              </React.Fragment>
+            }
+            value={this.props.userConfiguration.useLegacyBindings}
+            onChange={this.onChangeUser.useLegacyBindings}
+          />
         </Panel>
         {this.getViewportOptions()}
         <Panel header="Data Rendering" key="3">

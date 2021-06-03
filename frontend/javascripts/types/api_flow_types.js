@@ -202,6 +202,7 @@ export type APIUserBase = {
 
 export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
+  hasSeenModernControlsModal?: boolean,
 |};
 
 export type APIUserTheme = "auto" | "light" | "dark";
@@ -548,6 +549,7 @@ export type APIFeatureToggles = {
   +publicDemoDatasetUrl: string,
   +exportTiffMaxVolumeMVx: number,
   +exportTiffMaxEdgeLengthVx: number,
+  +defaultToLegacyBindings: boolean,
 };
 
 export type APIJob = {

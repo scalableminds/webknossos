@@ -37,6 +37,7 @@ const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
 const defaultSplitterSize = 1;
+export const DEFAULT_LAYOUT_NAME = "Custom Layout";
 // The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
 // The borderBar is (vertical) bar the the borders of the screen that contains a button for each tab of in the border to toggle.
 // As we want a flexible layout in the border, we use only on tab containing a sub-layout that is more flexible.
@@ -290,38 +291,38 @@ export const getCurrentDefaultLayoutConfig = () => {
   const defaultLayouts = getDefaultLayouts();
   return {
     OrthoLayoutView: {
-      "Custom Layout": defaultLayouts.OrthoLayoutView,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.OrthoLayoutView,
     },
     ArbitraryLayoutView: {
-      "Custom Layout": defaultLayouts.ArbitraryLayoutView,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.ArbitraryLayoutView,
     },
     VolumeTracingView: {
-      "Custom Layout": defaultLayouts.VolumeTracingView,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.VolumeTracingView,
     },
     ArbitraryLayout: {
-      "Custom Layout": defaultLayouts.ArbitraryLayout,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.ArbitraryLayout,
     },
     OrthoLayout: {
-      "Custom Layout": defaultLayouts.OrthoLayout,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.OrthoLayout,
     },
     OrthoLayout2d: {
-      "Custom Layout": defaultLayouts.OrthoLayout2d,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.OrthoLayout2d,
     },
     OrthoLayoutView2d: {
-      "Custom Layout": defaultLayouts.OrthoLayoutView2d,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.OrthoLayoutView2d,
     },
     VolumeTracingView2d: {
-      "Custom Layout": defaultLayouts.VolumeTracingView2d,
+      [DEFAULT_LAYOUT_NAME]: defaultLayouts.VolumeTracingView2d,
     },
     LastActiveLayouts: {
-      OrthoLayoutView: "Custom Layout",
-      ArbitraryLayoutView: "Custom Layout",
-      VolumeTracingView: "Custom Layout",
-      ArbitraryLayout: "Custom Layout",
-      OrthoLayout: "Custom Layout",
-      OrthoLayout2d: "Custom Layout",
-      OrthoLayoutView2d: "Custom Layout",
-      VolumeTracingView2d: "Custom Layout",
+      OrthoLayoutView: DEFAULT_LAYOUT_NAME,
+      ArbitraryLayoutView: DEFAULT_LAYOUT_NAME,
+      VolumeTracingView: DEFAULT_LAYOUT_NAME,
+      ArbitraryLayout: DEFAULT_LAYOUT_NAME,
+      OrthoLayout: DEFAULT_LAYOUT_NAME,
+      OrthoLayout2d: DEFAULT_LAYOUT_NAME,
+      OrthoLayoutView2d: DEFAULT_LAYOUT_NAME,
+      VolumeTracingView2d: DEFAULT_LAYOUT_NAME,
     },
   };
 };

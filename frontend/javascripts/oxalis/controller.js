@@ -9,6 +9,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
 import { Button, Col, Row } from "antd";
+import { APIAnnotationTypeEnum } from "types/api_flow_types";
 
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -37,9 +38,8 @@ import type { APIUser } from "types/api_flow_types";
 import app from "app";
 import constants, {
   ControlModeEnum,
+  type ShowContextMenuFunction,
   type ViewMode,
-  type Vector3,
-  type OrthoView,
 } from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
@@ -50,7 +50,7 @@ type OwnProps = {|
   initialCommandType: TraceOrViewCommand,
   controllerStatus: ControllerStatus,
   setControllerStatus: ControllerStatus => void,
-  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
+  showNodeContextMenuAt: ShowContextMenuFunction,
 |};
 type StateProps = {|
   viewMode: ViewMode,
@@ -109,12 +109,17 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     this.props.setControllerStatus("loading");
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
-
     Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch(error => {
         this.props.setControllerStatus("failedLoading");
         const isNotFoundError = error.status === 404;
+        if (
+          this.props.initialAnnotationType === APIAnnotationTypeEnum.CompoundProject &&
+          isNotFoundError
+        ) {
+          Toast.error(messages["tracing.compound_project_not_found"], { sticky: true });
+        }
         // Don't throw errors for errors already handled by the model
         // or "Not Found" errors because they are already handled elsewhere.
         if (error !== HANDLED_ERROR && !isNotFoundError) {

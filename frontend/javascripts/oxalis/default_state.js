@@ -80,6 +80,7 @@ const defaultState: OxalisState = {
     tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
+    useLegacyBindings: false,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -204,6 +205,7 @@ const defaultState: OxalisState = {
   },
   activeUser: null,
   uiInformation: {
+    activeTool: "MOVE",
     showDropzoneModal: false,
     showVersionRestore: false,
     storedLayouts: {},
@@ -218,6 +220,8 @@ const defaultState: OxalisState = {
         : "light",
   },
   isosurfaces: {},
+  currentMeshFile: null,
+  availableMeshFiles: null,
 };
 
 export default defaultState;

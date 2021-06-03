@@ -28,6 +28,11 @@ GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/mappi
 GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/agglomerates                                           @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String)
 GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/agglomerates/:mappingName/skeleton/:agglomerateId      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.generateAgglomerateSkeleton(organizationName: String, dataSetName: String, dataLayerName: String, mappingName: String, agglomerateId: Long)
 
+# Mesh files
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String)
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshChunksForSegment(organizationName: String, dataSetName: String, dataLayerName: String)
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks/data                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readMeshChunk(organizationName: String, dataSetName: String, dataLayerName: String)
+
 # Isosurfaces
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/isosurface                                             @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String)
 

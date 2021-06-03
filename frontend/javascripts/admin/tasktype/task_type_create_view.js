@@ -27,7 +27,7 @@ import {
 } from "admin/admin_rest_api";
 import { jsonStringify } from "libs/utils";
 import RecommendedConfigurationView, {
-  DEFAULT_RECOMMENDED_CONFIGURATION,
+  getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
 import Toast from "libs/toast";
 
@@ -107,7 +107,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       },
       recommendedConfiguration: hasRecommendedConfiguration
         ? {}
-        : DEFAULT_RECOMMENDED_CONFIGURATION,
+        : getDefaultRecommendedConfiguration(),
     };
     // Use merge which is deep _.extend
     const formValues = _.merge({}, defaultValues, taskType);
@@ -290,27 +290,33 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 prevValues.tracingType !== curValues.tracingType
               }
             >
-              {({ getFieldValue }) =>
-                getFieldValue(["tracingType"]) !== "volume" ? (
-                  <React.Fragment>
-                    <FormItem
-                      name={["settings", "somaClickingAllowed"]}
-                      label="Settings"
-                      valuePropName="checked"
-                    >
-                      <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
-                    </FormItem>
+              {({ getFieldValue }) => (
+                <div
+                  style={{
+                    // These form items are always emitted here and only their visibility
+                    // is changed, since the values are always needed to create/edit
+                    // a task type (its schema requires it even though the fields are
+                    // irrelevant for volume-only tasks).
+                    display: getFieldValue(["tracingType"]) === "volume" ? "none" : "block",
+                  }}
+                >
+                  <FormItem
+                    name={["settings", "somaClickingAllowed"]}
+                    label="Settings"
+                    valuePropName="checked"
+                  >
+                    <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
+                  </FormItem>
 
-                    <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
-                      <Checkbox>Allow Branchpoints</Checkbox>
-                    </FormItem>
+                  <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
+                    <Checkbox>Allow Branchpoints</Checkbox>
+                  </FormItem>
 
-                    <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
-                      <Checkbox>Merger Mode</Checkbox>
-                    </FormItem>
-                  </React.Fragment>
-                ) : null
-              }
+                  <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
+                    <Checkbox>Merger Mode</Checkbox>
+                  </FormItem>
+                </div>
+              )}
             </FormItem>
 
             <FormItem

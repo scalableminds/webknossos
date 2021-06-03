@@ -29,6 +29,7 @@ import {
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -164,8 +165,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     },
   };
 
-  componentDidMount() {
-    this.fetchData();
+  async componentDidMount() {
+    await this.fetchData();
+    sendAnalyticsEvent("open_dataset_settings", {
+      datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
+    });
   }
 
   async fetchData(): Promise<void> {
@@ -314,6 +318,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
       form.setFieldsValue({
         dataSourceJson: jsonStringify(inferredDataSource),
+        dataSource: inferredDataSource,
       });
       this.setState(
         currentState => {
@@ -632,23 +637,18 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     if (!form) {
       return;
     }
-
-    const parsedConfig = JSON.parse(form.getFieldValue("dataSourceJson"));
     if (syncTargetTabKey === "advanced") {
       // Copy from simple to advanced: update json
 
-      // parsedConfig has to be used as the base, since `dataSource` will only
-      // contain the fields that antd has registered input elements for
-      const newDataSource = parsedConfig;
-      // _.merge does a deep merge which mutates newDataSource
-      _.merge(newDataSource, form.getFieldValue("dataSource"));
+      const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
       form.setFieldsValue({
-        dataSourceJson: jsonStringify(newDataSource),
+        dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
       });
     } else {
+      const dataSourceFromAdvancedTab = JSON.parse(form.getFieldValue("dataSourceJson"));
       // Copy from advanced to simple: update form values
       form.setFieldsValue({
-        dataSource: parsedConfig,
+        dataSource: dataSourceFromAdvancedTab,
       });
     }
   };

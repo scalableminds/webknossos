@@ -1,7 +1,7 @@
 // @noflow
 const express = require("express");
 const httpProxy = require("http-proxy");
-const { spawn } = require("child_process");
+const { spawn, exec } = require("child_process");
 const path = require("path");
 const prefixLines = require("prefix-stream-lines");
 
@@ -14,6 +14,7 @@ const app = express();
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));
 const PORT = parseInt(process.env.PORT || 9000, 10);
 const HOST = `http://localhost:${PORT}`;
+const loggingPrefix = "Proxy:";
 
 function makeEnv(port, host) {
   const env = Object.assign({}, process.env);
@@ -53,28 +54,41 @@ const processes = {
 };
 
 function spawnIfNotSpecified(keyword, command, args, options) {
-  if (!process.argv.includes(keyword)) return spawn(command, args, options);
-  else return null;
+  if (!process.argv.includes(keyword)) {
+    const childProcess = spawn(command, args, options);
+    console.log(
+      loggingPrefix,
+      "Spawned child process with PID",
+      childProcess.pid,
+      "for command",
+      command,
+    );
+    return childProcess;
+  } else return null;
 }
 
-function killAll() {
+function shutdown() {
+  console.log("", loggingPrefix, "Shutting down, terminating child processes...");
   for (const proc of Object.values(processes).filter(x => x)) {
     if (proc.connected) {
-      proc.kill("SIGKILL");
+      proc.kill("SIGTERM");
     }
   }
+  exec("kill $(lsof -t -i:5005)"); // Also kill Java debug subproces, as it’s sometimes not terminated by sbt properly.
+  process.exit(0);
 }
 
 for (const [key, proc] of Object.entries(processes).filter(x => x[1] !== null)) {
   proc.stdout.pipe(prefixLines(`${key}: `)).pipe(process.stdout);
   proc.stderr.pipe(prefixLines(`${key}: `)).pipe(process.stderr);
   proc.on("error", err => console.error(err, err.stack));
-  proc.on("exit", killAll);
+  proc.on("exit", shutdown);
 }
-process.on("SIGTERM", killAll);
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 proxy.on("error", (err, req, res) => {
-  console.error("### Sending Bad gateway due to the following error: ", err);
+  console.error(loggingPrefix, "Sending Bad gateway due to the following error: ", err);
   res.writeHead(503);
   res.end("Bad gateway");
 });
@@ -91,4 +105,4 @@ app.all("/assets/bundle/*", toWebpackDev);
 app.all("/*", toBackend);
 
 app.listen(PORT);
-console.log("PROXY", "Listening on", PORT);
+console.log(loggingPrefix, "Listening on port", PORT);

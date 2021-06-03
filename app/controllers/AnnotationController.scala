@@ -21,6 +21,7 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
 import models.organization.OrganizationDAO
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -46,6 +47,7 @@ class AnnotationController @Inject()(
     provider: AnnotationInformationProvider,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     analyticsService: AnalyticsService,
+    mailchimpClient: MailchimpClient,
     conf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -56,7 +58,7 @@ class AnnotationController @Inject()(
 
   def info(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
-      log {
+      log() {
         val notFoundMessage =
           if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
         for {
@@ -156,6 +158,7 @@ class AnnotationController @Inject()(
           tracingType,
           request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
+        _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasAnnotated)
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
@@ -211,7 +214,7 @@ class AnnotationController @Inject()(
 
   def finish(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
-      log {
+      log() {
         for {
           (updated, message) <- finishAnnotation(typ, id, request.identity, timestamp) ?~> "annotation.finish.failed"
           restrictions <- provider.restrictionsFor(typ, id)
@@ -222,7 +225,7 @@ class AnnotationController @Inject()(
 
   def finishAll(typ: String, timestamp: Long): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
-      log {
+      log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
           val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
             jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, timestamp))

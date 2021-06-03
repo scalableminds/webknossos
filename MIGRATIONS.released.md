@@ -5,6 +5,12 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.06.0](https://github.com/scalableminds/webknossos/releases/tag/21.06.0) - 2021-06-01
+
+### Postgres Evolutions:
+- [071-adapt-td-view-display-planes.sql](conf/evolutions/071-adapt-td-view-display-planes.sql)
+
+
 ## [21.05.1](https://github.com/scalableminds/webknossos/releases/tag/21.05.1) - 2021-05-05
 - The config keys in application.conf were restructured. If you overwrite any of them for your config, please adapt to the new structure, according to the table below. If you run any stand-alone datastores or tracingstores, make sure to update their config files as well.
 

@@ -5,18 +5,16 @@ import sbt.Keys._
 import sbt._
 import sys.process.Process
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 object AssetCompilation {
   object SettingsKeys {
-    val npmPath = SettingKey[String]("npm-path", "where npm is installed")
+    val yarnPath = SettingKey[String]("npm-path", "where npm is installed")
   }
 
   import SettingsKeys._
   import com.typesafe.sbt.packager.Keys._
 
-  def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
+  private def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
 
   private def startProcess(app: String, params: List[String], base: File) = {
     if (isWindowsSystem)
@@ -25,17 +23,10 @@ object AssetCompilation {
       Process(app :: params, base)
   }
 
-  private def killProcess(pid: String) = {
-    if (isWindowsSystem)
-      Process("kill" :: "-f" :: pid :: Nil).run()
-    else
-      Process("kill" :: pid :: Nil).run()
-  }
-
-  private def npmInstall: Def.Initialize[Task[Seq[File]]] = Def task {
+  private def yarnInstall: Def.Initialize[Task[Seq[File]]] = Def task {
     try {
       val exitValue = startProcess(
-        npmPath.value,
+        yarnPath.value,
         List("install", "--frozen-lockfile"),
         baseDirectory.value
       ) ! streams.value.log
@@ -44,11 +35,11 @@ object AssetCompilation {
     } catch {
       case e: java.io.IOException =>
         streams.value.log.error(
-          "Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage
+          "Yarn couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage
         )
     }
 
-    Seq()
+    Seq.empty
   }
 
   private def copyRecursively(from: File, to: File): Unit = {
@@ -103,16 +94,16 @@ object AssetCompilation {
         val streamsValue = streams.value.log
 
         tmpPath.mkdirs
-        startProcess(npmPath.value, List("init", "-y"), tmpPath) ! streamsValue
+        startProcess(yarnPath.value, List("init", "-y"), tmpPath) ! streamsValue
         nodeModules.foreach(nodeModule => {
-          startProcess(npmPath.value, List("add", (nodeSrc / nodeModule).getAbsolutePath), tmpPath) ! streamsValue
+          startProcess(yarnPath.value, List("add", (nodeSrc / nodeModule).getAbsolutePath), tmpPath) ! streamsValue
         })
         deleteRecursively(nodeDest)
         copyRecursively(tmpPath / "node_modules", nodeDest)
         deleteRecursively(tmpPath)
       }
 
-    } dependsOn npmInstall
+    } dependsOn yarnInstall
 
   private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] =
     Def task {
@@ -159,7 +150,7 @@ object AssetCompilation {
     }
 
   val settings = Seq(
-    AssetCompilation.SettingsKeys.npmPath := "yarn",
+    AssetCompilation.SettingsKeys.yarnPath := "yarn",
     stage := (stage dependsOn assetsGenerationTask).value,
     dist := (dist dependsOn assetsGenerationTask).value,
     sourceGenerators in Compile += slickClassesFromDBSchemaTask,

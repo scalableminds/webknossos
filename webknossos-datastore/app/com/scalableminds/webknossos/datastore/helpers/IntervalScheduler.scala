@@ -24,7 +24,7 @@ trait IntervalScheduler {
   lifecycle.addStopHook(stop _)
 
   if (enabled) {
-    scheduled = system.scheduler.schedule(10.seconds, tickerInterval)(tick())
+    scheduled = system.scheduler.scheduleWithFixedDelay(10.seconds, tickerInterval)(() => tick())
   }
 
   private def stop(): Future[Unit] = {

@@ -86,15 +86,11 @@ export class OxalisModel {
 
     if (position == null) return zoomStep;
 
-    const { renderMissingDataBlack } = state.datasetConfiguration;
     const cube = this.getCubeByLayerName(layerName);
 
-    // While render missing data black is not active and there is no segmentation for the current zoom step,
-    // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
-    // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
-    const renderedZoomStep = renderMissingDataBlack
-      ? zoomStep
-      : cube.getNextUsableZoomStepForPosition(position, zoomStep);
+    // Depending on the zoom value, which magnifications are loaded and other settings,
+    // the currently rendered zoom step has to be determined.
+    const renderedZoomStep = cube.getNextUsableZoomStepForPosition(position, zoomStep);
 
     return renderedZoomStep;
   }

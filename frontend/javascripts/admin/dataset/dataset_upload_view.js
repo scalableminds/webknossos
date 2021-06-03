@@ -27,6 +27,7 @@ import {
   finishDatasetUpload,
   createResumableUpload,
   startConvertToWkwJob,
+  sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
@@ -142,6 +143,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   formRef = React.createRef<typeof FormInstance>();
+
+  componentDidMount() {
+    sendAnalyticsEvent("open_upload_view");
+  }
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
     const uploadableDatastores = this.props.datastores.filter(datastore => datastore.allowsUpload);
@@ -346,11 +351,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     if (files.length === 0) {
       return;
     }
-
     let needsConversion = true;
+    const fileExtensions = [];
     for (const file of files) {
       const filenameParts = file.name.split(".");
       const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
+      fileExtensions.push(fileExtension);
+      sendAnalyticsEvent("add_files_to_upload", { fileExtension });
       if (fileExtension === "zip") {
         createReader(
           new BlobReader(file),
@@ -380,6 +387,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         needsConversion = false;
       }
     }
+    const countedFileExtensions = _.countBy(fileExtensions, str => str);
+    Object.entries(countedFileExtensions).map(([fileExtension, count]) =>
+      sendAnalyticsEvent("add_files_to_upload", { fileExtension, count }),
+    );
 
     this.handleNeedsConversionInfo(needsConversion);
   };

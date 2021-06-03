@@ -24,4 +24,4 @@ SET recommendedconfiguration = jsonb_set(
 ```
 
 ### Postgres Evolutions:
-- [071-adapt-td-view-display-planes.sql](conf/evolutions/071-adapt-td-view-display-planes.sql)
+- 

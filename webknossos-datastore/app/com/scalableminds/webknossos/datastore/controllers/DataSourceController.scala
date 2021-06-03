@@ -27,6 +27,7 @@ class DataSourceController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     sampleDatasetService: SampleDataSourceService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
+    meshFileService: MeshFileService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -235,6 +236,59 @@ class DataSourceController @Inject()(
       }
     }
   }
+
+  def listMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccessForSyncBlock(
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          Ok(Json.toJson(meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)))
+        }
+      }
+    }
+
+  def listMeshChunksForSegment(organizationName: String,
+                               dataSetName: String,
+                               dataLayerName: String): Action[ListMeshChunksRequest] =
+    Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            positions <- meshFileService.listMeshChunksForSegment(
+              organizationName,
+              dataSetName,
+              dataLayerName,
+              request.body) ?~> Messages("mesh.file.listChunks.failed",
+                                         request.body.segmentId.toString,
+                                         request.body.meshFile) ?~> Messages(
+              "mesh.file.load.failed",
+              request.body.segmentId.toString) ~> BAD_REQUEST
+          } yield Ok(Json.toJson(positions))
+        }
+      }
+    }
+
+  def readMeshChunk(organizationName: String,
+                    dataSetName: String,
+                    dataLayerName: String): Action[MeshChunkDataRequest] =
+    Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (data, encoding) <- meshFileService.readMeshChunk(organizationName,
+                                                              dataSetName,
+                                                              dataLayerName,
+                                                              request.body) ?~> "mesh.file.loadChunk.failed"
+          } yield {
+            if (encoding.contains("gzip")) {
+              Ok(data).withHeaders("Content-Encoding" -> "gzip")
+            } else {
+              Ok(data)
+            }
+          }
+        }
+      }
+    }
 
   def update(organizationName: String, dataSetName: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>

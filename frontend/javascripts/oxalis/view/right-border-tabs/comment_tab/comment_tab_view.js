@@ -464,7 +464,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                           height={height}
                           width={width}
                           rowCount={this.getData().length}
-                          rowHeight={21}
+                          rowHeight={24}
                           rowRenderer={this.renderRow}
                           scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
                           tabIndex={null}

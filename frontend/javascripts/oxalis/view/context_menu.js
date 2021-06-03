@@ -1,10 +1,11 @@
 // @flow
-import * as React from "react";
+import React, { useEffect } from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { Vector3, OrthoView } from "oxalis/constants";
 import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
+import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { V3 } from "libs/mjs";
@@ -22,15 +23,21 @@ import {
   handlePickCellFromGlobalPosition,
   handleFloodFillFromGlobalPosition,
 } from "oxalis/controller/combinations/volume_handlers";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/meshes_view_helper";
+import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import Clipboard from "clipboard-js";
 import messages from "messages";
+import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import Model from "oxalis/model";
 import { roundTo } from "libs/utils";
 import Shortcut from "libs/shortcut_component";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
@@ -53,10 +60,15 @@ type DispatchProps = {|
 
 type StateProps = {|
   skeletonTracing: ?SkeletonTracing,
-  volumeTracing: ?VolumeTracing,
   datasetScale: Vector3,
+  segmentationLayer: ?APIDataLayer,
+  dataset: APIDataset,
+  zoomStep: number,
+  currentMeshFile: ?string,
+  volumeTracing: ?VolumeTracing,
   isSkeletonToolActive: boolean,
 |};
+
 /* eslint-enable react/no-unused-prop-types */
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
@@ -151,7 +163,7 @@ function NodeContextMenuOptions({
     );
   }
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       <Menu.Item
         className="node-context-menu-item"
         key="set-node-active"
@@ -222,7 +234,34 @@ function NoNodeContextMenuOptions({
   viewport,
   createTree,
   cellIdAtPosition,
+  segmentationLayer,
+  dataset,
+  zoomStep,
+  currentMeshFile,
 }: NoNodeContextMenuProps) {
+  useEffect(() => {
+    (async () => {
+      if (segmentationLayer) {
+        await maybeFetchMeshFiles(segmentationLayer, dataset, false);
+      }
+    })();
+  }, []);
+
+  const loadMesh = async () => {
+    if (!currentMeshFile) return;
+
+    if (segmentationLayer) {
+      const layer = Model.getSegmentationLayer();
+      if (!layer) {
+        throw new Error("No segmentation layer found");
+      }
+      const segmentationCube = layer.cube;
+      const id = segmentationCube.getDataValue(globalPosition, null, zoomStep);
+
+      await loadMeshFromFile(id, globalPosition, currentMeshFile, segmentationLayer, dataset);
+    }
+  };
+
   const skeletonActions =
     skeletonTracing != null
       ? [
@@ -262,6 +301,15 @@ function NoNodeContextMenuOptions({
 
           <Menu.Item
             className="node-context-menu-item"
+            key="load-mesh-file"
+            onClick={loadMesh}
+            disabled={!currentMeshFile}
+          >
+            Load Precomputed Mesh
+          </Menu.Item>,
+
+          <Menu.Item
+            className="node-context-menu-item"
             key="fill-cell"
             onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
           >
@@ -275,7 +323,7 @@ function NoNodeContextMenuOptions({
     : nonSkeletonActions.concat(skeletonActions);
 
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
+    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       {allActions}
     </Menu>
   );
@@ -425,6 +473,10 @@ function mapStateToProps(state: OxalisState): StateProps {
     volumeTracing: state.tracing.volume,
     datasetScale: state.dataset.dataSource.scale,
     isSkeletonToolActive: state.uiInformation.activeTool === AnnotationToolEnum.SKELETON,
+    dataset: state.dataset,
+    segmentationLayer: getSegmentationLayer(state.dataset),
+    zoomStep: getRequestLogZoomStep(state),
+    currentMeshFile: state.currentMeshFile,
   };
 }
 

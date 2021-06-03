@@ -10,6 +10,7 @@ import {
   getTeamsForSharedAnnotation,
   updateTeamsForSharedAnnotation,
   editAnnotation,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -108,6 +109,7 @@ export default function ShareModalView(props: Props) {
       );
       Toast.success(messages["annotation.shared_teams_edited"]);
     }
+    sendAnalyticsEvent("share_annotation", { visibility });
     onOk();
   };
 

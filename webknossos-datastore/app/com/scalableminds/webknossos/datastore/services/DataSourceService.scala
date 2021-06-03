@@ -139,6 +139,10 @@ class DataSourceService @Inject()(
             true
         },
         "Largest segment ID invalid"
+      ),
+      Check(
+        dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
+        "Layer names must be unique. At least two layers have the same name."
       )
     ).flatten
 

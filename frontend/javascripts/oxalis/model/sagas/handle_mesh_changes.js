@@ -53,7 +53,6 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
     yield* put(updateLocalMeshMetaDataAction(id, { isLoading: false }));
   }
 }
-
 function* handleRemoteUpdateMesh(action: UpdateRemoteMeshMetaDataAction): Saga<void> {
   const { id } = action;
 

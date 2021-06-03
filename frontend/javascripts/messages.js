@@ -129,6 +129,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.segmentation_zoom_warning_agglomerate":
     "Segmentation data which is mapped using an agglomerate file cannot be rendered in this resolution. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
+  "tracing.compound_project_not_found":
+    "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
@@ -157,6 +159,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There is no isosurface for the active segment id available to download.",
     'Click with "CTRL + Left Mouse" on the desired segment to load it\'s isosurface.',
   ],
+  "tracing.mesh_listing_failed":
+    "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
   "tracing.confirm_remove_fallback_layer.title":
     "Are you sure you want to unlink the dataset's original segmentation layer?",
   "tracing.confirm_remove_fallback_layer.explanation":

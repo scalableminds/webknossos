@@ -17,8 +17,8 @@ import models.organization.{OrganizationDAO, OrganizationService}
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
-import org.apache.commons.codec.digest.HmacUtils
-import oxalis.mail.{DefaultMails, MailchimpClient, Send}
+import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
+import oxalis.mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import play.api.data.Form
@@ -104,7 +104,7 @@ class AuthenticationController @Inject()(
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 if (conf.Features.isDemoInstance) {
-                  mailchimpClient.registerUser(user, multiUser, tag = "registered_as_user")
+                  mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
                 } else {
                   Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
                 }
@@ -206,6 +206,7 @@ class AuthenticationController @Inject()(
         _ <- Fox.serialCombined(request.body.recipients)(recipient =>
           inviteService.inviteOneRecipient(recipient, request.identity, request.body.autoActivate))
         _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
+        _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasInvitedTeam)
       } yield Ok
   }
 
@@ -325,7 +326,7 @@ class AuthenticationController @Inject()(
       case Some(user) =>
         // logged in
         // Check if the request we recieved was signed using our private sso-key
-        if (HmacUtils.hmacSha256Hex(ssoKey, sso) == sig) {
+        if (shaHex(ssoKey, sso) == sig) {
           val payload = new String(Base64.decodeBase64(sso))
           val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
           for {
@@ -340,7 +341,7 @@ class AuthenticationController @Inject()(
                 s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
                 s"name=${URLEncoder.encode(user.name, "UTF-8")}"
             val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
-            val returnSignature = HmacUtils.hmacSha256Hex(ssoKey, encodedReturnPayload)
+            val returnSignature = shaHex(ssoKey, encodedReturnPayload)
             val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
             Redirect(returnUrl + "?" + query)
           }
@@ -350,6 +351,9 @@ class AuthenticationController @Inject()(
       case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
     }
   }
+
+  private def shaHex(key: String, valueToDigest: String): String =
+    new HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(valueToDigest)
 
   def createOrganizationWithAdmin: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     signUpForm.bindFromRequest.fold(
@@ -400,7 +404,7 @@ class AuthenticationController @Inject()(
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      mailchimpClient.registerUser(user, multiUser, tag = "registered_as_admin")
+                      mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }
                     Ok
                   }

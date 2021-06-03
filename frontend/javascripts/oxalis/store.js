@@ -469,6 +469,9 @@ export type IsosurfaceInformation = {|
   +segmentId: number,
   +seedPosition: Vector3,
   +isLoading: boolean,
+  +isPrecomputed: boolean,
+  +isVisible: boolean,
+  +fileName?: string,
 |};
 
 export type OxalisState = {|
@@ -484,6 +487,8 @@ export type OxalisState = {|
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
   +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
+  +availableMeshFiles: ?Array<string>,
+  +currentMeshFile: ?string,
 |};
 
 const sagaMiddleware = createSagaMiddleware();

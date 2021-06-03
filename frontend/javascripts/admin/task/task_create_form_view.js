@@ -18,7 +18,7 @@ import {
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
 import React from "react";
-import { InboxOutlined } from "@ant-design/icons";
+import { InboxOutlined, WarningOutlined } from "@ant-design/icons";
 import _ from "lodash";
 
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
@@ -117,14 +117,13 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   if (tasks.length < 0) {
     return;
   }
-  const maybeTaskPlural = tasks.length > 2 ? "tasks" : "task";
+  const maybeTaskPlural = tasks.length > 1 ? "task_ids" : "task_id";
   const lastCreationTime = Math.max(...tasks.map(task => task.created));
-  const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime);
-  const allTeamNames = _.uniq(tasks.map(task => task.team));
-  const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
+  const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime, "YYYY-MM-DD_HH-mm");
+  const allProjectNames = _.uniq(tasks.map(task => task.projectName)).join("_");
   const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
   const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
-  const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
+  const filename = `${maybeTaskPlural}_${allProjectNames}_${currentDateAsString}.csv`;
   const blob = new Blob([csv], { type: "text/plain;charset=utf-8" });
   saveAs(blob, filename);
 }
@@ -138,14 +137,6 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
   const subHeadingStyle = { fontWeight: "bold" };
   const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
 
-  const warningsContent =
-    warnings.length > 0 ? (
-      <div>
-        <div style={subHeadingStyle}>There were warnings during task creation:</div>
-        <div>{warnings.join("\n")}</div>
-      </div>
-    ) : null;
-
   tasks.forEach((taskResponse: TaskCreationResponse, i: number) => {
     if (taskResponse.status === 200 && taskResponse.success) {
       if (!teamName) {
@@ -156,6 +147,24 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
       failedTasks.push(`Line ${i}: ${taskResponse.error} \n`);
     }
   });
+
+  const allProjectNames = _.uniq(successfulTasks.map(task => task.projectName));
+  if (allProjectNames.length > 1) {
+    warnings.push(
+      `You created tasks for multiple projects at a time: ${allProjectNames.join(", ")}.`,
+    );
+  }
+  const warningsContent =
+    warnings.length > 0 ? (
+      <div>
+        <div style={subHeadingStyle}>
+          <WarningOutlined style={{ color: "var(--ant-warning)" }} /> There were warnings during
+          task creation:
+        </div>
+        <div style={{ whiteSpace: "pre-line" }}>{warnings.join("\n")}</div>
+      </div>
+    ) : null;
+
   const failedTasksAsString = failedTasks.join("");
   const successfulTasksContent =
     successfulTasks.length <= maxDisplayedTasksCount ? (
@@ -165,7 +174,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         {successfulTasks.map(task => taskToShortText(task)).join("\n")}
       </pre>
     ) : (
-      "Too many tasks to show, please use CSV download for a full list."
+      "Too many tasks to show, please use CSV download above for a full list."
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
@@ -184,37 +193,34 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
+            <div style={{ display: "flex", justifyContent: "center", margin: 20 }}>
+              <Button onClick={() => downloadTasksAsCSV(successfulTasks)} type="primary">
+                Download task info as CSV
+              </Button>
+            </div>
             <div style={subHeadingStyle}> Successful Tasks: </div>
             <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
-        ) : null}
-        {successfulTasks.length > 0 ? (
-          <React.Fragment>
-            <br />
-            <Button onClick={() => downloadTasksAsCSV(successfulTasks)}>
-              Download task info as CSV
-            </Button>
-            <br />
-          </React.Fragment>
         ) : null}
         {failedTasks.length > 0 ? (
           <React.Fragment>
             <Divider />
             <div>
-              <br />
+              <div style={{ display: "flex", justifyContent: "center", margin: 20 }}>
+                <Button
+                  onClick={() => {
+                    const blob = new Blob([failedTasksAsString], {
+                      type: "text/plain;charset=utf-8",
+                    });
+                    saveAs(blob, "failed-tasks.csv");
+                  }}
+                >
+                  Download failed task info as CSV
+                </Button>
+              </div>
               <div style={subHeadingStyle}> Failed Tasks:</div>
               <div style={displayResultsStyle}> {failedTasksContent}</div>
               <br />
-              <Button
-                onClick={() => {
-                  const blob = new Blob([failedTasksAsString], {
-                    type: "text/plain;charset=utf-8",
-                  });
-                  saveAs(blob, "failed-tasks.csv");
-                }}
-              >
-                Download failed task info as CSV
-              </Button>
               <br />
             </div>
           </React.Fragment>

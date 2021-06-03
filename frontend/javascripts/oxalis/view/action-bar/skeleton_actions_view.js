@@ -6,7 +6,11 @@ import ButtonComponent from "oxalis/view/components/button_component";
 
 import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { narrowButtonStyle } from "./volume_actions_view";
+
+export const narrowButtonStyle = {
+  paddingLeft: 10,
+  paddingRight: 8,
+};
 
 export default function SkeletonActionsView() {
   const dispatch = useDispatch();

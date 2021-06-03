@@ -111,6 +111,7 @@ export class OxalisModel {
       segmentationLayerName,
       globalMousePosition,
     );
+
     const getIdForPos = (pos, usableZoomStep) => {
       const id = cube.getDataValue(pos, null, usableZoomStep);
       return cube.mapId(id);

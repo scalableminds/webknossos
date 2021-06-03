@@ -30,7 +30,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { toNullable } from "libs/utils";
-import SkeletonActionsView from "./skeleton_actions_view";
+import SkeletonActionsView, { narrowButtonStyle } from "./skeleton_actions_view";
 
 function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
@@ -67,11 +67,6 @@ function toggleOverwriteMode(overwriteMode) {
     return OverwriteModeEnum.OVERWRITE_ALL;
   }
 }
-
-export const narrowButtonStyle = {
-  paddingLeft: 10,
-  paddingRight: 8,
-};
 
 const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));

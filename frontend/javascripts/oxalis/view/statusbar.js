@@ -1,28 +1,13 @@
 // @flow
 import { Space, Tooltip } from "antd";
 
-import _ from "lodash";
-import { connect } from "react-redux";
-import type { Dispatch } from "redux";
-
-import _ from "lodash";
-import { connect } from "react-redux";
-
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import React from "react";
 
 import { WarningOutlined, MoreOutlined } from "@ant-design/icons";
 
-import type { OxalisState } from "oxalis/store";
-import {
-  type Vector2,
-  type Vector3,
-  type OrthoView,
-  OrthoViews,
-  type VolumeTool,
-  VolumeToolEnum,
-} from "oxalis/constants";
+import { type Vector3, OrthoViews } from "oxalis/constants";
 import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 
@@ -31,18 +16,12 @@ import Store from "oxalis/store";
 
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 
-import { isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import message from "messages";
-import { isPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
-import api from "oxalis/api/internal_api";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import Cube from "oxalis/model/bucket_data_handling/data_cube";
 
 import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import {
@@ -50,13 +29,9 @@ import {
   isPlaneMode as getIsPlaneMode,
 } from "oxalis/model/accessors/view_mode_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
-import api from "oxalis/api/internal_api";
-import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 
-const borderToggleButtonMargin = 40;
-const fontSize = 14;
 const spaceBetweenItems = 25;
 const lineColor = "rgba(255, 255, 255, 0.67)";
 
@@ -66,11 +41,6 @@ const moreIconStyle = { height: 14, color: lineColor };
 const moreLinkStyle = { marginLeft: 10 };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
-
-function getSegmentationCube(): Cube {
-  const segmentationLayer = Model.getSegmentationLayer();
-  return segmentationLayer.cube;
-}
 
 function getPosString(pos: Vector3) {
   return V3.floor(pos).join(",");
@@ -92,7 +62,6 @@ function ZoomShortcut() {
         className="keyboard-mouse-icon"
         src="/assets/images/icon-statusbar-mouse-wheel.svg"
         alt="Mouse Wheel"
-        style={defaultIconStyle}
       />
       Zoom in/out
     </span>
@@ -107,7 +76,6 @@ function LeftClickShortcut({ actionInfos }) {
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left.svg"
           alt="Mouse Left Click"
-          style={defaultIconStyle}
         />
         {actionInfos.leftClick}
       </span>
@@ -120,7 +88,6 @@ function LeftClickShortcut({ actionInfos }) {
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left-drag.svg"
           alt="Mouse Left Drag"
-          style={defaultIconStyle}
         />
         {actionInfos.leftDrag}
       </span>
@@ -142,7 +109,6 @@ function RightClickShortcut({ actionInfos }) {
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right.svg"
           alt="Mouse Right Click"
-          style={defaultIconStyle}
         />
         {actionInfos.rightClick}
       </span>
@@ -155,7 +121,6 @@ function RightClickShortcut({ actionInfos }) {
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right-drag.svg"
           alt="Mouse Right Drag"
-          style={defaultIconStyle}
         />
         {actionInfos.rightDrag}
       </span>
@@ -245,7 +210,6 @@ function ShortcutsInfo() {
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
-          style={defaultIconStyle}
         />
         {isAltPressed || isControlPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
@@ -254,7 +218,6 @@ function ShortcutsInfo() {
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right-drag.svg"
           alt="Mouse Right"
-          style={defaultIconStyle}
         />
         Rotate 3D View
       </span>
@@ -266,30 +229,61 @@ function ShortcutsInfo() {
 
 function getCellInfo(globalMousePosition: ?Vector3) {
   if (!hasSegmentation()) return null;
-  const segmentationLayerName = Model.getSegmentationLayer().name;
-  const cube = getSegmentationCube();
-  const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
-    segmentationLayerName,
-    globalMousePosition,
-  );
-  const getIdForPos = (pos, usableZoomStep) => {
-    const id = cube.getDataValue(pos, null, usableZoomStep);
-    return cube.mapId(id);
-  };
+
   const getSegmentIdString = () => {
-    if (!globalMousePosition) return "-";
-    const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
-    return cube.isMappingEnabled() ? `${id} (mapped)` : id;
+    const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
+    if (!hoveredCellInfo) {
+      return "-";
+    }
+    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : hoveredCellInfo.id;
   };
 
-  return <span style={{ minWidth: 180, ...defaultInfoStyle }}>Segment {getSegmentIdString()}</span>;
+  return (
+    <span className="info-element" style={{ minWidth: 140 }}>
+      Segment {getSegmentIdString()}
+    </span>
+  );
 }
 
+function maybeLabelWithSegmentationWarning(hasUint64Segmentation: boolean, label: string) {
+  return hasUint64Segmentation ? (
+    <React.Fragment>
+      {label}{" "}
+      <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
+        <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+      </Tooltip>
+    </React.Fragment>
+  ) : (
+    label
+  );
+}
 function Infos() {
   const activeResolution = useSelector(state => getCurrentResolution(state));
   const mousePosition = useSelector(state => state.temporaryConfiguration.mousePosition);
   const activeViewport = useSelector(state => state.viewModeData.plane.activeViewport);
   const isPlaneMode = useSelector(state => getIsPlaneMode(state));
+
+  const isSkeletonAnnotation = useSelector(state => state.tracing.skeleton != null);
+  const isVolumeAnnotation = useSelector(state => state.tracing.volume != null);
+  const activeCellId = useSelector(state =>
+    state.tracing.volume ? state.tracing.volume.activeCellId : null,
+  );
+  const activeNodeId = useSelector(state =>
+    state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
+  );
+  const activeTreeId = useSelector(state =>
+    state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
+  );
+
+  const dispatch = useDispatch();
+  const onChangeActiveCellId = id => dispatch(setActiveNodeAction(id));
+  const onChangeActiveNodeId = id => dispatch(setActiveTreeAction(id));
+  const onChangeActiveTreeId = id => dispatch(setActiveCellAction(id));
+
+  const hasUint64Segmentation = useSelector(state => {
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+    return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
+  });
 
   let globalMousePosition;
   if (mousePosition && activeViewport !== OrthoViews.TDView) {
@@ -308,11 +302,45 @@ function Infos() {
         {activeResolution.join("-")}{" "}
       </span>
       {isPlaneMode ? (
-        <span style={{ minWidth: 140, ...defaultInfoStyle }}>
+        <span className="info-element" style={{ minWidth: 140 }}>
           Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
         </span>
       ) : null}
       {isPlaneMode ? getCellInfo(globalMousePosition) : null}
+
+      {isSkeletonAnnotation ? (
+        <span className="info-element" style={{ minWidth: 120 }}>
+          <NumberInputPopoverSetting
+            value={activeCellId}
+            label={maybeLabelWithSegmentationWarning(hasUint64Segmentation, "Active Segment")}
+            detailedLabel={maybeLabelWithSegmentationWarning(
+              hasUint64Segmentation,
+              "Change Active Segment ID",
+            )}
+            onChange={onChangeActiveCellId}
+          />
+        </span>
+      ) : null}
+      {isVolumeAnnotation ? (
+        <span className="info-element" style={{ minWidth: 120 }}>
+          <NumberInputPopoverSetting
+            value={activeNodeId}
+            label="Active Node"
+            detailedLabel="Change Active Node ID"
+            onChange={onChangeActiveNodeId}
+          />
+        </span>
+      ) : null}
+      {isSkeletonAnnotation ? (
+        <span className="info-element" style={{ minWidth: 120 }}>
+          <NumberInputPopoverSetting
+            value={activeTreeId}
+            label="Active Tree"
+            detailedLabel="Change Active Tree ID"
+            onChange={onChangeActiveTreeId}
+          />
+        </span>
+      ) : null}
     </Space>
   );
 }
@@ -320,7 +348,7 @@ function Infos() {
 class Statusbar extends React.PureComponent<{}, {}> {
   render() {
     return (
-      <span style={statusbarStyle}>
+      <span className="statusbar">
         <Infos />
         <ShortcutsInfo />
       </span>

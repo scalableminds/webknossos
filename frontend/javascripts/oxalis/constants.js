@@ -97,7 +97,6 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
 };
 
 export const BorderTabs = {
-  // TODO: Somehow add a tooltip and option to have a short name to the title
   DatasetInfoTabView: { id: "DatasetInfoTabView", name: "Info" },
   CommentTabView: { id: "CommentTabView", name: "Comments" },
   MeshesView: { id: "MeshesView", name: "Meshes" },

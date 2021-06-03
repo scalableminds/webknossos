@@ -149,7 +149,7 @@ class JobListView extends React.PureComponent<Props, State> {
       FAILURE:
         "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
       MANUAL:
-        "The automatic job failed, but admins have been notified and will attempt to repair it manually. Please check back here soon.",
+        "The job will be handled by an admin shortly, since it couldn't be finished automatically. Please check back here soon.",
     };
 
     const tooltip: string = tooltipMessages[job.state];

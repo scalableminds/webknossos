@@ -276,9 +276,9 @@ function Infos() {
   );
 
   const dispatch = useDispatch();
-  const onChangeActiveCellId = id => dispatch(setActiveNodeAction(id));
-  const onChangeActiveNodeId = id => dispatch(setActiveTreeAction(id));
-  const onChangeActiveTreeId = id => dispatch(setActiveCellAction(id));
+  const onChangeActiveCellId = id => dispatch(setActiveCellAction(id));
+  const onChangeActiveNodeId = id => dispatch(setActiveNodeAction(id));
+  const onChangeActiveTreeId = id => dispatch(setActiveTreeAction(id));
 
   const hasUint64Segmentation = useSelector(state => {
     const segmentationLayer = getSegmentationLayer(state.dataset);

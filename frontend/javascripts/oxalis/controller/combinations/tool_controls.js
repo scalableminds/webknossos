@@ -443,7 +443,7 @@ export class EraseTool {
     _altKey: boolean,
   ): Object {
     return {
-      leftDrag: `Erase (${activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace"})`,
+      leftDrag: `Erase (${activeTool === AnnotationToolEnum.ERASE_BRUSH ? "Brush" : "Trace"})`,
       rightClick: "Context Menu",
     };
   }

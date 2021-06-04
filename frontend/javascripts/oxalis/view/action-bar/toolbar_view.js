@@ -25,12 +25,26 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import { createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  createTreeAction,
+  setMergerModeEnabledAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { toNullable } from "libs/utils";
-import SkeletonActionsView, { narrowButtonStyle } from "./skeleton_actions_view";
+
+const narrowButtonStyle = {
+  paddingLeft: 10,
+  paddingRight: 8,
+};
+
+const imgStyleForSpaceyIcons = {
+  width: 20,
+  height: 20,
+  lineHeight: 10,
+  marginTop: -2,
+};
 
 function getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
@@ -156,6 +170,49 @@ function OverwriteModeSwitch({ isControlPressed, isShiftPressed, visible }) {
   );
 }
 
+function AdditionalSkeletonModesButtons() {
+  const dispatch = useDispatch();
+  const isMergerModeEnabled = useSelector(
+    state => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  const isNewNodeNewTreeModeOn = useSelector(state => state.userConfiguration.newNodeNewTree);
+  const toggleNewNodeNewTreeMode = () =>
+    dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
+  const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
+  const activeButtonStyle = { ...narrowButtonStyle, borderColor: "#1890ff" };
+  const newNodeNewTreeModeButtonStyle = isNewNodeNewTreeModeOn
+    ? activeButtonStyle
+    : narrowButtonStyle;
+  const mergerModeButtonStyle = isMergerModeEnabled ? activeButtonStyle : narrowButtonStyle;
+
+  return (
+    <React.Fragment>
+      <Tooltip title="Toggle the Single node Tree (soma clicking) mode">
+        <ButtonComponent
+          style={newNodeNewTreeModeButtonStyle}
+          value="active"
+          onClick={toggleNewNodeNewTreeMode}
+        >
+          <img
+            style={imgStyleForSpaceyIcons}
+            src="/assets/images/soma-clicking-icon.svg"
+            alt="Single Node Tree Mode"
+          />
+        </ButtonComponent>
+      </Tooltip>
+      <Tooltip title="Toggle Merger Mode">
+        <ButtonComponent style={mergerModeButtonStyle} value="active" onClick={toggleMergerMode}>
+          <img
+            style={imgStyleForSpaceyIcons}
+            src="/assets/images/merger-mode-icon.svg"
+            alt="Merger Mode"
+          />
+        </ButtonComponent>
+      </Tooltip>
+    </React.Fragment>
+  );
+}
+
 const mapId = id => {
   const { cube } = Model.getSegmentationLayer();
   return cube.mapId(id);
@@ -207,17 +264,22 @@ function CreateTreeButton() {
   return (
     <Badge dot style={{ boxShadow: "none", background: rgbColorString }}>
       <Tooltip title={`Create a new Tree – ${activeTreeHint}`}>
-        <ButtonComponent onClick={handleCreateTree} style={{ width: 36, paddingLeft: 10 }}>
+        <ButtonComponent onClick={handleCreateTree} style={narrowButtonStyle}>
           <img
             src="/assets/images/new-tree.svg"
             alt="New Tree Icon"
-            style={{ width: 16, height: 16 }}
+            style={imgStyleForSpaceyIcons}
           />
         </ButtonComponent>
       </Tooltip>
     </Badge>
   );
 }
+// TODO:
+// statusbar: change active segments id does not work :/
+// new tree | soma clicking icon neu machen; new tree -> wie skeleton icon nur mit einem plus; soma clicking: runde ecken und kleinere rechtecke, damit man erkennt, dass die getrennt sind.
+// Tooltip for right tabs title is gone :/
+// Shift shortcuts toggle in statusbar is broken -> just use ctrl + shift a few times. the behaviour / displayed info is not deterministic
 
 function ChangeBrushSizeButton() {
   const brushSize = useSelector(state => state.userConfiguration.brushSize);
@@ -322,7 +384,7 @@ export default function ToolbarView() {
   const showCreateCellButton =
     isVolumeSupported && !showCreateTreeButton && adaptedActiveTool !== AnnotationToolEnum.MOVE;
   const showChangeBrushSizeButton =
-    isVolumeSupported &&
+    showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
       adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
 
@@ -491,19 +553,25 @@ export default function ToolbarView() {
         ) : null}
       </Radio.Group>
 
+      {showCreateTreeButton ? (
+        <Space size={0} className="tight-button-group" style={{ marginLeft: 10 }}>
+          <CreateTreeButton />
+          <AdditionalSkeletonModesButtons />
+        </Space>
+      ) : null}
+
+      {showCreateCellButton || showChangeBrushSizeButton ? (
+        <Space size={0} style={{ marginLeft: 12 }} className="tight-button-group">
+          {showCreateCellButton ? <CreateCellButton /> : null}
+          {showChangeBrushSizeButton ? <ChangeBrushSizeButton /> : null}
+        </Space>
+      ) : null}
+
       <OverwriteModeSwitch
         isControlPressed={isControlPressed}
         isShiftPressed={isShiftPressed}
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
-
-      <Space size={0} style={{ marginLeft: 12 }} className="tight-button-group">
-        {showCreateCellButton ? <CreateCellButton /> : null}
-        {showCreateTreeButton ? <CreateTreeButton /> : null}
-        {showChangeBrushSizeButton ? <ChangeBrushSizeButton /> : null}
-      </Space>
-
-      {hasSkeleton ? <SkeletonActionsView /> : null}
     </div>
   );
 }

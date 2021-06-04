@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -8,35 +7,28 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="14"
+   height="14"
+   viewBox="0 0 14 14"
+   fill="none"
    version="1.1"
-   id="mdi-table-merge-cells"
-   width="24"
-   height="24"
-   viewBox="0 0 24 24"
+   id="svg14"
    sodipodi:docname="soma-clicking-icon.svg"
    inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)">
   <metadata
-     id="metadata9">
+     id="metadata20">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <defs
-     id="defs7">
-    <linearGradient
-       id="linearGradient4579"
-       osb:paint="solid">
-      <stop
-         style="stop-color:#006466;stop-opacity:1;"
-         offset="0"
-         id="stop4577" />
-    </linearGradient>
-  </defs>
+     id="defs18" />
   <sodipodi:namedview
      pagecolor="#ffffff"
      bordercolor="#666666"
@@ -48,46 +40,47 @@
      inkscape:pageshadow="2"
      inkscape:window-width="1920"
      inkscape:window-height="1029"
-     id="namedview5"
+     id="namedview16"
      showgrid="false"
-     inkscape:zoom="19.666667"
-     inkscape:cx="-1.6995586"
-     inkscape:cy="13.890625"
+     inkscape:zoom="47.6792"
+     inkscape:cx="6.1040832"
+     inkscape:cy="7.5934397"
      inkscape:window-x="0"
      inkscape:window-y="27"
      inkscape:window-maximized="1"
-     inkscape:current-layer="mdi-table-merge-cells" />
+     inkscape:current-layer="svg14" />
+  <path
+     d="M 3.6329636,0.94692743 V 6.3189999"
+     id="path2"
+     inkscape:connector-curvature="0"
+     style="stroke:#f1f1f1;stroke-width:1;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none" />
+  <path
+     d="M 0.94692743,3.6329636 H 6.3189999"
+     id="path4"
+     inkscape:connector-curvature="0"
+     style="stroke:#f1f1f1;stroke-width:1;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none" />
   <rect
-     style="fill:#f1f1f1;fill-opacity:1;stroke:#f1f1f1;stroke-width:4.50999737;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     id="rect4575-5-3"
-     width="4.9810023"
-     height="4.4160028"
-     x="15.281714"
-     y="15.84574" />
+     x="8.9513245"
+     y="1"
+     width="5.0486755"
+     height="5.0486755"
+     rx="1.2621689"
+     id="rect6"
+     style="fill:#f1f1f1;stroke-width:1.26216888" />
   <rect
-     style="fill:#f1f1f1;fill-opacity:1;stroke:#f1f1f1;stroke-width:4.50995207;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     id="rect4575-5-3-3"
-     width="4.9811559"
-     height="4.4157767"
-     x="15.331455"
-     y="4.0433202" />
+     x="8.9513245"
+     y="8.9513245"
+     width="5.0486755"
+     height="5.0486755"
+     rx="1.2621689"
+     id="rect6-3"
+     style="fill:#f1f1f1;stroke-width:1.26216888" />
   <rect
-     style="fill:#f1f1f1;fill-opacity:1;stroke:#f1f1f1;stroke-width:4.50999784;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     id="rect4575-5-3-67"
-     width="4.9810023"
-     height="4.4160018"
-     x="4.0941906"
-     y="15.845741" />
-  <text
-     xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:45.01622772px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#f1f1f1;fill-opacity:1;stroke:none;stroke-width:1.12540567;"
-     x="1.446422"
-     y="10.12004"
-     id="text4551"
-     transform="scale(1.0171347,0.98315395)"><tspan
-       sodipodi:role="line"
-       id="tspan4549"
-       x="1.446422"
-       y="10.12004"
-       style="font-size:12px;fill:#f1f1f1;stroke-width:1.12540567;fill-opacity:1;">+</tspan></text>
+     x="1.1086259"
+     y="8.9513245"
+     width="5.0486755"
+     height="5.0486755"
+     rx="1.2621689"
+     id="rect6-3-6"
+     style="fill:#f1f1f1;stroke-width:1.26216888" />
 </svg>

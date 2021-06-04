@@ -275,11 +275,6 @@ function CreateTreeButton() {
     </Badge>
   );
 }
-// TODO:
-// statusbar: change active segments id does not work :/
-// new tree | soma clicking icon neu machen; new tree -> wie skeleton icon nur mit einem plus; soma clicking: runde ecken und kleinere rechtecke, damit man erkennt, dass die getrennt sind.
-// Tooltip for right tabs title is gone :/
-// Shift shortcuts toggle in statusbar is broken -> just use ctrl + shift a few times. the behaviour / displayed info is not deterministic
 
 function ChangeBrushSizeButton() {
   const brushSize = useSelector(state => state.userConfiguration.brushSize);

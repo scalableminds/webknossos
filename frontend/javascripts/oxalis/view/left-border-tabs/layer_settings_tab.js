@@ -634,7 +634,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     hasInvisibleLayers ? (
       <span>
         <Tooltip title="Not all layers are currently visible.">
-          <ExclamationCircleOutlined style={{ marginLeft: 8, color: "coral" }} />
+          <ExclamationCircleOutlined
+            style={{ margin: "auto", color: "var(--ant-warning)", width: "100%" }}
+          />
         </Tooltip>
       </span>
     ) : null;

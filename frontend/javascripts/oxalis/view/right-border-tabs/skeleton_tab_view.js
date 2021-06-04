@@ -729,7 +729,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     </ButtonComponent>
                   </Dropdown>
                 </InputGroup>
-                <InputGroup compact className="compact-icons">
+                <InputGroup compact className="compact-icons compact-items">
                   <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>

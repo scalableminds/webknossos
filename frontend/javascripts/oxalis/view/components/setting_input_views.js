@@ -1,6 +1,6 @@
 // @flow
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
-import { DeleteOutlined, DownloadOutlined } from "@ant-design/icons";
+import { DeleteOutlined, DownloadOutlined, EditOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -276,13 +276,11 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
     </div>
   );
   return (
-    <Popover
-      content={numberInput}
-      trigger="click"
-      placement={placement}
-      style={{ cursor: "pointer" }}
-    >
-      {label} {value != null ? value : "-"}
+    <Popover content={numberInput} trigger="click" placement={placement}>
+      <span style={{ cursor: "pointer" }}>
+        {label} {value != null ? value : "-"}
+        <EditOutlined style={{ fontSize: 11 }} />
+      </span>
     </Popover>
   );
 }

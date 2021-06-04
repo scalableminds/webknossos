@@ -272,7 +272,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 );
               }
             }
-            this.setState({ isUploading: false });
+            this.setState({ isUploading: false, retries: 0 });
             if (maybeError == null) {
               newestForm.setFieldsValue({ name: null, zipFile: [] });
               this.props.onUploaded(
@@ -291,6 +291,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               isUploading: false,
               isRetrying: false,
               uploadProgress: 0,
+              retries: 0,
             });
           },
         );
@@ -310,12 +311,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
 
       resumableUpload.on("fileRetry", file => {
-        const currentRetries = this.state.retries;
-        if (currentRetries === retriesUntilAnalyticsEventSent) {
-          ErrorHandling.notify(new Error(`Upload of file ${file} was resumed many times.`));
-          sendAnalyticsEvent("many_upload_retries", { currentRetries });
+        const currentRetries = this.state.retries + 1;
+        // log to airbrake in intervals of retriesUntilAnalyticsEventSent
+        if (currentRetries >= retriesUntilAnalyticsEventSent && currentRetries % 10 === 0) {
+          ErrorHandling.notify(
+            new Error(`Upload of file ${file} was resumed ${currentRetries} times.`),
+          );
         }
-        this.setState(prev => ({ ...prev, isRetrying: true, retries: prev.retries + 1 }));
+        this.setState(prev => ({
+          ...prev,
+          isRetrying: true,
+          retries: prev.retries + 1,
+        }));
       });
 
       resumableUpload.addFiles(formValues.zipFile);

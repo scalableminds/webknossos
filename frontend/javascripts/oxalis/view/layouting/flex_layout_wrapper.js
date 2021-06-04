@@ -4,7 +4,7 @@ import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import Store, { type OxalisState, type BorderOpenStatus } from "oxalis/store";
-import { Layout } from "antd";
+import { Layout, Tooltip } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -17,7 +17,7 @@ import {
 } from "oxalis/view/layouting/default_layout_configs";
 
 import Statusbar from "oxalis/view/statusbar";
-import { OrthoViews, ArbitraryViews } from "oxalis/constants";
+import { OrthoViews, ArbitraryViews, BorderTabs } from "oxalis/constants";
 import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
 import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
@@ -250,6 +250,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       <FlexLayout.Layout
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
+        titleFactory={renderedNode => (
+          <Tooltip title={BorderTabs[renderedNode.getId()].description}>
+            {renderedNode.getName()}{" "}
+          </Tooltip>
+        )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.

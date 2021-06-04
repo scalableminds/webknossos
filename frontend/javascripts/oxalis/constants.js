@@ -97,17 +97,46 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
 };
 
 export const BorderTabs = {
-  DatasetInfoTabView: { id: "DatasetInfoTabView", name: "Info" },
-  CommentTabView: { id: "CommentTabView", name: "Comments" },
-  MeshesView: { id: "MeshesView", name: "Meshes" },
-  SkeletonTabView: { id: "SkeletonTabView", name: "Skeleton" },
-  AbstractTreeTab: { id: "AbstractTreeTab", name: "AbsTree" },
+  DatasetInfoTabView: {
+    id: "DatasetInfoTabView",
+    name: "Info",
+    description: "Information about the dataset",
+  },
+  CommentTabView: {
+    id: "CommentTabView",
+    name: "Comments",
+    description: "Add comments to skeleton nodes",
+  },
+  MeshesView: {
+    id: "MeshesView",
+    name: "Meshes",
+    description: "Load, compute and organize Meshes of segments",
+  },
+  SkeletonTabView: {
+    id: "SkeletonTabView",
+    name: "Skeleton",
+    description: "Create and organize skeletons",
+  },
+  AbstractTreeTab: {
+    id: "AbstractTreeTab",
+    name: "AbsTree",
+    description: "Views an abstract version of the active skeleton",
+  },
   ControlsAndRenderingSettingsTab: {
     id: "ControlsAndRenderingSettingsTab",
-    name: "Controls/Rendering",
+    name: "Settings",
+    description: "Change general settings about controls and rendering.",
   },
-  BoundingBoxTab: { id: "BoundingBoxTab", name: "BBoxes" },
-  LayerSettingsTab: { id: "LayerSettingsTab", name: "Layer" },
+  BoundingBoxTab: {
+    id: "BoundingBoxTab",
+    name: "BBoxes",
+    description: "Add and organize bounding boxes",
+  },
+  LayerSettingsTab: {
+    id: "LayerSettingsTab",
+    name: "Layers",
+    description: "Change settings of each data layer",
+  },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;

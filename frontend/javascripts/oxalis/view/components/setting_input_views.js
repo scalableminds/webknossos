@@ -279,7 +279,7 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
     <Popover content={numberInput} trigger="click" placement={placement}>
       <span style={{ cursor: "pointer" }}>
         {label} {value != null ? value : "-"}
-        <EditOutlined style={{ fontSize: 11 }} />
+        <EditOutlined style={{ fontSize: 11, opacity: 0.7, margin: "0 0px 5px 3px" }} />
       </span>
     </Popover>
   );

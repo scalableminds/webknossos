@@ -25,6 +25,8 @@ ThisBuild / libraryDependencies ++= Seq(
   "com.github.ghik" % "silencer-lib" % "1.7.0" % Provided cross CrossVersion.full
 )
 
+ThisBuild / assemblyMergeStrategy := (_ => MergeStrategy.first)
+
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 scapegoatIgnoredFiles := Seq(".*/Tables.scala",
@@ -68,6 +70,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .settings(
     name := "webknossos-datastore",
     commonSettings,
+    assembly / assemblyMergeStrategy := (_ => MergeStrategy.first),
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,

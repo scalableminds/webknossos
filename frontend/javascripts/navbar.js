@@ -1,21 +1,38 @@
 // @flow
-import { Avatar, Icon, Layout, Menu, Popover } from "antd";
+import { Avatar, Layout, Menu, Popover } from "antd";
+import {
+  SwapOutlined,
+  TeamOutlined,
+  CheckOutlined,
+  BarChartOutlined,
+  HomeOutlined,
+  QuestionCircleOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
+import classnames from "classnames";
 import { connect } from "react-redux";
 import React from "react";
 
 import Toast from "libs/toast";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser, APIUserTheme } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import { getBuildInfo, getUsersOrganizations, switchToOrganization } from "admin/admin_rest_api";
-import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import {
+  getBuildInfo,
+  getUsersOrganizations,
+  switchToOrganization,
+  updateSelectedThemeOfUser,
+} from "admin/admin_rest_api";
+import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
+import { document } from "libs/window";
 import features from "features";
+import { setThemeAction } from "oxalis/model/actions/ui_actions";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -54,7 +71,7 @@ function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "flex" }}>
       <Avatar
         className="hover-effect-via-opacity"
         style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
@@ -62,7 +79,7 @@ function UserInitials({ activeUser, isMultiMember }) {
         {initialOf(firstName) + initialOf(lastName)}
       </Avatar>
       {isMultiMember ? (
-        <Icon
+        <SwapOutlined
           style={{
             position: "absolute",
             top: 2,
@@ -74,7 +91,6 @@ function UserInitials({ activeUser, isMultiMember }) {
             fontSize: 12,
             color: "#75df4a",
           }}
-          type="swap"
           title="You are member of multiple organizations. Click the avatar to switch between them."
         />
       ) : null}
@@ -95,17 +111,13 @@ function CollapsibleMenuTitle({ title, collapse, icon }) {
   }
 }
 
-function AdministrationSubMenu({ collapse, ...menuProps }) {
+function AdministrationSubMenu({ collapse, isAdmin, organization, ...menuProps }) {
   return (
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
       key="adminMenu"
       title={
-        <CollapsibleMenuTitle
-          title="Administration"
-          icon={<Icon type="team" />}
-          collapse={collapse}
-        />
+        <CollapsibleMenuTitle title="Administration" icon={<TeamOutlined />} collapse={collapse} />
       }
       {...menuProps}
     >
@@ -132,6 +144,11 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
       <Menu.Item key="/scripts">
         <Link to="/scripts">Scripts</Link>
       </Menu.Item>
+      {isAdmin && (
+        <Menu.Item key="/organization">
+          <Link to={`/organizations/${organization}/edit`}>Organization</Link>
+        </Menu.Item>
+      )}
     </SubMenu>
   );
 }
@@ -142,11 +159,7 @@ function StatisticsSubMenu({ collapse, ...menuProps }) {
       className={collapse ? "hide-on-small-screen" : ""}
       key="statisticMenu"
       title={
-        <CollapsibleMenuTitle
-          title="Statistics"
-          icon={<Icon type="bar-chart" />}
-          collapse={collapse}
-        />
+        <CollapsibleMenuTitle title="Statistics" icon={<BarChartOutlined />} collapse={collapse} />
       }
       {...menuProps}
     >
@@ -172,7 +185,7 @@ function getTimeTrackingMenu({ collapse }) {
       <Link to="/reports/timetracking" style={{ fontWeight: 400 }}>
         <CollapsibleMenuTitle
           title="Time Tracking"
-          icon={<Icon type="bar-chart" />}
+          icon={<BarChartOutlined />}
           collapse={collapse}
         />
       </Link>
@@ -184,11 +197,7 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
   return (
     <SubMenu
       title={
-        <CollapsibleMenuTitle
-          title="Help"
-          icon={<Icon type="question-circle" />}
-          collapse={collapse}
-        />
+        <CollapsibleMenuTitle title="Help" icon={<QuestionCircleOutlined />} collapse={collapse} />
       }
       {...other}
     >
@@ -246,9 +255,7 @@ function DashboardSubMenu({ collapse, ...other }) {
     <SubMenu
       className={collapse ? "hide-on-small-screen" : ""}
       key="dashboardMenu"
-      title={
-        <CollapsibleMenuTitle title="Dashboard" icon={<Icon type="home" />} collapse={collapse} />
-      }
+      title={<CollapsibleMenuTitle title="Dashboard" icon={<HomeOutlined />} collapse={collapse} />}
       {...other}
     >
       <Menu.Item key="/dashboard/datasets">
@@ -268,7 +275,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName, organization: organizationName } = activeUser;
+  const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
 
   const activeOrganization = usersOrganizations.find(org => org.name === organizationName);
@@ -281,6 +288,41 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const switchTo = async org => {
     Toast.info(`Switching to ${org.displayName || org.name}`);
     await switchToOrganization(org.name);
+  };
+
+  const setSelectedTheme = async (theme: APIUserTheme) => {
+    let newTheme = theme;
+    if (newTheme === "auto") {
+      newTheme =
+        window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+    }
+    const styleEl = (document.getElementById("primary-stylesheet"): HTMLLinkElement);
+    const oldThemeMatch = styleEl.href.match(/[a-z]+\.css/);
+    const oldTheme = oldThemeMatch != null ? oldThemeMatch[0] : null;
+    if (oldTheme !== newTheme) {
+      const newStyleEl = styleEl.cloneNode();
+      const parentEl = styleEl.parentNode;
+      if (parentEl != null) {
+        newStyleEl.href = newStyleEl.href.replace(/[a-z]+\.css/, `${newTheme}.css`);
+        newStyleEl.addEventListener(
+          "load",
+          () => {
+            parentEl.removeChild(styleEl);
+          },
+          { once: true },
+        );
+        parentEl.insertBefore(newStyleEl, styleEl);
+
+        Store.dispatch(setThemeAction(newTheme));
+      }
+    }
+    if (selectedTheme !== theme) {
+      const newUser = await updateSelectedThemeOfUser(activeUser.id, theme);
+      Store.dispatch(setActiveUserAction(newUser));
+    }
   };
 
   const isMultiMember = switchableOrganizations.length > 0;
@@ -316,6 +358,20 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item key="token">
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>
+        <Menu.SubMenu title="Theme" key="theme">
+          {[["auto", "System-default"], ["light", "Light"], ["dark", "Dark (beta)"]].map(
+            ([key, label]) => (
+              <Menu.Item
+                key={key}
+                onClick={() => {
+                  setSelectedTheme(key);
+                }}
+              >
+                {selectedTheme === key && <CheckOutlined />} {label}
+              </Menu.Item>
+            ),
+          )}
+        </Menu.SubMenu>
         <Menu.Item key="logout">
           <a href="/" onClick={handleLogout}>
             Logout
@@ -334,7 +390,11 @@ function AnonymousAvatar() {
       trigger="click"
       style={{ position: "fixed" }}
     >
-      <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
+      <Avatar
+        className="hover-effect-via-opacity"
+        icon={<UserOutlined />}
+        style={{ marginLeft: 8 }}
+      />
     </Popover>
   );
 }
@@ -361,18 +421,16 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const navbarStyle: Object = {
     padding: 0,
     overflowX: "auto",
+    overflowY: "hidden",
     position: "fixed",
-    width: "100%",
-    zIndex: 1000,
     height: navbarHeight,
     display: "flex",
     alignItems: "center",
-    color: "rgba(255, 255, 255, 0.67)",
-    background: "#001529",
     whiteSpace: "nowrap",
   };
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
+  const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
   const isAdminOrTeamManager =
     activeUser != null ? Utils.isUserAdminOrTeamManager(activeUser) : false;
 
@@ -387,8 +445,15 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 
-    if (isAdminOrTeamManager) {
-      menuItems.push(<AdministrationSubMenu key="admin" collapse={collapseAllNavItems} />);
+    if (isAdminOrTeamManager && activeUser != null) {
+      menuItems.push(
+        <AdministrationSubMenu
+          key="admin"
+          collapse={collapseAllNavItems}
+          isAdmin={isAdmin}
+          organization={activeUser.organization}
+        />,
+      );
       menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);
     } else {
       // JSX can not be used here directly as it adds a item between the menu and the actual menu item and this leads to a bug.
@@ -401,21 +466,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
         activeUser={loggedInUser}
         handleLogout={handleLogout}
       />,
-    );
-  }
-
-  if (!_isAuthenticated && features().isDemoInstance && !Utils.getIsInIframe()) {
-    menuItems.push(
-      <Menu.Item key="features">
-        <Link to="/features" style={{ fontWeight: 400 }}>
-          <Icon type="rocket" /> Features
-        </Link>
-      </Menu.Item>,
-      <Menu.Item key="pricing">
-        <Link to="/pricing" style={{ fontWeight: 400 }}>
-          <Icon type="trophy" /> Pricing
-        </Link>
-      </Menu.Item>,
     );
   }
 
@@ -435,14 +485,13 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.
   const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
-  const separator = (
-    <div
-      style={{ height: "100%", marginLeft: 2, marginRight: 10, borderLeft: "1px #666879 solid" }}
-    />
-  );
+  const separator = <div className="navbar-separator" />;
 
   return (
-    <Header style={navbarStyle} className={collapseAllNavItems ? "collapsed-nav-header" : ""}>
+    <Header
+      style={navbarStyle}
+      className={classnames("navbar-header", { "collapsed-nav-header": collapseAllNavItems })}
+    >
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}

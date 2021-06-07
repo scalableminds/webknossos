@@ -1,7 +1,7 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Tag, Spin, Button, Input, Modal } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import _ from "lodash";
@@ -10,9 +10,18 @@ import { AsyncLink } from "components/async_clickables";
 import type { APITaskType } from "types/api_flow_types";
 import { getTaskTypes, deleteTaskType, downloadNml } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import {
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  ScheduleOutlined,
+} from "@ant-design/icons";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -111,7 +120,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Link to="/taskTypes/create">
-              <Button icon="plus" style={marginRight} type="primary">
+              <Button icon={<PlusOutlined />} style={marginRight} type="primary">
                 Add Task Type
               </Button>
             </Link>
@@ -235,22 +244,22 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 render={(__, taskType: APITaskType) => (
                   <span>
                     <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
-                      <Icon type="eye-o" />
+                      <EyeOutlined />
                       View
                     </Link>
                     <br />
                     <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
-                      <Icon type="edit" />
+                      <EditOutlined />
                       Edit
                     </Link>
                     <br />
                     <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
-                      <Icon type="schedule" />
+                      <ScheduleOutlined />
                       Tasks
                     </Link>
                     <br />
                     <Link to={`/taskTypes/${taskType.id}/projects`} title="View Projects">
-                      <Icon type="eye-o" />
+                      <EyeOutlined />
                       Projects
                     </Link>
                     <br />
@@ -261,15 +270,15 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                         return downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
                       }}
                       title="Download all Finished Annotations"
+                      icon={<DownloadOutlined />}
                     >
-                      <Icon type="download" />
                       Download
                     </AsyncLink>
                     <br />
-                    <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
-                      <Icon type="delete" />
+                    <LinkButton onClick={_.partial(this.deleteTaskType, taskType)}>
+                      <DeleteOutlined />
                       Delete
-                    </a>
+                    </LinkButton>
                   </span>
                 )}
               />

@@ -16,7 +16,8 @@ export const settings = {
   nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
-  tdViewDisplayPlanes: "Display Planes in 3D View",
+  tdViewDisplayPlanes: "Plane Display Mode in 3D View",
+  tdViewDisplayDatasetBorders: "Display Dataset Borders in 3D View",
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   quality: "Quality",
@@ -63,7 +64,7 @@ export default {
   offline:
     "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
     "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
@@ -128,6 +129,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.segmentation_zoom_warning_agglomerate":
     "Segmentation data which is mapped using an agglomerate file cannot be rendered in this resolution. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
+  "tracing.compound_project_not_found":
+    "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
@@ -156,6 +159,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There is no isosurface for the active segment id available to download.",
     'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
   ],
+  "tracing.mesh_listing_failed":
+    "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
   "tracing.confirm_remove_fallback_layer.title":
     "Are you sure you want to unlink the dataset's original segmentation layer?",
   "tracing.confirm_remove_fallback_layer.explanation":
@@ -177,7 +182,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "webgl.context_loss":
     "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "webgl.too_many_active_layers": _.template(
-    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the sidebar settings.",
+    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now annotating a new task with the following description",
@@ -349,4 +354,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The project report page could not be refreshed. Please try to reload the page.",
   planned_maintenance:
     "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
+  "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
+  "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
+  "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
 };

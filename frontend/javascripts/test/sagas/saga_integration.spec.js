@@ -29,7 +29,6 @@ test.beforeEach(async t => {
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
   await __setupOxalis(t, "task");
-
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });

@@ -1,5 +1,6 @@
 // @flow
-import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "antd";
+import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
+import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { useState, useEffect } from "react";
@@ -9,6 +10,7 @@ import {
   getTeamsForSharedAnnotation,
   updateTeamsForSharedAnnotation,
   editAnnotation,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -34,7 +36,7 @@ function Hint({ children, style }) {
         ...style,
         marginBottom: 12,
         fontSize: 12,
-        color: "rgb(118, 118, 118)",
+        color: "var(--ant-text-secondary)",
       }}
     >
       {children}
@@ -107,6 +109,7 @@ export default function ShareModalView(props: Props) {
       );
       Toast.success(messages["annotation.shared_teams_edited"]);
     }
+    sendAnalyticsEvent("share_annotation", { visibility });
     onOk();
   };
 
@@ -158,7 +161,11 @@ export default function ShareModalView(props: Props) {
         <Col span={18}>
           <Input.Group compact>
             <Input style={{ width: "85%" }} value={url} readOnly />
-            <Button style={{ width: "15%" }} onClick={() => copyUrlToClipboard(url)} icon="copy">
+            <Button
+              style={{ width: "15%" }}
+              onClick={() => copyUrlToClipboard(url)}
+              icon={<CopyOutlined />}
+            >
               Copy
             </Button>
           </Input.Group>
@@ -167,7 +174,7 @@ export default function ShareModalView(props: Props) {
           </Hint>
         </Col>
       </Row>
-      <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
+      <Divider style={{ margin: "18px 0" }}>
         <i className={`fas fa-${iconMap[visibility]}`} />
         Visibility
       </Divider>
@@ -203,8 +210,8 @@ export default function ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
-      <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
-        <Icon type="share-alt" />
+      <Divider style={{ margin: "18px 0" }}>
+        <ShareAltOutlined />
         Team Sharing
       </Divider>
       <Row>

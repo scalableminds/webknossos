@@ -445,6 +445,7 @@ export function busyWaitDevHelper(time: number) {
   const start = new Date();
   let now;
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     now = new Date();
     if (now - start >= time) {
@@ -670,10 +671,15 @@ export function sortArray8(arr: Array<number>): void {
   swap(arr, 3, 4);
 }
 
-export function waitForCondition(pred: () => boolean): Promise<void> {
+// When an interval greater than RAF_INTERVAL_THRESHOLD is used,
+// setTimeout is used instead of requestAnimationFrame.
+const RAF_INTERVAL_THRESHOLD = 20;
+export function waitForCondition(pred: () => boolean, interval: number = 0): Promise<void> {
   const tryToResolve = resolve => {
     if (pred()) {
       resolve();
+    } else if (interval > RAF_INTERVAL_THRESHOLD) {
+      setTimeout(() => tryToResolve(resolve), interval);
     } else {
       window.requestAnimationFrame(() => tryToResolve(resolve));
     }

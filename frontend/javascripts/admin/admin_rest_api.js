@@ -38,6 +38,7 @@ import {
   APIAnnotationTypeEnum,
   type APIUpdateActionBatch,
   type APIUser,
+  type APIUserTheme,
   type APIUserLoggedTime,
   type ExperienceDomainList,
   type HybridServerTracing,
@@ -125,19 +126,20 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number 
   });
 }
 
-export function sendAnalyticsEvent(eventType: string, eventProperties: Object): void {
+export function sendAnalyticsEvent(eventType: string, eventProperties: {} = {}): void {
   // Note that the Promise from sendJSONReceiveJSON is not awaited or returned here,
   // since failing analytics events should not have an impact on the application logic.
   Request.sendJSONReceiveJSON(`/api/analytics/${eventType}`, {
     method: "POST",
     data: eventProperties,
+    showErrorToast: false,
   });
 }
 
 export function sendFailedRequestAnalyticsEvent(
   requestType: string,
   error: Object,
-  requestProperties: Object,
+  requestProperties: {},
 ): void {
   const eventProperties = {
     request_type: requestType,
@@ -223,6 +225,16 @@ export function updateLastTaskTypeIdOfUser(
   return Request.sendJSONReceiveJSON(`/api/users/${userId}/taskTypeId`, {
     method: "PUT",
     data: { lastTaskTypeId },
+  });
+}
+
+export function updateSelectedThemeOfUser(
+  userId: string,
+  selectedTheme: APIUserTheme,
+): Promise<APIUser> {
+  return Request.sendJSONReceiveJSON(`/api/users/${userId}/selectedTheme`, {
+    method: "PUT",
+    data: JSON.stringify(selectedTheme),
   });
 }
 
@@ -363,24 +375,24 @@ export async function getProjectsForTaskType(
   return responses.map(transformProject);
 }
 
-export async function getProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}`);
+export async function getProject(projectId: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectId}`);
   return transformProject(project);
 }
 
 export async function increaseProjectTaskInstances(
-  projectName: string,
+  projectId: string,
   delta?: number = 1,
 ): Promise<APIProjectWithAssignments> {
   const project = await Request.receiveJSON(
-    `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
+    `/api/projects/${projectId}/incrementEachTasksInstances?delta=${delta}`,
     { method: "PATCH" },
   );
   return transformProject(project);
 }
 
-export function deleteProject(projectName: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectName}`, {
+export function deleteProject(projectId: string): Promise<void> {
+  return Request.receiveJSON(`/api/projects/${projectId}`, {
     method: "DELETE",
   });
 }
@@ -395,29 +407,26 @@ export function createProject(project: APIProjectCreator): Promise<APIProject> {
   });
 }
 
-export function updateProject(
-  projectName: string,
-  project: APIProjectUpdater,
-): Promise<APIProject> {
+export function updateProject(projectId: string, project: APIProjectUpdater): Promise<APIProject> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
 
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}`, {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}`, {
     method: "PUT",
     data: transformedProject,
   });
 }
 
-export async function pauseProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}/pause`, {
+export async function pauseProject(projectId: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectId}/pause`, {
     method: "PATCH",
   });
   return transformProject(project);
 }
 
-export async function resumeProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}/resume`, {
+export async function resumeProject(projectId: string): Promise<APIProject> {
+  const project = await Request.receiveJSON(`/api/projects/${projectId}/resume`, {
     method: "PATCH",
   });
   return transformProject(project);
@@ -508,10 +517,10 @@ export function transferTask(annotationId: string, userId: string): Promise<APIA
 }
 
 export async function transferActiveTasksOfProject(
-  projectName: string,
+  projectId: string,
   userId: string,
 ): Promise<APIAnnotation> {
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}/transferActiveTasks`, {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectId}/transferActiveTasks`, {
     data: {
       userId,
     },
@@ -519,8 +528,8 @@ export async function transferActiveTasksOfProject(
   });
 }
 
-export async function getUsersWithActiveTasks(projectName: string): Promise<Array<APIActiveUser>> {
-  return Request.receiveJSON(`/api/projects/${projectName}/usersWithActiveTasks`);
+export async function getUsersWithActiveTasks(projectId: string): Promise<Array<APIActiveUser>> {
+  return Request.receiveJSON(`/api/projects/${projectId}/usersWithActiveTasks`);
 }
 
 // ### Annotations
@@ -822,6 +831,8 @@ export async function getJobs(): Promise<Array<APIJob>> {
     boundingBox: job.commandArgs.kwargs.bbox,
     exportFileName: job.commandArgs.kwargs.export_file_name,
     tracingId: job.commandArgs.kwargs.volume_tracing_id,
+    annotationId: job.commandArgs.kwargs.annotation_id,
+    annotationType: job.commandArgs.kwargs.annotation_type,
     state: job.celeryInfo.state || "UNKNOWN",
     createdAt: job.created,
   }));
@@ -843,15 +854,26 @@ export async function startExportTiffJob(
   bbox: Vector6,
   layerName: ?string,
   tracingId: ?string,
+  annotationId: ?string,
+  annotationType: ?APIAnnotationType,
+  mappingName: ?string,
+  mappingType: ?string,
+  hideUnmappedIds: ?boolean,
   tracingVersion: ?number = null,
 ): Promise<Array<APIJob>> {
   const layerNameSuffix = layerName != null ? `&layerName=${layerName}` : "";
   const tracingIdSuffix = tracingId != null ? `&tracingId=${tracingId}` : "";
+  const annotationIdSuffix = annotationId != null ? `&annotationId=${annotationId}` : "";
+  const annotationTypeSuffix = annotationType != null ? `&annotationType=${annotationType}` : "";
   const tracingVersionSuffix = tracingVersion != null ? `&tracingVersion=${tracingVersion}` : "";
+  const mappingNameSuffix = mappingName != null ? `&mappingName=${mappingName}` : "";
+  const mappingTypeSuffix = mappingType != null ? `&mappingType=${mappingType}` : "";
+  const hideUnmappedIdsSuffix =
+    hideUnmappedIds != null ? `&hideUnmappedIds=${hideUnmappedIds.toString()}` : "";
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
-    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}`,
+    )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
   );
 }
 
@@ -1014,10 +1036,7 @@ export function createResumableUpload(
   );
 }
 
-export function finishDatasetUpload(
-  datastoreHost: string,
-  uploadInformation: Object,
-): Promise<void> {
+export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}): Promise<void> {
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,
@@ -1396,6 +1415,23 @@ export async function checkAnyOrganizationExists(): Promise<boolean> {
   return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
+export async function deleteOrganization(organizationName: string): Promise<void> {
+  return Request.triggerRequest(`/api/organizations/${organizationName}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateOrganization(
+  organizationName: string,
+  displayName: string,
+  newUserMailingList: string,
+): Promise<APIOrganization> {
+  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationName}`, {
+    method: "PATCH",
+    data: { displayName, newUserMailingList },
+  });
+}
+
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
   return Request.receiveJSON("/api/buildinfo", { doNotInvestigate: true });
@@ -1532,4 +1568,67 @@ export function getAgglomerateSkeleton(
       { useWebworkerForArrayBuffer: false },
     ),
   );
+}
+
+export function getMeshfilesForDatasetLayer(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<Array<string>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes?token=${token}`,
+    ),
+  );
+}
+
+export function getMeshfileChunksForSegment(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+): Promise<Array<Vector3>> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+        },
+        showErrorToast: false,
+      },
+    ),
+  );
+}
+
+export function getMeshfileChunkData(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  meshFile: string,
+  segmentId: number,
+  position: Vector3,
+): Promise<ArrayBuffer> {
+  return doWithToken(async token => {
+    const data = await Request.sendJSONReceiveArraybufferWithHeaders(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/meshes/chunks/data?token=${token}`,
+      {
+        data: {
+          meshFile,
+          segmentId,
+          position,
+        },
+        useWebworkerForArrayBuffer: false,
+      },
+    );
+    return data;
+  });
 }

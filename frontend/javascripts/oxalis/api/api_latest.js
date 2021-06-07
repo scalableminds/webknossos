@@ -16,6 +16,7 @@ import Constants, {
   type Vector4,
   type VolumeTool,
   VolumeToolEnum,
+  TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
@@ -1105,15 +1106,12 @@ class DataApi {
 
     if (position == null) return zoomStep;
 
-    const { renderMissingDataBlack } = state.datasetConfiguration;
     const cube = this.model.getCubeByLayerName(layerName);
 
     // While render missing data black is not active and there is no segmentation for the current zoom step,
     // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
     // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
-    const renderedZoomStep = renderMissingDataBlack
-      ? zoomStep
-      : cube.getNextUsableZoomStepForPosition(position, zoomStep);
+    const renderedZoomStep = cube.getNextUsableZoomStepForPosition(position, zoomStep);
 
     return renderedZoomStep;
   }
@@ -1411,7 +1409,6 @@ class UserApi {
     - moveValue3d
     - rotateValue
     - crosshairSize
-    - layoutScaleValue
     - mouseRotateValue
     - clippingDistance
     - clippingDistanceArbitrary
@@ -1420,6 +1417,7 @@ class UserApi {
     - displayScalebars
     - scale
     - tdViewDisplayPlanes
+    - tdViewDisplayDatasetBorders
     - newNodeNewTree
     - centerNewNode
     - highlightCommentedNodes
@@ -1435,7 +1433,14 @@ class UserApi {
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
   getConfiguration(key: $Keys<UserConfiguration>) {
-    return Store.getState().userConfiguration[key];
+    const value = Store.getState().userConfiguration[key];
+
+    // Backwards compatibility
+    if (key === "tdViewDisplayPlanes") {
+      return value === TDViewDisplayModeEnum.DATA;
+    }
+
+    return value;
   }
 
   /**
@@ -1446,6 +1451,11 @@ class UserApi {
    * api.user.setConfiguration("keyboardDelay", 20);
    */
   setConfiguration(key: $Keys<UserConfiguration>, value: any) {
+    // Backwards compatibility
+    if (key === "tdViewDisplayPlanes") {
+      value = value ? TDViewDisplayModeEnum.DATA : TDViewDisplayModeEnum.WIREFRAME;
+    }
+
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }

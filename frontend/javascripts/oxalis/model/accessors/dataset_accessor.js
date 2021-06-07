@@ -50,7 +50,7 @@ export class ResolutionInfo {
 
     // This function creates a map which maps from powerOfTwo (2**index) to resolution.
 
-    const resolutions = this.resolutions;
+    const { resolutions } = this;
 
     if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
       throw new Error("Max dimension in resolutions is not unique.");
@@ -443,16 +443,9 @@ export function determineAllowedModes(
   settings?: Settings,
 ): { preferredMode: ?APIAllowedMode, allowedModes: Array<APIAllowedMode> } {
   // The order of allowedModes should be independent from the server and instead be similar to ViewModeValues
-  let allowedModes = settings
+  const allowedModes = settings
     ? _.intersection(ViewModeValues, settings.allowedModes)
     : ViewModeValues;
-
-  const colorLayer = _.find(dataset.dataSource.dataLayers, {
-    category: "color",
-  });
-  if (colorLayer != null && colorLayer.elementClass !== "uint8") {
-    allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
-  }
 
   let preferredMode = null;
   if (settings && settings.preferredMode != null) {

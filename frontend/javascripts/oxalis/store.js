@@ -36,6 +36,7 @@ import {
   type OverwriteMode,
   type ControlMode,
   ControlModeEnum,
+  type TDViewDisplayMode,
   type ViewMode,
   type OrthoView,
   type Rect,
@@ -295,7 +296,6 @@ export type UserConfiguration = {|
   +hideTreeRemovalWarning: boolean,
   +highlightCommentedNodes: boolean,
   +keyboardDelay: number,
-  +layoutScaleValue: number,
   +mouseRotateValue: number,
   +moveValue3d: number,
   +moveValue: number,
@@ -307,7 +307,8 @@ export type UserConfiguration = {|
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
-  +tdViewDisplayPlanes: boolean,
+  +tdViewDisplayPlanes: TDViewDisplayMode,
+  +tdViewDisplayDatasetBorders: boolean,
   +gpuMemoryFactor: number,
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
@@ -444,6 +445,13 @@ export type ViewModeData = {
   +arbitrary: ArbitraryModeData,
 };
 
+export type BorderOpenStatus = {
+  left: boolean,
+  right: boolean,
+};
+
+export type Theme = "light" | "dark";
+
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
@@ -452,12 +460,17 @@ type UiInformation = {
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
   +isRefreshingIsosurfaces: boolean,
+  +borderOpenStatus: BorderOpenStatus,
+  +theme: Theme,
 };
 
 export type IsosurfaceInformation = {|
   +segmentId: number,
   +seedPosition: Vector3,
   +isLoading: boolean,
+  +isPrecomputed: boolean,
+  +isVisible: boolean,
+  +fileName?: string,
 |};
 
 export type OxalisState = {|
@@ -473,6 +486,8 @@ export type OxalisState = {|
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
   +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
+  +availableMeshFiles: ?Array<string>,
+  +currentMeshFile: ?string,
 |};
 
 const sagaMiddleware = createSagaMiddleware();

@@ -1,5 +1,6 @@
 // @flow
-import { notification, Icon, Collapse } from "antd";
+import { notification, Collapse } from "antd";
+import { CloseCircleOutlined } from "@ant-design/icons";
 import React from "react";
 
 const { Panel } = Collapse;
@@ -86,12 +87,7 @@ const Toast = {
 
     if (type === "error") {
       toastConfig = Object.assign(toastConfig, {
-        icon: <Icon type="close-circle-o" className="alert-wiggle" style={{ color: "#a94442" }} />,
-        style: {
-          backgroundColor: "#f2dede",
-          borderColor: "#ebccd1",
-          color: "#a94442",
-        },
+        icon: <CloseCircleOutlined />,
       });
     }
 

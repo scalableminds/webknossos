@@ -1,5 +1,6 @@
 // @flow
-import { Button, Icon, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
+import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
+import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Dropzone from "react-dropzone";
 import * as React from "react";
@@ -32,31 +33,9 @@ type StateProps = {|
 type Props = {| ...StateProps, ...OwnProps |};
 
 function OverlayDropZone({ children }) {
-  const overlayStyle = {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    padding: "2.5em 0",
-    background: "rgba(0, 0, 0, 0.45)",
-    textAlign: "center",
-    zIndex: 1000,
-  };
-
   return (
-    <div style={overlayStyle}>
-      <div
-        style={{
-          width: 400,
-          height: 250,
-          background: "white",
-          borderRadius: 4,
-          margin: "0 auto",
-        }}
-      >
-        {children}
-      </div>
+    <div className="nml-upload-zone-overlay">
+      <div className="nml-upload-zone-modal">{children}</div>
     </div>
   );
 }
@@ -67,7 +46,7 @@ function NmlDropArea({ clickAllowed, isUpdateAllowed, getInputProps }) {
     <div style={{ textAlign: "center", cursor: "pointer" }}>
       {clickInput}
       <div>
-        <Icon type="inbox" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
+        <InboxOutlined style={{ fontSize: 180, color: "var(--ant-primary)" }} />
       </div>
       {isUpdateAllowed ? (
         <h5>Drop NML files here{clickAllowed ? " or click to select files" : null}...</h5>
@@ -121,7 +100,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           <List.Item>
             <List.Item.Meta
               avatar={
-                <Avatar size="large" icon="file" style={{ backgroundColor: "rgb(58, 144, 255)" }} />
+                <Avatar
+                  size="large"
+                  icon={<FileOutlined />}
+                  style={{ backgroundColor: "var(--ant-primary)" }}
+                />
               }
               title={
                 <span style={{ wordBreak: "break-word" }}>
@@ -164,18 +147,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             style={{ marginBottom: 12 }}
           />
         ) : null}
-        <Dropzone
-          multiple
-          disablePreview
-          style={{
-            position: "relative",
-            textAlign: "center",
-            border: "1px dashed #d9d9d9",
-            borderRadius: 4,
-            cursor: "pointer",
-          }}
-          onDrop={this.onDrop}
-        >
+        <Dropzone multiple disablePreview onDrop={this.onDrop}>
           {({ getRootProps, getInputProps }) => (
             <div {...getRootProps()}>
               <NmlDropArea

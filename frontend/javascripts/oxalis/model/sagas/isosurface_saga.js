@@ -15,9 +15,10 @@ import {
   removeIsosurfaceAction,
   addIsosurfaceAction,
   finishedRefreshingIsosurfacesAction,
-  startRefreshingIsosurfaceAction,
-  finishedRefreshingIsosurfaceAction,
+  finishedLoadingIsosurfaceAction,
+  startedLoadingIsosurfaceAction,
   type ImportIsosurfaceFromStlAction,
+  type UpdateIsosurfaceVisibilityAction,
   type RemoveIsosurfaceAction,
   type RefreshIsosurfaceAction,
   type TriggerIsosurfaceDownloadAction,
@@ -132,7 +133,9 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-  yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
+  if (action.shouldReload) {
+    yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
+  }
 }
 
 // This function either returns the activeCellId of the current volume tracing
@@ -154,10 +157,14 @@ function* ensureSuitableIsosurface(
 ): Saga<void> {
   const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
   const layer = Model.getSegmentationLayer();
+
+  // we need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
+  if (maybeFlycamAction && !maybeFlycamAction.shouldRefreshIsosurface) {
+    return;
+  }
   if (segmentId === 0 || layer == null) {
     return;
   }
-
   yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
 }
 
@@ -217,9 +224,9 @@ function* loadIsosurfaceWithNeighbors(
 
   const hasIsosurface = yield* select(state => state.isosurfaces[segmentId] != null);
   if (!hasIsosurface) {
-    yield* put(addIsosurfaceAction(segmentId, position));
+    yield* put(addIsosurfaceAction(segmentId, position, false));
   }
-  yield* put(startRefreshingIsosurfaceAction(segmentId));
+  yield* put(startedLoadingIsosurfaceAction(segmentId));
 
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
@@ -238,7 +245,7 @@ function* loadIsosurfaceWithNeighbors(
     positionsToRequest = positionsToRequest.concat(neighbors);
   }
 
-  yield* put(finishedRefreshingIsosurfaceAction(segmentId));
+  yield* put(finishedLoadingIsosurfaceAction(segmentId));
 }
 
 function hasBatchCounterExceededLimit(segmentId: number): boolean {
@@ -369,7 +376,7 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.
   const seedPosition = yield* select(state => getFlooredPosition(state.flycam));
-  yield* put(addIsosurfaceAction(segmentId, seedPosition));
+  yield* put(addIsosurfaceAction(segmentId, seedPosition, true));
 }
 
 function* removeIsosurface(
@@ -389,7 +396,7 @@ function* removeIsosurface(
   if (cellId === currentCellId) {
     // Clear the active cell id to avoid that the isosurface is immediately reconstructed
     // when the position changes.
-    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0]));
+    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0], false));
   }
 }
 
@@ -449,7 +456,7 @@ function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   if (isosurfacePositions.length === 0) {
     return;
   }
-  yield* put(startRefreshingIsosurfaceAction(cellId));
+  yield* put(startedLoadingIsosurfaceAction(cellId));
   // Removing Isosurface from cache.
   yield* call(removeIsosurface, removeIsosurfaceAction(cellId), false);
   // The isosurface should only be removed once after re-fetching the isosurface first position.
@@ -460,7 +467,13 @@ function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
     yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
     shouldBeRemoved = false;
   }
-  yield* put(finishedRefreshingIsosurfaceAction(cellId));
+  yield* put(finishedLoadingIsosurfaceAction(cellId));
+}
+
+function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
+  const { id, visibility } = action;
+  const SceneController = yield* call(getSceneController);
+  SceneController.setIsosurfaceVisibility(id, visibility);
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
@@ -473,5 +486,6 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
   yield _takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
+  yield _takeEvery("UPDATE_ISOSURFACE_VISIBILITY", handleIsosurfaceVisibilityChange);
   yield _takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
 }

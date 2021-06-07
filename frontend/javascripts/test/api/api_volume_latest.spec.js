@@ -10,23 +10,23 @@ import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
 test.beforeEach(t => __setupOxalis(t, "volume"));
 
 test("getActiveCellId should get the id of the active cell", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.is(api.tracing.getActiveCellId(), TRACING.activeSegmentId);
 });
 
 test("setActiveCell should set the active cell id", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   api.tracing.setActiveCell(27);
   t.is(api.tracing.getActiveCellId(), 27);
 });
 
 test("getVolumeTool should get the current tool", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.is(api.tracing.getVolumeTool(), VolumeToolEnum.MOVE);
 });
 
 test("setVolumeTool should set the current tool", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   api.tracing.setVolumeTool(VolumeToolEnum.TRACE);
   t.is(api.tracing.getVolumeTool(), VolumeToolEnum.TRACE);
   api.tracing.setVolumeTool(VolumeToolEnum.BRUSH);
@@ -34,7 +34,7 @@ test("setVolumeTool should set the current tool", t => {
 });
 
 test("setVolumeTool should throw an error for an invalid tool", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.throws(() => api.tracing.setVolumeTool(67));
   t.throws(() => api.tracing.setVolumeTool("myTool"));
   t.throws(() => api.tracing.setVolumeTool());
@@ -42,7 +42,7 @@ test("setVolumeTool should throw an error for an invalid tool", t => {
 
 test("Data API: labelVoxels should label a list of voxels", t => {
   const { api, model } = t.context;
-  const cube = model.getSegmentationLayer().cube;
+  const { cube } = model.getSegmentationLayer();
 
   api.data.labelVoxels([[1, 2, 3], [7, 8, 9]], 34);
   // The specified voxels should be labeled with the new value
@@ -53,7 +53,7 @@ test("Data API: labelVoxels should label a list of voxels", t => {
 });
 
 test("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.is(api.data.getVolumeTracingLayerName(), "segmentation");
 });
 
@@ -71,6 +71,6 @@ test("Data API: downloadRawDataCuboid should open a popup with the correct URL",
 });
 
 test("Calling a skeleton api function in a volume tracing should throw an error", t => {
-  const api = t.context.api;
+  const { api } = t.context;
   t.throws(() => api.tracing.getActiveNodeId());
 });

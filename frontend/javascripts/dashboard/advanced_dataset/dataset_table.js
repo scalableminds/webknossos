@@ -1,7 +1,8 @@
 // @flow
 
-import { Table, Icon, Tag } from "antd";
+import { Table, Tag } from "antd";
 import * as React from "react";
+import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import _ from "lodash";
 import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
@@ -178,7 +179,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               <Link
                 to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
                 title="View Dataset"
-                style={{ color: "rgba(0, 0, 0, 0.65)" }}
+                className="incognito-link"
               >
                 {dataset.name}
               </Link>
@@ -231,10 +232,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
           width={130}
           sorter={(a, b) => a.isActive - b.isActive}
           sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
-          render={(isActive: boolean) => {
-            const icon = isActive ? "check-circle-o" : "close-circle-o";
-            return <Icon type={icon} style={{ fontSize: 20 }} />;
-          }}
+          render={(isActive: boolean) =>
+            isActive ? (
+              <CheckCircleOutlined style={{ fontSize: 20 }} />
+            ) : (
+              <CloseCircleOutlined style={{ fontSize: 20 }} />
+            )
+          }
         />
         <Column
           title="Public"
@@ -243,10 +247,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
           width={130}
           sorter={(a, b) => a.isPublic - b.isPublic}
           sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
-          render={(isPublic: boolean) => {
-            const icon = isPublic ? "check-circle-o" : "close-circle-o";
-            return <Icon type={icon} style={{ fontSize: 20 }} />;
-          }}
+          render={(isPublic: boolean) =>
+            isPublic ? (
+              <CheckCircleOutlined style={{ fontSize: 20 }} />
+            ) : (
+              <CloseCircleOutlined style={{ fontSize: 20 }} />
+            )
+          }
         />
         <Column
           title="Data Layers"

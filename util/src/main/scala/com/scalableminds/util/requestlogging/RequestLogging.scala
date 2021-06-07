@@ -1,32 +1,43 @@
 package com.scalableminds.util.requestlogging
 
 import com.typesafe.scalalogging.LazyLogging
-import play.api.http.HttpEntity
+import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait AbstractRequestLogging extends LazyLogging {
 
-  def logRequestFormatted(request: Request[_], result: Result, userId: Option[String] = None): Unit = {
-    val userIdMsg = userId.map(id => s" for user $id").getOrElse("")
-    result.body match {
-      case HttpEntity.Strict(byteString, _) if result.header.status != 200 =>
-        logger.warn(
-          s"Answering ${result.header.status} at ${request.uri}$userIdMsg – ${byteString.take(20000).decodeString("utf-8")}")
-      case _ => ()
-    }
+  def logRequestFormatted(request: Request[_],
+                          result: Result,
+                          notifier: Option[String => Unit],
+                          requesterId: Option[String] = None): Unit = {
+
+    if (Status.isSuccessful(result.header.status)) return
+
+    val userIdMsg = requesterId.map(id => s" for user $id").getOrElse("")
+    val resultMsg = s": ${resultBody(result)}"
+    val msg = s"Answering ${result.header.status} at ${request.uri}$userIdMsg$resultMsg"
+    logger.warn(msg)
+    notifier.foreach(_(msg))
   }
+
+  private def resultBody(result: Result): String =
+    result.body match {
+      case HttpEntity.Strict(byteString, _) => byteString.take(20000).decodeString("utf-8")
+      case _                                => ""
+    }
 
 }
 
 trait RequestLogging extends AbstractRequestLogging {
   // Hint: within webKnossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
-  def log(block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] =
+  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[_],
+                                                                             ec: ExecutionContext): Future[Result] =
     for {
       result: Result <- block
-      _ = logRequestFormatted(request, result)
+      _ = logRequestFormatted(request, result, notifier)
     } yield result
 
   def logTime(notifier: String => Unit)(block: => Future[Result])(implicit request: Request[_],
@@ -43,14 +54,8 @@ trait RequestLogging extends AbstractRequestLogging {
     for {
       result: Result <- block
       executionTime = System.nanoTime() - start
-      _ = if (request.uri.contains("volume") && executionTime > 3e9) logTimeFormatted(executionTime, request, result)
+      _ = if (executionTime > 1e10) logTimeFormatted(executionTime, request, result)
     } yield result
-  }
-
-  def log(block: => Result)(implicit request: Request[_]): Result = {
-    val result: Result = block
-    logRequestFormatted(request, result)
-    result
   }
 
 }

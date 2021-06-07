@@ -48,6 +48,7 @@ GET           /users/:id                                                       c
 PATCH         /users/:id                                                       controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                            controllers.UserController.updateLastTaskTypeId(id: String)
 PUT           /users/:id/novelUserExperienceInfos                              controllers.UserController.updateNovelUserExperienceInfos(id: String)
+PUT           /users/:id/selectedTheme                                         controllers.UserController.updateSelectedTheme(id: String)
 GET           /users/:id/tasks                                                 controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/loggedTime                                            controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                controllers.UserController.usersLoggedTime
@@ -163,27 +164,29 @@ DELETE        /scripts/:id                                                     c
 GET           /projects                                                        controllers.ProjectController.list
 GET           /projects/assignments                                            controllers.ProjectController.listWithStatus
 POST          /projects                                                        controllers.ProjectController.create
-GET           /projects/:name                                                  controllers.ProjectController.read(name: String)
-DELETE        /projects/:name                                                  controllers.ProjectController.delete(name: String)
-PUT           /projects/:name                                                  controllers.ProjectController.update(name: String)
-GET           /projects/:name/tasks                                            controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-PATCH         /projects/:name/incrementEachTasksInstances                      controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
-PATCH         /projects/:name/pause                                            controllers.ProjectController.pause(name: String)
-PATCH         /projects/:name/resume                                           controllers.ProjectController.resume(name: String)
-GET           /projects/:name/usersWithActiveTasks                             controllers.ProjectController.usersWithActiveTasks(name:String)
-POST          /projects/:name/transferActiveTasks                              controllers.ProjectController.transferActiveTasks(name:String)
+GET           /projects/:id                                                    controllers.ProjectController.read(id: String)
+DELETE        /projects/:id                                                    controllers.ProjectController.delete(id: String)
+PUT           /projects/:id                                                    controllers.ProjectController.update(id: String)
+GET           /projects/:id/tasks                                              controllers.ProjectController.tasksForProject(id: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+PATCH         /projects/:id/incrementEachTasksInstances                        controllers.ProjectController.incrementEachTasksInstances(id: String, delta: Option[Long])
+PATCH         /projects/:id/pause                                              controllers.ProjectController.pause(id: String)
+PATCH         /projects/:id/resume                                             controllers.ProjectController.resume(id: String)
+GET           /projects/:id/usersWithActiveTasks                               controllers.ProjectController.usersWithActiveTasks(id:String)
+POST          /projects/:id/transferActiveTasks                                controllers.ProjectController.transferActiveTasks(id:String)
 
 # Statistics
 GET           /statistics/webknossos                                           controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
 GET           /statistics/users                                                controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 #Organizations
-GET           /organizations                                                   controllers.OrganizationController.list
-GET           /organizations/byInvite/:inviteToken                             controllers.OrganizationController.getByInvite(inviteToken: String)
-GET           /organizations/default                                           controllers.OrganizationController.getDefault
-GET           /organizationsIsEmpty                                            controllers.OrganizationController.organizationsIsEmpty
-GET           /organizations/:organizationName                                 controllers.OrganizationController.get(organizationName: String)
-GET           /operatorData                                                    controllers.OrganizationController.getOperatorData
+GET           /organizations                                                    controllers.OrganizationController.list
+GET           /organizations/byInvite/:inviteToken                              controllers.OrganizationController.getByInvite(inviteToken: String)
+GET           /organizations/default                                            controllers.OrganizationController.getDefault
+GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
+GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)
+PATCH         /organizations/:organizationName                                  controllers.OrganizationController.update(organizationName: String)
+DELETE        /organizations/:organizationName                                  controllers.OrganizationController.delete(organizationName: String)
+GET           /operatorData                                                     controllers.OrganizationController.getOperatorData
 
 #Timelogging
 GET           /time/allusers/:year/:month                                      controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
@@ -192,7 +195,8 @@ GET           /time/user/:userId                                               c
 
 # Long-Running Jobs
 GET           /jobs                                                            controllers.JobsController.list
+GET           /jobs/status                                                     controllers.JobsController.status
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
 GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String)
-GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String])
+GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])

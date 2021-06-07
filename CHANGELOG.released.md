@@ -7,6 +7,83 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [21.05.1](https://github.com/scalableminds/webknossos/releases/tag/21.06.0) - 2021-06-01
+[Commits](https://github.com/scalableminds/webknossos/compare/21.05.1...21.06.0)
+
+### Highlights
+- Added the possibility to load precomputed meshes from a meshfile via the meshes tab or context menu. [#5345](https://github.com/scalableminds/webknossos/pull/5345)
+- Added the option to hide the plane borders and crosshairs in the 3D viewport. Also, this setting was moved from the "Other" section of the user settings to the 3D viewport. Additionally, added a setting to hide the dataset bounding box in the 3D view. [#5440](https://github.com/scalableminds/webknossos/pull/5440)
+
+### Added
+- Added an icon to the info tab of a tracing that links to the dataset settings. It's located next to the dataset name. [#5462](https://github.com/scalableminds/webknossos/pull/5462)
+- Upgraded several dependencies including Play framework to 2.8, yielding performance and security improvements. [#5515](https://github.com/scalableminds/webknossos/pull/5515)
+
+### Changed
+- Active nodes and trees are now highlighted with a background color in the comments tab. [#5461](https://github.com/scalableminds/webknossos/pull/5461)
+- The visibility of meshes can now be toggled via the meshes tab. [#5346](https://github.com/scalableminds/webknossos/pull/5345)
+- When exporting an user bounding box to tiff, the active mapping will now be applied to the exported data, as well. [#5474](https://github.com/scalableminds/webknossos/pull/5474)
+- Changed the layout of the modal that informs the user about the success of task creations and changed the naming schema for the downloadable csv file containing the information about created tasks. [#5491](https://github.com/scalableminds/webknossos/pull/5491)
+
+### Fixed
+- Fixed that the row selection in the user table wasn't properly preserved when filtering the table and (un)selecting rows. [#5486](https://github.com/scalableminds/webknossos/pull/5486)
+- Fixed a bug where histograms generation failed for tiny datasets. [#5458](https://github.com/scalableminds/webknossos/pull/5458)
+- Fixed a bug where NMLs with huge tree IDs uploaded via back-end produced broken annotations. [#5484](https://github.com/scalableminds/webknossos/pull/5484)
+- Fixed a bug that led to various possible inconsistencies in the dataset settings in the datasource tab, when the inferred datasource properties suggested by the backend were accepted by the user. [#5492](https://github.com/scalableminds/webknossos/pull/5492)
+- Fixed a bug where the upload of multiple NMLs failed if some of them have an organization attribute and others don’t. [#5483](https://github.com/scalableminds/webknossos/pull/5483)
+- Fixed a bug in the application of agglomerate files where the `cumsum.json` was not used correctly. [#5499](https://github.com/scalableminds/webknossos/pull/5499)
+- Improve loading of precomputed meshes and fix some issues (e.g., deleting a mesh which was still being loaded) which could produce an invalid state. [#5519](https://github.com/scalableminds/webknossos/issues/5519)
+- Fixed an innocuous error toast when opening the dataset import view. [#5526](https://github.com/scalableminds/webknossos/pull/5526)
+- Fixed that creating/editing a volume task type didn't allow submitting the form. [#5532](https://github.com/scalableminds/webknossos/pull/5532)
+
+### Removed
+- Removed the button to load or refresh the isosurface of the centered cell from the 3D view. Instead, this action can be triggered from the "Meshes" tab. [#5440](https://github.com/scalableminds/webknossos/pull/5440)
+
+## [21.05.1](https://github.com/scalableminds/webknossos/releases/tag/21.05.1) - 2021-05-05
+[Commits](https://github.com/scalableminds/webknossos/compare/21.05.0...21.05.1)
+
+### Highlights
+- Added a dark theme for webKnossos. [#5407](https://github.com/scalableminds/webknossos/pull/5407)
+
+### Changed
+- The deployment configuration of webKnossos was cleaned up. If you host your own webKnossos instance, be sure to update your config according to the migration guide. [#5208](https://github.com/scalableminds/webknossos/pull/5208)
+
+### Fixed
+- Fixed a bug where users could see long-running jobs listing of other users [#5435](https://github.com/scalableminds/webknossos/pull/5435)
+- Fixed a rendering bug which occurred when the initial layout had a hidden 3D viewport. [#5429](https://github.com/scalableminds/webknossos/pull/5429)
+- Fixed an incorrect initial camera rotation in the 3D viewport and an incorrect initial zoom value. [#5453](https://github.com/scalableminds/webknossos/pull/5453)
+- Fixed a bug where the task search showed duplicates if a user had multiple instances of a task (as made possible by the transfer functionality). [#5456](https://github.com/scalableminds/webknossos/pull/5456)
+- Fixed a bug where showing active users of a project, and transferring their tasks was broken. [#5456](https://github.com/scalableminds/webknossos/pull/5456)
+
+## [21.05.0](https://github.com/scalableminds/webknossos/releases/tag/21.05.0) - 2021-04-22
+[Commits](https://github.com/scalableminds/webknossos/compare/21.04.0...21.05.0)
+
+### Highlights
+- The layout of the tracing view was revamped. Most notably, the layout now has two well-behaved sidebars (left and right) which can be collapsed and expanded while the remaining space is used for the main data view. Additionally, a status bar was added which shows important information, such as the currently rendered magnification and useful mouse controls. [#5279](https://github.com/scalableminds/webknossos/pull/5279)
+- Added a screenshot of the 3D view when using the screenshot functionality in the tracing view. [#5324](https://github.com/scalableminds/webknossos/pull/5324)
+
+### Added
+- The names of Task Types and Projects no longer need to be globally unique, instead only within their respective organization.  [#5334](https://github.com/scalableminds/webknossos/pull/5334)
+- Upgraded UI library antd to version 4, creating a slightly more modern look and behavior of many UI elements. [#5350](https://github.com/scalableminds/webknossos/pull/5350)
+- Tiff export jobs of volume annotations now show the link back to the annotation in the jobs list. [#5378](https://github.com/scalableminds/webknossos/pull/5378)
+- Added support for flight- and oblique-mode when having non-uint8 dataset layers. [#5396](https://github.com/scalableminds/webknossos/pull/5396)
+
+### Changed
+- webKnossos is now part of the [image.sc support community](https://forum.image.sc/tag/webknossos). [#5332](https://github.com/scalableminds/webknossos/pull/5332)
+- Meshes that are imported by the user in the meshes tab are now rendered the same way as generated isosurface meshes. [#5326](https://github.com/scalableminds/webknossos/pull/5326)
+- In the new REST API version 4, projects are no longer referenced by name, but instead by id. [#5334](https://github.com/scalableminds/webknossos/pull/5334)
+
+### Fixed
+- Fixed a bug where some values in the project list were displayed incorrectly after pausing/unpausing the project. [#5339](https://github.com/scalableminds/webknossos/pull/5339)
+- Fixed that editing a task type would always re-add the default values to the recommended configuration (if enabled). [#5341](https://github.com/scalableminds/webknossos/pull/5341)
+- Fixed a bug where tasks created from existing volume annotations that did not have a specified bounding box were broken. [#5362](https://github.com/scalableminds/webknossos/pull/5361)
+- Fixed broken search functionality in select components. [#5394](https://github.com/scalableminds/webknossos/pull/5394)
+- Fixed a bug which could cause corrupted trees when CTRL+Rightclick was used in an empty tree. [#5385](https://github.com/scalableminds/webknossos/pull/5385)
+- Fixed a bug in Safari which could cause an error message (which is safe to ignore). [#5373](https://github.com/scalableminds/webknossos/pull/5373)
+- Fixed artifacts in screenshots near the dataset border. [#5324](https://github.com/scalableminds/webknossos/pull/5324)
+- Fixed a bug where the page would scroll up unexpectedly when showing various confirm modals. [#5371](https://github.com/scalableminds/webknossos/pull/5371)
+- Fixed a bug where user changes (email, activation) would show as successful even if they actually failed. [#5392](https://github.com/scalableminds/webknossos/pull/5392)
+- Fixed a bug where dataset uploads were sent to the wrong datastore, and failed. [#5404](https://github.com/scalableminds/webknossos/pull/5404)
+
 ## [21.04.0](https://github.com/scalableminds/webknossos/releases/tag/21.04.0) - 2021-03-22
 [Commits](https://github.com/scalableminds/webknossos/compare/21.03.1...21.04.0)
 
@@ -23,6 +100,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Measured distances will be shown in voxel space, too. [#5240](https://github.com/scalableminds/webknossos/pull/5240)
+- Improved documentation and inline-help for data import and conversion. [#5420](https://github.com/scalableminds/webknossos/pull/5420)
 
 ### Fixed
 - Fixed a regression in the task search which could lead to a frontend crash. [#5267](https://github.com/scalableminds/webknossos/pull/5267)

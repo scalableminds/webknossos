@@ -22,7 +22,9 @@ import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import models.organization.{Organization, OrganizationDAO}
+import play.api.i18n.{Messages, MessagesProvider}
 
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -43,12 +45,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
   val unreportedStatus = "No longer available on datastore."
-  val initialTeamsTimeoutMs: Long = 5 * 60 * 1000
+  val initialTeamsTimeout: FiniteDuration = 1 hour
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
-  def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Boolean] =
+  def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[ObjectId] = {
@@ -206,7 +208,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }.futureBox
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
-    if (conf.Application.insertInitialData) {
+    if (conf.WebKnossos.SampleOrganization.enabled) {
       dataSetDAO.isEmpty.map { isEmpty =>
         if (isEmpty)
           Some(ObjectId("5c766bec6c01006c018c7459"))
@@ -309,9 +311,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
 
-  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext,
+                                                             m: MessagesProvider): Fox[Unit] =
     for {
-      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeoutMs) ?~> "dataset.initialTeams.timeout"
+      now <- Fox.successful(System.currentTimeMillis())
+      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeout.toMillis) ?~> Messages(
+        "dataset.initialTeams.timeout",
+        now,
+        dataSet.created)
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
       _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
       userTeams <- teamDAO.findAllEditable

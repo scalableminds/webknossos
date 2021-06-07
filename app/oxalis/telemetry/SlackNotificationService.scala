@@ -9,7 +9,7 @@ import utils.WkConf
 class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyLogging {
 
   private lazy val slackClient = new SlackClient(rpc,
-                                                 config.SlackNotifications.url,
+                                                 config.SlackNotifications.uri,
                                                  name = s"webKnossos at ${config.Http.uri}",
                                                  config.SlackNotifications.verboseLoggingEnabled)
 
@@ -22,6 +22,18 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
   def warn(title: String, msg: String): Unit =
     slackClient.warn(
       title = title,
+      msg = msg
+    )
+
+  def info(title: String, msg: String): Unit =
+    slackClient.info(
+      title = title,
+      msg = msg
+    )
+
+  def noticeFailedJobRequest(msg: String): Unit =
+    slackClient.warn(
+      title = "Failed job request",
       msg = msg
     )
 

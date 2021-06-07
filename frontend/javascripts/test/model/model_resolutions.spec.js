@@ -1,11 +1,15 @@
 // @noflow
 import test from "ava";
+import mockRequire from "mock-require";
 
-import { ensureMatchingLayerResolutions } from "oxalis/model_initialization";
 import {
   convertToDenseResolution,
   getResolutionUnion,
 } from "oxalis/model/accessors/dataset_accessor";
+import sinon from "sinon";
+const ToastMock = { error: sinon.stub() };
+mockRequire("libs/toast", ToastMock);
+const { ensureMatchingLayerResolutions } = mockRequire.reRequire("oxalis/model_initialization");
 
 test("Simple convertToDenseResolution", t => {
   const denseResolutions = convertToDenseResolution([[2, 2, 1], [4, 4, 2]]);
@@ -82,6 +86,6 @@ test("getResolutionUnion should fail since 8-8-1 != 8-8-2", t => {
       ],
     },
   };
-
-  t.throws(() => ensureMatchingLayerResolutions(dataset));
+  ensureMatchingLayerResolutions(dataset);
+  t.assert(ToastMock.error.called);
 });

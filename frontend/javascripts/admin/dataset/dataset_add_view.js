@@ -1,6 +1,7 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Tabs, Icon, Modal, Button } from "antd";
+import { Tabs, Modal, Button } from "antd";
+import { BarsOutlined, DatabaseOutlined, GoogleOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
@@ -13,6 +14,7 @@ import DatasetAddNeuroglancerView from "admin/dataset/dataset_add_neuroglancer_v
 import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
+import LinkButton from "components/link_button";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
@@ -113,7 +115,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
         <TabPane
           tab={
             <span>
-              <Icon type="upload" />
+              <UploadOutlined />
               Upload Dataset
             </span>
           }
@@ -125,7 +127,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           <TabPane
             tab={
               <span>
-                <Icon type="google" />
+                <GoogleOutlined />
                 Add Neuroglancer Dataset
               </span>
             }
@@ -141,7 +143,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           <TabPane
             tab={
               <span>
-                <Icon type="database" />
+                <DatabaseOutlined />
                 Add BossDB Dataset
               </span>
             }
@@ -154,7 +156,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           <TabPane
             tab={
               <span>
-                <Icon type="bars" />
+                <BarsOutlined />
                 Add Foreign Dataset
               </span>
             }
@@ -167,9 +169,9 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
       <div style={{ textAlign: "center" }}>
         <p>or</p>
         <p>
-          <a href="#" onClick={() => renderSampleDatasetsModal(activeUser, history)}>
+          <LinkButton onClick={() => renderSampleDatasetsModal(activeUser, history)}>
             Add a Sample Dataset
-          </a>
+          </LinkButton>
         </p>
       </div>
       <Modal

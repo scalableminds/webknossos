@@ -2,13 +2,15 @@
 
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Spin, Button, Input, Modal } from "antd";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
 import type { APIScript, APIUser } from "types/api_flow_types";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -113,7 +115,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
         <div>
           <div className="pull-right">
             <Link to="/scripts/create">
-              <Button icon="plus" style={marginRight} type="primary">
+              <Button icon={<PlusOutlined />} style={marginRight} type="primary">
                 Add Script
               </Button>
             </Link>
@@ -185,14 +187,14 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 render={(__, script: APIScript) => (
                   <span>
                     <Link to={`/scripts/${script.id}/edit`}>
-                      <Icon type="edit" />
+                      <EditOutlined />
                       Edit
                     </Link>
                     <br />
-                    <a href="#" onClick={_.partial(this.deleteScript, script)}>
-                      <Icon type="delete" />
+                    <LinkButton onClick={_.partial(this.deleteScript, script)}>
+                      <DeleteOutlined />
                       Delete
-                    </a>
+                    </LinkButton>
                   </span>
                 )}
               />

@@ -1,7 +1,8 @@
 // @flow
 
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, Icon, Menu, Modal, notification } from "antd";
+import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
+import { DeleteOutlined, PlusOutlined, SettingOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
@@ -42,8 +43,8 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 
-const CHECKBOX_STYLE = { verticalAlign: "middle" };
-const CHECKBOX_PLACEHOLDER_STYLE = { width: 24, display: "inline-block" };
+const CHECKBOX_STYLE = {};
+const CHECKBOX_PLACEHOLDER_STYLE = { width: 16, display: "inline-block" };
 
 type OwnProps = {|
   activeTreeId: ?number,
@@ -318,22 +319,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
         <Menu.Item key="create" data-group-id={id}>
-          <Icon type="plus" />
+          <PlusOutlined />
           Create new group
         </Menu.Item>
         <Menu.Item key="delete" data-group-id={id} disabled={isRoot}>
-          <Icon type="delete" />
+          <DeleteOutlined />
           Delete
         </Menu.Item>
         {hasSubgroup ? (
           <Menu.Item key="collapseSubgroups" data-group-id={id} disabled={!hasExpandedSubgroup}>
-            <Icon type="shrink" />
+            <ShrinkOutlined />
             Collapse all subgroups
           </Menu.Item>
         ) : null}
         {hasSubgroup ? (
           <Menu.Item key="expandSubgroups" data-group-id={id} disabled={!hasCollapsedSubgroup}>
-            <Icon type="shrink" />
+            <ShrinkOutlined />
             Expand all subgroups
           </Menu.Item>
         ) : null}
@@ -344,11 +345,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const displayableName = name.trim() || "<no name>";
     const nameAndDropdown = (
       <span className="ant-dropdown-link">
-        <span data-id={id} onClick={this.onSelectGroup}>
+        <span data-id={id} onClick={this.onSelectGroup} style={{ marginLeft: 9 }}>
           {displayableName}{" "}
         </span>
         <Dropdown overlay={menu} placement="bottomCenter">
-          <Icon type="setting" className="group-actions-icon" />
+          <SettingOutlined className="group-actions-icon" />
         </Dropdown>
       </span>
     );
@@ -374,9 +375,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
     const nodeProps = {};
+    const isRoot = node.id === MISSING_GROUP_ID;
     if (node.type === TYPE_GROUP) {
       nodeProps.title = this.renderGroupActionsDropdown(node);
-      nodeProps.className = "group-type";
+      if (!isRoot) {
+        // Only render the group icon if it's not the root.
+        nodeProps.className = "group-type";
+      }
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
@@ -437,7 +442,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
           }
         >
-          <Icon type="setting" className="group-actions-icon" />
+          <SettingOutlined className="group-actions-icon" />
         </Dropdown>
       );
 

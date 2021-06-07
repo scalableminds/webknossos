@@ -23,6 +23,7 @@ test.beforeEach(async t => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
+
   await __setupOxalis(t, "volume");
 
   // Dispatch the wkReadyAction, so the sagas are started

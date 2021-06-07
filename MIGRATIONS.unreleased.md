@@ -6,7 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-- Instances with long-running jobs only: the `tiff_cubing` job was renamed to `convert_to_wkw`. For old jobs to be listed properly, execute sql `update webknossos.jobs set command = 'convert_to_wkw' where command = 'tiff_cubing';`
+-
 
 ### Postgres Evolutions:
--
+- 

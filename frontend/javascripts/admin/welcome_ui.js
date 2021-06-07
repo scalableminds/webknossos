@@ -1,6 +1,14 @@
 // @flow
+import {
+  CloseOutlined,
+  CloudUploadOutlined,
+  MailOutlined,
+  PlayCircleOutlined,
+  PlusCircleOutlined,
+  RightOutlined,
+} from "@ant-design/icons";
 
-import { Icon, Tooltip } from "antd";
+import { Tooltip } from "antd";
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { isUserAdminOrTeamManager, isUserAdminOrDatasetManager } from "libs/utils";
@@ -25,10 +33,10 @@ const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsN
     <React.Fragment>
       {icon}
       <div className="label">
-        <h1>{title}</h1>
+        <h2>{title}</h2>
         <p>{description}</p>
       </div>
-      <Icon type="right" className="chevron" />
+      <RightOutlined className="chevron" />
     </React.Fragment>
   );
 
@@ -57,42 +65,17 @@ type WhatsNextHeaderProps = {
 
 export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps) => (
   <div>
-    <div
-      style={{
-        backgroundColor: "rgba(88, 88, 88, 0.4)",
-        backgroundImage: "linear-gradient(0deg, rgb(255 255 255) 0%, rgb(231 247 255) 70%)",
-        position: "relative",
-      }}
-    >
+    <div className="welcome-header-wrapper" style={{ position: "relative" }}>
       <div style={{ position: "absolute", right: 0, top: 0, margin: 8 }}>
         <Tooltip title="Don't show this again" placement="left">
-          <Icon type="close" onClick={onDismiss} />
+          <CloseOutlined onClick={onDismiss} />
         </Tooltip>
       </div>
       <div className="welcome-header-content">
         <img className="wk-logo" src="/assets/images/oxalis.svg" alt="webKnossos Logo" />
         <div className="text-and-button-container">
-          <h1
-            style={{
-              color: "#1F2937",
-              marginLeft: 56,
-              fontWeight: 200,
-              fontSize: 64,
-              lineHeight: "150%",
-              marginBottom: 0,
-            }}
-          >
-            Welcome to webKnossos!
-          </h1>
-          <div
-            style={{
-              margin: "0 20px 0px 60px",
-              fontWeight: 300,
-              fontSize: 20,
-              lineHeight: "150%",
-              color: "#6B7280",
-            }}
-          >
+          <h1>Welcome to webKnossos!</h1>
+          <div className="subtitle">
             <p
               style={{
                 fontSize: 20,
@@ -109,7 +92,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 title="Open a Demo Dataset"
                 description="Have a look at a public dataset to experience webKnossos in action."
                 href={getDemoDatasetUrl()}
-                icon={<Icon type="play-circle" className="action-icon" />}
+                icon={<PlayCircleOutlined className="action-icon" />}
               />
 
               {isUserAdminOrDatasetManager(activeUser) ? (
@@ -117,21 +100,21 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                   title="Import Your Own Data"
                   description="Directly upload your data as a zip file."
                   to="/datasets/upload"
-                  icon={<Icon type="cloud-upload" className="action-icon" />}
+                  icon={<CloudUploadOutlined className="action-icon" />}
                 />
               ) : null}
 
               <WhatsNextAction
                 title="Learn How To Create Annotations"
                 description="Watch a short video to see how data can be annotated with webKnossos."
-                icon={<Icon type="plus-circle" className="action-icon" />}
+                icon={<PlusCircleOutlined className="action-icon" />}
                 href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s"
               />
               {isUserAdminOrTeamManager(activeUser) ? (
                 <WhatsNextAction
                   title="Invite Your Colleagues"
                   description="Send invites to your colleagues and ask them to join your organization."
-                  icon={<Icon type="mail" className="action-icon" />}
+                  icon={<MailOutlined className="action-icon" />}
                   onClick={() => {
                     renderIndependently(destroy => (
                       <InviteUsersModal

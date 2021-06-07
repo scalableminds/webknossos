@@ -1,6 +1,8 @@
 // @flow
 
-import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip, Modal, Input } from "antd";
+import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, Modal, Input } from "antd";
+import { FormInstance } from "antd/lib/form";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
@@ -16,6 +18,7 @@ import type {
 } from "types/api_flow_types";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
+import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
@@ -26,6 +29,7 @@ import {
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -48,7 +52,6 @@ const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 
 type OwnProps = {|
-  form: Object,
   datasetId: APIDatasetId,
   isEditingMode: boolean,
   onComplete: () => void,
@@ -90,6 +93,7 @@ type State = {
   savedDataSourceOnServer: ?APIDataSource,
   inferredDataSource: ?APIDataSource,
   differenceBetweenDataSources: Object,
+  hasNoAllowedTeams: boolean,
   dataSourceSettingsStatus: DataSourceSettingsStatus,
 };
 
@@ -139,6 +143,7 @@ function ensureValidScaleOnInferredDataSource(
 }
 
 class DatasetImportView extends React.PureComponent<Props, State> {
+  formRef = React.createRef<typeof FormInstance>();
   static defaultProps = {
     isEditingMode: false,
   };
@@ -153,14 +158,18 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     savedDataSourceOnServer: null,
     inferredDataSource: null,
     differenceBetweenDataSources: {},
+    hasNoAllowedTeams: false,
     dataSourceSettingsStatus: {
       appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
       isJSONFormatValid: IsJSONFormatValidEnum.Yes,
     },
   };
 
-  componentDidMount() {
-    this.fetchData();
+  async componentDidMount() {
+    await this.fetchData();
+    sendAnalyticsEvent("open_dataset_settings", {
+      datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
+    });
   }
 
   async fetchData(): Promise<void> {
@@ -223,7 +232,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         datasetClone.dataSource.status = dataset.dataSource.status;
         dataset = (datasetClone: APIDataset);
       }
-      this.props.form.setFieldsValue({
+      const form = this.formRef.current;
+      if (!form) {
+        throw new Error("Form couldn't be initialized.");
+      }
+      form.setFieldsValue({
         dataSourceJson: jsonStringify(dataSource),
         dataset: {
           displayName: dataset.displayName || undefined,
@@ -235,7 +248,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       });
       // This call cannot be combined with the previous setFieldsValue,
       // since the layer values wouldn't be initialized correctly.
-      this.props.form.setFieldsValue({
+      form.setFieldsValue({
         dataSource,
       });
 
@@ -243,7 +256,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         this.props.datasetId,
       );
       enforceValidatedDatasetViewConfiguration(datasetDefaultConfiguration, dataset, true);
-      this.props.form.setFieldsValue({
+      form.setFieldsValue({
         defaultConfiguration: datasetDefaultConfiguration,
         defaultConfigurationLayersJson: JSON.stringify(
           datasetDefaultConfiguration.layers,
@@ -255,12 +268,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       this.setState({
         datasetDefaultConfiguration,
         dataset,
+        hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
       handleGenericError(error);
     } finally {
       this.setState({ isLoading: false });
-      this.props.form.validateFields();
+      const form = this.formRef.current;
+      if (form) {
+        form.validateFields();
+      }
     }
   }
 
@@ -295,8 +312,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     let message = null;
     let type = "info";
     const applySuggestedSettings = () => {
-      this.props.form.setFieldsValue({
+      const form = this.formRef.current;
+      if (!form) {
+        return;
+      }
+      form.setFieldsValue({
         dataSourceJson: jsonStringify(inferredDataSource),
+        dataSource: inferredDataSource,
       });
       this.setState(
         currentState => {
@@ -307,7 +329,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           return { dataSourceSettingsStatus: updatedStatus };
         },
         // Enforce validation as antd does not do this automatically.
-        () => this.props.form.validateFields(),
+        () => {
+          const currentForm = this.formRef.current;
+          if (currentForm) {
+            currentForm.validateFields();
+          }
+        },
       );
     };
 
@@ -332,21 +359,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         <div>
           The current datasource-properties.json on the server seems to have invalid or missing
           properties. <br />
-          <a
-            href="#"
+          <LinkButton
             onClick={() =>
               showJSONModal("Suggested datasource-properties.json", inferredDataSource)
             }
           >
             Here
-          </a>{" "}
+          </LinkButton>{" "}
           are suggested settings from webKnossos. But be aware that properties like the voxel size
           or the largest segment id cannot be detected correctly. <br />
           If you want to apply those settings, click{" "}
-          <a href="#" onClick={applySuggestedSettings}>
-            here
-          </a>
-          .
+          <LinkButton onClick={applySuggestedSettings}>here</LinkButton>.
         </div>
       );
     } else if (
@@ -371,8 +394,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           additional information about the dataset that could be inferred. The original
           datasource-properties.json settings can be seen below in the advanced version. The
           JSON-encoded difference between the current and the suggested version can be inspected{" "}
-          <a
-            href="#"
+          <LinkButton
             onClick={() =>
               showJSONModal(
                 "Difference to suggested datasource-properties.json",
@@ -381,22 +403,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             }
           >
             here
-          </a>
+          </LinkButton>
           .<br />
-          Click{" "}
-          <a href="#" onClick={applySuggestedSettings}>
-            here
-          </a>{" "}
-          to set the suggested JSON settings. This will replace the current settings in the form
-          with{" "}
-          <a
-            href="#"
+          Click <LinkButton onClick={applySuggestedSettings}>here</LinkButton> to set the suggested
+          JSON settings. This will replace the current settings in the form with{" "}
+          <LinkButton
             onClick={() =>
               showJSONModal("Suggested datasource-properties.json", inferredDataSource)
             }
           >
             these settings
-          </a>
+          </LinkButton>
           .
         </div>
       );
@@ -410,7 +427,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   getFormValidationSummary = (): Object => {
-    const err = this.props.form.getFieldsError();
+    const form = this.formRef.current;
+    if (!form) {
+      return {};
+    }
+    const err = form.getFieldsError();
     const { dataset } = this.state;
     const formErrors = {};
     if (!err || !dataset) {
@@ -418,13 +439,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
     const hasErr = hasFormError;
 
-    if (hasErr(err.dataSource) || hasErr(err.dataSourceJson)) {
+    if (hasErr(err, "dataSource") || hasErr(err, "dataSourceJson")) {
       formErrors.data = true;
     }
-    if (hasErr(err.dataset)) {
+    if (hasErr(err, "dataset")) {
       formErrors.general = true;
     }
-    if (hasErr(err.defaultConfiguration) || hasErr(err.defaultConfigurationLayersJson)) {
+    if (hasErr(err, "defaultConfiguration") || hasErr(err, "defaultConfigurationLayersJson")) {
       formErrors.defaultConfig = true;
     }
     return formErrors;
@@ -453,9 +474,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   isOnlyDatasourceIncorrectAndNotEdited() {
     const validationSummary = this.getFormValidationSummary();
+    const form = this.formRef.current;
+    if (!form) {
+      return false;
+    }
     if (_.size(validationSummary) === 1 && validationSummary.data) {
       try {
-        const dataSource = JSON.parse(this.props.form.getFieldValue("dataSourceJson"));
+        const dataSource = JSON.parse(form.getFieldValue("dataSourceJson"));
         const didNotEditDatasource = !this.didDatasourceChange(dataSource);
         return didNotEditDatasource;
       } catch (e) {
@@ -465,56 +490,78 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     return false;
   }
 
-  handleSubmit = (e: SyntheticEvent<>) => {
-    e.preventDefault();
+  handleValidationFailed = ({ values }: { values: FormData }) => {
+    const { dataset } = this.state;
+    const isOnlyDatasourceIncorrectAndNotEdited = this.isOnlyDatasourceIncorrectAndNotEdited();
+    // Check whether the validation error was introduced or existed before
+    if (!isOnlyDatasourceIncorrectAndNotEdited || !dataset) {
+      this.switchToProblematicTab();
+      Toast.warning(messages["dataset.import.invalid_fields"]);
+    } else {
+      // If the validation error existed before, still attempt to update dataset
+      this.submit(values);
+    }
+  };
+
+  handleSubmit = () => {
     // Ensure that all form fields are in sync
     this.syncDataSourceFields();
-    this.props.form.validateFields(async (err, formValues: FormData) => {
-      const { dataset, datasetDefaultConfiguration } = this.state;
-      const isOnlyDatasourceIncorrectAndNotEdited = this.isOnlyDatasourceIncorrectAndNotEdited();
-      if ((err && !isOnlyDatasourceIncorrectAndNotEdited) || !dataset) {
-        this.switchToProblematicTab();
-        Toast.warning(messages["dataset.import.invalid_fields"]);
-        return;
-      }
-      const datasetChangeValues = { ...formValues.dataset };
-      if (datasetChangeValues.sortingKey != null) {
-        datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
-      }
-      const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
 
-      await updateDataset(this.props.datasetId, Object.assign({}, dataset, datasetChangeValues));
+    const afterForceUpdateCallback = () =>
+      // Trigger validation manually, because fields may have been updated
+      form
+        .validateFields()
+        .then(formValues => this.submit(formValues))
+        .catch(errorInfo => this.handleValidationFailed(errorInfo));
+    // Need to force update of the SimpleAdvancedDataForm as removing a layer in the advanced tab does not update
+    // the form items in the simple tab (only the values are updated). The form items automatically update once
+    // the simple tab renders, but this is not the case when the user directly submits the changes.
+    this.forceUpdate(afterForceUpdateCallback);
+  };
 
-      if (datasetDefaultConfiguration != null) {
-        await updateDatasetDefaultConfiguration(
-          this.props.datasetId,
-          _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
-            layers: JSON.parse(formValues.defaultConfigurationLayersJson),
-          }),
-        );
-      }
-      await updateDatasetTeams(dataset, teamIds);
+  submit = async (formValues: FormData) => {
+    const { dataset, datasetDefaultConfiguration } = this.state;
+    const datasetChangeValues = { ...formValues.dataset };
+    if (datasetChangeValues.sortingKey != null) {
+      datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
+    }
+    const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
 
-      const dataSource = JSON.parse(formValues.dataSourceJson);
-      if (
-        dataset != null &&
-        !dataset.isForeign &&
-        !dataset.dataStore.isConnector &&
-        this.didDatasourceChange(dataSource)
-      ) {
-        await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
-        this.setState({
-          savedDataSourceOnServer: dataSource,
-          differenceBetweenDataSources: {},
-        });
-      }
+    await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });
 
-      const verb = this.props.isEditingMode ? "updated" : "imported";
-      Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
-      datasetCache.clear();
-      trackAction(`Dataset ${verb}`);
-      this.props.onComplete();
-    });
+    if (datasetDefaultConfiguration != null) {
+      await updateDatasetDefaultConfiguration(
+        this.props.datasetId,
+        _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+          layers: JSON.parse(formValues.defaultConfigurationLayersJson),
+        }),
+      );
+    }
+    await updateDatasetTeams(this.props.datasetId, teamIds);
+
+    const dataSource = JSON.parse(formValues.dataSourceJson);
+    if (
+      dataset != null &&
+      !dataset.isForeign &&
+      !dataset.dataStore.isConnector &&
+      this.didDatasourceChange(dataSource)
+    ) {
+      await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
+      this.setState({
+        savedDataSourceOnServer: dataSource,
+        differenceBetweenDataSources: {},
+      });
+    }
+
+    const verb = this.props.isEditingMode ? "updated" : "imported";
+    Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
+    datasetCache.clear();
+    trackAction(`Dataset ${verb}`);
+    this.props.onComplete();
   };
 
   getMessageComponents() {
@@ -574,9 +621,14 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   hasNoAllowedTeams(): boolean {
+    const form = this.formRef.current;
+    if (!form) {
+      return false;
+    }
+
     return (
-      this.props.form.getFieldValue("dataset.allowedTeams") == null ||
-      this.props.form.getFieldValue("dataset.allowedTeams").length === 0
+      form.getFieldValue(["dataset", "allowedTeams"]) == null ||
+      form.getFieldValue(["dataset", "allowedTeams"]).length === 0
     );
   }
 
@@ -586,29 +638,35 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       _syncTargetTabKey ||
       (this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple");
 
-    const { form } = this.props;
-    const parsedConfig = JSON.parse(form.getFieldValue("dataSourceJson"));
+    const form = this.formRef.current;
+    if (!form) {
+      return;
+    }
     if (syncTargetTabKey === "advanced") {
       // Copy from simple to advanced: update json
 
-      // parsedConfig has to be used as the base, since `dataSource` will only
-      // contain the fields that antd has registered input elements for
-      const newDataSource = parsedConfig;
-      // _.merge does a deep merge which mutates newDataSource
-      _.merge(newDataSource, form.getFieldValue("dataSource"));
+      const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
       form.setFieldsValue({
-        dataSourceJson: jsonStringify(newDataSource),
+        dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
       });
     } else {
+      const dataSourceFromAdvancedTab = JSON.parse(form.getFieldValue("dataSourceJson"));
       // Copy from advanced to simple: update form values
       form.setFieldsValue({
-        dataSource: parsedConfig,
+        dataSource: dataSourceFromAdvancedTab,
       });
     }
   };
 
+  onValuesChange = (changedValues: FormData, allValues: FormData) => {
+    const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
+    this.setState({ hasNoAllowedTeams });
+  };
+
   render() {
-    const { form, isUserAdmin } = this.props;
+    const form = this.formRef.current;
+
+    const { isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const confirmString =
       this.props.isEditingMode ||
@@ -619,18 +677,25 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     const errorIcon = (
       <Tooltip title="Some fields in this tab require your attention.">
-        <Icon type="exclamation-circle" style={{ color: "#f5222d", marginLeft: 4 }} />
+        <ExclamationCircleOutlined style={{ marginLeft: 4, color: "var(--ant-error)" }} />
       </Tooltip>
     );
-    const _hasNoAllowedTeams = this.hasNoAllowedTeams();
-    const hasNoAllowedTeamsWarning = _hasNoAllowedTeams ? (
+    const { hasNoAllowedTeams } = this.state;
+    const hasNoAllowedTeamsWarning = hasNoAllowedTeams ? (
       <Tooltip title="Please double-check some fields here.">
-        <Icon type="exclamation-circle" style={{ color: "#faad14", marginLeft: 4 }} />
+        <ExclamationCircleOutlined style={{ marginLeft: 4, color: "var(--ant-warning)" }} />
       </Tooltip>
     ) : null;
 
     return (
-      <Form className="row container dataset-import" onSubmit={this.handleSubmit}>
+      <Form
+        ref={this.formRef}
+        className="row container dataset-import"
+        onFinish={this.handleSubmit}
+        onFinishFailed={this.handleSubmit}
+        onValuesChange={this.onValuesChange}
+        layout="vertical"
+      >
         <Card
           bordered={false}
           title={
@@ -666,8 +731,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                       form={form}
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={activeEditMode => {
+                        const currentForm = this.formRef.current;
+                        if (!currentForm) {
+                          return;
+                        }
                         this.syncDataSourceFields(activeEditMode);
-                        this.props.form.validateFields();
+                        currentForm.validateFields();
                         this.setState({ activeDataSourceEditMode: activeEditMode });
                       }}
                       additionalAlert={this.getDatasourceDiffAlert()}
@@ -689,7 +758,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     <ImportSharingComponent
                       form={form}
                       datasetId={this.props.datasetId}
-                      hasNoAllowedTeams={_hasNoAllowedTeams}
+                      hasNoAllowedTeams={hasNoAllowedTeams}
                     />
                   </Hideable>
                 </TabPane>
@@ -721,7 +790,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 ) : null}
               </Tabs>
             </Card>
-            <FormItem>
+            <FormItem style={{ marginTop: 8 }}>
               <Button type="primary" htmlType="submit">
                 {confirmString}
               </Button>
@@ -739,6 +808,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
 });
 
-export default Form.create()(
-  connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetImportView),
-);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetImportView);

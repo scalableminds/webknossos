@@ -1,6 +1,7 @@
 // @flow
 
-import { Icon, Select, Switch, Table, Tooltip } from "antd";
+import { Select, Switch, Table, Tooltip } from "antd";
+import { InfoCircleOutlined, WarningOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -35,9 +36,6 @@ import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combination
 
 const { Option, OptGroup } = Select;
 
-type OwnProps = {|
-  portalKey: string,
-|};
 type StateProps = {|
   dataset: APIDataset,
   segmentationLayer: ?APISegmentationLayer,
@@ -57,7 +55,7 @@ type StateProps = {|
   isMergerModeEnabled: boolean,
   allowUpdate: boolean,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 type State = {
   // shouldMappingBeEnabled is the UI state which is directly connected to the
@@ -72,7 +70,7 @@ type State = {
 
 const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 export const convertCellIdToCSS = (id: number, customColors: ?Array<number>, alpha?: number) =>
-  convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
+  id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -202,7 +200,7 @@ class MappingInfoView extends React.Component<Props, State> {
               }
               placement="bottomLeft"
             >
-              <Icon type="info-circle" />
+              <InfoCircleOutlined />
             </Tooltip>
           </span>
         ),
@@ -250,7 +248,7 @@ class MappingInfoView extends React.Component<Props, State> {
         <React.Fragment>
           {title}{" "}
           <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
-            <Icon type="warning" style={{ color: "rgb(255, 155, 85)" }} />
+            <WarningOutlined style={{ color: "var(--ant-warning)" }} />
           </Tooltip>
         </React.Fragment>
       ) : (
@@ -365,7 +363,7 @@ class MappingInfoView extends React.Component<Props, State> {
 
   render() {
     if (!hasSegmentation()) {
-      return "No segmentation available";
+      return <div className="padded-tab-content">No segmentation available</div>;
     }
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
@@ -498,7 +496,7 @@ function mapStateToProps(state: OxalisState) {
 
 const debounceTime = 100;
 const maxWait = 500;
-export default connect<Props, OwnProps, _, _, _, _>(
+export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(debounceRender(MappingInfoView, debounceTime, { maxWait }));

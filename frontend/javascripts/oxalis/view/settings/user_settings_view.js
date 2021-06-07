@@ -4,7 +4,8 @@
  */
 
 import features from "features";
-import { Collapse, Tooltip, Icon } from "antd";
+import { Collapse, Tooltip } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -47,7 +48,6 @@ import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxa
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
-import renderIndependently from "libs/render_independently";
 import ExportBoundingBoxModal from "oxalis/view/settings/export_bounding_box_modal";
 
 const { Panel } = Collapse;
@@ -74,8 +74,13 @@ type UserSettingsViewProps = {
   dataset: APIDataset,
 };
 
-class UserSettingsView extends PureComponent<UserSettingsViewProps> {
+type State = {
+  exportBoundingBoxModalId: ?number,
+};
+
+class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
+  state = { exportBoundingBoxModalId: null };
 
   componentWillMount() {
     // cache onChange handler
@@ -140,18 +145,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   };
 
   handleExportUserBoundingBox = (id: number) => {
-    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
-    const selectedBoundingBox = userBoundingBoxes.find(boundingBox => boundingBox.id === id);
-    if (selectedBoundingBox) {
-      renderIndependently(destroy => (
-        <ExportBoundingBoxModal
-          dataset={this.props.dataset}
-          volumeTracing={this.props.tracing.volume}
-          boundingBox={selectedBoundingBox.boundingBox}
-          destroy={destroy}
-        />
-      ));
-    }
+    this.setState({ exportBoundingBoxModalId: id });
   };
 
   getViewportOptions = () => {
@@ -403,6 +397,12 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
 
   render() {
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+    const exportUserBoundingBox =
+      this.state.exportBoundingBoxModalId != null
+        ? userBoundingBoxes.find(
+            boundingBox => boundingBox.id === this.state.exportBoundingBoxModalId,
+          )
+        : null;
 
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
@@ -425,62 +425,66 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
 
     return (
-      <React.Fragment>
-        <Collapse bordered={false} defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
-          <Panel header="Controls" key="1">
-            <NumberSliderSetting
-              label={settingsLabels.keyboardDelay}
-              min={userSettings.keyboardDelay.minimum}
-              max={userSettings.keyboardDelay.maximum}
-              value={this.props.userConfiguration.keyboardDelay}
-              onChange={this.onChangeUser.keyboardDelay}
+      <Collapse
+        bordered={false}
+        defaultActiveKey={["1", "2", "3a", "3b", "4"]}
+        className="tracing-settings-menu"
+      >
+        <Panel header="Controls" key="1">
+          <NumberSliderSetting
+            label={settingsLabels.keyboardDelay}
+            min={userSettings.keyboardDelay.minimum}
+            max={userSettings.keyboardDelay.maximum}
+            value={this.props.userConfiguration.keyboardDelay}
+            onChange={this.onChangeUser.keyboardDelay}
+          />
+          {moveValueSetting}
+          <SwitchSetting
+            label={settingsLabels.dynamicSpaceDirection}
+            value={this.props.userConfiguration.dynamicSpaceDirection}
+            onChange={this.onChangeUser.dynamicSpaceDirection}
+          />
+        </Panel>
+        {this.getViewportOptions()}
+        {this.getSkeletonOrVolumeOptions()}
+        <Panel header={settingsLabels.userBoundingBoxes} key="4">
+          {userBoundingBoxes.map(bb => (
+            <UserBoundingBoxInput
+              key={bb.id}
+              tooltipTitle="Format: minX, minY, minZ, width, height, depth"
+              value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
+              color={bb.color}
+              name={bb.name}
+              isVisible={bb.isVisible}
+              onChange={_.partial(this.handleChangeUserBoundingBox, bb.id)}
+              onDelete={_.partial(this.handleDeleteUserBoundingBox, bb.id)}
+              onExport={_.partial(this.handleExportUserBoundingBox, bb.id)}
             />
-            {moveValueSetting}
-            <SwitchSetting
-              label={settingsLabels.dynamicSpaceDirection}
-              value={this.props.userConfiguration.dynamicSpaceDirection}
-              onChange={this.onChangeUser.dynamicSpaceDirection}
+          ))}
+          {exportUserBoundingBox != null ? (
+            <ExportBoundingBoxModal
+              dataset={this.props.dataset}
+              tracing={this.props.tracing}
+              boundingBox={exportUserBoundingBox.boundingBox}
+              destroy={() => {
+                this.setState({ exportBoundingBoxModalId: null });
+              }}
             />
-          </Panel>
-          {this.getViewportOptions()}
-          {this.getSkeletonOrVolumeOptions()}
-          <Panel header={settingsLabels.userBoundingBoxes} key="4">
-            {userBoundingBoxes.map(bb => (
-              <UserBoundingBoxInput
-                key={bb.id}
-                tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-                value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
-                color={bb.color}
-                name={bb.name}
-                isVisible={bb.isVisible}
-                onChange={_.partial(this.handleChangeUserBoundingBox, bb.id)}
-                onDelete={_.partial(this.handleDeleteUserBoundingBox, bb.id)}
-                onExport={_.partial(this.handleExportUserBoundingBox, bb.id)}
+          ) : null}
+          <div style={{ display: "inline-block", width: "100%" }}>
+            <Tooltip title="Click to add another bounding box.">
+              <PlusOutlined
+                onClick={this.handleAddNewUserBoundingBox}
+                style={{
+                  float: "right",
+                  cursor: "pointer",
+                  marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
+                }}
               />
-            ))}
-            <div style={{ display: "inline-block", width: "100%" }}>
-              <Tooltip title="Click to add another bounding box.">
-                <Icon
-                  type="plus"
-                  onClick={this.handleAddNewUserBoundingBox}
-                  style={{
-                    float: "right",
-                    cursor: "pointer",
-                    marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
-                  }}
-                />
-              </Tooltip>
-            </div>
-          </Panel>
-          <Panel header="Other" key="5">
-            <SwitchSetting
-              label={settingsLabels.tdViewDisplayPlanes}
-              value={this.props.userConfiguration.tdViewDisplayPlanes}
-              onChange={this.onChangeUser.tdViewDisplayPlanes}
-            />
-          </Panel>
-        </Collapse>
-      </React.Fragment>
+            </Tooltip>
+          </div>
+        </Panel>
+      </Collapse>
     );
   }
 }

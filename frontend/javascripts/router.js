@@ -30,6 +30,7 @@ import LoginView from "admin/auth/login_view";
 import Navbar from "navbar";
 import Onboarding from "admin/onboarding";
 import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import OrganizationEditView from "admin/organization/organization_edit_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
@@ -38,7 +39,6 @@ import RegistrationView from "admin/auth/registration_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import SecuredRoute from "components/secured_route";
-import SpotlightView from "dashboard/spotlight_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
@@ -145,9 +145,6 @@ class ReactRouter extends React.Component<Props> {
                   }
                   if (isAuthenticated) {
                     return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
-                  }
-                  if (features().isDemoInstance) {
-                    return <SpotlightView />;
                   }
                   return <Redirect to="/auth/login" />;
                 }}
@@ -259,18 +256,16 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/projects/:projectName/tasks"
+                path="/projects/:projectId/tasks"
                 render={({ match }: ContextRouter) => (
-                  <TaskListView
-                    initialFieldValues={{ projectName: match.params.projectName || "" }}
-                  />
+                  <TaskListView initialFieldValues={{ projectId: match.params.projectId || "" }} />
                 )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/projects/:projectName/edit"
+                path="/projects/:projectId/edit"
                 render={({ match }: ContextRouter) => (
-                  <ProjectCreateView projectName={match.params.projectName} />
+                  <ProjectCreateView projectId={match.params.projectId} />
                 )}
               />
               <SecuredRoute
@@ -388,6 +383,13 @@ class ReactRouter extends React.Component<Props> {
                 path="/jobs"
                 render={() => <JobListView />}
               />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/organizations/:organizationName/edit"
+                render={({ match }) => (
+                  <OrganizationEditView organizationName={match.params.organizationName || ""} />
+                )}
+              />
               <Route
                 path="/help/keyboardshortcuts"
                 render={() => (
@@ -443,7 +445,6 @@ class ReactRouter extends React.Component<Props> {
                   return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
-              <Route path="/spotlight" component={SpotlightView} />
               <Route
                 path="/datasets/:organizationName/:datasetName/view"
                 render={this.tracingViewMode}

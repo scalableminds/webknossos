@@ -11,6 +11,7 @@ import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.organization.OrganizationDAO
 import net.liftweb.common.Full
+import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsError, JsSuccess, JsValue}
@@ -24,6 +25,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       analyticsService: AnalyticsService,
                                       organizationDAO: OrganizationDAO,
                                       dataSetDAO: DataSetDAO,
+                                      mailchimpClient: MailchimpClient,
                                       wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext)
     extends Controller
     with LazyLogging {
@@ -55,7 +57,8 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
               "dataSet.notFound",
               dataSetName) ~> NOT_FOUND
             _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
-            _ <- dataSetService.addInitialTeams(dataSet, teams)(AuthorizedAccessContext(user))
+            _ = mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
+            _ <- dataSetService.addInitialTeams(dataSet, teams)(AuthorizedAccessContext(user), request.messages)
             _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
           } yield Ok
         }

@@ -34,10 +34,10 @@ class DataSourceService @Inject()(
     with LazyLogging
     with FoxImplicits {
 
-  override protected lazy val enabled: Boolean = config.Braingames.Binary.ChangeHandler.enabled
-  protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
+  override protected lazy val enabled: Boolean = config.Datastore.WatchFileSystem.enabled
+  protected lazy val tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
 
-  val dataBaseDir: Path = Paths.get(config.Braingames.Binary.baseFolder)
+  val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
@@ -139,6 +139,10 @@ class DataSourceService @Inject()(
             true
         },
         "Largest segment ID invalid"
+      ),
+      Check(
+        dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
+        "Layer names must be unique. At least two layers have the same name."
       )
     ).flatten
 

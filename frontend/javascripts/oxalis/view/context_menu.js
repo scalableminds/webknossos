@@ -322,6 +322,10 @@ function NoNodeContextMenuOptions({
     ? skeletonActions.concat(nonSkeletonActions)
     : nonSkeletonActions.concat(skeletonActions);
 
+  if (allActions.length === 0) {
+    return null;
+  }
+
   return (
     <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       {allActions}
@@ -439,7 +443,8 @@ function ContextMenu(props: Props) {
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
           : NoNodeContextMenuOptions({ isSkeletonToolActive, cellIdAtPosition, ...props })}
-        {infoRows.length > 0 ? <Divider style={{ margin: "4px 0px" }} /> : null}
+
+        <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
         {infoRows}
       </div>
     </React.Fragment>

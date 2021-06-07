@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Fixed
--
+- Fixed a bug where dataset uploads of zips with just one file inside failed. [#5534](https://github.com/scalableminds/webknossos/pull/5534)
 
 ### Removed
 - 

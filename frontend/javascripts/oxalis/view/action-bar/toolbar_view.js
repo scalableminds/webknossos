@@ -264,11 +264,26 @@ function CreateTreeButton() {
   return (
     <Badge dot style={{ boxShadow: "none", background: rgbColorString }}>
       <Tooltip title={`Create a new Tree – ${activeTreeHint}`}>
-        <ButtonComponent onClick={handleCreateTree} style={narrowButtonStyle}>
-          <img
-            src="/assets/images/new-tree.svg"
-            alt="New Tree Icon"
-            style={imgStyleForSpaceyIcons}
+        <ButtonComponent
+          onClick={handleCreateTree}
+          style={{ ...narrowButtonStyle, paddingRight: 5 }}
+        >
+          <i
+            style={{
+              opacity: 0.9,
+              transform: "scale(0.9) translate(-2px, -1px)",
+              marginRight: 3,
+            }}
+            className="fas fa-project-diagram"
+          />
+          <i
+            className="fas fa-plus"
+            style={{
+              position: "absolute",
+              top: 13,
+              left: 21,
+              fontSize: 11,
+            }}
           />
         </ButtonComponent>
       </Tooltip>

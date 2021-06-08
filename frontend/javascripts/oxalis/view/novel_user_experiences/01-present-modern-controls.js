@@ -38,8 +38,8 @@ export default function PresentModernControls() {
       <h1>Say Hello to the Context Menu</h1>
       <p>
         webKnossos now provides an easy-to-use context menu that allows performing even complex
-        actions, such as merging two trees, intuitively. Simply right-click an element of
-        interest (e.g., a node or segment) to see available actions.
+        actions, such as merging two trees, intuitively. Simply right-click an element of interest
+        (e.g., a node or segment) to see available actions.
       </p>
       <img
         src="/assets/images/novel_user_experiences/01-context-menu.png"

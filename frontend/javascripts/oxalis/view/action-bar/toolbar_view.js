@@ -179,7 +179,8 @@ function AdditionalSkeletonModesButtons() {
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
   const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
-  const activeButtonStyle = { ...narrowButtonStyle, borderColor: "#1890ff" };
+  // The z-index is needed so that the blue border of an active button does override the border color of the neighboring non active button.
+  const activeButtonStyle = { ...narrowButtonStyle, borderColor: "var(--ant-primary)", zIndex: 1 };
   const newNodeNewTreeModeButtonStyle = isNewNodeNewTreeModeOn
     ? activeButtonStyle
     : narrowButtonStyle;
@@ -187,7 +188,7 @@ function AdditionalSkeletonModesButtons() {
 
   return (
     <React.Fragment>
-      <Tooltip title="Toggle the Single node Tree (soma clicking) mode">
+      <Tooltip title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree.">
         <ButtonComponent
           style={newNodeNewTreeModeButtonStyle}
           value="active"
@@ -200,7 +201,7 @@ function AdditionalSkeletonModesButtons() {
           />
         </ButtonComponent>
       </Tooltip>
-      <Tooltip title="Toggle Merger Mode">
+      <Tooltip title="Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.">
         <ButtonComponent style={mergerModeButtonStyle} value="active" onClick={toggleMergerMode}>
           <img
             style={imgStyleForSpaceyIcons}

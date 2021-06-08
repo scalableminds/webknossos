@@ -14,7 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Changed
-- "Center new Nodes" option was changed to also influence the centering-behavior when deleting a node. [#5538](https://github.com/scalableminds/webknossos/pull/5538)
+- "Center new Nodes" option was renamed to "Auto-center Nodes" and changed to also influence the centering-behavior when deleting a node. [#5538](https://github.com/scalableminds/webknossos/pull/5538)
 
 ### Fixed
 - Fixed that a disabled "Center new Nodes" option didn't work correctly in merger mode. [#5538](https://github.com/scalableminds/webknossos/pull/5538)

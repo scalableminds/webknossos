@@ -83,7 +83,7 @@ Press the "J" to jump to the latest branch point to continue working from there 
 | J                 | Jump to Last Branch Point           |
 | C                 | Create New Tree                     |
 
-Note that you can enable *Classic Controls* which will behave slightly different and more explicit for the mouse actions:
+Note that you can enable *Classic Controls* which will behave slightly different and more explicit for some mouse actions:
 
 | Key Binding       | Operation                           |
 | ----------------- | -------------                       |
@@ -109,9 +109,9 @@ Hover over existing tree groups to bring up a little menu for creating new group
 Common tree operations include splitting and merging trees.
 
 - `Tree splitting` can be done in two ways:
-  1. Delete a node at which to split. This can be done by rightclicking a node and choosing "Delete this Node". If you have enabled *Classic Controls*, you need to select (*SHIFT + Left Click*) the node first and then delete (*DEL*) it.
-  2. Delete an edge between two nodes. Select the first node (*Left Click*), then rightclick the second node and select *Delete Edge to this Node*. If you have enabled *Classic Controls*, you need to select the first node with *Shift + Left Click* and then click on the second node with *SHIFT + CTRL + Left Click* on the second node of the edge to delete this connection.
-- `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and rightclick the second to choose *Create Edge & Merge with this Tree*. When using *Classic Controls*, the second node needs to be selected with *SHIFT + ALT + Left Click* to create an edge between the two.
+  1. Delete a node at which to split. This can be done by right-clicking a node and choosing "Delete this Node". If you have enabled *Classic Controls*, you need to select (*SHIFT + Left Click*) the node first and then delete (*DEL*) it.
+  2. Delete an edge between two nodes. Select the first node (*Left Click*), then right-click the second node and select *Delete Edge to this Node*. If you have enabled *Classic Controls*, you need to select the first node with *Shift + Left Click* and then click on the second node with *SHIFT + CTRL + Left Click* on the second node of the edge to delete this connection.
+- `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and right-click on a second one to choose *Create Edge & Merge with this Tree*. When using *Classic Controls*, the second node needs to be selected with *SHIFT + ALT + Left Click* to create an edge between the two.
 
 ![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
 

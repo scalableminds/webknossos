@@ -52,12 +52,12 @@ You can also change the size of the viewports to see more details in your data a
 Click the `Create Annotation` button from the view mode of a dataset to create your first annotation.
 webKnossos will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
 
-Depending on the current tool which can be selected in the top bar, various actions can be performed.
+Depending on the current tool - selectable in the top bar - various actions can be performed.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
-The first tool is the move tool which allows to navigate the dataset by moving the mouse while holding the left mouse button.
-In the skeleton tool, left click can be used to place markers in the data, called nodes.
+The first tool is the MOVE tool which allows to navigate the dataset by moving the mouse while holding the left mouse button.
+In the SKELETON tool, left click can be used to place markers in the data, called nodes.
 Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
-The draw tool allows to "paint" voxels to create volumetric annotations.
+The DRAW tool allows to "paint" voxels to create volumetric annotations.
 
 A right click can be used to open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment.
 Note that "Classic Controls" can be activated in the settings sidebar which assigns more specialized behaviors to the right click (e.g., dragging with the right mouse button in the draw tool will erase data).

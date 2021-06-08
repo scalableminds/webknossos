@@ -37,8 +37,8 @@ export default function PresentModernControls() {
     <Modal maskClosable={false} visible onCancel={closeModal} width={800} footer={null}>
       <h1>Say Hello to the Context Menu</h1>
       <p>
-        webKnossos now provides an easy-to-use context menu which allows to perform even complex
-        actions, such as merging two trees, in an intuitive way. Simply rightclick an element of
+        webKnossos now provides an easy-to-use context menu that allows performing even complex
+        actions, such as merging two trees, intuitively. Simply right-click an element of
         interest (e.g., a node or segment) to see available actions.
       </p>
       <img
@@ -52,8 +52,8 @@ export default function PresentModernControls() {
       />
       <p>
         Previously, the right-click was reserved for certain actions, such as creating a node or
-        erasing volume data. These actions are now available in their respective tool via leftclick
-        (e.g., using the dedicated erase-tool) or happen automatically (e.g., selecting a node
+        erasing volume data. These actions are now available in their respective tool via left-click
+        (e.g., using the dedicated erase tool) or happen automatically (e.g., selecting a node
         doesn’t require holding shift anymore).
       </p>
       <div className="center-item-using-flex">

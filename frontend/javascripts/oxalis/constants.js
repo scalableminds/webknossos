@@ -120,7 +120,7 @@ export const BorderTabs = {
   AbstractTreeTab: {
     id: "AbstractTreeTab",
     name: "AbsTree",
-    description: "Views an abstract version of the active skeleton",
+    description: "Shows an abstract version of the active skeleton",
   },
   ControlsAndRenderingSettingsTab: {
     id: "ControlsAndRenderingSettingsTab",

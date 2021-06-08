@@ -1,6 +1,6 @@
 # Keyboard & Mouse Shortcuts
 
-The most important shortcuts are always shown in the statusbar at the bottom.
+The most important shortcuts are always shown in the statusbar at the bottom of the screen.
 These shortcut hints depend on the active tool and also change when modifiers are pressed to allow easy exploration of available functionality.
 
 A complete listing of all available keyboard & mouse shortcuts for webKnossos can be found below.
@@ -9,7 +9,7 @@ A complete listing of all available keyboard & mouse shortcuts for webKnossos ca
 
 Note that you can enable *Classic Controls* in the left sidebar.
 Without classic controls (which is the default), a more intuitive behavior is used which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes) while the right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
-With classic controls, several mouse controls are modifier-driven and may also use the rightclick for actions, such as erasing volume data.
+With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.
 
 ## General
 
@@ -108,7 +108,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | V                                 | Copy Segmentation of Current Cell From Previous Slice       |
 | SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |
 
-Note that you can enable *Classic Controls* which won't open a context-menu on rightclick, but instead erases when the brush/trace tool is activated.
+Note that you can enable *Classic Controls* which won't open a context-menu on right-click, but instead erases when the brush/trace tool is activated.
 
 | Key Binding                       | Operation                                                   |
 | --------------------------------- | ----------------------------------------------------------- |

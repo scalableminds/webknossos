@@ -6,7 +6,8 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-- Make legacy bindings the default for users and task types with (adapt `true` to `false` if you want the opposite):
+- Consider setting `defaultToLegacyBindings` to `true` in application.conf if you want that new users use the classic controls by default.
+- To make the classic mouse bindings the default for existing users and task types execute the following (adapt `true` to `false` if you want the opposite):
 ```
 -- Activate legacy bindings for all users
 UPDATE webknossos.users

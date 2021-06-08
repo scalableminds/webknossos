@@ -25,8 +25,6 @@ ThisBuild / libraryDependencies ++= Seq(
   "com.github.ghik" % "silencer-lib" % "1.7.0" % Provided cross CrossVersion.full
 )
 
-ThisBuild / assemblyMergeStrategy := (_ => MergeStrategy.first)
-
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 scapegoatIgnoredFiles := Seq(".*/Tables.scala",
@@ -70,7 +68,20 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .settings(
     name := "webknossos-datastore",
     commonSettings,
-    assembly / assemblyMergeStrategy := (_ => MergeStrategy.first),
+    assembly / assemblyMergeStrategy := {
+      case PathList(ps @ _*) if ps.last endsWith ".class"                 => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last endsWith ".proto"                 => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last == "reference-overrides.conf"     => MergeStrategy.concat
+      case PathList(ps @ _*) if ps.last == "io.netty.versions.properties" => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last == "mailcap.default"              => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last == "mimetypes.default"            => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last == "native-image.properties"      => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last == "application.conf"             => MergeStrategy.concat
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+    },
+    assembly / test := {},
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,

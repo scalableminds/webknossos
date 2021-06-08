@@ -6,7 +6,6 @@
 import { Col, Row, Switch, Tooltip, Modal } from "antd";
 import {
   EditOutlined,
-  ExclamationCircleOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
   ScanOutlined,
@@ -630,17 +629,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     Toast.success("Successfully reloaded data of all layers.");
   };
 
-  renderPanelHeader = (hasInvisibleLayers: boolean) =>
-    hasInvisibleLayers ? (
-      <span>
-        <Tooltip title="Not all layers are currently visible.">
-          <ExclamationCircleOutlined
-            style={{ margin: "auto", color: "var(--ant-warning)", width: "100%" }}
-          />
-        </Tooltip>
-      </span>
-    ) : null;
-
   getVolumeMagsToDownsample = (): Array<Vector3> => {
     if (this.props.task != null) {
       return [];
@@ -801,13 +789,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });
-    const hasInvisibleLayers =
-      Object.keys(layers).find(
-        layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
-      ) != null;
     return (
       <div className="tracing-settings-menu">
-        {this.renderPanelHeader(hasInvisibleLayers)}
         {layerSettings}
         {this.getSkeletonLayer()}
         <DownsampleVolumeModal

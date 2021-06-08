@@ -262,7 +262,7 @@ function CreateTreeButton() {
 
   const handleCreateTree = () => dispatch(createTreeAction());
   return (
-    <Badge dot style={{ boxShadow: "none", background: rgbColorString }}>
+    <Badge dot style={{ boxShadow: "none", background: rgbColorString, zIndex: 1000 }}>
       <Tooltip title={`Create a new Tree – ${activeTreeHint}`}>
         <ButtonComponent
           onClick={handleCreateTree}
@@ -564,14 +564,14 @@ export default function ToolbarView() {
       </Radio.Group>
 
       {showCreateTreeButton ? (
-        <Space size={0} className="tight-button-group" style={{ marginLeft: 10 }}>
+        <Space size={0} className="antd-legacy-group" style={{ marginLeft: 10 }}>
           <CreateTreeButton />
           <AdditionalSkeletonModesButtons />
         </Space>
       ) : null}
 
       {showCreateCellButton || showChangeBrushSizeButton ? (
-        <Space size={0} style={{ marginLeft: 12 }} className="tight-button-group">
+        <Space size={0} style={{ marginLeft: 12 }} className="antd-legacy-group">
           {showCreateCellButton ? <CreateCellButton /> : null}
           {showChangeBrushSizeButton ? <ChangeBrushSizeButton /> : null}
         </Space>

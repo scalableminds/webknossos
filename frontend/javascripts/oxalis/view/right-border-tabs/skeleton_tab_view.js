@@ -737,7 +737,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onChange={this.handleChangeTreeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups}
-                    style={{ width: "60%" }}
+                    style={{ width: "70%" }}
                   />
                   <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
                     <i className="fas fa-arrow-right" />

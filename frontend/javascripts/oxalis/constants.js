@@ -120,7 +120,7 @@ export const BorderTabs = {
   AbstractTreeTab: {
     id: "AbstractTreeTab",
     name: "AbsTree",
-    description: "Shows an abstract version of the active skeleton",
+    description: "Abstract Tree - Shows an abstract version of the active skeleton",
   },
   ControlsAndRenderingSettingsTab: {
     id: "ControlsAndRenderingSettingsTab",
@@ -130,7 +130,7 @@ export const BorderTabs = {
   BoundingBoxTab: {
     id: "BoundingBoxTab",
     name: "BBoxes",
-    description: "Add and organize bounding boxes",
+    description: "Bounding Boxes - Add and organize bounding boxes",
   },
   LayerSettingsTab: {
     id: "LayerSettingsTab",

@@ -329,6 +329,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             label={settingsLabels.centerNewNode}
             value={this.props.userConfiguration.centerNewNode}
             onChange={this.onChangeUser.centerNewNode}
+            tooltipText="When disabled, the active node will not be centered after node creation/deletion."
           />
           <SwitchSetting
             label={settingsLabels.highlightCommentedNodes}

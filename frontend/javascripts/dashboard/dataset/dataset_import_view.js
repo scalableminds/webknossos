@@ -511,11 +511,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       return;
     }
 
-    // Trigger validation manually, because fields may have been updated
-    form
-      .validateFields()
-      .then(formValues => this.submit(formValues))
-      .catch(errorInfo => this.handleValidationFailed(errorInfo));
+    const afterForceUpdateCallback = () =>
+      // Trigger validation manually, because fields may have been updated
+      form
+        .validateFields()
+        .then(formValues => this.submit(formValues))
+        .catch(errorInfo => this.handleValidationFailed(errorInfo));
+    // Need to force update of the SimpleAdvancedDataForm as removing a layer in the advanced tab does not update
+    // the form items in the simple tab (only the values are updated). The form items automatically update once
+    // the simple tab renders, but this is not the case when the user directly submits the changes.
+    this.forceUpdate(afterForceUpdateCallback);
   };
 
   submit = async (formValues: FormData) => {

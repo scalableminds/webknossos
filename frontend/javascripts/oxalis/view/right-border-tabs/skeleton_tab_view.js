@@ -704,7 +704,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <SearchOutlined />
                     </ButtonComponent>
                   </AdvancedSearchPopover>
-                  <ButtonComponent onClick={this.props.onCreateTree} title="Create new Tree">
+                  <ButtonComponent onClick={this.props.onCreateTree} title="Create new Tree (C)">
                     <i className="fas fa-plus" />
                   </ButtonComponent>
                   <ButtonComponent onClick={this.handleDelete} title="Delete Selected Trees">
@@ -712,13 +712,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
-                    title="Toggle Visibility of All Trees"
+                    title="Toggle Visibility of All Trees (1)"
                   >
                     <i className="fas fa-toggle-on" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
-                    title="Toggle Visibility of Inactive Trees"
+                    title="Toggle Visibility of Inactive Trees (2)"
                   >
                     <i className="fas fa-toggle-off" />
                   </ButtonComponent>

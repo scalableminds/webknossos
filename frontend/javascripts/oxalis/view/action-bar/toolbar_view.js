@@ -40,8 +40,8 @@ const narrowButtonStyle = {
 };
 
 const imgStyleForSpaceyIcons = {
-  width: 20,
-  height: 20,
+  width: 14,
+  height: 14,
   lineHeight: 10,
   marginTop: -2,
 };
@@ -238,7 +238,7 @@ function CreateCellButton() {
   return (
     <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
       <Tooltip
-        title={`Create a new Segment ID – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
+        title={`Create a new Segment ID (C) – The active segment id is ${unmappedActiveCellId}${mappedIdInfo}.`}
       >
         <ButtonComponent onClick={handleCreateCell} style={{ width: 36, paddingLeft: 10 }}>
           <img src="/assets/images/new-cell.svg" alt="New Segment Icon" />
@@ -264,7 +264,7 @@ function CreateTreeButton() {
   const handleCreateTree = () => dispatch(createTreeAction());
   return (
     <Badge dot style={{ boxShadow: "none", background: rgbColorString, zIndex: 1000 }}>
-      <Tooltip title={`Create a new Tree – ${activeTreeHint}`}>
+      <Tooltip title={`Create a new Tree (C) – ${activeTreeHint}`}>
         <ButtonComponent
           onClick={handleCreateTree}
           style={{ ...narrowButtonStyle, paddingRight: 5 }}

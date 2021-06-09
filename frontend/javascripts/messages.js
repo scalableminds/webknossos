@@ -11,7 +11,7 @@ export const settings = {
   keyboardDelay: "Keyboard delay (ms)",
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
-  centerNewNode: "Center new Nodes",
+  centerNewNode: "Auto-center Nodes",
   highlightCommentedNodes: "Highlight Commented Nodes",
   nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",

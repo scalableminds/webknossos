@@ -760,6 +760,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               label={settings.centerNewNode}
               value={userConfiguration.centerNewNode}
               onChange={this.onChangeUser.centerNewNode}
+              tooltipText="When disabled, the active node will not be centered after node creation/deletion."
             />
             <SwitchSetting
               label={settings.highlightCommentedNodes}

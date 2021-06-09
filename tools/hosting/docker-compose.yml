@@ -2,7 +2,7 @@ version: "2.2"
 
 services:
   webknossos:
-    image: scalableminds/webknossos:${DOCKER_TAG:-20.02.0}
+    image: scalableminds/webknossos:${DOCKER_TAG:-21.05.1}
     ports:
       - "127.0.0.1:9000:9000"
     depends_on:
@@ -15,12 +15,10 @@ services:
     command:
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
-      - -Dhttp.address=0.0.0.0
       - -Dtracingstore.fossildb.address=fossildb
       - -Dtracingstore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
-      - -Dapplication.insertInitialData=false
-      - -Dapplication.authentication.enableDevAutoLogin=false
+      - -DwebKnossos.sampleOrganization.enabled=false
       - -Dtracingstore.publicUri=https://${PUBLIC_HOST}
       - -Ddatastore.publicUri=https://${PUBLIC_HOST}
     volumes:

@@ -505,14 +505,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       />
     );
 
-    if (isPublicViewMode || tracing.volume == null) {
-      return <div>{segmentationOpacitySetting}</div>;
-    }
-
     return (
       <div>
         {segmentationOpacitySetting}
-        {this.maybeGetAutoBrushUi()}
+        {!isPublicViewMode && tracing.volume != null ? this.maybeGetAutoBrushUi() : null}
         <MappingSettingsView />
       </div>
     );

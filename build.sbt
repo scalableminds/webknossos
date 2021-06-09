@@ -68,20 +68,6 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .settings(
     name := "webknossos-datastore",
     commonSettings,
-    assembly / assemblyMergeStrategy := {
-      case PathList(ps @ _*) if ps.last endsWith ".class"                 => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last endsWith ".proto"                 => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last == "reference-overrides.conf"     => MergeStrategy.concat
-      case PathList(ps @ _*) if ps.last == "io.netty.versions.properties" => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last == "mailcap.default"              => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last == "mimetypes.default"            => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last == "native-image.properties"      => MergeStrategy.last
-      case PathList(ps @ _*) if ps.last == "application.conf"             => MergeStrategy.concat
-      case x =>
-        val oldStrategy = (assembly / assemblyMergeStrategy).value
-        oldStrategy(x)
-    },
-    assembly / test := {},
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,
@@ -94,7 +80,19 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    copyConfFilesSetting
+    copyConfFilesSetting,
+    assembly / assemblyMergeStrategy := {
+      case PathList(ps @ _*) if ps.last endsWith ".class" => MergeStrategy.last
+      case PathList(ps @ _*) if ps.last endsWith ".proto" => MergeStrategy.last
+      case PathList(ps @ _*) if List("io.netty.versions.properties", "mailcap.default",
+        "mimetypes.default", "native-image.properties").contains(ps.last) => MergeStrategy.last
+      case PathList(ps @ _*) if List("application.conf", "reference-overrides.conf").contains(ps.last) => MergeStrategy.concat
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+    },
+    assembly / test := {},
+    assembly / assemblyJarName := s"webknossos-datastore-${BuildInfoSettings.webKnossosVersion}.jar"
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))

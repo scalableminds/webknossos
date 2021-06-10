@@ -4,7 +4,7 @@ import sbt._
 object Dependencies {
   private val akkaVersion = "2.6.14"
   private val log4jVersion = "2.13.3"
-  private val webknossosWrapVersion = "1.1.11-SNAPSHOT"
+  private val webknossosWrapVersion = "1.1.11"
 
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   private val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion

@@ -36,6 +36,7 @@ import api from "oxalis/api/internal_api";
 type Props = {
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
+  onTDCameraChanged: () => void,
   setTargetAndFixPosition: () => void,
 };
 
@@ -164,6 +165,8 @@ class CameraController extends React.PureComponent<Props> {
       tdCamera.left = oldMid - newWidth / 2;
       tdCamera.right = oldMid + newWidth / 2;
       tdCamera.updateProjectionMatrix();
+
+      this.props.onTDCameraChanged();
     }
   }
 

@@ -18,9 +18,8 @@ object BuildInfoSettings {
 
   def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
   def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")
-  def gitTag: String = getStdoutFromCommand("git describe --abbrev=0 --tags", "<getting git tag failed>")
 
-  def webKnossosVersion: String = if (ciTag != "") ciTag else gitTag + "-" + (if (ciBuild != "") ciBuild else "dev")
+  def webKnossosVersion: String = if (ciTag != "") ciTag else (if (ciBuild != "") ciBuild else "dev")
 
   lazy val webknossosBuildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
@@ -28,7 +27,6 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag,
       "version" -> webKnossosVersion,
       "datastoreApiVersion" -> "1.0"
     ),
@@ -42,7 +40,6 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag,
       "version" -> webKnossosVersion,
       "datastoreApiVersion" -> "1.0"
     ),
@@ -56,7 +53,6 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag,
       "version" -> webKnossosVersion
     ),
     buildInfoPackage := "webknossosTracingstore",

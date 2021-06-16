@@ -57,6 +57,7 @@ type OwnProps = {|
   onSelectTree: number => void,
   deselectAllTrees: () => void,
   onDeleteGroup: number => void,
+  allowUpdate: boolean,
 |};
 
 type Props = {
@@ -70,7 +71,6 @@ type Props = {
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onBatchActions: (Array<Action>, string) => void,
-  allowUpdate: boolean,
 };
 
 type State = {

@@ -70,6 +70,7 @@ type Props = {
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onBatchActions: (Array<Action>, string) => void,
+  allowUpdate: boolean,
 };
 
 type State = {
@@ -485,14 +486,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
-  canDrop(params: { nextParent: TreeNode }) {
+  canDrop = (params: { nextParent: TreeNode }) => {
     const { nextParent } = params;
-    return nextParent != null && nextParent.type === TYPE_GROUP;
-  }
+    return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
+  };
 
-  canDrag(params: { node: TreeNode }) {
+  canDrag = (params: { node: TreeNode }) => {
     const { node } = params;
-    return node.id !== MISSING_GROUP_ID;
+    return this.props.allowUpdate && node.id !== MISSING_GROUP_ID;
+  };
+
+  canNodeHaveChildren(node: TreeNode) {
+    return node.type === TYPE_GROUP;
   }
 
   render() {
@@ -511,6 +516,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}
+              canNodeHaveChildren={this.canNodeHaveChildren}
               rowHeight={24}
               innerStyle={{ padding: 0 }}
               scaffoldBlockPxWidth={25}

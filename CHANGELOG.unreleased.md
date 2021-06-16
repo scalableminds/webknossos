@@ -14,10 +14,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Changed
--
+- Improved dragging behavior of trees/groups in the tree tab. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
 
 ### Fixed
 - Fixed a bug where dataset uploads of zips with just one file inside failed. [#5534](https://github.com/scalableminds/webknossos/pull/5534)
+- Fixed crashing tree tab which could happen when dragging a node and then switching directly to another tab (e.g., comments) and then back again. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
+- Fixed that the UI allowed mutating trees in the tree tab (dragging/creating/deleting trees and groups). [#5573](https://github.com/scalableminds/webknossos/pull/5573)
+- Fixed "Create a new tree group for this file" setting in front-end import when a group id of 0 was used in the NML. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
+
 
 ### Removed
 - 

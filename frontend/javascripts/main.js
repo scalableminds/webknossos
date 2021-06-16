@@ -16,6 +16,10 @@ import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 import ErrorHandling from "libs/error_handling";
 import Router from "router";
 import Store from "oxalis/throttled_store";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+
+const dndBackend = HTML5Backend;
 
 async function loadActiveUser() {
   // Try to retreive the currently active user if logged in
@@ -48,7 +52,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (containerElement) {
     ReactDOM.render(
       <Provider store={Store}>
-        <Router />
+        <DndProvider backend={dndBackend}>
+          <Router />
+        </DndProvider>
       </Provider>,
       containerElement,
     );

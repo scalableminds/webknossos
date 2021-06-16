@@ -6,7 +6,7 @@ import { DeleteOutlined, PlusOutlined, SettingOutlined, ShrinkOutlined } from "@
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
-import SortableTree from "react-sortable-tree";
+import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import { type Action } from "oxalis/model/actions/actions";

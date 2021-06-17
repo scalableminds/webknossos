@@ -119,6 +119,8 @@
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./frontend/javascripts/**/*.js\" -x \"./frontend/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.js frontend/javascripts/oxalis/api/api_latest.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
+    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf",
+    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f frontend/javascripts/test/snapshots/flow-check/*.js",
     "apply-evolutions": "tools/postgres/apply_evolutions.sh",

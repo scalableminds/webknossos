@@ -15,7 +15,7 @@ import window, { document, location } from "libs/window";
 // you also need to set the values for projectID and projectKey in application.conf
 const LOG_LOCAL_ERRORS = false;
 
-const UNHANDLED_REJECTION_LABEL = "Unhandled Rejection";
+const UNHANDLED_REJECTION_LABEL = "UnhandledRejection";
 const UNHANDLED_REJECTION_PREFIX = `${UNHANDLED_REJECTION_LABEL}: `;
 
 // No more than MAX_NUM_ERRORS will be reported to airbrake
@@ -128,15 +128,13 @@ class ErrorHandling {
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
     window.addEventListener("unhandledrejection", event => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
-      const originalError = event.reason instanceof Error ? event.reason.toString() : event.reason;
-      // Put the actual error into the main string so that not all unhandled errors are grouped
-      // together in airbrake
-      this.notify(
-        Error(`${UNHANDLED_REJECTION_PREFIX}${JSON.stringify(originalError).slice(0, 80)}`),
-        {
-          originalError,
-        },
-      );
+      const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;
+      const wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
+      wrappedError.message =
+        UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80);
+      this.notify(wrappedError, {
+        originalError: reasonAsString,
+      });
     });
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {

@@ -31,7 +31,6 @@ const BLACKLISTED_ERROR_MESSAGES = [
 
 type ErrorHandlingOptions = {
   throwAssertions: boolean,
-  sendLocalErrors: boolean,
 };
 
 class ErrorWithParams extends Error {
@@ -61,17 +60,15 @@ export function handleGenericError(error: { ...Error, messages?: mixed }) {
 
 class ErrorHandling {
   throwAssertions: boolean;
-  sendLocalErrors: boolean;
   commitHash: ?string;
   airbrake: typeof AirbrakeClient;
   numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {
     if (options == null) {
-      options = { throwAssertions: false, sendLocalErrors: false };
+      options = { throwAssertions: false };
     }
     this.throwAssertions = options.throwAssertions;
-    this.sendLocalErrors = options.sendLocalErrors;
 
     const metaElement = document.querySelector("meta[name='commit-hash']");
     this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
@@ -112,17 +109,15 @@ class ErrorHandling {
       return null;
     });
 
-    if (!this.sendLocalErrors) {
-      this.airbrake.addFilter(notice => {
-        if (
-          LOG_LOCAL_ERRORS ||
-          (location.hostname !== "127.0.0.1" && location.hostname !== "localhost")
-        ) {
-          return notice;
-        }
-        return null;
-      });
-    }
+    this.airbrake.addFilter(notice => {
+      if (
+        LOG_LOCAL_ERRORS ||
+        (location.hostname !== "127.0.0.1" && location.hostname !== "localhost")
+      ) {
+        return notice;
+      }
+      return null;
+    });
 
     // Remove airbrake's unhandledrejection handler
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);

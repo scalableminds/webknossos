@@ -39,7 +39,7 @@ async function loadHasOrganizations() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
+  ErrorHandling.initialize({ throwAssertions: false });
 
   document.addEventListener("click", googleAnalyticsLogClicks);
   await Promise.all([loadFeatureToggles(), loadActiveUser(), loadHasOrganizations()]);

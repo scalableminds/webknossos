@@ -125,6 +125,7 @@ type StateProps = {|
   onSetActiveGroup: number => void,
   onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
+  allowUpdate: boolean,
 |};
 type Props = {| ...StateProps |};
 
@@ -560,6 +561,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
+        allowUpdate={this.props.allowUpdate}
         sortBy={sortBy}
         selectedTrees={this.state.selectedTrees}
         onSelectTree={this.onSelectTree}
@@ -705,10 +707,18 @@ class TreesTabView extends React.PureComponent<Props, State> {
                       </ButtonComponent>
                     </Tooltip>
                   </AdvancedSearchPopover>
-                  <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
+                  <ButtonComponent
+                    onClick={this.props.onCreateTree}
+                    title="Create Tree"
+                    disabled={!this.props.allowUpdate}
+                  >
                     <i className="fas fa-plus" /> Create
                   </ButtonComponent>
-                  <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
+                  <ButtonComponent
+                    onClick={this.handleDelete}
+                    title="Delete Tree"
+                    disabled={!this.props.allowUpdate}
+                  >
                     <i className="far fa-trash-alt" /> Delete
                   </ButtonComponent>
                   <ButtonComponent
@@ -787,6 +797,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   annotation: state.tracing,
+  allowUpdate: state.tracing.restrictions.allowUpdate,
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
 });

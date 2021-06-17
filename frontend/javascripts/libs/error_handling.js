@@ -11,6 +11,13 @@ import Toast from "libs/toast";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 
+// Note that if you set this value to true for debugging airbrake reporting,
+// you also need to set the values for projectID and projectKey in application.conf
+const LOG_LOCAL_ERRORS = false;
+
+const UNHANDLED_REJECTION_LABEL = "Unhandled Rejection";
+const UNHANDLED_REJECTION_PREFIX = `${UNHANDLED_REJECTION_LABEL}: `;
+
 // No more than MAX_NUM_ERRORS will be reported to airbrake
 const MAX_NUM_ERRORS = 50;
 const BLACKLISTED_ERROR_MESSAGES = [
@@ -107,7 +114,10 @@ class ErrorHandling {
 
     if (!this.sendLocalErrors) {
       this.airbrake.addFilter(notice => {
-        if (location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
+        if (
+          LOG_LOCAL_ERRORS ||
+          (location.hostname !== "127.0.0.1" && location.hostname !== "localhost")
+        ) {
           return notice;
         }
         return null;
@@ -121,9 +131,12 @@ class ErrorHandling {
       const originalError = event.reason instanceof Error ? event.reason.toString() : event.reason;
       // Put the actual error into the main string so that not all unhandled errors are grouped
       // together in airbrake
-      this.notify(Error(`Unhandled Rejection: ${JSON.stringify(originalError).slice(0, 80)}`), {
-        originalError,
-      });
+      this.notify(
+        Error(`${UNHANDLED_REJECTION_PREFIX}${JSON.stringify(originalError).slice(0, 80)}`),
+        {
+          originalError,
+        },
+      );
     });
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
@@ -161,6 +174,13 @@ class ErrorHandling {
 
   assertExtendContext(additionalContext: Object) {
     this.airbrake.addFilter(notice => {
+      notice.errors.forEach(error => {
+        const index = error.message.indexOf(UNHANDLED_REJECTION_PREFIX);
+        if (index > -1) {
+          error.type = UNHANDLED_REJECTION_LABEL;
+        }
+      });
+
       Object.assign(notice.context, additionalContext);
       return notice;
     });

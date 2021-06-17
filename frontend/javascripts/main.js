@@ -19,8 +19,6 @@ import Store from "oxalis/throttled_store";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
-const dndBackend = HTML5Backend;
-
 async function loadActiveUser() {
   // Try to retreive the currently active user if logged in
   try {
@@ -52,7 +50,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (containerElement) {
     ReactDOM.render(
       <Provider store={Store}>
-        <DndProvider backend={dndBackend}>
+        {/* The DnDProvider is necessary for the TreeHierarchyView. Otherwise, the view may crash in
+        certain conditions. See https://github.com/scalableminds/webknossos/issues/5568 for context.
+        The fix is inspired by:
+        https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
+        <DndProvider backend={HTML5Backend}>
           <Router />
         </DndProvider>
       </Provider>,

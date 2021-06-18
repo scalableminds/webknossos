@@ -230,7 +230,7 @@ function NoNodeContextMenuOptions({
       disabled={!currentMeshFile || !features().jobsEnabled}
     >
       <Tooltip
-        disabled={!features().jobsEnabled}
+        visible={!features().jobsEnabled}
         title="The computation of mesh files is not supported by this webKnossos instance."
       >
         Load Precomputed Mesh

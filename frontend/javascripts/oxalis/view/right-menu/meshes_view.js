@@ -59,7 +59,7 @@ import MenuItem from "antd/lib/menu/MenuItem";
 const DropdownButton = Dropdown.Button;
 
 // Interval to check if there is a running mesh file computation for this dataset
-const refreshInterval = 60000;
+const refreshInterval = 30000;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -153,15 +153,29 @@ class MeshesView extends React.Component<Props, State> {
 
   async fetchJobData(): Promise<void> {
     const jobs = await getJobs();
+    const wasComputingMeshfile = this.state.isComputingMeshfile;
+    const isComputingMeshfile =
+      jobs.filter(
+        job =>
+          job.type === "compute_mesh_file" &&
+          job.datasetName === this.props.datasetName &&
+          job.state === "STARTED",
+      ).length > 0;
+    if (wasComputingMeshfile && !isComputingMeshfile) {
+      Toast.info(
+        <React.Fragment>
+          A meshfile generation job for this dataset has finished. Click{" "}
+          <a href="/jobs" target="_blank">
+            here
+          </a>{" "}
+          to see all jobs.
+        </React.Fragment>,
+      );
+    }
+
     this.setState(
       {
-        isComputingMeshfile:
-          jobs.filter(
-            job =>
-              job.type === "compute_mesh_file" &&
-              job.datasetName === this.props.datasetName &&
-              job.state === "STARTED",
-          ).length > 0,
+        isComputingMeshfile,
       },
       // refresh according to the refresh interval
       () => {
@@ -213,7 +227,7 @@ class MeshesView extends React.Component<Props, State> {
 
     const getJobsDisabledTooltip = node => (
       <Tooltip
-        disabled={!features().jobsEnabled}
+        visible={!features().jobsEnabled}
         title="The computation of mesh files is not supported by this webKnossos instance."
       >
         {node}

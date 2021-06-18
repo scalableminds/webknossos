@@ -34,6 +34,7 @@ import {
   addIsosurfaceAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
+import features from "features";
 import { loadMeshFromFile, maybeFetchMeshFiles } from "oxalis/view/right-menu/meshes_view_helper";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
@@ -210,15 +211,26 @@ class MeshesView extends React.Component<Props, State> {
       );
     };
 
-    const getComputeMeshFileButton = () => (
-      <Button
-        size="small"
-        loading={this.state.isComputingMeshfile}
-        onClick={startComputingMeshfile}
+    const getJobsDisabledTooltip = node => (
+      <Tooltip
+        disabled={!features().jobsEnabled}
+        title="The computation of mesh files is not supported by this webKnossos instance."
       >
-        Compute Mesh File
-      </Button>
+        {node}
+      </Tooltip>
     );
+
+    const getComputeMeshFileButton = () =>
+      getJobsDisabledTooltip(
+        <Button
+          size="small"
+          loading={this.state.isComputingMeshfile}
+          onClick={startComputingMeshfile}
+          disabled={!features().jobsEnabled}
+        >
+          Compute Mesh File
+        </Button>,
+      );
 
     const getDownloadButton = (segmentId: number) => (
       <Tooltip title="Download Isosurface">
@@ -376,7 +388,9 @@ class MeshesView extends React.Component<Props, State> {
 
     const getHeaderDropdownMenu = () => (
       <Menu>
-        <Menu.Item onClick={startComputingMeshfile}>Compute Mesh File</Menu.Item>
+        <Menu.Item onClick={startComputingMeshfile} disabled={!features().jobsEnabled}>
+          {getJobsDisabledTooltip("Compute Mesh File")}
+        </Menu.Item>
         <Menu.Item>{getStlImportItem()}</Menu.Item>
       </Menu>
     );

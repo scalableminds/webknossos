@@ -9,4 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 -
 
 ### Postgres Evolutions:
-- 
+- [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)

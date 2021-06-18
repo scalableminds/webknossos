@@ -19,6 +19,7 @@ import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
 
+import { location } from "libs/window";
 import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_types";
 import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
@@ -89,6 +90,10 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
 
   componentDidMount() {
     this.fetchData();
+
+    if (location.hash === "#invite") {
+      this.setState({ isInviteModalVisible: true });
+    }
   }
 
   componentWillUpdate(nextProps, nextState) {

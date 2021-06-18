@@ -50,7 +50,11 @@ import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 
-const retriesUntilAnalyticsEventSent = 20;
+const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
+
+const logRetryToAnalytics = _.throttle((datasetName: string) => {
+  ErrorHandling.notify(new Error(`Warning: Upload of dataset ${datasetName} was retried.`));
+}, REPORT_THROTTLE_THRESHOLD);
 
 type OwnProps = {|
   datastores: Array<APIDataStore>,
@@ -72,7 +76,6 @@ type State = {
   isRetrying: boolean,
   uploadProgress: number,
   selectedTeams: APITeam | Array<APITeam>,
-  retries: number,
 };
 
 function WkwExample() {
@@ -144,7 +147,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
-    retries: 0,
   };
 
   formRef = React.createRef<typeof FormInstance>();
@@ -272,7 +274,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 );
               }
             }
-            this.setState({ isUploading: false, retries: 0 });
+            this.setState({ isUploading: false });
             if (maybeError == null) {
               newestForm.setFieldsValue({ name: null, zipFile: [] });
               this.props.onUploaded(
@@ -291,7 +293,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               isUploading: false,
               isRetrying: false,
               uploadProgress: 0,
-              retries: 0,
             });
           },
         );
@@ -311,18 +312,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
 
       resumableUpload.on("fileRetry", file => {
-        const currentRetries = this.state.retries + 1;
-        // log to airbrake in intervals of retriesUntilAnalyticsEventSent
-        if (currentRetries >= retriesUntilAnalyticsEventSent && currentRetries % 10 === 0) {
-          ErrorHandling.notify(
-            new Error(`Upload of file ${file} was resumed ${currentRetries} times.`),
-          );
-        }
-        this.setState(prev => ({
-          ...prev,
-          isRetrying: true,
-          retries: prev.retries + 1,
-        }));
+        logRetryToAnalytics(file);
+        this.setState({ isRetrying: true });
       });
 
       resumableUpload.addFiles(formValues.zipFile);

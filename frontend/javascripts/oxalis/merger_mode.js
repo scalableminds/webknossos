@@ -98,7 +98,10 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
   } else {
     await call(action);
     // Center the created cell manually, as somehow without this call the previous node would be centered.
-    api.tracing.centerActiveNode();
+
+    if (Store.getState().userConfiguration.centerNewNode) {
+      api.tracing.centerActiveNode();
+    }
   }
 }
 

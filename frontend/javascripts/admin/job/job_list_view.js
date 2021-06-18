@@ -140,15 +140,21 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderState = (__: any, job: APIJob) => {
-    const stateString = _.capitalize(job.state.toLowerCase());
-    if (job.state === "SUCCESS") return stateString;
-    else {
-      return (
-        <Tooltip title="Something went wrong when executing this job. Feel free to contact us if you need assistance.">
-          {stateString}
-        </Tooltip>
-      );
-    }
+    const tooltipMessages = {
+      UNKNOWN:
+        "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
+      SUCCESS: "This job has successfully been executed.",
+      PENDING: "This job will run as soon as a worker becomes available.",
+      STARTED: "This job is currently running.",
+      FAILURE:
+        "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
+      MANUAL:
+        "The job will be handled by an admin shortly, since it couldn't be finished automatically. Please check back here soon.",
+    };
+
+    const tooltip: string = tooltipMessages[job.state];
+    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+    return <Tooltip title={tooltip}>{jobStateNormalized}</Tooltip>;
   };
 
   render() {

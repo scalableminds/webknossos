@@ -367,3 +367,51 @@ img.keyboard-mouse-icon:first-child {
 .transparent-background-on-hover:hover {
   background: transparent;
 }
+
+.animate-alignment {
+  -webkit-animation: resize_alignment_demo 4s linear 0s infinite alternate;
+  -moz-animation: resize_alignment_demo 4s linear 0s infinite alternate;
+  -o-animation: resize_alignment_demo 4s linear 0s infinite alternate;
+  animation: resize_alignment_demo 4s linear 0s infinite alternate;
+}
+
+@-webkit-keyframes resize_alignment_demo {
+  from {
+    height: 90px;
+  }
+  to {
+    height: 180px;
+  }
+}
+@-moz-keyframes resize_alignment_demo {
+  from {
+    height: 90px;
+  }
+  to {
+    height: 180px;
+  }
+}
+@-o-keyframes resize_alignment_demo {
+  from {
+    height: 90px;
+  }
+  to {
+    height: 180px;
+  }
+}
+@keyframes resize_alignment_demo {
+  from {
+    height: 90px;
+  }
+  to {
+    height: 180px;
+  }
+}
+
+.crosslink-box {
+  padding: 20px;
+  margin-left: 20px;
+  background: @component-background;
+  box-shadow: @box-shadow-base;
+  border-radius: 3px;
+}

@@ -12,4 +12,6 @@ addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.9")
 
 addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "3.1.3")
 
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.15.0")
+
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.3"

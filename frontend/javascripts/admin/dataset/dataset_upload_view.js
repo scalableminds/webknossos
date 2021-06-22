@@ -11,7 +11,6 @@ import {
   Progress,
   Alert,
   List,
-  Layout,
 } from "antd";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -49,8 +48,6 @@ import { FormInstance } from "antd/lib/form";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
-
-const { Content, Sider } = Layout;
 
 type OwnProps = {|
   datastores: Array<APIDataStore>,
@@ -456,269 +453,190 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
-        <Layout>
-          <Content>
-            <CardContainer withoutCard={withoutCard} title="Upload Dataset">
-              <Form
-                onFinish={this.handleSubmit}
-                layout="vertical"
-                ref={this.formRef}
-                initialValues={{ initialTeams: [], scale: [0, 0, 0], zipFile: [] }}
-              >
-                {features().isDemoInstance && (
-                  <Alert
-                    message={
-                      <>
-                        We are happy to help!
-                        <br />
-                        Please <a href="mailto:hello@webknossos.org">contact us</a> if you have any
-                        trouble uploading your data or the uploader doesn&apos;t support your format
-                        yet.
-                      </>
-                    }
-                    type="info"
-                    style={{ marginBottom: 50 }}
-                  />
-                )}
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <DatasetNameFormItem activeUser={activeUser} />
-                  </Col>
-                  <Col span={12}>
-                    <FormItem
-                      name="initialTeams"
-                      label="Teams allowed to access this dataset"
-                      hasFeedback
-                      rules={[
-                        {
-                          required: !isDatasetManagerOrAdmin,
-                          message: !isDatasetManagerOrAdmin
-                            ? messages["dataset.import.required.initialTeam"]
-                            : null,
-                        },
-                      ]}
-                    >
-                      <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
-                        <TeamSelectionComponent
-                          mode="multiple"
-                          value={this.state.selectedTeams}
-                          onChange={selectedTeams => {
-                            if (this.formRef.current == null) return;
-                            if (!Array.isArray(selectedTeams)) {
-                              // Making sure that we always have an array even when only one team is selected.
-                              selectedTeams = [selectedTeams];
-                            }
-                            this.formRef.current.setFieldsValue({ initialTeams: selectedTeams });
-                            this.setState({ selectedTeams });
-                          }}
-                          afterFetchedTeams={fetchedTeams => {
-                            if (!features().isDemoInstance) {
-                              return;
-                            }
-                            const teamOfOrganisation = fetchedTeams.find(
-                              team => team.name === team.organization,
-                            );
-                            if (teamOfOrganisation == null) {
-                              return;
-                            }
-                            if (this.formRef.current == null) return;
-                            this.formRef.current.setFieldsValue({
-                              initialTeams: [teamOfOrganisation],
-                            });
-                            this.setState({ selectedTeams: [teamOfOrganisation] });
-                          }}
-                        />
-                      </Tooltip>
-                    </FormItem>
-                  </Col>
-                </Row>
-                <DatastoreFormItem
-                  form={form}
-                  datastores={uploadableDatastores}
-                  hidden={hasOnlyOneDatastoreOrNone}
-                />
-                {features().jobsEnabled && needsConversion ? (
-                  <React.Fragment>
-                    <FormItemWithInfo
-                      name="scale"
-                      label="Voxel Size"
-                      info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-                      disabled={this.state.needsConversion}
-                      help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
-                      rules={[
-                        {
-                          required: this.state.needsConversion,
-                          message: "Please provide a scale for the dataset.",
-                        },
-                        {
-                          validator: syncValidator(
-                            value => value && value.every(el => el > 0),
-                            "Each component of the scale must be larger than 0.",
-                          ),
-                        },
-                      ]}
-                    >
-                      <Vector3Input
-                        style={{ width: 400 }}
-                        allowDecimals
-                        onChange={scale => {
-                          if (this.formRef.current == null) return;
-                          this.formRef.current.setFieldsValue({ scale });
-                        }}
-                      />
-                    </FormItemWithInfo>
-                  </React.Fragment>
-                ) : null}
-
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+          <Form
+            onFinish={this.handleSubmit}
+            layout="vertical"
+            ref={this.formRef}
+            initialValues={{ initialTeams: [], scale: [0, 0, 0], zipFile: [] }}
+          >
+            {features().isDemoInstance && (
+              <Alert
+                message={
+                  <>
+                    We are happy to help!
+                    <br />
+                    Please <a href="mailto:hello@webknossos.org">contact us</a> if you have any
+                    trouble uploading your data or the uploader doesn&apos;t support your format
+                    yet.
+                  </>
+                }
+                type="info"
+                style={{ marginBottom: 50 }}
+              />
+            )}
+            <Row gutter={8}>
+              <Col span={12}>
+                <DatasetNameFormItem activeUser={activeUser} />
+              </Col>
+              <Col span={12}>
                 <FormItem
-                  name="zipFile"
-                  label="Dataset"
+                  name="initialTeams"
+                  label="Teams allowed to access this dataset"
                   hasFeedback
                   rules={[
-                    { required: true, message: messages["dataset.import.required.zipFile"] },
                     {
-                      validator: syncValidator(
-                        files =>
-                          files.filter(file => Utils.isFileExtensionEqualTo(file.path, "zip"))
-                            .length <= 1,
-                        "You cannot upload more than one archive.",
-                      ),
-                    },
-                    {
-                      validator: syncValidator(
-                        files =>
-                          files.filter(file =>
-                            Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]),
-                          ).length === 0,
-                        "Tar and rar archives are not supported currently. Please use zip archives.",
-                      ),
-                    },
-                    {
-                      validator: syncValidator(files => {
-                        const archives = files.filter(file =>
-                          Utils.isFileExtensionEqualTo(file.path, "zip"),
-                        );
-                        // Either there are no archives, or all files are archives
-                        return archives.length === 0 || archives.length === files.length;
-                      }, "Archives cannot be mixed with other files."),
-                    },
-                    {
-                      validator: syncValidator(files => {
-                        const wkwFiles = files.filter(file =>
-                          Utils.isFileExtensionEqualTo(file.path, "wkw"),
-                        );
-                        const imageFiles = files.filter(file =>
-                          Utils.isFileExtensionEqualTo(file.path, [
-                            "tif",
-                            "tiff",
-                            "jpg",
-                            "jpeg",
-                            "png",
-                            "czi",
-                            "dm3",
-                            "dm4",
-                            "nifti",
-                            "raw",
-                          ]),
-                        );
-                        return wkwFiles.length === 0 || imageFiles.length === 0;
-                      }, "WKW files should not be mixed with image files."),
+                      required: !isDatasetManagerOrAdmin,
+                      message: !isDatasetManagerOrAdmin
+                        ? messages["dataset.import.required.initialTeam"]
+                        : null,
                     },
                   ]}
-                  valuePropName="fileList"
                 >
-                  <FileUploadArea
-                    onChange={files => {
-                      this.maybeSetUploadName(files);
-                      this.validateFiles(files);
+                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
+                    <TeamSelectionComponent
+                      mode="multiple"
+                      value={this.state.selectedTeams}
+                      onChange={selectedTeams => {
+                        if (this.formRef.current == null) return;
+                        if (!Array.isArray(selectedTeams)) {
+                          // Making sure that we always have an array even when only one team is selected.
+                          selectedTeams = [selectedTeams];
+                        }
+                        this.formRef.current.setFieldsValue({ initialTeams: selectedTeams });
+                        this.setState({ selectedTeams });
+                      }}
+                      afterFetchedTeams={fetchedTeams => {
+                        if (!features().isDemoInstance) {
+                          return;
+                        }
+                        const teamOfOrganisation = fetchedTeams.find(
+                          team => team.name === team.organization,
+                        );
+                        if (teamOfOrganisation == null) {
+                          return;
+                        }
+                        if (this.formRef.current == null) return;
+                        this.formRef.current.setFieldsValue({
+                          initialTeams: [teamOfOrganisation],
+                        });
+                        this.setState({ selectedTeams: [teamOfOrganisation] });
+                      }}
+                    />
+                  </Tooltip>
+                </FormItem>
+              </Col>
+            </Row>
+            <DatastoreFormItem
+              form={form}
+              datastores={uploadableDatastores}
+              hidden={hasOnlyOneDatastoreOrNone}
+            />
+            {features().jobsEnabled && needsConversion ? (
+              <React.Fragment>
+                <FormItemWithInfo
+                  name="scale"
+                  label="Voxel Size"
+                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                  disabled={this.state.needsConversion}
+                  help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                  rules={[
+                    {
+                      required: this.state.needsConversion,
+                      message: "Please provide a scale for the dataset.",
+                    },
+                    {
+                      validator: syncValidator(
+                        value => value && value.every(el => el > 0),
+                        "Each component of the scale must be larger than 0.",
+                      ),
+                    },
+                  ]}
+                >
+                  <Vector3Input
+                    style={{ width: 400 }}
+                    allowDecimals
+                    onChange={scale => {
+                      if (this.formRef.current == null) return;
+                      this.formRef.current.setFieldsValue({ scale });
                     }}
-                    fileList={[]}
                   />
-                </FormItem>
-                <FormItem style={{ marginBottom: 0 }}>
-                  <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
-                    Upload
-                  </Button>
-                </FormItem>
-              </Form>
-            </CardContainer>
-          </Content>
-          <Sider className="hide-on-small-screen" width={300}>
-            <div className="crosslink-box">
-              <h4 style={{ fontWeight: "bold" }}>
-                Are you looking for dataset alignment or stitching?
-              </h4>
-              <img
-                src="/assets/images/vx/alignment-schema.png"
-                alt="Schematic Alignment"
-                style={{ width: "100%" }}
-              />
-              {/*<div style={{ position: "relative" }}>
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  overflow: "hidden",
-                  zIndex: 100,
-                }}
-                className="animate-alignment"
-              >
-                <img
-                  src="/assets/images/vx/2020-08-06-p7-raw-cubing__5146_1973_1207__PLANE_XZ.png"
-                  alt="Unaligned dataset"
-                  style={{ width: "100%" }}
-                />
-              </div>
-              <img
-                src="/assets/images/vx/2020-08-06-p7-align2__5535_2589_1208__PLANE_XZ.png"
-                alt="Aligned dataset"
-                style={{ width: "100%", position: "absolute", top: 0, left: 0 }}
-              />
-            </div>*/}
-              <Button
-                href="https://webknossos.org/services/alignment"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "block", margin: "10px auto" }}
-              >
-                Get in Contact
-              </Button>
-            </div>
+                </FormItemWithInfo>
+              </React.Fragment>
+            ) : null}
 
-            <div
-              className="crosslink-box"
-              style={{
-                background:
-                  "url(/assets/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
-                height: 500,
-                backgroundSize: "100%",
-                marginTop: 20,
-                padding: 0,
-              }}
+            <FormItem
+              name="zipFile"
+              label="Dataset"
+              hasFeedback
+              rules={[
+                { required: true, message: messages["dataset.import.required.zipFile"] },
+                {
+                  validator: syncValidator(
+                    files =>
+                      files.filter(file => Utils.isFileExtensionEqualTo(file.path, "zip")).length <=
+                      1,
+                    "You cannot upload more than one archive.",
+                  ),
+                },
+                {
+                  validator: syncValidator(
+                    files =>
+                      files.filter(file => Utils.isFileExtensionEqualTo(file.path, ["tar", "rar"]))
+                        .length === 0,
+                    "Tar and rar archives are not supported currently. Please use zip archives.",
+                  ),
+                },
+                {
+                  validator: syncValidator(files => {
+                    const archives = files.filter(file =>
+                      Utils.isFileExtensionEqualTo(file.path, "zip"),
+                    );
+                    // Either there are no archives, or all files are archives
+                    return archives.length === 0 || archives.length === files.length;
+                  }, "Archives cannot be mixed with other files."),
+                },
+                {
+                  validator: syncValidator(files => {
+                    const wkwFiles = files.filter(file =>
+                      Utils.isFileExtensionEqualTo(file.path, "wkw"),
+                    );
+                    const imageFiles = files.filter(file =>
+                      Utils.isFileExtensionEqualTo(file.path, [
+                        "tif",
+                        "tiff",
+                        "jpg",
+                        "jpeg",
+                        "png",
+                        "czi",
+                        "dm3",
+                        "dm4",
+                        "nifti",
+                        "raw",
+                      ]),
+                    );
+                    return wkwFiles.length === 0 || imageFiles.length === 0;
+                  }, "WKW files should not be mixed with image files."),
+                },
+              ]}
+              valuePropName="fileList"
             >
-              <div
-                style={{
-                  padding: "180px 10px 213px",
-                  background:
-                    "linear-gradient(181deg, transparent, rgb(59 59 59 / 20%), rgba(20, 19, 31, 0.84), #48484833, transparent)",
+              <FileUploadArea
+                onChange={files => {
+                  this.maybeSetUploadName(files);
+                  this.validateFiles(files);
                 }}
-              >
-                <h4 style={{ color: "white" }}>
-                  Are you looking for an automated segmentation of this dataset?
-                </h4>
-                <Button
-                  href="https://webknossos.org/services/automated-segmentation"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: "block", margin: "10px auto" }}
-                >
-                  Learn More
-                </Button>
-              </div>
-            </div>
-          </Sider>
-        </Layout>
+                fileList={[]}
+              />
+            </FormItem>
+            <FormItem style={{ marginBottom: 0 }}>
+              <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
+                Upload
+              </Button>
+            </FormItem>
+          </Form>
+        </CardContainer>
+
         {this.getUploadModal()}
       </div>
     );

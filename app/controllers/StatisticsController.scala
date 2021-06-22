@@ -74,7 +74,8 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
         handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
         users <- userDAO.findAll //Access query ensures only users of own orga are shown
-        usersWithTimes <- Fox.serialCombined(users)(user =>
+        notUnlistedUsers = users.filter(!_.isUnlisted)
+        usersWithTimes <- Fox.serialCombined(notUnlistedUsers)(user =>
           timeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
         data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
         json <- Fox.combined(data.map {

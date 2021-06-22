@@ -345,7 +345,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             <Layout style={{ display: "flex" }}>
               <MergerModeController />
               <div id={canvasAndLayoutContainerID} style={{ width: "100%", height: "100%" }}>
-                <TracingView />
+                {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
                   <FlexLayoutWrapper
                     onLayoutChange={this.onLayoutChange}

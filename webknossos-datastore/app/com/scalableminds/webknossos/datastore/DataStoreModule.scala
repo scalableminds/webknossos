@@ -22,5 +22,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[AgglomerateService]).asEagerSingleton()
     bind(classOf[IsosurfaceServiceHolder]).asEagerSingleton()
     bind(classOf[SampleDataSourceService]).asEagerSingleton()
+    bind(classOf[AutoUpdateService]).asEagerSingleton()
   }
 }

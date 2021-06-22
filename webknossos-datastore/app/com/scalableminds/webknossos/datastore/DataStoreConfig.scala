@@ -25,6 +25,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
     }
+    object AutoUpdate {
+      val enabled: Boolean = get[Boolean]("datastore.autoUpdate.enabled")
+    }
     object Cache {
       object DataCube {
         val maxEntries: Int = get[Int]("datastore.cache.dataCube.maxEntries")
@@ -47,7 +50,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
     }
-    val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface)
+    val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface, AutoUpdate)
   }
 
   val children = List(Http, Datastore)

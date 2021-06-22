@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import javax.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, InjectedController}
+
+import javax.inject.Inject
 
 class StandaloneDatastore @Inject()() extends InjectedController with RemoteOriginHelpers {
 

@@ -1,3 +1,4 @@
+#!/bin/bash
 start_webknossos() {
 	java -Dconfig.file=my-datastore.conf -jar webknossos.jar
 	status=$?

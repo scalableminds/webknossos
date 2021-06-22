@@ -1,0 +1,15 @@
+[Unit]
+Description=webKnossos datastore module 
+
+Wants=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/y/arbeit/webknossos/tools/auto_update
+ExecStart=/home/y/arbeit/webknossos/tools/auto_update/run.sh
+Restart=on-failure
+RestartSec=10
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

@@ -5,8 +5,8 @@ Wants=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/y/arbeit/webknossos/tools/auto_update
-ExecStart=/home/y/arbeit/webknossos/tools/auto_update/run.sh
+WorkingDirectory=WK_PATH
+ExecStart=WK_PATH/run.sh
 Restart=on-failure
 RestartSec=10
 KillMode=mixed

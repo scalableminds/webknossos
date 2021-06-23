@@ -198,11 +198,9 @@ class DataSetController @Inject()(userService: UserService,
         allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
         usersByTeams <- userDAO.findAllByTeams(allowedTeams)
         adminsAndDatasetManagers <- userDAO.findAdminsAndDatasetManagersByOrg(organization._id)
-        usersJs <- Fox.serialCombined((usersByTeams ++ adminsAndDatasetManagers).distinct)(u =>
-          userService.compactWrites(u))
-      } yield {
-        Ok(Json.toJson(usersJs))
-      }
+        usersFiltered = (usersByTeams ++ adminsAndDatasetManagers).distinct.filter(!_.isUnlisted)
+        usersJs <- Fox.serialCombined(usersFiltered)(u => userService.compactWrites(u))
+      } yield Ok(Json.toJson(usersJs))
   }
 
   def read(organizationName: String, dataSetName: String, sharingToken: Option[String]): Action[AnyContent] =

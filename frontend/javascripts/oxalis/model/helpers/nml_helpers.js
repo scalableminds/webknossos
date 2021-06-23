@@ -531,7 +531,7 @@ export function wrapInNewGroup(
   const trees = _.mapValues(originalTrees, tree => ({
     ...tree,
     // Give parentless trees the new treeGroup as parent
-    groupId: tree.groupId || unusedGroupId,
+    groupId: tree.groupId != null ? tree.groupId : unusedGroupId,
   }));
   const treeGroups = [
     // Create a new tree group which holds the old ones

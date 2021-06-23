@@ -550,6 +550,10 @@ export type APIFeatureToggles = {
   +exportTiffMaxEdgeLengthVx: number,
 };
 
+export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
+export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
+
 export type APIJob = {
   +id: string,
   +datasetName: ?string,
@@ -562,6 +566,7 @@ export type APIJob = {
   +boundingBox: ?string,
   +type: string,
   +state: string,
+  +manualState: string,
   +createdAt: number,
 };
 

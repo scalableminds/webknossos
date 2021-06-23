@@ -2936,7 +2936,7 @@ camelcase@^5.0.0, camelcase@^5.2.0, camelcase@^5.3.1:
 
 caniuse-lite@^1.0.30001165:
   version "1.0.30001239"
-  resolved "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001239.tgz"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001239.tgz"
   integrity sha512-cyBkXJDMeI4wthy8xJ2FvDU6+0dtcZSJW3voUF8+e9f1bBeuvyZfc3PNbkOETyhbR+dGCPzn9E7MA3iwzusOhQ==
 
 caseless@~0.12.0:

@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Alert, Layout, Tooltip } from "antd";
+import { Alert, Button, Layout, Tooltip, notification } from "antd";
 import { SettingOutlined, WarningFilled } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -117,6 +117,49 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   componentDidMount() {
     window.addEventListener("resize", this.debouncedOnLayoutChange);
+
+    notification.open({
+      message: (
+        <div>
+          <span className="logo" />
+          welcome to webKnossos!
+        </div>
+      ),
+      description: (
+        <div>
+          You are viewing this dataset on webKnossos. webKnossos is an online tool to visualise and
+          collaboratively annotate large image datasets. Try out the annotation features on the
+          public dataset below. If this is for you, sign up for free, upload your data and get
+          started!
+          <div style={{ marginTop: 12, marginLeft: 200 }}>
+            <Button
+              type="primary"
+              href="/auth/login"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ background: "#256ff7" }}
+            >
+              Sign Up
+            </Button>
+            <Button
+              type="default"
+              href="/auth/login"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ borderColor: "#eaeaea", marginLeft: 12 }}
+            >
+              Learn More
+            </Button>
+          </div>
+        </div>
+      ),
+      className: "webknossos-welcome-toast",
+
+      style: {
+        width: 600,
+      },
+      duration: 0,
+    });
   }
 
   componentDidCatch(error: Error) {

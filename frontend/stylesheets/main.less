@@ -367,3 +367,71 @@ img.keyboard-mouse-icon:first-child {
 .transparent-background-on-hover:hover {
   background: transparent;
 }
+
+.webknossos-welcome-toast {
+  background: #115a73;
+
+  // &:before {
+  // content: "";
+  background: url(https://res2.weblium.site/res/5ffc7e249a9fc00021e2921b/60a274863cb13f0021eb0e7a_optimized_3840.webp)
+      50% 50% / cover no-repeat,
+    rgb(23, 103, 139);
+  // position: absolute;
+  // top: 0;
+  // left: 0;
+  // right: 0;
+  // bottom: 0;
+  // }
+  &:before {
+    content: "";
+    background: linear-gradient(0deg, #222222d4 0%, rgba(23, 103, 139, 0.73) 100%);
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .logo {
+    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    padding-left: 105px;
+    height: 180px;
+    float: left;
+    margin-top: 2px;
+    margin-left: -15px;
+    background-size: 70px 70px;
+    filter: invert(1);
+  }
+
+  .logo-small {
+    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    padding-left: 75px;
+    height: 45px;
+    float: left;
+    margin-top: 2px;
+    margin-left: -15px;
+    background-size: 50px 50px;
+    filter: invert(1);
+  }
+
+  .ant-notification-notice-content {
+    position: relative;
+  }
+  .ant-notification-notice-message {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  .ant-notification-notice-description {
+    font-size: 16px;
+    line-height: 21px;
+    color: #ececec;
+  }
+
+  .ant-notification-notice-close {
+    color: white;
+  }
+
+  color: white;
+}

@@ -200,9 +200,7 @@ function NoNodeContextMenuOptions({
 }: NoNodeContextMenuProps) {
   useEffect(() => {
     (async () => {
-      if (segmentationLayer) {
-        await maybeFetchMeshFiles(segmentationLayer, dataset, false);
-      }
+      await maybeFetchMeshFiles(segmentationLayer, dataset, false);
     })();
   }, []);
 

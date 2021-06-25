@@ -9,7 +9,7 @@ function showWelcomeToast() {
     message: (
       <div>
         <span className="logo" />
-        welcome to webKnossos!
+        Welcome to webKnossos!
       </div>
     ),
     description: (
@@ -20,12 +20,12 @@ function showWelcomeToast() {
         <div style={{ marginTop: 12, marginLeft: 200 }}>
           <Button
             type="primary"
-            href="/auth/login"
+            href="/auth/signup"
             target="_blank"
             rel="noopener noreferrer"
             style={{ background: "#256ff7" }}
           >
-            Sign Up
+            Create a free account
           </Button>
           <Button
             type="default"

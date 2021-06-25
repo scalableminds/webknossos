@@ -303,8 +303,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         this.setState({ isRetrying: false, uploadProgress: resumableUpload.progress() });
       });
 
-      resumableUpload.on("fileRetry", file => {
-        logRetryToAnalytics(file);
+      resumableUpload.on("fileRetry", () => {
+        logRetryToAnalytics(datasetId.name);
         this.setState({ isRetrying: true });
       });
 

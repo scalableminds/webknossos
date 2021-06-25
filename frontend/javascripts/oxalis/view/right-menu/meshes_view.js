@@ -44,7 +44,7 @@ import {
   getRequestLogZoomStep,
   getCurrentResolution,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getSegmentationLayer, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -60,6 +60,7 @@ const DropdownButton = Dropdown.Button;
 
 // Interval to check if there is a running mesh file computation for this dataset
 const refreshInterval = 30000;
+const defaultMeshfileGenerationResolution = [4, 4, 4];
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -213,11 +214,17 @@ class MeshesView extends React.Component<Props, State> {
     };
 
     const startComputingMeshfile = async () => {
+      const availableResolutions = getResolutions(this.props.dataset);
+      const meshfileResolution =
+        availableResolutions.find(res => _.isEqual(res, defaultMeshfileGenerationResolution)) !=
+        null
+          ? defaultMeshfileGenerationResolution
+          : this.props.activeResolution;
       await startComputeMeshFileJob(
         this.props.organization,
         this.props.datasetName,
         this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
-        this.props.activeResolution,
+        meshfileResolution,
       );
       this.setState({ isComputingMeshfile: true });
       Toast.success(

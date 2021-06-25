@@ -14,9 +14,9 @@ function showWelcomeToast() {
     ),
     description: (
       <div>
-        You are viewing this dataset on webKnossos. webKnossos is an online tool to visualise and
-        collaboratively annotate large image datasets. Try out the annotation features on the public
-        dataset below. If this is for you, sign up for free, upload your data and get started!
+        webKnossos is a web-based platform for visualization, annotation, and sharing of large-scale
+        3D image datasets. Try out the annotation features and upload your own data with a free
+        account.
         <div style={{ marginTop: 12, marginLeft: 200 }}>
           <Button
             type="primary"

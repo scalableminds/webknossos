@@ -225,17 +225,20 @@ class MeshesView extends React.Component<Props, State> {
       );
     };
 
-    const getJobsDisabledTooltip = node => (
+    const getComputeMeshfileTooltip = node => (
       <Tooltip
-        visible={!features().jobsEnabled}
-        title="The computation of mesh files is not supported by this webKnossos instance."
+        title={
+          features().jobsEnabled
+            ? "Compute a mesh file for this dataset so that meshes for segments can be loaded quickly afterwards."
+            : "The computation of mesh files is not supported by this webKnossos instance."
+        }
       >
         {node}
       </Tooltip>
     );
 
     const getComputeMeshFileButton = () =>
-      getJobsDisabledTooltip(
+      getComputeMeshfileTooltip(
         <Button
           size="small"
           loading={this.state.isComputingMeshfile}
@@ -403,7 +406,7 @@ class MeshesView extends React.Component<Props, State> {
     const getHeaderDropdownMenu = () => (
       <Menu>
         <Menu.Item onClick={startComputingMeshfile} disabled={!features().jobsEnabled}>
-          {getJobsDisabledTooltip("Compute Mesh File")}
+          {getComputeMeshfileTooltip("Compute Mesh File")}
         </Menu.Item>
         <Menu.Item>{getStlImportItem()}</Menu.Item>
       </Menu>

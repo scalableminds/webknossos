@@ -16,7 +16,6 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import features from "features";
 import { loadMeshFromFile, maybeFetchMeshFiles } from "oxalis/view/right-menu/meshes_view_helper";
 import Model from "oxalis/model";
 import { setWaypoint } from "oxalis/controller/combinations/skeletontracing_plane_controller";
@@ -227,14 +226,9 @@ function NoNodeContextMenuOptions({
       className="node-context-menu-item"
       key="load-mesh-file"
       onClick={loadMesh}
-      disabled={!currentMeshFile || !features().jobsEnabled}
+      disabled={!currentMeshFile}
     >
-      <Tooltip
-        visible={!features().jobsEnabled}
-        title="The computation of mesh files is not supported by this webKnossos instance."
-      >
-        Load Precomputed Mesh
-      </Tooltip>
+      Load Precomputed Mesh
     </Menu.Item>
   );
 

@@ -29,10 +29,12 @@ export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
   source: "previousLayer" | "nextLayer",
 };
+export type MaybeBucketLoadedPromise = null | Promise<BucketDataArray>;
 export type AddBucketToUndoAction = {
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
+  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
 };
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourAction = { type: "RESET_CONTOUR" };
@@ -160,7 +162,13 @@ export const setContourTracingModeAction = (mode: ContourMode): SetContourTracin
 export const addBucketToUndoAction = (
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
-): AddBucketToUndoAction => ({ type: "ADD_BUCKET_TO_UNDO", zoomedBucketAddress, bucketData });
+  maybeBucketLoadedPromise: null | Promise<BucketDataArray>,
+): AddBucketToUndoAction => ({
+  type: "ADD_BUCKET_TO_UNDO",
+  zoomedBucketAddress,
+  bucketData,
+  maybeBucketLoadedPromise,
+});
 
 export const inferSegmentationInViewportAction = (
   position: Vector3,

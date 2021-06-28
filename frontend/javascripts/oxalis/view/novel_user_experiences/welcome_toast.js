@@ -17,7 +17,7 @@ function showWelcomeToast() {
         webKnossos is a web-based platform for visualization, annotation, and sharing of large-scale
         3D image datasets. Try out the annotation features and upload your own data with a free
         account.
-        <div style={{ marginTop: 12, marginLeft: 200 }}>
+        <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
           <Button
             type="primary"
             href="/auth/signup"

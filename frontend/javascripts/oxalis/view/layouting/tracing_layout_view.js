@@ -263,7 +263,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
-        <WelcomeToast />
         {nodeContextMenuPosition != null && nodeContextMenuViewport != null ? (
           <NodeContextMenu
             hideNodeContextMenu={this.hideNodeContextMenu}
@@ -349,11 +348,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               <div id={canvasAndLayoutContainerID} style={{ width: "100%", height: "100%" }}>
                 <TracingView />
                 {status === "loaded" ? (
-                  <FlexLayoutWrapper
-                    onLayoutChange={this.onLayoutChange}
-                    layoutKey={layoutType}
-                    layoutName={activeLayoutName}
-                  />
+                  <React.Fragment>
+                    <FlexLayoutWrapper
+                      onLayoutChange={this.onLayoutChange}
+                      layoutKey={layoutType}
+                      layoutName={activeLayoutName}
+                    />
+                    <WelcomeToast />
+                  </React.Fragment>
                 ) : null}
               </div>
               {this.props.showVersionRestore ? (

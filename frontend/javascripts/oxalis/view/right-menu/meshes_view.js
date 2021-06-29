@@ -168,11 +168,7 @@ class MeshesView extends React.Component<Props, State> {
     if (wasComputingMeshfile && !isComputingMeshfile) {
       Toast.info(
         <React.Fragment>
-          A meshfile generation job for this dataset has finished. Click{" "}
-          <a href="/jobs" target="_blank">
-            here
-          </a>{" "}
-          to see all jobs.
+          The computation of a mesh file for this dataset has finished. You can now use the "Load Precomputed Mesh" in the "Meshes" tab.
         </React.Fragment>,
       );
     }

@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added the possibility for admins to set long-running jobs to a “manually repaired” state. [#5530](https://github.com/scalableminds/webknossos/pull/5530)
 - Added compatibility with newer JREs, tested with 8, 11 and 14. [#5558](https://github.com/scalableminds/webknossos/pull/5558)
+- Added colored icons to the status entries in the job list. [#5572](https://github.com/scalableminds/webknossos/pull/5594)
 
 ### Changed
 - Improve error logging for unhandled rejections. [#5575](https://github.com/scalableminds/webknossos/pull/5575)

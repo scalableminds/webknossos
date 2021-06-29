@@ -137,15 +137,6 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #$columns from #$existingCollectionName where _id in #${writeStructTupleWithQuotes(ids.map(_.id))} and #$accessQuery"
-          .as[UsersRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
-
   def findOneByOrgaAndMultiUser(organizationId: ObjectId, multiUserId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[User] =
     for {
@@ -171,14 +162,16 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
-        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId".as[Int])
+        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId and not isUnlisted"
+          .as[Int])
       result <- resultList.headOption
     } yield result
 
   def countAdminsForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
-        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId and isAdmin".as[Int])
+        sql"select count(_id) from #$existingCollectionName where _organization = $organizationId and isAdmin and not isUnlisted"
+          .as[Int])
       result <- resultList.headOption
     } yield result
 

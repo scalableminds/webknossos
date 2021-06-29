@@ -72,7 +72,7 @@ export const stlIsosurfaceConstants = {
 
 // This file defines the component MeshesView.
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): * => ({
   meshes: state.tracing != null ? state.tracing.meshes : [],
   isImporting: state.uiInformation.isImportingMesh,
   isosurfaces: state.isosurfaces,
@@ -91,7 +91,7 @@ const mapStateToProps = (state: OxalisState) => ({
   currentMeshFile: state.currentMeshFile,
 });
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   updateRemoteMeshMetadata(id: string, meshMetaData: $Shape<RemoteMeshMetaData>) {
     dispatch(updateRemoteMeshMetaDataAction(id, meshMetaData));
   },
@@ -137,8 +137,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 });
 
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
+type StateProps = ExtractReturn<typeof mapStateToProps>;
 
-type Props = {| ...DispatchProps |};
+type Props = {| ...DispatchProps, ...StateProps |};
 
 type State = { hoveredListItem: ?number, isComputingMeshfile: boolean };
 
@@ -348,6 +349,9 @@ class MeshesView extends React.Component<Props, State> {
         Toast.info("No cell found at centered position");
         return;
       }
+      if (!this.props.currentMeshFile || !this.props.segmentationLayer) {
+        return;
+      }
       await loadMeshFromFile(
         id,
         pos,
@@ -386,12 +390,12 @@ class MeshesView extends React.Component<Props, State> {
     );
 
     const getLoadPrecomputedMeshButton = () => {
-      const hasCurrenMeshFile = this.props.currentMeshFile;
+      const hasCurrentMeshFile = this.props.currentMeshFile;
       return (
         <Tooltip
           key="tooltip"
           title={
-            hasCurrenMeshFile
+            this.props.currentMeshFile != null
               ? `Load mesh for centered cell from file ${this.props.currentMeshFile}`
               : "There is no mesh file."
           }
@@ -403,7 +407,7 @@ class MeshesView extends React.Component<Props, State> {
             overlay={getMeshFilesDropdown()}
             buttonsRender={([leftButton, rightButton]) => [
               React.cloneElement(leftButton, {
-                disabled: !hasCurrenMeshFile,
+                disabled: !hasCurrentMeshFile,
                 style: { borderRightStyle: "dashed" },
               }),
               React.cloneElement(rightButton, { style: { borderLeftStyle: "dashed" } }),

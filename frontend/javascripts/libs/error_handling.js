@@ -11,6 +11,13 @@ import Toast from "libs/toast";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 
+// Note that if you set this value to true for debugging airbrake reporting,
+// you also need to set the values for projectID and projectKey in application.conf
+const LOG_LOCAL_ERRORS = false;
+
+const UNHANDLED_REJECTION_LABEL = "UnhandledRejection";
+const UNHANDLED_REJECTION_PREFIX = `${UNHANDLED_REJECTION_LABEL}: `;
+
 // No more than MAX_NUM_ERRORS will be reported to airbrake
 const MAX_NUM_ERRORS = 50;
 const BLACKLISTED_ERROR_MESSAGES = [
@@ -24,7 +31,6 @@ const BLACKLISTED_ERROR_MESSAGES = [
 
 type ErrorHandlingOptions = {
   throwAssertions: boolean,
-  sendLocalErrors: boolean,
 };
 
 class ErrorWithParams extends Error {
@@ -54,17 +60,15 @@ export function handleGenericError(error: { ...Error, messages?: mixed }) {
 
 class ErrorHandling {
   throwAssertions: boolean;
-  sendLocalErrors: boolean;
   commitHash: ?string;
   airbrake: typeof AirbrakeClient;
   numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {
     if (options == null) {
-      options = { throwAssertions: false, sendLocalErrors: false };
+      options = { throwAssertions: false };
     }
     this.throwAssertions = options.throwAssertions;
-    this.sendLocalErrors = options.sendLocalErrors;
 
     const metaElement = document.querySelector("meta[name='commit-hash']");
     this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
@@ -105,24 +109,26 @@ class ErrorHandling {
       return null;
     });
 
-    if (!this.sendLocalErrors) {
-      this.airbrake.addFilter(notice => {
-        if (location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
-          return notice;
-        }
-        return null;
-      });
-    }
+    this.airbrake.addFilter(notice => {
+      if (
+        LOG_LOCAL_ERRORS ||
+        (location.hostname !== "127.0.0.1" && location.hostname !== "localhost")
+      ) {
+        return notice;
+      }
+      return null;
+    });
 
     // Remove airbrake's unhandledrejection handler
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
     window.addEventListener("unhandledrejection", event => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
-      const originalError = event.reason instanceof Error ? event.reason.toString() : event.reason;
-      // Put the actual error into the main string so that not all unhandled errors are grouped
-      // together in airbrake
-      this.notify(Error(`Unhandled Rejection: ${JSON.stringify(originalError).slice(0, 80)}`), {
-        originalError,
+      const reasonAsString = event.reason instanceof Error ? event.reason.toString() : event.reason;
+      const wrappedError = event.reason instanceof Error ? event.reason : new Error(event.reason);
+      wrappedError.message =
+        UNHANDLED_REJECTION_PREFIX + JSON.stringify(reasonAsString).slice(0, 80);
+      this.notify(wrappedError, {
+        originalError: reasonAsString,
       });
     });
 
@@ -161,6 +167,13 @@ class ErrorHandling {
 
   assertExtendContext(additionalContext: Object) {
     this.airbrake.addFilter(notice => {
+      notice.errors.forEach(error => {
+        const index = error.message.indexOf(UNHANDLED_REJECTION_PREFIX);
+        if (index > -1) {
+          error.type = UNHANDLED_REJECTION_LABEL;
+        }
+      });
+
       Object.assign(notice.context, additionalContext);
       return notice;
     });

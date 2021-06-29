@@ -24,10 +24,13 @@ import processTaskWithPool from "libs/task_pool";
 const PARALLEL_MESH_LOADING_COUNT = 6;
 
 export async function maybeFetchMeshFiles(
-  segmentationLayer: APIDataLayer,
+  segmentationLayer: ?APIDataLayer,
   dataset: APIDataset,
   mustRequest: boolean,
 ): Promise<void> {
+  if (!segmentationLayer) {
+    return;
+  }
   const files = Store.getState().availableMeshFiles;
 
   // only send new get request, if it hasn't happened before (files in store are null)

@@ -226,16 +226,22 @@ class MeshesView extends React.Component<Props, State> {
         meshfileResolutionIndex,
       );
 
-      await startComputeMeshFileJob(
-        this.props.organization,
-        this.props.datasetName,
-        this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
-        meshfileResolution,
-      );
-      this.setState({ isComputingMeshfile: true });
-      Toast.success(
-        "The computation of a mesh file was started successfully. Depending on the dataset's size this may take a bit. You don't need to keep this dataset open for the computation to continue.",
-      );
+      if (this.props.segmentationLayer != null) {
+        await startComputeMeshFileJob(
+          this.props.organization,
+          this.props.datasetName,
+          this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
+          meshfileResolution,
+        );
+        this.setState({ isComputingMeshfile: true });
+        Toast.success(
+          "The computation of a mesh file was started successfully. Depending on the dataset's size this may take a bit. You don't need to keep this dataset open for the computation to continue.",
+        );
+      } else {
+        Toast.error(
+          "The computation of a mesh file could not be started because no segmentation layer was found.",
+        );
+      }
     };
 
     const getComputeMeshfileTooltip = node => (

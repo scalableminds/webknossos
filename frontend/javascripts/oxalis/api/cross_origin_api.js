@@ -15,7 +15,7 @@ const onMessage = event => {
   //   return;
   // }
   if (!_.isObject(event.data)) return;
-  const { type, args } = event.data;
+  const { type, args, messageId } = event.data;
   if (type == null || !_.isArray(args)) return;
 
   switch (type) {
@@ -49,6 +49,7 @@ const onMessage = event => {
       console.warn("Unsupported cross origin API command.");
     }
   }
+  event.source.postMessage({ type: "acc", messageId }, "*");
 };
 
 const CrossOriginApi = () => {

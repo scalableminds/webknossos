@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.{JsArray, JsObject, JsString}
 
 import java.io.File
 import java.net.{HttpURLConnection, URL}
@@ -27,10 +28,18 @@ class AutoUpdateService @Inject()(
 
   override protected lazy val enabled: Boolean = config.Datastore.AutoUpdate.enabled
   protected lazy val tickerInterval: FiniteDuration = 24 hours
-  private val version = 5
+  private val version = "21.0.6"
 
   def checkForUpdate(): Fox[Boolean] =
-    rpc("http://localhost:9090/version").getWithJsonResponse[String].map(v => v.toInt > version)
+    for {
+      jsArray <- rpc("https://api.github.com/repos/scalableminds/webknossos/releases")
+        .addHeader("Accept" -> "application/vnd.github.v3+json")
+        .addQueryString("per_page" -> "1")
+        .getWithJsonResponse[JsArray]
+      jsObject <- jsArray.value.headOption.flatMap(_.validate[JsObject].asOpt)
+      tag_name <- jsObject.value.get("tag_name").map(_.asInstanceOf[JsString])
+      _ = logger.info(tag_name.value)
+    } yield version != tag_name.value
 
   def downloadUpdate(existsNewUpdate: Boolean): Fox[Unit] = {
     if (existsNewUpdate) {

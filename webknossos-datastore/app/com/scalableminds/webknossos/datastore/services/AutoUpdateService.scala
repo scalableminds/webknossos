@@ -11,7 +11,7 @@ import org.apache.commons.io.FileUtils
 import play.api.inject.ApplicationLifecycle
 
 import java.io.File
-import java.net.URL
+import java.net.{HttpURLConnection, URL}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.sys.exit
@@ -35,9 +35,20 @@ class AutoUpdateService @Inject()(
   def downloadUpdate(existsNewUpdate: Boolean): Fox[Unit] = {
     if (existsNewUpdate) {
       try {
-        FileUtils.copyURLToFile(new URL("http://localhost:9090/wk.jar"), new File("update.jar"), 30000, 30000)
+        var connection =
+          new URL("https://api.github.com/repos/youri-k/ComparingUnrelatedTypesExample/releases/assets/39547733")
+            .openConnection()
+            .asInstanceOf[HttpURLConnection]
+        connection.setRequestProperty("Accept", "application/octet-stream")
+        if (connection.getResponseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+          connection = new URL(connection.getHeaderField("Location")).openConnection().asInstanceOf[HttpURLConnection]
+          connection.setRequestProperty("Accept", "application/octet-stream")
+        }
+        connection.setReadTimeout(30000)
+        connection.setConnectTimeout(30000)
+        FileUtils.copyInputStreamToFile(connection.getInputStream, new File("update.jar"))
       } catch {
-        case e: java.io.IOException => logger.error(e.getMessage)
+        case e: java.io.IOException => logger.error(e.getMessage); Fox.failure(e.getMessage)
       }
     }
     Fox.successful(())

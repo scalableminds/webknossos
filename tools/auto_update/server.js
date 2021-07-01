@@ -9,7 +9,7 @@ http
   .createServer((req, res) => {
     if (req.url === "/version") {
       res.writeHead(200);
-      res.end(JSON.stringify("5"));
+      res.end(JSON.stringify("6"));
     } else {
       fs.readFile(path.join(__dirname, req.url), (err, data) => {
         if (err) {

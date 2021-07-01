@@ -65,6 +65,16 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 
 function* centerActiveNode(action: Action): Saga<void> {
+  if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
+    const centerNewNode = yield* select(
+      (state: OxalisState) => state.userConfiguration.centerNewNode,
+    );
+    if (!centerNewNode) {
+      // The active node should not be centered upon node manipulation.
+      return;
+    }
+  }
+
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
     activeNode => {
       if (action.suppressAnimation === true) {

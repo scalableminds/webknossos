@@ -6,7 +6,7 @@ import { DeleteOutlined, PlusOutlined, SettingOutlined, ShrinkOutlined } from "@
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
-import SortableTree from "react-sortable-tree";
+import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import { type Action } from "oxalis/model/actions/actions";
@@ -57,6 +57,7 @@ type OwnProps = {|
   onSelectTree: number => void,
   deselectAllTrees: () => void,
   onDeleteGroup: number => void,
+  allowUpdate: boolean,
 |};
 
 type Props = {
@@ -375,13 +376,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
     const nodeProps = {};
-    const isRoot = node.id === MISSING_GROUP_ID;
     if (node.type === TYPE_GROUP) {
       nodeProps.title = this.renderGroupActionsDropdown(node);
-      if (!isRoot) {
-        // Only render the group icon if it's not the root.
-        nodeProps.className = "group-type";
-      }
+      nodeProps.className = "group-type";
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
@@ -485,14 +482,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
-  canDrop(params: { nextParent: TreeNode }) {
+  canDrop = (params: { nextParent: TreeNode }) => {
     const { nextParent } = params;
-    return nextParent != null && nextParent.type === TYPE_GROUP;
-  }
+    return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
+  };
 
-  canDrag(params: { node: TreeNode }) {
+  canDrag = (params: { node: TreeNode }) => {
     const { node } = params;
-    return node.id !== MISSING_GROUP_ID;
+    return this.props.allowUpdate && node.id !== MISSING_GROUP_ID;
+  };
+
+  canNodeHaveChildren(node: TreeNode) {
+    return node.type === TYPE_GROUP;
   }
 
   render() {
@@ -511,6 +512,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}
+              canNodeHaveChildren={this.canNodeHaveChildren}
               rowHeight={24}
               innerStyle={{ padding: 0 }}
               scaffoldBlockPxWidth={25}

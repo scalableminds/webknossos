@@ -19,6 +19,10 @@
     width: 15px;
     background: none;
   }
+
+  .rst__rowContentsDragDisabled {
+    margin-left: 15px;
+  }
 }
 
 // Show a circle icon as the move handle for trees
@@ -50,7 +54,7 @@
 // Show a move icon as the move handle when hovering
 .rst__row.group-type,
 .rst__row.tree-type {
-  &:hover:before {
+  .rst__moveHandle:hover:before {
     color: @text-color;
     content: "\f0b2";
     font-family: "Font Awesome 5 Free";
@@ -59,6 +63,10 @@
     left: 0px;
     position: absolute;
     top: 2px;
+    // Hide the circle/group icon by covering it
+    // with a opaque background
+    background-color: @body-background;
+    padding: 0 1px;
   }
 }
 

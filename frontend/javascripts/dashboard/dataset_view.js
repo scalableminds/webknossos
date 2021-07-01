@@ -2,7 +2,7 @@
 
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
-import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin } from "antd";
+import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin, Tooltip, Alert } from "antd";
 import {
   CloudUploadOutlined,
   LoadingOutlined,
@@ -10,10 +10,15 @@ import {
   ReloadOutlined,
   RocketOutlined,
   SettingOutlined,
+  InfoCircleOutlined,
+  QuestionCircleTwoTone,
+  ClockCircleTwoTone,
+  CloseCircleTwoTone,
+  ToolTwoTone,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 
-import type { APIUser } from "types/api_flow_types";
+import type { APIJob, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
@@ -22,6 +27,8 @@ import * as Utils from "libs/utils";
 import features, { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
+import { getJobs } from "admin/admin_rest_api";
+import moment from "moment";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -62,6 +69,7 @@ function DatasetView(props: Props) {
   const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
     "onlyShowReported",
   );
+  const [jobs, setJobs] = useState<Array<APIJob>>([]);
 
   useEffect(() => {
     const state = persistence.load(history);
@@ -71,6 +79,7 @@ function DatasetView(props: Props) {
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
+    getJobs().then(newJobs => setJobs(newJobs));
     context.fetchDatasets({
       applyUpdatePredicate: _newDatasets => {
         // Only update the datasets when there are none currently.
@@ -187,6 +196,65 @@ function DatasetView(props: Props) {
     );
   }
 
+  function renderNewJobsAlert() {
+    const stateToIcon = {
+      UNKNOWN: <QuestionCircleTwoTone twoToneColor="grey" />,
+      PENDING: <ClockCircleTwoTone twoToneColor="orange" />,
+      STARTED: <LoadingOutlined />,
+      FAILURE: <CloseCircleTwoTone twoToneColor="red" />,
+      MANUAL: <ToolTwoTone twoToneColor="orange" />,
+    };
+    const now = moment();
+    const newJobs = jobs
+      .filter(
+        job =>
+          job.type === "convert_to_wkw" &&
+          job.state !== "SUCCESS" &&
+          moment.duration(now.diff(job.createdAt)).asDays() <= 3,
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    const newJobsHeader = (
+      <React.Fragment>
+        Converting datasets{" "}
+        <Tooltip
+          title="The displayed datasets are being converted in the 3 days."
+          placement="right"
+        >
+          <InfoCircleOutlined />
+        </Tooltip>
+      </React.Fragment>
+    );
+    const newJobsList = (
+      <React.Fragment>
+        {newJobs.slice(0, 5).map(job => (
+          <Row key={job.id} gutter={16}>
+            <Col span={10}>
+              <Tooltip title={job.state}>{stateToIcon[job.state]}</Tooltip>
+              {` ${job.datasetName || "UNKNOWN"}`}
+            </Col>
+          </Row>
+        ))}
+        <Row key="overview">
+          <Col span={10}>
+            <Link to="/jobs" title="Jobs Overview">
+              See complete list
+            </Link>
+          </Col>
+        </Row>
+      </React.Fragment>
+    );
+
+    return newJobs.length ? (
+      <Alert
+        message={newJobsHeader}
+        description={newJobsList}
+        type="info"
+        style={{ marginTop: 20 }}
+      />
+    ) : null;
+  }
+
   const margin = { marginRight: 5 };
   const createFilteringModeRadio = (key, label) => (
     <Radio
@@ -269,6 +337,8 @@ function DatasetView(props: Props) {
   return (
     <div>
       {adminHeader}
+      <div className="clearfix" style={{ margin: "20px 0px" }} />
+      {renderNewJobsAlert()}
       <div className="clearfix" style={{ margin: "20px 0px" }} />
 
       <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>

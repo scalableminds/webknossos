@@ -143,13 +143,7 @@ class TDController extends React.PureComponent<Props> {
       tdCamera,
       view,
       new THREE.Vector3(...pos),
-      (userTriggered: boolean = true) => {
-        const setCameraAction = userTriggered
-          ? setTDCameraAction
-          : setTDCameraWithoutTimeTrackingAction;
-        // write threeJS camera into store
-        Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
-      },
+      this.onTDCameraChanged,
     );
 
     this.controls.noZoom = true;
@@ -282,12 +276,22 @@ class TDController extends React.PureComponent<Props> {
     Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
   }
 
+  onTDCameraChanged = (userTriggered: boolean = true) => {
+    const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const setCameraAction = userTriggered
+      ? setTDCameraAction
+      : setTDCameraWithoutTimeTrackingAction;
+    // Write threeJS camera into store
+    Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
+  };
+
   render() {
     return (
       <CameraController
         cameras={this.props.cameras}
         onCameraPositionChanged={this.updateControls}
         setTargetAndFixPosition={this.setTargetAndFixPosition}
+        onTDCameraChanged={this.onTDCameraChanged}
       />
     );
   }

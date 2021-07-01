@@ -8,6 +8,7 @@
 // @flow
 import _ from "lodash";
 
+import type { ExtractReturn } from "libs/type_helpers";
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
 import Constants, {
@@ -283,7 +284,6 @@ export const resetDefaultLayouts = () => {
   getDefaultLayouts.cache.clear();
 };
 
-type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
 type Layout = $Keys<ExtractReturn<typeof _getDefaultLayouts>>;
 
 export const getCurrentDefaultLayoutConfig = () => {

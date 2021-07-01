@@ -25,4 +25,4 @@ SET recommendedconfiguration = jsonb_set(
 ```
 
 ### Postgres Evolutions:
-- 
+- [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)

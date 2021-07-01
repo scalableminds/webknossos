@@ -20,6 +20,7 @@ import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone } from "react-dropzone";
 
+import ErrorHandling from "libs/error_handling";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -48,6 +49,12 @@ import { FormInstance } from "antd/lib/form";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
+
+const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
+
+const logRetryToAnalytics = _.throttle((datasetName: string) => {
+  ErrorHandling.notify(new Error(`Warning: Upload of dataset ${datasetName} was retried.`));
+}, REPORT_THROTTLE_THRESHOLD);
 
 type OwnProps = {|
   datastores: Array<APIDataStore>,
@@ -301,6 +308,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
 
       resumableUpload.on("fileRetry", () => {
+        logRetryToAnalytics(datasetId.name);
         this.setState({ isRetrying: true });
       });
 

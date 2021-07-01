@@ -45,6 +45,7 @@ import {
 } from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
+import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
@@ -347,13 +348,16 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             <Layout style={{ display: "flex" }}>
               <MergerModeController />
               <div id={canvasAndLayoutContainerID} style={{ width: "100%", height: "100%" }}>
-                <TracingView />
+                {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
-                  <FlexLayoutWrapper
-                    onLayoutChange={this.onLayoutChange}
-                    layoutKey={layoutType}
-                    layoutName={activeLayoutName}
-                  />
+                  <React.Fragment>
+                    <FlexLayoutWrapper
+                      onLayoutChange={this.onLayoutChange}
+                      layoutKey={layoutType}
+                      layoutName={activeLayoutName}
+                    />
+                    <WelcomeToast />
+                  </React.Fragment>
                 ) : null}
               </div>
               {this.props.showVersionRestore ? (

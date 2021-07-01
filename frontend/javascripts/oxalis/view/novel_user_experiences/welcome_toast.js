@@ -46,9 +46,9 @@ export default function WelcomeToast() {
   const activeUser = useSelector(state => state.activeUser);
 
   useEffect(() => {
-    // if (features().isDemoInstance) {
-    //   return;
-    // }
+    if (!features().isDemoInstance) {
+      return;
+    }
     const hasSeenToast = localStorage.getItem("novelUserExperienceInfos.hasSeenWelcomeToast");
 
     if (activeUser == null && hasSeenToast == null) {

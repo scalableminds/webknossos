@@ -904,7 +904,7 @@ export function startComputeMeshFileJob(
   layerName: string,
   mag: Vector3,
   agglomerateView?: string,
-) {
+): Promise<APIJob> {
   return Request.receiveJSON(
     `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
       "-",

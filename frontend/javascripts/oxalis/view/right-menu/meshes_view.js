@@ -141,46 +141,86 @@ type StateProps = ExtractReturn<typeof mapStateToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
 
-type State = { hoveredListItem: ?number, isComputingMeshfile: boolean };
+type State = { hoveredListItem: ?number, activeMeshJobId: ?string };
 
 class MeshesView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
 
   state = {
     hoveredListItem: null,
-    isComputingMeshfile: false,
+    activeMeshJobId: null,
   };
 
   componentDidMount() {
     maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, false);
-    this.fetchJobData();
+    this.pollJobData();
   }
 
-  async fetchJobData(): Promise<void> {
+  componentWillUnmount() {
+    if (this.intervalID != null) {
+      clearTimeout(this.intervalID);
+    }
+  }
+
+  async pollJobData(): Promise<void> {
     const jobs = await getJobs();
-    const wasComputingMeshfile = this.state.isComputingMeshfile;
-    const isComputingMeshfile =
-      jobs.filter(
-        job =>
-          job.type === "compute_mesh_file" &&
-          job.datasetName === this.props.datasetName &&
-          job.state === "STARTED",
-      ).length > 0;
-    if (wasComputingMeshfile && !isComputingMeshfile) {
-      const message =
-        'The computation of a mesh file for this dataset has finished. You can now use the "Load Precomputed Mesh" in the "Meshes" tab.';
-      Toast.info(<React.Fragment>{message}</React.Fragment>);
+    const oldActiveJobId = this.state.activeMeshJobId;
+
+    const meshJobsForDataset = jobs.filter(
+      job => job.type === "compute_mesh_file" && job.datasetName === this.props.datasetName,
+    );
+    const activeJob =
+      oldActiveJobId != null ? meshJobsForDataset.find(job => job.id === oldActiveJobId) : null;
+
+    if (activeJob != null) {
+      // We are aware of a running mesh job. Check whether the job is finished now.
+      switch (activeJob.state) {
+        case "SUCCESS": {
+          Toast.success(
+            'The computation of a mesh file for this dataset has finished. You can now use the "Load Precomputed Mesh" in the "Meshes" tab.',
+          );
+          this.setState({ activeMeshJobId: null });
+          // maybeFetchMeshFiles will fetch the new mesh file and also activate it if no other mesh file
+          // currently exists.
+          maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, true);
+          break;
+        }
+        case "STARTED":
+        case "UNKNOWN":
+        case "PENDING": {
+          break;
+        }
+        case "FAILURE": {
+          Toast.info("The computation of a mesh file for this dataset didn't finish properly.");
+          this.setState({ activeMeshJobId: null });
+          break;
+        }
+        case "MANUAL": {
+          Toast.info(
+            "The computation of a mesh file for this dataset didn't finish properly. The job will be handled by an admin shortly. Please check back here soon.",
+          );
+          this.setState({ activeMeshJobId: null });
+          break;
+        }
+        default: {
+          break;
+        }
+      }
+    } else {
+      // Check whether there is an active mesh job (e.g., the user
+      // started the job earlier and reopened webKnossos in the meantime).
+
+      const pendingJobs = meshJobsForDataset.filter(
+        job => job.state === "STARTED" || job.state === "PENDING",
+      );
+      const activeMeshJobId = pendingJobs.length > 0 ? pendingJobs[0].id : null;
+      this.setState({
+        activeMeshJobId,
+      });
     }
 
-    this.setState(
-      {
-        isComputingMeshfile,
-      },
-      // refresh according to the refresh interval
-      () => {
-        this.intervalID = setTimeout(this.fetchJobData.bind(this), refreshInterval);
-      },
-    );
+    // refresh according to the refresh interval
+    this.intervalID = setTimeout(() => this.pollJobData(), refreshInterval);
   }
 
   render() {
@@ -227,13 +267,13 @@ class MeshesView extends React.Component<Props, State> {
       );
 
       if (this.props.segmentationLayer != null) {
-        await startComputeMeshFileJob(
+        const job = await startComputeMeshFileJob(
           this.props.organization,
           this.props.datasetName,
           this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
           meshfileResolution,
         );
-        this.setState({ isComputingMeshfile: true });
+        this.setState({ activeMeshJobId: job.id });
         Toast.success(
           "The computation of a mesh file was started successfully. Depending on the dataset's size this may take a bit. You don't need to keep this dataset open for the computation to continue.",
         );
@@ -260,7 +300,7 @@ class MeshesView extends React.Component<Props, State> {
       getComputeMeshfileTooltip(
         <Button
           size="small"
-          loading={this.state.isComputingMeshfile}
+          loading={this.state.activeMeshJobId != null}
           onClick={startComputingMeshfile}
           disabled={!features().jobsEnabled}
         >

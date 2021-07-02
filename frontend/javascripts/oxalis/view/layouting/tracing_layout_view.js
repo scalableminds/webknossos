@@ -18,7 +18,7 @@ import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/sto
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
-import NodeContextMenu from "oxalis/view/node_context_menu";
+import NodeContextMenu from "oxalis/view/context_menu";
 import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
@@ -26,16 +26,16 @@ import type { ControllerStatus } from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import Toast from "libs/toast";
 import TracingView from "oxalis/view/tracing_view";
-import { importTracingFiles } from "oxalis/view/right-menu/trees_tab_view";
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
 import { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import {
-  initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
+  initializeInputCatcherSizes,
 } from "oxalis/view/input_catcher";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import {
   layoutEmitter,
   storeLayoutConfig,
@@ -44,6 +44,7 @@ import {
   getLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
@@ -263,6 +264,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
+        <PresentModernControls />
         {nodeContextMenuPosition != null && nodeContextMenuViewport != null ? (
           <NodeContextMenu
             hideNodeContextMenu={this.hideNodeContextMenu}

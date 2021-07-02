@@ -9,6 +9,11 @@ export async function load() {
   return features;
 }
 
+export function __setFeatures(_features: Object) {
+  // Only use this function for tests.
+  features = _features;
+}
+
 export function getDemoDatasetUrl() {
   if (features == null) {
     throw new Error("Features not yet loaded.");

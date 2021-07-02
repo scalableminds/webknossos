@@ -16,6 +16,7 @@
 @import "_dashboard.less";
 @import "_spotlight.less";
 @import "trace_view/_tracing_view.less";
+@import "trace_view/_status_bar.less";
 @import "trace_view/_user_settings_view.less";
 @import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
@@ -276,44 +277,6 @@ i.without-icon-margin,
 
 .link-in-progress {
   cursor: wait;
-}
-
-.keyboard-key-icon {
-  border: 2px solid @border-color-base;
-  border-radius: 2px;
-  min-width: 26px;
-  min-height: 26px;
-  margin: 4px;
-  display: inline-block;
-  text-align: center;
-  font-size: 10px;
-  vertical-align: middle;
-  line-height: 24px;
-  font-weight: bold;
-}
-
-.keyboard-key-icon-small {
-  border: 1px solid rgb(255, 255, 255);
-  border-radius: 2px;
-  min-width: 14px;
-  height: 14px;
-  text-align: center;
-  font-size: 10px;
-  font-weight: bold;
-  vertical-align: middle;
-  display: inline-block;
-  padding: 0px 2px 0px 2px;
-}
-
-.keyboard-mouse-icon {
-  max-width: 18px;
-  max-height: 28px;
-  margin: 4px;
-}
-
-span.keyboard-key-icon:first-child,
-img.keyboard-mouse-icon:first-child {
-  margin-left: 0px;
 }
 
 .nml-upload-zone-overlay {

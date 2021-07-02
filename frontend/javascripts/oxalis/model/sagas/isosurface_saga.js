@@ -31,7 +31,7 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import { stlIsosurfaceConstants } from "oxalis/view/right-menu/meshes_view";
+import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/meshes_view";
 import { computeIsosurface, sendAnalyticsEvent } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";

@@ -5,7 +5,7 @@
 import update from "immutability-helper";
 
 import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
+import { ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
@@ -13,7 +13,6 @@ import {
 } from "oxalis/model/reducers/reducer_helpers";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  setToolReducer,
   setActiveCellReducer,
   createCellReducer,
   updateDirectionReducer,
@@ -42,7 +41,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         contourList: [],
         maxCellId,
         cells: {},
-        activeTool: VolumeToolEnum.MOVE,
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
@@ -60,24 +58,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
   return getVolumeTracing(state.tracing)
     .map(volumeTracing => {
       switch (action.type) {
-        case "SET_TOOL": {
-          if (!state.tracing.restrictions.allowUpdate) {
-            return state;
-          }
-          return setToolReducer(state, volumeTracing, action.tool);
-        }
-
-        case "CYCLE_TOOL": {
-          if (!state.tracing.restrictions.allowUpdate) {
-            return state;
-          }
-          const tools = Object.keys(VolumeToolEnum);
-          const currentToolIndex = tools.indexOf(volumeTracing.activeTool);
-          const newTool = tools[(currentToolIndex + 1) % tools.length];
-
-          return setToolReducer(hideBrushReducer(state), volumeTracing, newTool);
-        }
-
         case "SET_ACTIVE_CELL": {
           return setActiveCellReducer(state, volumeTracing, action.cellId);
         }

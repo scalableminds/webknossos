@@ -54,7 +54,7 @@ Nodes are placed automatically along the flight path, creating skeleton very eff
 Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.
 
-Nodes can be placed by right-clicking (*Right Click*) in orthogonal mode or automatically when moving in flight or oblique mode.
+Nodes can be placed by clicking (*Left Click* by default or *Right Click* when *Classic Controls* are enabled in the settings sidebar) in orthogonal mode (the skeleton tool should be selected) or automatically when moving in flight or oblique mode.
 All (global) operations are executed on the current active node, e.g. adding a comment or node deletion.
 Most keyboard shortcuts take the active node into context.
 Operations on whole trees, e.g. splitting or merging trees, follow the same pattern.
@@ -73,13 +73,24 @@ Press the "J" to jump to the latest branch point to continue working from there 
 
 | Key Binding       | Operation                           |
 | ----------------- | -------------                       |
-| Right Click       | Create New Node                     |
-| SHIFT + Left Click| Select Node (Mark as Active Node)   |
+| Left Click        | Create New Node                     |
+| Left Click        | Select Node (Mark as Active Node) if one was hovered  |
+| Left Drag         | Move around                         |
+| Left Drag         | Move node if one was hovered        |
 | S                 | Center Camera on Active Node        |
 | DEL               | Delete Active Node                  |
 | B                 | Create Branch Point                 |
 | J                 | Jump to Last Branch Point           |
 | C                 | Create New Tree                     |
+
+Note that you can enable *Classic Controls* which will behave slightly different and more explicit for some mouse actions:
+
+| Key Binding       | Operation                           |
+| ----------------- | -------------                       |
+| Left Drag         | Move around                         |
+| Right Click       | Create New Node                     |
+| SHIFT + Left Click| Select Node (Mark as Active Node)   |
+| Left Drag         | Move node if one was hovered (unless *Classic Controls* are enabled)        |
 
 All further keyboard shortcuts are [available here](./keyboard_shortcuts.md).
 
@@ -98,9 +109,9 @@ Hover over existing tree groups to bring up a little menu for creating new group
 Common tree operations include splitting and merging trees.
 
 - `Tree splitting` can be done in two ways:
-  1. Select a node at which to split (*SHIFT + Left Click*) and delete (*DEL*) it.
-  2. Delete an edge between two nodes. Select the first node (*SHIFT + Left Click*), then *SHIFT + CTRL + Left Click* on the second node of the edge to delete this connection.
-- `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and *SHIFT + ALT + Left Click* the second node to create an edge between the two.
+  1. Delete a node at which to split. This can be done by right-clicking a node and choosing "Delete this Node". If you have enabled *Classic Controls*, you need to select (*SHIFT + Left Click*) the node first and then delete (*DEL*) it.
+  2. Delete an edge between two nodes. Select the first node (*Left Click*), then right-click the second node and select *Delete Edge to this Node*. If you have enabled *Classic Controls*, you need to select the first node with *Shift + Left Click* and then click on the second node with *SHIFT + CTRL + Left Click* on the second node of the edge to delete this connection.
+- `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and right-click on a second one to choose *Create Edge & Merge with this Tree*. When using *Classic Controls*, the second node needs to be selected with *SHIFT + ALT + Left Click* to create an edge between the two.
 
 ![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
 
@@ -124,13 +135,11 @@ There are also keyboard shortcuts to quickly toggle the visibility:
 | ----------------------------| -------------                         |
 | 1                           | Toggle Visibility of all Trees        |
 | 2                           | Toggle Visibility of Inactive Trees   |
-| SHIFT + ALT + Left Click    | Merge Two Nodes and Combine Trees     |
-| SHIFT + CTRL + Left Click   | Delete Edge / Split Trees             |
 
 ![Trees can be hidden for a better overview over the data. Toggle the visibility of individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](images/tracing_ui_tree_visibility.png)
 
 #### The Context Menu for Easy Access to Functionalities
-webKnossos also has a context menu which can be opened via *Shift + Right Click*. This context menu takes the currently active node into context and offers functionalities plus information to the user.
+webKnossos also has a context menu which can be opened via *Right Click* (or *Shift + Right Click* if *Classic Controls* are enabled). This context menu takes the selected node into context and offers functionalities plus information to the user.
 ![Example of the context menu](./images/context_menu.png)
 The context menu has two modes. 
 

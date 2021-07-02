@@ -4,7 +4,7 @@ import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import Store, { type OxalisState, type BorderOpenStatus } from "oxalis/store";
-import { Layout } from "antd";
+import { Layout, Tooltip } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -16,19 +16,20 @@ import {
   resetDefaultLayouts,
 } from "oxalis/view/layouting/default_layout_configs";
 
-import { OrthoViews, ArbitraryViews } from "oxalis/constants";
-import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
-import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
-import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
-import InputCatcher from "oxalis/view/input_catcher";
-import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
-import MeshesView from "oxalis/view/right-menu/meshes_view";
-import RecordingSwitch from "oxalis/view/recording_switch";
-import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
-import UserSettingsView from "oxalis/view/settings/user_settings_view";
-import TDViewControls from "oxalis/view/td_view_controls";
-import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import Statusbar from "oxalis/view/statusbar";
+import { OrthoViews, ArbitraryViews, BorderTabs } from "oxalis/constants";
+import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
+import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
+import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import InputCatcher from "oxalis/view/input_catcher";
+import MeshesView from "oxalis/view/right-border-tabs/meshes_view";
+import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
+import RecordingSwitch from "oxalis/view/recording_switch";
+import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
+import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
+import TDViewControls from "oxalis/view/td_view_controls";
+
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
@@ -177,43 +178,34 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return true;
   }
 
-  renderRightBorderTab(id: string): ?React.Node {
+  renderBorderTab(id: string): ?React.Node {
     switch (id) {
       case "DatasetInfoTabView": {
         return <DatasetInfoTabView />;
       }
-      case "TreesTabView": {
-        return <TreesTabView />;
-      }
       case "CommentTabView": {
         return <CommentTabView />;
       }
-      case "AbstractTreeTabView": {
-        return <AbstractTreeTabView />;
-      }
-      case "MappingInfoView": {
-        return <MappingInfoView />;
+      case "AbstractTreeTab": {
+        return <AbstractTreeTab />;
       }
       case "MeshesView": {
         return <MeshesView />;
       }
+      case "SkeletonTabView": {
+        return <SkeletonTabView />;
+      }
+      case "BoundingBoxTab": {
+        return <BoundingBoxTab />;
+      }
+      case "LayerSettingsTab": {
+        return <LayerSettingsTab />;
+      }
+      case "ControlsAndRenderingSettingsTab": {
+        return <ControlsAndRenderingSettingsTab />;
+      }
       default: {
         console.error(`The tab with id ${id} is unknown.`);
-        return null;
-      }
-    }
-  }
-
-  renderSettingsTab(id: string): ?React.Node {
-    switch (id) {
-      case "UserSettingsView": {
-        return <UserSettingsView />;
-      }
-      case "DatasetSettingsView": {
-        return <DatasetSettingsView />;
-      }
-      default: {
-        console.error(`The settings tab with id ${id} is unknown.`);
         return null;
       }
     }
@@ -258,6 +250,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       <FlexLayout.Layout
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
+        titleFactory={renderedNode => (
+          <Tooltip title={BorderTabs[renderedNode.getId()].description}>
+            {renderedNode.getName()}{" "}
+          </Tooltip>
+        )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.
@@ -277,17 +274,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     const component = node.getComponent();
     const id = node.getId();
     switch (component) {
-      case "right-border-tab": {
-        return this.renderRightBorderTab(id);
-      }
-      case "settings-tab": {
-        const activeNodeOfTabset = node.getParent().getSelectedNode();
-        if (activeNodeOfTabset.getId() === id) {
-          return this.renderSettingsTab(id);
-        } else {
-          // If the current settings tab is not selected, we do no render its contents so save performance.
-          return null;
-        }
+      case "border-tab": {
+        return this.renderBorderTab(id);
       }
       case "viewport": {
         return this.renderViewport(id);

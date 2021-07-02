@@ -125,7 +125,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
             isVisible && (
               <React.Fragment>
                 <Shortcut supportInputElements keys="escape" onTrigger={this.closeSearchPopover} />
-                <InputGroup compact style={{ width: 450 }}>
+                <InputGroup compact style={{ width: 450 }} className="compact-items compact-icons">
                   <Input
                     style={{ width: "calc(100% - 100px)", ...additionalInputStyle }}
                     value={searchQuery}
@@ -145,7 +145,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                   />
                   <Tooltip title="Previous (shift+enter)">
                     <ButtonComponent
-                      style={{ width: 50 }}
+                      style={{ width: 40 }}
                       onClick={this.selectPreviousOption}
                       disabled={!hasMultipleResults}
                     >
@@ -154,7 +154,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                   </Tooltip>
                   <Tooltip title="Next (enter)">
                     <ButtonComponent
-                      style={{ width: 50 }}
+                      style={{ width: 40 }}
                       onClick={this.selectNextOption}
                       disabled={!hasMultipleResults}
                     >

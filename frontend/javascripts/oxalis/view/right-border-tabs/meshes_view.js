@@ -34,7 +34,10 @@ import {
   addIsosurfaceAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
-import { loadMeshFromFile, maybeFetchMeshFiles } from "oxalis/view/right-menu/meshes_view_helper";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -240,7 +243,7 @@ class MeshesView extends React.Component<Props, State> {
           const pos = getPosition(this.props.flycam);
           const id = getIdForPos(pos);
           if (id === 0) {
-            Toast.info("No cell found at centered position");
+            Toast.info("No segment found at centered position");
           }
           this.props.changeActiveIsosurfaceId(id, pos, true);
         }}
@@ -255,7 +258,7 @@ class MeshesView extends React.Component<Props, State> {
       const pos = getPosition(this.props.flycam);
       const id = getIdForPos(pos);
       if (id === 0) {
-        Toast.info("No cell found at centered position");
+        Toast.info("No segment found at centered position");
         return;
       }
       if (!this.props.currentMeshFile || !this.props.segmentationLayer) {
@@ -305,7 +308,7 @@ class MeshesView extends React.Component<Props, State> {
           key="tooltip"
           title={
             this.props.currentMeshFile != null
-              ? `Load mesh for centered cell from file ${this.props.currentMeshFile}`
+              ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
               : "There is no mesh file."
           }
         >
@@ -424,7 +427,7 @@ class MeshesView extends React.Component<Props, State> {
           locale={{
             emptyText: `There are no Meshes.${
               this.props.allowUpdate
-                ? " You can render a mesh for the currently centered cell by clicking the button above."
+                ? " You can render a mesh for the currently centered segment by clicking the button above."
                 : ""
             }`,
           }}

@@ -1,6 +1,11 @@
 // @flow
 
+import type { AnnotationTool } from "oxalis/constants";
 import { type BorderOpenStatus, type Theme } from "oxalis/store";
+
+type SetToolAction = { type: "SET_TOOL", tool: AnnotationTool };
+
+type CycleToolAction = { type: "CYCLE_TOOL" };
 
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",
@@ -37,6 +42,15 @@ type SetHasOrganizationsAction = {
   value: boolean,
 };
 
+export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
+  type: "SET_TOOL",
+  tool,
+});
+
+export const cycleToolAction = (): CycleToolAction => ({
+  type: "CYCLE_TOOL",
+});
+
 type SetThemeAction = {
   type: "SET_THEME",
   value: Theme,
@@ -50,6 +64,8 @@ export type UiAction =
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
   | SetHasOrganizationsAction
+  | SetToolAction
+  | CycleToolAction
   | SetThemeAction;
 
 export const setDropzoneModalVisibilityAction = (

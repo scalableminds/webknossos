@@ -18,7 +18,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import update from "immutability-helper";
 
-import { Comment, commentListId } from "oxalis/view/right-menu/comment_tab/comment";
+import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
 import { type Comparator, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
 import { InputKeyboard } from "libs/input";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
@@ -40,7 +40,7 @@ import Store, {
   type SkeletonTracing,
   type Tree,
 } from "oxalis/store";
-import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
+import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
 import messages from "messages";
 
 import AdvancedSearchPopover from "../advanced_search_popover";
@@ -410,7 +410,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
             return (
               <React.Fragment>
                 {this.renderMarkdownModal()}
-                <InputGroup compact>
+                <InputGroup compact className="compact-items compact-icons">
                   <AdvancedSearchPopover
                     onSelect={comment => this.props.setActiveNode(comment.nodeId)}
                     data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}

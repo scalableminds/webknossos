@@ -12,10 +12,13 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 - `Move`: Navigate around the dataset.
 - `Trace`: Draw outlines around the voxel you would like to label.
 - `Brush`: Draw over the voxels you would like to label. Adjust the brush size with *SHIFT + Mousewheel*.
+- `Erase (Trace/Brush)`: Draw over the voxels you would like to erase. Adjust the brush size with *SHIFT + Mousewheel*.
 - `Fill Tool`: Flood-fill the clicked region. All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active cell id.
+- `Cell Picker`: Click a segment to use its id as the active cell id.
 
-Add labels with *Left Mouse Drag*.
-Remove labels with *Right Mouse Drag*.
+When using the trace or brush tool, label can be added with *Left Mouse Drag*.
+Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left Mouse Drag*.
+If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, rightclick is mapped to open a context menu).
 
 In the `Segmentation` tab on the right-hand side, you can see the cell IDs which are active, below your cursor, or in the middle of the viewport.
 

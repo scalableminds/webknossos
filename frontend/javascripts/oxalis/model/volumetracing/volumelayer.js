@@ -5,6 +5,10 @@
 
 import _ from "lodash";
 
+import { V2, V3 } from "libs/mjs";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
   scaleGlobalPositionWithResolution,
   scaleGlobalPositionWithResolutionFloat,
@@ -16,18 +20,14 @@ import Constants, {
   type Vector2,
   type Vector3,
   Vector3Indicies,
-  VolumeToolEnum,
-  type VolumeTool,
+  type AnnotationTool,
   Vector2Indicies,
 } from "oxalis/constants";
-import { V2, V3 } from "libs/mjs";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
-import messages from "messages";
-import Toast from "libs/toast";
 import Store from "oxalis/store";
+import Toast from "libs/toast";
+import messages from "messages";
 
 /*
   A VoxelBuffer2D instance holds a two dimensional slice
@@ -170,7 +170,7 @@ class VolumeLayer {
     return this.getContourList(true).length === 0;
   }
 
-  getFillingVoxelBuffer2D(mode: VolumeTool): VoxelBuffer2D {
+  getFillingVoxelBuffer2D(mode: AnnotationTool): VoxelBuffer2D {
     if (this.isEmpty() || this.minCoord == null) {
       return VoxelBuffer2D.empty();
     }
@@ -181,7 +181,7 @@ class VolumeLayer {
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
-    if (mode === VolumeToolEnum.BRUSH) {
+    if (isBrushTool(mode)) {
       // If the brush is used, only perform the "filling" operation
       // when start- and end coordinate are close enough to each other
       const globalContourList = this.getContourList(true);

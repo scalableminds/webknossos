@@ -96,24 +96,47 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 
-export const TracingTabs = {
-  DatasetInfoTabView: { id: "DatasetInfoTabView", name: "Info" },
-  TreesTabView: { id: "TreesTabView", name: "Trees" },
-  CommentTabView: { id: "CommentTabView", name: "Comments" },
-  MappingInfoView: { id: "MappingInfoView", name: "Volume" },
-  MeshesView: { id: "MeshesView", name: "Meshes" },
-  AbstractTreeTabView: {
-    id: "AbstractTreeTabView",
-    name: "Abstract Tree",
+export const BorderTabs = {
+  DatasetInfoTabView: {
+    id: "DatasetInfoTabView",
+    name: "Info",
+    description: "Information about the dataset",
   },
-};
-
-export const SettingsTabs = {
-  UserSettingsTab: {
-    id: "UserSettingsView",
-    name: "Annotation",
+  CommentTabView: {
+    id: "CommentTabView",
+    name: "Comments",
+    description: "Add comments to skeleton nodes",
   },
-  DatasetSettingsTab: { id: "DatasetSettingsView", name: "Dataset" },
+  MeshesView: {
+    id: "MeshesView",
+    name: "Meshes",
+    description: "Load, compute and organize Meshes of segments",
+  },
+  SkeletonTabView: {
+    id: "SkeletonTabView",
+    name: "Skeleton",
+    description: "Create and organize skeletons",
+  },
+  AbstractTreeTab: {
+    id: "AbstractTreeTab",
+    name: "AbsTree",
+    description: "Abstract Tree - Shows an abstract version of the active skeleton",
+  },
+  ControlsAndRenderingSettingsTab: {
+    id: "ControlsAndRenderingSettingsTab",
+    name: "Settings",
+    description: "Change general settings about controls and rendering.",
+  },
+  BoundingBoxTab: {
+    id: "BoundingBoxTab",
+    name: "BBoxes",
+    description: "Bounding Boxes - Add and organize bounding boxes",
+  },
+  LayerSettingsTab: {
+    id: "LayerSettingsTab",
+    name: "Layers",
+    description: "Change settings of each data layer",
+  },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;
@@ -124,18 +147,34 @@ export const ControlModeEnum = {
 };
 export type ControlMode = $Keys<typeof ControlModeEnum>;
 
-export const VolumeToolEnum = {
+export const AnnotationToolEnum = {
   MOVE: "MOVE",
+  SKELETON: "SKELETON",
   BRUSH: "BRUSH",
+  ERASE_BRUSH: "ERASE_BRUSH",
   TRACE: "TRACE",
+  ERASE_TRACE: "ERASE_TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
 };
-export const ToolsWithOverwriteCapabilities = [VolumeToolEnum.TRACE, VolumeToolEnum.BRUSH];
-export type VolumeTool = $Keys<typeof VolumeToolEnum>;
+export const VolumeTools = [
+  AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.ERASE_BRUSH,
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.ERASE_TRACE,
+  AnnotationToolEnum.FILL_CELL,
+  AnnotationToolEnum.PICK_CELL,
+];
+export const ToolsWithOverwriteCapabilities = [
+  AnnotationToolEnum.TRACE,
+  AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.ERASE_TRACE,
+  AnnotationToolEnum.ERASE_BRUSH,
+];
+export type AnnotationTool = $Keys<typeof AnnotationToolEnum>;
 
-export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
-  return Object.keys(VolumeToolEnum).indexOf(volumeTool);
+export function annotationToolEnumToIndex(annotationTool: ?AnnotationTool): number {
+  return Object.keys(AnnotationToolEnum).indexOf(annotationTool);
 }
 
 export const ContourModeEnum = {
@@ -179,6 +218,8 @@ export const Unicode = {
 // are stored in a Uint8Array in a binary way (which cell
 // id the voxels should be changed to is not encoded).
 export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+
+export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoView) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

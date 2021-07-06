@@ -64,12 +64,12 @@ class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUser
   def webknossos_uri: String = wkConf.Http.uri
 }
 
-class AnalyticsSessionService @Inject()() extends LazyLogging {
+class AnalyticsSessionService @Inject()(wkConf: WkConf) extends LazyLogging {
   // Maintains session IDs per multiUser. The value is the start time of the session.
   // After an inactivity pause a new session id is assigned.
 
   // After this duration of inactivity, a new session ID is generated for a user
-  private lazy val pause: FiniteDuration = 30 seconds
+  private lazy val pause: FiniteDuration = wkConf.BackendAnalytics.sessionPause
 
   // format: userId → (lastRefreshTimestamp, sessionId)
   private lazy val sessionIdStore: scala.collection.mutable.Map[ObjectId, (Long, Long)] = scala.collection.mutable.Map()

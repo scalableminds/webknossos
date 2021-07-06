@@ -210,7 +210,7 @@ void main() {
       // - finally, the non-fractional part of each digit is removed (since it is covered by a more significant digit)
       color = fract(floor(nodeId / vec3(255.0 * 255.0, 255.0, 1.0)) / 255.0);
       // Enlarge the nodes on mobile, so they're easier to select
-      gl_PointSize = isTouch == 1 ? max(gl_PointSize * 1.5, 30.0) : max(gl_PointSize * 1.5, 10.0);
+      gl_PointSize = isTouch == 1 ? max(gl_PointSize * 1.5, 30.0) : max(gl_PointSize * 1.5, 15.0);
       return;
     }
 

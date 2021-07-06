@@ -8,10 +8,10 @@ import {
   OrthoViewValues,
   OrthoViews,
   type Vector3,
-  volumeToolEnumToIndex,
 } from "oxalis/constants";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
   getLookupBufferSize,
@@ -112,10 +112,6 @@ class PlaneMaterialFactory {
       Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
     this.uniforms = {
-      highlightHoveredCellId: {
-        type: "b",
-        value: true,
-      },
       sphericalCapRadius: {
         type: "f",
         value: 140,
@@ -176,9 +172,9 @@ class PlaneMaterialFactory {
         type: "b",
         value: false,
       },
-      activeVolumeToolIndex: {
-        type: "f",
-        value: 0,
+      showBrush: {
+        type: "b",
+        value: false,
       },
       viewMode: {
         type: "f",
@@ -419,16 +415,6 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.datasetConfiguration.highlightHoveredCellId,
-        highlightHoveredCellId => {
-          this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
         storeState => storeState.dataset,
         dataset => {
           const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
@@ -484,11 +470,12 @@ class PlaneMaterialFactory {
               this.uniforms.isMouseInCanvas.value = false;
               return;
             }
-            if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+            const state = Store.getState();
+            if (state.viewModeData.plane.activeViewport === OrthoViews.TDView) {
               return;
             }
 
-            const [x, y, z] = calculateGlobalPos({
+            const [x, y, z] = calculateGlobalPos(state, {
               x: globalMousePosition[0],
               y: globalMousePosition[1],
             });
@@ -565,12 +552,9 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState =>
-            volumeToolEnumToIndex(
-              Utils.toNullable(Utils.maybe(getVolumeTool)(storeState.tracing.volume)),
-            ),
-          volumeTool => {
-            this.uniforms.activeVolumeToolIndex.value = volumeTool;
+          storeState => storeState.uiInformation.activeTool,
+          annotationTool => {
+            this.uniforms.showBrush.value = isBrushTool(annotationTool);
           },
           true,
         ),

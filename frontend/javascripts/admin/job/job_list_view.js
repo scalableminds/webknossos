@@ -157,7 +157,7 @@ class JobListView extends React.PureComponent<Props, State> {
       },
       SUCCESS: {
         tooltip: "This job has successfully been executed.",
-        icon: <CheckCircleTwoTone twoToneColor="green" />,
+        icon: <CheckCircleTwoTone twoToneColor="#49b21b" />,
       },
       PENDING: {
         tooltip: "This job will run as soon as a worker becomes available.",
@@ -171,7 +171,7 @@ class JobListView extends React.PureComponent<Props, State> {
       },
       MANUAL: {
         tooltip:
-          "The job will be handled by an admin shortly, since it couldn't be finished automatically. Please check back here soon.",
+          "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
         icon: <ToolTwoTone twoToneColor="orange" />,
       },
     };

@@ -113,7 +113,8 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, id.toString)
     } yield parsed
 
-  def findOneBySummaryAndOrganization(summary: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
+  def findOneBySummaryAndOrganization(summary: String, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

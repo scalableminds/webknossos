@@ -14,14 +14,18 @@ import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
-class AnalyticsService @Inject()(rpc: RPC, wkConf: WkConf, analyticsLookUpService: AnalyticsLookUpService)(
-    implicit ec: ExecutionContext)
+class AnalyticsService @Inject()(rpc: RPC,
+                                 wkConf: WkConf,
+                                 analyticsLookUpService: AnalyticsLookUpService,
+                                 analyticsSessionService: AnalyticsSessionService)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   def track(analyticsEvent: AnalyticsEvent): Unit = {
     for {
-      analyticsJson <- analyticsEvent.toJson(analyticsLookUpService)
+      sessionId <- Fox.successful(analyticsSessionService.refreshAndGetSessionId(analyticsEvent.user._multiUser))
+      analyticsJson <- analyticsEvent.toJson(analyticsLookUpService, sessionId)
       _ <- send(analyticsJson)
     } yield ()
     () // Do not return the Future, so as to not block caller
@@ -60,6 +64,28 @@ class AnalyticsLookUpService @Inject()(userDAO: UserDAO, multiUserDAO: MultiUser
   def webknossos_uri: String = wkConf.Http.uri
 }
 
+class AnalyticsSessionService @Inject()() extends LazyLogging {
+  // Maintains session IDs per multiUser. The value is the start time of the session.
+  // After an inactivity pause a new session id is assigned.
+
+  // After this duration of inactivity, a new session ID is generated for a user
+  private lazy val pause: FiniteDuration = 30 seconds
+
+  // format: userId → (lastRefreshTimestamp, sessionId)
+  private lazy val sessionIdStore: scala.collection.mutable.Map[ObjectId, (Long, Long)] = scala.collection.mutable.Map()
+
+  def refreshAndGetSessionId(multiUserId: ObjectId): Long = {
+    val now: Long = System.currentTimeMillis()
+    sessionIdStore.synchronized {
+      val valueOld = sessionIdStore.getOrElse(multiUserId, (-1L, -1L))
+      val idToSet = if (valueOld._1 + pause.toMillis < now) now else valueOld._2
+      sessionIdStore.put(multiUserId, (now, idToSet))
+      idToSet
+    }
+  }
+
+}
+
 trait AnalyticsEvent {
   def eventType: String
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject]
@@ -79,7 +105,7 @@ trait AnalyticsEvent {
 
   def user: User
 
-  def toJson(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+  def toJson(analyticsLookUpService: AnalyticsLookUpService, sessionId: Long): Fox[JsObject] =
     for {
       eventProperties <- eventProperties(analyticsLookUpService)
       userProperties <- userProperties(analyticsLookUpService)
@@ -90,6 +116,7 @@ trait AnalyticsEvent {
         "time" -> timestamp,
         "user_properties" -> userProperties,
         "event_properties" -> eventProperties,
+        "session_id" -> sessionId
       )
     }
 }

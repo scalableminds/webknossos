@@ -28,9 +28,9 @@ class AnalyticsService @Inject()(rpc: RPC, wkConf: WkConf, analyticsLookUpServic
   }
 
   private def send(analyticsEventJson: JsObject): Fox[Unit] = {
-    if (wkConf.BackendAnalytics.uri == "" || wkConf.BackendAnalytics.key == "") {
+    if (wkConf.BackendAnalytics.uri == "") {
       if (wkConf.BackendAnalytics.verboseLoggingEnabled) {
-        logger.info(s"Not sending analytics event, since uri/key is not configured. Event was: $analyticsEventJson")
+        logger.info(s"Not sending analytics event, since uri is not configured. Event was: $analyticsEventJson")
       }
     } else {
       if (wkConf.BackendAnalytics.verboseLoggingEnabled) {

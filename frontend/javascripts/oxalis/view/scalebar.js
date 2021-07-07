@@ -6,7 +6,7 @@ import * as React from "react";
 import { Tooltip } from "antd";
 import type { APIDataset } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { convertPixelsToNm } from "oxalis/view/right-menu/dataset_info_tab_view";
+import { convertPixelsToNm } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { formatNumberToLength } from "libs/format_utils";
 import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";

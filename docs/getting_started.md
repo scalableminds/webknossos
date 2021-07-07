@@ -50,11 +50,18 @@ You can also change the size of the viewports to see more details in your data a
 
 ## Your First Annotation
 Click the `Create Annotation` button from the view mode of a dataset to create your first annotation.
-webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons.
+webKnossos will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
 
-Drag the mouse while pressing the left mouse button to navigate the dataset.
-Right-click in the data to place markers, called nodes.
-Basic movement in the dataset is done with the mouse wheel or by pressing the spacebar keyboard shortcut.
+Depending on the current tool - selectable in the top bar - various actions can be performed.
+Note that the most important controls are always shown in the status bar at the bottom of your screen.
+The first tool is the MOVE tool which allows to navigate the dataset by moving the mouse while holding the left mouse button.
+In the SKELETON tool, left click can be used to place markers in the data, called nodes.
+Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
+The DRAW tool allows to "paint" voxels to create volumetric annotations.
+
+A right click can be used to open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment.
+Note that "Classic Controls" can be activated in the settings sidebar which assigns more specialized behaviors to the right click (e.g., dragging with the right mouse button in the draw tool will erase data).
+Basic movement along the 3rd axis is done with the mouse wheel or by pressing the spacebar keyboard shortcut.
 
 Learn more about the skeleton, volume, and hybrid annotations as well as the interface in the [Annotation UI guide](./tracing_ui.md).
 

@@ -12,7 +12,7 @@ import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer, {
   type NodeListItem,
-} from "oxalis/view/right-menu/abstract_tree_renderer";
+} from "oxalis/view/right-border-tabs/abstract_tree_renderer";
 import window from "libs/window";
 
 type StateProps = {|
@@ -25,7 +25,7 @@ type State = {
   visible: boolean,
 };
 
-class AbstractTreeView extends Component<Props, State> {
+class AbstractTreeTab extends Component<Props, State> {
   canvas: ?HTMLCanvasElement;
   nodeList: Array<NodeListItem> = [];
   state = {
@@ -112,4 +112,4 @@ function mapStateToProps(state: OxalisState): $Shape<Props> {
   return { skeletonTracing: state.tracing.skeleton };
 }
 
-export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(AbstractTreeView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(AbstractTreeTab);

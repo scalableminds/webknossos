@@ -28,9 +28,9 @@ import {
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeTool, ControlMode } from "oxalis/constants";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
 import type {
   Node,
   UserConfiguration,
@@ -49,11 +49,12 @@ import * as Utils from "libs/utils";
 import {
   ControlModeEnum,
   OrthoViews,
-  VolumeToolEnum,
+  AnnotationToolEnum,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import TWEEN from "tween.js";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";
@@ -475,7 +476,7 @@ class TracingApi {
   //  VOLUMETRACING API
 
   /**
-   * Returns the id of the current active cell.
+   * Returns the id of the current active segment.
    * _Volume tracing only!_
    */
   getActiveCellId(): number {
@@ -484,40 +485,50 @@ class TracingApi {
   }
 
   /**
-   * Sets the active cell given a cell id.
-   * If a cell with the given id doesn't exist, it is created.
+   * Sets the active segment given a segment id.
+   * If a segment with the given id doesn't exist, it is created.
    * _Volume tracing only!_
    */
   setActiveCell(id: number) {
     assertVolume(Store.getState().tracing);
-    assertExists(id, "Cell id is missing.");
+    assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
   }
 
   /**
    * Returns the active volume tool which is either
-   * "MOVE", "TRACE" or "BRUSH".
-   * _Volume tracing only!_
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL".
    */
-  getVolumeTool(): ?VolumeTool {
-    const tracing = assertVolume(Store.getState().tracing);
-    return getVolumeTool(tracing);
+  getAnnotationTool(): AnnotationTool {
+    return Store.getState().uiInformation.activeTool;
   }
 
   /**
    * Sets the active volume tool which should be either
-   * "MOVE", "TRACE" or "BRUSH".
-   * _Volume tracing only!_
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL".
    */
-  setVolumeTool(tool: VolumeTool) {
-    assertVolume(Store.getState().tracing);
+  setAnnotationTool(tool: AnnotationTool) {
     assertExists(tool, "Volume tool is missing.");
-    if (VolumeToolEnum[tool] == null) {
+    if (AnnotationToolEnum[tool] == null) {
       throw new Error(
-        `Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`,
+        `Volume tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
     Store.dispatch(setToolAction(tool));
+  }
+
+  /**
+   * Deprecated! Use getAnnotationTool instead.
+   */
+  getVolumeTool(): AnnotationTool {
+    return this.getAnnotationTool();
+  }
+
+  /**
+   * Deprecated! Use setAnnotationTool instead.
+   */
+  setVolumeTool(tool: AnnotationTool) {
+    this.setAnnotationTool(tool);
   }
 }
 
@@ -687,7 +698,6 @@ class DataApi {
      - interpolation
      - layers
      - quality
-     - highlightHoveredCellId
      - segmentationPatternOpacity
      - renderMissingDataBlack
    *

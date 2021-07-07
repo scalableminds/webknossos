@@ -34,7 +34,10 @@ import {
   addIsosurfaceAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
-import { loadMeshFromFile, maybeFetchMeshFiles } from "oxalis/view/right-menu/meshes_view_helper";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -59,7 +62,7 @@ export const stlIsosurfaceConstants = {
 
 // This file defines the component MeshesView.
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): * => ({
   meshes: state.tracing != null ? state.tracing.meshes : [],
   isImporting: state.uiInformation.isImportingMesh,
   isosurfaces: state.isosurfaces,
@@ -75,7 +78,7 @@ const mapStateToProps = (state: OxalisState) => ({
   currentMeshFile: state.currentMeshFile,
 });
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   updateRemoteMeshMetadata(id: string, meshMetaData: $Shape<RemoteMeshMetaData>) {
     dispatch(updateRemoteMeshMetaDataAction(id, meshMetaData));
   },
@@ -121,8 +124,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 });
 
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
+type StateProps = ExtractReturn<typeof mapStateToProps>;
 
-type Props = {| ...DispatchProps |};
+type Props = {| ...DispatchProps, ...StateProps |};
 
 type State = { hoveredListItem: ?number };
 
@@ -239,7 +243,7 @@ class MeshesView extends React.Component<Props, State> {
           const pos = getPosition(this.props.flycam);
           const id = getIdForPos(pos);
           if (id === 0) {
-            Toast.info("No cell found at centered position");
+            Toast.info("No segment found at centered position");
           }
           this.props.changeActiveIsosurfaceId(id, pos, true);
         }}
@@ -254,7 +258,10 @@ class MeshesView extends React.Component<Props, State> {
       const pos = getPosition(this.props.flycam);
       const id = getIdForPos(pos);
       if (id === 0) {
-        Toast.info("No cell found at centered position");
+        Toast.info("No segment found at centered position");
+        return;
+      }
+      if (!this.props.currentMeshFile || !this.props.segmentationLayer) {
         return;
       }
       await loadMeshFromFile(
@@ -295,13 +302,13 @@ class MeshesView extends React.Component<Props, State> {
     );
 
     const getLoadPrecomputedMeshButton = () => {
-      const hasCurrenMeshFile = this.props.currentMeshFile;
+      const hasCurrentMeshFile = this.props.currentMeshFile;
       return (
         <Tooltip
           key="tooltip"
           title={
-            hasCurrenMeshFile
-              ? `Load mesh for centered cell from file ${this.props.currentMeshFile}`
+            this.props.currentMeshFile != null
+              ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
               : "There is no mesh file."
           }
         >
@@ -312,7 +319,7 @@ class MeshesView extends React.Component<Props, State> {
             overlay={getMeshFilesDropdown()}
             buttonsRender={([leftButton, rightButton]) => [
               React.cloneElement(leftButton, {
-                disabled: !hasCurrenMeshFile,
+                disabled: !hasCurrentMeshFile,
                 style: { borderRightStyle: "dashed" },
               }),
               React.cloneElement(rightButton, { style: { borderLeftStyle: "dashed" } }),
@@ -420,7 +427,7 @@ class MeshesView extends React.Component<Props, State> {
           locale={{
             emptyText: `There are no Meshes.${
               this.props.allowUpdate
-                ? " You can render a mesh for the currently centered cell by clicking the button above."
+                ? " You can render a mesh for the currently centered segment by clicking the button above."
                 : ""
             }`,
           }}

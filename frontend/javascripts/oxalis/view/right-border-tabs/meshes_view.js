@@ -180,7 +180,7 @@ class MeshesView extends React.Component<Props, State> {
       switch (activeJob.state) {
         case "SUCCESS": {
           Toast.success(
-            'The computation of a mesh file for this dataset has finished. You can now use the "Load Precomputed Mesh" in the "Meshes" tab.',
+            'The computation of a mesh file for this dataset has finished. You can now use the "Load Precomputed Mesh" functionality in the "Meshes" tab.',
           );
           this.setState({ activeMeshJobId: null });
           // maybeFetchMeshFiles will fetch the new mesh file and also activate it if no other mesh file

@@ -23,6 +23,7 @@ SET recommendedconfiguration = jsonb_set(
         array['useLegacyBindings'],
         to_jsonb('true'::boolean))
 ```
+- The health check at api/health does not longer include checking data/health and tracings/health if the respective local modules are enabled. Consider monitoring those routes separately.
 
 ### Postgres Evolutions:
 - [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)

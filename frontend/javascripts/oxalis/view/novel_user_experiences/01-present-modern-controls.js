@@ -10,7 +10,7 @@ export default function PresentModernControls() {
   const dispatch = useDispatch();
   const activeUser = useSelector(state => state.activeUser);
   const [isModalVisible, setIsModalVisible] = React.useState(
-    activeUser != null && !activeUser.novelUserExperienceInfos.shouldSeeModernControlsModal,
+    activeUser != null && activeUser.novelUserExperienceInfos.shouldSeeModernControlsModal,
   );
   if (!isModalVisible) {
     return null;

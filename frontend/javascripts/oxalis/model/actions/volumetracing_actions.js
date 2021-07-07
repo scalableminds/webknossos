@@ -143,7 +143,7 @@ export const setContourTracingModeAction = (mode: ContourMode): SetContourTracin
 export const addBucketToUndoAction = (
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
-  maybeBucketLoadedPromise: null | Promise<BucketDataArray>,
+  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
 ): AddBucketToUndoAction => ({
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress,

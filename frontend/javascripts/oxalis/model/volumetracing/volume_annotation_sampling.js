@@ -332,7 +332,7 @@ export function applyVoxelMap(
       if (bucket.type === "null") {
         continue;
       }
-      const data = bucket.getOrCreateData();
+      const { data } = bucket.getOrCreateData();
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {

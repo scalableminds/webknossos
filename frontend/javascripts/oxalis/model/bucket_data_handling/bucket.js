@@ -241,9 +241,9 @@ export class DataBucket {
   };
 
   getCopyOfData(): { dataClone: BucketDataArray, triggeredBucketFetch: boolean } {
-    const { data, triggeredBucketFetch } = this.getOrCreateData();
+    const { data: bucketData, triggeredBucketFetch } = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
-    const dataClone = new TypedArrayClass(data);
+    const dataClone = new TypedArrayClass(bucketData);
     return { dataClone, triggeredBucketFetch };
   }
 
@@ -313,7 +313,6 @@ export class DataBucket {
         this.temporalBucketManager.addBucket(this);
       }
     }
-
     return { data: this.getData(), triggeredBucketFetch };
   }
 

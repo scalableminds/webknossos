@@ -97,14 +97,6 @@ type racedActionsNeededForUndoRedo = {
   redo: ?RedoAction,
 };
 
-// Better version: Let the undo stack / batch know that bucket data is not yet fetched by the backend.
-// Then if the data is fetched backend, a promise passed to the saga as an argument of the ADD_BUCKET_TO_UNDO action
-// is triggered, that contains a reference to the compressed ground truth data of the backend and is then added to the bucket-data
-// in the undo stack.
-// Later when an undo action is triggered and a volume action should be undone, it is first tested whether this undo bucket has
-// ground truth data, and if yes, both are decompressed and then merged and applied.
-// If there is no ground truth, then proceed just like it is done currently.
-
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];

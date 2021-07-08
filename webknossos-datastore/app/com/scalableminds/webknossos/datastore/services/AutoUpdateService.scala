@@ -9,8 +9,10 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsArray, JsObject, JsString}
+import play.api.libs.json.{JsArray, JsObject, JsString, JsValue}
+import webknossosDatastore.BuildInfo
 
+import java.io
 import java.io.File
 import java.net.{HttpURLConnection, URL}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,26 +30,37 @@ class AutoUpdateService @Inject()(
 
   override protected lazy val enabled: Boolean = config.Datastore.AutoUpdate.enabled
   protected lazy val tickerInterval: FiniteDuration = 24 hours
-  private val version = "21.0.6"
 
-  def checkForUpdate(): Fox[Boolean] =
+  def checkForUpdate(): Fox[(Boolean, List[JsObject])] =
     for {
       jsArray <- rpc("https://api.github.com/repos/scalableminds/webknossos/releases")
         .addHeader("Accept" -> "application/vnd.github.v3+json")
         .addQueryString("per_page" -> "1")
         .getWithJsonResponse[JsArray]
       jsObject <- jsArray.value.headOption.flatMap(_.validate[JsObject].asOpt)
-      tag_name <- jsObject.value.get("tag_name").map(_.asInstanceOf[JsString])
-      _ = logger.info(tag_name.value)
-    } yield version != tag_name.value
+      tag_name <- jsObject.value.get("tag_name").flatMap(_.validate[JsString].asOpt)
+      assets <- jsObject.value.get("assets").flatMap(_.validate[JsArray].asOpt)
+      assetObjects = assets.value.flatMap(_.validate[JsObject].asOpt).toList
+    } yield (BuildInfo.ciTag != tag_name.value, assetObjects)
 
-  def downloadUpdate(existsNewUpdate: Boolean): Fox[Unit] = {
-    if (existsNewUpdate) {
+  def downloadUpdate(existsNewUpdate: Boolean, assets: List[JsObject]): Fox[Unit] = {
+    def jarUrl(): String = {
+      for {
+        asset <- assets
+        name = asset.value.get("name").flatMap(_.validate[JsString].asOpt).map(_.value)
+      } yield {
+        if (name.getOrElse("").endsWith(".jar")) {
+          return name.getOrElse("")
+        }
+      }
+      ""
+    }
+
+    val jarURL = jarUrl()
+    if (existsNewUpdate && jarURL != "") {
       try {
         var connection =
-          new URL("https://api.github.com/repos/youri-k/ComparingUnrelatedTypesExample/releases/assets/39547733")
-            .openConnection()
-            .asInstanceOf[HttpURLConnection]
+          new URL(jarURL).openConnection().asInstanceOf[HttpURLConnection]
         connection.setRequestProperty("Accept", "application/octet-stream")
         if (connection.getResponseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
           connection = new URL(connection.getHeaderField("Location")).openConnection().asInstanceOf[HttpURLConnection]
@@ -65,7 +78,7 @@ class AutoUpdateService @Inject()(
 
   def tick(): Unit =
     for {
-      existsNewUpdate <- checkForUpdate()
-      _ <- downloadUpdate(existsNewUpdate)
+      (existsNewUpdate, assets) <- checkForUpdate()
+      _ <- downloadUpdate(existsNewUpdate, assets)
     } yield if (existsNewUpdate) exit(250) else ()
 }

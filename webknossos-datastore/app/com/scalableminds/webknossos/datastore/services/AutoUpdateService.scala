@@ -43,24 +43,12 @@ class AutoUpdateService @Inject()(
       assetObjects = assets.value.flatMap(_.validate[JsObject].asOpt).toList
     } yield (BuildInfo.ciTag != tag_name.value, assetObjects)
 
-  def downloadUpdate(existsNewUpdate: Boolean, assets: List[JsObject]): Fox[Unit] = {
-    def jarUrl(): String = {
-      for {
-        asset <- assets
-        name = asset.value.get("name").flatMap(_.validate[JsString].asOpt).map(_.value)
-      } yield {
-        if (name.getOrElse("").endsWith(".jar")) {
-          return name.getOrElse("")
-        }
-      }
-      ""
-    }
-
-    val jarURL = jarUrl()
-    if (existsNewUpdate && jarURL != "") {
+  def downloadUpdate(existsNewUpdate: Boolean, assets: List[JsObject]): Fox[Boolean] = {
+    def downloadGithubFile(url: String, fileNameOnDisk: String): Fox[Boolean] = {
+      if (url == "") return Fox.successful(false)
       try {
         var connection =
-          new URL(jarURL).openConnection().asInstanceOf[HttpURLConnection]
+          new URL(url).openConnection().asInstanceOf[HttpURLConnection]
         connection.setRequestProperty("Accept", "application/octet-stream")
         if (connection.getResponseCode == HttpURLConnection.HTTP_MOVED_TEMP) {
           connection = new URL(connection.getHeaderField("Location")).openConnection().asInstanceOf[HttpURLConnection]
@@ -68,17 +56,43 @@ class AutoUpdateService @Inject()(
         }
         connection.setReadTimeout(30000)
         connection.setConnectTimeout(30000)
-        FileUtils.copyInputStreamToFile(connection.getInputStream, new File("update.jar"))
+        FileUtils.copyInputStreamToFile(connection.getInputStream, new File(fileNameOnDisk))
       } catch {
-        case e: java.io.IOException => logger.error(e.getMessage); Fox.failure(e.getMessage)
+        case e: java.io.IOException =>
+          logger.error(e.getMessage)
+          return Fox.failure(e.getMessage)
       }
+      Fox.successful(true)
     }
-    Fox.successful(())
+
+    def getUrlForFileEnding(fileEnding: String): String = {
+      for {
+        asset <- assets
+        name = asset.value.get("name").flatMap(_.validate[JsString].asOpt).map(_.value)
+        url = asset.value.get("url").flatMap(_.validate[JsString].asOpt).map(_.value)
+      } yield {
+        if (name.getOrElse("").endsWith(fileEnding) && url.getOrElse("") != "") {
+          return url.getOrElse("")
+        }
+      }
+      ""
+    }
+
+    val jarURL = getUrlForFileEnding(".jar")
+    val bashURL = getUrlForFileEnding(".sh")
+    if (existsNewUpdate) {
+      for {
+        jarUpdate <- downloadGithubFile(jarURL, "update.jar")
+        bashUpdate <- downloadGithubFile(bashURL, "update.sh")
+      } yield jarUpdate || bashUpdate
+    } else {
+      Fox.successful(false)
+    }
   }
 
   def tick(): Unit =
     for {
       (existsNewUpdate, assets) <- checkForUpdate()
-      _ <- downloadUpdate(existsNewUpdate, assets)
-    } yield if (existsNewUpdate) exit(250) else ()
+      needsRestart <- downloadUpdate(existsNewUpdate, assets)
+    } yield if (needsRestart) exit(250) else ()
 }

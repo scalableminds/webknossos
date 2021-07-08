@@ -13,7 +13,7 @@ import type {
   TreeGroupTypeFlat,
   Node,
 } from "oxalis/store";
-import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 export type SkeletonTracingStats = {|

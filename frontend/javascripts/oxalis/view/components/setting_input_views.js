@@ -1,6 +1,6 @@
 // @flow
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
-import { DeleteOutlined, DownloadOutlined } from "@ant-design/icons";
+import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
+import { DeleteOutlined, DownloadOutlined, EditOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -8,6 +8,8 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 
 import features from "features";
+
+const rowGutter = { xs: 8, sm: 16, md: 16, lg: 16 };
 
 type NumberSliderSettingProps = {
   onChange: (value: number) => void,
@@ -82,6 +84,7 @@ type LogSliderSettingProps = {
   min: number,
   roundTo: number,
   disabled?: boolean,
+  spans: [number, number, number],
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -91,6 +94,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   static defaultProps = {
     disabled: false,
     roundTo: 3,
+    spans: [9, 8, 5],
   };
 
   onChangeInput = (value: number) => {
@@ -131,13 +135,13 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   };
 
   render() {
-    const { label, roundTo, value, min, max, disabled } = this.props;
+    const { label, roundTo, value, min, max, disabled, spans } = this.props;
     return (
       <Row type="flex" align="middle">
-        <Col span={9}>
+        <Col span={spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={8}>
+        <Col span={spans[1]}>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
@@ -147,7 +151,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             disabled={disabled}
           />
         </Col>
-        <Col span={5}>
+        <Col span={spans[2]}>
           <InputNumber
             min={min}
             max={max}
@@ -169,18 +173,20 @@ type SwitchSettingProps = {
   label: string | React.Node,
   disabled: boolean,
   tooltipText: ?string,
+  loading: boolean,
 };
 
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
     disabled: false,
     tooltipText: null,
+    loading: false,
   };
 
   render() {
-    const { label, onChange, value, disabled, tooltipText } = this.props;
+    const { label, onChange, value, disabled, tooltipText, loading } = this.props;
     return (
-      <Row className="margin-bottom" type="flex" align="top">
+      <Row className="margin-bottom" type="flex" align="middle" gutter={rowGutter}>
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -193,6 +199,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 checked={value}
                 defaultChecked={value}
                 disabled={disabled}
+                loading={loading}
               />
             </div>
           </Tooltip>
@@ -220,9 +227,8 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
 
   render() {
     const { onChange, value, label, max, min, step } = this.props;
-
     return (
-      <Row className="margin-bottom" align="top">
+      <Row className="margin-bottom" align="top" gutter={rowGutter}>
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -240,6 +246,43 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
       </Row>
     );
   }
+}
+
+type NumberInputPopoverSettingProps = {
+  onChange: (value: number) => void,
+  value: ?number,
+  label: string | React.Node,
+  detailedLabel: string | React.Node,
+  placement?: string,
+  max?: number,
+  min?: number,
+  step?: number,
+};
+export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
+  const { min, max, onChange, step, value, label, detailedLabel } = props;
+  const placement = props.placement || "top";
+  const numberInput = (
+    <div>
+      <div style={{ marginBottom: 8 }}>{detailedLabel}:</div>
+      <InputNumber
+        style={{ width: 140 }}
+        min={min}
+        max={max}
+        onChange={onChange}
+        value={value}
+        step={step}
+        size="small"
+      />
+    </div>
+  );
+  return (
+    <Popover content={numberInput} trigger="click" placement={placement}>
+      <span style={{ cursor: "pointer" }}>
+        {label} {value != null ? value : "-"}
+        <EditOutlined style={{ fontSize: 11, opacity: 0.7, margin: "0 0px 5px 3px" }} />
+      </span>
+    </Popover>
+  );
 }
 
 export type UserBoundingBoxInputUpdate = {
@@ -347,16 +390,16 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const iconStyle = { margin: "auto 0px auto 6px" };
     const exportColumn = features().jobsEnabled ? (
       <Col span={2}>
-        <Tooltip title="Export data from this bouding box.">
+        <Tooltip title="Export data from this bounding box.">
           <DownloadOutlined onClick={onExport} style={iconStyle} />
         </Tooltip>
       </Col>
     ) : null;
-    const visibilityColSpan = exportColumn == null ? 22 : 20;
+    const nameColSpan = exportColumn == null ? 17 : 15;
     return (
       <React.Fragment>
-        <Row style={{ marginBottom: 16 }}>
-          <Col span={visibilityColSpan}>
+        <Row style={{ marginBottom: 10 }}>
+          <Col span={5}>
             <Switch
               size="small"
               onChange={this.handleVisibilityChange}
@@ -364,18 +407,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               style={{ margin: "auto 0px" }}
             />
           </Col>
-          {exportColumn}
-          <Col span={2}>
-            <Tooltip title="Delete this bounding box.">
-              <DeleteOutlined onClick={onDelete} style={iconStyle} />
-            </Tooltip>
-          </Col>
-        </Row>
-        <Row className="margin-bottom" align="top">
-          <Col span={5}>
-            <label className="settings-label"> Name: </label>
-          </Col>
-          <Col span={17}>
+          <Col span={nameColSpan}>
             <Input
               defaultValue={name}
               placeholder="Bounding Box Name"
@@ -388,20 +420,18 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               onBlur={this.handleNameChanged}
             />
           </Col>
+          {exportColumn}
           <Col span={2}>
-            <ColorSetting
-              value={Utils.rgbToHex(upscaledColor)}
-              onChange={this.handleColorChange}
-              className="ant-btn"
-              style={iconStyle}
-            />
+            <Tooltip title="Delete this bounding box.">
+              <DeleteOutlined onClick={onDelete} style={iconStyle} />
+            </Tooltip>
           </Col>
         </Row>
-        <Row className="margin-bottom" align="top">
+        <Row style={{ marginBottom: 20 }} align="top">
           <Col span={5}>
             <label className="settings-label"> Bounds: </label>
           </Col>
-          <Col span={17}>
+          <Col span={nameColSpan}>
             <Tooltip
               trigger={["focus"]}
               title={tooltipTitle}
@@ -417,6 +447,14 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                 size="small"
               />
             </Tooltip>
+          </Col>
+          <Col span={2}>
+            <ColorSetting
+              value={Utils.rgbToHex(upscaledColor)}
+              onChange={this.handleColorChange}
+              className="ant-btn"
+              style={iconStyle}
+            />
           </Col>
         </Row>
       </React.Fragment>

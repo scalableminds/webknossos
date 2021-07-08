@@ -1,11 +1,9 @@
 // @flow
 import _ from "lodash";
 
-import DataLayer from "oxalis/model/data_layer";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
-  setToolAction,
   finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
@@ -20,9 +18,6 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import sampleVoxelMapToResolution, {
-  applyVoxelMap,
-} from "oxalis/model/volumetracing/volume_annotation_sampling";
 import {
   type UpdateAction,
   updateVolumeTracing,
@@ -41,12 +36,19 @@ import {
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import {
   getResolutionInfoOfSegmentationLayer,
   ResolutionInfo,
   getRenderableResolutionForSegmentation,
 } from "oxalis/model/accessors/dataset_accessor";
+import {
+  isVolumeDrawingTool,
+  isBrushTool,
+  isTraceTool,
+} from "oxalis/model/accessors/tool_accessor";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
   type BoundingBoxType,
   type ContourMode,
@@ -54,13 +56,14 @@ import Constants, {
   ContourModeEnum,
   OverwriteModeEnum,
   type OrthoView,
-  type VolumeTool,
+  type AnnotationTool,
   type Vector2,
   type Vector3,
-  VolumeToolEnum,
+  AnnotationToolEnum,
   type LabeledVoxelsMap,
 } from "oxalis/constants";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import DataLayer from "oxalis/model/data_layer";
 import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
@@ -68,7 +71,9 @@ import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
-import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
+import sampleVoxelMapToResolution, {
+  applyVoxelMap,
+} from "oxalis/model/volumetracing/volume_annotation_sampling";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -111,7 +116,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const overwriteMode = yield* select(state => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
-    const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
+    const activeTool = yield* select(state => state.uiInformation.activeTool);
     // Depending on the tool, annotation in higher zoom steps might be disallowed.
     const isZoomStepTooHighForAnnotating = yield* select(state =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
@@ -139,7 +144,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     );
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-    if (activeTool === VolumeToolEnum.BRUSH) {
+    if (isBrushTool(activeTool)) {
       yield* call(
         labelWithVoxelBuffer2D,
         currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
@@ -166,13 +171,12 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         // if the current viewport does not match the initial viewport -> dont draw
         continue;
       }
-      if (
-        activeTool === VolumeToolEnum.TRACE ||
-        (activeTool === VolumeToolEnum.BRUSH && isDrawing)
-      ) {
+      if (isTraceTool(activeTool) || (isBrushTool(activeTool) && isDrawing)) {
+        // Close the polygon. When brushing, this causes an auto-fill which is why
+        // it's only performed when drawing (not when erasing).
         currentLayer.addContour(addToLayerAction.position);
       }
-      if (activeTool === VolumeToolEnum.BRUSH) {
+      if (isBrushTool(activeTool)) {
         // Disable continuous drawing for performance reasons
         const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
           lastPosition,
@@ -361,7 +365,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   // This restriction should be soften'ed when https://github.com/scalableminds/webknossos/issues/4639
   // is solved.
   const isResolutionTooLow = yield* select(state =>
-    isVolumeAnnotationDisallowedForZoom(VolumeToolEnum.TRACE, state),
+    isVolumeAnnotationDisallowedForZoom(AnnotationToolEnum.TRACE, state),
   );
   if (isResolutionTooLow) {
     Toast.warning(
@@ -617,7 +621,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
 
 export function* finishLayer(
   layer: VolumeLayer,
-  activeTool: VolumeTool,
+  activeTool: AnnotationTool,
   contourTracingMode: ContourMode,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
@@ -626,7 +630,7 @@ export function* finishLayer(
     return;
   }
 
-  if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
+  if (isVolumeDrawingTool(activeTool)) {
     yield* call(
       labelWithVoxelBuffer2D,
       layer.getFillingVoxelBuffer2D(activeTool),
@@ -644,11 +648,11 @@ export function* ensureToolIsAllowedInResolution(): Saga<*> {
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
     const isResolutionTooLow = yield* select(state => {
-      const { activeTool } = enforceVolumeTracing(state.tracing);
+      const { activeTool } = state.uiInformation;
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
     if (isResolutionTooLow) {
-      yield* put(setToolAction(VolumeToolEnum.MOVE));
+      yield* put(setToolAction(AnnotationToolEnum.MOVE));
     }
   }
 }

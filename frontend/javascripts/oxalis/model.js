@@ -6,6 +6,7 @@ import {} from "oxalis/model/actions/settings_actions";
 
 import _ from "lodash";
 
+import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
@@ -17,6 +18,7 @@ import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import * as Utils from "libs/utils";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 import { initialize } from "./model_initialization";
 
@@ -76,6 +78,42 @@ export class OxalisModel {
       dataLayer =>
         getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
     );
+  }
+
+  getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
+    const state = Store.getState();
+    const zoomStep = getRequestLogZoomStep(state);
+
+    if (position == null) return zoomStep;
+
+    const cube = this.getCubeByLayerName(layerName);
+
+    // Depending on the zoom value, which magnifications are loaded and other settings,
+    // the currently rendered zoom step has to be determined.
+    const renderedZoomStep = cube.getNextUsableZoomStepForPosition(position, zoomStep);
+
+    return renderedZoomStep;
+  }
+
+  getHoveredCellId(globalMousePosition: ?Vector3): ?{ id: number, isMapped: boolean } {
+    const segmentationLayer = this.getSegmentationLayer();
+    if (!segmentationLayer || !globalMousePosition) {
+      return null;
+    }
+
+    const segmentationLayerName = segmentationLayer.name;
+    const { cube } = segmentationLayer;
+    const renderedZoomStepForMousePosition = this.getRenderedZoomStepAtPosition(
+      segmentationLayerName,
+      globalMousePosition,
+    );
+
+    const getIdForPos = (pos, usableZoomStep) => {
+      const id = cube.getDataValue(pos, null, usableZoomStep);
+      return cube.mapId(id);
+    };
+    const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
+    return { id, isMapped: cube.isMappingEnabled() };
   }
 
   getSegmentationLayerName(): ?string {

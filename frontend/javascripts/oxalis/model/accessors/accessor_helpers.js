@@ -3,7 +3,7 @@ import _ from "lodash";
 
 /*
   Wraps a given function so that it returns the same instance on consecutive
-  calls if the new and old return value are equal (given a equality function).
+  calls if the new and old return value are equal (given an equality function).
 
   Motivation:
   Most of our selectors are memoized which ensures that passing the same input,

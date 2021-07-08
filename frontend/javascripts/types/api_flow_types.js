@@ -202,7 +202,7 @@ export type APIUserBase = {
 
 export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
-  hasSeenModernControlsModal?: boolean,
+  shouldSeeModernControlsModal?: boolean,
 |};
 
 export type APIUserTheme = "auto" | "light" | "dark";

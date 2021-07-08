@@ -21,7 +21,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import AuthenticationModal from "admin/auth/authentication_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
+import constants, { type ViewMode, type ControlMode, ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import { type OxalisState } from "oxalis/store";
 import TracingActionsView, {
@@ -30,7 +30,7 @@ import TracingActionsView, {
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
-import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
+import ToolbarView from "oxalis/view/action-bar/toolbar_view";
 import {
   is2dDataset,
   doesSupportVolumeWithFallback,
@@ -47,14 +47,13 @@ const VersionRestoreWarning = (
 type StateProps = {|
   dataset: APIDataset,
   activeUser: ?APIUser,
-  viewMode: ViewMode,
   controlMode: ControlMode,
-  hasVolume: boolean,
   hasVolumeFallback: boolean,
   hasSkeleton: boolean,
   showVersionRestore: boolean,
   isReadOnly: boolean,
   is2d: boolean,
+  viewMode: ViewMode,
 |};
 type OwnProps = {|
   layoutProps: LayoutProps,
@@ -132,18 +131,16 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
-      hasVolume,
       hasVolumeFallback,
       isReadOnly,
       dataset,
       showVersionRestore,
       controlMode,
-      viewMode,
+
       hasSkeleton,
       layoutProps,
     } = this.props;
     const isTraceMode = controlMode === ControlModeEnum.TRACE;
-    const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(viewMode);
     const isArbitrarySupported = hasSkeleton || controlMode === ControlModeEnum.VIEW;
     const layoutMenu = (
       <LayoutMenu
@@ -168,7 +165,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
+          {!isReadOnly && constants.MODES_PLANE.indexOf(this.props.viewMode) > -1 ? (
+            <ToolbarView />
+          ) : null}
           {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
@@ -193,14 +192,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: OxalisState): StateProps => ({
   dataset: state.dataset,
   activeUser: state.activeUser,
-  viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasVolume: state.tracing.volume != null,
   hasVolumeFallback: state.tracing.volume != null && state.tracing.volume.fallbackLayer != null,
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
+  viewMode: state.temporaryConfiguration.viewMode,
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);

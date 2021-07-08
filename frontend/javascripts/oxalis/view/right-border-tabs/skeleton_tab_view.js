@@ -30,7 +30,7 @@ import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import Model from "oxalis/model";
 import {
   getActiveTree,
@@ -87,7 +87,7 @@ import Store, {
   type UserConfiguration,
 } from "oxalis/store";
 import Toast from "libs/toast";
-import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
+import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
@@ -296,7 +296,7 @@ function checkAndConfirmDeletingInitialNode(treeIds) {
   });
 }
 
-class TreesTabView extends React.PureComponent<Props, State> {
+class SkeletonTabView extends React.PureComponent<Props, State> {
   state = {
     isUploading: false,
     isDownloading: false,
@@ -658,6 +658,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     if (!skeletonTracing) {
       return null;
     }
+    const { showSkeletons } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)
       .map(activeTree => activeTree.name)
       .getOrElse("");
@@ -693,7 +694,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <div className="antd-legacy-group">
+                <InputGroup compact className="compact-icons">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -701,37 +702,35 @@ class TreesTabView extends React.PureComponent<Props, State> {
                     provideShortcut
                     targetId={treeTabId}
                   >
-                    <Tooltip title="Open the search via CTRL + Shift + F">
-                      <ButtonComponent>
-                        <SearchOutlined />
-                      </ButtonComponent>
-                    </Tooltip>
+                    <ButtonComponent title="Open the search via CTRL + Shift + F">
+                      <SearchOutlined />
+                    </ButtonComponent>
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
-                    title="Create Tree"
+                    title="Create new Tree (C)"
                     disabled={!this.props.allowUpdate}
                   >
-                    <i className="fas fa-plus" /> Create
+                    <i className="fas fa-plus" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title="Delete Tree"
+                    title="Delete Selected Trees"
                     disabled={!this.props.allowUpdate}
                   >
-                    <i className="far fa-trash-alt" /> Delete
+                    <i className="far fa-trash-alt" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleAllTrees}
-                    title="Toggle Visibility of All Trees"
+                    title="Toggle Visibility of All Trees (1)"
                   >
-                    <i className="fas fa-toggle-on" /> Toggle All
+                    <i className="fas fa-toggle-on" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.toggleInactiveTrees}
-                    title="Toggle Visibility of Inactive Trees"
+                    title="Toggle Visibility of Inactive Trees (2)"
                   >
-                    <i className="fas fa-toggle-off" /> Toggle Inactive
+                    <i className="fas fa-toggle-off" />
                   </ButtonComponent>
                   <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent>
@@ -739,8 +738,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </div>
-                <InputGroup compact>
+                </InputGroup>
+                <InputGroup compact className="compact-icons compact-items">
                   <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
@@ -748,7 +747,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                     onChange={this.handleChangeTreeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups}
-                    style={{ width: "60%" }}
+                    style={{ width: "70%" }}
                   />
                   <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
                     <i className="fas fa-arrow-right" />
@@ -759,6 +758,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
                     </ButtonComponent>
                   </Dropdown>
                 </InputGroup>
+                {!showSkeletons ? (
+                  <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
+                    <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+                  </Tooltip>
+                ) : null}
                 {noTreesAndGroups ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -850,4 +854,4 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(TreesTabView);
+)(SkeletonTabView);

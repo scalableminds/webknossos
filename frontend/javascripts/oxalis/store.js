@@ -42,7 +42,7 @@ import {
   type Rect,
   type Vector2,
   type Vector3,
-  type VolumeTool,
+  type AnnotationTool,
 } from "oxalis/constants";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import DiffableMap from "libs/diffable_map";
@@ -214,13 +214,13 @@ export type SkeletonTracing = {|
   +activeGroupId: ?number,
   +cachedMaxNodeId: number,
   +navigationList: NavigationList,
+  +showSkeletons: boolean,
 |};
 
 export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
   +maxCellId: number,
-  +activeTool: VolumeTool,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
@@ -275,7 +275,6 @@ export type DatasetConfiguration = {|
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },
-  +highlightHoveredCellId: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
@@ -313,6 +312,7 @@ export type UserConfiguration = {|
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
   +overwriteMode: OverwriteMode,
+  +useLegacyBindings: boolean,
 |};
 
 export type RecommendedConfiguration = $Shape<{
@@ -454,6 +454,7 @@ export type Theme = "light" | "dark";
 
 type UiInformation = {
   +showDropzoneModal: boolean,
+  +activeTool: AnnotationTool,
   +showVersionRestore: boolean,
   +storedLayouts: Object,
   +isImportingMesh: boolean,

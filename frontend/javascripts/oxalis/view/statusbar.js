@@ -38,7 +38,7 @@ const lineColor = "rgba(255, 255, 255, 0.67)";
 const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
 const spaceStyle = { display: "flex", flexWrap: "wrap" };
 const moreIconStyle = { height: 14, color: lineColor };
-const moreLinkStyle = { marginLeft: 10 };
+const moreLinkStyle = { marginLeft: 10, marginRight: "auto" };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -94,7 +94,7 @@ function LeftClickShortcut({ actionInfos }) {
     ) : null;
 
   return (
-    <div style={{ display: "inline-block", marginLeft: "auto" }}>
+    <div style={{ display: "inline-block" }}>
       {leftClick}
       {leftDrag}
     </div>
@@ -174,7 +174,7 @@ function ShortcutsInfo() {
       <React.Fragment>
         <span
           style={{
-            marginLeft: "auto",
+            marginRight: "auto",
             textTransform: "capitalize",
           }}
         >
@@ -349,8 +349,8 @@ class Statusbar extends React.PureComponent<{}, {}> {
   render() {
     return (
       <span className="statusbar">
-        <Infos />
         <ShortcutsInfo />
+        <Infos />
       </span>
     );
   }

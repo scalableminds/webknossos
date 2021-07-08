@@ -4,7 +4,7 @@ start_webknossos() {
 	status=$?
 	if [[ status -eq 250 ]]; then
 		echo "Restarting webKnossos"
-		#mv update.jar webknossos.jar
+		mv update.jar webknossos.jar
 		if [[ -f "update.sh" ]]; then
 			exec ./update.sh
 		else

@@ -42,11 +42,11 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {|
-  nodeContextMenuPosition: [number, number],
+  contextMenuPosition: [number, number],
   clickedNodeId: ?number,
   globalPosition: Vector3,
   viewport: OrthoView,
-  hideNodeContextMenu: () => void,
+  hideContextMenu: () => void,
 |};
 
 type DispatchProps = {|
@@ -141,7 +141,7 @@ function getMaybeHoveredCellMenuItem(globalPosition: Vector3) {
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
-  hideNodeContextMenu,
+  hideContextMenu,
   deleteEdge,
   mergeTrees,
   deleteNode,
@@ -163,7 +163,7 @@ function NodeContextMenuOptions({
     );
   }
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
+    <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       <Menu.Item
         className="node-context-menu-item"
         key="set-node-active"
@@ -229,7 +229,7 @@ function NoNodeContextMenuOptions({
   skeletonTracing,
   volumeTracing,
   isSkeletonToolActive,
-  hideNodeContextMenu,
+  hideContextMenu,
   globalPosition,
   viewport,
   createTree,
@@ -327,7 +327,7 @@ function NoNodeContextMenuOptions({
   }
 
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
+    <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       {allActions}
     </Menu>
   );
@@ -346,8 +346,8 @@ function ContextMenu(props: Props) {
     skeletonTracing,
     isSkeletonToolActive,
     clickedNodeId,
-    nodeContextMenuPosition,
-    hideNodeContextMenu,
+    contextMenuPosition,
+    hideContextMenu,
     datasetScale,
     globalPosition,
   } = props;
@@ -431,15 +431,15 @@ function ContextMenu(props: Props) {
       <div
         style={{
           position: "absolute",
-          left: nodeContextMenuPosition[0],
-          top: nodeContextMenuPosition[1],
+          left: contextMenuPosition[0],
+          top: contextMenuPosition[1],
         }}
         className="node-context-menu"
         tabIndex={-1}
-        onBlur={hideNodeContextMenu}
+        onBlur={hideContextMenu}
         ref={inputRef}
       >
-        <Shortcut supportInputElements keys="escape" onTrigger={hideNodeContextMenu} />
+        <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
           : NoNodeContextMenuOptions({ isSkeletonToolActive, cellIdAtPosition, ...props })}

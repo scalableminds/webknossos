@@ -282,6 +282,17 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
+
+  const loadMeshItem = (
+    <Menu.Item
+      className="node-context-menu-item"
+      key="load-mesh-file"
+      onClick={loadMesh}
+      disabled={!currentMeshFile}
+    >
+      Load Precomputed Mesh
+    </Menu.Item>
+  );
   const nonSkeletonActions =
     volumeTracing != null
       ? [
@@ -296,16 +307,7 @@ function NoNodeContextMenuOptions({
               Select Segment ({cellIdAtPosition})
             </Menu.Item>
           ) : null,
-
-          <Menu.Item
-            className="node-context-menu-item"
-            key="load-mesh-file"
-            onClick={loadMesh}
-            disabled={!currentMeshFile}
-          >
-            Load Precomputed Mesh
-          </Menu.Item>,
-
+          loadMeshItem,
           <Menu.Item
             className="node-context-menu-item"
             key="fill-cell"
@@ -314,7 +316,7 @@ function NoNodeContextMenuOptions({
             Fill Segment (flood-fill region)
           </Menu.Item>,
         ]
-      : [];
+      : [loadMeshItem];
 
   const allActions = isSkeletonToolActive
     ? skeletonActions.concat(nonSkeletonActions)

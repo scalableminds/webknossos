@@ -415,7 +415,7 @@ function ContextMenu(props: Props) {
   if (cellIdAtPosition > 0) {
     infoRows.push(
       <div key="copy-cell" className="node-context-menu-item">
-        <img src="/assets/images/cell.svg" className="cell-context-icon" alt="Segment Icon" />
+        <div className="cell-context-icon" alt="Segment Icon" />
         Segment ID: {cellIdAtPosition} {copyIconWithTooltip(cellIdAtPosition, "Copy Segment ID")}
       </div>,
     );

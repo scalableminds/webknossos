@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The toolbar contains two  additional tools: [#5384](https://github.com/scalableminds/webknossos/pull/5384)
   - one for the skeleton mode (similar to the existing move tool).
   - one for erasing volume data (similar to right-dragging with the previous brush/trace tool)
+- Added colored icons to the status entries in the job list. [#5572](https://github.com/scalableminds/webknossos/pull/5594)
 
 ### Changed
 - Improve error logging for unhandled rejections. [#5575](https://github.com/scalableminds/webknossos/pull/5575)
@@ -37,6 +38,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
     - The "Mapping" setting was moved to the segmentation layer in the left sidebar.
   - The status bar contains additional elements for (editable) information, such as the active tree id (previously positioned in the left sidebar).
   - Some UI elements were less spacious by favoring icons instead of labels. Hover these elements to get an helpful tooltip.
+- The health check at api/health does not longer include checking data/health and tracings/health if the respective local modules are enabled. Consider monitoring those routes separately. [#5601](https://github.com/scalableminds/webknossos/pull/5601)
 
 ### Fixed
 - Fixed that a disabled "Center new Nodes" option didn't work correctly in merger mode. [#5538](https://github.com/scalableminds/webknossos/pull/5538)
@@ -51,6 +53,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The following changes belong to [#5384](https://github.com/scalableminds/webknossos/pull/5384):
   - Removed "Highlight hovered cells" setting (highlight on hover will always be done).
   - The "Volume" tab was removed. The "Mapping" setting was moved to the segmentation layer in the left sidebar. The "segment id" table was removed, as the status bar also contains the information about the hovered cell id.
+- Fixed a bug where nested tree groups were messed up during NML upload if “Create a new tree group for this file.“ is selected. [#5596](https://github.com/scalableminds/webknossos/pull/5596)
 
 ### Removed
 -

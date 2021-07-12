@@ -39,6 +39,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
   - The status bar contains additional elements for (editable) information, such as the active tree id (previously positioned in the left sidebar).
   - Some UI elements were less spacious by favoring icons instead of labels. Hover these elements to get an helpful tooltip.
 - The health check at api/health does not longer include checking data/health and tracings/health if the respective local modules are enabled. Consider monitoring those routes separately. [#5601](https://github.com/scalableminds/webknossos/pull/5601)
+- Improved the progress display for dataset uploads. [5616](https://github.com/scalableminds/webknossos/pull/5616)
 
 ### Fixed
 - Fixed that a disabled "Center new Nodes" option didn't work correctly in merger mode. [#5538](https://github.com/scalableminds/webknossos/pull/5538)

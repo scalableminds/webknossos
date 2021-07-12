@@ -11,6 +11,7 @@ import {
   Progress,
   Alert,
   List,
+  Spin,
 } from "antd";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -72,6 +73,7 @@ type PropsWithFormAndRouter = {|
 
 type State = {
   isUploading: boolean,
+  isFinishing: boolean,
   needsConversion: boolean,
   isRetrying: boolean,
   uploadProgress: number,
@@ -143,6 +145,7 @@ function MultiLayerImageStackExample() {
 class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   state = {
     isUploading: false,
+    isFinishing: false,
     needsConversion: false,
     isRetrying: false,
     uploadProgress: 0,
@@ -236,11 +239,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           needsConversion: this.state.needsConversion,
         };
 
+        this.setState({ isFinishing: true });
+
         finishDatasetUpload(formValues.datastore, uploadInfo).then(
           async () => {
-            Toast.success(messages["dataset.upload_success"]);
             trackAction("Upload dataset");
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+            Toast.success(messages["dataset.upload_success"]);
             let maybeError;
             if (this.state.needsConversion) {
               try {
@@ -270,7 +275,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 );
               }
             }
-            this.setState({ isUploading: false });
+            this.setState({ isUploading: false, isFinishing: false });
             if (maybeError == null) {
               newestForm.setFieldsValue({ name: null, zipFile: [] });
               this.props.onUploaded(
@@ -287,6 +292,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             Toast.error(messages["dataset.upload_failed"]);
             this.setState({
               isUploading: false,
+              isFinishing: true,
               isRetrying: false,
               uploadProgress: 0,
             });
@@ -322,7 +328,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return null;
     }
 
-    const { isRetrying, uploadProgress, isUploading } = this.state;
+    const { isRetrying, isFinishing, uploadProgress, isUploading } = this.state;
     return (
       <Modal
         visible={isUploading}
@@ -340,16 +346,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             ? `Upload of dataset ${form.getFieldValue("name")} froze.`
             : `Uploading Dataset ${form.getFieldValue("name")}.`}
           <br />
-          {isRetrying ? "Retrying to continue the upload..." : null}
+          {isRetrying ? "Retrying to continue the upload …" : null}
           <br />
           <Progress
-            // Round to 1 digit after the comma. Don't show 100%, since there is
-            // some additional delay until the UI shows the next screen.
-            // Otherwise, the user might think that nothing will happen after 100%
-            // was reached.
-            percent={Math.min(99.9, Math.round(uploadProgress * 1000) / 10)}
+            // Round to 1 digit after the comma.
+            percent={Math.round(uploadProgress * 1000) / 10}
             status="active"
           />
+          {isFinishing ? <Spin tip="Processing uploaded files …" /> : null}
         </div>
       </Modal>
     );

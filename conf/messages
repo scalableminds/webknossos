@@ -188,7 +188,7 @@ priority=Priority
 
 project=Project (optional)
 projectName=Project Name
-project.name.alreadyTaken=Name already used
+project.name.alreadyTaken=The project name “{0}” is already in use.
 project.name.invalidChars=Name contains invalid characters
 project.remove.confirm=Do you really want to delete this project? All annotations and tasks connected to this project will be deleted.
 project.remove.notAllowed=You are not authorized to remove this project. Talk to the owner.
@@ -292,6 +292,7 @@ task.notOneAnnotation=The specified base task does not have exactly one (finishe
 assignment.retrieval.failed=Failed to retrieve any assignment
 
 taskType=Task type
+taskType.summary.alreadyTaken=A task type with summary “{0}” already exists. The summary needs to be unique.
 taskType.editSuccess=Task type successfully edited
 taskType.notFound=Selected task type doesn’t exist
 taskType.deleteSuccess=Task type “{0}” successfully deleted

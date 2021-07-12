@@ -157,6 +157,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   object BackendAnalytics {
     val uri: String = get[String]("backendAnalytics.uri")
     val key: String = get[String]("backendAnalytics.key")
+    val sessionPause: FiniteDuration = get[FiniteDuration]("backendAnalytics.sessionPause")
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
   }
 

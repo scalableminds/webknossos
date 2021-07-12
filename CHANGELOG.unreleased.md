@@ -53,6 +53,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The following changes belong to [#5384](https://github.com/scalableminds/webknossos/pull/5384):
   - Removed "Highlight hovered cells" setting (highlight on hover will always be done).
   - The "Volume" tab was removed. The "Mapping" setting was moved to the segmentation layer in the left sidebar. The "segment id" table was removed, as the status bar also contains the information about the hovered cell id.
+- Fixed a bug where nested tree groups were messed up during NML upload if “Create a new tree group for this file.“ is selected. [#5596](https://github.com/scalableminds/webknossos/pull/5596)
 
 ### Removed
 -

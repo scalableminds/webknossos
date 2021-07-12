@@ -85,7 +85,9 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends L
   }
 
   private def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
-    def getMaximumGroupId(treeGroups: Seq[TreeGroup]) = if (treeGroups.isEmpty) 0 else treeGroups.map(_.groupId).max
+    def getMaximumGroupId(treeGroups: Seq[TreeGroup]): Int =
+      if (treeGroups.isEmpty) 0
+      else Math.max(treeGroups.map(_.groupId).max, getMaximumGroupId(treeGroups.flatMap(_.children)))
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val unusedGroupId = getMaximumGroupId(tracing.treeGroups) + 1

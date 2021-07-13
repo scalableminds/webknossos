@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
   - one for the skeleton mode (similar to the existing move tool).
   - one for erasing volume data (similar to right-dragging with the previous brush/trace tool)
 - Added colored icons to the status entries in the job list. [#5572](https://github.com/scalableminds/webknossos/pull/5594)
+- Back-end side analytics are now sent to events-relay.webknossos.org by default. You can opt out by setting `backendAnalytics.uri` to empty in your config. [5607](https://github.com/scalableminds/webknossos/pull/5607)
 
 ### Changed
 - Improve error logging for unhandled rejections. [#5575](https://github.com/scalableminds/webknossos/pull/5575)

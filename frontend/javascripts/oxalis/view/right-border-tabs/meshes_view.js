@@ -64,8 +64,8 @@ import MenuItem from "antd/lib/menu/MenuItem";
 // $FlowIgnore[prop-missing] flow does not know that Dropdown has a Button
 const DropdownButton = Dropdown.Button;
 
-// Interval to check if there is a running mesh file computation for this dataset
-const refreshInterval = 30000;
+// Interval in ms to check for running mesh file computation jobs for this dataset
+const refreshInterval = 5000;
 const defaultMeshfileGenerationResolutionIndex = 2;
 
 export const stlIsosurfaceConstants = {
@@ -277,8 +277,17 @@ class MeshesView extends React.Component<Props, State> {
           meshfileResolution,
         );
         this.setState({ activeMeshJobId: job.id });
-        Toast.success(
-          "The computation of a mesh file was started successfully. Depending on the dataset's size this may take a bit. You don't need to keep this dataset open for the computation to continue.",
+        Toast.info(
+          <React.Fragment>
+            The computation of a mesh file was started. For large datasets, this may take a while.
+            Closing this tab will not stop the computation.
+            <br />
+            See{" "}
+            <a target="_blank" href="/jobs" rel="noopener noreferrer">
+              Processing Jobs
+            </a>{" "}
+            for an overview of running jobs.
+          </React.Fragment>,
         );
       } else {
         Toast.error(

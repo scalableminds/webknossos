@@ -114,6 +114,15 @@ class JobListView extends React.PureComponent<Props, State> {
           (Bounding Box {job.boundingBox})
         </span>
       );
+    } else if (job.type === "compute_mesh_file" && job.organizationName && job.datasetName) {
+      return (
+        <span>
+          Mesh file computation for{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
     } else {
       return <span>{job.type}</span>;
     }

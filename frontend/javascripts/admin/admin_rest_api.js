@@ -898,6 +898,20 @@ export async function startExportTiffJob(
   );
 }
 
+export function startComputeMeshFileJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  mag: Vector3,
+  agglomerateView?: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
+      "-",
+    )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {

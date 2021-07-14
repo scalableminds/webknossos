@@ -296,16 +296,6 @@ function NoNodeContextMenuOptions({
               Select Segment ({cellIdAtPosition})
             </Menu.Item>
           ) : null,
-
-          <Menu.Item
-            className="node-context-menu-item"
-            key="load-mesh-file"
-            onClick={loadMesh}
-            disabled={!currentMeshFile}
-          >
-            Load Precomputed Mesh
-          </Menu.Item>,
-
           <Menu.Item
             className="node-context-menu-item"
             key="fill-cell"
@@ -315,6 +305,18 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
+  if (volumeTracing == null && segmentationLayer != null)
+    // There is no volume tracing, but there's a segmentation layer.
+    nonSkeletonActions.push(
+      <Menu.Item
+        className="node-context-menu-item"
+        key="load-mesh-file"
+        onClick={loadMesh}
+        disabled={!currentMeshFile}
+      >
+        Load Precomputed Mesh
+      </Menu.Item>,
+    );
 
   const allActions = isSkeletonToolActive
     ? skeletonActions.concat(nonSkeletonActions)

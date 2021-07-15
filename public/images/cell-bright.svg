@@ -13,7 +13,7 @@
    fill="none"
    version="1.1"
    id="svg4"
-   sodipodi:docname="cell.svg"
+   sodipodi:docname="cell-bright.svg"
    inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)">
   <metadata
      id="metadata10">
@@ -52,5 +52,5 @@
      d="M14.5402 10.5083C12.1152 14.9889 8.06642 16.4429 6.16263 15.8874C4.25884 15.3319 2.37908 13.2516 3.19622 11.143C4.01337 9.03438 7.94247 9.03438 8.50271 6.74256C9.06295 4.45074 10.3156 -0.669029 13.282 0.0727835C16.2484 0.814596 16.9651 6.02769 14.5402 10.5083Z"
      fill="#000000a6"
      id="path2"
-     style="fill:#4d4d4d;fill-opacity:1" />
+     style="stroke:none;stroke-opacity:1;fill:#f1f1f1;fill-opacity:1" />
 </svg>

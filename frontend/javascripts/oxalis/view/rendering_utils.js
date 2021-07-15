@@ -43,12 +43,18 @@ export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: typeof THREE.Scene,
   camera?: typeof THREE.Camera,
+  withFarClipping?: boolean,
   clearColor?: number,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
   scene = scene || defaultScene;
   camera = camera || scene.getObjectByName(plane);
+  if (withFarClipping) {
+    camera = camera.clone();
+    camera.far = 1;
+    camera.updateProjectionMatrix();
+  }
   clearColor = clearColor != null ? clearColor : 0x000000;
 
   renderer.autoClear = true;
@@ -91,7 +97,7 @@ export async function downloadScreenshot() {
 
     // $FlowIssue[prop-missing] planeId cannot be arbitraryViewport in OrthoViewColors access
     const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
-    const buffer = renderToTexture(planeId, null, null, clearColor);
+    const buffer = renderToTexture(planeId, null, null, false, clearColor);
 
     // eslint-disable-next-line no-await-in-loop
     const blob = await convertBufferToImage(buffer, width, height);

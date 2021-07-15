@@ -26,6 +26,7 @@ import {
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
+  getIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
@@ -36,6 +37,7 @@ import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { roundTo } from "libs/utils";
+
 import Shortcut from "libs/shortcut_component";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
@@ -236,7 +238,6 @@ function NoNodeContextMenuOptions({
   cellIdAtPosition,
   segmentationLayer,
   dataset,
-  zoomStep,
   currentMeshFile,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
@@ -249,13 +250,11 @@ function NoNodeContextMenuOptions({
     if (!currentMeshFile) return;
 
     if (segmentationLayer) {
-      const layer = Model.getSegmentationLayer();
-      if (!layer) {
-        throw new Error("No segmentation layer found");
+      const id = getIdForPosition(globalPosition);
+      if (id === 0) {
+        Toast.info("No segment found at the clicked position");
+        return;
       }
-      const segmentationCube = layer.cube;
-      const id = segmentationCube.getDataValue(globalPosition, null, zoomStep);
-
       await loadMeshFromFile(id, globalPosition, currentMeshFile, segmentationLayer, dataset);
     }
   };
@@ -316,7 +315,10 @@ function NoNodeContextMenuOptions({
             Fill Segment (flood-fill region)
           </Menu.Item>,
         ]
-      : [loadMeshItem];
+      : [];
+  if (volumeTracing == null && segmentationLayer != null) {
+    nonSkeletonActions.push(loadMeshItem);
+  }
 
   const allActions = isSkeletonToolActive
     ? skeletonActions.concat(nonSkeletonActions)

@@ -92,6 +92,7 @@ export async function initialize(
   let annotation: APIAnnotation;
   let datasetId: APIDatasetId;
   if (initialCommandType.type === ControlModeEnum.TRACE) {
+    console.log("got tracig type");
     const { annotationId } = initialCommandType;
     annotation = await getAnnotationInformation(annotationId, annotationType);
     datasetId = { name: annotation.dataSetName, owningOrganization: annotation.organization };
@@ -108,6 +109,7 @@ export async function initialize(
     Store.dispatch(setTaskAction(annotation.task));
   } else {
     const { name, owningOrganization } = initialCommandType;
+    console.log("owning orga", owningOrganization);
     datasetId = { name, owningOrganization };
   }
 
@@ -116,7 +118,7 @@ export async function initialize(
     datasetId,
     versions,
   );
-
+  console.log("fethced dataset", dataset);
   const displayedVolumeTracings = [];
   if (tracing != null && tracing.volume != null) {
     displayedVolumeTracings.push(tracing.volume.id);

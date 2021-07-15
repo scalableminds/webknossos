@@ -19,6 +19,7 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
+import { getUsersOrganizations } from "admin/admin_rest_api";
 import LoginForm from "admin/auth/login_form";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -33,7 +34,7 @@ import Store, {
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser, APIOrganization } from "types/api_flow_types";
 
 import app from "app";
 import constants, {
@@ -42,7 +43,7 @@ import constants, {
   type ViewMode,
 } from "oxalis/constants";
 import messages from "messages";
-import window, { document } from "libs/window";
+import window, { document, location } from "libs/window";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {|
@@ -61,6 +62,7 @@ type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   gotUnhandledError: boolean,
+  usersOrganizations: Array<APIOrganization>,
 };
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
@@ -68,6 +70,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   isMounted: boolean;
   state = {
     gotUnhandledError: false,
+    usersOrganizations: [],
   };
 
   // Main controller, responsible for setting modes and everything
@@ -114,6 +117,18 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       .catch(error => {
         this.props.setControllerStatus("failedLoading");
         const isNotFoundError = error.status === 404;
+        console.log(
+          "caught error, is not found error",
+          isNotFoundError,
+          this.props.initialCommandType,
+        );
+        if (isNotFoundError) {
+          // The dataset could probably not be fetched, because the user is currently not in the correct organization.
+          // Thus fetch them to check whether the user can switch to the organization of the dataset.
+          getUsersOrganizations().then(organizations =>
+            this.setState({ usersOrganizations: organizations }),
+          );
+        }
         if (
           this.props.initialAnnotationType === APIAnnotationTypeEnum.CompoundProject &&
           isNotFoundError
@@ -281,8 +296,17 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const status = this.props.controllerStatus;
-    const { user, viewMode } = this.props;
-    const { gotUnhandledError } = this.state;
+    const { user, viewMode, initialCommandType } = this.props;
+    const { gotUnhandledError, usersOrganizations } = this.state;
+    let suggestedOrganization = null;
+    if (user != null && initialCommandType.owningOrganization !== user.organization) {
+      suggestedOrganization = usersOrganizations.find(
+        orga => orga === initialCommandType.owningOrganization,
+      );
+      // Use URL
+      location.pathname;
+    }
+    // TODO maybe here
     if (status === "loading") {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {

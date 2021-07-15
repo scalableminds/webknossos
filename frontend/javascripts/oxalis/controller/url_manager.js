@@ -64,6 +64,7 @@ class UrlManager {
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
     const stateString = location.hash.slice(1);
+    console.log("stateString", stateString);
     const state: UrlManagerState = {};
 
     if (stateString) {

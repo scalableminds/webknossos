@@ -1,14 +1,15 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.{Path, Paths}
-
 import ch.systemsx.cisd.hdf5.HDF5FactoryProvider
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.SingleOrganizationConfigAdapter
 import com.scalableminds.webknossos.datastore.storage.{CachedMeshFile, MeshFileCache}
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
@@ -38,8 +39,9 @@ object MeshChunkDataRequest {
   implicit val jsonFormat: OFormat[MeshChunkDataRequest] = Json.format[MeshChunkDataRequest]
 }
 
-class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class MeshFileService @Inject()(protected val config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
+    with SingleOrganizationConfigAdapter
     with LazyLogging {
 
   private val dataBaseDir = Paths.get(config.Datastore.baseFolder)
@@ -50,7 +52,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private lazy val meshFileCache = new MeshFileCache(30)
 
   def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
+    val layerDir =
+      resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(dataSetName).resolve(dataLayerName)
     PathUtils
       .listFiles(layerDir.resolve(meshesDir), PathUtils.fileExtensionFilter(meshFileExtension))
       .map { paths =>
@@ -65,13 +68,11 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                                dataSetName: String,
                                dataLayerName: String,
                                listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Point3D]] = {
-    val meshFilePath =
-      dataBaseDir
-        .resolve(organizationName)
-        .resolve(dataSetName)
-        .resolve(dataLayerName)
-        .resolve(meshesDir)
-        .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
+    val meshFilePath = resolveOrganizationFolderIfExists(dataBaseDir, organizationName)
+      .resolve(dataSetName)
+      .resolve(dataLayerName)
+      .resolve(meshesDir)
+      .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
     for {
       cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
@@ -93,8 +94,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                     dataSetName: String,
                     dataLayerName: String,
                     meshChunkDataRequest: MeshChunkDataRequest): Fox[(Array[Byte], String)] = {
-    val meshFilePath = dataBaseDir
-      .resolve(organizationName)
+    val meshFilePath = resolveOrganizationFolderIfExists(dataBaseDir, organizationName)
       .resolve(dataSetName)
       .resolve(dataLayerName)
       .resolve(meshesDir)

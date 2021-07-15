@@ -2,22 +2,29 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio._
 import java.nio.file.{Files, Paths}
-
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
 import com.scalableminds.webknossos.datastore.geometry.Point3D
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{
+  NodeDefaults,
+  SingleOrganizationConfigAdapter,
+  SkeletonTracingDefaults
+}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
-class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+class AgglomerateService @Inject()(val config: DataStoreConfig)
+    extends DataConverter
+    with SingleOrganizationConfigAdapter
+    with LazyLogging {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"
@@ -27,7 +34,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
+    val layerDir =
+      resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(dataSetName).resolve(dataLayerName)
     PathUtils
       .listFiles(layerDir.resolve(agglomerateDir), PathUtils.fileExtensionFilter(agglomerateFileExtension))
       .map { paths =>
@@ -87,8 +95,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
   private def initHDFReader(request: DataServiceDataRequest) = {
     val hdfFile =
-      dataBaseDir
-        .resolve(request.dataSource.id.team)
+      resolveOrganizationFolderIfExists(dataBaseDir, request.dataSource.id.team)
         .resolve(request.dataSource.id.name)
         .resolve(request.dataLayer.name)
         .resolve(agglomerateDir)
@@ -96,8 +103,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         .toFile
 
     val cumsumPath =
-      dataBaseDir
-        .resolve(request.dataSource.id.team)
+      resolveOrganizationFolderIfExists(dataBaseDir, request.dataSource.id.team)
         .resolve(request.dataSource.id.name)
         .resolve(request.dataLayer.name)
         .resolve(agglomerateDir)
@@ -125,8 +131,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     try {
       val startTime = System.nanoTime()
       val hdfFile =
-        dataBaseDir
-          .resolve(organizationName)
+        resolveOrganizationFolderIfExists(dataBaseDir, organizationName)
           .resolve(dataSetName)
           .resolve(dataLayerName)
           .resolve(agglomerateDir)

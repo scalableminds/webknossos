@@ -25,6 +25,11 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
     }
+    object SingleOrganizationDatastore {
+      // val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
+      val organizationName: Option[String] =
+        getOptional[String]("datastore.singleOrganizationDatastore.organizationName")
+    }
     object AutoUpdate {
       val enabled: Boolean = get[Boolean]("datastore.autoUpdate.enabled")
     }

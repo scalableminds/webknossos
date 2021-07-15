@@ -309,7 +309,7 @@ class DataSourceController @Inject()(
   def createOrganizationDirectory(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
-        val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
+        val newOrganizationFolder = dataSourceService.dataBaseDir.resolve(organizationName).toFile
         newOrganizationFolder.mkdirs()
         if (newOrganizationFolder.isDirectory)
           Ok
@@ -327,7 +327,9 @@ class DataSourceController @Inject()(
           logger.info(
             s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}datasource $organizationName / $dataSetName: closed $count open file handles.")
           val reloadedDataSource = dataSourceService.dataSourceFromFolder(
-            dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName),
+            dataSourceService
+              .resolveOrganizationFolderIfExists(dataSourceService.dataBaseDir, organizationName)
+              .resolve(dataSetName),
             organizationName)
           for {
             _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
@@ -342,8 +344,9 @@ class DataSourceController @Inject()(
         .validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName))) {
           AllowRemoteOrigin {
             for {
-              _ <- binaryDataServiceHolder.binaryDataService
-                .deleteOnDisk(organizationName, dataSetName, reason = Some("the user wants to delete the dataset"))
+              _ <- uploadService.deleteOnDisk(organizationName,
+                                              dataSetName,
+                                              reason = Some("the user wants to delete the dataset"))
             } yield Ok
           }
         }

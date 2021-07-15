@@ -33,11 +33,9 @@ class AutoUpdateService @Inject()(
 
   def checkForUpdate(): Fox[(Boolean, List[JsObject])] =
     for {
-      jsArray <- rpc("https://api.github.com/repos/scalableminds/webknossos/releases")
+      jsObject <- rpc("https://api.github.com/repos/scalableminds/webknossos/releases/latest")
         .addHeader("Accept" -> "application/vnd.github.v3+json")
-        .addQueryString("per_page" -> "1")
-        .getWithJsonResponse[JsArray]
-      jsObject <- jsArray.value.headOption.flatMap(_.validate[JsObject].asOpt)
+        .getWithJsonResponse[JsObject]
       tag_name <- jsObject.value.get("tag_name").flatMap(_.validate[JsString].asOpt)
       assets <- jsObject.value.get("assets").flatMap(_.validate[JsArray].asOpt)
       assetObjects = assets.value.flatMap(_.validate[JsObject].asOpt).toList

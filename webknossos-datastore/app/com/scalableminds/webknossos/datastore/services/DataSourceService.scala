@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.io.{File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
-
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
@@ -11,7 +10,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
-import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.helpers.{
+  IntervalScheduler,
+  SingleOrganizationAdapter,
+  SingleOrganizationConfigAdapter
+}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.typesafe.scalalogging.LazyLogging
@@ -26,11 +29,12 @@ import scala.concurrent.duration._
 import scala.io.Source
 
 class DataSourceService @Inject()(
-    config: DataStoreConfig,
+    val config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends IntervalScheduler
+    with SingleOrganizationConfigAdapter
     with LazyLogging
     with FoxImplicits {
 
@@ -52,22 +56,31 @@ class DataSourceService @Inject()(
 
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
-    for {
-      _ <- PathUtils.listDirectories(dataBaseDir) match {
-        case Full(organizationDirs) =>
-          for {
-            _ <- Fox.successful(())
-            _ = if (verbose) logEmptyDirs(organizationDirs)
-            foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
-            _ = logFoundDatasources(foundInboxSources, verbose)
-            _ <- dataSourceRepository.updateDataSources(foundInboxSources)
-          } yield ()
-        case e =>
-          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
-          logger.error(errorMsg)
-          Fox.failure(errorMsg)
-      }
-    } yield ()
+    if (isSingleOrganizationDataStore) {
+      for {
+        _ <- Fox.successful(())
+        foundInboxSources = organizationNameAwareInboxSources(dataBaseDir, getSingleOrganizationName)
+        _ = logFoundDatasources(foundInboxSources, verbose)
+        _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+      } yield ()
+    } else {
+      for {
+        _ <- PathUtils.listDirectories(dataBaseDir) match {
+          case Full(organizationDirs) =>
+            for {
+              _ <- Fox.successful(())
+              _ = if (verbose) logEmptyDirs(organizationDirs)
+              foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
+              _ = logFoundDatasources(foundInboxSources, verbose)
+              _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+            } yield ()
+          case e =>
+            val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+            logger.error(errorMsg)
+            Fox.failure(errorMsg)
+        }
+      } yield ()
+    }
   }
 
   private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
@@ -105,7 +118,7 @@ class DataSourceService @Inject()(
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {
-    val path = dataBaseDir.resolve(id.team).resolve(id.name)
+    val path = resolveOrganizationFolderIfExists(dataBaseDir, id.team).resolve(id.name)
     val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
       dataSource <- WKWDataFormat.exploreDataSource(id, path, previous, report)
@@ -114,7 +127,8 @@ class DataSourceService @Inject()(
 
   def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .exploreMappings(
+        resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(dataSetName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
@@ -156,7 +170,7 @@ class DataSourceService @Inject()(
   def updateDataSource(dataSource: DataSource): Fox[Unit] =
     for {
       _ <- validateDataSource(dataSource).toFox
-      dataSourcePath = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name)
+      dataSourcePath = resolveOrganizationFolderIfExists(dataBaseDir, dataSource.id.team).resolve(dataSource.id.name)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- backupPreviousProperties(dataSourcePath) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
@@ -191,15 +205,18 @@ class DataSourceService @Inject()(
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
+    organizationNameAwareInboxSources(path, organization)
+  }
+
+  private def organizationNameAwareInboxSources(path: Path, organizationName: String): List[InboxDataSource] =
     PathUtils.listDirectories(path) match {
       case Full(dataSourceDirs) =>
-        val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
+        val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organizationName))
         dataSources
       case _ =>
-        logger.error(s"Failed to list directories for organization $organization at path $path")
+        logger.error(s"Failed to list directories for organization $organizationName at path $path")
         Nil
     }
-  }
 
   def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
     val id = DataSourceId(path.getFileName.toString, organization)

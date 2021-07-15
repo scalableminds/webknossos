@@ -2,12 +2,11 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
-
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
+import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, SingleOrganizationAdapter}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
@@ -35,6 +34,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     with FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
+  val singleOrganizationName: Option[String] =
+    dataSourceService.config.Datastore.SingleOrganizationDatastore.organizationName
   private val uploadingDir: String = ".uploading"
 
   // structure: uploadId → (fileCount, fileName → (totalChunkCount, receivedChunkIndices))
@@ -49,7 +50,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   private def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
   def uploadDirectory(organizationName: String, uploadId: String): Path =
-    dataBaseDir.resolve(organizationName).resolve(uploadingDir).resolve(uploadId)
+    resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(uploadingDir).resolve(uploadId)
 
   def handleUploadChunk(uploadFileId: String,
                         datasourceId: DataSourceId,
@@ -166,9 +167,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
     val dataSourceDir =
       if (datasetNeedsConversion)
-        dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
+        resolveOrganizationFolderIfExists(dataBaseDir, dataSourceId.team)
+          .resolve(".forConversion")
+          .resolve(dataSourceId.name)
       else
-        dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+        resolveOrganizationFolderIfExists(dataBaseDir, dataSourceId.team).resolve(dataSourceId.name)
     dataSourceDir
   }
 

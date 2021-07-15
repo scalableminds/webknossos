@@ -1,11 +1,10 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Path
-
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
+import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, SingleOrganizationAdapter}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
@@ -14,9 +13,12 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateService: AgglomerateService)
+class BinaryDataService(val dataBaseDir: Path,
+                        maxCacheSize: Int,
+                        val agglomerateService: AgglomerateService,
+                        val singleOrganizationName: Option[String])
     extends FoxImplicits
-    with DataSetDeleter
+    with SingleOrganizationAdapter
     with LazyLogging {
 
   /* Note that this must stay in sync with the back-end constant
@@ -77,7 +79,11 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.resolution)) {
       val readInstruction =
-        DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
+        DataReadInstruction(dataBaseDir,
+                            replaceDataSourceOrganizationIfNeeded(request.dataSource),
+                            request.dataLayer,
+                            bucket,
+                            request.settings.version)
 
       request.dataLayer.bucketProvider.load(readInstruction, cache)
     } else {

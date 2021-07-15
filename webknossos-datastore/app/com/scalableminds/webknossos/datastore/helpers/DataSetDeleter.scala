@@ -7,17 +7,19 @@ import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 
-trait DataSetDeleter extends LazyLogging {
+trait DataSetDeleter extends LazyLogging with SingleOrganizationAdapter {
   def dataBaseDir: Path
+  def singleOrganizationName: Option[String]
 
   def deleteOnDisk(organizationName: String,
                    dataSetName: String,
                    isInConversion: Boolean = false,
                    reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataSourcePath =
-      if (isInConversion) dataBaseDir.resolve(organizationName).resolve(".forConversion").resolve(dataSetName)
-      else dataBaseDir.resolve(organizationName).resolve(dataSetName)
-    val trashPath: Path = dataBaseDir.resolve(organizationName).resolve(".trash")
+      if (isInConversion)
+        resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(".forConversion").resolve(dataSetName)
+      else resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(dataSetName)
+    val trashPath: Path = resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(".trash")
     val targetPath = trashPath.resolve(dataSetName)
     new File(trashPath.toString).mkdirs()
 

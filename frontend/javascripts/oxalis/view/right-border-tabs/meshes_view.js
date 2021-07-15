@@ -13,7 +13,6 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
-import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { RemoteMeshMetaData } from "types/api_flow_types";

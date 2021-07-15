@@ -33,5 +33,5 @@ assignees: ''
 - Operating System and version: e.g. Windows 10
 - Version of WebKnossos (Release or Commit):
 - Needed `application.conf` changes:
-  - [ ] Set `jobsEnabled` to true
-  - [ ] Set `isDemoInstance` to true
+  - [ ] Specific to long-running jobs (`jobsEnabled=true`)
+  - [ ] Specific to webKnossos.org (`isDemoInstance=true`)

@@ -13,5 +13,5 @@ assignees: ''
 ## Context
 <!--- Why is this change / new feature important ? What are its use cases? -->
 * For the context the following changes to the `application.conf` are needed:
-  * [ ] Set `jobsEnabled` to true
-  * [ ] Set `isDemoInstance` to true
+  * [ ] Specific to long-running jobs (`jobsEnabled=true`)
+  * [ ] Specific to webKnossos.org (`isDemoInstance=true`)

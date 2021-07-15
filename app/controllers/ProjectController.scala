@@ -71,7 +71,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       for {
         _ <- projectDAO
           .findOneByNameAndOrganization(project.name, request.identity._organization)(GlobalAccessContext)
-          .reverse ?~> "project.name.alreadyTaken"
+          .reverse ?~> Messages("project.name.alreadyTaken", project.name)
         _ <- Fox
           .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
         _ <- projectDAO.insertOne(project, request.identity._organization) ?~> "project.creation.failed"

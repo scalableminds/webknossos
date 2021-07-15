@@ -12,6 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
 import models.job.JobManualState.JobManualState
+import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO}
 import net.liftweb.common.{Failure, Full}
 import oxalis.telemetry.SlackNotificationService
@@ -108,6 +109,7 @@ class JobService @Inject()(wkConf: WkConf,
                            userDAO: UserDAO,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
+                           organizationDAO: OrganizationDAO,
                            rpc: RPC,
                            analyticsService: AnalyticsService,
                            slackNotificationService: SlackNotificationService,
@@ -203,11 +205,13 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       user <- userDAO.findOne(job._owner)(GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = analyticsService.track(FailedJobEvent(user, job.command))
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
-        s"Job ${job._id} failed. Command ${job.command}, celery job id: ${job.celeryJobId}.")
+        s"Job ${job._id} failed. Command ${job.command}, celery job id: ${job.celeryJobId}, organization name: ${organization.name}."
+      )
     } yield ()
     ()
   }
@@ -215,11 +219,12 @@ class JobService @Inject()(wkConf: WkConf,
   private def trackNewlySuccessful(job: Job): Unit = {
     for {
       user <- userDAO.findOne(job._owner)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = slackNotificationService.info(
         s"Successful job$superUserLabel",
-        s"Job ${job._id} succeeded. Command ${job.command}, celery job id: ${job.celeryJobId}."
+        s"Job ${job._id} succeeded. Command ${job.command}, celery job id: ${job.celeryJobId}, organization name: ${organization.name}."
       )
     } yield ()
     ()

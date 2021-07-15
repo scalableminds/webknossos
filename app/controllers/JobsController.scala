@@ -74,6 +74,29 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
+  def runComputeMeshFileJob(organizationName: String,
+                            dataSetName: String,
+                            layerName: String,
+                            mag: String,
+                            agglomerateView: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
+        command = "compute_mesh_file"
+        commandArgs = Json.obj(
+          "organization_name" -> organizationName,
+          "dataset_name" -> dataSetName,
+          "layer_name" -> layerName,
+          "mag" -> mag,
+          "agglomerate_view" -> agglomerateView
+        )
+        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunComputeMeshFile"
+        js <- jobService.publicWrites(job)
+      } yield Ok(js)
+    }
+
   def runExportTiffJob(organizationName: String,
                        dataSetName: String,
                        bbox: String,

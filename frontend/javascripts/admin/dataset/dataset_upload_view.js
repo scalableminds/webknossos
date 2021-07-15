@@ -257,11 +257,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   <React.Fragment>
                     The conversion for the uploaded dataset was started.
                     <br />
-                    Click{" "}
+                    See{" "}
                     <a target="_blank" href="/jobs" rel="noopener noreferrer">
-                      here
+                      Processing Jobs
                     </a>{" "}
-                    to see all running jobs.
+                    for an overview of running jobs.
                   </React.Fragment>,
                 );
               } else {

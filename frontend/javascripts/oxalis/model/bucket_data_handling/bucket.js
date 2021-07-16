@@ -262,7 +262,7 @@ export class DataBucket {
       const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
       if (triggeredBucketFetch) {
         maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
-          this.once("bucketLoaded", backendData => resolve(backendData));
+          this.once("bucketLoaded", resolve);
         });
       }
       Store.dispatch(

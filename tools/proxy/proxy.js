@@ -90,7 +90,9 @@ process.on("SIGINT", shutdown);
 proxy.on("error", (err, req, res) => {
   console.error(loggingPrefix, "Sending Bad gateway due to the following error: ", err);
   res.writeHead(503);
-  res.end("Bad gateway");
+  res.end(
+    "Bad gateway. The server might still be starting up, please try again in a few seconds or check console output.",
+  );
 });
 
 function toBackend(req, res) {

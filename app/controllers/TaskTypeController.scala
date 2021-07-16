@@ -1,6 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
@@ -37,6 +38,9 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- taskTypeDAO
+          .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(GlobalAccessContext)
+          .reverse ?~> Messages("taskType.summary.alreadyTaken", taskType.summary)
         _ <- taskTypeDAO.insertOne(taskType, request.identity._organization)
         js <- taskTypeService.publicWrites(taskType)
       } yield Ok(js)

@@ -231,6 +231,9 @@ function* compressBucketAndAddToUndoBatch(
     };
     if (maybeBucketLoadedPromise != null) {
       maybeBucketLoadedPromise.then(async backendBucketData => {
+        // Once the backend data is fetched, do not directly merge it with the already saved undo data
+        // as this operation is only needed, when the volume action is undone. Additionally merging is more
+        // expensive than saving the backend data. Thus the data is only merged upon an undo action / when it is needed.
         const backendDataAsByteArray = new Uint8Array(
           backendBucketData.buffer,
           backendBucketData.byteOffset,

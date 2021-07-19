@@ -322,6 +322,7 @@ job.notFound = Job with id {0} could not be found.
 job.couldNotRunCubing = Failed to start WKW conversion job.
 job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
+job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 job.export.fileNotFound = Exported file not found. The link may be expired.
 job.export.tiff.invalidBoundingBox = The selected bounding box could not be parsed, must be x,y,z,width,height,depth

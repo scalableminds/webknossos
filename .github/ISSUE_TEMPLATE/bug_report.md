@@ -32,6 +32,5 @@ assignees: ''
 - Browser name and version: e.g. Chrome 39
 - Operating System and version: e.g. Windows 10
 - Version of WebKnossos (Release or Commit):
-- Needed `application.conf` changes:
-  - [ ] Specific to long-running jobs (`jobsEnabled=true`)
-  - [ ] Specific to webKnossos.org (`isDemoInstance=true`)
+- [ ] Specific to long-running jobs (set `jobsEnabled=true` in `application.conf`)
+- [ ] Specific to webKnossos.org (set `isDemoInstance=true` in `application.conf`)

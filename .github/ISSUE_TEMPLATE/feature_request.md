@@ -12,6 +12,5 @@ assignees: ''
 
 ## Context
 <!--- Why is this change / new feature important ? What are its use cases? -->
-* For the context the following changes to the `application.conf` are needed:
-  * [ ] Specific to long-running jobs (`jobsEnabled=true`)
-  * [ ] Specific to webKnossos.org (`isDemoInstance=true`)
+* [ ] Specific to long-running jobs (set `jobsEnabled=true` in `application.conf`)
+* [ ] Specific to webKnossos.org (set `isDemoInstance=true` in `application.conf`)

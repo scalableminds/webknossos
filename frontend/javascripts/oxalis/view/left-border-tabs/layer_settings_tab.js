@@ -65,7 +65,7 @@ import LinkButton from "components/link_button";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
+import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -101,6 +101,7 @@ type DatasetSettingsProps = {|
   onChangeEnableAutoBrush: (active: boolean) => void,
   isAutoBrushEnabled: boolean,
   controlMode: ControlMode,
+  isArbitraryMode: boolean,
 |};
 
 function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDownsample }) {
@@ -740,13 +741,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               value={userConfiguration.particleSize}
               onChange={this.onChangeUser.particleSize}
             />
-            <NumberSliderSetting
-              label={settings.clippingDistanceArbitrary}
-              min={userSettings.clippingDistanceArbitrary.minimum}
-              max={userSettings.clippingDistanceArbitrary.maximum}
-              value={userConfiguration.clippingDistanceArbitrary}
-              onChange={this.onChangeUser.clippingDistanceArbitrary}
-            />
+            {this.props.isArbitraryMode ? (
+              <NumberSliderSetting
+                label={settings.clippingDistanceArbitrary}
+                min={userSettings.clippingDistanceArbitrary.minimum}
+                max={userSettings.clippingDistanceArbitrary.maximum}
+                value={userConfiguration.clippingDistanceArbitrary}
+                onChange={this.onChangeUser.clippingDistanceArbitrary}
+              />
+            ) : (
+              <LogSliderSetting
+                label={settings.clippingDistance}
+                roundTo={3}
+                min={userSettings.clippingDistance.minimum}
+                max={userSettings.clippingDistance.maximum}
+                value={this.props.userConfiguration.clippingDistance}
+                onChange={this.onChangeUser.clippingDistance}
+              />
+            )}
             <SwitchSetting
               label={settings.overrideNodeRadius}
               value={userConfiguration.overrideNodeRadius}
@@ -809,6 +821,7 @@ const mapStateToProps = (state: OxalisState) => ({
   task: state.task,
   controlMode: state.temporaryConfiguration.controlMode,
   isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
+  isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

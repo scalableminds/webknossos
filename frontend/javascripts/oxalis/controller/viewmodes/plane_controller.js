@@ -73,7 +73,7 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
   }
 }
 
-type OwnProps = {| showNodeContextMenuAt: ShowContextMenuFunction |};
+type OwnProps = {| showContextMenuAt: ShowContextMenuFunction |};
 
 type StateProps = {|
   tracing: Tracing,
@@ -209,23 +209,23 @@ class PlaneController extends React.PureComponent<Props> {
     const moveControls = MoveTool.getMouseControls(
       planeId,
       this.planeView,
-      this.props.showNodeContextMenuAt,
+      this.props.showContextMenuAt,
     );
 
     const skeletonControls = SkeletonTool.getMouseControls(
       this.planeView,
-      this.props.showNodeContextMenuAt,
+      this.props.showContextMenuAt,
     );
 
     const drawControls = DrawTool.getPlaneMouseControls(
       planeId,
       this.planeView,
-      this.props.showNodeContextMenuAt,
+      this.props.showContextMenuAt,
     );
     const eraseControls = EraseTool.getPlaneMouseControls(
       planeId,
       this.planeView,
-      this.props.showNodeContextMenuAt,
+      this.props.showContextMenuAt,
     );
     const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
     const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);

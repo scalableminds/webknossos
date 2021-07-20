@@ -13,7 +13,6 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
-import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { RemoteMeshMetaData } from "types/api_flow_types";
@@ -38,6 +37,7 @@ import features from "features";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
+  getIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
@@ -230,27 +230,6 @@ class MeshesView extends React.Component<Props, State> {
 
   render() {
     const hasSegmentation = Model.getSegmentationLayer() != null;
-    const getSegmentationCube = () => {
-      const layer = Model.getSegmentationLayer();
-      if (!layer) {
-        throw new Error("No segmentation layer found");
-      }
-      return layer.cube;
-    };
-    const getIdForPos = pos => {
-      const segmentationCube = getSegmentationCube();
-      const segmentationLayerName = Model.getSegmentationLayerName();
-
-      if (!segmentationLayerName) {
-        return 0;
-      }
-
-      const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
-        segmentationLayerName,
-        pos,
-      );
-      return segmentationCube.getDataValue(pos, null, renderedZoomStepForCameraPosition);
-    };
 
     const moveTo = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition, null, false));
@@ -389,7 +368,7 @@ class MeshesView extends React.Component<Props, State> {
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
-          const id = getIdForPos(pos);
+          const id = getIdForPosition(pos);
           if (id === 0) {
             Toast.info("No segment found at centered position");
           }
@@ -404,7 +383,7 @@ class MeshesView extends React.Component<Props, State> {
 
     const loadPrecomputedMesh = async () => {
       const pos = getPosition(this.props.flycam);
-      const id = getIdForPos(pos);
+      const id = getIdForPosition(pos);
       if (id === 0) {
         Toast.info("No segment found at centered position");
         return;
@@ -520,7 +499,9 @@ class MeshesView extends React.Component<Props, State> {
 
     const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-      const isCenteredCell = hasSegmentation ? getIdForPos(getPosition(this.props.flycam)) : false;
+      const isCenteredCell = hasSegmentation
+        ? getIdForPosition(getPosition(this.props.flycam))
+        : false;
       const isHoveredItem = segmentId === this.state.hoveredListItem;
       const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
 

@@ -48,17 +48,27 @@ export function renderToTexture(
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
+  const state = Store.getState();
   scene = scene || defaultScene;
   camera = camera || scene.getObjectByName(plane);
+
+  const previousFarValue = camera.far;
+
   if (withFarClipping) {
+    const isArbitraryMode = constants.MODES_ARBITRARY.includes(
+      state.temporaryConfiguration.viewMode,
+    );
     camera = camera.clone();
-    camera.far = 1;
+    camera.far = isArbitraryMode
+      ? state.userConfiguration.clippingDistanceArbitrary
+      : state.userConfiguration.clippingDistance;
+
     camera.updateProjectionMatrix();
   }
   clearColor = clearColor != null ? clearColor : 0x000000;
 
   renderer.autoClear = true;
-  let { width, height } = getInputCatcherRect(Store.getState(), plane);
+  let { width, height } = getInputCatcherRect(state, plane);
   width = Math.round(width);
   height = Math.round(height);
 
@@ -77,6 +87,8 @@ export function renderToTexture(
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
   renderer.setRenderTarget(null);
+
+  camera.far = previousFarValue;
   return buffer;
 }
 

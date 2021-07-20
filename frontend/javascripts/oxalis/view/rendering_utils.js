@@ -43,6 +43,11 @@ export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: typeof THREE.Scene,
   camera?: typeof THREE.Camera,
+  // When withFarClipping is true, the user-specified clipping distance is used.
+  // Note that the data planes might not be included in the rendered texture, since
+  // these are exactly offset by the clipping distance. Currently, `withFarClipping`
+  // is only used for node picking (which does not render the data planes), which is why
+  // this behavior is not problematic for us.
   withFarClipping?: boolean,
   clearColor?: number,
 ): Uint8Array {

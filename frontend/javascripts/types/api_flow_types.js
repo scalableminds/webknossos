@@ -569,6 +569,7 @@ export type APIJob = {
   +type: string,
   +state: string,
   +manualState: string,
+  +result: ?string,
   +createdAt: number,
 };
 

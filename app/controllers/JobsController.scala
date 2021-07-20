@@ -5,6 +5,7 @@ import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.services.DataSourceService
 import javax.inject.Inject
 import models.annotation.TracingStoreRpcClient
 import models.job.{JobDAO, JobService}
@@ -22,6 +23,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
                                jobService: JobService,
                                slackNotificationService: SlackNotificationService,
+                               dataSourceService: DataSourceService,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
 
@@ -97,9 +99,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
-  def runInferNucleiJob(organizationName: String,
-                        dataSetName: String,
-                        colorLayerName: Option[String]): Action[AnyContent] =
+  def runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -110,7 +110,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
-            "color_layer_name" -> colorLayerName
+            "layer_name" -> layerName,
+            "webknossos_token" -> TracingStoreRpcClient.webKnossosToken,
           )
           job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)

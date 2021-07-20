@@ -111,7 +111,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
           dataset={dataset}
           tracing={tracing}
           boundingBox={selectedBoundingBoxForExport.boundingBox}
-          destroy={() => setSelectedBoundingBoxForExport(null)}
+          handleClose={() => setSelectedBoundingBoxForExport(null)}
         />
       ) : null}
     </div>

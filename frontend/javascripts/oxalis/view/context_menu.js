@@ -26,6 +26,7 @@ import {
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
+  getIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
@@ -36,17 +37,18 @@ import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { roundTo } from "libs/utils";
+
 import Shortcut from "libs/shortcut_component";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {|
-  nodeContextMenuPosition: [number, number],
+  contextMenuPosition: [number, number],
   clickedNodeId: ?number,
   globalPosition: Vector3,
   viewport: OrthoView,
-  hideNodeContextMenu: () => void,
+  hideContextMenu: () => void,
 |};
 
 type DispatchProps = {|
@@ -141,7 +143,7 @@ function getMaybeHoveredCellMenuItem(globalPosition: Vector3) {
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
-  hideNodeContextMenu,
+  hideContextMenu,
   deleteEdge,
   mergeTrees,
   deleteNode,
@@ -163,7 +165,7 @@ function NodeContextMenuOptions({
     );
   }
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
+    <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       <Menu.Item
         className="node-context-menu-item"
         key="set-node-active"
@@ -229,14 +231,13 @@ function NoNodeContextMenuOptions({
   skeletonTracing,
   volumeTracing,
   isSkeletonToolActive,
-  hideNodeContextMenu,
+  hideContextMenu,
   globalPosition,
   viewport,
   createTree,
   cellIdAtPosition,
   segmentationLayer,
   dataset,
-  zoomStep,
   currentMeshFile,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
@@ -249,13 +250,11 @@ function NoNodeContextMenuOptions({
     if (!currentMeshFile) return;
 
     if (segmentationLayer) {
-      const layer = Model.getSegmentationLayer();
-      if (!layer) {
-        throw new Error("No segmentation layer found");
+      const id = getIdForPosition(globalPosition);
+      if (id === 0) {
+        Toast.info("No segment found at the clicked position");
+        return;
       }
-      const segmentationCube = layer.cube;
-      const id = segmentationCube.getDataValue(globalPosition, null, zoomStep);
-
       await loadMeshFromFile(id, globalPosition, currentMeshFile, segmentationLayer, dataset);
     }
   };
@@ -282,6 +281,17 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
+
+  const loadMeshItem = (
+    <Menu.Item
+      className="node-context-menu-item"
+      key="load-mesh-file"
+      onClick={loadMesh}
+      disabled={!currentMeshFile}
+    >
+      Load Precomputed Mesh
+    </Menu.Item>
+  );
   const nonSkeletonActions =
     volumeTracing != null
       ? [
@@ -296,16 +306,7 @@ function NoNodeContextMenuOptions({
               Select Segment ({cellIdAtPosition})
             </Menu.Item>
           ) : null,
-
-          <Menu.Item
-            className="node-context-menu-item"
-            key="load-mesh-file"
-            onClick={loadMesh}
-            disabled={!currentMeshFile}
-          >
-            Load Precomputed Mesh
-          </Menu.Item>,
-
+          loadMeshItem,
           <Menu.Item
             className="node-context-menu-item"
             key="fill-cell"
@@ -315,6 +316,9 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
+  if (volumeTracing == null && segmentationLayer != null) {
+    nonSkeletonActions.push(loadMeshItem);
+  }
 
   const allActions = isSkeletonToolActive
     ? skeletonActions.concat(nonSkeletonActions)
@@ -325,7 +329,7 @@ function NoNodeContextMenuOptions({
   }
 
   return (
-    <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }} mode="vertical">
+    <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       {allActions}
     </Menu>
   );
@@ -344,8 +348,8 @@ function ContextMenu(props: Props) {
     skeletonTracing,
     isSkeletonToolActive,
     clickedNodeId,
-    nodeContextMenuPosition,
-    hideNodeContextMenu,
+    contextMenuPosition,
+    hideContextMenu,
     datasetScale,
     globalPosition,
   } = props;
@@ -413,7 +417,7 @@ function ContextMenu(props: Props) {
   if (cellIdAtPosition > 0) {
     infoRows.push(
       <div key="copy-cell" className="node-context-menu-item">
-        <img src="/assets/images/cell.svg" className="cell-context-icon" alt="Segment Icon" />
+        <div className="cell-context-icon" alt="Segment Icon" />
         Segment ID: {cellIdAtPosition} {copyIconWithTooltip(cellIdAtPosition, "Copy Segment ID")}
       </div>,
     );
@@ -429,15 +433,15 @@ function ContextMenu(props: Props) {
       <div
         style={{
           position: "absolute",
-          left: nodeContextMenuPosition[0],
-          top: nodeContextMenuPosition[1],
+          left: contextMenuPosition[0],
+          top: contextMenuPosition[1],
         }}
         className="node-context-menu"
         tabIndex={-1}
-        onBlur={hideNodeContextMenu}
+        onBlur={hideContextMenu}
         ref={inputRef}
       >
-        <Shortcut supportInputElements keys="escape" onTrigger={hideNodeContextMenu} />
+        <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
           : NoNodeContextMenuOptions({ isSkeletonToolActive, cellIdAtPosition, ...props })}

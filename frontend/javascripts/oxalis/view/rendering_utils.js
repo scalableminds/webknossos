@@ -8,6 +8,7 @@ import constants, {
   ArbitraryViewport,
   OrthoViewColors,
   OrthoViewValues,
+  OrthoViews,
 } from "oxalis/constants";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -59,7 +60,9 @@ export function renderToTexture(
 
   const previousFarValue = camera.far;
 
-  if (withFarClipping) {
+  // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
+  // nodes there.
+  if (withFarClipping && plane !== OrthoViews.TDView) {
     const isArbitraryMode = constants.MODES_ARBITRARY.includes(
       state.temporaryConfiguration.viewMode,
     );

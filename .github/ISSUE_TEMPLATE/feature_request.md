@@ -12,3 +12,5 @@ assignees: ''
 
 ## Context
 <!--- Why is this change / new feature important ? What are its use cases? -->
+* [ ] Specific to long-running jobs (set `jobsEnabled=true` in `application.conf`)
+* [ ] Specific to webKnossos.org (set `isDemoInstance=true` in `application.conf`)

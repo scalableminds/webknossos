@@ -291,8 +291,7 @@ export function maybeGetNodeIdFromPosition(
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);
-
-  const buffer = renderToTexture(plane, pickingScene, camera);
+  const buffer = renderToTexture(plane, pickingScene, camera, true);
   // Beware of the fact that new browsers yield float numbers for the mouse position
   // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher
   const borderWidth = OUTER_CSS_BORDER;

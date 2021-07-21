@@ -34,7 +34,7 @@ const onMessage = async event => {
       } else {
         const errorMessage = "The first argument needs to be the name of the tree.";
         console.warn(errorMessage);
-        event.source.postMessage({ type: "err", messageId, error: errorMessage }, "*");
+        event.source.postMessage({ type: "err", messageId, message: errorMessage }, "*");
         return;
       }
       break;
@@ -46,7 +46,7 @@ const onMessage = async event => {
       } else {
         const errorMessage = "The first argument needs to be the content of the nml as a string.";
         console.warn(errorMessage);
-        event.source.postMessage({ type: "err", messageId, error: errorMessage }, "*");
+        event.source.postMessage({ type: "err", messageId, message: errorMessage }, "*");
         return;
       }
       break;
@@ -54,7 +54,7 @@ const onMessage = async event => {
     default: {
       const errorMessage = `Unsupported cross origin API command: ${type}`;
       console.warn(errorMessage);
-      event.source.postMessage({ type: "err", messageId, error: errorMessage }, "*");
+      event.source.postMessage({ type: "err", messageId, message: errorMessage }, "*");
       return;
     }
   }
@@ -69,7 +69,7 @@ const CrossOriginApi = () => {
   useEffect(() => {
     if (window.webknossos && window.parent) {
       window.webknossos.apiReady().then(() => {
-        window.parent.postMessage({ message: "api ready" }, "*");
+        window.parent.postMessage({ type: "init" }, "*");
       });
     }
   }, [window.webknossos]);

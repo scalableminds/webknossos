@@ -6,7 +6,7 @@ import { Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
-import React from "react";
+import React, { useState } from "react";
 import _ from "lodash";
 
 import type { APIDataset } from "types/api_flow_types";
@@ -20,7 +20,6 @@ import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor
 import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import * as Utils from "libs/utils";
 
-import renderIndependently from "libs/render_independently";
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
 
 type BoundingBoxTabProps = {
@@ -30,6 +29,7 @@ type BoundingBoxTabProps = {
 };
 
 function BoundingBoxTab(props: BoundingBoxTabProps) {
+  const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
   const { tracing, dataset, onChangeBoundingBoxes } = props;
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
@@ -76,20 +76,6 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     onChangeBoundingBoxes(updatedUserBoundingBoxes);
   }
 
-  function handleExportUserBoundingBox(id: number) {
-    const selectedBoundingBox = userBoundingBoxes.find(boundingBox => boundingBox.id === id);
-    if (selectedBoundingBox) {
-      renderIndependently(destroy => (
-        <ExportBoundingBoxModal
-          dataset={dataset}
-          tracing={tracing}
-          boundingBox={selectedBoundingBox.boundingBox}
-          destroy={destroy}
-        />
-      ));
-    }
-  }
-
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {userBoundingBoxes.length > 0 ? (
@@ -103,7 +89,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             isVisible={bb.isVisible}
             onChange={_.partial(handleChangeUserBoundingBox, bb.id)}
             onDelete={_.partial(handleDeleteUserBoundingBox, bb.id)}
-            onExport={_.partial(handleExportUserBoundingBox, bb.id)}
+            onExport={_.partial(setSelectedBoundingBoxForExport, bb)}
           />
         ))
       ) : (
@@ -120,6 +106,14 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
           />
         </Tooltip>
       </div>
+      {selectedBoundingBoxForExport != null ? (
+        <ExportBoundingBoxModal
+          dataset={dataset}
+          tracing={tracing}
+          boundingBox={selectedBoundingBoxForExport.boundingBox}
+          handleClose={() => setSelectedBoundingBoxForExport(null)}
+        />
+      ) : null}
     </div>
   );
 }

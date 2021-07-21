@@ -113,6 +113,16 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, id.toString)
     } yield parsed
 
+  def findOneBySummaryAndOrganization(summary: String, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[TaskType] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where summary = '#${sanitize(summary)}' and _organization = $organizationId and #$accessQuery"
+          .as[TasktypesRow])
+      parsed <- parseFirst(r, summary)
+    } yield parsed
+
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery

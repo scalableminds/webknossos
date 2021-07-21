@@ -31,7 +31,6 @@ export const layerViewConfiguration = {
 export const defaultDatasetViewConfiguration = {
   fourBit: false,
   interpolation: true,
-  highlightHoveredCellId: true,
   renderMissingDataBlack: true,
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,
@@ -44,7 +43,6 @@ export const defaultDatasetViewConfiguration = {
 export const baseDatasetViewConfiguration = {
   fourBit: { type: "boolean" },
   interpolation: { type: "boolean" },
-  highlightHoveredCellId: { type: "boolean" },
   zoom: { type: "number", minimum: 0.005 },
   renderMissingDataBlack: { type: "boolean" },
   loadingStrategy: { enum: ["BEST_QUALITY_FIRST", "PROGRESSIVE_QUALITY"] },
@@ -73,7 +71,6 @@ export default {
       required: [
         "fourBit",
         "interpolation",
-        "highlightHoveredCellId",
         "renderMissingDataBlack",
         "loadingStrategy",
         "segmentationPatternOpacity",

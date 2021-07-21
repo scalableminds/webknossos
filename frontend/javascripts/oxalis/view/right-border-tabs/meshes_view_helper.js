@@ -20,14 +20,19 @@ import type { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
+import Model from "oxalis/model";
+import api from "oxalis/api/internal_api";
 
 const PARALLEL_MESH_LOADING_COUNT = 6;
 
 export async function maybeFetchMeshFiles(
-  segmentationLayer: APIDataLayer,
+  segmentationLayer: ?APIDataLayer,
   dataset: APIDataset,
   mustRequest: boolean,
 ): Promise<void> {
+  if (!segmentationLayer) {
+    return;
+  }
   const files = Store.getState().availableMeshFiles;
 
   // only send new get request, if it hasn't happened before (files in store are null)
@@ -44,6 +49,25 @@ export async function maybeFetchMeshFiles(
       Store.dispatch(updateCurrentMeshFileAction(availableMeshFiles[0]));
     }
   }
+}
+
+export function getIdForPosition(pos: Vector3) {
+  const layer = Model.getSegmentationLayer();
+  if (!layer) {
+    throw new Error("No segmentation layer found");
+  }
+  const segmentationCube = layer.cube;
+  const segmentationLayerName = layer.name;
+
+  if (!segmentationLayerName) {
+    return 0;
+  }
+
+  const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+    segmentationLayerName,
+    pos,
+  );
+  return segmentationCube.getDataValue(pos, null, renderedZoomStepForCameraPosition);
 }
 
 export async function loadMeshFromFile(

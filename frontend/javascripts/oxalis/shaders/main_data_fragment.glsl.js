@@ -5,13 +5,7 @@ import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,
 } from "oxalis/model/bucket_data_handling/mappings";
-import constants, {
-  ViewModeValuesIndices,
-  OrthoViewIndices,
-  type Vector3,
-  VolumeToolEnum,
-  volumeToolEnumToIndex,
-} from "oxalis/constants";
+import constants, { ViewModeValuesIndices, OrthoViewIndices, type Vector3 } from "oxalis/constants";
 
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -69,7 +63,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% if (hasSegmentation) { %>
   uniform vec4 activeCellId;
   uniform bool isMouseInActiveViewport;
-  uniform float activeVolumeToolIndex;
+  uniform bool showBrush;
   uniform float segmentationPatternOpacity;
 
   <% if (isMappingSupported) { %>
@@ -86,7 +80,6 @@ uniform float sphericalCapRadius;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
-uniform bool highlightHoveredCellId;
 uniform vec3 bboxMin;
 uniform vec3 bboxMax;
 uniform vec3 globalPosition;
@@ -210,7 +203,7 @@ void main() {
       float hoverAlphaIncrement =
         // Hover cell only if it's the active one, if the feature is enabled
         // and if segmentation opacity is not zero
-        cellIdUnderMouse == id && highlightHoveredCellId && <%= segmentationName%>_alpha > 0.0
+        cellIdUnderMouse == id && <%= segmentationName%>_alpha > 0.0
           ? 0.2 : 0.0;
       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(id), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
     }
@@ -241,7 +234,6 @@ void main() {
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
-    brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
   });
 }

@@ -1,5 +1,6 @@
 // @flow
 import Maybe from "data.maybe";
+import { updateKey } from "oxalis/model/helpers/deep_update";
 
 import type {
   APIAnnotation,
@@ -11,11 +12,16 @@ import type {
   BoundingBoxObject,
   UserBoundingBox,
   UserBoundingBoxToServer,
+  OxalisState,
 } from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
-import type { BoundingBoxType } from "oxalis/constants";
+import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
+import {
+  isVolumeTool,
+  isVolumeAnnotationDisallowedForZoom,
+} from "oxalis/model/accessors/volumetracing_accessor";
 
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
@@ -127,4 +133,15 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     meshes,
     user,
   };
+}
+
+export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
+  if (tool === state.uiInformation.activeTool) {
+    return state;
+  }
+  if (isVolumeTool(tool) && isVolumeAnnotationDisallowedForZoom(tool, state)) {
+    return state;
+  }
+
+  return updateKey(state, "uiInformation", { activeTool: tool });
 }

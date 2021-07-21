@@ -755,7 +755,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 roundTo={3}
                 min={userSettings.clippingDistance.minimum}
                 max={userSettings.clippingDistance.maximum}
-                value={this.props.userConfiguration.clippingDistance}
+                value={userConfiguration.clippingDistance}
                 onChange={this.onChangeUser.clippingDistance}
               />
             )}

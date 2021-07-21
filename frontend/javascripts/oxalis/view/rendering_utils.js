@@ -58,8 +58,6 @@ export function renderToTexture(
   scene = scene || defaultScene;
   camera = camera || scene.getObjectByName(plane);
 
-  const previousFarValue = camera.far;
-
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.
   if (withFarClipping && plane !== OrthoViews.TDView) {
@@ -96,7 +94,6 @@ export function renderToTexture(
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
   renderer.setRenderTarget(null);
 
-  camera.far = previousFarValue;
   return buffer;
 }
 

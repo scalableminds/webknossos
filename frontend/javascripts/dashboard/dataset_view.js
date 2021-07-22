@@ -230,7 +230,7 @@ function DatasetView(props: Props) {
         {newJobs.slice(0, 5).map(job => (
           <Row key={job.id} gutter={16}>
             <Col span={10}>
-              <Tooltip title={job.state}>{stateToIcon[job.state]}</Tooltip>
+              <Tooltip title={`Status: ${job.state}`}>{stateToIcon[job.state]}</Tooltip>
               {` ${job.datasetName || "UNKNOWN"}`}
             </Col>
           </Row>

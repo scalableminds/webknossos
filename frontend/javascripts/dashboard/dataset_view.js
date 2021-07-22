@@ -29,6 +29,7 @@ import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
 import { getJobs } from "admin/admin_rest_api";
 import moment from "moment";
+import FormattedDate from "components/formatted_date";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -216,9 +217,9 @@ function DatasetView(props: Props) {
 
     const newJobsHeader = (
       <React.Fragment>
-        Converting datasets{" "}
+        Converting Datasets{" "}
         <Tooltip
-          title="The displayed datasets are being converted in the 3 days."
+          title="The conversion of the displayed datasets were started in the last 3 days."
           placement="right"
         >
           <InfoCircleOutlined />
@@ -231,7 +232,7 @@ function DatasetView(props: Props) {
           <Row key={job.id} gutter={16}>
             <Col span={10}>
               <Tooltip title={`Status: ${job.state}`}>{stateToIcon[job.state]}</Tooltip>
-              {` ${job.datasetName || "UNKNOWN"}`}
+              {` ${job.datasetName || "UNKNOWN"} (`}<FormattedDate timestamp={job.createdAt} />)
             </Col>
           </Row>
         ))}

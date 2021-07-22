@@ -45,7 +45,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
     - The "Bounding Boxes" section in "Annotation" tab was moved to an own tab to the right sidebar.
     - The "Mapping" setting was moved to the segmentation layer in the left sidebar.
   - The status bar contains additional elements for (editable) information, such as the active tree id (previously positioned in the left sidebar).
-  - Some UI elements were less spacious by favoring icons instead of labels. Hover these elements to get an helpful tooltip.
+  - In some UI elements, text was replaced by icons. An explaining tooltip can be shown by hovering.
 - The health check at api/health does not longer include checking data/health and tracings/health if the respective local modules are enabled. Consider monitoring those routes separately. [#5601](https://github.com/scalableminds/webknossos/pull/5601)
 - Improved the progress display for dataset uploads. [5616](https://github.com/scalableminds/webknossos/pull/5616)
 

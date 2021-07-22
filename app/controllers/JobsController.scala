@@ -5,7 +5,6 @@ import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.services.DataSourceService
 import javax.inject.Inject
 import models.annotation.TracingStoreRpcClient
 import models.job.{JobDAO, JobService}
@@ -23,7 +22,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
                                jobService: JobService,
                                slackNotificationService: SlackNotificationService,
-                               dataSourceService: DataSourceService,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
 

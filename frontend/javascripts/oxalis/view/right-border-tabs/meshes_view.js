@@ -156,7 +156,9 @@ class MeshesView extends React.Component<Props, State> {
 
   componentDidMount() {
     maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, false);
-    this.pollJobData();
+    if (features().jobsEnabled) {
+      this.pollJobData();
+    }
   }
 
   componentWillUnmount() {

@@ -41,16 +41,19 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
   - The status bar contains additional elements for (editable) information, such as the active tree id (previously positioned in the left sidebar).
   - Some UI elements were less spacious by favoring icons instead of labels. Hover these elements to get an helpful tooltip.
 - The health check at api/health does not longer include checking data/health and tracings/health if the respective local modules are enabled. Consider monitoring those routes separately. [#5601](https://github.com/scalableminds/webknossos/pull/5601)
+- Improved the progress display for dataset uploads. [5616](https://github.com/scalableminds/webknossos/pull/5616)
 
 ### Fixed
 - Fixed that a disabled "Center new Nodes" option didn't work correctly in merger mode. [#5538](https://github.com/scalableminds/webknossos/pull/5538)
 - Fixed a bug where dataset uploads of zips with just one file inside failed. [#5534](https://github.com/scalableminds/webknossos/pull/5534)
 - Fixed a benign error message when a dataset without a segmentation layer was opened in view mode or with a skeleton-only annotation. [#5583](https://github.com/scalableminds/webknossos/pull/5583)
 - Fixed crashing tree tab which could happen when dragging a node and then switching directly to another tab (e.g., comments) and then back again. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
+- Fixed a bug that the selection of nodes in the skeleton tool was possible for nodes far behind the position and thus prevented creating new nodes. [#5624](https://github.com/scalableminds/webknossos/pull/5624)
 - Fixed that the UI allowed mutating trees in the tree tab (dragging/creating/deleting trees and groups) in read-only tracings. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
 - Fixed "Create a new tree group for this file" setting in front-end import when a group id of 0 was used in the NML. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
 - Fixed a bug that caused a distortion when moving or zooming in the maximized 3d viewport. [#5550](https://github.com/scalableminds/webknossos/pull/5550)
 - Fixed a bug that prevented focusing the login fields when being prompted to login after trying to view a dataset without being logged in.[#5521](https://github.com/scalableminds/webknossos/pull/5577)
+- Fixed a bug that prevented the modal to export data of a bounding box to tiff files to open up. [#5624](https://github.com/scalableminds/webknossos/pull/5624)
 - Fixed that the 3d view content disappeared permanently if the 3d view was resized to not be visible. [#5588](https://github.com/scalableminds/webknossos/pull/5588)
 - The following changes belong to [#5384](https://github.com/scalableminds/webknossos/pull/5384):
   - Removed "Highlight hovered cells" setting (highlight on hover will always be done).

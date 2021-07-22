@@ -540,7 +540,6 @@ export type APIFeatureToggles = {
   +discussionBoardRequiresAdmin: boolean,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +isDemoInstance: boolean,
   +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,

@@ -204,9 +204,9 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
 function VoxelyticsBanner() {
   const [showSegmentationBanner] = useState(Math.random() > 0.5);
 
-  // if (!features().isDemoInstance) {
-  //   return null;
-  // }
+  if (!features().isDemoInstance) {
+    return null;
+  }
 
   const segmentationBanner = (
     <div

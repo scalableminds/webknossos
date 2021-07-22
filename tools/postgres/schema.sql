@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(71);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(74);
 COMMIT TRANSACTION;
 
 
@@ -360,6 +360,8 @@ CREATE TABLE webknossos.maintenance(
 );
 INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
+CREATE TYPE webknossos.JOB_MANUAL_STATE AS ENUM ('SUCCESS', 'FAILURE');
+
 CREATE TABLE webknossos.jobs(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _owner CHAR(24) NOT NULL,
@@ -367,6 +369,7 @@ CREATE TABLE webknossos.jobs(
   commandArgs JSONB NOT NULL,
   celeryJobId CHAR(36) NOT NULL,
   celeryInfo JSONB NOT NULL,
+  manualState webknossos.JOB_MANUAL_STATE,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -491,6 +494,9 @@ ALTER TABLE webknossos.multiUsers
   ADD CONSTRAINT lastLoggedInIdentity_ref FOREIGN KEY(_lastLoggedInIdentity) REFERENCES webknossos.users(_id) ON DELETE SET NULL;
 ALTER TABLE webknossos.experienceDomains
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
+ALTER TABLE webknossos.jobs
+  ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE;
+
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
   BEGIN

@@ -11,7 +11,7 @@ export const settings = {
   keyboardDelay: "Keyboard delay (ms)",
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
-  centerNewNode: "Center new Nodes",
+  centerNewNode: "Auto-center Nodes",
   highlightCommentedNodes: "Highlight Commented Nodes",
   nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",
@@ -22,7 +22,6 @@ export const settings = {
   interpolation: "Interpolation",
   quality: "Quality",
   segmentationOpacity: "Segmentation Opacity",
-  highlightHoveredCellId: "Highlight Hovered Cells",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
   clippingDistanceArbitrary: "Clipping Distance",
@@ -43,6 +42,7 @@ export const settings = {
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
   overwriteMode: "Volume Annotation Overwrite Mode",
+  useLegacyBindings: "Classic Controls",
 };
 
 export const layerViewConfigurations = {
@@ -111,9 +111,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
     } current position and zoom value. Consider fine-tuning your current view before copying the URL.`,
-  "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
+  "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.copy_maybe_mapped_cell_id":
-    "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
+    "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
@@ -157,7 +157,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_isosurface_available_to_download": [
     "There is no isosurface for the active segment id available to download.",
-    'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
+    'Click with "CTRL + Left Mouse" on the desired segment to load it\'s isosurface.',
   ],
   "tracing.mesh_listing_failed":
     "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
@@ -170,11 +170,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
   "tracing.agglomerate_skeleton.no_cell":
-    "Clicked on the background. Please click on a cell to load a skeleton.",
+    "Clicked on the background. Please click on a segment to load a skeleton.",
   "tracing.agglomerate_skeleton.no_mapping":
-    "Please activate an agglomerate file mapping to load a skeleton for a cell.",
+    "Please activate an agglomerate file mapping to load a skeleton for a segment.",
   "tracing.agglomerate_skeleton.no_agglomerate_file":
-    "Loading a skeleton for a cell only works with agglomerate file mappings.",
+    "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.skeletons_are_hidden_warning":
+    'All skeletons are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

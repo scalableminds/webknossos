@@ -16,6 +16,7 @@
 @import "_dashboard.less";
 @import "_spotlight.less";
 @import "trace_view/_tracing_view.less";
+@import "trace_view/_status_bar.less";
 @import "trace_view/_user_settings_view.less";
 @import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
@@ -278,44 +279,6 @@ i.without-icon-margin,
   cursor: wait;
 }
 
-.keyboard-key-icon {
-  border: 2px solid @border-color-base;
-  border-radius: 2px;
-  min-width: 26px;
-  min-height: 26px;
-  margin: 4px;
-  display: inline-block;
-  text-align: center;
-  font-size: 10px;
-  vertical-align: middle;
-  line-height: 24px;
-  font-weight: bold;
-}
-
-.keyboard-key-icon-small {
-  border: 1px solid rgb(255, 255, 255);
-  border-radius: 2px;
-  min-width: 14px;
-  height: 14px;
-  text-align: center;
-  font-size: 10px;
-  font-weight: bold;
-  vertical-align: middle;
-  display: inline-block;
-  padding: 0px 2px 0px 2px;
-}
-
-.keyboard-mouse-icon {
-  max-width: 18px;
-  max-height: 28px;
-  margin: 4px;
-}
-
-span.keyboard-key-icon:first-child,
-img.keyboard-mouse-icon:first-child {
-  margin-left: 0px;
-}
-
 .nml-upload-zone-overlay {
   position: fixed;
   top: 0;
@@ -374,4 +337,50 @@ img.keyboard-mouse-icon:first-child {
   background: @component-background;
   box-shadow: @box-shadow-base;
   border-radius: 3px;
+}
+
+.webknossos-welcome-toast {
+  background: url(/assets/images/mesh_background.webp) 50% 50% / cover no-repeat, rgb(23, 103, 139);
+
+  &:before {
+    content: "";
+    background: linear-gradient(0deg, #222222d4 0%, rgba(23, 103, 139, 0.73) 100%);
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .logo {
+    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    padding-left: 105px;
+    height: 140px;
+    float: left;
+    margin-top: 2px;
+    margin-left: -15px;
+    background-size: 70px 70px;
+    filter: invert(1);
+  }
+
+  .ant-notification-notice-content {
+    position: relative;
+  }
+  .ant-notification-notice-message {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  .ant-notification-notice-description {
+    font-size: 16px;
+    line-height: 21px;
+    color: #ececec;
+  }
+
+  .ant-notification-notice-close {
+    color: white;
+  }
+
+  color: white;
 }

@@ -157,9 +157,8 @@ export const getBrushOverlay: ShaderModule = {
   code: `
     vec4 getBrushOverlay(vec3 worldCoordUVW) {
       vec4 brushOverlayColor = vec4(0.0);
-      bool isBrushModeActive = activeVolumeToolIndex == <%= brushToolIndex %>;
 
-      if (!isMouseInCanvas || !isMouseInActiveViewport || !isBrushModeActive) {
+      if (!isMouseInCanvas || !isMouseInActiveViewport || !showBrush) {
         return brushOverlayColor;
       }
       vec3 flooredMousePos = floor(globalMousePosition);

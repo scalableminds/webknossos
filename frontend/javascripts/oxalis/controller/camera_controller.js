@@ -36,6 +36,7 @@ import api from "oxalis/api/internal_api";
 type Props = {
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
+  onTDCameraChanged: () => void,
   setTargetAndFixPosition: () => void,
 };
 
@@ -140,6 +141,11 @@ class CameraController extends React.PureComponent<Props> {
       this.props.cameras[planeId].bottom = -height / 2;
       this.props.cameras[planeId].top = height / 2;
 
+      // We only set the `near` value here. The effect of far=clippingDistance is
+      // achieved by offsetting the plane onto which is rendered by the amount
+      // of clippingDistance. Theoretically, `far` could be set here too, however,
+      // this leads to imprecision related bugs which cause the planes to not render
+      // for certain clippingDistance values.
       this.props.cameras[planeId].near = -clippingDistance;
       this.props.cameras[planeId].updateProjectionMatrix();
     }
@@ -152,18 +158,20 @@ class CameraController extends React.PureComponent<Props> {
       const oldWidth = tdCamera.right - tdCamera.left;
       const oldHeight = tdCamera.top - tdCamera.bottom;
 
-      const oldAspectRatio = oldWidth / oldHeight;
       const tdRect = inputCatcherRects[OrthoViews.TDView];
+
+      // Do not update the tdCamera if the tdView is not visible
+      if (tdRect.height === 0 || tdRect.width === 0) return;
+
+      const oldAspectRatio = oldWidth / oldHeight;
       const newAspectRatio = tdRect.width / tdRect.height;
-
-      // Do not update the tdCamera if the tdView is not visible (height === 0)
-      if (Number.isNaN(newAspectRatio)) return;
-
       const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
 
       tdCamera.left = oldMid - newWidth / 2;
       tdCamera.right = oldMid + newWidth / 2;
       tdCamera.updateProjectionMatrix();
+
+      this.props.onTDCameraChanged();
     }
   }
 

@@ -202,6 +202,7 @@ export type APIUserBase = {
 
 export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
+  shouldSeeModernControlsModal?: boolean,
 |};
 
 export type APIUserTheme = "auto" | "light" | "dark";
@@ -547,7 +548,12 @@ export type APIFeatureToggles = {
   +publicDemoDatasetUrl: string,
   +exportTiffMaxVolumeMVx: number,
   +exportTiffMaxEdgeLengthVx: number,
+  +defaultToLegacyBindings: boolean,
 };
+
+export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
+export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
 
 export type APIJob = {
   +id: string,
@@ -561,6 +567,7 @@ export type APIJob = {
   +boundingBox: ?string,
   +type: string,
   +state: string,
+  +manualState: string,
   +createdAt: number,
 };
 

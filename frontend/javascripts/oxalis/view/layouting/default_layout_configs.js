@@ -8,6 +8,7 @@
 // @flow
 import _ from "lodash";
 
+import type { ExtractReturn } from "libs/type_helpers";
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
 import Constants, {
@@ -16,11 +17,11 @@ import Constants, {
   type ViewMode,
   OrthoViews,
   OrthoViewsToName,
-  TracingTabs,
-  SettingsTabs,
+  BorderTabs,
   ArbitraryViews,
   ArbitraryViewsToName,
 } from "oxalis/constants";
+
 import type {
   RowOrTabsetNode,
   RowNode,
@@ -32,18 +33,18 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 12;
+export const currentLayoutVersion = 14;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
-export const defaultSplitterSize = 1;
+const defaultSplitterSize = 1;
 export const DEFAULT_LAYOUT_NAME = "Custom Layout";
 // The border has two parts: The parts that contains the tabs via a sub-layout and the borderBar.
 // The borderBar is (vertical) bar the the borders of the screen that contains a button for each tab of in the border to toggle.
 // As we want a flexible layout in the border, we use only on tab containing a sub-layout that is more flexible.
 // Additionally, we want to avoid the borderBar. As the borderBars width will be automatically calculated
 // when it is set to 0, we use a value near value to make it almost not visible.
-export const borderBarSize = 1;
+const borderBarSize = 1;
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
@@ -77,16 +78,12 @@ function Tab(name: string, id: string, component: string): TabNode {
   };
 }
 
-function Tabset(
-  children: Array<TabNode>,
-  weight?: number,
-  defaultSelectedIndex?: number,
-): TabsetNode {
+function Tabset(children: Array<TabNode>, weight?: number): TabsetNode {
   weight = weight != null ? weight : 100;
   return {
     type: "tabset",
     weight,
-    selected: defaultSelectedIndex || 0,
+    selected: 0,
     children,
   };
 }
@@ -100,24 +97,19 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
   };
 }
 
-const infoTabs = {};
+const borderTabs: { [$Keys<typeof BorderTabs>]: Object } = {};
 // Flow does not understand that the values must have a name and an id.
-Object.entries(TracingTabs).forEach(([tabKey, { name, id }]: any) => {
-  infoTabs[tabKey] = Tab(name, id, "right-border-tab");
+Object.entries(BorderTabs).forEach(([tabKey, { name, id }]: any) => {
+  borderTabs[tabKey] = Tab(name, id, "border-tab");
 });
 
-const settingsTabs = {};
-Object.entries(SettingsTabs).forEach(([tabKey, { name, id }]: any) => {
-  settingsTabs[tabKey] = Tab(name, id, "settings-tab");
-});
-
-const OrthoViewports = {};
+const OrthoViewports: { [$Keys<typeof OrthoViews>]: Object } = {};
 Object.keys(OrthoViews).forEach(viewportId => {
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 
-const ArbitraryViewports = {};
+const ArbitraryViewports: { [$Keys<typeof ArbitraryViews>]: Object } = {};
 Object.keys(ArbitraryViews).forEach(viewportId => {
   const name = ArbitraryViewsToName[viewportId];
   ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
@@ -140,23 +132,14 @@ const subLayoutGlobalSettings: GlobalConfig = {
   tabSetTabStripHeight: layoutHeaderHeight + additionalHeaderHeightForBorderTabSets,
 };
 
-function buildTabsets(
-  setsOfTabs: Array<Array<TabNode>>,
-  defaultSelectedIndex?: number,
-): Array<TabsetNode> {
+function buildTabsets(setsOfTabs: Array<Array<TabNode>>): Array<TabsetNode> {
   const tabsetWeight = 100 / setsOfTabs.length;
-  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight, defaultSelectedIndex));
+  const tabsets = setsOfTabs.map(tabs => Tabset(tabs, tabsetWeight));
   return tabsets;
 }
 
-function buildBorder(
-  side,
-  setsOfTabs: Array<Array<TabNode>>,
-  width: number,
-  isBorderOpen: boolean,
-  defaultSelectedIndex?: number,
-): Border {
-  const tabsets = buildTabsets(setsOfTabs, defaultSelectedIndex);
+function buildBorder(side, tabset: Array<TabNode>, width: number, isBorderOpen: boolean): Border {
+  const buildTabset = Tabset(tabset, 100);
   const border: Border = {
     type: "border",
     location: side,
@@ -172,7 +155,7 @@ function buildBorder(
         config: {
           model: {
             global: subLayoutGlobalSettings,
-            layout: Row([Row(tabsets)]),
+            layout: Row([buildTabset]),
             borders: [],
           },
         },
@@ -215,23 +198,26 @@ const _getDefaultLayouts = () => {
   const borderIsOpenByDefault = !isInIframe;
   const leftBorder = buildBorder(
     "left",
-    [((Object.values(settingsTabs): any): Array<TabNode>)],
+    [borderTabs.LayerSettingsTab, borderTabs.ControlsAndRenderingSettingsTab],
     leftBorderWidth,
     borderIsOpenByDefault,
-    1,
   );
   const rightBorderWithSkeleton = buildBorder(
     "right",
     [
-      [infoTabs.DatasetInfoTabView, infoTabs.TreesTabView, infoTabs.CommentTabView],
-      [infoTabs.MappingInfoView, infoTabs.MeshesView, infoTabs.AbstractTreeTabView],
+      borderTabs.DatasetInfoTabView,
+      borderTabs.SkeletonTabView,
+      borderTabs.CommentTabView,
+      borderTabs.MeshesView,
+      borderTabs.BoundingBoxTab,
+      borderTabs.AbstractTreeTab,
     ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
     "right",
-    [[infoTabs.DatasetInfoTabView, infoTabs.MappingInfoView, infoTabs.MeshesView]],
+    [borderTabs.DatasetInfoTabView, borderTabs.BoundingBoxTab, borderTabs.MeshesView],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );
@@ -298,7 +284,6 @@ export const resetDefaultLayouts = () => {
   getDefaultLayouts.cache.clear();
 };
 
-type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
 type Layout = $Keys<ExtractReturn<typeof _getDefaultLayouts>>;
 
 export const getCurrentDefaultLayoutConfig = () => {

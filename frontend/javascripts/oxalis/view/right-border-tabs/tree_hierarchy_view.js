@@ -6,7 +6,7 @@ import { DeleteOutlined, PlusOutlined, SettingOutlined, ShrinkOutlined } from "@
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
-import SortableTree from "react-sortable-tree";
+import { SortableTreeWithoutDndContext as SortableTree } from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import { type Action } from "oxalis/model/actions/actions";
@@ -25,7 +25,7 @@ import {
   forEachTreeNode,
   findTreeNode,
   anySatisfyDeep,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
@@ -57,6 +57,7 @@ type OwnProps = {|
   onSelectTree: number => void,
   deselectAllTrees: () => void,
   onDeleteGroup: number => void,
+  allowUpdate: boolean,
 |};
 
 type Props = {
@@ -282,6 +283,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.setState({ activeTreeDropdownId: null });
   };
 
+  toggleTreeDropdownMenuVisibility = (treeId: number) => {
+    if (this.state.activeTreeDropdownId === treeId) {
+      this.setState({ activeTreeDropdownId: null });
+    } else {
+      this.setState({ activeTreeDropdownId: treeId });
+    }
+  };
+
   getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
     if (isTreeSelected) {
@@ -375,13 +384,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
     const nodeProps = {};
-    const isRoot = node.id === MISSING_GROUP_ID;
     if (node.type === TYPE_GROUP) {
       nodeProps.title = this.renderGroupActionsDropdown(node);
-      if (!isRoot) {
-        // Only render the group icon if it's not the root.
-        nodeProps.className = "group-type";
-      }
+      nodeProps.className = "group-type";
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
@@ -433,33 +438,32 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Menu.Item>
         </Menu>
       );
-      const dropdownMenu = (
-        <Dropdown
-          overlay={menu}
-          placement="bottomCenter"
-          visible={this.state.activeTreeDropdownId === tree.treeId}
-          onVisibleChange={isVisible =>
-            this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
-          }
-        >
-          <SettingOutlined className="group-actions-icon" />
-        </Dropdown>
-      );
 
       nodeProps.title = (
         <div className={styleClass}>
-          <Checkbox
-            checked={tree.isVisible}
-            onChange={this.onCheck}
-            node={node}
-            style={CHECKBOX_STYLE}
-          />
-          <div
-            data-id={node.id}
-            style={{ marginLeft: 9, display: "inline" }}
-            onClick={this.onSelectTree}
-          >{`(${tree.nodes.size()}) ${tree.name}`}</div>
-          {dropdownMenu}
+          <Dropdown
+            overlay={menu}
+            placement="bottomCenter"
+            visible={this.state.activeTreeDropdownId === tree.treeId}
+            onVisibleChange={isVisible =>
+              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
+            }
+            trigger={["contextMenu"]}
+          >
+            <span>
+              <Checkbox
+                checked={tree.isVisible}
+                onChange={this.onCheck}
+                node={node}
+                style={CHECKBOX_STYLE}
+              />
+              <div
+                data-id={node.id}
+                style={{ marginLeft: 9, display: "inline" }}
+                onClick={this.onSelectTree}
+              >{`(${tree.nodes.size()}) ${tree.name}`}</div>
+            </span>
+          </Dropdown>
         </div>
       );
       nodeProps.className = "tree-type";
@@ -485,14 +489,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
-  canDrop(params: { nextParent: TreeNode }) {
+  canDrop = (params: { nextParent: TreeNode }) => {
     const { nextParent } = params;
-    return nextParent != null && nextParent.type === TYPE_GROUP;
-  }
+    return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
+  };
 
-  canDrag(params: { node: TreeNode }) {
+  canDrag = (params: { node: TreeNode }) => {
     const { node } = params;
-    return node.id !== MISSING_GROUP_ID;
+    return this.props.allowUpdate && node.id !== MISSING_GROUP_ID;
+  };
+
+  canNodeHaveChildren(node: TreeNode) {
+    return node.type === TYPE_GROUP;
   }
 
   render() {
@@ -511,6 +519,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}
+              canNodeHaveChildren={this.canNodeHaveChildren}
               rowHeight={24}
               innerStyle={{ padding: 0 }}
               scaffoldBlockPxWidth={25}

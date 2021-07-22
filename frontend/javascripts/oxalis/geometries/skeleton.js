@@ -92,7 +92,7 @@ const EdgeBufferHelperType = {
  * @class
  */
 class Skeleton {
-  rootNode: typeof THREE.Object3D;
+  rootGroup: typeof THREE.Group;
   pickingNode: typeof THREE.Object3D;
   prevTracing: SkeletonTracing;
   nodes: BufferCollection;
@@ -100,7 +100,7 @@ class Skeleton {
   treeColorTexture: typeof THREE.DataTexture;
 
   constructor() {
-    this.rootNode = new THREE.Object3D();
+    this.rootGroup = new THREE.Group();
     this.pickingNode = new THREE.Object3D();
 
     getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
@@ -120,7 +120,7 @@ class Skeleton {
 
   reset(skeletonTracing: SkeletonTracing) {
     // Remove all existing geometries
-    this.rootNode.remove(...this.rootNode.children);
+    this.rootGroup.remove(...this.rootGroup.children);
     this.pickingNode.remove(...this.pickingNode.children);
 
     const { trees } = skeletonTracing;
@@ -197,7 +197,7 @@ class Skeleton {
     const geometry = new THREE.BufferGeometry();
     helper.addAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
-    this.rootNode.add(mesh);
+    this.rootGroup.add(mesh);
     if (helper.supportsPicking) {
       const pickingMesh = helper.buildMesh(geometry, material);
       this.pickingNode.add(pickingMesh);
@@ -408,13 +408,13 @@ class Skeleton {
     return this.nodes.buffers.map(buffer => buffer.mesh);
   }
 
-  getRootNode(): typeof THREE.Object3D {
-    return this.rootNode;
+  getRootGroup(): typeof THREE.Object3D {
+    return this.rootGroup;
   }
 
   startPicking(isTouch: boolean): typeof THREE.Object3D {
     this.pickingNode.matrixAutoUpdate = false;
-    this.pickingNode.matrix.copy(this.rootNode.matrixWorld);
+    this.pickingNode.matrix.copy(this.rootGroup.matrixWorld);
     this.nodes.material.uniforms.isTouch.value = isTouch ? 1 : 0;
     this.nodes.material.uniforms.isPicking.value = 1;
     return this.pickingNode;

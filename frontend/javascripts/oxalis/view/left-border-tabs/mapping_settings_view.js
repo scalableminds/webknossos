@@ -1,7 +1,6 @@
 // @flow
 
-import { Select, Switch, Table, Tooltip } from "antd";
-import { InfoCircleOutlined, WarningOutlined } from "@ant-design/icons";
+import { Select, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -9,30 +8,24 @@ import debounceRender from "react-debounce-render";
 
 import createProgressCallback from "libs/progress_callback";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
-import type { OxalisState, Mapping, MappingType } from "oxalis/store";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
+import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getSegmentationLayer,
-  getResolutionInfoOfSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
   setMappingEnabledAction,
   setHideUnmappedIdsAction,
 } from "oxalis/model/actions/settings_actions";
-import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
-import message from "messages";
+import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import DataLayer from "oxalis/model/data_layer";
-import api from "oxalis/api/internal_api";
 import { AsyncButton } from "components/async_clickables";
-import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_plane_controller";
+import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
 
 const { Option, OptGroup } = Select;
 
@@ -83,42 +76,12 @@ const unpackMappingNameAndCategory = packedString => {
   return [mappingName, categoryName];
 };
 
-class MappingInfoView extends React.Component<Props, State> {
-  isMounted: boolean = false;
-
+class MappingSettingsView extends React.Component<Props, State> {
   state = {
     shouldMappingBeEnabled: false,
     isRefreshingMappingList: false,
     didRefreshMappingList: false,
   };
-
-  componentDidMount() {
-    this.isMounted = true;
-    if (!hasSegmentation()) {
-      return;
-    }
-    const cube = this.getSegmentationCube();
-    cube.on("bucketLoaded", this._forceUpdate);
-    cube.on("volumeLabeled", this._forceUpdate);
-  }
-
-  componentWillUnmount() {
-    this.isMounted = false;
-    if (!hasSegmentation()) {
-      return;
-    }
-    const cube = this.getSegmentationCube();
-    cube.off("bucketLoaded", this._forceUpdate);
-    cube.off("volumeLabeled", this._forceUpdate);
-  }
-
-  // eslint-disable-next-line react/sort-comp
-  _forceUpdate = _.throttle(() => {
-    if (!this.isMounted) {
-      return;
-    }
-    this.forceUpdate();
-  }, 100);
 
   getSegmentationLayer(): DataLayer {
     const layer = Model.getSegmentationLayer();
@@ -126,157 +89,6 @@ class MappingInfoView extends React.Component<Props, State> {
       throw new Error("No segmentation layer found");
     }
     return layer;
-  }
-
-  getSegmentationCube(): Cube {
-    const segmentationLayer = this.getSegmentationLayer();
-    return segmentationLayer.cube;
-  }
-
-  renderIdTable() {
-    const {
-      mapping,
-      isMappingEnabled,
-      mappingColors,
-      activeViewport,
-      mousePosition,
-      position,
-      dataset,
-      segmentationLayer,
-    } = this.props;
-    const cube = this.getSegmentationCube();
-    const hasMapping = mapping != null;
-    const customColors = isMappingEnabled ? mappingColors : null;
-
-    let globalMousePosition;
-    if (mousePosition && activeViewport !== OrthoViews.TDView) {
-      const [x, y] = mousePosition;
-      globalMousePosition = calculateGlobalPos({ x, y });
-    }
-
-    const flycamPosition = position;
-    const segmentationLayerName = this.getSegmentationLayer().name;
-
-    const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      flycamPosition,
-    );
-    const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
-      segmentationLayerName,
-      globalMousePosition,
-    );
-
-    const getResolutionOfZoomStepAsString = usedZoomStep => {
-      const usedResolution = getResolutionInfoOfSegmentationLayer(dataset).getResolutionByIndex(
-        usedZoomStep,
-      );
-      return usedResolution
-        ? `${usedResolution[0]}-${usedResolution[1]}-${usedResolution[2]}`
-        : "Not available";
-    };
-    const getIdForPos = (pos, usableZoomStep) =>
-      pos && cube.getDataValue(pos, null, usableZoomStep);
-
-    const tableData = [
-      {
-        name: "Active ID",
-        key: "active",
-        unmapped: this.props.activeCellId,
-        resolution: "",
-      },
-      {
-        name: "ID at the center",
-        key: "current",
-        unmapped: getIdForPos(flycamPosition, renderedZoomStepForCameraPosition),
-        resolution: getResolutionOfZoomStepAsString(renderedZoomStepForCameraPosition),
-      },
-      {
-        name: (
-          <span>
-            ID at mouse position{" "}
-            <Tooltip
-              title={
-                message[hasMapping ? "tracing.copy_maybe_mapped_cell_id" : "tracing.copy_cell_id"]
-              }
-              placement="bottomLeft"
-            >
-              <InfoCircleOutlined />
-            </Tooltip>
-          </span>
-        ),
-        key: "mouse",
-        unmapped: getIdForPos(globalMousePosition, renderedZoomStepForMousePosition),
-        resolution: globalMousePosition
-          ? getResolutionOfZoomStepAsString(renderedZoomStepForMousePosition)
-          : "Not available",
-      },
-    ]
-      .map(idInfo => ({
-        ...idInfo,
-        mapped: idInfo.unmapped != null ? cube.mapId(idInfo.unmapped) : undefined,
-      }))
-      .map(idInfo => ({
-        ...idInfo,
-        unmapped: (
-          <span
-            style={{
-              background: convertCellIdToCSS(idInfo.unmapped || 0, null, 0.15),
-            }}
-          >
-            {idInfo.unmapped}
-          </span>
-        ),
-        mapped: (
-          <span
-            style={{
-              background: convertCellIdToCSS(idInfo.mapped || 0, customColors, 0.15),
-            }}
-          >
-            {idInfo.mapped}
-          </span>
-        ),
-      }));
-
-    const columnHelper = (title, dataIndex) => ({
-      title,
-      dataIndex,
-    });
-    const showSegmentation64bitWarning =
-      segmentationLayer && segmentationLayer.originalElementClass === "uint64";
-    const maybeWithTooltipWarningTitle = title =>
-      showSegmentation64bitWarning ? (
-        <React.Fragment>
-          {title}{" "}
-          <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
-            <WarningOutlined style={{ color: "var(--ant-warning)" }} />
-          </Tooltip>
-        </React.Fragment>
-      ) : (
-        title
-      );
-    const idColumns =
-      hasMapping && this.props.isMappingEnabled
-        ? // Show an unmapped and mapped id column if there's a mapping
-          [
-            columnHelper(maybeWithTooltipWarningTitle("Unmapped"), "unmapped"),
-            columnHelper(maybeWithTooltipWarningTitle("Mapped"), "mapped"),
-          ]
-        : // Otherwise, only show an ID column
-          [columnHelper(maybeWithTooltipWarningTitle("ID"), "unmapped")];
-    const columns = [
-      columnHelper("", "name"),
-      ...idColumns,
-      columnHelper("Magnification", "resolution"),
-    ];
-    return (
-      <Table
-        size="small"
-        dataSource={tableData}
-        columns={columns}
-        pagination={false}
-        align="right"
-      />
-    );
   }
 
   handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
@@ -354,7 +166,7 @@ class MappingInfoView extends React.Component<Props, State> {
             disabled={isDisabled}
             style={isDisabled ? { pointerEvents: "none" } : {}}
           >
-            Import Skeleton for Centered Cell
+            Import Skeleton for Centered Segment
           </AsyncButton>
         </span>
       </Tooltip>
@@ -411,58 +223,49 @@ class MappingInfoView extends React.Component<Props, State> {
       this.props.hideUnmappedIds != null;
 
     return (
-      <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
-        {this.renderIdTable()}
-        <div style={{ marginTop: 24, width: "55%", marginLeft: 16 }}>
-          {/* Only display the mapping selection when merger mode is not active
+      <React.Fragment>
+        {/* Only display the mapping selection when merger mode is not active
             to avoid conflicts in the logic of the UI. */
-          !this.props.isMergerModeEnabled ? (
-            <React.Fragment>
-              <div style={{ marginBottom: 6 }}>
-                <label className="setting-label">
-                  ID Mapping
-                  <Switch
-                    onChange={this.handleSetMappingEnabled}
-                    checked={shouldMappingBeEnabled}
-                    style={{ float: "right" }}
-                    loading={this.state.isRefreshingMappingList}
-                  />
-                </label>
-              </div>
+        !this.props.isMergerModeEnabled ? (
+          <React.Fragment>
+            <div style={{ marginBottom: 6 }}>
+              <SwitchSetting
+                onChange={this.handleSetMappingEnabled}
+                value={shouldMappingBeEnabled}
+                label="ID Mapping"
+                loading={this.state.isRefreshingMappingList}
+              />
+            </div>
 
-              {/*
+            {/*
             Show mapping-select even when the mapping is disabled but the UI was used before
             (i.e., mappingName != null)
           */}
-              {shouldMappingBeEnabled || this.props.mappingName != null ? (
-                <Select
-                  placeholder="Select mapping"
-                  defaultActiveFirstOption={false}
-                  style={{ width: "100%", marginBottom: 14 }}
-                  {...selectValueProp}
-                  onChange={this.handleChangeMapping}
-                  notFoundContent="No mappings found."
-                >
-                  {renderCategoryOptions(availableMappings, "JSON")}
-                  {renderCategoryOptions(availableAgglomerates, "HDF5")}
-                </Select>
-              ) : null}
-            </React.Fragment>
-          ) : null}
-          {renderHideUnmappedSegmentsSwitch ? (
-            <label className="setting-label">
-              Hide unmapped segments
-              <Switch
-                onChange={this.handleChangeHideUnmappedSegments}
-                checked={this.props.hideUnmappedIds}
-                style={{ float: "right" }}
-                loading={this.state.isRefreshingMappingList}
-              />
-            </label>
-          ) : null}
-          {this.renderAgglomerateSkeletonButton()}
-        </div>
-      </div>
+            {shouldMappingBeEnabled ? (
+              <Select
+                placeholder="Select mapping"
+                defaultActiveFirstOption={false}
+                style={{ width: "100%", marginBottom: 14 }}
+                {...selectValueProp}
+                onChange={this.handleChangeMapping}
+                notFoundContent="No mappings found."
+              >
+                {renderCategoryOptions(availableMappings, "JSON")}
+                {renderCategoryOptions(availableAgglomerates, "HDF5")}
+              </Select>
+            ) : null}
+          </React.Fragment>
+        ) : null}
+        {renderHideUnmappedSegmentsSwitch ? (
+          <SwitchSetting
+            onChange={this.handleChangeHideUnmappedSegments}
+            value={this.props.hideUnmappedIds === true}
+            label="Hide unmapped segments"
+            loading={this.state.isRefreshingMappingList}
+          />
+        ) : null}
+        {this.renderAgglomerateSkeletonButton()}
+      </React.Fragment>
     );
   }
 }
@@ -499,4 +302,4 @@ const maxWait = 500;
 export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(debounceRender(MappingInfoView, debounceTime, { maxWait }));
+)(debounceRender(MappingSettingsView, debounceTime, { maxWait }));

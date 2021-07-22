@@ -4,7 +4,12 @@ import "test/sagas/volumetracing_saga.mock.js";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
 
-import { OrthoViews, VolumeToolEnum, ContourModeEnum, OverwriteModeEnum } from "oxalis/constants";
+import {
+  OrthoViews,
+  AnnotationToolEnum,
+  ContourModeEnum,
+  OverwriteModeEnum,
+} from "oxalis/constants";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -33,7 +38,6 @@ const volumeTracing: VolumeTracing = {
   createdTimestamp: 0,
   tracingId: "tracingId",
   version: 0,
-  activeTool: VolumeToolEnum.TRACE,
   activeCellId: 0,
   cells: {},
   maxCellId: 0,
@@ -104,7 +108,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(VolumeToolEnum.BRUSH);
+  saga.next(AnnotationToolEnum.BRUSH);
   saga.next(false);
   // pass labeled resolution
   const startEditingSaga = execCall(t, saga.next({ resolution: [1, 1, 1], zoomStep: 0 }));
@@ -122,7 +126,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(VolumeToolEnum.TRACE);
+  saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
@@ -146,7 +150,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(VolumeToolEnum.TRACE);
+  saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
@@ -161,7 +165,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
     call(
       finishLayer,
       volumeLayer,
-      VolumeToolEnum.TRACE,
+      AnnotationToolEnum.TRACE,
       ContourModeEnum.DRAW,
       OverwriteModeEnum.OVERWRITE_ALL,
       0,
@@ -177,7 +181,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DELETE);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(VolumeToolEnum.TRACE);
+  saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
@@ -192,7 +196,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     call(
       finishLayer,
       volumeLayer,
-      VolumeToolEnum.TRACE,
+      AnnotationToolEnum.TRACE,
       ContourModeEnum.DELETE,
       OverwriteModeEnum.OVERWRITE_ALL,
       0,

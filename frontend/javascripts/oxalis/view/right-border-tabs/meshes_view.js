@@ -2,9 +2,9 @@
 import { Button, List, Tooltip, Upload, Dropdown, Menu } from "antd";
 import {
   DeleteOutlined,
+  EllipsisOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
-  PlusSquareOutlined,
   ReloadOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
@@ -13,7 +13,6 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
-import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { RemoteMeshMetaData } from "types/api_flow_types";
@@ -34,23 +33,40 @@ import {
   addIsosurfaceAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
-import { loadMeshFromFile, maybeFetchMeshFiles } from "oxalis/view/right-menu/meshes_view_helper";
+import features from "features";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+  getIdForPosition,
+} from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getPosition,
+  getRequestLogZoomStep,
+  getCurrentResolution,
+} from "oxalis/model/accessors/flycam_accessor";
+import {
+  getSegmentationLayer,
+  getResolutionInfoOfSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
+import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
 import Checkbox from "antd/lib/checkbox/Checkbox";
 import MenuItem from "antd/lib/menu/MenuItem";
 
 // $FlowIgnore[prop-missing] flow does not know that Dropdown has a Button
 const DropdownButton = Dropdown.Button;
+
+// Interval in ms to check for running mesh file computation jobs for this dataset
+const refreshInterval = 5000;
+const defaultMeshfileGenerationResolutionIndex = 2;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -71,6 +87,9 @@ const mapStateToProps = (state: OxalisState): * => ({
   segmentationLayer: getSegmentationLayer(state.dataset),
   zoomStep: getRequestLogZoomStep(state),
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  activeResolution: getCurrentResolution(state),
+  organization: state.dataset.owningOrganization,
+  datasetName: state.dataset.name,
   availableMeshFiles: state.availableMeshFiles,
   currentMeshFile: state.currentMeshFile,
 });
@@ -125,44 +144,162 @@ type StateProps = ExtractReturn<typeof mapStateToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
 
-type State = { hoveredListItem: ?number };
+type State = { hoveredListItem: ?number, activeMeshJobId: ?string };
 
 class MeshesView extends React.Component<Props, State> {
+  intervalID: ?TimeoutID;
+
   state = {
     hoveredListItem: null,
+    activeMeshJobId: null,
   };
 
   componentDidMount() {
     maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, false);
+    if (features().jobsEnabled) {
+      this.pollJobData();
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.intervalID != null) {
+      clearTimeout(this.intervalID);
+    }
+  }
+
+  async pollJobData(): Promise<void> {
+    const jobs = await getJobs();
+    const oldActiveJobId = this.state.activeMeshJobId;
+
+    const meshJobsForDataset = jobs.filter(
+      job => job.type === "compute_mesh_file" && job.datasetName === this.props.datasetName,
+    );
+    const activeJob =
+      oldActiveJobId != null ? meshJobsForDataset.find(job => job.id === oldActiveJobId) : null;
+
+    if (activeJob != null) {
+      // We are aware of a running mesh job. Check whether the job is finished now.
+      switch (activeJob.state) {
+        case "SUCCESS": {
+          Toast.success(
+            'The computation of a mesh file for this dataset has finished. You can now use the "Load Precomputed Mesh" functionality in the "Meshes" tab.',
+          );
+          this.setState({ activeMeshJobId: null });
+          // maybeFetchMeshFiles will fetch the new mesh file and also activate it if no other mesh file
+          // currently exists.
+          maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, true);
+          break;
+        }
+        case "STARTED":
+        case "UNKNOWN":
+        case "PENDING": {
+          break;
+        }
+        case "FAILURE": {
+          Toast.info("The computation of a mesh file for this dataset didn't finish properly.");
+          this.setState({ activeMeshJobId: null });
+          break;
+        }
+        case "MANUAL": {
+          Toast.info(
+            "The computation of a mesh file for this dataset didn't finish properly. The job will be handled by an admin shortly. Please check back here soon.",
+          );
+          this.setState({ activeMeshJobId: null });
+          break;
+        }
+        default: {
+          break;
+        }
+      }
+    } else {
+      // Check whether there is an active mesh job (e.g., the user
+      // started the job earlier and reopened webKnossos in the meantime).
+
+      const pendingJobs = meshJobsForDataset.filter(
+        job => job.state === "STARTED" || job.state === "PENDING",
+      );
+      const activeMeshJobId = pendingJobs.length > 0 ? pendingJobs[0].id : null;
+      this.setState({
+        activeMeshJobId,
+      });
+    }
+
+    // refresh according to the refresh interval
+    this.intervalID = setTimeout(() => this.pollJobData(), refreshInterval);
   }
 
   render() {
     const hasSegmentation = Model.getSegmentationLayer() != null;
-    const getSegmentationCube = () => {
-      const layer = Model.getSegmentationLayer();
-      if (!layer) {
-        throw new Error("No segmentation layer found");
-      }
-      return layer.cube;
-    };
-    const getIdForPos = pos => {
-      const segmentationCube = getSegmentationCube();
-      const segmentationLayerName = Model.getSegmentationLayerName();
-
-      if (!segmentationLayerName) {
-        return 0;
-      }
-
-      const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
-        segmentationLayerName,
-        pos,
-      );
-      return segmentationCube.getDataValue(pos, null, renderedZoomStepForCameraPosition);
-    };
 
     const moveTo = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition, null, false));
     };
+
+    const startComputingMeshfile = async () => {
+      const datasetResolutionInfo = getResolutionInfoOfSegmentationLayer(this.props.dataset);
+      const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
+        defaultMeshfileGenerationResolutionIndex,
+      );
+
+      const meshfileResolutionIndex =
+        defaultOrHigherIndex != null
+          ? defaultOrHigherIndex
+          : datasetResolutionInfo.getClosestExistingIndex(defaultMeshfileGenerationResolutionIndex);
+
+      const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
+        meshfileResolutionIndex,
+      );
+
+      if (this.props.segmentationLayer != null) {
+        const job = await startComputeMeshFileJob(
+          this.props.organization,
+          this.props.datasetName,
+          this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
+          meshfileResolution,
+        );
+        this.setState({ activeMeshJobId: job.id });
+        Toast.info(
+          <React.Fragment>
+            The computation of a mesh file was started. For large datasets, this may take a while.
+            Closing this tab will not stop the computation.
+            <br />
+            See{" "}
+            <a target="_blank" href="/jobs" rel="noopener noreferrer">
+              Processing Jobs
+            </a>{" "}
+            for an overview of running jobs.
+          </React.Fragment>,
+        );
+      } else {
+        Toast.error(
+          "The computation of a mesh file could not be started because no segmentation layer was found.",
+        );
+      }
+    };
+
+    const getComputeMeshfileTooltip = node => (
+      <Tooltip
+        title={
+          features().jobsEnabled
+            ? "Compute a mesh file for this dataset so that meshes for segments can be loaded quickly afterwards."
+            : "The computation of mesh files is not supported by this webKnossos instance."
+        }
+      >
+        {node}
+      </Tooltip>
+    );
+
+    const getComputeMeshFileButton = () =>
+      getComputeMeshfileTooltip(
+        <Button
+          size="small"
+          loading={this.state.activeMeshJobId != null}
+          onClick={startComputingMeshfile}
+          disabled={!features().jobsEnabled}
+        >
+          Compute Mesh File
+        </Button>,
+      );
 
     const getDownloadButton = (segmentId: number) => (
       <Tooltip title="Download Isosurface">
@@ -200,7 +337,6 @@ class MeshesView extends React.Component<Props, State> {
         <DeleteOutlined
           key="delete-button"
           onClick={() => {
-            // does not work properly for imported isosurfaces
             Store.dispatch(removeIsosurfaceAction(segmentId));
             // reset the active isosurface id so the deleted one is not reloaded immediately
             this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
@@ -213,34 +349,28 @@ class MeshesView extends React.Component<Props, State> {
     const convertCellIdToCSS = id =>
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
-    const getImportButton = () => (
-      <React.Fragment>
-        <Upload
-          accept=".stl"
-          beforeUpload={() => false}
-          onChange={file => {
-            this.props.onStlUpload(file);
-          }}
-          showUploadList={false}
-          style={{ fontSize: 16, cursor: "pointer" }}
-          disabled={!this.props.allowUpdate || this.props.isImporting}
-        >
-          <Tooltip
-            title={this.props.isImporting ? "The import is still in progress." : "Import STL"}
-          >
-            {this.props.isImporting ? <LoadingOutlined /> : <PlusSquareOutlined />}
-          </Tooltip>
-        </Upload>
-      </React.Fragment>
+    const getStlImportItem = () => (
+      <Upload
+        accept=".stl"
+        beforeUpload={() => false}
+        onChange={file => {
+          this.props.onStlUpload(file);
+        }}
+        showUploadList={false}
+        style={{ fontSize: 16, cursor: "pointer" }}
+        disabled={!this.props.allowUpdate || this.props.isImporting}
+      >
+        Import STL
+      </Upload>
     );
 
     const getLoadMeshCellButton = () => (
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
-          const id = getIdForPos(pos);
+          const id = getIdForPosition(pos);
           if (id === 0) {
-            Toast.info("No cell found at centered position");
+            Toast.info("No segment found at centered position");
           }
           this.props.changeActiveIsosurfaceId(id, pos, true);
         }}
@@ -253,9 +383,9 @@ class MeshesView extends React.Component<Props, State> {
 
     const loadPrecomputedMesh = async () => {
       const pos = getPosition(this.props.flycam);
-      const id = getIdForPos(pos);
+      const id = getIdForPosition(pos);
       if (id === 0) {
-        Toast.info("No cell found at centered position");
+        Toast.info("No segment found at centered position");
         return;
       }
       if (!this.props.currentMeshFile || !this.props.segmentationLayer) {
@@ -305,7 +435,7 @@ class MeshesView extends React.Component<Props, State> {
           key="tooltip"
           title={
             this.props.currentMeshFile != null
-              ? `Load mesh for centered cell from file ${this.props.currentMeshFile}`
+              ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
               : "There is no mesh file."
           }
         >
@@ -328,16 +458,31 @@ class MeshesView extends React.Component<Props, State> {
       );
     };
 
+    const getHeaderDropdownMenu = () => (
+      <Menu>
+        <Menu.Item onClick={startComputingMeshfile} disabled={!features().jobsEnabled}>
+          {getComputeMeshfileTooltip("Compute Mesh File")}
+        </Menu.Item>
+        <Menu.Item>{getStlImportItem()}</Menu.Item>
+      </Menu>
+    );
+
+    const getHeaderDropdownButton = () => (
+      <Dropdown overlay={getHeaderDropdownMenu()}>
+        <EllipsisOutlined />
+      </Dropdown>
+    );
+
     const getMeshesHeader = () => (
       <React.Fragment>
         Meshes{" "}
         <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They can be computed ad-hoc or pre-computed.">
           <InfoCircleOutlined />
         </Tooltip>
-        {getImportButton()}
+        {getHeaderDropdownButton()}
         <div className="antd-legacy-group">
           {getLoadMeshCellButton()}
-          {getLoadPrecomputedMeshButton()}
+          {this.props.currentMeshFile ? getLoadPrecomputedMeshButton() : getComputeMeshFileButton()}
         </div>
       </React.Fragment>
     );
@@ -354,7 +499,9 @@ class MeshesView extends React.Component<Props, State> {
 
     const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-      const isCenteredCell = hasSegmentation ? getIdForPos(getPosition(this.props.flycam)) : false;
+      const isCenteredCell = hasSegmentation
+        ? getIdForPosition(getPosition(this.props.flycam))
+        : false;
       const isHoveredItem = segmentId === this.state.hoveredListItem;
       const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
 
@@ -424,7 +571,7 @@ class MeshesView extends React.Component<Props, State> {
           locale={{
             emptyText: `There are no Meshes.${
               this.props.allowUpdate
-                ? " You can render a mesh for the currently centered cell by clicking the button above."
+                ? " You can render a mesh for the currently centered segment by clicking the button above."
                 : ""
             }`,
           }}

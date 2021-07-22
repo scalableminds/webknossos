@@ -3,10 +3,9 @@
  * @flow
  */
 
-import { Col, Collapse, Row, Switch, Tooltip, Modal } from "antd";
+import { Col, Row, Switch, Tooltip, Modal } from "antd";
 import {
   EditOutlined,
-  ExclamationCircleOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
   ScanOutlined,
@@ -23,10 +22,11 @@ import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
   NumberSliderSetting,
-  DropdownSetting,
+  LogSliderSetting,
   ColorSetting,
-} from "oxalis/view/settings/setting_input_views";
+} from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
+import features from "features";
 import {
   findDataPositionForLayer,
   clearCache,
@@ -41,14 +41,16 @@ import {
   getResolutionInfo,
   getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { userSettings } from "types/schemas/user_settings.schema";
 import {
+  updateTemporarySettingAction,
+  updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
-  updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+
 import Model from "oxalis/model";
 import Store, {
   type DatasetConfiguration,
@@ -63,12 +65,19 @@ import LinkButton from "components/link_button";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
+import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  setNodeRadiusAction,
+  setShowSkeletonsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import messages, { settings } from "messages";
+import MappingSettingsView from "./mapping_settings_view";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
-
-const { Panel } = Collapse;
 
 type DatasetSettingsProps = {|
   userConfiguration: UserConfiguration,
@@ -80,14 +89,19 @@ type DatasetSettingsProps = {|
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  viewMode: ViewMode,
   histogramData: HistogramDataForAllLayers,
+  onChangeRadius: (value: number) => void,
+  onChangeShowSkeletons: boolean => void,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
   onUnlinkFallbackLayer: Tracing => Promise<void>,
   tracing: Tracing,
   task: ?Task,
+  onChangeEnableAutoBrush: (active: boolean) => void,
+  isAutoBrushEnabled: boolean,
+  controlMode: ControlMode,
+  isArbitraryMode: boolean,
 |};
 
 function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDownsample }) {
@@ -150,9 +164,18 @@ type State = {|
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
+  onChangeUser: { [$Keys<UserConfiguration>]: Function };
+
   state = {
     isDownsampleVolumeModalVisible: false,
   };
+
+  componentWillMount() {
+    // cache onChange handler
+    this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
+      _.partial(this.props.onChangeUser, propertyName),
+    );
+  }
 
   getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
     let tooltipText = isDisabled
@@ -177,7 +200,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: -16,
+            right: -8,
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         />
@@ -196,7 +219,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 6,
+            right: 14,
             cursor: "pointer",
           }}
         />
@@ -213,7 +236,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         style={{
           position: "absolute",
           top: 4,
-          right: 26,
+          right: 38,
           cursor: "pointer",
         }}
       />
@@ -249,7 +272,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 30,
+            right: 38,
             cursor: "pointer",
             color: isInEditMode ? "var(--ant-primary)" : null,
           }}
@@ -272,6 +295,35 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       return layerName === otherLayerName ? !isDisabled : isDisabled;
     });
     return isOnlyGivenLayerVisible;
+  };
+
+  handleAutoBrushChange = async (active: boolean) => {
+    this.props.onChangeEnableAutoBrush(active);
+    if (active) {
+      Toast.info(
+        "You enabled the experimental automatic brush feature. Activate the brush tool and use CTRL+Click to use it.",
+      );
+    }
+  };
+
+  maybeGetAutoBrushUi = () => {
+    const { autoBrushReadyDatasets } = features();
+    if (
+      autoBrushReadyDatasets == null ||
+      !autoBrushReadyDatasets.includes(this.props.dataset.name)
+    ) {
+      return null;
+    }
+
+    return (
+      <SwitchSetting
+        label={settings.autoBrush}
+        value={this.props.isAutoBrushEnabled}
+        onChange={value => {
+          this.handleAutoBrushChange(value);
+        }}
+      />
+    );
   };
 
   getEnableDisableLayerSwitch = (
@@ -387,6 +439,82 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
+  getColorLayerSpecificSettings = (
+    layerConfiguration: DatasetLayerConfiguration,
+    layerName: string,
+  ) => (
+    <Row className="margin-bottom" style={{ marginTop: 6 }}>
+      <Col span={12}>
+        <label className="setting-label">Color</label>
+      </Col>
+      <Col span={10}>
+        <ColorSetting
+          value={Utils.rgbToHex(layerConfiguration.color)}
+          onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+          className="ant-btn"
+          style={{ marginLeft: 6 }}
+        />
+      </Col>
+      <Col span={2}>
+        <Tooltip title="Invert the color of this layer.">
+          <div
+            onClick={() =>
+              this.props.onChangeLayer(
+                layerName,
+                "isInverted",
+                layerConfiguration ? !layerConfiguration.isInverted : false,
+              )
+            }
+            style={{
+              position: "absolute",
+              top: 0,
+              right: -2,
+              marginTop: 0,
+              display: "inline-flex",
+            }}
+          >
+            <i
+              className={classnames("fas", "fa-adjust", {
+                "flip-horizontally": layerConfiguration.isInverted,
+              })}
+              style={{
+                margin: 0,
+                transition: "transform 0.5s ease 0s",
+                color: layerConfiguration.isInverted
+                  ? "var(--ant-primary)"
+                  : "var(--ant-text-secondary)",
+              }}
+            />
+          </div>
+        </Tooltip>
+      </Col>
+    </Row>
+  );
+
+  getVolumeAnnotationSpecificSettings = () => {
+    const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
+    const { tracing } = this.props;
+
+    const segmentationOpacitySetting = (
+      <NumberSliderSetting
+        label={settings.segmentationPatternOpacity}
+        min={0}
+        max={100}
+        step={1}
+        value={this.props.datasetConfiguration.segmentationPatternOpacity}
+        onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+      />
+    );
+
+    return (
+      <div>
+        {segmentationOpacitySetting}
+        {!isPublicViewMode && tracing.volume != null ? this.maybeGetAutoBrushUi() : null}
+        <MappingSettingsView />
+      </div>
+    );
+  };
+
   getLayerSettings = (
     layerName: string,
     layerConfiguration: ?DatasetLayerConfiguration,
@@ -419,79 +547,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
-            {!isColorLayer && (
-              <NumberSliderSetting
-                label={settings.segmentationPatternOpacity}
-                min={0}
-                max={100}
-                step={1}
-                value={this.props.datasetConfiguration.segmentationPatternOpacity}
-                onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
-              />
-            )}
-            {isColorLayer ? (
-              <Row className="margin-bottom" style={{ marginTop: 6 }}>
-                <Col span={12}>
-                  <label className="setting-label">Color</label>
-                </Col>
-                <Col span={10}>
-                  <ColorSetting
-                    value={Utils.rgbToHex(layerConfiguration.color)}
-                    onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-                    className="ant-btn"
-                    style={{ marginLeft: 6 }}
-                  />
-                </Col>
-                <Col span={2}>
-                  <Tooltip title="Invert the color of this layer.">
-                    <div
-                      onClick={() =>
-                        this.props.onChangeLayer(
-                          layerName,
-                          "isInverted",
-                          layerConfiguration ? !layerConfiguration.isInverted : false,
-                        )
-                      }
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        right: -9,
-                        marginTop: 0,
-                        display: "inline-flex",
-                      }}
-                    >
-                      <i
-                        className={classnames("fas", "fa-adjust", {
-                          "flip-horizontally": layerConfiguration.isInverted,
-                        })}
-                        style={{
-                          margin: 0,
-                          transition: "transform 0.5s ease 0s",
-                          color: layerConfiguration.isInverted
-                            ? "var(--ant-primary)"
-                            : "var(--ant-text-secondary)",
-                        }}
-                      />
-                    </div>
-                  </Tooltip>
-                </Col>
-              </Row>
-            ) : (
-              <SwitchSetting
-                label={settings.highlightHoveredCellId}
-                value={this.props.datasetConfiguration.highlightHoveredCellId}
-                onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
-              />
-            )}
+            {isColorLayer
+              ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
+              : this.getVolumeAnnotationSpecificSettings()}
           </div>
         )}
       </div>
     );
-  };
-
-  onChangeGpuFactor = (gpuFactor: number) => {
-    Toast.warning("Please reload the page to allow the changes to take effect.");
-    this.props.onChangeUser("gpuMemoryFactor", gpuFactor);
   };
 
   handleFindData = async (layerName: string, isDataLayer: boolean) => {
@@ -564,18 +626,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     Toast.success("Successfully reloaded data of all layers.");
   };
 
-  renderPanelHeader = (hasInvisibleLayers: boolean) =>
-    hasInvisibleLayers ? (
-      <span>
-        Layers
-        <Tooltip title="Not all layers are currently visible.">
-          <ExclamationCircleOutlined style={{ marginLeft: 16, color: "coral" }} />
-        </Tooltip>
-      </span>
-    ) : (
-      "Layers"
-    );
-
   getVolumeMagsToDownsample = (): Array<Vector3> => {
     if (this.props.task != null) {
       return [];
@@ -632,6 +682,105 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
+  getSkeletonLayer = () => {
+    const {
+      controlMode,
+      tracing,
+      onChangeRadius,
+      userConfiguration,
+      onChangeShowSkeletons,
+    } = this.props;
+    const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
+
+    if (isPublicViewMode || tracing.skeleton == null) {
+      return null;
+    }
+    const skeletonTracing = enforceSkeletonTracing(tracing);
+    const { showSkeletons } = skeletonTracing;
+    const activeNodeRadius = getActiveNode(skeletonTracing)
+      .map(activeNode => activeNode.radius)
+      .getOrElse(0);
+
+    return (
+      <React.Fragment>
+        <Tooltip
+          title={showSkeletons ? "Hide all Skeletons" : "Show all skeletons"}
+          placement="top"
+        >
+          {/* This div is necessary for the tooltip to be displayed */}
+          <div style={{ display: "inline-block", marginRight: 8 }}>
+            <Switch
+              size="small"
+              onChange={() => onChangeShowSkeletons(!showSkeletons)}
+              checked={showSkeletons}
+            />
+          </div>
+        </Tooltip>
+        <span style={{ fontWeight: 700, wordWrap: "break-word" }}>Skeletons</span>
+        {showSkeletons ? (
+          <React.Fragment>
+            <LogSliderSetting
+              label={settings.nodeRadius}
+              min={userSettings.nodeRadius.minimum}
+              max={userSettings.nodeRadius.maximum}
+              roundTo={0}
+              value={activeNodeRadius}
+              onChange={onChangeRadius}
+              disabled={userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
+            />
+            <NumberSliderSetting
+              label={
+                userConfiguration.overrideNodeRadius
+                  ? settings.particleSize
+                  : `Min. ${settings.particleSize}`
+              }
+              min={userSettings.particleSize.minimum}
+              max={userSettings.particleSize.maximum}
+              step={0.1}
+              roundTo={1}
+              value={userConfiguration.particleSize}
+              onChange={this.onChangeUser.particleSize}
+            />
+            {this.props.isArbitraryMode ? (
+              <NumberSliderSetting
+                label={settings.clippingDistanceArbitrary}
+                min={userSettings.clippingDistanceArbitrary.minimum}
+                max={userSettings.clippingDistanceArbitrary.maximum}
+                value={userConfiguration.clippingDistanceArbitrary}
+                onChange={this.onChangeUser.clippingDistanceArbitrary}
+              />
+            ) : (
+              <LogSliderSetting
+                label={settings.clippingDistance}
+                roundTo={3}
+                min={userSettings.clippingDistance.minimum}
+                max={userSettings.clippingDistance.maximum}
+                value={userConfiguration.clippingDistance}
+                onChange={this.onChangeUser.clippingDistance}
+              />
+            )}
+            <SwitchSetting
+              label={settings.overrideNodeRadius}
+              value={userConfiguration.overrideNodeRadius}
+              onChange={this.onChangeUser.overrideNodeRadius}
+            />
+            <SwitchSetting
+              label={settings.centerNewNode}
+              value={userConfiguration.centerNewNode}
+              onChange={this.onChangeUser.centerNewNode}
+              tooltipText="When disabled, the active node will not be centered after node creation/deletion."
+            />
+            <SwitchSetting
+              label={settings.highlightCommentedNodes}
+              value={userConfiguration.highlightCommentedNodes}
+              onChange={this.onChangeUser.highlightCommentedNodes}
+            />{" "}
+          </React.Fragment>
+        ) : null}
+      </React.Fragment>
+    );
+  };
+
   showDownsampleVolumeModal = () => {
     this.setState({ isDownsampleVolumeModalVisible: true });
   };
@@ -649,92 +798,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });
-    const hasInvisibleLayers =
-      Object.keys(layers).find(
-        layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
-      ) != null;
     return (
-      <Collapse
-        bordered={false}
-        defaultActiveKey={["1", "2", "3", "4"]}
-        className="tracing-settings-menu"
-      >
-        <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
-          {layerSettings}
-        </Panel>
-        <Panel header="Data Rendering" key="3">
-          <DropdownSetting
-            label={
-              <React.Fragment>
-                {settings.gpuMemoryFactor}{" "}
-                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
-            }
-            value={(
-              this.props.userConfiguration.gpuMemoryFactor || constants.DEFAULT_GPU_MEMORY_FACTOR
-            ).toString()}
-            onChange={this.onChangeGpuFactor}
-            options={getGpuFactorsWithLabels().map(([factor, label]) => ({
-              label,
-              value: factor.toString(),
-            }))}
-          />
-          <DropdownSetting
-            label={
-              <React.Fragment>
-                {settings.loadingStrategy}{" "}
-                <Tooltip title={settings.loadingStrategyDescription}>
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
-            }
-            value={this.props.datasetConfiguration.loadingStrategy}
-            onChange={_.partial(this.props.onChange, "loadingStrategy")}
-            options={[
-              { value: "BEST_QUALITY_FIRST", label: "Best quality first" },
-              { value: "PROGRESSIVE_QUALITY", label: "Progressive quality" },
-            ]}
-          />
-          <SwitchSetting
-            label={
-              <React.Fragment>
-                {settings.fourBit}{" "}
-                <Tooltip title="Decrease size of transferred data by half using lossy compression. Recommended for poor and/or capped Internet connections.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
-            }
-            value={this.props.datasetConfiguration.fourBit}
-            onChange={_.partial(this.props.onChange, "fourBit")}
-          />
-          {constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
-            <SwitchSetting
-              label={settings.interpolation}
-              value={this.props.datasetConfiguration.interpolation}
-              onChange={_.partial(this.props.onChange, "interpolation")}
-            />
-          )}
-          <SwitchSetting
-            label={
-              <React.Fragment>
-                {settings.renderMissingDataBlack}{" "}
-                <Tooltip title="If disabled, missing data will be rendered by using poorer resolutions.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
-            }
-            value={this.props.datasetConfiguration.renderMissingDataBlack}
-            onChange={this.onChangeRenderMissingDataBlack}
-          />
-        </Panel>
+      <div className="tracing-settings-menu">
+        {layerSettings}
+        {this.getSkeletonLayer()}
         <DownsampleVolumeModal
           visible={this.state.isDownsampleVolumeModalVisible}
           hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
           magsToDownsample={this.getVolumeMagsToDownsample()}
         />
-      </Collapse>
+      </div>
     );
   }
 }
@@ -742,11 +815,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
-  viewMode: state.temporaryConfiguration.viewMode,
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
   tracing: state.tracing,
   task: state.task,
+  controlMode: state.temporaryConfiguration.controlMode,
+  isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
+  isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -759,8 +834,17 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeLayer(layerName, propertyName, value) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
+  onChangeRadius(radius: number) {
+    dispatch(setNodeRadiusAction(radius));
+  },
   onSetPosition(position) {
     dispatch(setPositionAction(position));
+  },
+  onChangeEnableAutoBrush(active: boolean) {
+    dispatch(updateTemporarySettingAction("isAutoBrushEnabled", active));
+  },
+  onChangeShowSkeletons(showSkeletons: boolean) {
+    dispatch(setShowSkeletonsAction(showSkeletons));
   },
   onZoomToResolution(resolution) {
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);

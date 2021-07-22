@@ -1,6 +1,6 @@
 // @flow
 
-import { Button } from "antd";
+import { Button, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
@@ -9,6 +9,7 @@ type ButtonComponentProp = {
   faIcon?: string,
   loading?: boolean,
   children?: React.Node,
+  title?: React.Node,
 };
 
 /*
@@ -31,13 +32,14 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
   };
 
   render() {
-    const { children, faIcon, ...restProps } = this.props;
-    return (
+    const { children, faIcon, title, ...restProps } = this.props;
+    const button = (
       <Button {...restProps} onClick={this.handleClick}>
         {faIcon != null && !this.props.loading ? <i className={faIcon} /> : null}
         {children}
       </Button>
     );
+    return title != null ? <Tooltip title={title}>{button}</Tooltip> : button;
   }
 }
 

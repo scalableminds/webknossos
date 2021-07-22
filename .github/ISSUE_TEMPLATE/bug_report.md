@@ -21,14 +21,16 @@ assignees: ''
 <!-- If the bug is hard to reproduce check the following: -->
 - [ ] Cannot reproduce the bug anymore / needs deeper investigation.
 <!--- If you can reproduce the bug, provide a list of actions to reproduce the bug. -->
+
 1.
 2.
 3.
 4.
 
-
 ## Your Environment for bug
 <!--- In what environment did the bug occur? -->
-* Browser name and version: e.g. Chrome 39
-* Operating System and version: e.g. Windows 10
-* Version of WebKnossos (Release or Commit):
+- Browser name and version: e.g. Chrome 39
+- Operating System and version: e.g. Windows 10
+- Version of WebKnossos (Release or Commit):
+- [ ] Specific to long-running jobs (set `jobsEnabled=true` in `application.conf`)
+- [ ] Specific to webKnossos.org (set `isDemoInstance=true` in `application.conf`)

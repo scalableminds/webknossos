@@ -25,7 +25,7 @@ import type {
   TreeGroup,
   BoundingBoxObject,
 } from "oxalis/store";
-import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";

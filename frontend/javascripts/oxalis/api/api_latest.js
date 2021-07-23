@@ -51,6 +51,7 @@ import {
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
+  getSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -80,7 +81,12 @@ import {
   setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { refreshIsosurfacesAction } from "oxalis/model/actions/annotation_actions";
+import {
+  updateCurrentMeshFileAction,
+  refreshIsosurfacesAction,
+  updateIsosurfaceVisibilityAction,
+  removeIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateUserSettingAction,
@@ -114,6 +120,12 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+  getIdForPosition,
+} from "oxalis/view/right-border-tabs/meshes_view_helper";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -1377,6 +1389,80 @@ class DataApi {
         Store.dispatch(updateDatasetSettingAction(key, value));
       }
     }
+  }
+
+  /**
+   *
+   */
+  async getAvailableMeshFiles(): Promise<Array<string>> {
+    const state = Store.getState();
+    const { dataset } = state;
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+
+    return maybeFetchMeshFiles(segmentationLayer, dataset, true);
+  }
+
+  /**
+   *
+   */
+  getActiveMeshFile(): ?string {
+    return Store.getState().currentMeshFile;
+  }
+
+  /**
+   *
+   */
+  setActiveMeshFile(meshFile: ?string) {
+    if (meshFile == null) {
+      Store.dispatch(updateCurrentMeshFileAction(meshFile));
+      return;
+    }
+    const state = Store.getState();
+    if (state.availableMeshFiles == null || !state.availableMeshFiles.includes(meshFile)) {
+      throw new Error(
+        `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
+          state.availableMeshFiles || []
+        ).join(", ")}`,
+      );
+    }
+
+    Store.dispatch(updateCurrentMeshFileAction(meshFile));
+  }
+
+  /**
+   *
+   */
+  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3) {
+    const state = Store.getState();
+    const { currentMeshFile, dataset } = state;
+    if (currentMeshFile == null) {
+      throw new Error(
+        "No mesh file was activated. Please call `api.data.setActiveMeshFile` first (use `api.data.getAvailableMeshFiles` to retrieve candidates).",
+      );
+    }
+
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+    if (!segmentationLayer) {
+      throw new Error("No segmentation layer was found.");
+    }
+    await loadMeshFromFile(segmentId, seedPosition, currentMeshFile, segmentationLayer, dataset);
+  }
+
+  /**
+   *
+   */
+  computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
+    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
+  }
+
+  setMeshVisibility(segmentId: number, isVisible: boolean) {
+    if (Store.getState().isosurfaces[segmentId] != null) {
+      Store.dispatch(updateIsosurfaceVisibilityAction(segmentId, isVisible));
+    }
+  }
+
+  removeMesh(segmentId: number) {
+    Store.dispatch(removeIsosurfaceAction(segmentId));
   }
 }
 

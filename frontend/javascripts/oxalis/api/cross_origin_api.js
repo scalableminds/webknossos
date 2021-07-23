@@ -45,6 +45,23 @@ const onMessage = event => {
       }
       break;
     }
+    case "loadPrecomputedMesh": {
+      const segmentId = args[0];
+      const seedPosition = args[1];
+      api.data.loadPrecomputedMesh(segmentId, seedPosition);
+      break;
+    }
+    case "setMeshVisibility": {
+      const segmentId = args[0];
+      const isVisible = args[1];
+      api.data.setMeshVisibility(segmentId, isVisible);
+      break;
+    }
+    case "removeMesh": {
+      const segmentId = args[0];
+      api.data.removeMesh(segmentId);
+      break;
+    }
     default: {
       console.warn("Unsupported cross origin API command.");
     }

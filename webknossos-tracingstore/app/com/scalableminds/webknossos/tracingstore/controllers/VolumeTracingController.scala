@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TSRemoteWebKnossosClient}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -25,7 +25,7 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val webKnossosServer: TracingStoreWkRpcClient,
+                                        val remoteWebKnossosClient: TSRemoteWebKnossosClient,
                                         val accessTokenService: TracingStoreAccessTokenService,
                                         val slackNotificationService: SlackNotificationService)(
     implicit val ec: ExecutionContext,

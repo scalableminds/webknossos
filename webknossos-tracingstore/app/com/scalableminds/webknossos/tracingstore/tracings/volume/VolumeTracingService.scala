@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.services.{
   IsosurfaceService,
   IsosurfaceServiceHolder
 }
-import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TSRemoteWebKnossosClient}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
@@ -40,7 +40,7 @@ import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val tracingStoreWkRpcClient: TracingStoreWkRpcClient,
+    val tracingStoreWkRpcClient: TSRemoteWebKnossosClient,
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val volumeDataCache: TemporaryVolumeDataStore,

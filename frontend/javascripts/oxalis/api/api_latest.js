@@ -1391,7 +1391,10 @@ class DataApi {
   }
 
   /**
+   * Retrieve a list of available precomputed mesh files.
    *
+   * @example
+   * const availableMeshFileNames = api.data.getAvailableMeshFiles();
    */
   async getAvailableMeshFiles(): Promise<Array<string>> {
     const state = Store.getState();
@@ -1402,14 +1405,23 @@ class DataApi {
   }
 
   /**
+   * Get currently active mesh file (might be null).
    *
+   * @example
+   * const activeMeshFile = api.data.getActiveMeshFile();
    */
   getActiveMeshFile(): ?string {
     return Store.getState().currentMeshFile;
   }
 
   /**
+   * Set currently active mesh file (can be set to null).
    *
+   * @example
+   * const availableMeshFileNames = api.data.getAvailableMeshFiles();
+   * if (availableMeshFileNames.length > 0) {
+   *   api.data.setActiveMeshFile(availableMeshFileNames[0]);
+   * }
    */
   setActiveMeshFile(meshFile: ?string) {
     if (meshFile == null) {
@@ -1429,7 +1441,16 @@ class DataApi {
   }
 
   /**
+   * If a mesh file is active, loadPrecomputedMesh can be used to load a mesh for a given segment at a given seed position.
+   * If there is no mesh file for the dataset's segmentation layer available, you can use api.data.computeMeshOnDemand instead.
    *
+   * @example
+   * const currentPosition = api.tracing.getCameraPosition();
+   * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
+   * const availableMeshFiles = await api.data.getAvailableMeshFiles();
+   * api.data.setActiveMeshFile(availableMeshFiles[0]);
+   *
+   * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
   async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3) {
     const state = Store.getState();
@@ -1448,20 +1469,39 @@ class DataApi {
   }
 
   /**
+   * Load a mesh for a given segment id and a seed position by computing it ad-hoc.
    *
+   * @example
+   * const currentPosition = api.tracing.getCameraPosition();
+   * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
+   * api.tracing.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
     Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
   }
 
+  /**
+   * Set the visibility for a loaded mesh by providing the corresponding segment id.
+   *
+   * @example
+   * api.tracing.setMeshVisibility(segmentId, false);
+   */
   setMeshVisibility(segmentId: number, isVisible: boolean) {
     if (Store.getState().isosurfaces[segmentId] != null) {
       Store.dispatch(updateIsosurfaceVisibilityAction(segmentId, isVisible));
     }
   }
 
+  /**
+   * Remove the mesh for a given segment.
+   *
+   * @example
+   * api.tracing.removeMesh(segmentId);
+   */
   removeMesh(segmentId: number) {
-    Store.dispatch(removeIsosurfaceAction(segmentId));
+    if (Store.getState().isosurfaces[segmentId] != null) {
+      Store.dispatch(removeIsosurfaceAction(segmentId));
+    }
   }
 }
 

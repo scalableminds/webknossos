@@ -123,7 +123,6 @@ import UserLocalStorage from "libs/user_local_storage";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-  getIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
@@ -1399,7 +1398,7 @@ class DataApi {
     const { dataset } = state;
     const segmentationLayer = getSegmentationLayer(state.dataset);
 
-    return maybeFetchMeshFiles(segmentationLayer, dataset, true);
+    return maybeFetchMeshFiles(segmentationLayer, dataset, true, false);
   }
 
   /**

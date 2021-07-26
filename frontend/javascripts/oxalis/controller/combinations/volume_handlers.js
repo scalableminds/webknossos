@@ -57,7 +57,7 @@ export function handlePickCell(pos: Point2) {
 export function getSegmentIdForPosition(globalPos: Vector3) {
   const layer = Model.getSegmentationLayer();
   if (!layer) {
-    throw new Error("No segmentation layer found");
+    return 0;
   }
   const segmentationCube = layer.cube;
   const segmentationLayerName = layer.name;

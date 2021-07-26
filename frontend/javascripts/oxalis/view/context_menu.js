@@ -140,6 +140,10 @@ function getMaybeHoveredCellMenuItem(globalPosition: Vector3) {
   );
 }
 
+function positionToString(pos: Vector3): string {
+  return pos.map(value => roundTo(value, 2)).join(", ");
+}
+
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
@@ -383,9 +387,7 @@ function ContextMenu(props: Props) {
         ]
       : null;
   const nodePositionAsString =
-    nodeContextMenuNode != null
-      ? nodeContextMenuNode.position.map(value => roundTo(value, 2)).join(", ")
-      : "";
+    nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
 
   const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
 
@@ -403,6 +405,14 @@ function ContextMenu(props: Props) {
       <div key="positionInfo" className="node-context-menu-item">
         Position: {nodePositionAsString}
         {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
+      </div>,
+    );
+  } else {
+    const positionAsString = positionToString(globalPosition);
+    infoRows.push(
+      <div key="positionInfo" className="node-context-menu-item">
+        Position: {positionAsString}
+        {copyIconWithTooltip(positionAsString, "Copy position")}
       </div>,
     );
   }

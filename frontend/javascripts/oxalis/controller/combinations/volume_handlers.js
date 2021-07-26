@@ -19,6 +19,7 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import api from "oxalis/api/internal_api";
+import window from "libs/window";
 
 // TODO: Build proper UI for this
 window.isAutomaticBrushEnabled = false;

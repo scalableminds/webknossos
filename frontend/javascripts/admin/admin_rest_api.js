@@ -838,6 +838,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     annotationType: job.commandArgs.kwargs.annotation_type,
     state: adaptJobState(job.command, job.celeryInfo.state, job.manualState),
     manualState: job.manualState,
+    result: job.celeryInfo.result,
     createdAt: job.created,
   }));
 }

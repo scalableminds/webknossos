@@ -644,6 +644,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             </FormItem>
           </Form>
         </CardContainer>
+
         {this.getUploadModal()}
       </div>
     );

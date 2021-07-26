@@ -12,7 +12,7 @@ import * as Utils from "libs/utils";
 import { useSelector } from "react-redux";
 
 type Props = {
-  destroy: () => void,
+  handleClose: () => void,
   tracing: ?Tracing,
   dataset: APIDataset,
   boundingBox: BoundingBoxType,
@@ -32,7 +32,7 @@ type LayerInfos = {
   isColorLayer: ?boolean,
 };
 
-const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Props) => {
+const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: Props) => {
   const [startedExports, setStartedExports] = useState([]);
   const volumeTracing = tracing != null ? tracing.volume : null;
   const annotationId = tracing != null ? tracing.annotationId : null;
@@ -49,10 +49,6 @@ const ExportBoundingBoxModal = ({ destroy, dataset, boundingBox, tracing }: Prop
     state => state.temporaryConfiguration.isMergerModeEnabled,
   );
   const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
-
-  const handleClose = () => {
-    destroy();
-  };
 
   const exportKey = (layerInfos: LayerInfos) =>
     (layerInfos.layerName || "") + (layerInfos.tracingId || "");

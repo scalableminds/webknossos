@@ -37,8 +37,8 @@ import features from "features";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-  getSegmentIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";

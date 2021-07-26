@@ -19,11 +19,13 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import { handleFloodFillFromGlobalPosition } from "oxalis/controller/combinations/volume_handlers";
+import {
+  getSegmentIdForPosition,
+  handleFloodFillFromGlobalPosition,
+} from "oxalis/controller/combinations/volume_handlers";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-  getSegmentIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";

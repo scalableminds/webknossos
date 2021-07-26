@@ -15,8 +15,6 @@ import {
   setActiveCellAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutionInfoOfSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";

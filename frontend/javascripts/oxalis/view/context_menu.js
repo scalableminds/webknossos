@@ -18,15 +18,12 @@ import {
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
-import {
-  getCellFromGlobalPosition,
-  handlePickCellFromGlobalPosition,
-  handleFloodFillFromGlobalPosition,
-} from "oxalis/controller/combinations/volume_handlers";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { handleFloodFillFromGlobalPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-  getIdForPosition,
+  getSegmentIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
@@ -58,6 +55,7 @@ type DispatchProps = {|
   setActiveNode: number => void,
   hideTree: number => void,
   createTree: () => void,
+  setActiveCell: number => void,
 |};
 
 type StateProps = {|
@@ -77,7 +75,7 @@ type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
 type NoNodeContextMenuProps = {|
   ...Props,
-  cellIdAtPosition: number,
+  segmentIdAtPosition: number,
   isSkeletonToolActive: boolean,
 |};
 
@@ -235,10 +233,11 @@ function NoNodeContextMenuOptions({
   globalPosition,
   viewport,
   createTree,
-  cellIdAtPosition,
+  segmentIdAtPosition,
   segmentationLayer,
   dataset,
   currentMeshFile,
+  setActiveCell,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
     (async () => {
@@ -250,7 +249,7 @@ function NoNodeContextMenuOptions({
     if (!currentMeshFile) return;
 
     if (segmentationLayer) {
-      const id = getIdForPosition(globalPosition);
+      const id = getSegmentIdForPosition(globalPosition);
       if (id === 0) {
         Toast.info("No segment found at the clicked position");
         return;
@@ -297,13 +296,15 @@ function NoNodeContextMenuOptions({
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          cellIdAtPosition > 0 ? (
+          segmentIdAtPosition > 0 ? (
             <Menu.Item
               className="node-context-menu-item"
               key="select-cell"
-              onClick={() => handlePickCellFromGlobalPosition(globalPosition)}
+              onClick={() => {
+                setActiveCell(segmentIdAtPosition);
+              }}
             >
-              Select Segment ({cellIdAtPosition})
+              Select Segment ({segmentIdAtPosition})
             </Menu.Item>
           ) : null,
           loadMeshItem,
@@ -384,7 +385,7 @@ function ContextMenu(props: Props) {
       ? nodeContextMenuNode.position.map(value => roundTo(value, 2)).join(", ")
       : "";
 
-  const cellIdAtPosition = getCellFromGlobalPosition(globalPosition);
+  const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
 
   const infoRows = [];
 
@@ -414,11 +415,12 @@ function ContextMenu(props: Props) {
     );
   }
 
-  if (cellIdAtPosition > 0) {
+  if (segmentIdAtPosition > 0) {
     infoRows.push(
       <div key="copy-cell" className="node-context-menu-item">
         <div className="cell-context-icon" alt="Segment Icon" />
-        Segment ID: {cellIdAtPosition} {copyIconWithTooltip(cellIdAtPosition, "Copy Segment ID")}
+        Segment ID: {segmentIdAtPosition}{" "}
+        {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
       </div>,
     );
   }
@@ -444,7 +446,7 @@ function ContextMenu(props: Props) {
         <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ isSkeletonToolActive, cellIdAtPosition, ...props })}
+          : NoNodeContextMenuOptions({ isSkeletonToolActive, segmentIdAtPosition, ...props })}
 
         <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
         {infoRows}
@@ -471,6 +473,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   createTree() {
     dispatch(createTreeAction());
+  },
+  setActiveCell(segmentId: number) {
+    dispatch(setActiveCellAction(segmentId));
   },
 });
 

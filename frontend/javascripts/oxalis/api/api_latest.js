@@ -1474,7 +1474,7 @@ class DataApi {
    * @example
    * const currentPosition = api.tracing.getCameraPosition();
    * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
-   * api.tracing.computeMeshOnDemand(segmentId, currentPosition);
+   * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
     Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
@@ -1484,7 +1484,7 @@ class DataApi {
    * Set the visibility for a loaded mesh by providing the corresponding segment id.
    *
    * @example
-   * api.tracing.setMeshVisibility(segmentId, false);
+   * api.data.setMeshVisibility(segmentId, false);
    */
   setMeshVisibility(segmentId: number, isVisible: boolean) {
     if (Store.getState().isosurfaces[segmentId] != null) {
@@ -1496,7 +1496,7 @@ class DataApi {
    * Remove the mesh for a given segment.
    *
    * @example
-   * api.tracing.removeMesh(segmentId);
+   * api.data.removeMesh(segmentId);
    */
   removeMesh(segmentId: number) {
     if (Store.getState().isosurfaces[segmentId] != null) {

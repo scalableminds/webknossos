@@ -15,11 +15,11 @@ import {
   setActiveCellAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutionInfoOfSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import api from "oxalis/api/internal_api";
+import window from "libs/window";
 
 // TODO: Build proper UI for this
 window.isAutomaticBrushEnabled = false;
@@ -55,23 +55,27 @@ export function handlePickCell(pos: Point2) {
   return handlePickCellFromGlobalPosition(globalPos);
 }
 
-export function getCellFromGlobalPosition(globalPos: Vector3): number {
-  const segmentation = Model.getSegmentationLayer();
-  if (!segmentation) {
+export function getSegmentIdForPosition(globalPos: Vector3) {
+  const layer = Model.getSegmentationLayer();
+  if (!layer) {
+    return 0;
+  }
+  const segmentationCube = layer.cube;
+  const segmentationLayerName = layer.name;
+
+  if (!segmentationLayerName) {
     return 0;
   }
 
-  const storeState = Store.getState();
-  const logZoomStep = getRequestLogZoomStep(storeState);
-  const resolutionInfo = getResolutionInfoOfSegmentationLayer(storeState.dataset);
-  const existingZoomStep = resolutionInfo.getClosestExistingIndex(logZoomStep);
-
-  const cellId = segmentation.cube.getMappedDataValue(globalPos, existingZoomStep);
-  return cellId;
+  const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+    segmentationLayerName,
+    globalPos,
+  );
+  return segmentationCube.getMappedDataValue(globalPos, renderedZoomStepForCameraPosition);
 }
 
 export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
-  const cellId = getCellFromGlobalPosition(globalPos);
+  const cellId = getSegmentIdForPosition(globalPos);
   if (cellId > 0) {
     Store.dispatch(setActiveCellAction(cellId));
   }

@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a route to call new webknossos-worker job for nuclei inferral. [#5626](https://github.com/scalableminds/webknossos/pull/5626)
 
 ### Changed
-- 
+- Improved context menu for interactions with segmentation data which wasn't loaded completely, yet. [#5637](https://github.com/scalableminds/webknossos/pull/5637)
 
 ### Fixed
 -

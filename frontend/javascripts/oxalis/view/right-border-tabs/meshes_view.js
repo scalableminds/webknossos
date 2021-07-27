@@ -37,8 +37,8 @@ import features from "features";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-  getIdForPosition,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -368,7 +368,7 @@ class MeshesView extends React.Component<Props, State> {
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
-          const id = getIdForPosition(pos);
+          const id = getSegmentIdForPosition(pos);
           if (id === 0) {
             Toast.info("No segment found at centered position");
           }
@@ -383,7 +383,7 @@ class MeshesView extends React.Component<Props, State> {
 
     const loadPrecomputedMesh = async () => {
       const pos = getPosition(this.props.flycam);
-      const id = getIdForPosition(pos);
+      const id = getSegmentIdForPosition(pos);
       if (id === 0) {
         Toast.info("No segment found at centered position");
         return;
@@ -500,7 +500,7 @@ class MeshesView extends React.Component<Props, State> {
     const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
       const isCenteredCell = hasSegmentation
-        ? getIdForPosition(getPosition(this.props.flycam))
+        ? getSegmentIdForPosition(getPosition(this.props.flycam))
         : false;
       const isHoveredItem = segmentId === this.state.hoveredListItem;
       const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";

@@ -18,7 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved context menu for interactions with segmentation data which wasn't loaded completely, yet. [#5637](https://github.com/scalableminds/webknossos/pull/5637)
 
 ### Fixed
--
+- Fix that active segment and node id were not shown in status bar when being in a non-hybrid annotation. [#5638](https://github.com/scalableminds/webknossos/pull/5638)
 
 ### Removed
 -

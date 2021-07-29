@@ -232,7 +232,8 @@ function DatasetView(props: Props) {
           <Row key={job.id} gutter={16}>
             <Col span={10}>
               <Tooltip title={`Status: ${job.state}`}>{stateToIcon[job.state]}</Tooltip>
-              {` ${job.datasetName || "UNKNOWN"} (`}<FormattedDate timestamp={job.createdAt} />)
+              {` ${job.datasetName || "UNKNOWN"} (`}
+              <FormattedDate timestamp={job.createdAt} />)
             </Col>
           </Row>
         ))}

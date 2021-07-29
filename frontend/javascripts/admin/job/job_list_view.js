@@ -123,6 +123,20 @@ class JobListView extends React.PureComponent<Props, State> {
           </Link>{" "}
         </span>
       );
+    } else if (
+      job.type === "infer_nuclei" &&
+      job.organizationName &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Nuclei inferral for layer {job.layerName} of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
     } else {
       return <span>{job.type}</span>;
     }
@@ -151,6 +165,20 @@ class JobListView extends React.PureComponent<Props, State> {
               <DownOutlined />
               Download
             </a>
+          )}
+        </span>
+      );
+    } else if (job.type === "infer_nuclei") {
+      return (
+        <span>
+          {job.state === "SUCCESS" && job.result && this.props.activeUser && (
+            <Link
+              to={`/datasets/${this.props.activeUser.organization}/${job.result}/view`}
+              title="View Segmentation"
+            >
+              <EyeOutlined />
+              View
+            </Link>
           )}
         </span>
       );

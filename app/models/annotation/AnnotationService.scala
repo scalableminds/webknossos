@@ -110,7 +110,7 @@ class AnnotationService @Inject()(
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Point3D] = None,
       startRotation: Option[Vector3D] = None,
-      resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty
+      resolutionRestrictions: ResolutionRestrictions
   ): Fox[VolumeTracing] = {
     val resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)

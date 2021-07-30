@@ -1,7 +1,7 @@
 // @flow
-import { Dropdown, Menu, Tooltip } from "antd";
+import { Menu, Tooltip } from "antd";
 import {
-  DownOutlined,
+  EllipsisOutlined,
   EyeOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
@@ -22,86 +22,23 @@ import {
 import Toast from "libs/toast";
 import messages from "messages";
 
-const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) => {
-  if (!maybeUnimportedDataset.isActive) {
-    // The dataset isn't imported. This menu won't be shown, anyway.
-    return <Menu />;
-  }
-  const dataset: APIDataset = maybeUnimportedDataset;
-
-  const buildMenuItem = (type, useFallback, label, disabled = false) => {
-    const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
-    const minRes = 2;
-    const maxRes = 4;
-    let resolutionParameters = "";
-    if (minRes != null) {
-      resolutionParameters += `?minRes=${minRes}`;
-    }
-    if (maxRes != null) {
-      resolutionParameters += minRes == null ? "?" : "&";
-      resolutionParameters += `maxRes=${maxRes}`;
-    }
-    return (
-      <Menu.Item key="existing">
-        <LinkWithDisabled
-          to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/${type}/${
-            useFallback ? "true" : "false"
-          }${resolutionParameters}`}
-          title={`New ${typeCapitalized} Annotation`}
-          disabled={disabled}
-        >
-          {label}
-        </LinkWithDisabled>
-      </Menu.Item>
-    );
-  };
-
-  const segmentationLayer = getSegmentationLayer(dataset);
-
-  if (segmentationLayer != null) {
-    if (doesSupportVolumeWithFallback(dataset)) {
-      return (
-        <Menu>
-          <Menu.ItemGroup title="Other Options:" />
-          {buildMenuItem("hybrid", false, "New Annotation (Without Existing Segmentation)")}
-          {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
-          <Menu.SubMenu title="New Volume-only Annotation">
-            {buildMenuItem("volume", true, "With Existing Segmentation")}
-            {buildMenuItem("volume", false, "Without Existing Segmentation")}
-          </Menu.SubMenu>
-        </Menu>
-      );
-    } else {
-      return (
-        <Menu>
-          <Menu.ItemGroup title="Other Options:" />
-          {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
-          <Menu.SubMenu title="New Volume-only Annotation">
-            {buildMenuItem("volume", true, "With existing Segmentation", true)}
-            {buildMenuItem("volume", false, "Without Existing Segmentation")}
-          </Menu.SubMenu>
-        </Menu>
-      );
-    }
-  } else {
-    return (
-      <Menu>
-        <Menu.ItemGroup title="Other Options:" />
-        {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
-        {buildMenuItem("volume", true, "New Volume-only Annotation")}
-      </Menu>
-    );
-  }
-};
+import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 
 const disabledStyle = { pointerEvents: "none", color: "var(--ant-disabled)" };
 function getDisabledWhenReloadingStyle(isReloading) {
   return isReloading ? disabledStyle : null;
 }
 
-function NewAnnotationLink({ dataset, isReloading }) {
-  const newTracingMenu = getNewTracingMenu(dataset);
+function NewAnnotationLink({
+  dataset,
+  isReloading,
+  showCreateExplorativeModal,
+  onShowCreateExplorativeModal,
+  onCloseCreateExplorativeModal,
+}) {
   const withFallback = doesSupportVolumeWithFallback(dataset) ? "true" : "false";
+
+  console.log("showCreateExplorativeModal:", showCreateExplorativeModal);
 
   return (
     <React.Fragment>
@@ -127,11 +64,16 @@ function NewAnnotationLink({ dataset, isReloading }) {
           >
             |
           </span>
-          <Dropdown overlay={newTracingMenu}>
-            <a className="ant-dropdown-link" onClick={e => e.preventDefault()}>
-              <DownOutlined style={{ color: "var(--ant-link)" }} />
-            </a>
-          </Dropdown>
+          <a
+            title="New Annotation With Custom Properties"
+            className="ant-dropdown-link"
+            onClick={() => onShowCreateExplorativeModal()}
+          >
+            <EllipsisOutlined style={{ color: "var(--ant-link)" }} />
+          </a>
+          {showCreateExplorativeModal ? (
+            <CreateExplorativeModal dataset={dataset} onClose={onCloseCreateExplorativeModal} />
+          ) : null}
         </div>
       )}
     </React.Fragment>
@@ -145,6 +87,7 @@ type Props = {
 
 type State = {
   isReloading: boolean,
+  showCreateExplorativeModal: boolean,
 };
 
 function LinkWithDisabled({
@@ -177,6 +120,7 @@ function LinkWithDisabled({
 class DatasetActionView extends React.PureComponent<Props, State> {
   state = {
     isReloading: false,
+    showCreateExplorativeModal: false,
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
@@ -194,6 +138,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   render() {
     const { dataset } = this.props;
     const { isReloading } = this.state;
+    const { showCreateExplorativeModal } = this.state;
 
     const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
 
@@ -229,7 +174,17 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
             {!dataset.isForeign ? (
-              <NewAnnotationLink dataset={dataset} isReloading={isReloading} />
+              <NewAnnotationLink
+                dataset={dataset}
+                isReloading={isReloading}
+                showCreateExplorativeModal={showCreateExplorativeModal}
+                onShowCreateExplorativeModal={() =>
+                  this.setState({ showCreateExplorativeModal: true })
+                }
+                onCloseCreateExplorativeModal={() =>
+                  this.setState({ showCreateExplorativeModal: false })
+                }
+              />
             ) : (
               <p style={disabledWhenReloadingStyle}>
                 New Annotation &nbsp;

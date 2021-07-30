@@ -27,7 +27,9 @@ import oxalis.mail.{MailchimpClient, MailchimpTag}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean], resolutionRestrictions: Option[ResolutionRestrictions])
+case class CreateExplorationalParameters(typ: String,
+                                         withFallback: Option[Boolean],
+                                         resolutionRestrictions: Option[ResolutionRestrictions])
 object CreateExplorationalParameters {
   implicit val jsonFormat: OFormat[CreateExplorationalParameters] = Json.format[CreateExplorationalParameters]
 }

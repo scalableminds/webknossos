@@ -172,7 +172,10 @@ class AnnotationService @Inject()(
           client <- tracingStoreService.clientFor(dataSet)
           fallbackLayer = getFallbackLayer
           _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
-          volumeTracing <- createVolumeTracing(dataSource, organizationName, fallbackLayer, resolutionRestrictions=resolutionRestrictions)
+          volumeTracing <- createVolumeTracing(dataSource,
+                                               organizationName,
+                                               fallbackLayer,
+                                               resolutionRestrictions = resolutionRestrictions)
           volumeTracingId <- client.saveVolumeTracing(volumeTracing)
         } yield (None, Some(volumeTracingId))
       case TracingType.hybrid =>
@@ -184,15 +187,21 @@ class AnnotationService @Inject()(
             SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,
                                                         editPosition = dataSource.center,
                                                         organizationName = Some(organizationName)))
-          volumeTracing <- createVolumeTracing(dataSource, organizationName, fallbackLayer, resolutionRestrictions=resolutionRestrictions)
+          volumeTracing <- createVolumeTracing(dataSource,
+                                               organizationName,
+                                               fallbackLayer,
+                                               resolutionRestrictions = resolutionRestrictions)
           volumeTracingId <- client.saveVolumeTracing(volumeTracing)
         } yield (Some(skeletonTracingId), Some(volumeTracingId))
     }
   }
 
-  def createExplorationalFor(user: User, _dataSet: ObjectId, tracingType: TracingType.Value, withFallback: Boolean, resolutionRestrictions: ResolutionRestrictions)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Annotation] =
+  def createExplorationalFor(user: User,
+                             _dataSet: ObjectId,
+                             tracingType: TracingType.Value,
+                             withFallback: Boolean,
+                             resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext,
+                                                                             m: MessagesProvider): Fox[Annotation] =
     for {
       dataSet <- dataSetDAO.findOne(_dataSet) ?~> "dataSet.noAccessById"
       dataSource <- dataSetService.dataSourceFor(dataSet)
@@ -223,7 +232,12 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
       case TracingType.skeleton =>
-        createTracingsForExplorational(dataSet, dataSource, TracingType.volume, withFallback = true, ResolutionRestrictions.empty, organizationName).flatMap {
+        createTracingsForExplorational(dataSet,
+                                       dataSource,
+                                       TracingType.volume,
+                                       withFallback = true,
+                                       ResolutionRestrictions.empty,
+                                       organizationName).flatMap {
           case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
           case _                   => Fox.failure("unexpectedReturn")
         }

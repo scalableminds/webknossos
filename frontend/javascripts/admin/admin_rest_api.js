@@ -27,6 +27,7 @@ import {
   type APIProjectProgressReport,
   type APIProjectUpdater,
   type APIProjectWithAssignments,
+  type APIResolutionRestrictions,
   type APISampleDataset,
   type APIScript,
   type APIScriptCreator,

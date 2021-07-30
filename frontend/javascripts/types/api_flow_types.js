@@ -250,8 +250,8 @@ export type APIRestrictions = {|
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";
 
 export type APIResolutionRestrictions = {
-    min?: number,
-    max?: number,
+  min?: number,
+  max?: number,
 };
 
 export type APISettings = {|

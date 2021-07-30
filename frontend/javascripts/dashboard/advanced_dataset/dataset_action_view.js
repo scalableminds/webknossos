@@ -31,12 +31,22 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
 
   const buildMenuItem = (type, useFallback, label, disabled = false) => {
     const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+    const minRes = 2;
+    const maxRes = 4;
+    let resolutionParameters = "";
+    if (minRes != null) {
+      resolutionParameters += `?minRes=${minRes}`;
+    }
+    if (maxRes != null) {
+      resolutionParameters += minRes == null ? "?" : "&";
+      resolutionParameters += `maxRes=${maxRes}`;
+    }
     return (
       <Menu.Item key="existing">
         <LinkWithDisabled
           to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/${type}/${
             useFallback ? "true" : "false"
-          }`}
+          }${resolutionParameters}`}
           title={`New ${typeCapitalized} Annotation`}
           disabled={disabled}
         >

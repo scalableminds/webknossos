@@ -488,8 +488,22 @@ class ReactRouter extends React.Component<Props> {
                         Enum.coalesce(TracingTypeEnum, match.params.type) ||
                         TracingTypeEnum.skeleton;
                       const withFallback = match.params.withFallback === "true";
-                      const resolutionRestrictions = {min: 4, max: 8};
-                      const annotation = await createExplorational(dataset, type, withFallback, resolutionRestrictions);
+
+                      const params = Utils.getUrlParamsObjectFromString(location.search);
+
+                      const resolutionRestrictions = {};
+                      if (params.minRes !== undefined) {
+                        resolutionRestrictions.min = parseInt(params.minRes);
+                      }
+                      if (params.maxRes !== undefined) {
+                        resolutionRestrictions.max = parseInt(params.minRes);
+                      }
+                      const annotation = await createExplorational(
+                        dataset,
+                        type,
+                        withFallback,
+                        resolutionRestrictions,
+                      );
                       trackAction(`Create ${type} tracing`);
                       return `/annotations/${annotation.typ}/${annotation.id}`;
                     }}

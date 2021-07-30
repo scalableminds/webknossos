@@ -21,7 +21,7 @@ export function getDemoDatasetUrl() {
 
   // Only create a tracing on the demo instance, as the user might not be logged in there
   // otherwise.
-  const suffix = features.isDemoInstance ? "/createExplorative/hybrid/true" : "/view";
+  const suffix = features.isDemoInstance ? "/createExplorative/hybrid/true/null/null" : "/view";
   return features.publicDemoDatasetUrl + suffix;
 }
 

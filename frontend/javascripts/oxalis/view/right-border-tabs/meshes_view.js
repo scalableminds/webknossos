@@ -84,6 +84,7 @@ const mapStateToProps = (state: OxalisState): * => ({
   mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
   flycam: state.flycam,
   activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
+  hasVolume: state.tracing.volume != null,
   segmentationLayer: getSegmentationLayer(state.dataset),
   zoomStep: getRequestLogZoomStep(state),
   allowUpdate: state.tracing.restrictions.allowUpdate,
@@ -277,29 +278,43 @@ class MeshesView extends React.Component<Props, State> {
       }
     };
 
-    const getComputeMeshfileTooltip = node => (
-      <Tooltip
-        title={
-          features().jobsEnabled
-            ? "Compute a mesh file for this dataset so that meshes for segments can be loaded quickly afterwards."
-            : "The computation of mesh files is not supported by this webKnossos instance."
-        }
-      >
-        {node}
-      </Tooltip>
-    );
+    const getComputeMeshFileTooltipInfo = () => {
+      let title = "";
+      let disabled = true;
+      if (!features().jobsEnabled) {
+        title = "Computation jobs are not enabled for this webKnossos instance.";
+      } else if (this.props.hasVolume) {
+        title =
+          "Meshes cannot be computed for volume annotations. Please open this dataset in view mode to compute a mesh file";
+      } else if (this.props.segmentationLayer == null) {
+        title = "There is no segmentation layer for which a mesh file could be computed.";
+      } else {
+        title =
+          "Compute a mesh file for this dataset so that meshes for segments can be loaded quickly afterwards.";
+        disabled = false;
+      }
 
-    const getComputeMeshFileButton = () =>
-      getComputeMeshfileTooltip(
-        <Button
-          size="small"
-          loading={this.state.activeMeshJobId != null}
-          onClick={startComputingMeshfile}
-          disabled={!features().jobsEnabled}
-        >
-          Compute Mesh File
-        </Button>,
+      return {
+        disabled,
+        title,
+      };
+    };
+
+    const getComputeMeshFileButton = () => {
+      const { disabled, title } = getComputeMeshFileTooltipInfo();
+      return (
+        <Tooltip key="tooltip" title={title}>
+          <Button
+            size="small"
+            loading={this.state.activeMeshJobId != null}
+            onClick={startComputingMeshfile}
+            disabled={disabled}
+          >
+            Compute Mesh File
+          </Button>
+        </Tooltip>
       );
+    };
 
     const getDownloadButton = (segmentId: number) => (
       <Tooltip title="Download Isosurface">
@@ -458,14 +473,17 @@ class MeshesView extends React.Component<Props, State> {
       );
     };
 
-    const getHeaderDropdownMenu = () => (
-      <Menu>
-        <Menu.Item onClick={startComputingMeshfile} disabled={!features().jobsEnabled}>
-          {getComputeMeshfileTooltip("Compute Mesh File")}
-        </Menu.Item>
-        <Menu.Item>{getStlImportItem()}</Menu.Item>
-      </Menu>
-    );
+    const getHeaderDropdownMenu = () => {
+      const { disabled, title } = getComputeMeshFileTooltipInfo();
+      return (
+        <Menu>
+          <Menu.Item onClick={startComputingMeshfile} disabled={disabled}>
+            <Tooltip title={title}>Compute Mesh File</Tooltip>
+          </Menu.Item>
+          <Menu.Item>{getStlImportItem()}</Menu.Item>
+        </Menu>
+      );
+    };
 
     const getHeaderDropdownButton = () => (
       <Dropdown overlay={getHeaderDropdownMenu()}>

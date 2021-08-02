@@ -301,7 +301,7 @@ function Infos() {
       ) : null}
       {isPlaneMode ? getCellInfo(globalMousePosition) : null}
 
-      {isSkeletonAnnotation ? (
+      {isVolumeAnnotation ? (
         <span className="info-element">
           <NumberInputPopoverSetting
             value={activeCellId}
@@ -314,7 +314,7 @@ function Infos() {
           />
         </span>
       ) : null}
-      {isVolumeAnnotation ? (
+      {isSkeletonAnnotation ? (
         <span className="info-element">
           <NumberInputPopoverSetting
             value={activeNodeId}

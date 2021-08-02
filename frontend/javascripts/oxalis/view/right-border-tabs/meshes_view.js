@@ -284,13 +284,17 @@ class MeshesView extends React.Component<Props, State> {
       if (!features().jobsEnabled) {
         title = "Computation jobs are not enabled for this webKnossos instance.";
       } else if (this.props.hasVolume) {
-        title =
-          "Meshes cannot be computed for volume annotations. Please open this dataset in view mode to compute a mesh file";
+        title = (
+          <>
+            Meshes cannot be precomputed for volume annotations. However, you can open this dataset
+            in view mode to precompute meshes for the dataset&apos;s segmentation layer.
+          </>
+        );
       } else if (this.props.segmentationLayer == null) {
-        title = "There is no segmentation layer for which a mesh file could be computed.";
+        title = "There is no segmentation layer for which meshes could be precomputed.";
       } else {
         title =
-          "Compute a mesh file for this dataset so that meshes for segments can be loaded quickly afterwards.";
+          "Precompute meshes for all segments of this dataset so that meshes for segments can be loaded quickly afterwards from a mesh file.";
         disabled = false;
       }
 
@@ -300,7 +304,7 @@ class MeshesView extends React.Component<Props, State> {
       };
     };
 
-    const getComputeMeshFileButton = () => {
+    const getPrecomputeMeshesButton = () => {
       const { disabled, title } = getComputeMeshFileTooltipInfo();
       return (
         <Tooltip key="tooltip" title={title}>
@@ -310,7 +314,7 @@ class MeshesView extends React.Component<Props, State> {
             onClick={startComputingMeshfile}
             disabled={disabled}
           >
-            Compute Mesh File
+            Precompute Meshes
           </Button>
         </Tooltip>
       );
@@ -379,7 +383,7 @@ class MeshesView extends React.Component<Props, State> {
       </Upload>
     );
 
-    const getLoadMeshCellButton = () => (
+    const getLoadTemporaryMeshButton = () => (
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
@@ -392,7 +396,7 @@ class MeshesView extends React.Component<Props, State> {
         disabled={!hasSegmentation}
         size="small"
       >
-        Compute Mesh
+        Compute Mesh (ad hoc)
       </Button>
     );
 
@@ -478,7 +482,7 @@ class MeshesView extends React.Component<Props, State> {
       return (
         <Menu>
           <Menu.Item onClick={startComputingMeshfile} disabled={disabled}>
-            <Tooltip title={title}>Compute Mesh File</Tooltip>
+            <Tooltip title={title}>Precompute Meshes</Tooltip>
           </Menu.Item>
           <Menu.Item>{getStlImportItem()}</Menu.Item>
         </Menu>
@@ -499,8 +503,11 @@ class MeshesView extends React.Component<Props, State> {
         </Tooltip>
         {getHeaderDropdownButton()}
         <div className="antd-legacy-group">
-          {getLoadMeshCellButton()}
-          {this.props.currentMeshFile ? getLoadPrecomputedMeshButton() : getComputeMeshFileButton()}
+          {/* Only show option for ad-hoc computation if no mesh file is available */
+          this.props.currentMeshFile ? null : getLoadTemporaryMeshButton()}
+          {this.props.currentMeshFile
+            ? getLoadPrecomputedMeshButton()
+            : getPrecomputeMeshesButton()}
         </div>
       </React.Fragment>
     );

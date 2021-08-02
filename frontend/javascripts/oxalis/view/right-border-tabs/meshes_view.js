@@ -229,13 +229,185 @@ class MeshesView extends React.Component<Props, State> {
     this.intervalID = setTimeout(() => this.pollJobData(), refreshInterval);
   }
 
-  render() {
+  getPrecomputeMeshesTooltipInfo = () => {
+    let title = "";
+    let disabled = true;
+    if (!features().jobsEnabled) {
+      title = "Computation jobs are not enabled for this webKnossos instance.";
+    } else if (this.props.hasVolume) {
+      title =
+        this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer
+          ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
+          : "Meshes cannot be precomputed for volume annotations.";
+    } else if (this.props.segmentationLayer == null) {
+      title = "There is no segmentation layer for which meshes could be precomputed.";
+    } else {
+      title =
+        "Precompute meshes for all segments of this dataset so that meshes for segments can be loaded quickly afterwards from a mesh file.";
+      disabled = false;
+    }
+
+    return {
+      disabled,
+      title,
+    };
+  };
+
+  getComputeMeshAdHocTooltipInfo = () => {
+    let title = "";
+    let disabled = true;
+    if (this.props.hasVolume) {
+      title =
+        this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer
+          ? "Meshes cannot be computed for volume annotations. However, you can open this dataset in view mode to compute meshes for the dataset's segmentation layer."
+          : "Meshes cannot be computed for volume annotations.";
+    } else if (this.props.segmentationLayer == null) {
+      title = "There is no segmentation layer for which a mesh could be computed.";
+    } else {
+      title = "Compute mesh for the centered segment.";
+      disabled = false;
+    }
+
+    return {
+      disabled,
+      title,
+    };
+  };
+
+  getIsosurfaceList = () => {
     const hasSegmentation = Model.getSegmentationLayer() != null;
 
     const moveTo = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition, null, false));
     };
 
+    const getDownloadButton = (segmentId: number) => (
+      <Tooltip title="Download Mesh">
+        <VerticalAlignBottomOutlined
+          key="download-button"
+          onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segmentId))}
+        />
+      </Tooltip>
+    );
+    const getRefreshButton = (segmentId: number, isPrecomputed: boolean, isLoading: boolean) => {
+      if (isLoading) {
+        return (
+          <LoadingOutlined
+            key="refresh-button"
+            onClick={() => {
+              Store.dispatch(refreshIsosurfaceAction(segmentId));
+            }}
+          />
+        );
+      } else {
+        return isPrecomputed ? null : (
+          <Tooltip title="Refresh Mesh">
+            <ReloadOutlined
+              key="refresh-button"
+              onClick={() => {
+                Store.dispatch(refreshIsosurfaceAction(segmentId));
+              }}
+            />
+          </Tooltip>
+        );
+      }
+    };
+    const getDeleteButton = (segmentId: number) => (
+      <Tooltip title="Delete Mesh">
+        <DeleteOutlined
+          key="delete-button"
+          onClick={() => {
+            Store.dispatch(removeIsosurfaceAction(segmentId));
+            // reset the active mesh id so the deleted one is not reloaded immediately
+            this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
+          }}
+        />
+      </Tooltip>
+    );
+    const convertHSLAToCSSString = ([h, s, l, a]) =>
+      `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+    const convertCellIdToCSS = id =>
+      convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
+
+    const getToggleVisibilityCheckbox = (segmentId: number, isVisible: boolean) => (
+      <Tooltip title="Change visibility">
+        <Checkbox
+          checked={isVisible}
+          onChange={(event: SyntheticInputEvent<>) => {
+            this.props.onChangeVisibility(segmentId, event.target.checked);
+          }}
+        />
+      </Tooltip>
+    );
+
+    const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
+      const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
+      const isCenteredCell = hasSegmentation
+        ? getSegmentIdForPosition(getPosition(this.props.flycam))
+        : false;
+      const isHoveredItem = segmentId === this.state.hoveredListItem;
+      const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
+
+      const textStyle = isVisible ? {} : { fontStyle: "italic", color: "#989898" };
+      return (
+        <List.Item
+          style={{
+            padding: 0,
+            cursor: "pointer",
+          }}
+          onMouseEnter={() => {
+            this.setState({ hoveredListItem: segmentId });
+          }}
+          onMouseLeave={() => {
+            this.setState({ hoveredListItem: null });
+          }}
+          key={segmentId}
+        >
+          <div style={{ display: "flex" }}>
+            <div
+              className={classnames("mesh-list-item", {
+                "is-centered-cell": segmentId === isCenteredCell,
+              })}
+            >
+              {isHoveredItem ? (
+                getToggleVisibilityCheckbox(segmentId, isVisible)
+              ) : (
+                <span
+                  className="circle"
+                  style={{
+                    paddingLeft: "10px",
+                    backgroundColor: convertCellIdToCSS(segmentId),
+                  }}
+                />
+              )}{" "}
+              <span
+                onClick={() => {
+                  this.props.changeActiveIsosurfaceId(segmentId, seedPosition, !isPrecomputed);
+                  moveTo(seedPosition);
+                }}
+                style={textStyle}
+              >
+                Segment {segmentId}
+              </span>
+            </div>
+            <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
+              {getRefreshButton(segmentId, isPrecomputed, isLoading)}
+              {getDownloadButton(segmentId)}
+              {getDeleteButton(segmentId)}
+            </div>
+          </div>
+        </List.Item>
+      );
+    };
+
+    // $FlowIgnore[incompatible-call]
+    // $FlowIgnore[missing-annot] flow does not know that the values passed as isosurfaces are indeed from the type IsosurfaceInformation
+    return Object.values(this.props.isosurfaces).map((isosurface: IsosurfaceInformation) =>
+      getIsosurfaceListItem(isosurface),
+    );
+  };
+
+  render() {
     const startComputingMeshfile = async () => {
       const datasetResolutionInfo = getResolutionInfoOfSegmentationLayer(this.props.dataset);
       const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
@@ -293,54 +465,6 @@ class MeshesView extends React.Component<Props, State> {
         </Tooltip>
       );
     };
-
-    const getDownloadButton = (segmentId: number) => (
-      <Tooltip title="Download Mesh">
-        <VerticalAlignBottomOutlined
-          key="download-button"
-          onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segmentId))}
-        />
-      </Tooltip>
-    );
-    const getRefreshButton = (segmentId: number, isPrecomputed: boolean, isLoading: boolean) => {
-      if (isLoading) {
-        return (
-          <LoadingOutlined
-            key="refresh-button"
-            onClick={() => {
-              Store.dispatch(refreshIsosurfaceAction(segmentId));
-            }}
-          />
-        );
-      } else {
-        return isPrecomputed ? null : (
-          <Tooltip title="Refresh Mesh">
-            <ReloadOutlined
-              key="refresh-button"
-              onClick={() => {
-                Store.dispatch(refreshIsosurfaceAction(segmentId));
-              }}
-            />
-          </Tooltip>
-        );
-      }
-    };
-    const getDeleteButton = (segmentId: number) => (
-      <Tooltip title="Delete Mesh">
-        <DeleteOutlined
-          key="delete-button"
-          onClick={() => {
-            Store.dispatch(removeIsosurfaceAction(segmentId));
-            // reset the active mesh id so the deleted one is not reloaded immediately
-            this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
-          }}
-        />
-      </Tooltip>
-    );
-    const convertHSLAToCSSString = ([h, s, l, a]) =>
-      `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-    const convertCellIdToCSS = id =>
-      convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
     const getStlImportItem = () => (
       <Upload
@@ -483,87 +607,13 @@ class MeshesView extends React.Component<Props, State> {
         {getHeaderDropdownButton()}
         <div className="antd-legacy-group">
           {/* Only show option for ad-hoc computation if no mesh file is available */
-          this.props.currentMeshFile ? null : getLoadTemporaryMeshButton()}
+          this.props.currentMeshFile ? null : getComputeMeshAdHocButton()}
           {this.props.currentMeshFile
             ? getLoadPrecomputedMeshButton()
             : getPrecomputeMeshesButton()}
         </div>
       </React.Fragment>
     );
-    const getToggleVisibilityCheckbox = (segmentId: number, isVisible: boolean) => (
-      <Tooltip title="Change visibility">
-        <Checkbox
-          checked={isVisible}
-          onChange={(event: SyntheticInputEvent<>) => {
-            this.props.onChangeVisibility(segmentId, event.target.checked);
-          }}
-        />
-      </Tooltip>
-    );
-
-    const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
-      const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-      const isCenteredCell = hasSegmentation
-        ? getSegmentIdForPosition(getPosition(this.props.flycam))
-        : false;
-      const isHoveredItem = segmentId === this.state.hoveredListItem;
-      const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
-
-      const textStyle = isVisible ? {} : { fontStyle: "italic", color: "#989898" };
-      return (
-        <List.Item
-          style={{
-            padding: 0,
-            cursor: "pointer",
-          }}
-          onMouseEnter={() => {
-            this.setState({ hoveredListItem: segmentId });
-          }}
-          onMouseLeave={() => {
-            this.setState({ hoveredListItem: null });
-          }}
-          key={segmentId}
-        >
-          <div style={{ display: "flex" }}>
-            <div
-              className={classnames("mesh-list-item", {
-                "is-centered-cell": segmentId === isCenteredCell,
-              })}
-            >
-              {isHoveredItem ? (
-                getToggleVisibilityCheckbox(segmentId, isVisible)
-              ) : (
-                <span
-                  className="circle"
-                  style={{
-                    paddingLeft: "10px",
-                    backgroundColor: convertCellIdToCSS(segmentId),
-                  }}
-                />
-              )}{" "}
-              <span
-                onClick={() => {
-                  this.props.changeActiveIsosurfaceId(segmentId, seedPosition, !isPrecomputed);
-                  moveTo(seedPosition);
-                }}
-                style={textStyle}
-              >
-                Segment {segmentId}
-              </span>
-            </div>
-            <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
-              {getRefreshButton(segmentId, isPrecomputed, isLoading)}
-              {getDownloadButton(segmentId)}
-              {getDeleteButton(segmentId)}
-            </div>
-          </div>
-        </List.Item>
-      );
-    };
-
-    const getIsosurfaceList = () =>
-      // $FlowIgnore[incompatible-call] flow does not know that the values passed as isosurfaces are indeed from the type IsosurfaceInformation
-      Object.values(this.props.isosurfaces).map(isosurface => getIsosurfaceListItem(isosurface));
 
     return (
       <div className="padded-tab-content">
@@ -580,7 +630,7 @@ class MeshesView extends React.Component<Props, State> {
             }`,
           }}
         >
-          {getIsosurfaceList()}
+          {this.getIsosurfaceList()}
         </List>
       </div>
     );

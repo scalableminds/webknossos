@@ -236,6 +236,8 @@ class MeshesView extends React.Component<Props, State> {
     let disabled = true;
     if (!features().jobsEnabled) {
       title = "Computation jobs are not enabled for this webKnossos instance.";
+    } else if (this.props.activeUser == null) {
+      title = "Please log in to precompute the meshes of this dataset.";
     } else if (this.props.hasVolume) {
       title =
         this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer

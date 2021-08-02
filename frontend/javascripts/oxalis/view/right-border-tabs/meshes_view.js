@@ -321,7 +321,7 @@ class MeshesView extends React.Component<Props, State> {
     };
 
     const getDownloadButton = (segmentId: number) => (
-      <Tooltip title="Download Isosurface">
+      <Tooltip title="Download Mesh">
         <VerticalAlignBottomOutlined
           key="download-button"
           onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segmentId))}
@@ -340,7 +340,7 @@ class MeshesView extends React.Component<Props, State> {
         );
       } else {
         return isPrecomputed ? null : (
-          <Tooltip title="Refresh Isosurface">
+          <Tooltip title="Refresh Mesh">
             <ReloadOutlined
               key="refresh-button"
               onClick={() => {
@@ -352,12 +352,12 @@ class MeshesView extends React.Component<Props, State> {
       }
     };
     const getDeleteButton = (segmentId: number) => (
-      <Tooltip title="Delete Isosurface">
+      <Tooltip title="Delete Mesh">
         <DeleteOutlined
           key="delete-button"
           onClick={() => {
             Store.dispatch(removeIsosurfaceAction(segmentId));
-            // reset the active isosurface id so the deleted one is not reloaded immediately
+            // reset the active mesh id so the deleted one is not reloaded immediately
             this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
           }}
         />
@@ -547,7 +547,7 @@ class MeshesView extends React.Component<Props, State> {
         >
           <div style={{ display: "flex" }}>
             <div
-              className={classnames("isosurface-list-item", {
+              className={classnames("mesh-list-item", {
                 "is-centered-cell": segmentId === isCenteredCell,
               })}
             >

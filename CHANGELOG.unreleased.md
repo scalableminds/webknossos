@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fix that active segment and node id were not shown in status bar when being in a non-hybrid annotation. [#5638](https://github.com/scalableminds/webknossos/pull/5638)
+- Fixed a bug where an authentication error was shown when viewing the meshes tab while not logged in. [#5647](https://github.com/scalableminds/webknossos/pull/5647)
 
 ### Removed
 -

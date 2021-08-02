@@ -53,7 +53,7 @@ object UserAccessRequest {
 }
 
 trait AccessTokenService {
-  val webKnossosServer: WkRpcClient
+  val remoteWebKnossosClient: RemoteWebKnossosClient
   val cache: SyncCacheApi
 
   val AccessExpiration: FiniteDuration = 2.minutes
@@ -82,7 +82,7 @@ trait AccessTokenService {
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String]): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)
     cache.getOrElseUpdate(key, AccessExpiration) {
-      webKnossosServer.requestUserAccess(token, accessRequest)
+      remoteWebKnossosClient.requestUserAccess(token, accessRequest)
     }
   }
 
@@ -98,5 +98,6 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val webKnossosServer: DataStoreWkRpcClient, val cache: SyncCacheApi)
+class DataStoreAccessTokenService @Inject()(val remoteWebKnossosClient: DSRemoteWebKnossosClient,
+                                            val cache: SyncCacheApi)
     extends AccessTokenService

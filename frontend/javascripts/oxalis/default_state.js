@@ -50,7 +50,6 @@ const defaultState: OxalisState = {
     interpolation: false,
     layers: {},
     loadingStrategy: "PROGRESSIVE_QUALITY",
-    highlightHoveredCellId: true,
     segmentationPatternOpacity: 40,
     renderMissingDataBlack: true,
   },
@@ -81,6 +80,7 @@ const defaultState: OxalisState = {
     tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
+    useLegacyBindings: false,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -205,6 +205,7 @@ const defaultState: OxalisState = {
   },
   activeUser: null,
   uiInformation: {
+    activeTool: "MOVE",
     showDropzoneModal: false,
     showVersionRestore: false,
     storedLayouts: {},

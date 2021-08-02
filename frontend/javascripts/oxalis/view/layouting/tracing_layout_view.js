@@ -18,7 +18,7 @@ import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/sto
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
-import NodeContextMenu from "oxalis/view/node_context_menu";
+import ContextMenu from "oxalis/view/context_menu";
 import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
@@ -26,16 +26,16 @@ import type { ControllerStatus } from "oxalis/controller";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
 import Toast from "libs/toast";
 import TracingView from "oxalis/view/tracing_view";
-import { importTracingFiles } from "oxalis/view/right-menu/trees_tab_view";
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
 import { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
 import {
-  initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
+  initializeInputCatcherSizes,
 } from "oxalis/view/input_catcher";
+import { importTracingFiles } from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import {
   layoutEmitter,
   storeLayoutConfig,
@@ -44,6 +44,8 @@ import {
   getLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
 import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
+import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
 import TabTitle from "../components/tab_title_component";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 
@@ -78,10 +80,10 @@ type State = {
   activeLayoutName: string,
   hasError: boolean,
   status: ControllerStatus,
-  nodeContextMenuPosition: ?[number, number],
+  contextMenuPosition: ?[number, number],
   clickedNodeId: ?number,
-  nodeContextMenuGlobalPosition: Vector3,
-  nodeContextMenuViewport: ?OrthoView,
+  contextMenuGlobalPosition: Vector3,
+  contextMenuViewport: ?OrthoView,
   model: Object,
 };
 
@@ -107,10 +109,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       activeLayoutName: lastActiveLayoutName,
       hasError: false,
       status: "loading",
-      nodeContextMenuPosition: null,
+      contextMenuPosition: null,
       clickedNodeId: null,
-      nodeContextMenuGlobalPosition: [0, 0, 0],
-      nodeContextMenuViewport: null,
+      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuViewport: null,
       model: layout,
     };
   }
@@ -155,7 +157,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     initializeInputCatcherSizes();
   };
 
-  showNodeContextMenuAt = (
+  showContextMenuAt = (
     xPos: number,
     yPos: number,
     nodeId: ?number,
@@ -163,19 +165,19 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     viewport: OrthoView,
   ) => {
     this.setState({
-      nodeContextMenuPosition: [xPos, yPos],
+      contextMenuPosition: [xPos, yPos],
       clickedNodeId: nodeId,
-      nodeContextMenuGlobalPosition: globalPosition,
-      nodeContextMenuViewport: viewport,
+      contextMenuGlobalPosition: globalPosition,
+      contextMenuViewport: viewport,
     });
   };
 
-  hideNodeContextMenu = () => {
+  hideContextMenu = () => {
     this.setState({
-      nodeContextMenuPosition: null,
+      contextMenuPosition: null,
       clickedNodeId: null,
-      nodeContextMenuGlobalPosition: [0, 0, 0],
-      nodeContextMenuViewport: null,
+      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuViewport: null,
     });
   };
 
@@ -235,9 +237,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     const {
       clickedNodeId,
-      nodeContextMenuPosition,
-      nodeContextMenuGlobalPosition,
-      nodeContextMenuViewport,
+      contextMenuPosition,
+      contextMenuGlobalPosition,
+      contextMenuViewport,
       status,
       activeLayoutName,
     } = this.state;
@@ -262,13 +264,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
-        {nodeContextMenuPosition != null && nodeContextMenuViewport != null ? (
-          <NodeContextMenu
-            hideNodeContextMenu={this.hideNodeContextMenu}
+        <PresentModernControls />
+        {contextMenuPosition != null && contextMenuViewport != null ? (
+          <ContextMenu
+            hideContextMenu={this.hideContextMenu}
             clickedNodeId={clickedNodeId}
-            nodeContextMenuPosition={nodeContextMenuPosition}
-            globalPosition={nodeContextMenuGlobalPosition}
-            viewport={nodeContextMenuViewport}
+            contextMenuPosition={contextMenuPosition}
+            globalPosition={contextMenuGlobalPosition}
+            viewport={contextMenuViewport}
           />
         ) : null}
         <NmlUploadZoneContainer
@@ -281,7 +284,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
             setControllerStatus={this.onStatusLoaded}
-            showNodeContextMenuAt={this.showNodeContextMenuAt}
+            showContextMenuAt={this.showContextMenuAt}
           />
           <CrossOriginApi />
           <Layout className="tracing-layout">
@@ -347,11 +350,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               <div id={canvasAndLayoutContainerID} style={{ width: "100%", height: "100%" }}>
                 {status !== "failedLoading" && <TracingView />}
                 {status === "loaded" ? (
-                  <FlexLayoutWrapper
-                    onLayoutChange={this.onLayoutChange}
-                    layoutKey={layoutType}
-                    layoutName={activeLayoutName}
-                  />
+                  <React.Fragment>
+                    <FlexLayoutWrapper
+                      onLayoutChange={this.onLayoutChange}
+                      layoutKey={layoutType}
+                      layoutName={activeLayoutName}
+                    />
+                    <WelcomeToast />
+                  </React.Fragment>
                 ) : null}
               </div>
               {this.props.showVersionRestore ? (

@@ -10,7 +10,6 @@ const datasetViewConfigurationType = "types::DatasetViewConfiguration";
 const CORRECT_DATASET_CONFIGURATION = {
   fourBit: false,
   interpolation: true,
-  highlightHoveredCellId: true,
   renderMissingDataBlack: true,
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,

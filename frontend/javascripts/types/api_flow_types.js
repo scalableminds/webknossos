@@ -202,6 +202,7 @@ export type APIUserBase = {
 
 export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
+  shouldSeeModernControlsModal?: boolean,
 |};
 
 export type APIUserTheme = "auto" | "light" | "dark";
@@ -539,7 +540,6 @@ export type APIFeatureToggles = {
   +discussionBoardRequiresAdmin: boolean,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +isDemoInstance: boolean,
   +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
@@ -548,6 +548,7 @@ export type APIFeatureToggles = {
   +publicDemoDatasetUrl: string,
   +exportTiffMaxVolumeMVx: number,
   +exportTiffMaxEdgeLengthVx: number,
+  +defaultToLegacyBindings: boolean,
 };
 
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
@@ -567,6 +568,7 @@ export type APIJob = {
   +type: string,
   +state: string,
   +manualState: string,
+  +result: ?string,
   +createdAt: number,
 };
 

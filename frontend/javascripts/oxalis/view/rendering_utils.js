@@ -8,6 +8,7 @@ import constants, {
   ArbitraryViewport,
   OrthoViewColors,
   OrthoViewValues,
+  OrthoViews,
 } from "oxalis/constants";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -43,16 +44,37 @@ export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: typeof THREE.Scene,
   camera?: typeof THREE.Camera,
+  // When withFarClipping is true, the user-specified clipping distance is used.
+  // Note that the data planes might not be included in the rendered texture, since
+  // these are exactly offset by the clipping distance. Currently, `withFarClipping`
+  // is only used for node picking (which does not render the data planes), which is why
+  // this behavior is not problematic for us.
+  withFarClipping?: boolean,
   clearColor?: number,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
+  const state = Store.getState();
   scene = scene || defaultScene;
   camera = camera || scene.getObjectByName(plane);
+
+  // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
+  // nodes there.
+  if (withFarClipping && plane !== OrthoViews.TDView) {
+    const isArbitraryMode = constants.MODES_ARBITRARY.includes(
+      state.temporaryConfiguration.viewMode,
+    );
+    camera = camera.clone();
+    camera.far = isArbitraryMode
+      ? state.userConfiguration.clippingDistanceArbitrary
+      : state.userConfiguration.clippingDistance;
+
+    camera.updateProjectionMatrix();
+  }
   clearColor = clearColor != null ? clearColor : 0x000000;
 
   renderer.autoClear = true;
-  let { width, height } = getInputCatcherRect(Store.getState(), plane);
+  let { width, height } = getInputCatcherRect(state, plane);
   width = Math.round(width);
   height = Math.round(height);
 
@@ -71,6 +93,7 @@ export function renderToTexture(
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
   renderer.setRenderTarget(null);
+
   return buffer;
 }
 
@@ -91,7 +114,7 @@ export async function downloadScreenshot() {
 
     // $FlowIssue[prop-missing] planeId cannot be arbitraryViewport in OrthoViewColors access
     const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
-    const buffer = renderToTexture(planeId, null, null, clearColor);
+    const buffer = renderToTexture(planeId, null, null, false, clearColor);
 
     // eslint-disable-next-line no-await-in-loop
     const blob = await convertBufferToImage(buffer, width, height);

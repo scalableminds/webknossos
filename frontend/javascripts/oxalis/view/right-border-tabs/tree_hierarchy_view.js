@@ -25,7 +25,7 @@ import {
   forEachTreeNode,
   findTreeNode,
   anySatisfyDeep,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
@@ -283,6 +283,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.setState({ activeTreeDropdownId: null });
   };
 
+  toggleTreeDropdownMenuVisibility = (treeId: number) => {
+    if (this.state.activeTreeDropdownId === treeId) {
+      this.setState({ activeTreeDropdownId: null });
+    } else {
+      this.setState({ activeTreeDropdownId: treeId });
+    }
+  };
+
   getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
     if (isTreeSelected) {
@@ -430,33 +438,32 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           </Menu.Item>
         </Menu>
       );
-      const dropdownMenu = (
-        <Dropdown
-          overlay={menu}
-          placement="bottomCenter"
-          visible={this.state.activeTreeDropdownId === tree.treeId}
-          onVisibleChange={isVisible =>
-            this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
-          }
-        >
-          <SettingOutlined className="group-actions-icon" />
-        </Dropdown>
-      );
 
       nodeProps.title = (
         <div className={styleClass}>
-          <Checkbox
-            checked={tree.isVisible}
-            onChange={this.onCheck}
-            node={node}
-            style={CHECKBOX_STYLE}
-          />
-          <div
-            data-id={node.id}
-            style={{ marginLeft: 9, display: "inline" }}
-            onClick={this.onSelectTree}
-          >{`(${tree.nodes.size()}) ${tree.name}`}</div>
-          {dropdownMenu}
+          <Dropdown
+            overlay={menu}
+            placement="bottomCenter"
+            visible={this.state.activeTreeDropdownId === tree.treeId}
+            onVisibleChange={isVisible =>
+              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
+            }
+            trigger={["contextMenu"]}
+          >
+            <span>
+              <Checkbox
+                checked={tree.isVisible}
+                onChange={this.onCheck}
+                node={node}
+                style={CHECKBOX_STYLE}
+              />
+              <div
+                data-id={node.id}
+                style={{ marginLeft: 9, display: "inline" }}
+                onClick={this.onSelectTree}
+              >{`(${tree.nodes.size()}) ${tree.name}`}</div>
+            </span>
+          </Dropdown>
         </div>
       );
       nodeProps.className = "tree-type";

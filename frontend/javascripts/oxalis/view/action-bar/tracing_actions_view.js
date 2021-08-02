@@ -397,16 +397,23 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           ),
         ]
       : [
-          <ButtonComponent key="read-only-button" type="danger" disabled>
+          <ButtonComponent
+            key="read-only-button"
+            type="danger"
+            disabled
+            style={{ backgroundColor: "var(--ant-warning-dark-5)" }}
+          >
             Read only
           </ButtonComponent>,
-          <AsyncButton
-            key="copy-button"
-            icon={<FileAddOutlined />}
-            onClick={this.handleCopyToAccount}
-          >
-            Copy To My Account
-          </AsyncButton>,
+          activeUser != null ? (
+            <AsyncButton
+              key="copy-button"
+              icon={<FileAddOutlined />}
+              onClick={this.handleCopyToAccount}
+            >
+              Copy To My Account
+            </AsyncButton>
+          ) : null,
         ];
 
     const finishAndNextTaskButton =

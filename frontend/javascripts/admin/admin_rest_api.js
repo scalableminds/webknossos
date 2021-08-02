@@ -838,6 +838,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     annotationType: job.commandArgs.kwargs.annotation_type,
     state: adaptJobState(job.command, job.celeryInfo.state, job.manualState),
     manualState: job.manualState,
+    result: job.celeryInfo.result,
     createdAt: job.created,
   }));
 }
@@ -895,6 +896,20 @@ export async function startExportTiffJob(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
     )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+  );
+}
+
+export function startComputeMeshFileJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  mag: Vector3,
+  agglomerateView?: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
+      "-",
+    )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
   );
 }
 

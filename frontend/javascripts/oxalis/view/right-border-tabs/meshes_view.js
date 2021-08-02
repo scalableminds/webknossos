@@ -92,6 +92,7 @@ const mapStateToProps = (state: OxalisState): * => ({
   datasetName: state.dataset.name,
   availableMeshFiles: state.availableMeshFiles,
   currentMeshFile: state.currentMeshFile,
+  activeUser: state.activeUser,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
@@ -168,7 +169,8 @@ class MeshesView extends React.Component<Props, State> {
   }
 
   async pollJobData(): Promise<void> {
-    const jobs = await getJobs();
+    const jobs = this.props.activeUser != null ? await getJobs() : [];
+
     const oldActiveJobId = this.state.activeMeshJobId;
 
     const meshJobsForDataset = jobs.filter(

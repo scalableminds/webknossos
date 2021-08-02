@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
-  TracingStoreWkRpcClient,
+  TSRemoteWebKnossosClient,
   TracingUpdatesReport
 }
 import play.api.i18n.Messages
@@ -28,7 +28,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
 
   def tracingService: TracingService[T]
 
-  def webKnossosServer: TracingStoreWkRpcClient
+  def remoteWebKnossosClient: TSRemoteWebKnossosClient
 
   def accessTokenService: TracingStoreAccessTokenService
 
@@ -193,7 +193,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
       userToken
     )
-    webKnossosServer.reportTracingUpdates(report).flatMap { _ =>
+    remoteWebKnossosClient.reportTracingUpdates(report).flatMap { _ =>
       updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {

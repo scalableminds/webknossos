@@ -23,16 +23,16 @@ object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
 }
 
-trait WkRpcClient {
+trait RemoteWebKnossosClient {
   def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer]
 }
 
-class DataStoreWkRpcClient @Inject()(
+class DSRemoteWebKnossosClient @Inject()(
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
-) extends WkRpcClient
+) extends RemoteWebKnossosClient
     with IntervalScheduler
     with LazyLogging
     with FoxImplicits {

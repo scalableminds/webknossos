@@ -19,14 +19,15 @@ import play.api.mvc.Action
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class WKDataStoreController @Inject()(dataSetService: DataSetService,
-                                      dataStoreService: DataStoreService,
-                                      dataStoreDAO: DataStoreDAO,
-                                      analyticsService: AnalyticsService,
-                                      organizationDAO: OrganizationDAO,
-                                      dataSetDAO: DataSetDAO,
-                                      mailchimpClient: MailchimpClient,
-                                      wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext)
+class WKRemoteDataStoreController @Inject()(
+    dataSetService: DataSetService,
+    dataStoreService: DataStoreService,
+    dataStoreDAO: DataStoreDAO,
+    analyticsService: AnalyticsService,
+    organizationDAO: OrganizationDAO,
+    dataSetDAO: DataSetDAO,
+    mailchimpClient: MailchimpClient,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext)
     extends Controller
     with LazyLogging {
 

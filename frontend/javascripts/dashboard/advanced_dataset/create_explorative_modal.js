@@ -1,8 +1,13 @@
 // @flow
-import { Modal, Radio, Button } from "antd";
+import { Modal, Radio, Button, Checkbox } from "antd";
 import React, { useState } from "react";
 import type { APIDataset } from "types/api_flow_types";
 import { Link } from "react-router-dom";
+
+import {
+  getSegmentationLayer,
+  doesSupportVolumeWithFallback,
+} from "oxalis/model/accessors/dataset_accessor";
 
 type Props = {
   dataset: APIDataset,
@@ -84,10 +89,35 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
 */
 
 const CreateExplorativeModal = ({ dataset, onClose }: Props) => {
-  const isFallbackSegmentationAvailable = false; // Todo depends on dataset
+  const segmentationLayer = getSegmentationLayer(dataset);
+  // doesSupportVolumeWithFallback(dataset);
 
   const [annotationType, setAnnotationType] = useState("hybrid");
-  const [withFallback, setWithFallback] = useState(isFallbackSegmentationAvailable);
+  const [userDefinedWithFallback, setUserDefinedWithFallback] = useState(true);
+
+  const isFallbackSegmentationAlwaysOff =
+    segmentationLayer == null ||
+    (!doesSupportVolumeWithFallback(dataset) && annotationType !== "skeleton");
+  const isFallbackSegmentationAlwaysOn =
+    !isFallbackSegmentationAlwaysOff && annotationType === "skeleton";
+
+  const isFallbackSegmentationOptional =
+    !isFallbackSegmentationAlwaysOff && !isFallbackSegmentationAlwaysOn;
+
+  const isFallbackSegmentationSelected =
+    isFallbackSegmentationAlwaysOn || (userDefinedWithFallback && !isFallbackSegmentationAlwaysOff);
+
+  const isFallbackSegmentationSelectedString = isFallbackSegmentationSelected ? "true" : "false";
+
+  const fallbackCheckbox = (
+    <Checkbox
+      onChange={e => setUserDefinedWithFallback(e.target.checked)}
+      checked={isFallbackSegmentationSelected}
+      disabled={!isFallbackSegmentationOptional}
+    >
+      With Existing Segmentation
+    </Checkbox>
+  );
 
   return (
     <Modal
@@ -98,18 +128,18 @@ const CreateExplorativeModal = ({ dataset, onClose }: Props) => {
       onCancel={onClose}
     >
       <p>
-        <Radio.Group onChange={e => setAnnotationType(e.target.value)}>
-          <Radio.Button value="hybrid">Skeleton and Volume</Radio.Button>
-          <Radio.Button value="skeleton">Skeleton only</Radio.Button>
-          <Radio.Button value="volume">Volume only</Radio.Button>
+        <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
+          <Radio value="hybrid">Skeleton and Volume</Radio>
+          <Radio value="skeleton">Skeleton only</Radio>
+          <Radio value="volume">Volume only</Radio>
         </Radio.Group>
       </p>
-      <p>Fallback Layer... TODO</p>
+      {fallbackCheckbox}
       <p>Restrict resolutions... TODO</p>
       <Link
         to={`/datasets/${dataset.owningOrganization}/${
           dataset.name
-        }/createExplorative/${annotationType}/${withFallback}`}
+        }/createExplorative/${annotationType}/${isFallbackSegmentationSelectedString}`}
         title="Create new annotation with selected properties"
       >
         <Button size="large" type="primary">

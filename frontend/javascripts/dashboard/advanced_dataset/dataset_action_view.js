@@ -1,5 +1,5 @@
 // @flow
-import { Menu, Tooltip } from "antd";
+import { Tooltip } from "antd";
 import {
   EllipsisOutlined,
   EyeOutlined,
@@ -13,12 +13,9 @@ import {
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
-import type { APIMaybeUnimportedDataset, APIDataset, APIDatasetId } from "types/api_flow_types";
+import type { APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
-import {
-  getSegmentationLayer,
-  doesSupportVolumeWithFallback,
-} from "oxalis/model/accessors/dataset_accessor";
+import { doesSupportVolumeWithFallback } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
 

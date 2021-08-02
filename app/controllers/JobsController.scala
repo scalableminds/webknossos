@@ -108,7 +108,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
-            "webknossos_token" -> TracingStoreRpcClient.webKnossosToken,
+            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
           job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)

@@ -278,34 +278,8 @@ class MeshesView extends React.Component<Props, State> {
       }
     };
 
-    const getComputeMeshFileTooltipInfo = () => {
-      let title = "";
-      let disabled = true;
-      if (!features().jobsEnabled) {
-        title = "Computation jobs are not enabled for this webKnossos instance.";
-      } else if (this.props.hasVolume) {
-        title = (
-          <>
-            Meshes cannot be precomputed for volume annotations. However, you can open this dataset
-            in view mode to precompute meshes for the dataset&apos;s segmentation layer.
-          </>
-        );
-      } else if (this.props.segmentationLayer == null) {
-        title = "There is no segmentation layer for which meshes could be precomputed.";
-      } else {
-        title =
-          "Precompute meshes for all segments of this dataset so that meshes for segments can be loaded quickly afterwards from a mesh file.";
-        disabled = false;
-      }
-
-      return {
-        disabled,
-        title,
-      };
-    };
-
     const getPrecomputeMeshesButton = () => {
-      const { disabled, title } = getComputeMeshFileTooltipInfo();
+      const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
       return (
         <Tooltip key="tooltip" title={title}>
           <Button
@@ -383,22 +357,27 @@ class MeshesView extends React.Component<Props, State> {
       </Upload>
     );
 
-    const getLoadTemporaryMeshButton = () => (
-      <Button
-        onClick={() => {
-          const pos = getPosition(this.props.flycam);
-          const id = getSegmentIdForPosition(pos);
-          if (id === 0) {
-            Toast.info("No segment found at centered position");
-          }
-          this.props.changeActiveIsosurfaceId(id, pos, true);
-        }}
-        disabled={!hasSegmentation}
-        size="small"
-      >
-        Compute Mesh (ad hoc)
-      </Button>
-    );
+    const getComputeMeshAdHocButton = () => {
+      const { disabled, title } = this.getComputeMeshAdHocTooltipInfo();
+      return (
+        <Tooltip title={title}>
+          <Button
+            onClick={() => {
+              const pos = getPosition(this.props.flycam);
+              const id = getSegmentIdForPosition(pos);
+              if (id === 0) {
+                Toast.info("No segment found at centered position");
+              }
+              this.props.changeActiveIsosurfaceId(id, pos, true);
+            }}
+            disabled={disabled}
+            size="small"
+          >
+            Compute Mesh (ad hoc)
+          </Button>
+        </Tooltip>
+      );
+    };
 
     const loadPrecomputedMesh = async () => {
       const pos = getPosition(this.props.flycam);
@@ -478,7 +457,7 @@ class MeshesView extends React.Component<Props, State> {
     };
 
     const getHeaderDropdownMenu = () => {
-      const { disabled, title } = getComputeMeshFileTooltipInfo();
+      const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
       return (
         <Menu>
           <Menu.Item onClick={startComputingMeshfile} disabled={disabled}>

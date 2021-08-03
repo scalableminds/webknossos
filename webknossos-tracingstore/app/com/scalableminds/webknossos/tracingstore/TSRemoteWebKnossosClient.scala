@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.services.{
   AccessTokenService,
   UserAccessAnswer,
   UserAccessRequest,
-  WkRpcClient
+  RemoteWebKnossosClient
 }
 import com.typesafe.scalalogging.LazyLogging
 import play.api.cache.SyncCacheApi
@@ -26,11 +26,11 @@ object TracingUpdatesReport {
   implicit val jsonFormat: OFormat[TracingUpdatesReport] = Json.format[TracingUpdatesReport]
 }
 
-class TracingStoreWkRpcClient @Inject()(
+class TSRemoteWebKnossosClient @Inject()(
     rpc: RPC,
     config: TracingStoreConfig,
     val lifecycle: ApplicationLifecycle
-) extends WkRpcClient
+) extends RemoteWebKnossosClient
     with LazyLogging {
 
   private val tracingStoreKey: String = config.Tracingstore.key
@@ -62,5 +62,6 @@ class TracingStoreWkRpcClient @Inject()(
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 
-class TracingStoreAccessTokenService @Inject()(val webKnossosServer: TracingStoreWkRpcClient, val cache: SyncCacheApi)
+class TracingStoreAccessTokenService @Inject()(val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+                                               val cache: SyncCacheApi)
     extends AccessTokenService

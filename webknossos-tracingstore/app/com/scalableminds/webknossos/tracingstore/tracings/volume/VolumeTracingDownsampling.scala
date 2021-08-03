@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
-import com.scalableminds.webknossos.tracingstore.TracingStoreWkRpcClient
+import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -41,7 +41,7 @@ trait VolumeTracingDownsampling
     with FoxImplicits {
 
   val tracingDataStore: TracingDataStore
-  val tracingStoreWkRpcClient: TracingStoreWkRpcClient
+  val tracingStoreWkRpcClient: TSRemoteWebKnossosClient
   def saveBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  data: Array[Byte],

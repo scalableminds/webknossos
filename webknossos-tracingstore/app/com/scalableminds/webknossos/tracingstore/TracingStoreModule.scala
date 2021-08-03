@@ -18,7 +18,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[SkeletonTracingService]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()
-    bind(classOf[TracingStoreWkRpcClient]).asEagerSingleton()
+    bind(classOf[TSRemoteWebKnossosClient]).asEagerSingleton()
     bind(classOf[SlackNotificationService]).asEagerSingleton()
   }
 }

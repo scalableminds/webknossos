@@ -339,8 +339,8 @@ function* downloadIsosurfaceCellById(cellId: number): Saga<void> {
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(cellId);
   if (geometry == null) {
-    const errorMessages = messages["tracing.not_isosurface_available_to_download"];
-    Toast.error(errorMessages, { sticky: false });
+    const errorMessage = messages["tracing.not_isosurface_available_to_download"];
+    Toast.error(errorMessage, { sticky: false });
     return;
   }
   const stl = exportToStl(geometry);

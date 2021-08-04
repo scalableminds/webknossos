@@ -197,7 +197,7 @@ class TDController extends React.PureComponent<Props> {
         }
 
         if (!event.shiftKey && !event.ctrlKey) {
-          // No modifiers were pressed. No isosurface related action is necessary.
+          // No modifiers were pressed. No mesh related action is necessary.
           return;
         }
 

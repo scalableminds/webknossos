@@ -112,7 +112,7 @@ export type UpdateMeshFileListAction = {
 };
 export type UpdateCurrentMeshFileAction = {
   type: "UPDATE_CURRENT_MESH_FILE",
-  meshFile: string,
+  meshFile: ?string,
 };
 
 export type ImportIsosurfaceFromStlAction = {
@@ -293,7 +293,7 @@ export const updateMeshFileListAction = (meshFiles: Array<string>): UpdateMeshFi
   meshFiles,
 });
 
-export const updateCurrentMeshFileAction = (meshFile: string): UpdateCurrentMeshFileAction => ({
+export const updateCurrentMeshFileAction = (meshFile: ?string): UpdateCurrentMeshFileAction => ({
   type: "UPDATE_CURRENT_MESH_FILE",
   meshFile,
 });

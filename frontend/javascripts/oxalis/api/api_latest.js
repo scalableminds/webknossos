@@ -51,6 +51,7 @@ import {
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
+  getSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -80,7 +81,12 @@ import {
   setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { refreshIsosurfacesAction } from "oxalis/model/actions/annotation_actions";
+import {
+  updateCurrentMeshFileAction,
+  refreshIsosurfacesAction,
+  updateIsosurfaceVisibilityAction,
+  removeIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateUserSettingAction,
@@ -114,6 +120,11 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/meshes_view_helper";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -1376,6 +1387,133 @@ class DataApi {
       default: {
         Store.dispatch(updateDatasetSettingAction(key, value));
       }
+    }
+  }
+
+  /**
+   * Retrieve a list of available precomputed mesh files.
+   *
+   * @example
+   * const availableMeshFileNames = api.data.getAvailableMeshFiles();
+   */
+  async getAvailableMeshFiles(): Promise<Array<string>> {
+    const state = Store.getState();
+    const { dataset } = state;
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+
+    return maybeFetchMeshFiles(segmentationLayer, dataset, true, false);
+  }
+
+  /**
+   * Get currently active mesh file (might be null).
+   *
+   * @example
+   * const activeMeshFile = api.data.getActiveMeshFile();
+   */
+  getActiveMeshFile(): ?string {
+    return Store.getState().currentMeshFile;
+  }
+
+  /**
+   * Set currently active mesh file (can be set to null).
+   *
+   * @example
+   * const availableMeshFileNames = api.data.getAvailableMeshFiles();
+   * if (availableMeshFileNames.length > 0) {
+   *   api.data.setActiveMeshFile(availableMeshFileNames[0]);
+   * }
+   */
+  setActiveMeshFile(meshFile: ?string) {
+    if (meshFile == null) {
+      Store.dispatch(updateCurrentMeshFileAction(meshFile));
+      return;
+    }
+    const state = Store.getState();
+    if (state.availableMeshFiles == null || !state.availableMeshFiles.includes(meshFile)) {
+      throw new Error(
+        `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
+          state.availableMeshFiles || []
+        ).join(", ")}`,
+      );
+    }
+
+    Store.dispatch(updateCurrentMeshFileAction(meshFile));
+  }
+
+  /**
+   * If a mesh file is active, loadPrecomputedMesh can be used to load a mesh for a given segment at a given seed position.
+   * If there is no mesh file for the dataset's segmentation layer available, you can use api.data.computeMeshOnDemand instead.
+   *
+   * @example
+   * const currentPosition = api.tracing.getCameraPosition();
+   * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
+   * const availableMeshFiles = await api.data.getAvailableMeshFiles();
+   * api.data.setActiveMeshFile(availableMeshFiles[0]);
+   *
+   * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
+   */
+  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3) {
+    const state = Store.getState();
+    const { currentMeshFile, dataset } = state;
+    if (currentMeshFile == null) {
+      throw new Error(
+        "No mesh file was activated. Please call `api.data.setActiveMeshFile` first (use `api.data.getAvailableMeshFiles` to retrieve candidates).",
+      );
+    }
+
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+    if (!segmentationLayer) {
+      throw new Error("No segmentation layer was found.");
+    }
+    await loadMeshFromFile(segmentId, seedPosition, currentMeshFile, segmentationLayer, dataset);
+  }
+
+  /**
+   * Load a mesh for a given segment id and a seed position by computing it ad-hoc.
+   *
+   * @example
+   * const currentPosition = api.tracing.getCameraPosition();
+   * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
+   * api.data.computeMeshOnDemand(segmentId, currentPosition);
+   */
+  computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
+    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
+  }
+
+  /**
+   * Set the visibility for a loaded mesh by providing the corresponding segment id.
+   *
+   * @example
+   * api.data.setMeshVisibility(segmentId, false);
+   */
+  setMeshVisibility(segmentId: number, isVisible: boolean) {
+    if (Store.getState().isosurfaces[segmentId] != null) {
+      Store.dispatch(updateIsosurfaceVisibilityAction(segmentId, isVisible));
+    }
+  }
+
+  /**
+   * Remove the mesh for a given segment.
+   *
+   * @example
+   * api.data.removeMesh(segmentId);
+   */
+  removeMesh(segmentId: number) {
+    if (Store.getState().isosurfaces[segmentId] != null) {
+      Store.dispatch(removeIsosurfaceAction(segmentId));
+    }
+  }
+
+  /**
+   * Removes all meshes from the scene.
+   *
+   * @example
+   * api.data.resetMeshes();
+   */
+  resetMeshes() {
+    const segmentIds = Object.keys(Store.getState().isosurfaces);
+    for (const segmentId of segmentIds) {
+      Store.dispatch(removeIsosurfaceAction(Number(segmentId)));
     }
   }
 }

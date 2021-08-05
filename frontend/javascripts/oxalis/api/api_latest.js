@@ -342,27 +342,6 @@ class TracingApi {
   }
 
   /**
-   * Get the position of some node of a tree (referenced by tree name).
-   *
-   * @example
-   * const position = api.tracing.getSomeNodePositionByTreeName("tree_xyz");
-   */
-  getSomeNodePositionByTreeName(treeName: string) {
-    const { tracing } = Store.getState();
-    const skeleton = assertSkeleton(tracing);
-    const treeWithMatchingName = _.values(skeleton.trees).find(tree => tree.name === treeName);
-    if (treeWithMatchingName == null) {
-      return null;
-    }
-
-    const someNodeId = _.max(treeWithMatchingName.nodes.map(el => el.id)) || null;
-    if (someNodeId == null) {
-      return null;
-    }
-    return treeWithMatchingName.nodes.get(someNodeId).position;
-  }
-
-  /**
    * Makes the tree specified by name active. Within the tree, the node with the highest ID will be activated.
    *
    * @example

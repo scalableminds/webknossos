@@ -82,10 +82,6 @@ const onMessage = async event => {
       await api.data.setActiveMeshFile(args[0]);
       break;
     }
-    case "getSomeNodePositionByTreeName": {
-      returnValue = api.tracing.getSomeNodePositionByTreeName(args[0]);
-      break;
-    }
     case "resetMeshes": {
       api.data.resetMeshes();
       break;

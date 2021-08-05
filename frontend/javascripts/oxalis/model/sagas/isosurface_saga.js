@@ -31,7 +31,7 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import { stlIsosurfaceConstants } from "oxalis/view/right-menu/meshes_view";
+import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/meshes_view";
 import { computeIsosurface, sendAnalyticsEvent } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -328,7 +328,7 @@ function* maybeLoadIsosurface(
     } catch (exception) {
       retryCount++;
       ErrorHandling.notify(exception);
-      console.warn("Retrying isosurface generation...");
+      console.warn("Retrying mesh generation...");
       yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
     }
   }
@@ -339,8 +339,8 @@ function* downloadIsosurfaceCellById(cellId: number): Saga<void> {
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(cellId);
   if (geometry == null) {
-    const errorMessages = messages["tracing.not_isosurface_available_to_download"];
-    Toast.error(errorMessages[0], { sticky: false }, errorMessages[1]);
+    const errorMessage = messages["tracing.not_isosurface_available_to_download"];
+    Toast.error(errorMessage, { sticky: false });
     return;
   }
   const stl = exportToStl(geometry);
@@ -353,7 +353,7 @@ function* downloadIsosurfaceCellById(cellId: number): Saga<void> {
   stl.setUint32(cellIdIndex, cellId, true);
 
   const blob = new Blob([stl]);
-  yield* call(saveAs, blob, `isosurface-${cellId}.stl`);
+  yield* call(saveAs, blob, `mesh-${cellId}.stl`);
 }
 
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {

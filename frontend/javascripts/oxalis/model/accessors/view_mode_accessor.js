@@ -10,8 +10,12 @@ import constants, {
   type Rect,
   type Viewport,
   OrthoViews,
+  type Point2,
+  type Vector3,
   type ViewMode,
 } from "oxalis/constants";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
@@ -90,6 +94,50 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
   const xScale = (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   const yScale = (height + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   return [xScale, yScale];
+}
+
+export function calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector3 {
+  let position;
+  const { activeViewport } = state.viewModeData.plane;
+  const curGlobalPos = getPosition(state.flycam);
+  const zoomFactors = getPlaneScalingFactor(state, state.flycam, activeViewport);
+  const viewportScale = getViewportScale(state, activeViewport);
+  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
+
+  const center = [0, 1].map(dim => (constants.VIEWPORT_WIDTH * viewportScale[dim]) / 2);
+  const diffX = ((center[0] - clickPos.x) / viewportScale[0]) * zoomFactors[0];
+  const diffY = ((center[1] - clickPos.y) / viewportScale[1]) * zoomFactors[1];
+
+  switch (activeViewport) {
+    case OrthoViews.PLANE_XY:
+      position = [
+        curGlobalPos[0] - diffX * planeRatio[0],
+        curGlobalPos[1] - diffY * planeRatio[1],
+        curGlobalPos[2],
+      ];
+      break;
+    case OrthoViews.PLANE_YZ:
+      position = [
+        curGlobalPos[0],
+        curGlobalPos[1] - diffY * planeRatio[1],
+        curGlobalPos[2] - diffX * planeRatio[2],
+      ];
+      break;
+    case OrthoViews.PLANE_XZ:
+      position = [
+        curGlobalPos[0] - diffX * planeRatio[0],
+        curGlobalPos[1],
+        curGlobalPos[2] - diffY * planeRatio[2],
+      ];
+      break;
+    default:
+      console.error(
+        `Trying to calculate the global position, but no viewport is active: ${activeViewport}`,
+      );
+      return [0, 0, 0];
+  }
+
+  return position;
 }
 
 export function getViewMode(state: OxalisState): ViewMode {

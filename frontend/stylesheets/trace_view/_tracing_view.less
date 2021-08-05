@@ -114,27 +114,27 @@
 }
 .tracing-settings-menu {
   width: @left-menu-width;
-
-  .ant-collapse-header {
-    font-size: 14px;
-  }
-
-  .margin-bottom {
-    margin-bottom: 10px;
+  font-size: 14px;
+  font-variant: tabular-nums;
+  line-height: 1.5715;
+  list-style: none;
+  font-feature-settings: "tnum";
+  padding: 16px;
+  padding-top: 10px;
+  .ant-collapse-content {
+    color: unset;
   }
 }
+
 .setting-label {
   word-wrap: break-word;
   white-space: normal;
   margin-right: 5px;
   display: inline-block;
 }
-.tracing-right-menu {
-  min-width: 450px;
-}
 
 .node-context-menu {
-  z-index: 100;
+  z-index: 1000;
   border-radius: 6px;
   color: @text-color;
   background: @component-background;
@@ -149,16 +149,10 @@
     border-right: none;
   }
 }
+
 .node-context-menu-sub {
   font-size: 12px;
   margin-left: -6px;
-}
-
-.node-context-menu-overlay {
-  width: 100%;
-  height: calc(100% - @navbar-height);
-  position: absolute;
-  z-index: 99;
 }
 
 #version-restore-sider {
@@ -210,6 +204,44 @@
     width: 24px;
     height: 24px;
   }
+}
+
+.keyboard-key-icon {
+  border: 2px solid @border-color-base;
+  border-radius: 2px;
+  min-width: 26px;
+  min-height: 26px;
+  margin: 4px;
+  display: inline-block;
+  text-align: center;
+  font-size: 10px;
+  vertical-align: middle;
+  line-height: 24px;
+  font-weight: bold;
+}
+
+.keyboard-key-icon-small {
+  border: 1px solid rgb(255, 255, 255);
+  border-radius: 2px;
+  min-width: 14px;
+  height: 14px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: bold;
+  vertical-align: middle;
+  display: inline-block;
+  padding: 0px 2px 0px 2px;
+}
+
+.keyboard-mouse-icon {
+  max-width: 18px;
+  max-height: 28px;
+  margin: 4px;
+}
+
+span.keyboard-key-icon:first-child,
+img.keyboard-mouse-icon:first-child {
+  margin-left: 0px;
 }
 
 .shortcut-table {
@@ -346,14 +378,6 @@
     }
   }
 
-  .ant-radio-button-wrapper-checked .svg-gray-to-highlighted-blue {
-    // Calculated with https://codepen.io/sosuke/pen/Pjoqqp
-    // Input: background-color: #f1f1f1 for .pixel
-    // Prepended `brightness(50%) invert(39%)` to output
-    filter: brightness(50%) invert(39%) sepia(61%) saturate(2429%) hue-rotate(194deg)
-      brightness(105%) contrast(101%);
-  }
-
   .ant-radio-button-wrapper:not(:first-child)::before {
     background-color: @dark-border;
   }
@@ -468,4 +492,26 @@
 }
 .icon-sidebar-hide-right-dark {
   background-image: url(/assets/images/icon-sidebar-hide-right-dark.svg);
+}
+
+.cell-context-icon {
+  margin-right: 8px;
+  height: 12px;
+  width: 15px;
+  display: inline-block;
+  background-image: url("/assets/images/cell.svg");
+  background-size: contain;
+}
+
+.resolution-status-bar-icon {
+  height: 14px;
+  margin-top: -2px;
+}
+
+.hide-if-first:first-child {
+  display: none;
+}
+
+.hide-if-last:last-child {
+  display: none;
 }

@@ -31,7 +31,7 @@ import type {
   DeleteEdgeUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
-import { MISSING_GROUP_ID } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 type Description = { description: string, icon: React.Node };
 

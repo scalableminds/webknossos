@@ -31,8 +31,8 @@ import PlaneView from "oxalis/view/plane_view";
 import Store, { type CameraData, type Flycam, type OxalisState, type Tracing } from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
-import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import { SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 
 export function threeCameraToCameraData(camera: typeof THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
@@ -47,6 +47,21 @@ export function threeCameraToCameraData(camera: typeof THREE.OrthographicCamera)
     position: objToArr(position),
     up: objToArr(up),
     lookAt: objToArr(lookAt),
+  };
+}
+
+function getTDViewMouseControlsSkeleton(planeView: PlaneView): Object {
+  return {
+    leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
+      SkeletonTool.onLegacyLeftClick(
+        planeView,
+        pos,
+        event.shiftKey,
+        event.altKey,
+        event.ctrlKey,
+        OrthoViews.TDView,
+        isTouch,
+      ),
   };
 }
 
@@ -154,7 +169,7 @@ class TDController extends React.PureComponent<Props> {
       this.props.tracing != null &&
       this.props.tracing.skeleton != null &&
       this.props.planeView != null
-        ? skeletonController.getTDViewMouseControls(this.props.planeView)
+        ? getTDViewMouseControlsSkeleton(this.props.planeView)
         : null;
 
     const controls = {
@@ -182,7 +197,7 @@ class TDController extends React.PureComponent<Props> {
         }
 
         if (!event.shiftKey && !event.ctrlKey) {
-          // No modifiers were pressed. No isosurface related action is necessary.
+          // No modifiers were pressed. No mesh related action is necessary.
           return;
         }
 

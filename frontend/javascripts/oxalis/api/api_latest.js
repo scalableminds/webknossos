@@ -14,8 +14,8 @@ import Constants, {
   OrthoViews,
   type Vector3,
   type Vector4,
-  type VolumeTool,
-  VolumeToolEnum,
+  type AnnotationTool,
+  AnnotationToolEnum,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -25,7 +25,7 @@ import {
   getConstructorForElementClass,
 } from "oxalis/model/bucket_data_handling/bucket";
 import type { Versions } from "oxalis/view/version_view";
-import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
@@ -46,17 +46,14 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
+  getSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getPosition,
-  getRotation,
-  getRequestLogZoomStep,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
@@ -64,7 +61,7 @@ import {
   globalPositionToBaseBucket,
 } from "oxalis/model/helpers/position_converter";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
-import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   addTreesAndGroupsAction,
   setActiveNodeAction,
@@ -84,7 +81,13 @@ import {
   setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { refreshIsosurfacesAction } from "oxalis/model/actions/annotation_actions";
+import {
+  updateCurrentMeshFileAction,
+  refreshIsosurfacesAction,
+  updateIsosurfaceVisibilityAction,
+  removeIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -117,6 +120,11 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/meshes_view_helper";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -813,7 +821,7 @@ class TracingApi {
   //  VOLUMETRACING API
 
   /**
-   * Returns the id of the current active cell.
+   * Returns the id of the current active segment.
    * _Volume tracing only!_
    */
   getActiveCellId(): ?number {
@@ -822,40 +830,50 @@ class TracingApi {
   }
 
   /**
-   * Sets the active cell given a cell id.
-   * If a cell with the given id doesn't exist, it is created.
+   * Sets the active segment given a segment id.
+   * If a segment with the given id doesn't exist, it is created.
    * _Volume tracing only!_
    */
   setActiveCell(id: number) {
     assertVolume(Store.getState().tracing);
-    assertExists(id, "Cell id is missing.");
+    assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
   }
 
   /**
-   * Returns the active volume tool which is either
-   * "MOVE", "TRACE" or "BRUSH".
-   * _Volume tracing only!_
+   * Returns the active tool which is either
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
    */
-  getVolumeTool(): ?VolumeTool {
-    const tracing = assertVolume(Store.getState().tracing);
-    return getVolumeTool(tracing);
+  getAnnotationTool(): AnnotationTool {
+    return Store.getState().uiInformation.activeTool;
   }
 
   /**
-   * Sets the active volume tool which should be either
-   * "MOVE", "TRACE" or "BRUSH".
+   * Sets the active tool which should be either
+   * "MOVE", "SKELETON", "TRACE", "BRUSH", "FILL_CELL" or "PICK_CELL"
    * _Volume tracing only!_
    */
-  setVolumeTool(tool: VolumeTool) {
-    assertVolume(Store.getState().tracing);
-    assertExists(tool, "Volume tool is missing.");
-    if (VolumeToolEnum[tool] == null) {
+  setAnnotationTool(tool: AnnotationTool) {
+    if (AnnotationToolEnum[tool] == null) {
       throw new Error(
-        `Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`,
+        `Annotation tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
     Store.dispatch(setToolAction(tool));
+  }
+
+  /**
+   * Deprecated! Use getAnnotationTool instead.
+   */
+  getVolumeTool(): AnnotationTool {
+    return this.getAnnotationTool();
+  }
+
+  /**
+   * Deprecated! Use setAnnotationTool instead.
+   */
+  setVolumeTool(tool: AnnotationTool) {
+    this.setAnnotationTool(tool);
   }
 
   /**
@@ -1101,19 +1119,7 @@ class DataApi {
   }
 
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
-    const state = Store.getState();
-    const zoomStep = getRequestLogZoomStep(state);
-
-    if (position == null) return zoomStep;
-
-    const cube = this.model.getCubeByLayerName(layerName);
-
-    // While render missing data black is not active and there is no segmentation for the current zoom step,
-    // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
-    // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
-    const renderedZoomStep = cube.getNextUsableZoomStepForPosition(position, zoomStep);
-
-    return renderedZoomStep;
+    return this.model.getRenderedZoomStepAtPosition(layerName, position);
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
@@ -1304,7 +1310,6 @@ class DataApi {
      - interpolation
      - layers
      - quality
-     - highlightHoveredCellId
      - segmentationPatternOpacity
      - renderMissingDataBlack
    *
@@ -1382,6 +1387,133 @@ class DataApi {
       default: {
         Store.dispatch(updateDatasetSettingAction(key, value));
       }
+    }
+  }
+
+  /**
+   * Retrieve a list of available precomputed mesh files.
+   *
+   * @example
+   * const availableMeshFileNames = api.data.getAvailableMeshFiles();
+   */
+  async getAvailableMeshFiles(): Promise<Array<string>> {
+    const state = Store.getState();
+    const { dataset } = state;
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+
+    return maybeFetchMeshFiles(segmentationLayer, dataset, true, false);
+  }
+
+  /**
+   * Get currently active mesh file (might be null).
+   *
+   * @example
+   * const activeMeshFile = api.data.getActiveMeshFile();
+   */
+  getActiveMeshFile(): ?string {
+    return Store.getState().currentMeshFile;
+  }
+
+  /**
+   * Set currently active mesh file (can be set to null).
+   *
+   * @example
+   * const availableMeshFileNames = api.data.getAvailableMeshFiles();
+   * if (availableMeshFileNames.length > 0) {
+   *   api.data.setActiveMeshFile(availableMeshFileNames[0]);
+   * }
+   */
+  setActiveMeshFile(meshFile: ?string) {
+    if (meshFile == null) {
+      Store.dispatch(updateCurrentMeshFileAction(meshFile));
+      return;
+    }
+    const state = Store.getState();
+    if (state.availableMeshFiles == null || !state.availableMeshFiles.includes(meshFile)) {
+      throw new Error(
+        `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
+          state.availableMeshFiles || []
+        ).join(", ")}`,
+      );
+    }
+
+    Store.dispatch(updateCurrentMeshFileAction(meshFile));
+  }
+
+  /**
+   * If a mesh file is active, loadPrecomputedMesh can be used to load a mesh for a given segment at a given seed position.
+   * If there is no mesh file for the dataset's segmentation layer available, you can use api.data.computeMeshOnDemand instead.
+   *
+   * @example
+   * const currentPosition = api.tracing.getCameraPosition();
+   * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
+   * const availableMeshFiles = await api.data.getAvailableMeshFiles();
+   * api.data.setActiveMeshFile(availableMeshFiles[0]);
+   *
+   * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
+   */
+  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3) {
+    const state = Store.getState();
+    const { currentMeshFile, dataset } = state;
+    if (currentMeshFile == null) {
+      throw new Error(
+        "No mesh file was activated. Please call `api.data.setActiveMeshFile` first (use `api.data.getAvailableMeshFiles` to retrieve candidates).",
+      );
+    }
+
+    const segmentationLayer = getSegmentationLayer(state.dataset);
+    if (!segmentationLayer) {
+      throw new Error("No segmentation layer was found.");
+    }
+    await loadMeshFromFile(segmentId, seedPosition, currentMeshFile, segmentationLayer, dataset);
+  }
+
+  /**
+   * Load a mesh for a given segment id and a seed position by computing it ad-hoc.
+   *
+   * @example
+   * const currentPosition = api.tracing.getCameraPosition();
+   * const segmentId = await api.data.getDataValue("segmentation", currentPosition);
+   * api.data.computeMeshOnDemand(segmentId, currentPosition);
+   */
+  computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
+    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
+  }
+
+  /**
+   * Set the visibility for a loaded mesh by providing the corresponding segment id.
+   *
+   * @example
+   * api.data.setMeshVisibility(segmentId, false);
+   */
+  setMeshVisibility(segmentId: number, isVisible: boolean) {
+    if (Store.getState().isosurfaces[segmentId] != null) {
+      Store.dispatch(updateIsosurfaceVisibilityAction(segmentId, isVisible));
+    }
+  }
+
+  /**
+   * Remove the mesh for a given segment.
+   *
+   * @example
+   * api.data.removeMesh(segmentId);
+   */
+  removeMesh(segmentId: number) {
+    if (Store.getState().isosurfaces[segmentId] != null) {
+      Store.dispatch(removeIsosurfaceAction(segmentId));
+    }
+  }
+
+  /**
+   * Removes all meshes from the scene.
+   *
+   * @example
+   * api.data.resetMeshes();
+   */
+  resetMeshes() {
+    const segmentIds = Object.keys(Store.getState().isosurfaces);
+    for (const segmentId of segmentIds) {
+      Store.dispatch(removeIsosurfaceAction(Number(segmentId)));
     }
   }
 }

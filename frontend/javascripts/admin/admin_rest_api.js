@@ -838,6 +838,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     annotationType: job.commandArgs.kwargs.annotation_type,
     state: adaptJobState(job.command, job.celeryInfo.state, job.manualState),
     manualState: job.manualState,
+    result: job.celeryInfo.result,
     createdAt: job.created,
   }));
 }
@@ -895,6 +896,20 @@ export async function startExportTiffJob(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
     )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+  );
+}
+
+export function startComputeMeshFileJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  mag: Vector3,
+  agglomerateView?: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
+      "-",
+    )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
   );
 }
 
@@ -1550,14 +1565,14 @@ export function computeIsosurface(
       {
         data: {
           // The back-end needs a small padding at the border of the
-          // bounding box to calculate the isosurface. This padding
+          // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, voxelDimensions)),
           cubeSize: V3.toArray(V3.add(cubeSize, voxelDimensions)),
           zoomStep,
-          // Segment to build isosurface for
+          // Segment to build mesh for
           segmentId,
-          // Name of mapping to apply before building isosurface (optional)
+          // Name of mapping to apply before building mesh (optional)
           mapping: layer.activeMapping,
           mappingType: layer.activeMappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)

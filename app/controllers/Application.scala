@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
-import models.binary.DataStoreRpcClient
 import models.user.{MultiUserDAO, User}
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsObject, Json}
@@ -48,7 +47,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       case Some(user) =>
         for {
           multiUser <- multiUserDAO.findOne(user._multiUser)
-        } yield if (multiUser.isSuperUser) Some(DataStoreRpcClient.webKnossosToken) else None
+        } yield if (multiUser.isSuperUser) Some(RpcTokenHolder.webKnossosToken) else None
       case _ => Fox.successful(None)
     }
 

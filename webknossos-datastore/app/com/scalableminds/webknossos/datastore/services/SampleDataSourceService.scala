@@ -18,7 +18,7 @@ case class SampleDatasetInfo(url: String, description: String)
 
 class SampleDataSourceService @Inject()(rpc: RPC,
                                         uploadService: UploadService,
-                                        webknossosServer: DataStoreWkRpcClient,
+                                        remoteWebKnossosClient: DSRemoteWebKnossosClient,
                                         dataSourceRepository: DataSourceRepository)
     extends FoxImplicits {
 
@@ -55,7 +55,7 @@ class SampleDataSourceService @Inject()(rpc: RPC,
       _ <- bool2Fox(availableDatasets.contains(dataSetName)) ?~> "dataSet.name.notInSamples"
       _ <- bool2Fox(!runningDownloads.contains(dataSourceId)) ?~> "dataSet.downloadAlreadyRunning"
       _ <- bool2Fox(dataSourceRepository.find(dataSourceId).isEmpty) ?~> "dataSet.alreadyPresent"
-      _ <- webknossosServer.validateDataSourceUpload(dataSourceId) ?~> "dataSet.name.alreadyTaken"
+      _ <- remoteWebKnossosClient.validateDataSourceUpload(dataSourceId) ?~> "dataSet.name.alreadyTaken"
       _ = runningDownloads.put(dataSourceId, ())
       _ = download(dataSourceId)
     } yield ()

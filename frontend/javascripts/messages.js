@@ -155,10 +155,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "tracing.merger_mode_node_outside_segment":
     "You cannot place nodes outside of a segment in merger mode.",
-  "tracing.not_isosurface_available_to_download": [
-    "There is no isosurface for the active segment id available to download.",
-    'Click with "CTRL + Left Mouse" on the desired segment to load it\'s isosurface.',
-  ],
+  "tracing.not_isosurface_available_to_download":
+    "There is no mesh for the active segment id available to download.",
   "tracing.mesh_listing_failed":
     "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
   "tracing.confirm_remove_fallback_layer.title":

@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import javax.inject.Inject
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService, DataStoreRpcClient, DataStoreService}
+import models.binary.{DataSetDAO, DataSetService, DataStoreService}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
@@ -22,6 +22,16 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
+
+object RpcTokenHolder {
+  /*
+   * This token is used to tell the datastore or tracing store “I am webKnossos”.
+   * The respective module asks the remote webKnossos to validate that.
+   * The token is refreshed on every wK restart.
+   * Keep it secret!
+   */
+  lazy val webKnossosToken: String = CompactRandomIDGenerator.generateBlocking()
+}
 
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataSetService: DataSetService,
@@ -72,7 +82,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
-    if (token.contains(DataStoreRpcClient.webKnossosToken)) {
+    if (token.contains(RpcTokenHolder.webKnossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {

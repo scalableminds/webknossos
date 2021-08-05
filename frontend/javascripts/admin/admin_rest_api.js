@@ -1565,14 +1565,14 @@ export function computeIsosurface(
       {
         data: {
           // The back-end needs a small padding at the border of the
-          // bounding box to calculate the isosurface. This padding
+          // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
           position: V3.toArray(V3.sub(position, voxelDimensions)),
           cubeSize: V3.toArray(V3.add(cubeSize, voxelDimensions)),
           zoomStep,
-          // Segment to build isosurface for
+          // Segment to build mesh for
           segmentId,
-          // Name of mapping to apply before building isosurface (optional)
+          // Name of mapping to apply before building mesh (optional)
           mapping: layer.activeMapping,
           mappingType: layer.activeMappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)

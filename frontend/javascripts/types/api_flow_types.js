@@ -540,7 +540,6 @@ export type APIFeatureToggles = {
   +discussionBoardRequiresAdmin: boolean,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +isDemoInstance: boolean,
   +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
@@ -569,6 +568,7 @@ export type APIJob = {
   +type: string,
   +state: string,
   +manualState: string,
+  +result: ?string,
   +createdAt: number,
 };
 

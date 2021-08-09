@@ -1,6 +1,6 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Tabs, Modal, Button } from "antd";
+import { Tabs, Modal, Button, Layout } from "antd";
 import { BarsOutlined, DatabaseOutlined, GoogleOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect } from "react-redux";
@@ -21,6 +21,7 @@ import renderIndependently from "libs/render_independently";
 import { useFetch } from "libs/react_helpers";
 
 const { TabPane } = Tabs;
+const { Content, Sider } = Layout;
 
 type Props = {|
   activeUser: APIUser,
@@ -111,69 +112,77 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
 
   return (
     <React.Fragment>
-      <Tabs defaultActiveKey="1" className="container">
-        <TabPane
-          tab={
-            <span>
-              <UploadOutlined />
-              Upload Dataset
-            </span>
-          }
-          key="1"
-        >
-          <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
-        </TabPane>
-        {datastores.wkConnect.length > 0 && (
-          <TabPane
-            tab={
-              <span>
-                <GoogleOutlined />
-                Add Neuroglancer Dataset
-              </span>
-            }
-            key="2"
-          >
-            <DatasetAddNeuroglancerView
-              datastores={datastores.wkConnect}
-              onAdded={handleDatasetAdded}
-            />
-          </TabPane>
-        )}
-        {datastores.wkConnect.length > 0 && (
-          <TabPane
-            tab={
-              <span>
-                <DatabaseOutlined />
-                Add BossDB Dataset
-              </span>
-            }
-            key="3"
-          >
-            <DatasetAddBossView datastores={datastores.wkConnect} onAdded={handleDatasetAdded} />
-          </TabPane>
-        )}
-        {features().addForeignDataset && (
-          <TabPane
-            tab={
-              <span>
-                <BarsOutlined />
-                Add Foreign Dataset
-              </span>
-            }
-            key="4"
-          >
-            <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
-          </TabPane>
-        )}
-      </Tabs>
-      <div style={{ textAlign: "center" }}>
-        <p>or</p>
-        <p>
-          <LinkButton onClick={() => renderSampleDatasetsModal(activeUser, history)}>
-            Add a Sample Dataset
-          </LinkButton>
-        </p>
-      </div>
+      <Layout>
+        <Content>
+          <Tabs defaultActiveKey="1" className="container">
+            <TabPane
+              tab={
+                <span>
+                  <UploadOutlined />
+                  Upload Dataset
+                </span>
+              }
+              key="1"
+            >
+              <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
+            </TabPane>
+            {datastores.wkConnect.length > 0 && (
+              <TabPane
+                tab={
+                  <span>
+                    <GoogleOutlined />
+                    Add Neuroglancer Dataset
+                  </span>
+                }
+                key="2"
+              >
+                <DatasetAddNeuroglancerView
+                  datastores={datastores.wkConnect}
+                  onAdded={handleDatasetAdded}
+                />
+              </TabPane>
+            )}
+            {datastores.wkConnect.length > 0 && (
+              <TabPane
+                tab={
+                  <span>
+                    <DatabaseOutlined />
+                    Add BossDB Dataset
+                  </span>
+                }
+                key="3"
+              >
+                <DatasetAddBossView
+                  datastores={datastores.wkConnect}
+                  onAdded={handleDatasetAdded}
+                />
+              </TabPane>
+            )}
+            {features().addForeignDataset && (
+              <TabPane
+                tab={
+                  <span>
+                    <BarsOutlined />
+                    Add Foreign Dataset
+                  </span>
+                }
+                key="4"
+              >
+                <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
+              </TabPane>
+            )}
+          </Tabs>
+          <div style={{ textAlign: "center" }}>
+            <p>or</p>
+            <p>
+              <LinkButton onClick={() => renderSampleDatasetsModal(activeUser, history)}>
+                Add a Sample Dataset
+              </LinkButton>
+            </p>
+          </div>
+        </Content>
+        <VoxelyticsBanner />
+      </Layout>
       <Modal
         visible={showAfterUploadContent}
         closable={showAfterUploadContent}
@@ -191,6 +200,72 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
     </React.Fragment>
   );
 };
+
+function VoxelyticsBanner() {
+  const [showSegmentationBanner] = useState(Math.random() > 0.5);
+
+  if (!features().isDemoInstance) {
+    return null;
+  }
+
+  const segmentationBanner = (
+    <div
+      className="crosslink-box"
+      style={{
+        background: "url(/assets/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
+        height: 500,
+        backgroundSize: "110%",
+        padding: 0,
+      }}
+    >
+      <div
+        style={{
+          padding: "180px 10px 213px",
+          background:
+            "linear-gradient(181deg, transparent, rgb(59 59 59 / 20%), rgba(20, 19, 31, 0.84), #48484833, transparent)",
+        }}
+      >
+        <h4 style={{ color: "white", textAlign: "center" }}>
+          Are you looking for an automated segmentation of this dataset?
+        </h4>
+        <Button
+          href="https://webknossos.org/services/automated-segmentation"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "block", margin: "10px auto", width: "50%" }}
+        >
+          Learn More
+        </Button>
+      </div>
+    </div>
+  );
+  const alignBanner = (
+    <div className="crosslink-box">
+      <h4 style={{ fontWeight: "bold", textAlign: "center" }}>
+        Are you looking for dataset alignment or stitching?
+      </h4>
+      <img
+        src="/assets/images/vx/alignment-schema.png"
+        alt="Schematic Alignment"
+        style={{ width: "100%" }}
+      />
+      <Button
+        href="https://webknossos.org/services/alignment"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block", margin: "10px auto", width: "50%" }}
+      >
+        Learn More
+      </Button>
+    </div>
+  );
+
+  return (
+    <Sider className="hide-on-small-screen" width={300}>
+      {showSegmentationBanner ? segmentationBanner : alignBanner}
+    </Sider>
+  );
+}
 
 const mapStateToProps = (state: OxalisState) => ({
   activeUser: enforceActiveUser(state.activeUser),

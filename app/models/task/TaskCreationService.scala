@@ -18,7 +18,7 @@ import models.annotation.{
   AnnotationService,
   AnnotationState,
   AnnotationType,
-  TracingStoreRpcClient,
+  WKRemoteTracingStoreClient,
   TracingStoreService
 }
 import models.binary.{DataSet, DataSetDAO, DataSetService}
@@ -126,7 +126,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   // Used in create (without files) in case of base annotation
   private def duplicateOrCreateSkeletonBase(baseAnnotation: Annotation,
                                             params: TaskParameters,
-                                            tracingStoreClient: TracingStoreRpcClient): Fox[String] =
+                                            tracingStoreClient: WKRemoteTracingStoreClient): Fox[String] =
     baseAnnotation.skeletonTracingId
       .map(id => tracingStoreClient.duplicateSkeletonTracing(id))
       .getOrElse(
@@ -142,7 +142,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def duplicateOrCreateVolumeBase(
       baseAnnotation: Annotation,
       params: TaskParameters,
-      tracingStoreClient: TracingStoreRpcClient,
+      tracingStoreClient: WKRemoteTracingStoreClient,
       organizationId: ObjectId,
       resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
     baseAnnotation.volumeTracingId
@@ -464,7 +464,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
 
   private def saveVolumeTracingIfPresent(
       requestedTaskBox: Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
-      tracingStoreClient: TracingStoreRpcClient)(implicit ctx: DBAccessContext): Fox[Option[String]] =
+      tracingStoreClient: WKRemoteTracingStoreClient)(implicit ctx: DBAccessContext): Fox[Option[String]] =
     requestedTaskBox.map { tuple =>
       (tuple._1, tuple._3)
     } match {

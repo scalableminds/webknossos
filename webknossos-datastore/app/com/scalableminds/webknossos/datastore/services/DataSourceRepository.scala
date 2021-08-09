@@ -12,7 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceRepository @Inject()(
-    webKnossosServer: DataStoreWkRpcClient,
+    remoteWebKnossosClient: DSRemoteWebKnossosClient,
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends TemporaryStore[DataSourceId, InboxDataSource](system)
     with LazyLogging
@@ -25,7 +25,7 @@ class DataSourceRepository @Inject()(
     for {
       _ <- Fox.successful(())
       _ = insert(dataSource.id, dataSource)
-      _ <- webKnossosServer.reportDataSource(dataSource)
+      _ <- remoteWebKnossosClient.reportDataSource(dataSource)
     } yield ()
 
   def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =
@@ -33,12 +33,12 @@ class DataSourceRepository @Inject()(
       _ <- Fox.successful(())
       _ = removeAll()
       _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
-      _ <- webKnossosServer.reportDataSources(dataSources)
+      _ <- remoteWebKnossosClient.reportDataSources(dataSources)
     } yield ()
 
   def cleanUpDataSource(dataSourceId: DataSourceId): Fox[Unit] =
     for {
       _ <- Fox.successful(remove(dataSourceId))
-      _ <- webKnossosServer.deleteErroneousDataSource(dataSourceId)
+      _ <- remoteWebKnossosClient.deleteErroneousDataSource(dataSourceId)
     } yield ()
 }

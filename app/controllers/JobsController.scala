@@ -6,7 +6,6 @@ import java.util.Date
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
-import models.annotation.TracingStoreRpcClient
 import models.job.{JobDAO, JobService}
 import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
@@ -65,7 +64,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "scale" -> scale,
-            "webknossos_token" -> TracingStoreRpcClient.webKnossosToken
+            "webknossos_token" -> RpcTokenHolder.webKnossosToken
           )
 
           job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
@@ -97,6 +96,26 @@ class JobsController @Inject()(jobDAO: JobDAO,
       } yield Ok(js)
     }
 
+  def runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+          command = "infer_nuclei"
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "layer_name" -> layerName,
+            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+          )
+          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunNucleiInferral"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
   def runExportTiffJob(organizationName: String,
                        dataSetName: String,
                        bbox: String,
@@ -121,7 +140,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "bbox" -> bbox,
-            "webknossos_token" -> TracingStoreRpcClient.webKnossosToken,
+            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
             "export_file_name" -> exportFileName,
             "layer_name" -> layerName,
             "volume_tracing_id" -> tracingId,

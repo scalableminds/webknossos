@@ -38,14 +38,12 @@ export class OxalisModel {
     initialFetch: boolean,
     versions?: Versions,
   ) {
-    console.log("trying model init");
     const initializationInformation = await initialize(
       annotationType,
       initialCommandType,
       initialFetch,
       versions,
     );
-    console.log("model init succeeded");
     if (initializationInformation) {
       // Only executed on initial fetch
       const {

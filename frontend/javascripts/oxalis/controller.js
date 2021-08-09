@@ -4,6 +4,7 @@
  */
 
 import { type RouterHistory, withRouter, Link } from "react-router-dom";
+import { AsyncButton } from "components/async_clickables";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -19,7 +20,7 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
-import { getUsersOrganizations } from "admin/admin_rest_api";
+import { getUsersOrganizations, switchToOrganization } from "admin/admin_rest_api";
 import LoginForm from "admin/auth/login_form";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -117,11 +118,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       .catch(error => {
         this.props.setControllerStatus("failedLoading");
         const isNotFoundError = error.status === 404;
-        console.log(
-          "caught error, is not found error",
-          isNotFoundError,
-          this.props.initialCommandType,
-        );
         if (isNotFoundError) {
           // The dataset could probably not be fetched, because the user is currently not in the correct organization.
           // Thus fetch them to check whether the user can switch to the organization of the dataset.
@@ -152,7 +148,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || evt.pathname !== window.location.pathname) {
+      if (action === undefined || evt.pathname !== location.pathname) {
         const stateSaved = Model.stateSaved();
         if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
@@ -299,28 +295,51 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const { user, viewMode, initialCommandType } = this.props;
     const { gotUnhandledError, usersOrganizations } = this.state;
     let suggestedOrganization = null;
-    if (user != null && initialCommandType.owningOrganization !== user.organization) {
+    if (
+      user != null &&
+      initialCommandType.type === ControlModeEnum.VIEW &&
+      initialCommandType.owningOrganization !== user.organization
+    ) {
+      // Retrieving organization name from url. This only works in view mode.
+      const owningOrganizationName = location.pathname.split("/")[2];
       suggestedOrganization = usersOrganizations.find(
-        orga => orga === initialCommandType.owningOrganization,
+        orga => orga.name === owningOrganizationName && orga.name !== user.organization,
       );
-      // Use URL
-      location.pathname;
     }
-    // TODO maybe here
+    const switchToOwningOrganizationButton = (
+      <AsyncButton
+        type="primary"
+        style={{ marginRight: 26 }}
+        onClick={async () => {
+          if (suggestedOrganization != null) {
+            await switchToOrganization(suggestedOrganization.name);
+          }
+        }}
+      >
+        Switch to this Organization
+      </AsyncButton>
+    );
     if (status === "loading") {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
+      const message =
+        suggestedOrganization != null
+          ? `This dataset belongs to the organization ${
+              suggestedOrganization.displayName
+            } and this is currently not your active organization. Do you want to switch to that organization?`
+          : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
         <BrainSpinner
           message={
             <div style={{ textAlign: "center" }}>
-              {gotUnhandledError
-                ? messages["tracing.unhandled_initialization_error"]
-                : "Either the dataset does not exist or you do not have the necessary access rights."}
+              {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
               <br />
-              <Link to="/" style={{ marginTop: 16, display: "inline-block" }}>
-                <Button type="primary">Return to dashboard</Button>
-              </Link>
+              <div style={{ marginTop: 16, display: "inline-block" }}>
+                {suggestedOrganization != null ? switchToOwningOrganizationButton : null}
+                <Link to="/">
+                  <Button type="primary">Return to dashboard</Button>
+                </Link>
+              </div>
             </div>
           }
           isLoading={false}

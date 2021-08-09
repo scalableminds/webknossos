@@ -89,7 +89,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
           </Tooltip>
         </h5>
         <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
-          {datasetResolutionInfo.getResolutionByIndex(lowResolutionIndex).join("-")}
+          {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
         </div>
         <div
           style={{
@@ -103,6 +103,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
             tooltipVisible={false}
             onChange={value => setUserDefinedResolutionIndices(value)}
             range
+            disabled={annotationType === "skeleton"}
             step={1}
             min={lowestResolutionIndex}
             max={highestResolutionIndex}
@@ -110,7 +111,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
           />
         </div>
         <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
-          {datasetResolutionInfo.getResolutionByIndex(highResolutionIndex).join("-")}
+          {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
         </div>
         <br />
         <br />
@@ -118,9 +119,9 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
           to={`/datasets/${dataset.owningOrganization}/${
             dataset.name
           }/createExplorative/${annotationType}/${isFallbackSegmentationSelectedString}?minRes=${Math.max(
-            ...datasetResolutionInfo.getResolutionByIndex(lowResolutionIndex),
+            ...datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
           )}&maxRes=${Math.max(
-            ...datasetResolutionInfo.getResolutionByIndex(highResolutionIndex),
+            ...datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
           )}`}
           title="Create new annotation with selected properties"
         >
@@ -134,7 +135,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
 
   return (
     <Modal
-      title={`Create New Annotation for dataset “${dataset.name}”`}
+      title={`Create New Annotation for Dataset “${datasetId.name}”`}
       visible
       width={500}
       footer={null}

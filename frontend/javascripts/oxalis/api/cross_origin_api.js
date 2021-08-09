@@ -18,6 +18,8 @@ const onMessage = async event => {
   const { type, args, messageId } = event.data;
   if (type == null || !_.isArray(args)) return;
 
+  let returnValue = null;
+
   switch (type) {
     case "setMapping": {
       api.data.setMapping(api.data.getVolumeTracingLayerName(), ...args);
@@ -51,6 +53,39 @@ const onMessage = async event => {
       }
       break;
     }
+    case "loadPrecomputedMesh": {
+      const segmentId = args[0];
+      const seedPosition = args[1];
+      await api.data.loadPrecomputedMesh(segmentId, seedPosition);
+      break;
+    }
+    case "setMeshVisibility": {
+      const segmentId = args[0];
+      const isVisible = args[1];
+      api.data.setMeshVisibility(segmentId, isVisible);
+      break;
+    }
+    case "removeMesh": {
+      const segmentId = args[0];
+      api.data.removeMesh(segmentId);
+      break;
+    }
+    case "getAvailableMeshFiles": {
+      returnValue = await api.data.getAvailableMeshFiles();
+      break;
+    }
+    case "getActiveMeshFile": {
+      returnValue = await api.data.getActiveMeshFile();
+      break;
+    }
+    case "setActiveMeshFile": {
+      await api.data.setActiveMeshFile(args[0]);
+      break;
+    }
+    case "resetMeshes": {
+      api.data.resetMeshes();
+      break;
+    }
     default: {
       const errorMessage = `Unsupported cross origin API command: ${type}`;
       console.warn(errorMessage);
@@ -58,7 +93,7 @@ const onMessage = async event => {
       return;
     }
   }
-  event.source.postMessage({ type: "ack", messageId }, "*");
+  event.source.postMessage({ type: "ack", messageId, returnValue }, "*");
 };
 
 const CrossOriginApi = () => {

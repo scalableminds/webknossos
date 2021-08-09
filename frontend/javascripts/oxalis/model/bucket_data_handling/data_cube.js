@@ -412,7 +412,7 @@ class DataCube {
       );
     }
     const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);
-    const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
+    const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
     if (sourceCellId === cellId) {
       return null;
     }
@@ -428,7 +428,7 @@ class DataCube {
       ) {
         continue;
       }
-      const bucketData = currentBucket.getOrCreateData();
+      const { data: bucketData } = currentBucket.getOrCreateData();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.

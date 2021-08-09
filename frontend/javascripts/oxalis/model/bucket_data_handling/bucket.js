@@ -240,15 +240,15 @@ export class DataBucket {
     return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
   };
 
-  getCopyOfData(): BucketDataArray {
-    const bucketData = this.getOrCreateData();
+  getCopyOfData(): { dataClone: BucketDataArray, triggeredBucketFetch: boolean } {
+    const { data: bucketData, triggeredBucketFetch } = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
     const dataClone = new TypedArrayClass(bucketData);
-    return dataClone;
+    return { dataClone, triggeredBucketFetch };
   }
 
   label(labelFunc: BucketDataArray => void) {
-    const bucketData = this.getOrCreateData();
+    const { data: bucketData } = this.getOrCreateData();
     this.markAndAddBucketForUndo();
     labelFunc(bucketData);
     this.throttledTriggerLabeled();
@@ -258,7 +258,16 @@ export class DataBucket {
     this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
-      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));
+      let maybeBucketLoadedPromise = null;
+      const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
+      if (triggeredBucketFetch) {
+        maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
+          this.once("bucketLoaded", resolve);
+        });
+      }
+      Store.dispatch(
+        addBucketToUndoAction(this.zoomedAddress, dataClone, maybeBucketLoadedPromise),
+      );
     }
   }
 
@@ -294,16 +303,17 @@ export class DataBucket {
     this.accessed = false;
   }
 
-  getOrCreateData(): BucketDataArray {
+  getOrCreateData(): { data: BucketDataArray, triggeredBucketFetch: boolean } {
+    let triggeredBucketFetch = false;
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
+        triggeredBucketFetch = true;
         this.temporalBucketManager.addBucket(this);
       }
     }
-
-    return this.getData();
+    return { data: this.getData(), triggeredBucketFetch };
   }
 
   pull(): void {
@@ -346,7 +356,7 @@ export class DataBucket {
         } else {
           this.data = data;
         }
-        this.trigger("bucketLoaded");
+        this.trigger("bucketLoaded", data);
         this.state = BucketStateEnum.LOADED;
         break;
       default:

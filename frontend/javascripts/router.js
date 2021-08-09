@@ -496,7 +496,7 @@ class ReactRouter extends React.Component<Props> {
                         resolutionRestrictions.min = parseInt(params.minRes);
                       }
                       if (params.maxRes !== undefined) {
-                        resolutionRestrictions.max = parseInt(params.minRes);
+                        resolutionRestrictions.max = parseInt(params.maxRes);
                       }
                       const annotation = await createExplorational(
                         dataset,

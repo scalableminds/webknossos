@@ -1,5 +1,5 @@
 // @flow
-import { Space, Tooltip } from "antd";
+import { Tooltip } from "antd";
 
 import { useDispatch, useSelector } from "react-redux";
 
@@ -32,13 +32,10 @@ import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 
-const spaceBetweenItems = 25;
 const lineColor = "rgba(255, 255, 255, 0.67)";
 
-const defaultShortcutStyle = { marginLeft: spaceBetweenItems };
-const spaceStyle = { display: "flex", flexWrap: "wrap" };
 const moreIconStyle = { height: 14, color: lineColor };
-const moreLinkStyle = { marginLeft: 10 };
+const moreLinkStyle = { marginLeft: 10, marginRight: "auto" };
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -48,7 +45,7 @@ function getPosString(pos: Vector3) {
 
 function ZoomShortcut() {
   return (
-    <span key="zoom" style={defaultShortcutStyle}>
+    <span key="zoom" className="shortcut-info-element">
       <span
         key="zoom-i"
         className="keyboard-key-icon-small"
@@ -71,7 +68,7 @@ function ZoomShortcut() {
 function LeftClickShortcut({ actionInfos }) {
   const leftClick =
     actionInfos.leftClick != null ? (
-      <span style={defaultShortcutStyle}>
+      <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left.svg"
@@ -83,7 +80,7 @@ function LeftClickShortcut({ actionInfos }) {
 
   const leftDrag =
     actionInfos.leftDrag != null ? (
-      <span style={defaultShortcutStyle}>
+      <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-left-drag.svg"
@@ -94,17 +91,17 @@ function LeftClickShortcut({ actionInfos }) {
     ) : null;
 
   return (
-    <div style={{ display: "inline-block", marginLeft: "auto" }}>
+    <span>
       {leftClick}
       {leftDrag}
-    </div>
+    </span>
   );
 }
 
 function RightClickShortcut({ actionInfos }) {
   const rightClick =
     actionInfos.rightClick != null ? (
-      <span style={defaultShortcutStyle}>
+      <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right.svg"
@@ -116,7 +113,7 @@ function RightClickShortcut({ actionInfos }) {
 
   const rightDrag =
     actionInfos.rightDrag != null ? (
-      <span style={defaultShortcutStyle}>
+      <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right-drag.svg"
@@ -174,7 +171,7 @@ function ShortcutsInfo() {
       <React.Fragment>
         <span
           style={{
-            marginLeft: "auto",
+            marginRight: "auto",
             textTransform: "capitalize",
           }}
         >
@@ -185,7 +182,7 @@ function ShortcutsInfo() {
           />
           Move
         </span>
-        <span key="zoom" style={defaultShortcutStyle}>
+        <span key="zoom" className="shortcut-info-element">
           <span
             key="zoom-i"
             className="keyboard-key-icon-small"
@@ -205,7 +202,7 @@ function ShortcutsInfo() {
     <React.Fragment>
       <LeftClickShortcut actionInfos={actionInfos} />
       <RightClickShortcut actionInfos={actionInfos} />
-      <span style={defaultShortcutStyle}>
+      <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-wheel.svg"
@@ -213,7 +210,7 @@ function ShortcutsInfo() {
         />
         {isAltPressed || isControlPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
-      <span style={defaultShortcutStyle}>
+      <span className="shortcut-info-element">
         <img
           className="keyboard-mouse-icon"
           src="/assets/images/icon-statusbar-mouse-right-drag.svg"
@@ -238,11 +235,7 @@ function getCellInfo(globalMousePosition: ?Vector3) {
     return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : hoveredCellInfo.id;
   };
 
-  return (
-    <span className="info-element" style={{ minWidth: 140 }}>
-      Segment {getSegmentIdString()}
-    </span>
-  );
+  return <span className="info-element">Segment {getSegmentIdString()}</span>;
 }
 
 function maybeLabelWithSegmentationWarning(hasUint64Segmentation: boolean, label: string) {
@@ -292,8 +285,8 @@ function Infos() {
   }
 
   return (
-    <Space size={spaceBetweenItems} style={spaceStyle}>
-      <span>
+    <React.Fragment>
+      <span className="info-element">
         <img
           src="/assets/images/icon-statusbar-downsampling.svg"
           className="resolution-status-bar-icon"
@@ -302,14 +295,14 @@ function Infos() {
         {activeResolution.join("-")}{" "}
       </span>
       {isPlaneMode ? (
-        <span className="info-element" style={{ minWidth: 140 }}>
+        <span className="info-element">
           Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
         </span>
       ) : null}
       {isPlaneMode ? getCellInfo(globalMousePosition) : null}
 
-      {isSkeletonAnnotation ? (
-        <span className="info-element" style={{ minWidth: 120 }}>
+      {isVolumeAnnotation ? (
+        <span className="info-element">
           <NumberInputPopoverSetting
             value={activeCellId}
             label={maybeLabelWithSegmentationWarning(hasUint64Segmentation, "Active Segment")}
@@ -321,8 +314,8 @@ function Infos() {
           />
         </span>
       ) : null}
-      {isVolumeAnnotation ? (
-        <span className="info-element" style={{ minWidth: 120 }}>
+      {isSkeletonAnnotation ? (
+        <span className="info-element">
           <NumberInputPopoverSetting
             value={activeNodeId}
             label="Active Node"
@@ -332,7 +325,7 @@ function Infos() {
         </span>
       ) : null}
       {isSkeletonAnnotation ? (
-        <span className="info-element" style={{ minWidth: 120 }}>
+        <span className="info-element">
           <NumberInputPopoverSetting
             value={activeTreeId}
             label="Active Tree"
@@ -341,7 +334,7 @@ function Infos() {
           />
         </span>
       ) : null}
-    </Space>
+    </React.Fragment>
   );
 }
 
@@ -349,8 +342,8 @@ class Statusbar extends React.PureComponent<{}, {}> {
   render() {
     return (
       <span className="statusbar">
-        <Infos />
         <ShortcutsInfo />
+        <Infos />
       </span>
     );
   }

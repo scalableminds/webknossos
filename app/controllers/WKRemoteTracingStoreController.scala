@@ -17,7 +17,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class WKTracingStoreController @Inject()(
+class WKRemoteTracingStoreController @Inject()(
     tracingStoreService: TracingStoreService,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     timeSpanService: TimeSpanService,

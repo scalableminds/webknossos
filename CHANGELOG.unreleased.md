@@ -8,52 +8,24 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/21.06.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/21.07.0...HEAD)
 
 ### Added
-- Added the possibility for admins to set long-running jobs to a “manually repaired” state. [#5530](https://github.com/scalableminds/webknossos/pull/5530)
-- Added compatibility with newer JREs, tested with 8, 11 and 14. [#5558](https://github.com/scalableminds/webknossos/pull/5558)
-- The toolbar contains two  additional tools: [#5384](https://github.com/scalableminds/webknossos/pull/5384)
-  - one for the skeleton mode (similar to the existing move tool).
-  - one for erasing volume data (similar to right-dragging with the previous brush/trace tool)
+- Fixed a bug where non-existing resolutions could be selected for wk-worker-based meshfile computations [#5631](https://github.com/scalableminds/webknossos/pull/5631)
+- Added new mesh-related functions to the front-end API: getAvailableMeshFiles, getActiveMeshFile, setActiveMeshFile, loadPrecomputedMesh, computeMeshOnDemand, setMeshVisibility, removeMesh. [#5634](https://github.com/scalableminds/webknossos/pull/5634)
+- Added a route to call new webknossos-worker job for nuclei inferral. [#5626](https://github.com/scalableminds/webknossos/pull/5626)
 
 ### Changed
-- Improve error logging for unhandled rejections. [#5575](https://github.com/scalableminds/webknossos/pull/5575)
-- Improved dragging behavior of trees/groups in the tree tab. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
-- "Center new Nodes" option was renamed to "Auto-center Nodes" and changed to also influence the centering-behavior when deleting a node. [#5538](https://github.com/scalableminds/webknossos/pull/5538)
-- The displayed webKnossos version now omits the parent release name for intermediate builds. [#5565](https://github.com/scalableminds/webknossos/pull/5565)
-- The following changes belong to [#5384](https://github.com/scalableminds/webknossos/pull/5384):
-  - The move tool is only capable of performing movements (its skeleton-functionalities were moved to a dedicated skeleton tool).
-  - (Unless classic mode is enabled:) Right-click opens a context-sensitive menu by default with various actions, such as creating an edge between two nodes. Consequently, important actions which were done via right click previously were changed:
-      - In the skeleton tool, left click can be used to create, select and move nodes. Also, mere dragging (without hovering a node) moves the active position (similar to the move tool).
-      - In the trace/brush tool, erasure cannot be performed with right click, anymore. Instead, CTRL + Shift + Left Click works for erasing. Alternatively, selecting the dedicated erase tool also works.
-  - The two tabs in the left sidebar "Annotation" and "Dataset" were renamed and restructured to "Layers" and "Settings".
-      - "Layers" contains the layers which were previously visible in "Dataset".
-    - Also, "Layers" contains a dedicated Skeleton layer which handles skeleton-specific settings (e.g., clipping distance).
-    - "Merger Mode" and "Soma Clicking" were moved to the toolbar (visible when the skeleton tool is selected).
-    - “Brush Size” was moved to the toolbar (visible when brush or brush-eraser is selected)
-    - "Controls" and "Viewport options" (previously under "Annotation") and "Data Rendering" (previously under "Dataset") were moved to "Settings".
-    - The "Bounding Boxes" section in "Annotation" tab was moved to an own tab to the right sidebar.
-    - The "Mapping" setting was moved to the segmentation layer in the left sidebar.
-  - The status bar contains additional elements for (editable) information, such as the active tree id (previously positioned in the left sidebar).
-  - Some UI elements were less spacious by favoring icons instead of labels. Hover these elements to get an helpful tooltip.
+- Improved context menu for interactions with segmentation data which wasn't loaded completely, yet. [#5637](https://github.com/scalableminds/webknossos/pull/5637)
 
 ### Fixed
-- Fixed that a disabled "Center new Nodes" option didn't work correctly in merger mode. [#5538](https://github.com/scalableminds/webknossos/pull/5538)
-- Fixed a bug where dataset uploads of zips with just one file inside failed. [#5534](https://github.com/scalableminds/webknossos/pull/5534)
-- Fixed a benign error message when a dataset without a segmentation layer was opened in view mode or with a skeleton-only annotation. [#5583](https://github.com/scalableminds/webknossos/pull/5583)
-- Fixed crashing tree tab which could happen when dragging a node and then switching directly to another tab (e.g., comments) and then back again. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
-- Fixed that the UI allowed mutating trees in the tree tab (dragging/creating/deleting trees and groups) in read-only tracings. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
-- Fixed "Create a new tree group for this file" setting in front-end import when a group id of 0 was used in the NML. [#5573](https://github.com/scalableminds/webknossos/pull/5573)
-- Fixed a bug that caused a distortion when moving or zooming in the maximized 3d viewport. [#5550](https://github.com/scalableminds/webknossos/pull/5550)
-- Fixed a bug that prevented focusing the login fields when being prompted to login after trying to view a dataset without being logged in.[#5521](https://github.com/scalableminds/webknossos/pull/5577)
-- Fixed that the 3d view content disappeared permanently if the 3d view was resized to not be visible. [#5588](https://github.com/scalableminds/webknossos/pull/5588)
-- The following changes belong to [#5384](https://github.com/scalableminds/webknossos/pull/5384):
-  - Removed "Highlight hovered cells" setting (highlight on hover will always be done).
-  - The "Volume" tab was removed. The "Mapping" setting was moved to the segmentation layer in the left sidebar. The "segment id" table was removed, as the status bar also contains the information about the hovered cell id.
+- Fix that active segment and node id were not shown in status bar when being in a non-hybrid annotation. [#5638](https://github.com/scalableminds/webknossos/pull/5638)
+- Fix that "Compute Mesh File" button was enabled in scenarios where it should not be supported (e.g., when no segmentation layer exists). [#5648](https://github.com/scalableminds/webknossos/pull/5648)
+- Fixed a bug where an authentication error was shown when viewing the meshes tab while not logged in. [#5647](https://github.com/scalableminds/webknossos/pull/5647)
+- Fixed that undoing of volume annotations might overwrite the backend data on not loaded magnifications with nothing. [#5608](https://github.com/scalableminds/webknossos/pull/5608)
 
 ### Removed
 -
 
 ### Breaking Change
--
+- The interface of the cross-origin API changed. The initialization message is no longer an object with a `message` property of "api ready", but instead an object with a `type` property of "init". Additionally, if an API call finishes, a return message of type "ack" is sent. If the original API call contained a `messageId` property, the return message will contain the same `messageId` to allow to match the return message. If the API call is misformatted, a return message of `type` "err" is sent, containing an error message in the `message` property.

@@ -52,7 +52,7 @@ type OwnProps = {|
   initialCommandType: TraceOrViewCommand,
   controllerStatus: ControllerStatus,
   setControllerStatus: ControllerStatus => void,
-  showNodeContextMenuAt: ShowContextMenuFunction,
+  showContextMenuAt: ShowContextMenuFunction,
 |};
 type StateProps = {|
   viewMode: ViewMode,
@@ -380,7 +380,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     if (isArbitrary) {
       return <ArbitraryController viewMode={viewMode} />;
     } else if (isPlane) {
-      return <PlaneController showNodeContextMenuAt={this.props.showNodeContextMenuAt} />;
+      return <PlaneController showContextMenuAt={this.props.showContextMenuAt} />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
       // In case we add new viewmodes, the following error will be thrown.

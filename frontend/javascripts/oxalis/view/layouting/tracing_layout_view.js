@@ -18,7 +18,7 @@ import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/sto
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
-import NodeContextMenu from "oxalis/view/context_menu";
+import ContextMenu from "oxalis/view/context_menu";
 import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
@@ -80,10 +80,10 @@ type State = {
   activeLayoutName: string,
   hasError: boolean,
   status: ControllerStatus,
-  nodeContextMenuPosition: ?[number, number],
+  contextMenuPosition: ?[number, number],
   clickedNodeId: ?number,
-  nodeContextMenuGlobalPosition: Vector3,
-  nodeContextMenuViewport: ?OrthoView,
+  contextMenuGlobalPosition: Vector3,
+  contextMenuViewport: ?OrthoView,
   model: Object,
 };
 
@@ -109,10 +109,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       activeLayoutName: lastActiveLayoutName,
       hasError: false,
       status: "loading",
-      nodeContextMenuPosition: null,
+      contextMenuPosition: null,
       clickedNodeId: null,
-      nodeContextMenuGlobalPosition: [0, 0, 0],
-      nodeContextMenuViewport: null,
+      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuViewport: null,
       model: layout,
     };
   }
@@ -157,7 +157,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     initializeInputCatcherSizes();
   };
 
-  showNodeContextMenuAt = (
+  showContextMenuAt = (
     xPos: number,
     yPos: number,
     nodeId: ?number,
@@ -165,19 +165,19 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     viewport: OrthoView,
   ) => {
     this.setState({
-      nodeContextMenuPosition: [xPos, yPos],
+      contextMenuPosition: [xPos, yPos],
       clickedNodeId: nodeId,
-      nodeContextMenuGlobalPosition: globalPosition,
-      nodeContextMenuViewport: viewport,
+      contextMenuGlobalPosition: globalPosition,
+      contextMenuViewport: viewport,
     });
   };
 
-  hideNodeContextMenu = () => {
+  hideContextMenu = () => {
     this.setState({
-      nodeContextMenuPosition: null,
+      contextMenuPosition: null,
       clickedNodeId: null,
-      nodeContextMenuGlobalPosition: [0, 0, 0],
-      nodeContextMenuViewport: null,
+      contextMenuGlobalPosition: [0, 0, 0],
+      contextMenuViewport: null,
     });
   };
 
@@ -237,9 +237,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     const {
       clickedNodeId,
-      nodeContextMenuPosition,
-      nodeContextMenuGlobalPosition,
-      nodeContextMenuViewport,
+      contextMenuPosition,
+      contextMenuGlobalPosition,
+      contextMenuViewport,
       status,
       activeLayoutName,
     } = this.state;
@@ -265,13 +265,13 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <React.Fragment>
         <PresentModernControls />
-        {nodeContextMenuPosition != null && nodeContextMenuViewport != null ? (
-          <NodeContextMenu
-            hideNodeContextMenu={this.hideNodeContextMenu}
+        {contextMenuPosition != null && contextMenuViewport != null ? (
+          <ContextMenu
+            hideContextMenu={this.hideContextMenu}
             clickedNodeId={clickedNodeId}
-            nodeContextMenuPosition={nodeContextMenuPosition}
-            globalPosition={nodeContextMenuGlobalPosition}
-            viewport={nodeContextMenuViewport}
+            contextMenuPosition={contextMenuPosition}
+            globalPosition={contextMenuGlobalPosition}
+            viewport={contextMenuViewport}
           />
         ) : null}
         <NmlUploadZoneContainer
@@ -284,7 +284,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
             setControllerStatus={this.onStatusLoaded}
-            showNodeContextMenuAt={this.showNodeContextMenuAt}
+            showContextMenuAt={this.showContextMenuAt}
           />
           <CrossOriginApi />
           <Layout className="tracing-layout">

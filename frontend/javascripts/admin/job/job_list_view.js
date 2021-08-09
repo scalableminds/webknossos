@@ -4,7 +4,16 @@ import _ from "lodash";
 import { PropTypes } from "@scalableminds/prop-types";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { Table, Spin, Input, Tooltip } from "antd";
-import { DownOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  CheckCircleTwoTone,
+  ClockCircleTwoTone,
+  CloseCircleTwoTone,
+  DownOutlined,
+  EyeOutlined,
+  LoadingOutlined,
+  QuestionCircleTwoTone,
+  ToolTwoTone,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -105,6 +114,29 @@ class JobListView extends React.PureComponent<Props, State> {
           (Bounding Box {job.boundingBox})
         </span>
       );
+    } else if (job.type === "compute_mesh_file" && job.organizationName && job.datasetName) {
+      return (
+        <span>
+          Mesh file computation for{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    } else if (
+      job.type === "infer_nuclei" &&
+      job.organizationName &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Nuclei inferral for layer {job.layerName} of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
     } else {
       return <span>{job.type}</span>;
     }
@@ -136,25 +168,59 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
+    } else if (job.type === "infer_nuclei") {
+      return (
+        <span>
+          {job.state === "SUCCESS" && job.result && this.props.activeUser && (
+            <Link
+              to={`/datasets/${this.props.activeUser.organization}/${job.result}/view`}
+              title="View Segmentation"
+            >
+              <EyeOutlined />
+              View
+            </Link>
+          )}
+        </span>
+      );
     } else return null;
   };
 
   renderState = (__: any, job: APIJob) => {
-    const tooltipMessages = {
-      UNKNOWN:
-        "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
-      SUCCESS: "This job has successfully been executed.",
-      PENDING: "This job will run as soon as a worker becomes available.",
-      STARTED: "This job is currently running.",
-      FAILURE:
-        "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
-      MANUAL:
-        "The job will be handled by an admin shortly, since it couldn't be finished automatically. Please check back here soon.",
+    const tooltipMessagesAndIcons = {
+      UNKNOWN: {
+        tooltip:
+          "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
+        icon: <QuestionCircleTwoTone twoToneColor="grey" />,
+      },
+      SUCCESS: {
+        tooltip: "This job has successfully been executed.",
+        icon: <CheckCircleTwoTone twoToneColor="#49b21b" />,
+      },
+      PENDING: {
+        tooltip: "This job will run as soon as a worker becomes available.",
+        icon: <ClockCircleTwoTone twoToneColor="orange" />,
+      },
+      STARTED: { tooltip: "This job is currently running.", icon: <LoadingOutlined /> },
+      FAILURE: {
+        tooltip:
+          "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
+        icon: <CloseCircleTwoTone twoToneColor="red" />,
+      },
+      MANUAL: {
+        tooltip:
+          "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
+        icon: <ToolTwoTone twoToneColor="orange" />,
+      },
     };
 
-    const tooltip: string = tooltipMessages[job.state];
+    const { tooltip, icon } = tooltipMessagesAndIcons[job.state];
     const jobStateNormalized = _.capitalize(job.state.toLowerCase());
-    return <Tooltip title={tooltip}>{jobStateNormalized}</Tooltip>;
+    return (
+      <Tooltip title={tooltip}>
+        {icon}
+        {jobStateNormalized}
+      </Tooltip>
+    );
   };
 
   render() {

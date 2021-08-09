@@ -4,10 +4,12 @@
  */
 import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutionInfoOfSegmentationLayer } from  "oxalis/model/accessors/dataset_accessor";
 import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import type { AnnotationTool, ContourMode } from "oxalis/constants";
 import type { HybridServerTracing, ServerVolumeTracing } from "types/api_flow_types";
+
 
 export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volume != null) {
@@ -64,6 +66,10 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     // disabled.
     return false;
   }
+
+  console.log(getResolutionInfoOfSegmentationLayer(state.dataset));
+
+  console.log("current requestLogZoomStep:", getRequestLogZoomStep(state));
 
   // The current resolution is too high for the tool
   // because too many voxels could be annotated at the same time.

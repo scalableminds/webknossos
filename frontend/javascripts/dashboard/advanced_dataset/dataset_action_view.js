@@ -69,7 +69,7 @@ function NewAnnotationLink({
             <EllipsisOutlined style={{ color: "var(--ant-link)" }} />
           </a>
           {showCreateExplorativeModal ? (
-            <CreateExplorativeModal dataset={dataset} onClose={onCloseCreateExplorativeModal} />
+            <CreateExplorativeModal datasetId={dataset} onClose={onCloseCreateExplorativeModal} />
           ) : null}
         </div>
       )}

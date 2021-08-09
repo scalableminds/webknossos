@@ -1,16 +1,20 @@
 // @flow
-import { Modal, Radio, Button, Checkbox } from "antd";
+import { Modal, Radio, Button, Checkbox, Tooltip, Slider, Spin } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDatasetId } from "types/api_flow_types";
 import { Link } from "react-router-dom";
+import { useFetch } from "libs/react_helpers";
+import { getDataset } from "admin/admin_rest_api";
 
 import {
   getSegmentationLayer,
   doesSupportVolumeWithFallback,
+  getDatasetResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 
 type Props = {
-  dataset: APIDataset,
+  datasetId: APIDatasetId,
   onClose: () => void,
 };
 
@@ -88,12 +92,33 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
 };
 */
 
-const CreateExplorativeModal = ({ dataset, onClose }: Props) => {
+
+
+const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
+  const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
+  const [annotationType, setAnnotationType] = useState("hybrid");
+  const [userDefinedWithFallback, setUserDefinedWithFallback] = useState(true);
+  const [userDefinedResolutionIndices, setUserDefinedResolutionIndices] = useState([0, 10000]);
+
+  if (dataset === null) {
+    return (
+          <Modal
+      title={`Create New Annotation for dataset “${datasetId.name}”`}
+      visible
+      width={500}
+      footer={null}
+      onCancel={onClose}
+    ><Spin /></Modal>)
+  }
+
   const segmentationLayer = getSegmentationLayer(dataset);
   // doesSupportVolumeWithFallback(dataset);
 
-  const [annotationType, setAnnotationType] = useState("hybrid");
-  const [userDefinedWithFallback, setUserDefinedWithFallback] = useState(true);
+  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+  console.log(datasetResolutionInfo);
+  const highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
+  const lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
+
 
   const isFallbackSegmentationAlwaysOff =
     segmentationLayer == null ||
@@ -127,15 +152,30 @@ const CreateExplorativeModal = ({ dataset, onClose }: Props) => {
       footer={null}
       onCancel={onClose}
     >
-      <p>
-        <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
-          <Radio value="hybrid">Skeleton and Volume</Radio>
-          <Radio value="skeleton">Skeleton only</Radio>
-          <Radio value="volume">Volume only</Radio>
-        </Radio.Group>
-      </p>
+      <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
+        <Radio value="hybrid">Skeleton and Volume</Radio>
+        <Radio value="skeleton">Skeleton only</Radio>
+        <Radio value="volume">Volume only</Radio>
+      </Radio.Group>
+      <br />
       {fallbackCheckbox}
-      <p>Restrict resolutions... TODO</p>
+      <br />
+      <Checkbox>
+        Restrict Resolutions{" "}
+        <Tooltip
+          title="Select which of the dataset resolutions the volume data should be created at. Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
+          placement="right"
+        >
+          <InfoCircleOutlined />
+        </Tooltip>
+      </Checkbox>
+      <br />
+      <div style={{display: "inline-block", width: "20%"}}>{datasetResolutionInfo.getResolutionByIndex(Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0])).join("-")}</div>
+      <div style={{display: "inline-block", width: "50%"}}>
+        <Slider tooltipVisible={false} onChange={value => setUserDefinedResolutionIndices(value)} range step={1} min={lowestResolutionIndex} max={highestResolutionIndex} value={[userDefinedResolutionIndices[0], userDefinedResolutionIndices[1]]} />
+      </div>
+      <div style={{display: "inline-block", width: "20%"}}>{datasetResolutionInfo.getResolutionByIndex(Math.min(highestResolutionIndex, userDefinedResolutionIndices[1])).join("-")}</div>
+      <br />
       <Link
         to={`/datasets/${dataset.owningOrganization}/${
           dataset.name

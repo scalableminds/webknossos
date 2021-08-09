@@ -83,6 +83,13 @@ export class MoveTool {
       over: () => {
         MoveHandlers.handleOverViewport(planeId);
       },
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        const { useLegacyBindings } = Store.getState().userConfiguration;
+
+        if (event.shiftKey || !useLegacyBindings) {
+          SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+        }
+      },
       pinch: delta => MoveHandlers.zoom(delta, true),
       mouseMove: (delta: Point2, position: Point2, id, event) => {
         // Always set the correct mouse position. Otherwise, using alt + mouse move and
@@ -117,12 +124,22 @@ export class MoveTool {
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
-    _useLegacyBindings: boolean,
-    _shiftKey: boolean,
+    useLegacyBindings: boolean,
+    shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
   ): Object {
+    // In legacy mode, don't display a hint for
+    // left click as it would be equal to left drag
+    const leftClickInfo =
+      useLegacyBindings && !shiftKey
+        ? {}
+        : {
+            leftClick: "Select Node",
+          };
+
     return {
+      ...leftClickInfo,
       leftDrag: "Move",
       rightClick: "Context Menu",
     };
@@ -267,7 +284,7 @@ export class SkeletonTool {
     const leftClickInfo = useLegacyBindings
       ? {}
       : {
-          leftClick: "Place Node",
+          leftClick: "Place/Select Node",
         };
 
     return {

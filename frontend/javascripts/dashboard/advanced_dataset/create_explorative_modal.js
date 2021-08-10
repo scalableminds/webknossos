@@ -53,10 +53,11 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
         onChange={e => setUserDefinedWithFallback(e.target.checked)}
         checked={isFallbackSegmentationSelected}
         disabled={!isFallbackSegmentationOptional}
+        style={{ marginBottom: 14 }}
       >
         With Existing Segmentation{" "}
         <Tooltip
-          title="Base your volume annotation on an existing segmentation layer of this dataset. Note that skeleton-only annotations always show the existing segmentation."
+          title="Base your volume annotation on an existing segmentation layer of this dataset. Note that skeleton-only annotations always show the existing segmentation by default."
           placement="right"
         >
           <InfoCircleOutlined />
@@ -69,52 +70,50 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
 
     modalContent = (
       <React.Fragment>
-        <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
-          <Radio value="hybrid">Skeleton and Volume</Radio>
-          <Radio value="skeleton">Skeleton only</Radio>
-          <Radio value="volume">Volume only</Radio>
-        </Radio.Group>
-        <br />
-        <br />
-        {fallbackCheckbox}
-        <br />
-        <br />
+        <div style={{ marginBottom: 14 }}>
+          <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
+            <Radio value="hybrid">Skeleton and Volume</Radio>
+            <Radio value="skeleton">Skeleton only</Radio>
+            <Radio value="volume">Volume only</Radio>
+          </Radio.Group>
+        </div>
+        {doesSupportVolumeWithFallback(dataset) ? fallbackCheckbox : null}
         <h5>
           Volume Resolutions{" "}
           <Tooltip
-            title="Select which of the dataset resolutions the volume data should be created at. Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
+            title="Select which of the dataset resolutions the volume data should be created at. For example, resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
             placement="right"
           >
             <InfoCircleOutlined />
           </Tooltip>
         </h5>
-        <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
-          {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
+            {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+          </div>
+          <div
+            style={{
+              display: "inline-block",
+              width: "60%",
+              verticalAlign: "middle",
+              paddingRight: "1em",
+            }}
+          >
+            <Slider
+              tooltipVisible={false}
+              onChange={value => setUserDefinedResolutionIndices(value)}
+              range
+              disabled={annotationType === "skeleton"}
+              step={1}
+              min={lowestResolutionIndex}
+              max={highestResolutionIndex}
+              value={[lowResolutionIndex, highResolutionIndex]}
+            />
+          </div>
+          <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
+            {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
+          </div>
         </div>
-        <div
-          style={{
-            display: "inline-block",
-            width: "60%",
-            verticalAlign: "middle",
-            paddingRight: "1em",
-          }}
-        >
-          <Slider
-            tooltipVisible={false}
-            onChange={value => setUserDefinedResolutionIndices(value)}
-            range
-            disabled={annotationType === "skeleton"}
-            step={1}
-            min={lowestResolutionIndex}
-            max={highestResolutionIndex}
-            value={[lowResolutionIndex, highResolutionIndex]}
-          />
-        </div>
-        <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
-          {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
-        </div>
-        <br />
-        <br />
         <Link
           to={`/datasets/${dataset.owningOrganization}/${
             dataset.name

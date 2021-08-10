@@ -29,13 +29,11 @@ function getDisabledWhenReloadingStyle(isReloading) {
 function NewAnnotationLink({
   dataset,
   isReloading,
-  showCreateExplorativeModal,
+  isCreateExplorativeModalVisible,
   onShowCreateExplorativeModal,
   onCloseCreateExplorativeModal,
 }) {
   const withFallback = doesSupportVolumeWithFallback(dataset) ? "true" : "false";
-
-  console.log("showCreateExplorativeModal:", showCreateExplorativeModal);
 
   return (
     <React.Fragment>
@@ -64,11 +62,11 @@ function NewAnnotationLink({
           <a
             title="New Annotation With Custom Properties"
             className="ant-dropdown-link"
-            onClick={() => onShowCreateExplorativeModal()}
+            onClick={onShowCreateExplorativeModal}
           >
             <EllipsisOutlined style={{ color: "var(--ant-link)" }} />
           </a>
-          {showCreateExplorativeModal ? (
+          {isCreateExplorativeModalVisible ? (
             <CreateExplorativeModal datasetId={dataset} onClose={onCloseCreateExplorativeModal} />
           ) : null}
         </div>
@@ -84,7 +82,7 @@ type Props = {
 
 type State = {
   isReloading: boolean,
-  showCreateExplorativeModal: boolean,
+  isCreateExplorativeModalVisible: boolean,
 };
 
 function LinkWithDisabled({
@@ -117,7 +115,7 @@ function LinkWithDisabled({
 class DatasetActionView extends React.PureComponent<Props, State> {
   state = {
     isReloading: false,
-    showCreateExplorativeModal: false,
+    isCreateExplorativeModalVisible: false,
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
@@ -135,7 +133,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   render() {
     const { dataset } = this.props;
     const { isReloading } = this.state;
-    const { showCreateExplorativeModal } = this.state;
+    const { isCreateExplorativeModalVisible } = this.state;
 
     const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
 
@@ -174,12 +172,12 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               <NewAnnotationLink
                 dataset={dataset}
                 isReloading={isReloading}
-                showCreateExplorativeModal={showCreateExplorativeModal}
+                isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
                 onShowCreateExplorativeModal={() =>
-                  this.setState({ showCreateExplorativeModal: true })
+                  this.setState({ isCreateExplorativeModalVisible: true })
                 }
                 onCloseCreateExplorativeModal={() =>
-                  this.setState({ showCreateExplorativeModal: false })
+                  this.setState({ isCreateExplorativeModalVisible: false })
                 }
               />
             ) : (

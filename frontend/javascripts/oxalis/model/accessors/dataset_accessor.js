@@ -152,9 +152,6 @@ export class ResolutionInfo {
     });
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, entry => entry[1]));
-
-    console.log("index", index);
-    console.log("indices", indices);
     return bestIndexWithDistance[0];
   }
 

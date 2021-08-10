@@ -119,8 +119,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         this.props.setControllerStatus("failedLoading");
         const isNotFoundError = error.status === 404;
         if (isNotFoundError) {
-          // The dataset could probably not be fetched, because the user is currently not in the correct organization.
-          // Thus fetch them to check whether the user can switch to the organization of the dataset.
+          // The dataset could not be fetched. This might have happened because the user is currently not in the correct organization.
+          // Thus, fetch the user's organizations to check whether they can switch to the organization of the dataset.
           getUsersOrganizations().then(organizations =>
             this.setState({ usersOrganizations: organizations }),
           );
@@ -326,7 +326,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         suggestedOrganization != null
           ? `This dataset belongs to the organization ${
               suggestedOrganization.displayName
-            } and this is currently not your active organization. Do you want to switch to that organization?`
+            } which is currently not your active organization. Do you want to switch to that organization?`
           : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
         <BrainSpinner

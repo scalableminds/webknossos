@@ -12,7 +12,7 @@ import {
 import { useHistory, Link } from "react-router-dom";
 import classnames from "classnames";
 import { connect } from "react-redux";
-import React from "react";
+import React, { useEffect } from "react";
 
 import Toast from "libs/toast";
 import type { APIUser, APIUserTheme } from "types/api_flow_types";
@@ -51,6 +51,28 @@ export const navbarHeight = 48;
 
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
+
+function WhatsNew() {
+  useEffect(() => {
+    // Initialize Olvy after mounting
+    const OlvyConfig = {
+      organisation: "webknossos",
+      target: "#olvy-target",
+      type: "modal",
+      view: {
+        showSearch: false,
+        compact: false,
+        showHeader: true, // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
+        showUnreadIndicator: true,
+        unreadIndicatorColor: "#cc1919",
+        unreadIndicatorPosition: "top-right",
+      },
+    };
+    window.Olvy.init(OlvyConfig);
+  }, []);
+
+  return <>What&apos;s New</>;
+}
 
 function NavbarMenuItem({ children, ...props }) {
   return (
@@ -460,6 +482,13 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       menuItems.push(getTimeTrackingMenu({ collapse: collapseAllNavItems }));
     }
 
+    // <div role="button" className="ant-menu-submenu-title" id="olvy-target">
+    // </div>,
+    menuItems.push(
+      <Menu.Item id="olvy-target">
+        <WhatsNew />
+      </Menu.Item>,
+    );
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"

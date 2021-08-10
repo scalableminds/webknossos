@@ -53,7 +53,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
         onChange={e => setUserDefinedWithFallback(e.target.checked)}
         checked={isFallbackSegmentationSelected}
         disabled={!isFallbackSegmentationOptional}
-        style={{ marginBottom: 14 }}
+        style={{ marginBottom: 16 }}
       >
         With Existing Segmentation{" "}
         <Tooltip
@@ -70,7 +70,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
 
     modalContent = (
       <React.Fragment>
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 16 }}>
           <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
             <Radio value="hybrid">Skeleton and Volume</Radio>
             <Radio value="skeleton">Skeleton only</Radio>
@@ -78,7 +78,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
           </Radio.Group>
         </div>
         {doesSupportVolumeWithFallback(dataset) ? fallbackCheckbox : null}
-        <h5>
+        <h5 style={{ marginBottom: 0 }}>
           Volume Resolutions{" "}
           <Tooltip
             title="Select which of the dataset resolutions the volume data should be created at. For example, resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
@@ -87,30 +87,30 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
             <InfoCircleOutlined />
           </Tooltip>
         </h5>
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            alignContent: "center",
+          }}
+        >
+          <div style={{ width: "5em" }}>
             {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
           </div>
-          <div
-            style={{
-              display: "inline-block",
-              width: "60%",
-              verticalAlign: "middle",
-              paddingRight: "1em",
-            }}
-          >
-            <Slider
-              tooltipVisible={false}
-              onChange={value => setUserDefinedResolutionIndices(value)}
-              range
-              disabled={annotationType === "skeleton"}
-              step={1}
-              min={lowestResolutionIndex}
-              max={highestResolutionIndex}
-              value={[lowResolutionIndex, highResolutionIndex]}
-            />
-          </div>
-          <div style={{ display: "inline-block", width: "5em", verticalAlign: "middle" }}>
+          <Slider
+            tooltipVisible={false}
+            onChange={value => setUserDefinedResolutionIndices(value)}
+            range
+            disabled={annotationType === "skeleton"}
+            step={1}
+            min={lowestResolutionIndex}
+            max={highestResolutionIndex}
+            value={[lowResolutionIndex, highResolutionIndex]}
+            style={{ flexGrow: 1 }}
+          />
+          <div style={{ width: "5.5em", textAlign: "right" }}>
             {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
           </div>
         </div>

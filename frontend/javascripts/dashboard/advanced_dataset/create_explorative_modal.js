@@ -11,6 +11,7 @@ import {
   getSegmentationLayer,
   doesSupportVolumeWithFallback,
   getDatasetResolutionInfo,
+  getResolutionInfoOfSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 
 type Props = {
@@ -28,10 +29,6 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
 
   if (dataset !== null) {
     const segmentationLayer = getSegmentationLayer(dataset);
-
-    const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
-    const highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
-    const lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
 
     const isFallbackSegmentationAlwaysOff =
       segmentationLayer == null ||
@@ -65,8 +62,18 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
       </Checkbox>
     );
 
-    const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
+    const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+    let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
+    let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
+
+    if (isFallbackSegmentationSelected && annotationType !== "skeleton") {
+      const datasetFallbackLayerResolutionInfo = getResolutionInfoOfSegmentationLayer(dataset);
+      highestResolutionIndex = datasetFallbackLayerResolutionInfo.getHighestResolutionIndex();
+      lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getClosestExistingIndex(0);
+    }
+
     const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
+    const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
 
     modalContent = (
       <React.Fragment>

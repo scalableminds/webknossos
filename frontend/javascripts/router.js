@@ -5,6 +5,7 @@ import { connect } from "react-redux";
 import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
+import _ from "lodash";
 
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "types/api_flow_types";
@@ -494,9 +495,15 @@ class ReactRouter extends React.Component<Props> {
                       const resolutionRestrictions = {};
                       if (params.minRes !== undefined) {
                         resolutionRestrictions.min = parseInt(params.minRes);
+                        if (!_.isNumber(resolutionRestrictions.min)) {
+                          throw new Error("Invalid minRes parameter");
+                        }
                       }
                       if (params.maxRes !== undefined) {
                         resolutionRestrictions.max = parseInt(params.maxRes);
+                        if (!_.isNumber(resolutionRestrictions.max)) {
+                          throw new Error("Invalid maxRes parameter");
+                        }
                       }
                       const annotation = await createExplorational(
                         dataset,

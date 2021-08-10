@@ -8,6 +8,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
+import Toast from "libs/toast";
 
 import type { APIDataset } from "types/api_flow_types";
 import {
@@ -21,6 +22,7 @@ import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_acti
 import * as Utils from "libs/utils";
 
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
+import messages from "messages";
 
 type BoundingBoxTabProps = {
   tracing: Tracing,
@@ -76,6 +78,10 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     onChangeBoundingBoxes(updatedUserBoundingBoxes);
   }
 
+  function showExportNotSupportedToast() {
+    Toast.info(messages["data.bounding_box_export_not_supported"]);
+  }
+
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {userBoundingBoxes.length > 0 ? (
@@ -86,10 +92,15 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
             color={bb.color}
             name={bb.name}
+            isExportDisabled={dataset.isForeign}
             isVisible={bb.isVisible}
             onChange={_.partial(handleChangeUserBoundingBox, bb.id)}
             onDelete={_.partial(handleDeleteUserBoundingBox, bb.id)}
-            onExport={_.partial(setSelectedBoundingBoxForExport, bb)}
+            onExport={
+              dataset.isForeign
+                ? showExportNotSupportedToast
+                : _.partial(setSelectedBoundingBoxForExport, bb)
+            }
           />
         ))
       ) : (

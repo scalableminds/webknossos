@@ -472,7 +472,7 @@ test("A labeledVoxelMap should be applied correctly", t => {
     expectedBucketData[addr] = 1;
   });
   applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
-  const labeledBucketData = bucket.getOrCreateData();
+  const { data: labeledBucketData } = bucket.getOrCreateData();
   for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
     for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);

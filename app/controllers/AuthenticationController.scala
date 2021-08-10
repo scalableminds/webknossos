@@ -9,7 +9,7 @@ import com.mohiva.play.silhouette.api.services.AuthenticatorResult
 import com.mohiva.play.silhouette.api.util.Credentials
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, InviteEvent, JoinOrganizationEvent, SignupEvent}
@@ -46,6 +46,8 @@ class AuthenticationController @Inject()(
     userDAO: UserDAO,
     multiUserDAO: MultiUserDAO,
     defaultMails: DefaultMails,
+    annotationController: AnnotationController,
+    dataSetController: DataSetController,
     conf: WkConf,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -184,6 +186,49 @@ class AuthenticationController @Inject()(
       cookie <- combinedAuthenticatorService.init(authenticator)
       result <- combinedAuthenticatorService.embed(cookie, Redirect("/dashboard")) //to login the new user
     } yield result
+
+  /*
+    superadmin - can definitely switch, find organization via global access context
+    not superadmin - fetch all identities, construct access context, try until one works
+   */
+
+  def accessibleBySwitching(organizationName: Option[String],
+                            dataSetName: Option[String],
+                            annotationTyp: Option[String],
+                            annotationId: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+        accessContexts <- accessContextsForMultiUser(multiUser)
+        selectedAccessContext <- accessContexts
+          .find(ctx => canAccessDatasetOrAnnotation(ctx, organizationName, dataSetName, annotationTyp, annotationId))
+          .toFox
+        selectedOrganization <- selectedAccessContext match {
+          case GlobalAccessContext =>
+            organizationDAO.findOneByName(organizationName.getOrElse("TODO: Annotations for SuperUsers"))(
+              GlobalAccessContext)
+          case AuthorizedAccessContext(user: User) => organizationDAO.findOne(user._organization)(GlobalAccessContext)
+          case _                                   => Fox.failure("Nope")
+        }
+        selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
+      } yield Ok(selectedOrganizationJs)
+  }
+
+  private def accessContextsForMultiUser(multiUser: MultiUser): Fox[List[DBAccessContext]] =
+    if (multiUser.isSuperUser)
+      Fox.successful(List(GlobalAccessContext))
+    else {
+      for {
+        users <- userDAO.findAllByMultiUser(multiUser._id)
+      } yield users.map(u => DBAccessContext(Some(u)))
+    }
+
+  private def canAccessDatasetOrAnnotation(ctx: DBAccessContext,
+                                           organizationName: Option[String],
+                                           dataSetName: Option[String],
+                                           annotationTyp: Option[String],
+                                           annotationId: Option[String]): Boolean =
+    true
 
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

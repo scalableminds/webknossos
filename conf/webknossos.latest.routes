@@ -19,7 +19,7 @@ GET           /auth/token                                                      c
 DELETE        /auth/token                                                      controllers.AuthenticationController.deleteToken
 GET           /auth/switch                                                     controllers.AuthenticationController.switchMultiUser(to: String)
 POST          /auth/switchOrganization/:organizationName                       controllers.AuthenticationController.switchOrganization(organizationName: String)
-GET           /auth/accessibleBySwitching                                      controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], annotationTyp: Option[String], annotationId: Option[String])
+GET           /auth/accessibleBySwitching                                      controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], datasetName: Option[String], annotationTyp: Option[String], annotationId: Option[String])
 POST          /auth/sendInvites                                                controllers.AuthenticationController.sendInvites
 POST          /auth/startResetPassword                                         controllers.AuthenticationController.handleStartResetPassword
 POST          /auth/changePassword                                             controllers.AuthenticationController.changePassword

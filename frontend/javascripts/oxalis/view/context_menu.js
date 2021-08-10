@@ -445,14 +445,20 @@ function ContextMenu(props: Props) {
   return (
     <React.Fragment>
       <div
+        className="node-context-menu-overlay"
+        onClick={hideContextMenu}
+        onContextMenu={evt => {
+          evt.preventDefault();
+          hideContextMenu();
+        }}
+      />
+      <div
         style={{
-          position: "absolute",
           left: contextMenuPosition[0],
           top: contextMenuPosition[1],
         }}
         className="node-context-menu"
         tabIndex={-1}
-        onBlur={hideContextMenu}
         ref={inputRef}
       >
         <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />

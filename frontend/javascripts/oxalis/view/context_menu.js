@@ -454,7 +454,6 @@ function ContextMenu(props: Props) {
       />
       <div
         style={{
-          position: "absolute",
           left: contextMenuPosition[0],
           top: contextMenuPosition[1],
         }}

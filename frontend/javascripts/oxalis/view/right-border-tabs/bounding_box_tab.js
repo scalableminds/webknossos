@@ -78,10 +78,6 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     onChangeBoundingBoxes(updatedUserBoundingBoxes);
   }
 
-  function showExportNotSupportedToast() {
-    Toast.info(messages["data.bounding_box_export_not_supported"]);
-  }
-
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {userBoundingBoxes.length > 0 ? (
@@ -97,9 +93,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             onChange={_.partial(handleChangeUserBoundingBox, bb.id)}
             onDelete={_.partial(handleDeleteUserBoundingBox, bb.id)}
             onExport={
-              dataset.jobsEnabled
-                ? _.partial(setSelectedBoundingBoxForExport, bb)
-                : showExportNotSupportedToast
+              dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
             }
           />
         ))

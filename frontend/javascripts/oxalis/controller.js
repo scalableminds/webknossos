@@ -20,7 +20,7 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
-import { getUsersOrganizations, switchToOrganization } from "admin/admin_rest_api";
+import { switchToOrganization } from "admin/admin_rest_api";
 import LoginForm from "admin/auth/login_form";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";

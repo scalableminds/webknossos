@@ -8,7 +8,6 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
-import Toast from "libs/toast";
 
 import type { APIDataset } from "types/api_flow_types";
 import {
@@ -22,7 +21,6 @@ import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_acti
 import * as Utils from "libs/utils";
 
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
-import messages from "messages";
 
 type BoundingBoxTabProps = {
   tracing: Tracing,

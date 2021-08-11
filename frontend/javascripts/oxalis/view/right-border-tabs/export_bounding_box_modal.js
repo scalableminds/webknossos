@@ -121,7 +121,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
 
   const exportButtonsList = allLayerInfos.map(layerInfos =>
     layerInfos ? (
-      <p>
+      <p key={exportKey(layerInfos)}>
         <Button
           key={exportKey(layerInfos)}
           onClick={() => handleStartExport(layerInfos)}

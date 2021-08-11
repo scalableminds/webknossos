@@ -52,7 +52,7 @@ export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
-function WhatsNew() {
+function WhatsNewButton() {
   useEffect(() => {
     // Initialize Olvy after mounting
     const OlvyConfig = {
@@ -69,6 +69,9 @@ function WhatsNew() {
       },
     };
     window.Olvy.init(OlvyConfig);
+    // Olvy doesn't set the lastOpened attribute by default. Consequently, users would only get
+    // update indicators after they clicked on "What's New" themselves for the first time.
+    window.localStorage.setItem("olvy-webknossos-lastOpened", new Date().toISOString());
   }, []);
 
   return <>What&apos;s New</>;
@@ -482,13 +485,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       menuItems.push(getTimeTrackingMenu({ collapse: collapseAllNavItems }));
     }
 
-    // <div role="button" className="ant-menu-submenu-title" id="olvy-target">
-    // </div>,
-    menuItems.push(
-      <Menu.Item id="olvy-target">
-        <WhatsNew />
-      </Menu.Item>,
-    );
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
@@ -510,6 +506,14 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       collapse={collapseAllNavItems}
     />,
   );
+
+  if (features().isDemoInstance) {
+    menuItems.push(
+      <Menu.Item id="olvy-target">
+        <WhatsNewButton />
+      </Menu.Item>,
+    );
+  }
 
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.

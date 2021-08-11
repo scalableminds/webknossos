@@ -63,7 +63,7 @@ type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   gotUnhandledError: boolean,
-  usersOrganizations: Array<APIOrganization>,
+  organizationToSwitchTo: ?APIOrganization,
 };
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
@@ -71,7 +71,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   isMounted: boolean;
   state = {
     gotUnhandledError: false,
-    usersOrganizations: [],
+    organizationToSwitchTo: null,
   };
 
   // Main controller, responsible for setting modes and everything
@@ -118,22 +118,22 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       .catch(error => {
         this.props.setControllerStatus("failedLoading");
         const isNotFoundError = error.status === 404;
-        if (isNotFoundError) {
-          // The dataset could not be fetched. This might have happened because the user is currently not in the correct organization.
-          // Thus, fetch the user's organizations to check whether they can switch to the organization of the dataset.
-          getUsersOrganizations().then(organizations =>
-            this.setState({ usersOrganizations: organizations }),
-          );
-        }
         if (
           this.props.initialAnnotationType === APIAnnotationTypeEnum.CompoundProject &&
           isNotFoundError
         ) {
           Toast.error(messages["tracing.compound_project_not_found"], { sticky: true });
         }
-        // Don't throw errors for errors already handled by the model
-        // or "Not Found" errors because they are already handled elsewhere.
+        if (
+          error.organizationToSwitchTo != null &&
+          this.props.user != null &&
+          this.props.initialCommandType.owningOrganization !== this.props.user.organization
+        ) {
+          this.setState({ organizationToSwitchTo: error.organizationToSwitchTo });
+        }
         if (error !== HANDLED_ERROR && !isNotFoundError) {
+          // Don't throw errors for errors already handled by the model
+          // or "Not Found" errors because they are already handled elsewhere.
           Toast.error(`${messages["tracing.unhandled_initialization_error"]} ${error.toString()}`, {
             sticky: true,
           });
@@ -292,27 +292,15 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const status = this.props.controllerStatus;
-    const { user, viewMode, initialCommandType } = this.props;
-    const { gotUnhandledError, usersOrganizations } = this.state;
-    let suggestedOrganization = null;
-    if (
-      user != null &&
-      initialCommandType.type === ControlModeEnum.VIEW &&
-      initialCommandType.owningOrganization !== user.organization
-    ) {
-      // Retrieving organization name from url. This only works in view mode.
-      const owningOrganizationName = location.pathname.split("/")[2];
-      suggestedOrganization = usersOrganizations.find(
-        orga => orga.name === owningOrganizationName && orga.name !== user.organization,
-      );
-    }
+    const { user, viewMode } = this.props;
+    const { gotUnhandledError, organizationToSwitchTo } = this.state;
     const switchToOwningOrganizationButton = (
       <AsyncButton
         type="primary"
         style={{ marginRight: 26 }}
         onClick={async () => {
-          if (suggestedOrganization != null) {
-            await switchToOrganization(suggestedOrganization.name);
+          if (organizationToSwitchTo != null) {
+            await switchToOrganization(organizationToSwitchTo.name);
           }
         }}
       >
@@ -323,9 +311,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
       const message =
-        suggestedOrganization != null
+        organizationToSwitchTo != null
           ? `This dataset belongs to the organization ${
-              suggestedOrganization.displayName
+              organizationToSwitchTo.displayName
             } which is currently not your active organization. Do you want to switch to that organization?`
           : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
@@ -335,7 +323,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
               {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
               <br />
               <div style={{ marginTop: 16, display: "inline-block" }}>
-                {suggestedOrganization != null ? switchToOwningOrganizationButton : null}
+                {organizationToSwitchTo != null ? switchToOwningOrganizationButton : null}
                 <Link to="/">
                   <Button type="primary">Return to dashboard</Button>
                 </Link>

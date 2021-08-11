@@ -63,7 +63,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 
-  def health: Action[AnyContent] = sil.UserAwareAction { implicit request =>
+  def health: Action[AnyContent] = Action {
     Ok
   }
 

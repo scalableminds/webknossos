@@ -238,8 +238,9 @@ class MeshesView extends React.Component<Props, State> {
       title = "Computation jobs are not enabled for this webKnossos instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
-    } else if (this.props.dataset.isForeign) {
-      title = "Meshes Computation is not supported for foreign datasets.";
+    } else if (this.props.dataset.jobsEnabled) {
+      title =
+        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
     } else if (this.props.hasVolume) {
       title =
         this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer

@@ -554,10 +554,11 @@ class DataApi {
    * _Volume tracing only!_
    */
   getVolumeTracingLayerName(): string {
-    assertVolume(Store.getState().tracing);
-    const segmentationLayer = this.model.getSegmentationLayer();
-    assertExists(segmentationLayer, "Segmentation layer not found!");
-    return segmentationLayer.name;
+    const segmentationLayerName = this.model.getActiveSegmentationLayerName();
+    if (!segmentationLayerName) {
+      throw new Error("Segmentation layer not found!");
+    }
+    return segmentationLayerName;
   }
 
   /**
@@ -576,7 +577,7 @@ class DataApi {
       throw new Error(messages["mapping.too_few_textures"]);
     }
 
-    const segmentationLayerName = this.model.getSegmentationLayer().name;
+    const segmentationLayerName = this.model.getActiveSegmentationLayerName();
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
@@ -679,8 +680,11 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const segmentationLayer = this.model.getSegmentationLayer();
+    const segmentationLayer = this.model.getActiveSegmentationLayer();
     assertExists(segmentationLayer, "Segmentation layer not found!");
+    if (segmentationLayer == null) {
+      throw new Error("Segmentation layer not found!")
+    }
 
     for (const voxel of voxels) {
       segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);

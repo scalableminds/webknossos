@@ -514,7 +514,22 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 
+export function getActiveSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+  const { datasetConfiguration } = state;
+  const { viewMode } = state.temporaryConfiguration;
+
+  const visibleSegmentationLayers = getSegmentationLayers(state.dataset).filter(layer =>
+    isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode),
+  );
+  if (visibleSegmentationLayers.length > 0) {
+    return visibleSegmentationLayers[0];
+  }
+
+  return null;
+}
+
 export function getSegmentationLayer(dataset: APIMaybeUnimportedDataset): ?APISegmentationLayer {
+  // todop: deprecate
   if (!dataset.isActive) {
     return null;
   }
@@ -528,6 +543,22 @@ export function getSegmentationLayer(dataset: APIMaybeUnimportedDataset): ?APISe
     return null;
   }
   return segmentationLayers[0];
+}
+
+export function getSegmentationLayers(
+  dataset: APIMaybeUnimportedDataset,
+): Array<APISegmentationLayer> {
+  if (!dataset.isActive) {
+    return [];
+  }
+
+  // $FlowIssue[incompatible-type]
+  // $FlowIssue[prop-missing]
+  const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
+    dataLayer => isSegmentationLayer(dataset, dataLayer.name),
+  );
+
+  return segmentationLayers;
 }
 
 export function hasSegmentation(dataset: APIDataset): boolean {

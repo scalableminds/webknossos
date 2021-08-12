@@ -29,6 +29,9 @@ import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combination
 
 const { Option, OptGroup } = Select;
 
+type OwnProps = {|
+  layerName: string
+|};
 type StateProps = {|
   dataset: APIDataset,
   segmentationLayer: ?APISegmentationLayer,
@@ -48,7 +51,7 @@ type StateProps = {|
   isMergerModeEnabled: boolean,
   allowUpdate: boolean,
 |};
-type Props = {| ...StateProps |};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   // shouldMappingBeEnabled is the UI state which is directly connected to the
@@ -106,7 +109,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       pauseDelay: 500,
       successMessageDelay: 2000,
     });
-    Model.getSegmentationLayer().setActiveMapping(mappingName, mappingType, progressCallback);
+    Model.getLayerByName(this.props.layerName).setActiveMapping(mappingName, mappingType, progressCallback);
 
     if (document.activeElement) document.activeElement.blur();
   };
@@ -299,7 +302,7 @@ function mapStateToProps(state: OxalisState) {
 
 const debounceTime = 100;
 const maxWait = 500;
-export default connect<Props, {||}, _, _, _, _>(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(debounceRender(MappingSettingsView, debounceTime, { maxWait }));

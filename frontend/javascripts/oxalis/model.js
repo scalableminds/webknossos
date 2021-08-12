@@ -8,7 +8,7 @@ import _ from "lodash";
 
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerByName, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import ConnectionInfo from "oxalis/model/data_connection_info";
@@ -71,13 +71,33 @@ export class OxalisModel {
     );
   }
 
-  // Todo: Make return type optional
-  getSegmentationLayer(): DataLayer {
-    return _.find(
-      this.dataLayers,
+  getSegmentationLayers(): Array<DataLayer> {
+    return Object.keys(this.dataLayers).map(k => this.dataLayers[k]).filter(
       dataLayer =>
         getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
     );
+  }
+
+  getSegmentationLayer(): ?DataLayer {
+    console.error("DEPRECATED usage of getSegmentationLayer")
+    const layers = this.getSegmentationLayers();
+    if (layers.length > 0) {
+      return layers[0];
+    }
+    return null;
+  }
+
+  getActiveSegmentationLayer(): ?DataLayer {
+    const state = Store.getState();
+    const {datasetConfiguration} = state;
+    const {viewMode} = state.temporaryConfiguration;
+
+    const visibleSegmentationLayers = this.getSegmentationLayers().filter(layer => isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode));
+    if (visibleSegmentationLayers.length > 0) {
+      return visibleSegmentationLayers[0];
+    }
+
+    return null;
   }
 
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
@@ -116,8 +136,14 @@ export class OxalisModel {
     return { id, isMapped: cube.isMappingEnabled() };
   }
 
+  // todop: remove
   getSegmentationLayerName(): ?string {
     const segmentation = this.getSegmentationLayer();
+    return segmentation != null ? segmentation.name : undefined;
+  }
+
+  getActiveSegmentationLayerName(): ?string {
+    const segmentation = this.getActiveSegmentationLayer();
     return segmentation != null ? segmentation.name : undefined;
   }
 
@@ -129,10 +155,14 @@ export class OxalisModel {
   }
 
   getPullQueueByLayerName(name: string): PullQueue {
+    return this.getLayerByName(name).pullQueue;
+  }
+
+  getLayerByName(name: string): DataLayer {
     if (!this.dataLayers[name]) {
       throw new Error(`Layer with name ${name} was not found.`);
     }
-    return this.dataLayers[name].pullQueue;
+    return this.dataLayers[name];
   }
 
   getLayerRenderingManagerByName(name: string): LayerRenderingManager {

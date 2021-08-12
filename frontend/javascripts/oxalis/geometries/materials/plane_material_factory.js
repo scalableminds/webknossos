@@ -271,7 +271,7 @@ class PlaneMaterialFactory {
     }
 
     // Add mapping
-    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationLayer = Model.getActiveSegmentationLayer();
     if (
       segmentationLayer != null &&
       segmentationLayer.mappings != null &&
@@ -430,13 +430,12 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         state => state.datasetConfiguration.layers,
         layerSettings => {
-          const segmentationLayerName = Model.getSegmentationLayerName();
           for (const dataLayer of Model.getAllLayers()) {
             const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
             if (settings != null) {
               const isLayerEnabled = !settings.isDisabled;
-              const isSegmentationLayer = segmentationLayerName === dataLayer.name;
+              const isSegmentationLayer = dataLayer.isSegmentation;
               if (
                 !isSegmentationLayer &&
                 oldVisibilityPerLayer[dataLayer.name] != null &&
@@ -564,7 +563,11 @@ class PlaneMaterialFactory {
 
   updateActiveCellId() {
     const activeCellId = Utils.maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
-    const mappedActiveCellId = Model.getSegmentationLayer().cube.mapId(activeCellId);
+    const segmentationLayer = Model.getActiveSegmentationLayer();
+    if (segmentationLayer == null) {
+      return;
+    }
+    const mappedActiveCellId = segmentationLayer.cube.mapId(activeCellId);
     // Convert the id into 4 bytes (little endian)
     const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
     this.uniforms.activeCellId.value.set(r, g, b, a);
@@ -678,7 +681,7 @@ class PlaneMaterialFactory {
       maximumLayerCountToRender,
     } = Store.getState().temporaryConfiguration.gpuSetup;
 
-    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationLayer = Model.getActiveSegmentationLayer();
     const colorLayerNames = this.getLayersToRender(
       maximumLayerCountToRender - (segmentationLayer ? 1 : 0),
     );

@@ -491,7 +491,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Row>
   );
 
-  getVolumeAnnotationSpecificSettings = () => {
+  getVolumeAnnotationSpecificSettings = (layerName: string) => {
     const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
     const { tracing } = this.props;
 
@@ -510,7 +510,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <div>
         {segmentationOpacitySetting}
         {!isPublicViewMode && tracing.volume != null ? this.maybeGetAutoBrushUi() : null}
-        <MappingSettingsView />
+        <MappingSettingsView layerName={layerName} />
       </div>
     );
   };
@@ -549,7 +549,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             {isColorLayer
               ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
-              : this.getVolumeAnnotationSpecificSettings()}
+              : this.getVolumeAnnotationSpecificSettings(layerName)}
           </div>
         )}
       </div>

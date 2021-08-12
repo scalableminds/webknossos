@@ -928,8 +928,8 @@ class DataApi {
    * Returns the name of the volume tracing layer.
    */
   getVolumeTracingLayerName(): string {
-    // TODO: Rename method to getSegmentationLayerName() and increase api version
-    const segmentationLayerName = this.model.getSegmentationLayerName();
+    // TODO: Rename method to getActiveSegmentationLayerName() and increase api version
+    const segmentationLayerName = this.model.getActiveSegmentationLayerName();
     if (!segmentationLayerName) {
       throw new Error("Segmentation layer not found!");
     }
@@ -987,10 +987,11 @@ class DataApi {
     }
     // Note: As there is at most one segmentation layer now, the layerName is unneccessary
     // However, we probably want to support multiple segmentation layers in the future
-    const segmentationLayerName = this.model.getSegmentationLayer().name;
-    if (layerName !== segmentationLayerName) {
+    const layer = this.model.getLayerByName(layerName);
+    if (!layer.isSegmentation) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
+    // todop: setMappingAction should take layer name
     Store.dispatch(
       setMappingAction(
         "<custom mapping>",
@@ -1328,14 +1329,14 @@ class DataApi {
     switch (key) {
       case "segmentationOpacity": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getSegmentationLayerName();
+        const segmentationLayerName = Model.getActiveSegmentationLayerName();
         return segmentationLayerName
           ? Store.getState().datasetConfiguration.layers[segmentationLayerName].alpha
           : undefined;
       }
       case "isSegmentationDisabled": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getSegmentationLayerName();
+        const segmentationLayerName = Model.getActiveSegmentationLayerName();
         return segmentationLayerName
           ? Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled
           : undefined;
@@ -1370,7 +1371,7 @@ class DataApi {
     switch (key) {
       case "segmentationOpacity": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getSegmentationLayerName();
+        const segmentationLayerName = Model.getActiveSegmentationLayerName();
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "alpha", value));
         }
@@ -1378,7 +1379,7 @@ class DataApi {
       }
       case "isSegmentationDisabled": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getSegmentationLayerName();
+        const segmentationLayerName = Model.getActiveSegmentationLayerName();
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "isDisabled", value));
         }

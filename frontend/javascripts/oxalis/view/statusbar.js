@@ -267,7 +267,7 @@ function Infos() {
   const activeTreeId = useSelector(state =>
     state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
   );
-  // Needed so each time the flycam changes, the displayed position also changes.
+  // Needed so each time the flycam changes, the displayed position also updates.
   useSelector(state => state.flycam);
 
   const dispatch = useDispatch();

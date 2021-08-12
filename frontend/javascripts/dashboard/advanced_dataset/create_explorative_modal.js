@@ -75,20 +75,12 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
     const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
 
-    modalContent = (
+    const resolutionSlider = (
       <React.Fragment>
-        <div style={{ marginBottom: 16 }}>
-          <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
-            <Radio value="hybrid">Skeleton and Volume</Radio>
-            <Radio value="skeleton">Skeleton only</Radio>
-            <Radio value="volume">Volume only</Radio>
-          </Radio.Group>
-        </div>
-        {doesSupportVolumeWithFallback(dataset) ? fallbackCheckbox : null}
         <h5 style={{ marginBottom: 0 }}>
           Volume Resolutions{" "}
           <Tooltip
-            title="Select which of the dataset resolutions the volume data should be created at. For example, resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
+            title="Select which of the dataset resolutions the volume data should be created at. Restricting the available resolutions can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
             placement="right"
           >
             <InfoCircleOutlined />
@@ -121,20 +113,36 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
             {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
           </div>
         </div>
-        <Link
-          to={`/datasets/${dataset.owningOrganization}/${
-            dataset.name
-          }/createExplorative/${annotationType}/${isFallbackSegmentationSelectedString}?minRes=${Math.max(
-            ...datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
-          )}&maxRes=${Math.max(
-            ...datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
-          )}`}
-          title="Create new annotation with selected properties"
-        >
-          <Button size="large" type="primary">
-            Create Annotation
-          </Button>
-        </Link>
+      </React.Fragment>
+    );
+
+    modalContent = (
+      <React.Fragment>
+        <div style={{ marginBottom: 16 }}>
+          <Radio.Group onChange={e => setAnnotationType(e.target.value)} value={annotationType}>
+            <Radio value="hybrid">Skeleton and Volume</Radio>
+            <Radio value="skeleton">Skeleton only</Radio>
+            <Radio value="volume">Volume only</Radio>
+          </Radio.Group>
+        </div>
+        {doesSupportVolumeWithFallback(dataset) ? fallbackCheckbox : null}
+        {lowestResolutionIndex < highestResolutionIndex ? resolutionSlider : null}
+        <div style={{ textAlign: "right" }}>
+          <Link
+            to={`/datasets/${dataset.owningOrganization}/${
+              dataset.name
+            }/createExplorative/${annotationType}/${isFallbackSegmentationSelectedString}?minRes=${Math.max(
+              ...datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
+            )}&maxRes=${Math.max(
+              ...datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
+            )}`}
+            title="Create new annotation with selected properties"
+          >
+            <Button size="large" type="primary">
+              Create Annotation
+            </Button>
+          </Link>
+        </div>
       </React.Fragment>
     );
   }

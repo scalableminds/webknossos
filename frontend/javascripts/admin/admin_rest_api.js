@@ -913,6 +913,16 @@ export function startComputeMeshFileJob(
   );
 }
 
+export function startNucleiInferralJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {

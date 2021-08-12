@@ -211,6 +211,7 @@ class AuthenticationController @Inject()(
                                             dataSetName,
                                             annotationTyp,
                                             annotationId)
+        _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
         selectedOrganizationJs <- organizationService.publicWrites(selectedOrganization)
       } yield Ok(selectedOrganizationJs)
   }

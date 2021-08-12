@@ -124,11 +124,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         ) {
           Toast.error(messages["tracing.compound_project_not_found"], { sticky: true });
         }
-        if (
-          error.organizationToSwitchTo != null &&
-          this.props.user != null &&
-          this.props.initialCommandType.owningOrganization !== this.props.user.organization
-        ) {
+        if (error.organizationToSwitchTo != null && this.props.user != null) {
           this.setState({ organizationToSwitchTo: error.organizationToSwitchTo });
         }
         if (error !== HANDLED_ERROR && !isNotFoundError) {

@@ -14,7 +14,7 @@ const rowGutter = { xs: 8, sm: 16, md: 16, lg: 16 };
 type NumberSliderSettingProps = {
   onChange: (value: number) => void,
   value: number,
-  label: string,
+  label: string | React.Node,
   max: number,
   min: number,
   step: number,
@@ -79,7 +79,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
 type LogSliderSettingProps = {
   onChange: (value: number) => void,
   value: number,
-  label: string,
+  label: string | React.Node,
   max: number,
   min: number,
   roundTo: number,

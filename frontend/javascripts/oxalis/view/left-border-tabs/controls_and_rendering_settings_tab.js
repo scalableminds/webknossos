@@ -4,7 +4,6 @@
  */
 
 import { Collapse, Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -68,7 +67,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting
-              label={settingsLabels.zoom}
+              label={
+                <Tooltip title="Zoom in or out in the data viewports">
+                  {settingsLabels.zoom}
+                </Tooltip>
+              }
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -76,12 +79,20 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               onChange={this.props.onChangeZoomStep}
             />
             <SwitchSetting
-              label={settingsLabels.displayCrosshair}
+              label={
+                <Tooltip title="Show crosshair lines in each viewport, with colors indicating the other viewports">
+                  {settingsLabels.displayCrosshair}
+                </Tooltip>
+              }
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
             <SwitchSetting
-              label={settingsLabels.displayScalebars}
+              label={
+                <Tooltip title="Show a scale in the lower-right corner of each viewport">
+                  {settingsLabels.displayScalebars}
+                </Tooltip>
+              }
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
@@ -91,7 +102,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting
-              label={settingsLabels.zoom}
+              label={
+                <Tooltip title="Zoom in or out in the data viewports">
+                  {settingsLabels.zoom}
+                </Tooltip>
+              }
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -99,12 +114,20 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               onChange={this.props.onChangeZoomStep}
             />
             <SwitchSetting
-              label={settingsLabels.displayCrosshair}
+              label={
+                <Tooltip title="Show crosshair lines in each viewport, with colors indicating the other viewports">
+                  {settingsLabels.displayCrosshair}
+                </Tooltip>
+              }
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
             <SwitchSetting
-              label={settingsLabels.displayScalebars}
+              label={
+                <Tooltip title="Show a scale in the lower-right corner of each viewport">
+                  {settingsLabels.displayScalebars}
+                </Tooltip>
+              }
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
@@ -114,7 +137,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         return (
           <Panel header="Flight Options" key="2">
             <LogSliderSetting
-              label={settingsLabels.zoom}
+              label={
+                <Tooltip title="Zoom in or out in the data viewport">{settingsLabels.zoom}</Tooltip>
+              }
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -146,7 +171,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               onChange={this.onChangeUser.crosshairSize}
             />
             <NumberSliderSetting
-              label={settingsLabels.sphericalCapRadius}
+              label={
+                <Tooltip title="Set the radius of the spherical cap the data is projected on.">
+                  {settingsLabels.sphericalCapRadius}
+                </Tooltip>
+              }
               min={userSettings.sphericalCapRadius.minimum}
               max={userSettings.sphericalCapRadius.maximum}
               step={1}
@@ -154,7 +183,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               onChange={this.onChangeUser.sphericalCapRadius}
             />
             <SwitchSetting
-              label={settingsLabels.displayCrosshair}
+              label={
+                <Tooltip title="Show crosshair marker in the viewing direction center">
+                  {settingsLabels.displayCrosshair}
+                </Tooltip>
+              }
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
@@ -216,7 +249,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       >
         <Panel header="Controls" key="1">
           <NumberSliderSetting
-            label={settingsLabels.keyboardDelay}
+            label={
+              <Tooltip title="Delay after which shortcut keys (e.g. d/f for moving) are assumed to be intentionally held down, so that continuous movement is triggered.">
+                {settingsLabels.keyboardDelay}
+              </Tooltip>
+            }
             min={userSettings.keyboardDelay.minimum}
             max={userSettings.keyboardDelay.maximum}
             value={this.props.userConfiguration.keyboardDelay}
@@ -224,16 +261,19 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           {moveValueSetting}
           <SwitchSetting
-            label={settingsLabels.dynamicSpaceDirection}
+            label={
+              <Tooltip title="If enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes">
+                {settingsLabels.dynamicSpaceDirection}
+              </Tooltip>
+            }
             value={this.props.userConfiguration.dynamicSpaceDirection}
             onChange={this.onChangeUser.dynamicSpaceDirection}
           />
           <SwitchSetting
             label={
               <React.Fragment>
-                {settingsLabels.useLegacyBindings}{" "}
                 <Tooltip title="When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.">
-                  <InfoCircleOutlined />
+                  {settingsLabels.useLegacyBindings}
                 </Tooltip>
               </React.Fragment>
             }
@@ -245,12 +285,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
             label={
-              <React.Fragment>
-                {settingsLabels.gpuMemoryFactor}{" "}
-                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              <Tooltip title="Controls which data resolution is displayed, depending on zoom step and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
+                {settingsLabels.gpuMemoryFactor}
+              </Tooltip>
             }
             value={(
               this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
@@ -263,12 +300,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           <DropdownSetting
             label={
-              <React.Fragment>
-                {settingsLabels.loadingStrategy}{" "}
-                <Tooltip title={settingsLabels.loadingStrategyDescription}>
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              <Tooltip title={settingsLabels.loadingStrategyDescription}>
+                {settingsLabels.loadingStrategy}
+              </Tooltip>
             }
             value={this.props.datasetConfiguration.loadingStrategy}
             onChange={this.onChangeDataset.loadingStrategy}
@@ -279,31 +313,29 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           <SwitchSetting
             label={
-              <React.Fragment>
-                {settingsLabels.fourBit}{" "}
-                <Tooltip title="Decrease size of transferred data by half using lossy compression. Recommended for poor and/or capped Internet connections.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              <Tooltip title="Decrease size of transferred data by half, using lossy compression. Recommended for poor and/or capped internet connections.">
+                {settingsLabels.fourBit}
+              </Tooltip>
             }
             value={this.props.datasetConfiguration.fourBit}
             onChange={this.onChangeDataset.fourBit}
           />
           {Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
             <SwitchSetting
-              label={settingsLabels.interpolation}
+              label={
+                <Tooltip title="Smooth the rendered data by interpolating color values, depending on zoom step">
+                  {settingsLabels.interpolation}
+                </Tooltip>
+              }
               value={this.props.datasetConfiguration.interpolation}
               onChange={this.onChangeDataset.interpolation}
             />
           )}
           <SwitchSetting
             label={
-              <React.Fragment>
+              <Tooltip title="If disabled, missing data will be rendered by using downsampled resolutions.">
                 {settingsLabels.renderMissingDataBlack}{" "}
-                <Tooltip title="If disabled, missing data will be rendered by using poorer resolutions.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              </Tooltip>
             }
             value={this.props.datasetConfiguration.renderMissingDataBlack}
             onChange={this.onChangeRenderMissingDataBlack}

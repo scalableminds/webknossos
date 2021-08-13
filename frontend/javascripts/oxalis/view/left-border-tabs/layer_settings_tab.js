@@ -608,24 +608,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
 
-  onChangeRenderMissingDataBlack = async (value: boolean): Promise<void> => {
-    Toast.info(
-      value
-        ? messages["data.enabled_render_missing_data_black"]
-        : messages["data.disabled_render_missing_data_black"],
-      { timeout: 8000 },
-    );
-    this.props.onChange("renderMissingDataBlack", value);
-    const { layers } = this.props.datasetConfiguration;
-    const reloadAllLayersPromises = Object.keys(layers).map(async layerName => {
-      await clearCache(this.props.dataset, layerName);
-      await api.data.reloadBuckets(layerName);
-    });
-    await Promise.all(reloadAllLayersPromises);
-    window.needsRerender = true;
-    Toast.success("Successfully reloaded data of all layers.");
-  };
-
   getVolumeMagsToDownsample = (): Array<Vector3> => {
     if (this.props.task != null) {
       return [];

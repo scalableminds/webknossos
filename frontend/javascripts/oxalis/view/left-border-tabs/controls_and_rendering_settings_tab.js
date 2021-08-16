@@ -147,7 +147,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               onChange={this.props.onChangeZoomStep}
             />
             <NumberSliderSetting
-              label={settingsLabels.mouseRotateValue}
+              label={
+                <Tooltip title="Rotation speed when using the mouse to drag the rotation.">
+                  {settingsLabels.mouseRotateValue}
+                </Tooltip>
+              }
               min={userSettings.mouseRotateValue.minimum}
               max={userSettings.mouseRotateValue.maximum}
               step={0.001}
@@ -155,7 +159,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               onChange={this.onChangeUser.mouseRotateValue}
             />
             <NumberSliderSetting
-              label={settingsLabels.rotateValue}
+              label={
+                <Tooltip title="Rotation speed when using the arrow keys on the keyboard">
+                  {settingsLabels.rotateValue}
+                </Tooltip>
+              }
               min={userSettings.rotateValue.minimum}
               max={userSettings.rotateValue.maximum}
               step={0.001}
@@ -163,7 +171,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               onChange={this.onChangeUser.rotateValue}
             />
             <NumberSliderSetting
-              label={settingsLabels.crosshairSize}
+              label={
+                <Tooltip title="Size of the crosshair marker in the viewing direction center">
+                  {settingsLabels.crosshairSize}
+                </Tooltip>
+              }
               min={userSettings.crosshairSize.minimum}
               max={userSettings.crosshairSize.maximum}
               step={0.01}
@@ -222,7 +234,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   render() {
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label={settingsLabels.moveValue3d}
+        label={
+          <Tooltip title="Increase to speed up movement through the dataset when holding d/f/space.">
+            {settingsLabels.moveValue3d}
+          </Tooltip>
+        }
         min={userSettings.moveValue3d.minimum}
         max={userSettings.moveValue3d.maximum}
         step={10}
@@ -231,7 +247,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       />
     ) : (
       <NumberSliderSetting
-        label={settingsLabels.moveValue}
+        label={
+          <Tooltip title="Increase to speed up movement through the dataset when holding d/f/space.">
+            {settingsLabels.moveValue}
+          </Tooltip>
+        }
         min={userSettings.moveValue.minimum}
         max={userSettings.moveValue.maximum}
         step={10}
@@ -262,7 +282,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           {moveValueSetting}
           <SwitchSetting
             label={
-              <Tooltip title="If enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes">
+              <Tooltip title="When enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes">
                 {settingsLabels.dynamicSpaceDirection}
               </Tooltip>
             }
@@ -271,11 +291,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           <SwitchSetting
             label={
-              <React.Fragment>
-                <Tooltip title="When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.">
-                  {settingsLabels.useLegacyBindings}
-                </Tooltip>
-              </React.Fragment>
+              <Tooltip title="When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.">
+                {settingsLabels.useLegacyBindings}
+              </Tooltip>
             }
             value={this.props.userConfiguration.useLegacyBindings}
             onChange={this.onChangeUser.useLegacyBindings}

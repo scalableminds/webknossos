@@ -33,7 +33,6 @@ type StateProps = {|
   dataset: APIDataset,
   segmentationLayer: ?APISegmentationLayer,
   position: Vector3,
-  mousePosition: ?Vector2,
   isMappingEnabled: boolean,
   mapping: ?Mapping,
   mappingName: ?string,
@@ -286,7 +285,6 @@ function mapStateToProps(state: OxalisState) {
     mappingName: state.temporaryConfiguration.activeMapping.mappingName,
     mappingType: state.temporaryConfiguration.activeMapping.mappingType,
     mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
-    mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
     segmentationLayer: getSegmentationLayer(state.dataset),
     activeCellId: getVolumeTracing(state.tracing)

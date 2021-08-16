@@ -10,6 +10,7 @@ import {
   ReloadOutlined,
   ScanOutlined,
   StopOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -374,8 +375,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isInEditMode: boolean,
     layerName: string,
     elementClass: string,
+    layerSettings: DatasetLayerConfiguration,
   ) => {
     const { tracing } = this.props;
+    const { intensityRange } = layerSettings;
     const isVolumeTracing = tracing.volume != null;
     const isFallbackLayer = tracing.volume
       ? tracing.volume.fallbackLayer != null && !isColorLayer
@@ -428,6 +431,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             <InfoCircleOutlined style={{ marginLeft: 4 }} />
           </Tooltip>
 
+          {intensityRange[0] === intensityRange[1] && !isDisabled ? (
+            <Tooltip
+              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values. 
+            If you do not want this layer to be rendered, better disable it with the switch on the left.`}
+            >
+              <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+            </Tooltip>
+          ) : null}
           {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
 
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
@@ -534,6 +545,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           isInEditMode,
           layerName,
           elementClass,
+          layerConfiguration,
         )}
         {isDisabled ? null : (
           <div style={{ marginBottom: 30, marginLeft: 10 }}>

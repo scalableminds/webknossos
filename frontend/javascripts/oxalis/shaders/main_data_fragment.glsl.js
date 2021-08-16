@@ -184,14 +184,14 @@ void main() {
       // Keep the color in bounds of min and max
       color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
       // Scale the color value according to the histogram settings.
-      // Note: max == min causes NaN values. This is handled below.
+      // Note: max == min would cause a division by 0. Thus we add 1 in this case and filter out the whole value below.
       float is_max_and_min_equal = float(<%= name %>_max == <%= name %>_min);
-      color_value = mix((color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min), vec3(1.0), is_max_and_min_equal);
+      color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min + is_max_and_min_equal);
 
       // Maybe invert the color using the inverting_factor
       color_value = abs(color_value - <%= name %>_is_inverted);
-      // Catch the case where max == min causes a NaN value for color_value and use black as a fallback color.
-      // color_value = mix(color_value, vec3(1.0), is_max_and_min_equal);
+      // Catch the case where max == min would causes a NaN value and use black as a fallback color.
+      color_value = mix(color_value, vec3(0.0), is_max_and_min_equal);
       // Multiply with color and alpha for <%= name %>
       data_color += color_value * <%= name %>_alpha * <%= name %>_color;
     }

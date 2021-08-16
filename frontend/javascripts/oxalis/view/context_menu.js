@@ -1,5 +1,5 @@
 // @flow
-import React, { useEffect } from "react";
+import React, { useEffect, type Node } from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { AnnotationToolEnum } from "oxalis/constants";
@@ -144,6 +144,52 @@ function positionToString(pos: Vector3): string {
   return pos.map(value => roundTo(value, 2)).join(", ");
 }
 
+function shortcutBuilder(shortcuts: Array<string>): Node {
+  const lineColor = "rgba(255, 255, 255, 0.45)";
+  const mapNameToShortcutIcon = (name: string) => {
+    switch (name) {
+      case "leftMouse": {
+        return (
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-left.svg"
+            alt="Mouse Left Click"
+            style={{ margin: 0 }}
+          />
+        );
+      }
+      case "rightMouse": {
+        return (
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-right.svg"
+            alt="Mouse Right Click"
+            style={{ margin: 0 }}
+          />
+        );
+      }
+      default: {
+        return (
+          <span className="keyboard-key-icon-small" style={{ borderColor: lineColor }}>
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span style={{ position: "relative", top: -9 }}>{name}</span>
+          </span>
+        );
+      }
+    }
+  };
+  return (
+    <span style={{ float: "right", color: lineColor, marginLeft: 10 }}>
+      {shortcuts.map((name, index) => (
+        <React.Fragment key={name}>
+          {mapNameToShortcutIcon(name)}
+          {index < shortcuts.length - 1 ? " + " : null}
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
+
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
@@ -184,7 +230,7 @@ function NodeContextMenuOptions({
         disabled={areInSameTree}
         onClick={() => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null)}
       >
-        Create Edge & Merge with this Tree
+        Create Edge & Merge with this Tree {shortcutBuilder(["Shift", "Alt", "leftMouse"])}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -192,14 +238,14 @@ function NodeContextMenuOptions({
         disabled={!areNodesConnected}
         onClick={() => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null)}
       >
-        Delete Edge to this Node
+        Delete Edge to this Node {shortcutBuilder(["Shift", "Ctrl", "leftMouse"])}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
         key="delete-node"
         onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}
       >
-        Delete this Node
+        Delete this Node {shortcutBuilder(["Del"])}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -282,7 +328,7 @@ function NoNodeContextMenuOptions({
               setWaypoint(globalPosition, viewport, false);
             }}
           >
-            Create new Tree here
+            Create new Tree here {shortcutBuilder(["C"])}
           </Menu.Item>,
         ]
       : [];
@@ -310,7 +356,7 @@ function NoNodeContextMenuOptions({
                 setActiveCell(segmentIdAtPosition);
               }}
             >
-              Select Segment ({segmentIdAtPosition})
+              Select Segment ({segmentIdAtPosition}) {shortcutBuilder(["Shift", "leftMouse"])}
             </Menu.Item>
           ) : null,
           loadMeshItem,

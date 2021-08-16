@@ -12,7 +12,6 @@ import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 
 import { useKeyPress } from "libs/react_hooks";
-import Store from "oxalis/store";
 
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 

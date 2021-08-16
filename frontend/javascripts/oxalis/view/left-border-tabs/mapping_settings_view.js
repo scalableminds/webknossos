@@ -8,7 +8,7 @@ import debounceRender from "react-debounce-render";
 
 import createProgressCallback from "libs/progress_callback";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import { type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
+import { type OrthoView, type Vector3 } from "oxalis/constants";
 import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";

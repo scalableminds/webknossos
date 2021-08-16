@@ -253,7 +253,6 @@ function maybeLabelWithSegmentationWarning(hasUint64Segmentation: boolean, label
 function Infos() {
   const activeResolution = useSelector(state => getCurrentResolution(state));
   const mousePosition = useSelector(state => state.temporaryConfiguration.mousePosition);
-  const activeViewport = useSelector(state => state.viewModeData.plane.activeViewport);
   const isPlaneMode = useSelector(state => getIsPlaneMode(state));
 
   const isSkeletonAnnotation = useSelector(state => state.tracing.skeleton != null);
@@ -267,8 +266,6 @@ function Infos() {
   const activeTreeId = useSelector(state =>
     state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
   );
-  // Needed so each time the flycam changes, the displayed position also updates.
-  useSelector(state => state.flycam);
 
   const dispatch = useDispatch();
   const onChangeActiveCellId = id => dispatch(setActiveCellAction(id));
@@ -279,12 +276,14 @@ function Infos() {
     const segmentationLayer = getSegmentationLayer(state.dataset);
     return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
   });
-
-  let globalMousePosition;
-  if (mousePosition && activeViewport !== OrthoViews.TDView) {
-    const [x, y] = mousePosition;
-    globalMousePosition = calculateGlobalPos(Store.getState(), { x, y });
-  }
+  const globalMousePosition = useSelector(state => {
+    const { activeViewport } = state.viewModeData.plane;
+    if (mousePosition && activeViewport !== OrthoViews.TDView) {
+      const [x, y] = mousePosition;
+      return calculateGlobalPos(state, { x, y });
+    }
+    return undefined;
+  });
 
   return (
     <React.Fragment>

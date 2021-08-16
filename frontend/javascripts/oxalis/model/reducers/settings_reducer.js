@@ -135,22 +135,19 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
     case "SET_MAPPING": {
-      const {
-        mappingName,
-        mapping,
-        mappingKeys,
-        mappingColors,
-        mappingType,
-        hideUnmappedIds,
-      } = action;
+      const { mappingName, mapping, mappingKeys, mappingColors, mappingType } = action;
+      const hideUnmappedIds =
+        action.hideUnmappedIds != null
+          ? action.hideUnmappedIds
+          : state.temporaryConfiguration.activeMapping.hideUnmappedIds;
       return updateActiveMapping(state, {
         mappingName,
         mapping,
         mappingKeys,
         mappingColors,
         mappingType,
+        hideUnmappedIds,
         mappingSize: mappingKeys != null ? mappingKeys.length : 0,
-        hideUnmappedIds: hideUnmappedIds || false,
       });
     }
     default:

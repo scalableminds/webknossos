@@ -78,6 +78,10 @@ export function recalculateInputCatcherSizes() {
   Store.dispatch(setInputCatcherRects(viewportRects));
 }
 
+export function getHTMLIdForViewportId(viewportID: Viewport) {
+  return `inputcatcher_${viewportID}`;
+}
+
 class InputCatcher extends React.PureComponent<Props, {}> {
   domElement: ?HTMLElement;
 
@@ -99,7 +103,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
     return (
       <div className="flexlayout-dont-overflow">
         <div
-          id={`inputcatcher_${viewportID}`}
+          id={getHTMLIdForViewportId(viewportID)}
           ref={domElement => {
             this.domElement = domElement;
           }}

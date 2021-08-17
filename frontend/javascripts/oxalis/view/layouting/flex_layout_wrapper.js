@@ -15,9 +15,9 @@ import {
   type LayoutKeys,
   resetDefaultLayouts,
 } from "oxalis/view/layouting/default_layout_configs";
-
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import Statusbar from "oxalis/view/statusbar";
-import { OrthoViews, ArbitraryViews, BorderTabs } from "oxalis/constants";
+import { OrthoViews, ArbitraryViews, BorderTabs, type OrthoView } from "oxalis/constants";
 import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
 import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
@@ -56,6 +56,7 @@ type OwnProps = {|
 |};
 type DispatchProps = {|
   setBorderOpenStatus: BorderOpenStatus => void,
+  setActiveViewport: OrthoView => void,
 |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type State = {
@@ -321,6 +322,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       if (document.activeElement) {
         document.activeElement.blur();
       }
+      const toggledViewportId = this.state.model
+        .getNodeById(data.node)
+        .getChildren()[0]
+        .getId();
+      this.props.setActiveViewport(OrthoViews[toggledViewportId]);
     }
     return action;
   };
@@ -416,6 +422,9 @@ function mapDispatchToProps(dispatch: Dispatch<*>) {
   return {
     setBorderOpenStatus(borderOpenStatus: BorderOpenStatus) {
       dispatch(setBorderOpenStatusAction(borderOpenStatus));
+    },
+    setActiveViewport(viewport: OrthoView) {
+      dispatch(setViewportAction(viewport));
     },
   };
 }

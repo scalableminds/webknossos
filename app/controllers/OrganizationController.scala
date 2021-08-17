@@ -3,6 +3,7 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import io.swagger.annotations.Api
 import javax.inject.Inject
 import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO}
@@ -15,6 +16,7 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
+@Api
 class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                        organizationService: OrganizationService,
                                        inviteDAO: InviteDAO,

@@ -318,6 +318,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         this.maximizedItemId = data.node;
       }
       this.onMaximizeToggle();
+      if (document.activeElement) {
+        document.activeElement.blur();
+      }
     }
     return action;
   };

@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Layout, Menu, Popover } from "antd";
+import { Avatar, Badge, Layout, Menu, Popover } from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -12,7 +12,7 @@ import {
 import { useHistory, Link } from "react-router-dom";
 import classnames from "classnames";
 import { connect } from "react-redux";
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 import Toast from "libs/toast";
 import type { APIUser, APIUserTheme } from "types/api_flow_types";
@@ -22,6 +22,7 @@ import {
   getUsersOrganizations,
   switchToOrganization,
   updateSelectedThemeOfUser,
+  updateUser,
 } from "admin/admin_rest_api";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
@@ -52,29 +53,58 @@ export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
-function WhatsNewButton() {
+function useOlvy() {
+  const [isInitialized, setIsInitialized] = useState(false);
+  // Initialize Olvy after mounting
   useEffect(() => {
-    // Initialize Olvy after mounting
+    if (!features().isDemoInstance) {
+      return;
+    }
     const OlvyConfig = {
       organisation: "webknossos",
-      target: "#olvy-target",
+      // This target needs to be defined (otherwise, Olvy crashes when using .show()). However,
+      // we don't want Olvy to add any notification icons, since we do this on our own. Therefore,
+      // provide a dummy value here.
+      target: "#unused-olvy-target",
       type: "modal",
       view: {
         showSearch: false,
         compact: false,
         showHeader: true, // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
-        showUnreadIndicator: true,
+        showUnreadIndicator: false,
         unreadIndicatorColor: "#cc1919",
         unreadIndicatorPosition: "top-right",
       },
     };
     window.Olvy.init(OlvyConfig);
-    // Olvy doesn't set the lastOpened attribute by default. Consequently, users would only get
-    // update indicators after they clicked on "What's New" themselves for the first time.
-    window.localStorage.setItem("olvy-webknossos-lastOpened", new Date().toISOString());
+    setIsInitialized(true);
   }, []);
 
-  return <>What&apos;s New</>;
+  return isInitialized;
+}
+
+function useOlvyUnreadReleasesCount(activeUser) {
+  const { lastOpenedReleasesTimestamp } = activeUser;
+
+  const isInitialized = useOlvy();
+  const unreadCount = useFetch(
+    async () => {
+      if (
+        !isInitialized ||
+        !features().isDemoInstance ||
+        !lastOpenedReleasesTimestamp ||
+        !window.Olvy
+      ) {
+        return null;
+      }
+      return window.Olvy.getUnreadReleasesCount(
+        new Date(lastOpenedReleasesTimestamp).toISOString(),
+      );
+    },
+    null,
+    [isInitialized, lastOpenedReleasesTimestamp],
+  );
+  return unreadCount;
 }
 
 function NavbarMenuItem({ children, ...props }) {
@@ -92,17 +122,19 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
-function UserInitials({ activeUser, isMultiMember }) {
+function UserInitials({ activeUser, isMultiMember, showNotification }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
     <div style={{ position: "relative", display: "flex" }}>
-      <Avatar
-        className="hover-effect-via-opacity"
-        style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
-      >
-        {initialOf(firstName) + initialOf(lastName)}
-      </Avatar>
+      <Badge dot={showNotification}>
+        <Avatar
+          className="hover-effect-via-opacity"
+          style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
+        >
+          {initialOf(firstName) + initialOf(lastName)}
+        </Avatar>
+      </Badge>
       {isMultiMember ? (
         <SwapOutlined
           style={{
@@ -352,11 +384,30 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
 
   const isMultiMember = switchableOrganizations.length > 0;
 
+  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
+  const showNotification =
+    features().isDemoInstance && maybeUnreadReleaseCount != null
+      ? maybeUnreadReleaseCount > 0
+      : false;
+  const handleShowReleases = () => {
+    const updatedUser = { ...activeUser, lastOpenedReleasesTimestamp: new Date().getTime() };
+    updateUser(updatedUser);
+    Store.dispatch(setActiveUserAction(updatedUser));
+
+    window.Olvy.show();
+  };
+
   return (
     <NavbarMenuItem>
       <SubMenu
         key="loggedMenu"
-        title={<UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />}
+        title={
+          <UserInitials
+            showNotification={showNotification}
+            activeUser={activeUser}
+            isMultiMember={isMultiMember}
+          />
+        }
         style={{ padding: 0 }}
         className="sub-menu-without-padding vertical-center-flex-fix"
         {...other}
@@ -397,6 +448,17 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
             ),
           )}
         </Menu.SubMenu>
+
+        {features().isDemoInstance ? (
+          <Menu.Item>
+            <Badge dot={showNotification}>
+              <a href="#" onClick={handleShowReleases}>
+                What&apos;s New
+              </a>
+            </Badge>
+          </Menu.Item>
+        ) : null}
+
         <Menu.Item key="logout">
           <a href="/" onClick={handleLogout}>
             Logout
@@ -506,14 +568,6 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       collapse={collapseAllNavItems}
     />,
   );
-
-  if (features().isDemoInstance) {
-    menuItems.push(
-      <Menu.Item id="olvy-target">
-        <WhatsNewButton />
-      </Menu.Item>,
-    );
-  }
 
   // Don't highlight active menu items, when showing the narrow version of the navbar,
   // since this makes the icons appear more crowded.

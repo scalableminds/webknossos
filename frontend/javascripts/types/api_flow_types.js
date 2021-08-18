@@ -219,6 +219,7 @@ export type APIUser = APIUserBase & {
   +organization: string,
   +novelUserExperienceInfos: NovelUserExperienceInfoType,
   +selectedTheme: APIUserTheme,
+  +lastOpenedReleasesTimestamp: number,
 };
 
 export type APITimeInterval = {

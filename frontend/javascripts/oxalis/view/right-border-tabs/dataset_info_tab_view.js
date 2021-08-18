@@ -200,7 +200,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     if (!features().jobsEnabled) {
       return (
         <Tooltip title="Premium features are only available for datasets hosted natively and not on other datastores.">
-          <StarOutlined /> Premium Features
+          <StarOutlined className="info-tab-icon" width={24} height={24} /> Premium Features
         </Tooltip>
       );
     }
@@ -208,17 +208,24 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <Menu>
         <Menu.Item onClick={() => this.setState({ showNucleiInferralModal: true })}>
           <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
-            Start nuclei inferral
+            Start Nuclei Inferral
           </Tooltip>
         </Menu.Item>
       </Menu>
     );
     return (
-      <Dropdown overlay={overlay}>
-        <span>
-          <StarOutlined /> Premium Features
-        </span>
-      </Dropdown>
+      <tr>
+        <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+          <StarOutlined className="info-tab-icon" style={{ fontSize: 18 }} />
+        </td>
+        <Dropdown overlay={overlay}>
+          <td>
+            <Button type="link" style={{ padding: 0 }}>
+              Process Dataset
+            </Button>
+          </td>
+        </Dropdown>
+      </tr>
     );
   };
 
@@ -487,24 +494,23 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                 </tr>
               </Tooltip>
               {resolutionInfo}
+
+              {activeUser != null && (activeUser.isDatasetManager || activeUser.isAdmin)
+                ? this.getPremiumFeaturesMenu()
+                : null}
             </tbody>
           </table>
+          {this.state.showNucleiInferralModal ? (
+            <NucleiInferralModal
+              dataset={dataset}
+              handleClose={() => this.setState({ showNucleiInferralModal: false })}
+            />
+          ) : null}
         </div>
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
-        {activeUser != null && (activeUser.isDatasetManager || activeUser.isAdmin) ? (
-          <React.Fragment>
-            {this.getPremiumFeaturesMenu()}
-            {this.state.showNucleiInferralModal ? (
-              <NucleiInferralModal
-                dataset={dataset}
-                handleClose={() => this.setState({ showNucleiInferralModal: false })}
-              />
-            ) : null}
-          </React.Fragment>
-        ) : null}
       </div>
     );
   }

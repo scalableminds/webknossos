@@ -52,33 +52,26 @@ export default function NucleiInferralModal(props: Props) {
   };
 
   return (
-    <Modal
-      title="Start Nuclei inferal job"
-      onCancel={handleClose}
-      visible
-      width={700}
-      footer={null}
-    >
+    <Modal title="Start Nuclei Inferal" onCancel={handleClose} visible width={700} footer={null}>
       <p>
         Start a job that automatically detects nuclei for this dataset. This job creates a copy of
-        this dataset once finished. This copy has the detected nuclei as a segmentation layer.
-        <br />
-        Note: As this is a premium feature, it will become a paid feature soon.
+        this dataset once it has finished. This copy contains the detected nuclei as a segmentation
+        layer.
       </p>
       <br />
       <div style={{ textAlign: "center" }}>
         <img
           src="/assets/images/nuclei_inferral_example.jpg"
           alt="Nuclei inferral example"
-          style={{ width: 400, height: "auto" }}
+          style={{ width: 400, height: "auto", borderRadius: 3 }}
         />
       </div>
       <br />
       {colorLayers.length > 1 ? (
         <React.Fragment>
           <p>
-            This feature uses a single color layer to predict the nuclei. Please select the layer
-            that should be used for detection.
+            The detection approach uses a single color layer to predict the nuclei. Please select
+            the layer that should be used for detection.
           </p>
           <div style={{ textAlign: "center" }}>
             <Select
@@ -100,15 +93,10 @@ export default function NucleiInferralModal(props: Props) {
           </div>
           <br />
         </React.Fragment>
-      ) : (
-        <p>
-          This feature uses a single color layer to predict the nuclei. As this dataset has only one
-          color layer &quot;{selectedColorLayerName || ""}&quot;, this color layer will be used.
-        </p>
-      )}
+      ) : null}
       <div style={{ textAlign: "center" }}>
         <Button type="primary" disabled={selectedColorLayerName == null} onClick={startJob}>
-          Start nuclei inferral
+          Start Nuclei Inferral
         </Button>
       </div>
     </Modal>

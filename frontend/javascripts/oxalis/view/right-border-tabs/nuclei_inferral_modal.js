@@ -70,7 +70,7 @@ export default function NucleiInferralModal(props: Props) {
       <p>
         <b>
           Note that this feature is still experimental. Nuclei detection currently works best with
-          EM data and a resolution of 4 - 64{ThinSpace}nm per voxel.
+          EM data and a resolution of 4 to 64{ThinSpace}nm per voxel.
         </b>
       </p>
       <br />

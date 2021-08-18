@@ -5,6 +5,9 @@ import { Modal, Select, Button } from "antd";
 import { startNucleiInferralJob } from "admin/admin_rest_api";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
+import { Unicode } from "oxalis/constants";
+
+const { ThinSpace } = Unicode;
 
 type Props = {
   dataset: APIDataset,
@@ -39,7 +42,13 @@ export default function NucleiInferralModal(props: Props) {
         selectedColorLayerName,
       );
       Toast.info(
-        "The nuclei inferral job has been started. You can look in the Processing Jobs view under Administration for details on the progress of this job.",
+        <>
+          The nuclei inferral job has been started. You can look in the{" "}
+          <a target="_blank" href="/jobs" rel="noopener noreferrer">
+            Processing Jobs
+          </a>{" "}
+          view under Administration for details on the progress of this job.
+        </>,
       );
       handleClose();
     } catch (error) {
@@ -56,7 +65,13 @@ export default function NucleiInferralModal(props: Props) {
       <p>
         Start a job that automatically detects nuclei for this dataset. This job creates a copy of
         this dataset once it has finished. This copy contains the detected nuclei as a segmentation
-        layer.
+        layer.{" "}
+      </p>
+      <p>
+        <b>
+          Note that this feature is still experimental. Nuclei detection currently works best with
+          EM data and a resolution of 4 - 64{ThinSpace}nm per voxel.
+        </b>
       </p>
       <br />
       <div style={{ textAlign: "center" }}>

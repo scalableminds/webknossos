@@ -39,20 +39,20 @@ export default function NucleiInferralModal(props: Props) {
         selectedColorLayerName,
       );
       Toast.info(
-        "Starting the nuclei inferral job succeeded. You can look in the Processing Jobs view under Administration for details on the progress of this job.",
+        "The nuclei inferral job has been started. You can look in the Processing Jobs view under Administration for details on the progress of this job.",
       );
       handleClose();
     } catch (error) {
       console.error(error);
       Toast.error(
-        "Starting the nuclei inferral job failed. Please look in the console for more details.",
+        "The nuclei inferral job could not be started. Please contact an administrator or look in the console for more details.",
       );
       handleClose();
     }
   };
 
   return (
-    <Modal title="Start Nuclei Inferal" onCancel={handleClose} visible width={700} footer={null}>
+    <Modal title="Start Nuclei Inferral" onCancel={handleClose} visible width={700} footer={null}>
       <p>
         Start a job that automatically detects nuclei for this dataset. This job creates a copy of
         this dataset once it has finished. This copy contains the detected nuclei as a segmentation

@@ -62,137 +62,108 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   }
 
   getViewportOptions = () => {
-    switch (this.props.viewMode) {
-      case Constants.MODE_PLANE_TRACING:
-        return (
-          <Panel header="Viewport Options" key="2">
-            <LogSliderSetting
-              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
-              roundTo={3}
-              min={this.props.validZoomRange[0]}
-              max={this.props.validZoomRange[1]}
-              value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
-            />
-            <SwitchSetting
-              label={
-                <Tooltip title={settingsTooltips.displayCrosshair}>
-                  {settingsLabels.displayCrosshair}
-                </Tooltip>
-              }
-              value={this.props.userConfiguration.displayCrosshair}
-              onChange={this.onChangeUser.displayCrosshair}
-            />
-            <SwitchSetting
-              label={
-                <Tooltip title={settingsTooltips.displayScalebars}>
-                  {settingsLabels.displayScalebars}
-                </Tooltip>
-              }
-              value={this.props.userConfiguration.displayScalebars}
-              onChange={this.onChangeUser.displayScalebars}
-            />
-          </Panel>
-        );
-      case Constants.MODE_VOLUME:
-        return (
-          <Panel header="Viewport Options" key="2">
-            <LogSliderSetting
-              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
-              roundTo={3}
-              min={this.props.validZoomRange[0]}
-              max={this.props.validZoomRange[1]}
-              value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
-            />
-            <SwitchSetting
-              label={
-                <Tooltip title={settingsTooltips.displayCrosshair}>
-                  {settingsLabels.displayCrosshair}
-                </Tooltip>
-              }
-              value={this.props.userConfiguration.displayCrosshair}
-              onChange={this.onChangeUser.displayCrosshair}
-            />
-            <SwitchSetting
-              label={
-                <Tooltip title={settingsTooltips.displayScalebars}>
-                  {settingsLabels.displayScalebars}
-                </Tooltip>
-              }
-              value={this.props.userConfiguration.displayScalebars}
-              onChange={this.onChangeUser.displayScalebars}
-            />
-          </Panel>
-        );
-      default:
-        return (
-          <Panel header="Flight Options" key="2">
-            <LogSliderSetting
-              label={<Tooltip title={settingsTooltips.zoomFlight}>{settingsLabels.zoom}</Tooltip>}
-              roundTo={3}
-              min={this.props.validZoomRange[0]}
-              max={this.props.validZoomRange[1]}
-              value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
-            />
-            <NumberSliderSetting
-              label={
-                <Tooltip title={settingsTooltips.mouseRotateValue}>
-                  {settingsLabels.mouseRotateValue}
-                </Tooltip>
-              }
-              min={userSettings.mouseRotateValue.minimum}
-              max={userSettings.mouseRotateValue.maximum}
-              step={0.001}
-              value={this.props.userConfiguration.mouseRotateValue}
-              onChange={this.onChangeUser.mouseRotateValue}
-            />
-            <NumberSliderSetting
-              label={
-                <Tooltip title={settingsTooltips.rotateValue}>{settingsLabels.rotateValue}</Tooltip>
-              }
-              min={userSettings.rotateValue.minimum}
-              max={userSettings.rotateValue.maximum}
-              step={0.001}
-              value={this.props.userConfiguration.rotateValue}
-              onChange={this.onChangeUser.rotateValue}
-            />
-            <NumberSliderSetting
-              label={
-                <Tooltip title={settingsTooltips.crosshairSize}>
-                  {settingsLabels.crosshairSize}
-                </Tooltip>
-              }
-              min={userSettings.crosshairSize.minimum}
-              max={userSettings.crosshairSize.maximum}
-              step={0.01}
-              value={this.props.userConfiguration.crosshairSize}
-              onChange={this.onChangeUser.crosshairSize}
-            />
-            <NumberSliderSetting
-              label={
-                <Tooltip title={settingsTooltips.sphericalCapRadius}>
-                  {settingsLabels.sphericalCapRadius}
-                </Tooltip>
-              }
-              min={userSettings.sphericalCapRadius.minimum}
-              max={userSettings.sphericalCapRadius.maximum}
-              step={1}
-              value={this.props.userConfiguration.sphericalCapRadius}
-              onChange={this.onChangeUser.sphericalCapRadius}
-            />
-            <SwitchSetting
-              label={
-                <Tooltip title={settingsTooltips.displayCrosshair}>
-                  {settingsLabels.displayCrosshair}
-                </Tooltip>
-              }
-              value={this.props.userConfiguration.displayCrosshair}
-              onChange={this.onChangeUser.displayCrosshair}
-            />
-          </Panel>
-        );
+    if (
+      this.props.viewMode === Constants.MODE_ARBITRARY ||
+      this.props.viewMode === Constants.MODE_ARBITRARY_PLANE
+    ) {
+      return (
+        <Panel header="Flight Options" key="2">
+          <LogSliderSetting
+            label={<Tooltip title={settingsTooltips.zoomFlight}>{settingsLabels.zoom}</Tooltip>}
+            roundTo={3}
+            min={this.props.validZoomRange[0]}
+            max={this.props.validZoomRange[1]}
+            value={this.props.zoomStep}
+            onChange={this.props.onChangeZoomStep}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.mouseRotateValue}>
+                {settingsLabels.mouseRotateValue}
+              </Tooltip>
+            }
+            min={userSettings.mouseRotateValue.minimum}
+            max={userSettings.mouseRotateValue.maximum}
+            step={0.001}
+            value={this.props.userConfiguration.mouseRotateValue}
+            onChange={this.onChangeUser.mouseRotateValue}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.rotateValue}>{settingsLabels.rotateValue}</Tooltip>
+            }
+            min={userSettings.rotateValue.minimum}
+            max={userSettings.rotateValue.maximum}
+            step={0.001}
+            value={this.props.userConfiguration.rotateValue}
+            onChange={this.onChangeUser.rotateValue}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.crosshairSize}>
+                {settingsLabels.crosshairSize}
+              </Tooltip>
+            }
+            min={userSettings.crosshairSize.minimum}
+            max={userSettings.crosshairSize.maximum}
+            step={0.01}
+            value={this.props.userConfiguration.crosshairSize}
+            onChange={this.onChangeUser.crosshairSize}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.sphericalCapRadius}>
+                {settingsLabels.sphericalCapRadius}
+              </Tooltip>
+            }
+            min={userSettings.sphericalCapRadius.minimum}
+            max={userSettings.sphericalCapRadius.maximum}
+            step={1}
+            value={this.props.userConfiguration.sphericalCapRadius}
+            onChange={this.onChangeUser.sphericalCapRadius}
+          />
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.displayCrosshair}>
+                {settingsLabels.displayCrosshair}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.displayCrosshair}
+            onChange={this.onChangeUser.displayCrosshair}
+          />
+        </Panel>
+      );
+    } else {
+      return (
+        <Panel header="Viewport Options" key="2">
+          <LogSliderSetting
+            label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
+            roundTo={3}
+            min={this.props.validZoomRange[0]}
+            max={this.props.validZoomRange[1]}
+            value={this.props.zoomStep}
+            onChange={this.props.onChangeZoomStep}
+          />
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.displayCrosshair}>
+                {settingsLabels.displayCrosshair}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.displayCrosshair}
+            onChange={this.onChangeUser.displayCrosshair}
+          />
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.displayScalebars}>
+                {settingsLabels.displayScalebars}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.displayScalebars}
+            onChange={this.onChangeUser.displayScalebars}
+          />
+        </Panel>
+      );
     }
   };
 

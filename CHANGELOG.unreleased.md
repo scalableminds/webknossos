@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Improved context menu for interactions with segmentation data which wasn't loaded completely, yet. [#5637](https://github.com/scalableminds/webknossos/pull/5637)
+- Any feature connected to computational jobs like precomputing a meshfile is now disabled for non local hosted datasets. [#5663](https://github.com/scalableminds/webknossos/pull/5663)
 - Clicking outside of the context menu closes it without performing any other action (e.g., previously, a node could be created when clicking outside of the context menu, when the skeleton tool was active). Also, a repeated rightclick doesn't open the context menu again. [#5658](https://github.com/scalableminds/webknossos/pull/5658)
 
 ### Fixed

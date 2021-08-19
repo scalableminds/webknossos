@@ -120,6 +120,8 @@ In order to restore the current window, a reload is necessary.`,
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "data.bounding_box_export_not_supported":
+    "Exporting data from a foreign dataset is not supported.",
   "sampling.could_not_get_or_create_bucket": (zoomedAddress: Vector4) =>
     `While sampling could not get or create bucket at address ${zoomedAddress.toString()}.`,
   "tracing.unhandled_initialization_error":

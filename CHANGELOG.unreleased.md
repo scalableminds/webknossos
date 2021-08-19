@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where non-existing resolutions could be selected for wk-worker-based meshfile computations [#5631](https://github.com/scalableminds/webknossos/pull/5631)
 - Added new mesh-related functions to the front-end API: getAvailableMeshFiles, getActiveMeshFile, setActiveMeshFile, loadPrecomputedMesh, computeMeshOnDemand, setMeshVisibility, removeMesh. [#5634](https://github.com/scalableminds/webknossos/pull/5634)
 - Added a route to call new webknossos-worker job for nuclei inferral. [#5626](https://github.com/scalableminds/webknossos/pull/5626)
+- Added the possibility to restrict the volume resolutions when creating explorative annotations. Use this to annotate larger structures without creating tons of high-res data. [#5645](https://github.com/scalableminds/webknossos/pull/5645)
 - Added tooltips for all elements of the Settings tab in the left sidebar. [#5673](https://github.com/scalableminds/webknossos/pull/5673)
 
 ### Changed
@@ -26,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where an authentication error was shown when viewing the meshes tab while not logged in. [#5647](https://github.com/scalableminds/webknossos/pull/5647)
 - Fixed that nodes could only be selected via the context menu when an annotation was opened in read-only mode. Shift-Click will now work, too (and if "Classic Controls" are disabled, a simple left click will work, too). [#5661](https://github.com/scalableminds/webknossos/pull/5661)
 - Fixed that the copy buttons in the context menu did not work properly. [#5658](https://github.com/scalableminds/webknossos/pull/5658)
+- Fixed that creating a new node in merger mode did always turn of the "Hide unmapped segments" setting. [#5668](https://github.com/scalableminds/webknossos/pull/5668)
 - Fixed that undoing of volume annotations might overwrite the backend data on not loaded magnifications with nothing. [#5608](https://github.com/scalableminds/webknossos/pull/5608)
 - Fixed a bug where volume annotation downloads were occasionally cancelled with “Connection reset by peer” error. [#5660](https://github.com/scalableminds/webknossos/pull/5660)
 

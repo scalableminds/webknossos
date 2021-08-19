@@ -9,37 +9,54 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsArray, JsObject, JsString, JsValue}
+import play.api.libs.json.{JsArray, JsObject, JsString}
 import webknossosDatastore.BuildInfo
 
-import java.io
 import java.io.File
 import java.net.{HttpURLConnection, URL}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.sys.exit
 
-class AutoUpdateService @Inject()(
-    config: DataStoreConfig,
-    val lifecycle: ApplicationLifecycle,
-    val system: ActorSystem,
-    rpc: RPC
-) extends IntervalScheduler
-    with LazyLogging
-    with FoxImplicits {
-
-  override protected lazy val enabled: Boolean = config.Datastore.AutoUpdate.enabled
-  protected lazy val tickerInterval: FiniteDuration = 24 hours
+trait GithubReleaseChecker {
+  def rpc: RPC
 
   def checkForUpdate(): Fox[(Boolean, List[JsObject])] =
     for {
-      jsObject <- rpc("https://api.github.com/repos/scalableminds/webknossos/releases/latest")
+      jsObject <- rpc("https://api.github.com/repos/youri-k/ComparingUnrelatedTypesExample/releases/latest")
         .addHeader("Accept" -> "application/vnd.github.v3+json")
         .getWithJsonResponse[JsObject]
       tag_name <- jsObject.value.get("tag_name").flatMap(_.validate[JsString].asOpt)
       assets <- jsObject.value.get("assets").flatMap(_.validate[JsArray].asOpt)
       assetObjects = assets.value.flatMap(_.validate[JsObject].asOpt).toList
     } yield (BuildInfo.ciTag != tag_name.value, assetObjects)
+
+  def getUrlForFileEnding(assets: List[JsObject], fileEnding: String): String = {
+    for {
+      asset <- assets
+      name = asset.value.get("name").flatMap(_.validate[JsString].asOpt).map(_.value)
+      url = asset.value.get("url").flatMap(_.validate[JsString].asOpt).map(_.value)
+    } yield {
+      if (name.getOrElse("").endsWith(fileEnding) && url.getOrElse("") != "") {
+        return url.getOrElse("")
+      }
+    }
+    ""
+  }
+}
+
+class AutoUpdateService @Inject()(
+    config: DataStoreConfig,
+    val lifecycle: ApplicationLifecycle,
+    val system: ActorSystem,
+    val rpc: RPC
+) extends IntervalScheduler
+    with LazyLogging
+    with FoxImplicits
+    with GithubReleaseChecker {
+
+  override protected lazy val enabled: Boolean = config.Datastore.AutoUpdate.enabled
+  protected lazy val tickerInterval: FiniteDuration = 24 hours
 
   def downloadUpdate(existsNewUpdate: Boolean, assets: List[JsObject]): Fox[Boolean] = {
     def downloadGithubFile(url: String, fileNameOnDisk: String): Fox[Boolean] = {
@@ -63,25 +80,10 @@ class AutoUpdateService @Inject()(
       Fox.successful(true)
     }
 
-    def getUrlForFileEnding(fileEnding: String): String = {
-      for {
-        asset <- assets
-        name = asset.value.get("name").flatMap(_.validate[JsString].asOpt).map(_.value)
-        url = asset.value.get("url").flatMap(_.validate[JsString].asOpt).map(_.value)
-      } yield {
-        if (name.getOrElse("").endsWith(fileEnding) && url.getOrElse("") != "") {
-          return url.getOrElse("")
-        }
-      }
-      ""
-    }
-
-    val jarURL = getUrlForFileEnding(".jar")
-    val bashURL = getUrlForFileEnding(".sh")
     if (existsNewUpdate) {
       for {
-        jarUpdate <- downloadGithubFile(jarURL, "update.jar")
-        bashUpdate <- downloadGithubFile(bashURL, "update.sh")
+        jarUpdate <- downloadGithubFile(getUrlForFileEnding(assets, ".jar"), "update.jar")
+        bashUpdate <- downloadGithubFile(getUrlForFileEnding(assets, ".sh"), "update.sh")
       } yield jarUpdate || bashUpdate
     } else {
       Fox.successful(false)

@@ -129,6 +129,5 @@ class WKRemoteDataStoreController @Inject()(
         }
       } yield Ok
     }
-
   }
 }

@@ -2,16 +2,29 @@ package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.services.GithubReleaseChecker
 import com.scalableminds.webknossos.schema.Tables._
+import models.organization.OrganizationDAO
+import oxalis.security.CompactRandomIDGenerator
+
 import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Request, Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
+import java.io.{FileWriter, PrintWriter}
 import scala.concurrent.{ExecutionContext, Future}
+
+case class UserDataStoreConfig(name: String, url: String, port: String)
+
+object UserDataStoreConfig {
+  implicit val jsonFormat: Format[UserDataStoreConfig] = Json.format[UserDataStoreConfig]
+}
 
 case class DataStore(
     name: String,
@@ -60,9 +73,14 @@ object DataStore {
     fromForm(name, url, publicUrl, "", isScratch, isForeign, isConnector, allowsUpload)
 }
 
-class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
+class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO,
+                                 val rpc: RPC,
+                                 conf: WkConf,
+                                 temporaryFileCreator: TemporaryFileCreator,
+                                 organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with Results {
+    with Results
+    with GithubReleaseChecker {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] =
     Fox.successful(
@@ -84,6 +102,39 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
       result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
 
+  def createNewUserDataStore(config: UserDataStoreConfig, organizationId: ObjectId): Fox[TemporaryFile] = {
+    def writeInstallScriptToFile(fileContent: String): TemporaryFile = {
+      val file = temporaryFileCreator.create()
+      val fw = new FileWriter(file)
+      fw.write(fileContent)
+      fw.close()
+      file
+    }
+
+    for {
+      key <- new CompactRandomIDGenerator().generate
+      organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
+      (_, assets) <- checkForUpdate()
+      jarURL = getUrlForFileEnding(assets, ".jar")
+      updateScriptURL = getUrlForFileEnding(assets, ".sh")
+      _ <- dataStoreDAO.insertOne(DataStore(
+        config.name,
+        config.url,
+        config.url,
+        key,
+        onlyAllowedOrganization = Some(organizationId))) ?~> "dataStore.create.failed"
+      installScript = InstallScript.getInstallScript(config.name,
+                                                     config.url,
+                                                     config.port,
+                                                     organization.name,
+                                                     key,
+                                                     conf.Http.uri,
+                                                     updateScriptURL,
+                                                     jarURL)
+
+    } yield writeInstallScriptToFile(installScript)
+
+  }
 }
 
 class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

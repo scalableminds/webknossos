@@ -2,20 +2,21 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
-import models.binary.{DataStore, DataStoreDAO, DataStoreService}
+import models.binary.{DataStore, DataStoreDAO, DataStoreService, UserDataStoreConfig}
 import net.liftweb.common.Empty
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
-                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -59,6 +60,19 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
         case _ => Future.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
       }
     }
+  }
+
+  def createNewUserDataStore: Action[UserDataStoreConfig] = sil.SecuredAction.async(validateJson[UserDataStoreConfig]) {
+    implicit request =>
+      val dataStore = request.body
+      dataStoreDAO.findOneByName(dataStore.name).futureBox.flatMap {
+        case Empty =>
+          for {
+            _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+            installScriptFile <- dataStoreService.createNewUserDataStore(dataStore, request.identity._organization)
+          } yield Ok.sendFile(installScriptFile, fileName = _ => Some("install.sh"))
+        case _ => Future.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
+      }
   }
 
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

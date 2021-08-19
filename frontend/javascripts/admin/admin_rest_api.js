@@ -671,7 +671,7 @@ export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
   withFallback: boolean,
-  resolutionRestrictions?: APIResolutionRestrictions,
+  resolutionRestrictions: ?APIResolutionRestrictions,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;

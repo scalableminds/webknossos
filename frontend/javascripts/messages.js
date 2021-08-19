@@ -25,7 +25,6 @@ export const settings = {
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
   clippingDistanceArbitrary: "Clipping Distance",
-  moveValue3d: "Move Value (nm/s)",
   mouseRotateValue: "Mouse Rotation",
   rotateValue: "Keyboard Rotation",
   sphericalCapRadius: "Sphere Radius",
@@ -34,15 +33,40 @@ export const settings = {
   segmentationPatternOpacity: "Pattern Opacity",
   userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
-  loadingStrategyDescription: `You can choose between loading the best quality first
-    (will take longer until you see data) or alternatively,
-    improving the quality progressively (data will be loaded faster,
-    but it will take more time until the best quality is shown).`,
   mergerMode: "Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
+};
+
+export const settingsTooltips = {
+  loadingStrategy: `You can choose between loading the best quality first
+      (will take longer until you see data) or alternatively,
+      improving the quality progressively (data will be loaded faster,
+      but it will take more time until the best quality is shown).`,
+  fourBit:
+    "Decrease size of transferred data by half, using lossy compression. Recommended for poor and/or capped internet connections.",
+  interpolation: "Smooth the rendered data by interpolating color values",
+  renderMissingDataBlack:
+    "If disabled, missing data will be rendered by using downsampled resolutions.",
+  gpuMemoryFactor:
+    "Controls which data resolution is displayed, depending on zoom step and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
+  useLegacyBindings:
+    "When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.",
+  dynamicSpaceDirection:
+    "When enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes",
+  keyboardDelay:
+    "Delay after which shortcut keys (e.g. d/f for moving) are assumed to be intentionally held down, so that continuous movement is triggered.",
+  moveValue: "Increase to speed up movement through the dataset when holding d/f/space.",
+  displayCrosshair: "Show crosshair marker in the viewing direction center",
+  sphericalCapRadius: "Set the radius of the spherical cap the data is projected on.",
+  crosshairSize: "Size of the crosshair marker in the viewing direction center",
+  rotateValue: "Rotation speed when using the arrow keys on the keyboard",
+  mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
+  zoom: "Zoom in or out in the data viewports",
+  zoomFlight: "Zoom in or out in the data viewport",
+  displayScalebars: "Show a scale in the lower-right corner of each viewport",
 };
 
 export const layerViewConfigurations = {

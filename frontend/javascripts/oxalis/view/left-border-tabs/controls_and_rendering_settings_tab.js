@@ -26,7 +26,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import messages, { settings as settingsLabels } from "messages";
+import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type ViewMode } from "oxalis/constants";
@@ -67,11 +67,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting
-              label={
-                <Tooltip title="Zoom in or out in the data viewports">
-                  {settingsLabels.zoom}
-                </Tooltip>
-              }
+              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -80,7 +76,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <SwitchSetting
               label={
-                <Tooltip title="Show crosshair lines in each viewport, with colors indicating the other viewports">
+                <Tooltip title={settingsTooltips.displayCrosshair}>
                   {settingsLabels.displayCrosshair}
                 </Tooltip>
               }
@@ -89,7 +85,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <SwitchSetting
               label={
-                <Tooltip title="Show a scale in the lower-right corner of each viewport">
+                <Tooltip title={settingsTooltips.displayScalebars}>
                   {settingsLabels.displayScalebars}
                 </Tooltip>
               }
@@ -102,11 +98,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting
-              label={
-                <Tooltip title="Zoom in or out in the data viewports">
-                  {settingsLabels.zoom}
-                </Tooltip>
-              }
+              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -115,7 +107,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <SwitchSetting
               label={
-                <Tooltip title="Show crosshair lines in each viewport, with colors indicating the other viewports">
+                <Tooltip title={settingsTooltips.displayCrosshair}>
                   {settingsLabels.displayCrosshair}
                 </Tooltip>
               }
@@ -124,7 +116,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <SwitchSetting
               label={
-                <Tooltip title="Show a scale in the lower-right corner of each viewport">
+                <Tooltip title={settingsTooltips.displayScalebars}>
                   {settingsLabels.displayScalebars}
                 </Tooltip>
               }
@@ -137,9 +129,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         return (
           <Panel header="Flight Options" key="2">
             <LogSliderSetting
-              label={
-                <Tooltip title="Zoom in or out in the data viewport">{settingsLabels.zoom}</Tooltip>
-              }
+              label={<Tooltip title={settingsTooltips.zoomFlight}>{settingsLabels.zoom}</Tooltip>}
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -148,7 +138,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title="Rotation speed when using the mouse to drag the rotation.">
+                <Tooltip title={settingsTooltips.mouseRotateValue}>
                   {settingsLabels.mouseRotateValue}
                 </Tooltip>
               }
@@ -160,9 +150,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title="Rotation speed when using the arrow keys on the keyboard">
-                  {settingsLabels.rotateValue}
-                </Tooltip>
+                <Tooltip title={settingsTooltips.rotateValue}>{settingsLabels.rotateValue}</Tooltip>
               }
               min={userSettings.rotateValue.minimum}
               max={userSettings.rotateValue.maximum}
@@ -172,7 +160,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title="Size of the crosshair marker in the viewing direction center">
+                <Tooltip title={settingsTooltips.crosshairSize}>
                   {settingsLabels.crosshairSize}
                 </Tooltip>
               }
@@ -184,7 +172,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title="Set the radius of the spherical cap the data is projected on.">
+                <Tooltip title={settingsTooltips.sphericalCapRadius}>
                   {settingsLabels.sphericalCapRadius}
                 </Tooltip>
               }
@@ -196,7 +184,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <SwitchSetting
               label={
-                <Tooltip title="Show crosshair marker in the viewing direction center">
+                <Tooltip title={settingsTooltips.displayCrosshair}>
                   {settingsLabels.displayCrosshair}
                 </Tooltip>
               }
@@ -234,11 +222,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   render() {
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label={
-          <Tooltip title="Increase to speed up movement through the dataset when holding d/f/space.">
-            {settingsLabels.moveValue3d}
-          </Tooltip>
-        }
+        label={<Tooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</Tooltip>}
         min={userSettings.moveValue3d.minimum}
         max={userSettings.moveValue3d.maximum}
         step={10}
@@ -247,11 +231,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       />
     ) : (
       <NumberSliderSetting
-        label={
-          <Tooltip title="Increase to speed up movement through the dataset when holding d/f/space.">
-            {settingsLabels.moveValue}
-          </Tooltip>
-        }
+        label={<Tooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</Tooltip>}
         min={userSettings.moveValue.minimum}
         max={userSettings.moveValue.maximum}
         step={10}
@@ -270,7 +250,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         <Panel header="Controls" key="1">
           <NumberSliderSetting
             label={
-              <Tooltip title="Delay after which shortcut keys (e.g. d/f for moving) are assumed to be intentionally held down, so that continuous movement is triggered.">
+              <Tooltip title={settingsTooltips.keyboardDelay}>
                 {settingsLabels.keyboardDelay}
               </Tooltip>
             }
@@ -282,7 +262,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           {moveValueSetting}
           <SwitchSetting
             label={
-              <Tooltip title="When enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes">
+              <Tooltip title={settingsTooltips.dynamicSpaceDirection}>
                 {settingsLabels.dynamicSpaceDirection}
               </Tooltip>
             }
@@ -291,7 +271,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           <SwitchSetting
             label={
-              <Tooltip title="When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.">
+              <Tooltip title={settingsTooltips.useLegacyBindings}>
                 {settingsLabels.useLegacyBindings}
               </Tooltip>
             }
@@ -303,7 +283,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
             label={
-              <Tooltip title="Controls which data resolution is displayed, depending on zoom step and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
+              <Tooltip title={settingsTooltips.gpuMemoryFactor}>
                 {settingsLabels.gpuMemoryFactor}
               </Tooltip>
             }
@@ -318,7 +298,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           <DropdownSetting
             label={
-              <Tooltip title={settingsLabels.loadingStrategyDescription}>
+              <Tooltip title={settingsTooltips.loadingStrategy}>
                 {settingsLabels.loadingStrategy}
               </Tooltip>
             }
@@ -330,18 +310,14 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             ]}
           />
           <SwitchSetting
-            label={
-              <Tooltip title="Decrease size of transferred data by half, using lossy compression. Recommended for poor and/or capped internet connections.">
-                {settingsLabels.fourBit}
-              </Tooltip>
-            }
+            label={<Tooltip title={settingsTooltips.fourBit}>{settingsLabels.fourBit}</Tooltip>}
             value={this.props.datasetConfiguration.fourBit}
             onChange={this.onChangeDataset.fourBit}
           />
           {Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
             <SwitchSetting
               label={
-                <Tooltip title="Smooth the rendered data by interpolating color values, depending on zoom step">
+                <Tooltip title={settingsTooltips.interpolation}>
                   {settingsLabels.interpolation}
                 </Tooltip>
               }
@@ -351,7 +327,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           )}
           <SwitchSetting
             label={
-              <Tooltip title="If disabled, missing data will be rendered by using downsampled resolutions.">
+              <Tooltip title={settingsTooltips.renderMissingDataBlack}>
                 {settingsLabels.renderMissingDataBlack}{" "}
               </Tooltip>
             }

@@ -123,7 +123,6 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
     layerInfos ? (
       <p key={exportKey(layerInfos)}>
         <Button
-          key={exportKey(layerInfos)}
           onClick={() => handleStartExport(layerInfos)}
           disabled={
             startedExports.includes(exportKey(layerInfos)) ||

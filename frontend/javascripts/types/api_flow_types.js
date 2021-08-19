@@ -250,16 +250,18 @@ export type APIRestrictions = {|
 
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";
 
+export type APIResolutionRestrictions = {
+  min?: number,
+  max?: number,
+};
+
 export type APISettings = {|
   +allowedModes: Array<APIAllowedMode>,
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
   +mergerMode?: boolean,
-  +resolutionRestrictions: {
-    min?: number,
-    max?: number,
-  },
+  +resolutionRestrictions: APIResolutionRestrictions,
 |};
 
 export const APIAnnotationTypeEnum = Enum.make({

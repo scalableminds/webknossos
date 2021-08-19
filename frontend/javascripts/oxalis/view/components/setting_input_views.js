@@ -8,6 +8,7 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 
 import features from "features";
+import messages from "messages";
 
 const rowGutter = { xs: 8, sm: 16, md: 16, lg: 16 };
 
@@ -297,6 +298,7 @@ type UserBoundingBoxInputProps = {
   name: string,
   color: Vector3,
   isVisible: boolean,
+  isExportEnabled: boolean,
   tooltipTitle: string,
   onChange: UserBoundingBoxInputUpdate => void,
   onDelete: () => void,
@@ -385,13 +387,19 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
   render() {
     const { name } = this.state;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-    const { tooltipTitle, color, isVisible, onDelete, onExport } = this.props;
+    const { tooltipTitle, color, isVisible, onDelete, onExport, isExportEnabled } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = { margin: "auto 0px auto 6px" };
+    const exportIconStyle = isExportEnabled
+      ? iconStyle
+      : { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportButtonTooltip = isExportEnabled
+      ? "Export data from this bounding box."
+      : messages["data.bounding_box_export_not_supported"];
     const exportColumn = features().jobsEnabled ? (
       <Col span={2}>
-        <Tooltip title="Export data from this bounding box.">
-          <DownloadOutlined onClick={onExport} style={iconStyle} />
+        <Tooltip title={exportButtonTooltip} placement="topRight">
+          <DownloadOutlined onClick={onExport} style={exportIconStyle} />
         </Tooltip>
       </Col>
     ) : null;

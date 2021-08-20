@@ -195,13 +195,21 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
-  getPremiumFeaturesMenu = () => {
-    // TODO: Integrate the new jobsEnabled field from the dataset.
-    if (!features().jobsEnabled) {
+  getProcessingJobsMenu = () => {
+    if (!this.props.dataset.jobsEnabled) {
       return (
-        <Tooltip title="Premium features are only available for datasets hosted natively and not on other datastores.">
-          <StarOutlined className="info-tab-icon" width={24} height={24} /> Premium Features
-        </Tooltip>
+        <tr>
+          <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+            <StarOutlined className="info-tab-icon" width={24} height={24} />
+          </td>
+          <td>
+            <Tooltip title="Dataset Processing features are only available for datasets hosted natively and not on other datastores.">
+              <Button disabled type="link" style={{ padding: 0 }}>
+                Process Dataset
+              </Button>
+            </Tooltip>
+          </td>
+        </tr>
       );
     }
     const overlay = (
@@ -495,8 +503,10 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               </Tooltip>
               {resolutionInfo}
 
-              {activeUser != null && (activeUser.isDatasetManager || activeUser.isAdmin)
-                ? this.getPremiumFeaturesMenu()
+              {features().jobsEnabled &&
+              activeUser != null &&
+              (activeUser.isDatasetManager || activeUser.isAdmin)
+                ? this.getProcessingJobsMenu()
                 : null}
             </tbody>
           </table>

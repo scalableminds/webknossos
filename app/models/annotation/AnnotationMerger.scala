@@ -66,14 +66,14 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
       implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] =
     for {
       dataSet <- dataSetDAO.findOne(dataSetId)
-      tracingStoreClient: TracingStoreRpcClient <- tracingStoreService.clientFor(dataSet)
+      tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds <- Fox.successful(annotations.map(_.skeletonTracingId))
       skeletonTracingReference <- mergeSkeletonTracings(tracingStoreClient, skeletonTracingIds, persistTracing)
       volumeTracingIds <- Fox.successful(annotations.sortBy(_.modified).map(_.volumeTracingId))
       volumeTracingReference <- mergeVolumeTracings(tracingStoreClient, volumeTracingIds, persistTracing)
     } yield (skeletonTracingReference, volumeTracingReference)
 
-  private def mergeSkeletonTracings(tracingStoreClient: TracingStoreRpcClient,
+  private def mergeSkeletonTracings(tracingStoreClient: WKRemoteTracingStoreClient,
                                     skeletonTracingIds: List[Option[String]],
                                     persistTracing: Boolean) =
     if (skeletonTracingIds.flatten.isEmpty)
@@ -83,7 +83,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
         .mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing)
         .map(Some(_)) ?~> "Failed to merge skeleton tracings."
 
-  private def mergeVolumeTracings(tracingStoreClient: TracingStoreRpcClient,
+  private def mergeVolumeTracings(tracingStoreClient: WKRemoteTracingStoreClient,
                                   volumeTracingIds: List[Option[String]],
                                   persistTracing: Boolean) =
     if (volumeTracingIds.flatten.isEmpty)

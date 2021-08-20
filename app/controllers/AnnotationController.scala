@@ -5,6 +5,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
@@ -26,7 +27,9 @@ import oxalis.mail.{MailchimpClient, MailchimpTag}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
+case class CreateExplorationalParameters(typ: String,
+                                         withFallback: Option[Boolean],
+                                         resolutionRestrictions: Option[ResolutionRestrictions])
 object CreateExplorationalParameters {
   implicit val jsonFormat: OFormat[CreateExplorationalParameters] = Json.format[CreateExplorationalParameters]
 }
@@ -156,7 +159,9 @@ class AnnotationController @Inject()(
           request.identity,
           dataSet._id,
           tracingType,
-          request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
+          request.body.withFallback.getOrElse(true),
+          request.body.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
+        ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasAnnotated)
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"

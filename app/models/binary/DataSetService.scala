@@ -262,10 +262,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def dataStoreFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStore] =
     dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
 
-  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStoreRpcClient] =
+  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WKRemoteDataStoreClient] =
     for {
       dataStore <- dataStoreFor(dataSet)
-    } yield new DataStoreRpcClient(dataStore, dataSet, rpc)
+    } yield new WKRemoteDataStoreClient(dataStore, dataSet, rpc)
 
   def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Long] =
     userOpt match {
@@ -352,6 +352,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
       publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
+      jobsEnabled = conf.Features.jobsEnabled && (dataStore.url == conf.Http.uri) //currently only for local datastore
     } yield {
       Json.obj(
         "name" -> dataSet.name,
@@ -371,7 +372,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "details" -> dataSet.details,
         "publication" -> publicationJson,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
-        "isForeign" -> dataStore.isForeign
+        "isForeign" -> dataStore.isForeign,
+        "jobsEnabled" -> jobsEnabled,
       )
     }
 }

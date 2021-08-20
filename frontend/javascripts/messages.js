@@ -25,7 +25,6 @@ export const settings = {
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
   clippingDistanceArbitrary: "Clipping Distance",
-  moveValue3d: "Move Value (nm/s)",
   mouseRotateValue: "Mouse Rotation",
   rotateValue: "Keyboard Rotation",
   sphericalCapRadius: "Sphere Radius",
@@ -34,15 +33,40 @@ export const settings = {
   segmentationPatternOpacity: "Pattern Opacity",
   userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
-  loadingStrategyDescription: `You can choose between loading the best quality first
-    (will take longer until you see data) or alternatively,
-    improving the quality progressively (data will be loaded faster,
-    but it will take more time until the best quality is shown).`,
   mergerMode: "Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
+};
+
+export const settingsTooltips = {
+  loadingStrategy: `You can choose between loading the best quality first
+      (will take longer until you see data) or alternatively,
+      improving the quality progressively (data will be loaded faster,
+      but it will take more time until the best quality is shown).`,
+  fourBit:
+    "Decrease size of transferred data by half, using lossy compression. Recommended for poor and/or capped internet connections.",
+  interpolation: "Smooth the rendered data by interpolating color values",
+  renderMissingDataBlack:
+    "If disabled, missing data will be rendered by using downsampled resolutions.",
+  gpuMemoryFactor:
+    "Controls which data resolution is displayed, depending on zoom step and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
+  useLegacyBindings:
+    "When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.",
+  dynamicSpaceDirection:
+    "When enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes",
+  keyboardDelay:
+    "Delay after which shortcut keys (e.g. d/f for moving) are assumed to be intentionally held down, so that continuous movement is triggered.",
+  moveValue: "Increase to speed up movement through the dataset when holding d/f/space.",
+  displayCrosshair: "Show crosshair marker in the viewing direction center",
+  sphericalCapRadius: "Set the radius of the spherical cap the data is projected on.",
+  crosshairSize: "Size of the crosshair marker in the viewing direction center",
+  rotateValue: "Rotation speed when using the arrow keys on the keyboard",
+  mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
+  zoom: "Zoom in or out in the data viewports",
+  zoomFlight: "Zoom in or out in the data viewport",
+  displayScalebars: "Show a scale in the lower-right corner of each viewport",
 };
 
 export const layerViewConfigurations = {
@@ -96,6 +120,8 @@ In order to restore the current window, a reload is necessary.`,
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "data.bounding_box_export_not_supported":
+    "Exporting data from a foreign dataset is not supported.",
   "sampling.could_not_get_or_create_bucket": (zoomedAddress: Vector4) =>
     `While sampling could not get or create bucket at address ${zoomedAddress.toString()}.`,
   "tracing.unhandled_initialization_error":
@@ -155,10 +181,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "tracing.merger_mode_node_outside_segment":
     "You cannot place nodes outside of a segment in merger mode.",
-  "tracing.not_isosurface_available_to_download": [
-    "There is no isosurface for the active segment id available to download.",
-    'Click with "CTRL + Left Mouse" on the desired segment to load it\'s isosurface.',
-  ],
+  "tracing.not_isosurface_available_to_download":
+    "There is no mesh for the active segment id available to download.",
   "tracing.mesh_listing_failed":
     "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
   "tracing.confirm_remove_fallback_layer.title":

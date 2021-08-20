@@ -23,7 +23,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
-    webKnossosServer: DataStoreWkRpcClient,
+    remoteWebKnossosClient: DSRemoteWebKnossosClient,
     accessTokenService: DataStoreAccessTokenService,
     sampleDatasetService: SampleDataSourceService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
@@ -108,7 +108,7 @@ class DataSourceController @Inject()(
                   val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                   for {
                     _ <- if (!uploadService.isKnownUpload(uploadId))
-                      webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
+                      remoteWebKnossosClient.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
                     else Fox.successful(())
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadId,
@@ -132,7 +132,7 @@ class DataSourceController @Inject()(
         for {
           (dataSourceId, initialTeams, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
           userTokenOpt = accessTokenService.tokenFromRequest(request)
-          _ <- webKnossosServer
+          _ <- remoteWebKnossosClient
             .reportUpload(dataSourceId, initialTeams, dataSetSizeBytes, userTokenOpt) ?~> "setInitialTeams.failed"
         } yield Ok
       }

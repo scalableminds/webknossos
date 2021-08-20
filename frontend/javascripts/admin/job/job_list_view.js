@@ -24,6 +24,33 @@ import * as Utils from "libs/utils";
 import type { OxalisState } from "oxalis/store";
 import FormattedDate from "components/formatted_date";
 
+export const TOOLTIP_MESSAGES_AND_ICONS = {
+  UNKNOWN: {
+    tooltip:
+      "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
+    icon: <QuestionCircleTwoTone twoToneColor="grey" />,
+  },
+  SUCCESS: {
+    tooltip: "This job has successfully been executed.",
+    icon: <CheckCircleTwoTone twoToneColor="#49b21b" />,
+  },
+  PENDING: {
+    tooltip: "This job will run as soon as a worker becomes available.",
+    icon: <ClockCircleTwoTone twoToneColor="orange" />,
+  },
+  STARTED: { tooltip: "This job is currently running.", icon: <LoadingOutlined /> },
+  FAILURE: {
+    tooltip:
+      "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
+    icon: <CloseCircleTwoTone twoToneColor="red" />,
+  },
+  MANUAL: {
+    tooltip:
+      "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
+    icon: <ToolTwoTone twoToneColor="orange" />,
+  },
+};
+
 const refreshInterval = 5000;
 
 const { Column } = Table;
@@ -186,34 +213,7 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderState = (__: any, job: APIJob) => {
-    const tooltipMessagesAndIcons = {
-      UNKNOWN: {
-        tooltip:
-          "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
-        icon: <QuestionCircleTwoTone twoToneColor="grey" />,
-      },
-      SUCCESS: {
-        tooltip: "This job has successfully been executed.",
-        icon: <CheckCircleTwoTone twoToneColor="#49b21b" />,
-      },
-      PENDING: {
-        tooltip: "This job will run as soon as a worker becomes available.",
-        icon: <ClockCircleTwoTone twoToneColor="orange" />,
-      },
-      STARTED: { tooltip: "This job is currently running.", icon: <LoadingOutlined /> },
-      FAILURE: {
-        tooltip:
-          "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
-        icon: <CloseCircleTwoTone twoToneColor="red" />,
-      },
-      MANUAL: {
-        tooltip:
-          "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
-        icon: <ToolTwoTone twoToneColor="orange" />,
-      },
-    };
-
-    const { tooltip, icon } = tooltipMessagesAndIcons[job.state];
+    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
     const jobStateNormalized = _.capitalize(job.state.toLowerCase());
     return (
       <Tooltip title={tooltip}>

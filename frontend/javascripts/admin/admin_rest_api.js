@@ -27,6 +27,7 @@ import {
   type APIProjectProgressReport,
   type APIProjectUpdater,
   type APIProjectWithAssignments,
+  type APIResolutionRestrictions,
   type APISampleDataset,
   type APIScript,
   type APIScriptCreator,
@@ -670,12 +671,13 @@ export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
   withFallback: boolean,
+  resolutionRestrictions: ?APIResolutionRestrictions,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   return Request.sendJSONReceiveJSON(
     url,
-    Object.assign({}, { data: { typ, withFallback } }, options),
+    Object.assign({}, { data: { typ, withFallback, resolutionRestrictions } }, options),
   );
 }
 

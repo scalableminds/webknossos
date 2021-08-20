@@ -64,13 +64,14 @@ export default function NucleiInferralModal(props: Props) {
     <Modal title="Start Nuclei Inferral" onCancel={handleClose} visible width={700} footer={null}>
       <p>
         Start a job that automatically detects nuclei for this dataset. This job creates a copy of
-        this dataset once it has finished. This copy contains the detected nuclei as a segmentation
-        layer.{" "}
+        this dataset once it has finished. The new dataset will contain the detected nuclei as a
+        segmentation layer.{" "}
       </p>
       <p>
         <b>
           Note that this feature is still experimental. Nuclei detection currently works best with
-          EM data and a resolution of 4 to 64{ThinSpace}nm per voxel.
+          EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The inferral process
+          will automatically use the magnification that matches that resolution best.
         </b>
       </p>
       <br />

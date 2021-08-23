@@ -39,7 +39,13 @@ export async function screenshotDataset(
   optionalDatasetConfigOverride: ?DatasetConfiguration,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
-  const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);
+  const createdExplorational = await createExplorational(
+    datasetId,
+    "skeleton",
+    false,
+    null,
+    options,
+  );
   if (optionalDatasetConfigOverride != null) {
     await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
   }
@@ -54,7 +60,13 @@ export async function screenshotDatasetWithMapping(
   mappingName: string,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
-  const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);
+  const createdExplorational = await createExplorational(
+    datasetId,
+    "skeleton",
+    false,
+    null,
+    options,
+  );
   await openTracingView(page, baseUrl, createdExplorational.id);
   await page.evaluate(
     `webknossos.apiReady().then(async api => api.data.activateMapping("${mappingName}"))`,

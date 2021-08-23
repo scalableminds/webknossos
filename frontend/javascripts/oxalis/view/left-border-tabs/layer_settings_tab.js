@@ -793,7 +793,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { layers } = this.props.datasetConfiguration;
     const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
-      const isColorLayer = getLayerByName(this.props.dataset, layerName);
+      const isColorLayer = getLayerByName(this.props.dataset, layerName).category === "color";
       // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });

@@ -29,7 +29,6 @@ export default function ViewportStatusIndicator() {
 
     setRenderMissingDataBlack(state.datasetConfiguration.renderMissingDataBlack);
   });
-  console.log("unrenderableLayersWithInfo", unrenderableLayersWithInfo);
   if (unrenderableLayersWithInfo.length === 0) {
     return null;
   }
@@ -41,11 +40,6 @@ export default function ViewportStatusIndicator() {
     .filter(([, { higher }]) => higher)
     .map(([layerName]) => layerName);
   const pluralSForHigherZoomstep = unrenderableLayerNamesWithHigherZoomstep.length > 1 ? "s" : "";
-  console.log(
-    "unrenderableLayerNamesWithSmallerZoomstep",
-    unrenderableLayerNamesWithSmallerZoomstep,
-  );
-  console.log("unrenderableLayerNamesWithHigherZoomstep", unrenderableLayerNamesWithHigherZoomstep);
 
   const renderMissingDataBlackHint = renderMissingDataBlack
     ? " Also consider disabling the option “Render Missing Data Black”."

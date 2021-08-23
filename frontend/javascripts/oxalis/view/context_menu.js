@@ -69,6 +69,7 @@ type StateProps = {|
   currentMeshFile: ?string,
   volumeTracing: ?VolumeTracing,
   isSkeletonToolActive: boolean,
+  useLegacyBindings: boolean,
 |};
 
 /* eslint-enable react/no-unused-prop-types */
@@ -145,7 +146,7 @@ function positionToString(pos: Vector3): string {
 }
 
 function shortcutBuilder(shortcuts: Array<string>): Node {
-  const lineColor = "rgba(255, 255, 255, 0.45)";
+  const lineColor = "var(--ant-text-primary)";
   const mapNameToShortcutIcon = (name: string) => {
     switch (name) {
       case "leftMouse": {
@@ -199,6 +200,7 @@ function NodeContextMenuOptions({
   deleteNode,
   setActiveNode,
   hideTree,
+  useLegacyBindings,
 }: NodeContextMenuOptionsProps) {
   if (skeletonTracing == null) {
     return null;
@@ -230,7 +232,8 @@ function NodeContextMenuOptions({
         disabled={areInSameTree}
         onClick={() => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null)}
       >
-        Create Edge & Merge with this Tree {shortcutBuilder(["Shift", "Alt", "leftMouse"])}
+        Create Edge & Merge with this Tree{" "}
+        {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -238,7 +241,8 @@ function NodeContextMenuOptions({
         disabled={!areNodesConnected}
         onClick={() => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null)}
       >
-        Delete Edge to this Node {shortcutBuilder(["Shift", "Ctrl", "leftMouse"])}
+        Delete Edge to this Node{" "}
+        {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -554,6 +558,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     segmentationLayer: getSegmentationLayer(state.dataset),
     zoomStep: getRequestLogZoomStep(state),
     currentMeshFile: state.currentMeshFile,
+    useLegacyBindings: state.userConfiguration.useLegacyBindings,
   };
 }
 

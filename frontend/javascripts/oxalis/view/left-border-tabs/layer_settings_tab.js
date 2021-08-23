@@ -434,7 +434,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           {intensityRange[0] === intensityRange[1] && !isDisabled ? (
             <Tooltip
               title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values. 
-            If you do not want this layer to be rendered, better disable it with the switch on the left.`}
+            If you want to hide this layer, you can also disable it with the switch on the left.`}
             >
               <WarningOutlined style={{ color: "var(--ant-warning)" }} />
             </Tooltip>

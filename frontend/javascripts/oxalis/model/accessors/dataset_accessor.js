@@ -33,6 +33,8 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 
 export type ResolutionsMap = Map<number, Vector3>;
 
+type SmallerOrHigherInfo = { smaller: boolean, higher: boolean };
+
 export class ResolutionInfo {
   resolutions: $ReadOnlyArray<Vector3>;
   resolutionMap: $ReadOnlyMap<number, Vector3>;
@@ -131,12 +133,16 @@ export class ResolutionInfo {
     return _.max(Array.from(this.resolutionMap.keys()));
   }
 
+  getAllIndices(): Array<number> {
+    return this.getResolutionsWithIndices().map(entry => entry[0]);
+  }
+
   getClosestExistingIndex(index: number): number {
     if (this.hasIndex(index)) {
       return index;
     }
 
-    const indices = this.getResolutionsWithIndices().map(entry => entry[0]);
+    const indices = this.getAllIndices();
     const indicesWithDistances = indices.map(_index => {
       const distance = index - _index;
       if (distance >= 0) {
@@ -153,6 +159,19 @@ export class ResolutionInfo {
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, entry => entry[1]));
     return bestIndexWithDistance[0];
+  }
+
+  hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {
+    const indices = this.getAllIndices();
+    const hasSmallOrHigher = { smaller: false, higher: false };
+    indices.forEach(currentIndex => {
+      if (currentIndex < index) {
+        hasSmallOrHigher.smaller = true;
+      } else if (currentIndex > index) {
+        hasSmallOrHigher.higher = true;
+      }
+    });
+    return hasSmallOrHigher;
   }
 
   getIndexOrClosestHigherIndex(requestedIndex: number): ?number {
@@ -591,8 +610,8 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
       resolutionInfo: getResolutionInfo(layer.resolutions),
     }))
     .filter(({ resolutionInfo }) => {
-      const isMissing = !resolutionInfo.hasIndex(zoomStep);
-      if (!isMissing) {
+      const isPresent = resolutionInfo.hasIndex(zoomStep);
+      if (isPresent) {
         // The layer exists. Thus, it is not unrenderable.
         return false;
       }
@@ -612,7 +631,10 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
         return resolutionInfo.hasIndex(fallbackZoomStep);
       });
     })
-    .map<DataLayerType>(({ layer }) => layer);
+    .map<[DataLayerType, SmallerOrHigherInfo]>(({ layer, resolutionInfo }) => {
+      const hasSmallOrHigher = resolutionInfo.hasSmallerAndOrHigherIndex(zoomStep);
+      return [layer, hasSmallOrHigher];
+    });
   return unrenderableLayers;
 }
 

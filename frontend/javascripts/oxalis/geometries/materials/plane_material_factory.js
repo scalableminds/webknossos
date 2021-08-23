@@ -339,7 +339,7 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getUnrenderableLayersForCurrentZoom(storeState),
+        storeState => getUnrenderableLayersForCurrentZoom(storeState).map(([layer]) => layer),
         unrenderableLayers => {
           const unrenderableLayerNames = unrenderableLayers.map(l => l.name);
           for (const dataLayer of Model.getAllLayers()) {

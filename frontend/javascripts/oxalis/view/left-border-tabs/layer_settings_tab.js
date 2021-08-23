@@ -634,7 +634,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (volumeTracing == null) {
       return [];
     }
-    const segmentationLayer = Model.getEnforcedActiveSegmentationLayer();
+    const segmentationLayer = Model.getEnforcedSomeSegmentationLayer();
     const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetResolutions =
       fallbackLayerInfo != null
@@ -791,10 +791,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const segmentationLayerName = Model.getSegmentationLayerName();
     const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
-      const isColorLayer = segmentationLayerName !== layerName;
+      const isColorLayer = getLayerByName(this.props.dataset, layerName);
       // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });

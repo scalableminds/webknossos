@@ -554,11 +554,8 @@ class DataApi {
    * _Volume tracing only!_
    */
   getVolumeTracingLayerName(): string {
-    const segmentationLayerName = this.model.getActiveSegmentationLayerName();
-    if (!segmentationLayerName) {
-      throw new Error("Segmentation layer not found!");
-    }
-    return segmentationLayerName;
+    const segmentationLayer = this.model.getEnforcedSomeSegmentationLayer();
+    return segmentationLayer.name;
   }
 
   /**
@@ -577,7 +574,9 @@ class DataApi {
       throw new Error(messages["mapping.too_few_textures"]);
     }
 
-    const segmentationLayerName = this.model.getActiveSegmentationLayerName();
+    // todop: should be adapted to multiple segmentation layers
+    const segmentationLayer = this.model.getSomeSegmentationLayer();
+    const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
@@ -680,11 +679,7 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const segmentationLayer = this.model.getActiveSegmentationLayer();
-    assertExists(segmentationLayer, "Segmentation layer not found!");
-    if (segmentationLayer == null) {
-      throw new Error("Segmentation layer not found!")
-    }
+    const segmentationLayer = this.model.getEnforcedSomeSegmentationLayer();
 
     for (const voxel of voxels) {
       segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);

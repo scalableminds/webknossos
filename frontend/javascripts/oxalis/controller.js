@@ -263,10 +263,11 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     _.extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
-        const segmentationLayerName = Model.getSegmentationLayerName();
-        if (!segmentationLayerName) {
+        const segmentationLayer = Model.getSomeSegmentationLayer();
+        if (!segmentationLayer) {
           return;
         }
+        const segmentationLayerName = segmentationLayer.name;
         const isSegmentationDisabled = Store.getState().datasetConfiguration.layers[
           segmentationLayerName
         ].isDisabled;

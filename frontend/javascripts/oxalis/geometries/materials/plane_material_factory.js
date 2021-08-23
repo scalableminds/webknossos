@@ -271,7 +271,7 @@ class PlaneMaterialFactory {
     }
 
     // Add mapping
-    const segmentationLayer = Model.getActiveSegmentationLayer();
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (
       segmentationLayer != null &&
       segmentationLayer.mappings != null &&
@@ -459,8 +459,7 @@ class PlaneMaterialFactory {
       ),
     );
 
-    const hasSegmentation = Model.getSegmentationLayer() != null;
-    if (hasSegmentation) {
+    if (Model.hasSegmentationLayer()) {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           storeState => storeState.temporaryConfiguration.mousePosition,
@@ -563,7 +562,7 @@ class PlaneMaterialFactory {
 
   updateActiveCellId() {
     const activeCellId = Utils.maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
-    const segmentationLayer = Model.getActiveSegmentationLayer();
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (segmentationLayer == null) {
       return;
     }
@@ -681,7 +680,7 @@ class PlaneMaterialFactory {
       maximumLayerCountToRender,
     } = Store.getState().temporaryConfiguration.gpuSetup;
 
-    const segmentationLayer = Model.getActiveSegmentationLayer();
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
     const colorLayerNames = this.getLayersToRender(
       maximumLayerCountToRender - (segmentationLayer ? 1 : 0),
     );

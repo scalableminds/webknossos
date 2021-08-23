@@ -514,7 +514,7 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 
-export function getActiveSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+export function getVisibleSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
 
@@ -523,6 +523,23 @@ export function getActiveSegmentationLayer(state: OxalisState): ?APISegmentation
   );
   if (visibleSegmentationLayers.length > 0) {
     return visibleSegmentationLayers[0];
+  }
+
+  return null;
+}
+
+export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+  const { datasetConfiguration } = state;
+  const { viewMode } = state.temporaryConfiguration;
+
+  const segmentationLayers = getSegmentationLayers(state.dataset);
+  const visibleSegmentationLayers = segmentationLayers.filter(layer =>
+    isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode),
+  );
+  if (visibleSegmentationLayers.length > 0) {
+    return visibleSegmentationLayers[0];
+  } else if (segmentationLayers.length > 0) {
+    return segmentationLayers[0];
   }
 
   return null;

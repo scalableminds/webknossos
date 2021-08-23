@@ -19,7 +19,7 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
 }
 
 export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
-  const segmentation = Model.getSegmentationLayer();
+  const segmentation = Model.getVisibleSegmentationLayer();
   if (!segmentation) {
     return;
   }

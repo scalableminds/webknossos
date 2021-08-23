@@ -277,7 +277,8 @@ function* applyStateOfStack(
 function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
 ): Saga<VolumeUndoState> {
-  const segmentationLayer = Model.getSegmentationLayer();
+  // todop: needs to be adapted to multiple segmentation layers properly
+  const segmentationLayer = Model.getSomeSegmentationLayer();
   if (!segmentationLayer) {
     throw new Error("Undoing a volume annotation but no volume layer exists.");
   }

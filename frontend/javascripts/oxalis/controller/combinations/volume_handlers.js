@@ -56,7 +56,7 @@ export function handlePickCell(pos: Point2) {
 }
 
 export function getSegmentIdForPosition(globalPos: Vector3) {
-  const layer = Model.getSegmentationLayer();
+  const layer = Model.getVisibleSegmentationLayer();
   if (!layer) {
     return 0;
   }

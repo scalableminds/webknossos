@@ -12,7 +12,7 @@ import { type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
 import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getSomeSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -23,14 +23,13 @@ import Model from "oxalis/model";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-import DataLayer from "oxalis/model/data_layer";
 import { AsyncButton } from "components/async_clickables";
 import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
 
 const { Option, OptGroup } = Select;
 
 type OwnProps = {|
-  layerName: string
+  layerName: string,
 |};
 type StateProps = {|
   dataset: APIDataset,
@@ -68,7 +67,7 @@ const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, 
 export const convertCellIdToCSS = (id: number, customColors: ?Array<number>, alpha?: number) =>
   id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
-const hasSegmentation = () => Model.getSegmentationLayer() != null;
+const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
 
 const needle = "##";
 const packMappingNameAndCategory = (mappingName, category) => `${category}${needle}${mappingName}`;
@@ -86,14 +85,6 @@ class MappingSettingsView extends React.Component<Props, State> {
     didRefreshMappingList: false,
   };
 
-  getSegmentationLayer(): DataLayer {
-    const layer = Model.getSegmentationLayer();
-    if (!layer) {
-      throw new Error("No segmentation layer found");
-    }
-    return layer;
-  }
-
   handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
     this.props.setHideUnmappedIds(hideUnmappedIds);
   };
@@ -109,7 +100,11 @@ class MappingSettingsView extends React.Component<Props, State> {
       pauseDelay: 500,
       successMessageDelay: 2000,
     });
-    Model.getLayerByName(this.props.layerName).setActiveMapping(mappingName, mappingType, progressCallback);
+    Model.getLayerByName(this.props.layerName).setActiveMapping(
+      mappingName,
+      mappingType,
+      progressCallback,
+    );
 
     if (document.activeElement) document.activeElement.blur();
   };
@@ -291,7 +286,7 @@ function mapStateToProps(state: OxalisState) {
     mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
-    segmentationLayer: getSegmentationLayer(state.dataset),
+    segmentationLayer: getSomeSegmentationLayer(state),
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),

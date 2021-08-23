@@ -34,10 +34,11 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
 function shouldDisplaySegmentationData(): boolean {
   const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
   const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
-  const segmentationLayerName = Model.getSegmentationLayerName();
-  if (!segmentationLayerName || !canModeDisplaySegmentationData) {
+  const segmentationLayer = Model.getVisibleSegmentationLayer();
+  if (!segmentationLayer || !canModeDisplaySegmentationData) {
     return false;
   }
+  const segmentationLayerName = segmentationLayer.name;
   const isSegmentationLayerDisabled = Store.getState().datasetConfiguration.layers[
     segmentationLayerName
   ].isDisabled;
@@ -46,7 +47,7 @@ function shouldDisplaySegmentationData(): boolean {
 
 export function* warnAboutSegmentationZoom(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (!segmentationLayer) {
       return;
     }
@@ -76,7 +77,8 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
   yield* warnMaybe();
 
   while (true) {
-    const segmentationLayerName = Model.getSegmentationLayerName();
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
     yield* take([
       "ZOOM_IN",
       "ZOOM_OUT",

@@ -37,7 +37,7 @@ const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = { height: 14, color: lineColor };
 const moreLinkStyle = { marginLeft: 10, marginRight: "auto" };
 
-const hasSegmentation = () => Model.getSegmentationLayer() != null;
+const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
 
 function getPosString(pos: Vector3) {
   return V3.floor(pos).join(",");

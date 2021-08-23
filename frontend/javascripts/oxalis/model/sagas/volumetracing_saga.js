@@ -87,12 +87,12 @@ function* warnOfTooLowOpacity(): Saga<void> {
   if (yield* select(state => state.tracing.volume == null)) {
     return;
   }
-  const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
-  if (!segmentationLayerName) {
+  const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
+  if (!segmentationLayer) {
     return;
   }
   const isOpacityTooLow = yield* select(
-    state => state.datasetConfiguration.layers[segmentationLayerName].alpha < 10,
+    state => state.datasetConfiguration.layers[segmentationLayer.name].alpha < 10,
   );
   if (isOpacityTooLow) {
     Toast.warning(
@@ -248,7 +248,7 @@ function* labelWithVoxelBuffer2D(
   if (!allowUpdate) return;
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const segmentationLayer = yield* call([Model, Model.getEnforcedActiveSegmentationLayer]);
+  const segmentationLayer = yield* call([Model, Model.getEnforcedSomeSegmentationLayer]);
   const { cube } = segmentationLayer;
 
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
@@ -374,10 +374,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
-  const segmentationLayer: DataLayer = yield* call([
-    Model,
-    Model.getEnforcedActiveSegmentationLayer,
-  ]);
+  const segmentationLayer: DataLayer = yield* call([Model, Model.getEnforcedSomeSegmentationLayer]);
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const resolutionInfo = yield* select(state =>
@@ -468,7 +465,7 @@ export function* floodFill(): Saga<void> {
       throw new Error("Unexpected action. Satisfy flow.");
     }
     const { position, planeId } = floodFillAction;
-    const segmentationLayer = Model.getEnforcedActiveSegmentationLayer();
+    const segmentationLayer = Model.getEnforcedSomeSegmentationLayer();
     const { cube } = segmentationLayer;
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);

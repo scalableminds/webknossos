@@ -279,7 +279,7 @@ class MeshesView extends React.Component<Props, State> {
   };
 
   getIsosurfaceList = () => {
-    const hasSegmentation = Model.getSegmentationLayer() != null;
+    const hasSegmentation = Model.hasSegmentationLayer() != null;
 
     const moveTo = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition, null, false));

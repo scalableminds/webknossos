@@ -156,7 +156,10 @@ function* ensureSuitableIsosurface(
   removeExistingIsosurface: boolean = false,
 ): Saga<void> {
   const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
-  const layer = Model.getSegmentationLayer();
+  const layer = Model.getVisibleSegmentationLayer();
+  if (!layer) {
+    return;
+  }
 
   // we need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
   if (maybeFlycamAction && !maybeFlycamAction.shouldRefreshIsosurface) {
@@ -175,11 +178,7 @@ function* getInfoForIsosurfaceLoading(): Saga<{
   resolutionInfo: ResolutionInfo,
 }> {
   const dataset = yield* select(state => state.dataset);
-  const layer = Model.getActiveSegmentationLayer();
-  if (layer == null) {
-    // The function should never be called if no segmentation layer exists.
-    throw new Error("No segmentation layer found.");
-  }
+  const layer = Model.getEnforcedSomeSegmentationLayer();
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
@@ -440,7 +439,7 @@ function* refreshIsosurfaces(): Saga<void> {
     }
   }
   // Also load the Isosurface at the current flycam position.
-  const segmentationLayer = Model.getSegmentationLayer();
+  const segmentationLayer = Model.getVisibleSegmentationLayer();
   if (!segmentationLayer) {
     return;
   }

@@ -50,7 +50,8 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const userConfiguration = yield* select(state => state.userConfiguration);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
   const zoomStep = yield* select(state => state.flycam.zoomStep);
-  const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
+  const segmentationLayer = yield* call([Model, Model.getSomeSegmentationLayer]);
+  const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
   const segmentationOpacity =
     segmentationLayerName != null ? datasetConfiguration.layers[segmentationLayerName].alpha : 0;
 

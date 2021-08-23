@@ -929,11 +929,8 @@ class DataApi {
    */
   getVolumeTracingLayerName(): string {
     // TODO: Rename method to getActiveSegmentationLayerName() and increase api version
-    const segmentationLayerName = this.model.getActiveSegmentationLayerName();
-    if (!segmentationLayerName) {
-      throw new Error("Segmentation layer not found!");
-    }
-    return segmentationLayerName;
+    const segmentationLayer = this.model.getEnforcedSomeSegmentationLayer();
+    return segmentationLayer.name;
   }
 
   /**
@@ -1027,7 +1024,7 @@ class DataApi {
    *
    */
   getActiveMapping(): ?string {
-    const activeSegmentationLayer = this.model.getActiveSegmentationLayer();
+    const activeSegmentationLayer = this.model.getVisibleSegmentationLayer();
     if (!activeSegmentationLayer) {
       return null;
     }
@@ -1039,7 +1036,7 @@ class DataApi {
    *
    */
   activateMapping(mappingName?: string, mappingType: MappingType = "JSON"): void {
-    const activeSegmentationLayer = this.model.getActiveSegmentationLayer();
+    const activeSegmentationLayer = this.model.getVisibleSegmentationLayer();
     if (!activeSegmentationLayer) {
       return;
     }
@@ -1300,7 +1297,7 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const segmentationLayer = this.model.getEnforcedActiveSegmentationLayer();
+    const segmentationLayer = this.model.getEnforcedSomeSegmentationLayer();
 
     for (const voxel of voxels) {
       segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);
@@ -1336,16 +1333,16 @@ class DataApi {
     switch (key) {
       case "segmentationOpacity": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getActiveSegmentationLayerName();
-        return segmentationLayerName
-          ? Store.getState().datasetConfiguration.layers[segmentationLayerName].alpha
+        const segmentationLayer = Model.getVisibleSegmentationLayer();
+        return segmentationLayer
+          ? Store.getState().datasetConfiguration.layers[segmentationLayer.name].alpha
           : undefined;
       }
       case "isSegmentationDisabled": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getActiveSegmentationLayerName();
-        return segmentationLayerName
-          ? Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled
+        const segmentationLayer = Model.getVisibleSegmentationLayer();
+        return segmentationLayer
+          ? Store.getState().datasetConfiguration.layers[segmentationLayer.name].isDisabled
           : undefined;
       }
       default: {
@@ -1378,7 +1375,8 @@ class DataApi {
     switch (key) {
       case "segmentationOpacity": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getActiveSegmentationLayerName();
+        const segmentationLayer = Model.getSomeSegmentationLayer();
+        const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "alpha", value));
         }
@@ -1386,7 +1384,8 @@ class DataApi {
       }
       case "isSegmentationDisabled": {
         printDeprecationWarning();
-        const segmentationLayerName = Model.getActiveSegmentationLayerName();
+        const segmentationLayer = Model.getSomeSegmentationLayer();
+        const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "isDisabled", value));
         }

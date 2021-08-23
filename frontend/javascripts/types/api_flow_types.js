@@ -145,6 +145,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   logoUrl: ?string,
   lastUsedByUser: number,
   isForeign: boolean,
+  jobsEnabled: boolean,
   sortingKey: number,
   owningOrganization: string,
   publication: ?APIPublication,

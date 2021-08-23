@@ -23,6 +23,7 @@ import {
   switchToOrganization,
   updateSelectedThemeOfUser,
   updateNovelUserExperienceInfos,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
@@ -31,7 +32,7 @@ import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
-import { document } from "libs/window";
+import window, { document, location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 
@@ -393,6 +394,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
     });
 
     Store.dispatch(setActiveUserAction(newUserSync));
+    sendAnalyticsEvent("open_whats_new_view");
 
     window.Olvy.show();
   };
@@ -500,7 +502,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
     // Hard navigation
-    window.location.href = "/";
+    location.href = "/";
   };
 
   const version = useFetch(getAndTrackVersion, null, []);

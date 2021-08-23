@@ -215,7 +215,7 @@ function AdditionalSkeletonModesButtons() {
 }
 
 const mapId = id => {
-  const { cube } = Model.getSegmentationLayer();
+  const { cube } = Model.getEnforcedActiveSegmentationLayer();
   return cube.mapId(id);
 };
 

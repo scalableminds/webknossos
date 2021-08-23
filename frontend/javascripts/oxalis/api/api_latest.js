@@ -1027,7 +1027,11 @@ class DataApi {
    *
    */
   getActiveMapping(): ?string {
-    return this.model.getSegmentationLayer().activeMapping;
+    const activeSegmentationLayer = this.model.getActiveSegmentationLayer();
+    if (!activeSegmentationLayer) {
+      return null;
+    }
+    return activeSegmentationLayer.activeMapping;
   }
 
   /**
@@ -1035,7 +1039,11 @@ class DataApi {
    *
    */
   activateMapping(mappingName?: string, mappingType: MappingType = "JSON"): void {
-    return this.model.getSegmentationLayer().setActiveMapping(mappingName, mappingType);
+    const activeSegmentationLayer = this.model.getActiveSegmentationLayer();
+    if (!activeSegmentationLayer) {
+      return;
+    }
+    return activeSegmentationLayer.setActiveMapping(mappingName, mappingType);
   }
 
   /**
@@ -1292,8 +1300,7 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const segmentationLayer = this.model.getSegmentationLayer();
-    assertExists(segmentationLayer, "Segmentation layer not found!");
+    const segmentationLayer = this.model.getEnforcedActiveSegmentationLayer();
 
     for (const voxel of voxels) {
       segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);

@@ -175,7 +175,11 @@ function* getInfoForIsosurfaceLoading(): Saga<{
   resolutionInfo: ResolutionInfo,
 }> {
   const dataset = yield* select(state => state.dataset);
-  const layer = Model.getSegmentationLayer();
+  const layer = Model.getActiveSegmentationLayer();
+  if (layer == null) {
+    // The function should never be called if no segmentation layer exists.
+    throw new Error("No segmentation layer found.");
+  }
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;

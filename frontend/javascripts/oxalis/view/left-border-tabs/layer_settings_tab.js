@@ -634,7 +634,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (volumeTracing == null) {
       return [];
     }
-    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationLayer = Model.getEnforcedActiveSegmentationLayer();
     const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetResolutions =
       fallbackLayerInfo != null

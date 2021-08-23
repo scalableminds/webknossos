@@ -72,14 +72,16 @@ export class OxalisModel {
   }
 
   getSegmentationLayers(): Array<DataLayer> {
-    return Object.keys(this.dataLayers).map(k => this.dataLayers[k]).filter(
-      dataLayer =>
-        getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
-    );
+    return Object.keys(this.dataLayers)
+      .map(k => this.dataLayers[k])
+      .filter(
+        dataLayer =>
+          getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
+      );
   }
 
   getSegmentationLayer(): ?DataLayer {
-    console.error("DEPRECATED usage of getSegmentationLayer")
+    console.error("DEPRECATED usage of getSegmentationLayer");
     const layers = this.getSegmentationLayers();
     if (layers.length > 0) {
       return layers[0];
@@ -89,15 +91,26 @@ export class OxalisModel {
 
   getActiveSegmentationLayer(): ?DataLayer {
     const state = Store.getState();
-    const {datasetConfiguration} = state;
-    const {viewMode} = state.temporaryConfiguration;
+    const { datasetConfiguration } = state;
+    const { viewMode } = state.temporaryConfiguration;
 
-    const visibleSegmentationLayers = this.getSegmentationLayers().filter(layer => isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode));
+    const visibleSegmentationLayers = this.getSegmentationLayers().filter(layer =>
+      isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode),
+    );
     if (visibleSegmentationLayers.length > 0) {
       return visibleSegmentationLayers[0];
     }
 
     return null;
+  }
+
+  getEnforcedActiveSegmentationLayer(): DataLayer {
+    const layer = this.getActiveSegmentationLayer();
+    if (layer == null) {
+      // The function should never be called if no segmentation layer exists.
+      throw new Error("No segmentation layer found.");
+    }
+    return layer;
   }
 
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {

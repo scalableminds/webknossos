@@ -31,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix that segment id 0 was always shown even when fallback data of the segmentation layer was visible and hovered with the mouse. [#5674](https://github.com/scalableminds/webknossos/pull/5674)
 - Fixed that nodes could only be selected via the context menu when an annotation was opened in read-only mode. Shift-Click will now work, too (and if "Classic Controls" are disabled, a simple left click will work, too). [#5661](https://github.com/scalableminds/webknossos/pull/5661)
 - Fixed that the copy buttons in the context menu did not work properly. [#5658](https://github.com/scalableminds/webknossos/pull/5658)
+- Fixed that the position of the mouse displayed in the statusbar was not updated properly when navigating via the keyboard. [#5670](https://github.com/scalableminds/webknossos/issues/5670)
 - Fixed that creating a new node in merger mode did always turn of the "Hide unmapped segments" setting. [#5668](https://github.com/scalableminds/webknossos/pull/5668)
 - Fixed that undoing of volume annotations might overwrite the backend data on not loaded magnifications with nothing. [#5608](https://github.com/scalableminds/webknossos/pull/5608)
 - Fixed a bug where volume annotation downloads were occasionally cancelled with “Connection reset by peer” error. [#5660](https://github.com/scalableminds/webknossos/pull/5660)

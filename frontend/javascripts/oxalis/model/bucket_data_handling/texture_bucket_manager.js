@@ -41,7 +41,7 @@ import type { ElementClass } from "types/api_flow_types";
 export const channelCountForLookupBuffer = 2;
 
 function getSomeValue<T>(set: Set<T>): T {
-  const value = set.values().next().value;
+  const { value } = set.values().next();
 
   if (value == null) {
     throw new Error("Cannot get value of set because it's empty.");
@@ -345,8 +345,8 @@ export default class TextureBucketManager {
         address = reservedAddress;
       }
 
-      const isBaseBucket = bucketZoomStep === currentZoomStep;
-      const isFirstFallback = bucketZoomStep - 1 === currentZoomStep;
+      const zoomStepDifference = bucketZoomStep - currentZoomStep;
+      const isBaseBucket = zoomStepDifference === 0;
       if (isBaseBucket) {
         if (address === -1) {
           let fallbackBucket = bucket.getFallbackBucket();
@@ -379,27 +379,22 @@ export default class TextureBucketManager {
           this.lookUpBuffer[posInBuffer] = address;
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
         }
-      } else if (isFirstFallback) {
-        if (address !== -1) {
-          const baseBucketAddresses = this._getBaseBucketAddresses(bucket, 1);
-          for (const baseBucketAddress of baseBucketAddresses) {
-            const lookUpIdx = this._getBucketIndex(baseBucketAddress);
-            const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-            if (this.lookUpBuffer[posInBuffer] !== -2 || lookUpIdx === -1) {
-              // Either, another bucket was already placed here. Or, the lookUpIdx is
-              // invalid. Skip the entire loop
-              break;
-            }
-            this.lookUpBuffer[posInBuffer] = address;
-            this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+      } else if (address !== -1) {
+        const baseBucketAddresses = this._getBaseBucketAddresses(bucket, zoomStepDifference);
+        for (const baseBucketAddress of baseBucketAddresses) {
+          const lookUpIdx = this._getBucketIndex(baseBucketAddress);
+          const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+          if (this.lookUpBuffer[posInBuffer] !== -2 || lookUpIdx === -1) {
+            // Either, another bucket was already placed here. Or, the lookUpIdx is
+            // invalid. Skip the entire loop
+            break;
           }
-        } else {
-          // Don't overwrite the default -2 within the look up buffer for fallback buckets,
-          // since the effort is not worth it (only has an impact on the fallback color within the shader)
+          this.lookUpBuffer[posInBuffer] = address;
+          this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
         }
       } else {
-        // Don't handle buckets with zoomStepDiff > 1, because filling the corresponding
-        // positions in the lookup buffer would take 8**zoomStepDiff iterations PER bucket.
+        // Don't overwrite the default -2 within the look up buffer for fallback buckets,
+        // since the effort is not worth it (only has an impact on the fallback color within the shader)
       }
     }
 

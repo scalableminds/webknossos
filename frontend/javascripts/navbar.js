@@ -388,7 +388,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
     features().isDemoInstance && maybeUnreadReleaseCount != null
       ? maybeUnreadReleaseCount > 0
       : false;
-  const handleShowReleases = () => {
+  const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: new Date().getTime(),
     });
@@ -454,7 +454,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         {/* The onClick has to be defined on <Menu.Item /> so that the entire menu item
         is clickable. The dummy <a /> tag is still needed for styling. */}
         {features().isDemoInstance ? (
-          <Menu.Item onClick={handleShowReleases}>
+          <Menu.Item onClick={handleShowWhatsNewView}>
             <Badge dot={showNotification}>
               <a href="#">What&apos;s New</a>
             </Badge>

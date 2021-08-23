@@ -63,10 +63,6 @@ export function getSegmentIdForPosition(globalPos: Vector3) {
   const segmentationCube = layer.cube;
   const segmentationLayerName = layer.name;
 
-  if (!segmentationLayerName) {
-    return 0;
-  }
-
   const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
     segmentationLayerName,
     globalPos,

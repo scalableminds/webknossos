@@ -8,7 +8,7 @@ import React from "react";
 import { WarningOutlined, MoreOutlined } from "@ant-design/icons";
 
 import { type Vector3, OrthoViews } from "oxalis/constants";
-import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 
 import { useKeyPress } from "libs/react_hooks";
@@ -36,8 +36,6 @@ const lineColor = "rgba(255, 255, 255, 0.67)";
 
 const moreIconStyle = { height: 14, color: lineColor };
 const moreLinkStyle = { marginLeft: 10, marginRight: "auto" };
-
-const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
 
 function getPosString(pos: Vector3) {
   return V3.floor(pos).join(",");
@@ -224,9 +222,7 @@ function ShortcutsInfo() {
   );
 }
 
-function getCellInfo(globalMousePosition: ?Vector3) {
-  if (!hasSegmentation()) return null;
-
+function getCellInfo(dataset, globalMousePosition: ?Vector3) {
   const getSegmentIdString = () => {
     const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
     if (!hoveredCellInfo) {
@@ -273,8 +269,9 @@ function Infos() {
   const onChangeActiveNodeId = id => dispatch(setActiveNodeAction(id));
   const onChangeActiveTreeId = id => dispatch(setActiveTreeAction(id));
 
+  const hasVisibleSegmentation = useSelector(state => getVisibleSegmentationLayer(state) != null);
   const hasUint64Segmentation = useSelector(state => {
-    const segmentationLayer = getSegmentationLayer(state.dataset);
+    const segmentationLayer = getVisibleSegmentationLayer(state.dataset);
     return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
   });
 
@@ -299,7 +296,7 @@ function Infos() {
           Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
         </span>
       ) : null}
-      {isPlaneMode ? getCellInfo(globalMousePosition) : null}
+      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
 
       {isVolumeAnnotation ? (
         <span className="info-element">

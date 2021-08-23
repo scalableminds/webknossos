@@ -14,42 +14,34 @@ import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_acce
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
-import type DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Store, { type Mapping, type MappingType } from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
 
 type APIMappings = { [string]: APIMapping };
 
-// For now, since we have no UI for this
-export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
+// Remove soon (e.g., October 2021)
+export function setupGlobalMappingsObject() {
   return {
     getAll(): string[] {
-      trackAction("Deprecated mapping usage (getAll)");
-      console.warn(
+      throw new Error(
         "Using mappings.getAll() is deprecated. Please use the official front-end API function getMappingNames() instead.",
       );
-      return segmentationLayer.mappings != null ? segmentationLayer.mappings.getMappingNames() : [];
     },
     getActive(): ?string {
-      trackAction("Deprecated mapping usage (getActive)");
-      console.warn(
+      throw new Error(
         "Using mappings.getActive() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
       );
-      return segmentationLayer.activeMapping;
     },
-    activate(mapping: string) {
-      trackAction("Deprecated mapping usage (activate)");
-      console.warn(
+    activate(_mapping: string) {
+      throw new Error(
         "Using mappings.activate() is deprecated. Please use the official front-end API function activateMapping() instead.",
       );
-      return segmentationLayer.setActiveMapping(mapping, "JSON");
     },
   };
 }

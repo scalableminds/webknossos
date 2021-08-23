@@ -3,9 +3,8 @@ import type { OxalisState } from "oxalis/store";
 import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  isLayerVisible,
   getRenderableResolutionForSegmentation,
-  getSegmentationLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import memoizeOne from "memoize-one";
@@ -15,12 +14,12 @@ const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 const isZoomStepTooHighFor = (state, tool) => isVolumeAnnotationDisallowedForZoom(tool, state);
 
 const getExplanationForDisabledVolume = (
-  isSegmentationActivated,
+  isSegmentationVisible,
   isInMergerMode,
   isSegmentationVisibleForMag,
   isZoomInvalidForTracing,
 ) => {
-  if (!isSegmentationActivated) {
+  if (!isSegmentationVisible) {
     return "Volume annotation is disabled since the segmentation layer is invisible. Enable it in the left settings sidebar.";
   }
   if (isZoomInvalidForTracing) {
@@ -138,27 +137,16 @@ export function getDisabledInfoForTools(
 
   const hasVolume = state.tracing.volume != null;
   const hasSkeleton = state.tracing.skeleton != null;
-  const isSegmentationActivated = (() => {
-    const segmentationLayer = getSegmentationLayer(state.dataset);
-    if (segmentationLayer == null) {
-      return false;
-    }
-    return isLayerVisible(
-      state.dataset,
-      segmentationLayer.name,
-      state.datasetConfiguration,
-      state.temporaryConfiguration.viewMode,
-    );
-  })();
+  const isSegmentationVisible = getVisibleSegmentationLayer(state) != null;
 
   const genericDisabledExplanation = getExplanationForDisabledVolume(
-    isSegmentationActivated,
+    isSegmentationVisible,
     isInMergerMode,
     isSegmentationVisibleForMag,
     isZoomInvalidForTracing,
   );
 
-  if (!hasVolume || !isSegmentationActivated || !isSegmentationVisibleForMag || isInMergerMode) {
+  if (!hasVolume || !isSegmentationVisible || !isSegmentationVisibleForMag || isInMergerMode) {
     // All segmentation-related tools are disabled.
     return getDisabledInfoWhenVolumeIsDisabled(genericDisabledExplanation, hasSkeleton);
   }

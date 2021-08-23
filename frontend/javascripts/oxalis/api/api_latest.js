@@ -51,7 +51,8 @@ import {
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
-  getSegmentationLayer,
+  getVisibleSegmentationLayer,
+  getSomeSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -1406,7 +1407,7 @@ class DataApi {
   async getAvailableMeshFiles(): Promise<Array<string>> {
     const state = Store.getState();
     const { dataset } = state;
-    const segmentationLayer = getSegmentationLayer(state.dataset);
+    const segmentationLayer = getVisibleSegmentationLayer(state);
 
     return maybeFetchMeshFiles(segmentationLayer, dataset, true, false);
   }
@@ -1468,7 +1469,7 @@ class DataApi {
       );
     }
 
-    const segmentationLayer = getSegmentationLayer(state.dataset);
+    const segmentationLayer = getSomeSegmentationLayer(state);
     if (!segmentationLayer) {
       throw new Error("No segmentation layer was found.");
     }

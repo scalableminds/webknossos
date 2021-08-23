@@ -16,7 +16,7 @@ import * as React from "react";
 import type { APIMaybeUnimportedDataset, APIDataset, APIDatasetId } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
 import {
-  getSegmentationLayer,
+  getFirstSegmentationLayer,
   doesSupportVolumeWithFallback,
 } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
@@ -46,7 +46,7 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
     );
   };
 
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const segmentationLayer = getFirstSegmentationLayer(dataset);
 
   if (segmentationLayer != null) {
     if (doesSupportVolumeWithFallback(dataset)) {

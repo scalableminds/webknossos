@@ -275,13 +275,14 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
 }
 
 function _getResolutionInfoOfSegmentationLayer(dataset: APIDataset): ResolutionInfo {
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const segmentationLayer = getFirstSegmentationLayer(dataset);
   if (!segmentationLayer) {
     return new ResolutionInfo([]);
   }
   return getResolutionInfo(segmentationLayer.resolutions);
 }
 
+// todo: adapt to currently visible layer
 export const getResolutionInfoOfSegmentationLayer = memoizeOne(
   _getResolutionInfoOfSegmentationLayer,
 );
@@ -545,7 +546,18 @@ export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLa
   return null;
 }
 
-export function getSegmentationLayer(dataset: APIMaybeUnimportedDataset): ?APISegmentationLayer {
+export function getFirstSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
+  const segmentationLayers = getSegmentationLayers(dataset);
+  if (segmentationLayers.length > 0) {
+    return segmentationLayers[0];
+  }
+
+  return null;
+}
+
+export function DEPRECATED_getSegmentationLayer(
+  dataset: APIMaybeUnimportedDataset,
+): ?APISegmentationLayer {
   // todop: deprecate
   if (!dataset.isActive) {
     return null;
@@ -579,14 +591,15 @@ export function getSegmentationLayers(
 }
 
 export function hasSegmentation(dataset: APIDataset): boolean {
-  return getSegmentationLayer(dataset) != null;
+  return getFirstSegmentationLayer(dataset) != null;
 }
 
+// todop: adapt to multiple segmentation layers (for which do we ask this question?)
 export function doesSupportVolumeWithFallback(dataset: APIMaybeUnimportedDataset): boolean {
   if (!dataset.isActive) {
     return false;
   }
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const segmentationLayer = getFirstSegmentationLayer(dataset);
   if (!segmentationLayer) {
     return false;
   }
@@ -680,8 +693,8 @@ function _getRenderableResolutionForSegmentation(
   const requestedZoomStep = getRequestLogZoomStep(state);
   const { renderMissingDataBlack } = state.datasetConfiguration;
   const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
-  const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const resolutionInfo = getResolutionInfoOfSegmentationLayer(dataset);
+  const segmentationLayer = getVisibleSegmentationLayer(state);
 
   if (!segmentationLayer) {
     return null;
@@ -745,7 +758,7 @@ export function getThumbnailURL(dataset: APIDataset): string {
 export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const organizationName = dataset.owningOrganization;
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const segmentationLayer = getFirstSegmentationLayer(dataset);
   if (segmentationLayer) {
     return `/api/datasets/${organizationName}/${datasetName}/layers/${
       segmentationLayer.name

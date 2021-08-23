@@ -21,10 +21,10 @@ import {
   determineAllowedModes,
   getBitDepth,
   getBoundaries,
-  getColorLayers,
+  getDataLayers,
   getDatasetCenter,
   getResolutionUnion,
-  getSegmentationLayer,
+  getFirstSegmentationLayer,
   isElementClassSupported,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
@@ -256,7 +256,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
 
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
       ErrorHandling.assert(
-        getSegmentationLayer(dataset) != null,
+        getFirstSegmentationLayer(dataset) != null,
         messages["tracing.volume_missing_segmentation"],
       );
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
@@ -414,12 +414,12 @@ function initializeDataLayerInstances(
     );
   }
 
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const segmentationLayer = getFirstSegmentationLayer(dataset);
   if (segmentationLayer != null && isMappingSupported) {
-    window.mappings = setupGlobalMappingsObject(dataLayers[segmentationLayer.name]);
+    window.mappings = setupGlobalMappingsObject();
   }
 
-  if (getColorLayers(dataset).length === 0 && segmentationLayer == null) {
+  if (getDataLayers(dataset).length === 0) {
     Toast.error(messages["dataset.no_data"]);
     throw HANDLED_ERROR;
   }

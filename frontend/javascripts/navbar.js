@@ -449,12 +449,12 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
           )}
         </Menu.SubMenu>
 
+        {/* The onClick has to be defined on <Menu.Item /> so that the entire menu item
+        is clickable. The dummy <a /> tag is still needed for styling. */}
         {features().isDemoInstance ? (
-          <Menu.Item>
+          <Menu.Item onClick={handleShowReleases}>
             <Badge dot={showNotification}>
-              <a href="#" onClick={handleShowReleases}>
-                What&apos;s New
-              </a>
+              <a href="#">What&apos;s New</a>
             </Badge>
           </Menu.Item>
         ) : null}

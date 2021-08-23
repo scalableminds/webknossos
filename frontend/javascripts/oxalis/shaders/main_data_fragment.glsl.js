@@ -156,7 +156,7 @@ void main() {
       // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
       // Passing the mouse position from the 3D viewport is not an option here, since that position
       // isn't on the orthogonal planes necessarily.
-      <%= segmentationName%>_cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId_<%= segmentationName%>(worldCoordUVW);
+      <%= segmentationName%>_cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId_<%= segmentationName%>(flooredMousePosUVW);
     }
 
   <% }) %>

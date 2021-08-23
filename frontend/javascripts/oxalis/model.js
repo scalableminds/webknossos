@@ -84,8 +84,8 @@ export class OxalisModel {
     // Prefer the visible segmentation layer. If that does not exist,
     // simply use one of the available segmentation layers.
 
-    const segmentationLayers = this.getSegmentationLayers();
     const visibleSegmentationLayer = this.getVisibleSegmentationLayer();
+    const segmentationLayers = this.getSegmentationLayers();
     if (visibleSegmentationLayer) {
       return visibleSegmentationLayer;
     } else if (segmentationLayers.length > 0) {

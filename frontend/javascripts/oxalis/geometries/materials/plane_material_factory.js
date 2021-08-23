@@ -19,6 +19,7 @@ import {
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
+  getVisibleSegmentationLayer,
   getDataLayers,
   getResolutions,
   getByteCount,
@@ -204,6 +205,10 @@ class PlaneMaterialFactory {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
+      activeSegmentationLayerIndex: {
+        type: "f",
+        value: -1,
+      },
     };
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
@@ -350,6 +355,21 @@ class PlaneMaterialFactory {
           }
         },
         true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => getVisibleSegmentationLayer(storeState),
+        visibleSegmentationLayer => {
+          const activeSegmentationLayerIndex =
+            visibleSegmentationLayer != null
+              ? Model.getSegmentationLayers().find(
+                  layer => layer.name === visibleSegmentationLayer.name,
+                )
+              : null;
+          this.uniforms.activeSegmentationLayerIndex.value = activeSegmentationLayerIndex;
+        },
       ),
     );
 
@@ -680,24 +700,25 @@ class PlaneMaterialFactory {
       maximumLayerCountToRender,
     } = Store.getState().temporaryConfiguration.gpuSetup;
 
-    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    // Don't compile code for segmentation in arbitrary mode
+    const hasSegmentation = this.isOrthogonal && Model.hasSegmentationLayer();
     const colorLayerNames = this.getLayersToRender(
-      maximumLayerCountToRender - (segmentationLayer ? 1 : 0),
+      maximumLayerCountToRender - (hasSegmentation ? 1 : 0),
     );
     const packingDegreeLookup = getPackingDegreeLookup();
-    const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
+    const segmentationLayerNames = Model.getSegmentationLayers().map(layer =>
+      sanitizeName(layer.name),
+    );
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
-    // Don't compile code for segmentation in arbitrary mode
-    const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
     const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
 
     return getMainFragmentShader({
       colorLayerNames,
+      segmentationLayerNames,
       packingDegreeLookup,
       hasSegmentation,
-      segmentationName,
       isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,

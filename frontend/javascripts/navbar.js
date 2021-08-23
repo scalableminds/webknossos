@@ -22,7 +22,7 @@ import {
   getUsersOrganizations,
   switchToOrganization,
   updateSelectedThemeOfUser,
-  updateUser,
+  updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
@@ -84,25 +84,23 @@ function useOlvy() {
 }
 
 function useOlvyUnreadReleasesCount(activeUser) {
-  const { lastOpenedReleasesTimestamp } = activeUser;
+  const lastViewedTimestampWithFallback =
+    activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp != null
+      ? activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp
+      : activeUser.created;
 
   const isInitialized = useOlvy();
   const unreadCount = useFetch(
     async () => {
-      if (
-        !isInitialized ||
-        !features().isDemoInstance ||
-        !lastOpenedReleasesTimestamp ||
-        !window.Olvy
-      ) {
+      if (!isInitialized || !features().isDemoInstance || !window.Olvy) {
         return null;
       }
       return window.Olvy.getUnreadReleasesCount(
-        new Date(lastOpenedReleasesTimestamp).toISOString(),
+        new Date(lastViewedTimestampWithFallback).toISOString(),
       );
     },
     null,
-    [isInitialized, lastOpenedReleasesTimestamp],
+    [isInitialized, lastViewedTimestampWithFallback],
   );
   return unreadCount;
 }
@@ -390,9 +388,11 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
       ? maybeUnreadReleaseCount > 0
       : false;
   const handleShowReleases = () => {
-    const updatedUser = { ...activeUser, lastOpenedReleasesTimestamp: new Date().getTime() };
-    updateUser(updatedUser);
-    Store.dispatch(setActiveUserAction(updatedUser));
+    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
+      lastViewedWhatsNewTimestamp: new Date().getTime(),
+    });
+
+    Store.dispatch(setActiveUserAction(newUserSync));
 
     window.Olvy.show();
   };

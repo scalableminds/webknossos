@@ -203,6 +203,7 @@ export type APIUserBase = {
 export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
   shouldSeeModernControlsModal?: boolean,
+  lastViewedWhatsNewTimestamp?: number,
 |};
 
 export type APIUserTheme = "auto" | "light" | "dark";
@@ -219,7 +220,6 @@ export type APIUser = APIUserBase & {
   +organization: string,
   +novelUserExperienceInfos: NovelUserExperienceInfoType,
   +selectedTheme: APIUserTheme,
-  +lastOpenedReleasesTimestamp: number,
 };
 
 export type APITimeInterval = {

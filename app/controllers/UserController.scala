@@ -253,7 +253,6 @@ class UserController @Inject()(userService: UserService,
       (__ \ "isAdmin").readNullable[Boolean] and
       (__ \ "isDatasetManager").readNullable[Boolean] and
       (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads())) and
-      (__ \ "lastOpenedReleasesTimestamp").readNullable[Long] and
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
@@ -313,7 +312,6 @@ class UserController @Inject()(userService: UserService,
             isAdminOpt,
             isDatasetManagerOpt,
             assignedMembershipsOpt,
-            lastOpenedReleasesTimestampOpt,
             experiencesOpt,
             lastTaskTypeIdOpt) =>
         for {
@@ -326,7 +324,6 @@ class UserController @Inject()(userService: UserService,
           oldEmail <- userService.emailFor(user)
           email = emailOpt.getOrElse(oldEmail)
           isActive = isActiveOpt.getOrElse(!user.isDeactivated)
-          lastOpenedReleasesTimestamp = lastOpenedReleasesTimestampOpt.getOrElse(user.lastOpenedReleasesTimestamp)
           isAdmin = isAdminOpt.getOrElse(user.isAdmin)
           isDatasetManager = isDatasetManagerOpt.getOrElse(user.isDatasetManager)
           assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
@@ -356,7 +353,6 @@ class UserController @Inject()(userService: UserService,
                                   isAdmin,
                                   isDatasetManager,
                                   updatedTeams,
-                                  lastOpenedReleasesTimestamp,
                                   trimmedExperiences,
                                   lastTaskTypeId)
           updatedUser <- userDAO.findOne(userIdValidated)

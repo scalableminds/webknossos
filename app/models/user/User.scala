@@ -28,7 +28,6 @@ case class User(
     firstName: String,
     lastName: String,
     lastActivity: Long = System.currentTimeMillis(),
-    lastOpenedReleasesTimestamp: Long = System.currentTimeMillis(),
     userConfiguration: JsObject,
     loginInfo: LoginInfo,
     isAdmin: Boolean,
@@ -75,7 +74,6 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.firstname,
         r.lastname,
         r.lastactivity.getTime,
-        r.lastopenedreleasestimestamp.getTime,
         userConfiguration,
         LoginInfo(User.default_login_provider_id, r._Id),
         r.isadmin,
@@ -185,10 +183,10 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def insertOne(u: User): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity, lastOpenedReleasesTimestamp,
+      _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity,
                                             userConfiguration, isDeactivated, isAdmin, isDatasetManager, isUnlisted, created, isDeleted)
                      values(${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
-                            ${new java.sql.Timestamp(u.lastActivity)}, ${new java.sql.Timestamp(u.lastOpenedReleasesTimestamp)}, '#${sanitize(
+                            ${new java.sql.Timestamp(u.lastActivity)}, '#${sanitize(
         Json.toJson(u.userConfiguration).toString)}',
                      ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isUnlisted}, ${new java.sql.Timestamp(
         u.created)}, ${u.isDeleted})
@@ -212,13 +210,12 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                    isAdmin: Boolean,
                    isDatasetManager: Boolean,
                    isDeactivated: Boolean,
-                   lastOpenedReleasesTimestamp: Long,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
-      (row.firstname, row.lastname, row.isadmin, row.isdatasetmanager, row.isdeactivated, row.lastopenedreleasestimestamp, row.lasttasktypeid)
+      (row.firstname, row.lastname, row.isadmin, row.isdatasetmanager, row.isdeactivated, row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, new java.sql.Timestamp(lastOpenedReleasesTimestamp), lastTaskTypeId))
+      _ <- run(q.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
     } yield ()
   }
 

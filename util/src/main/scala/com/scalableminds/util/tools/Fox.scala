@@ -138,6 +138,16 @@ object Fox extends FoxImplicits {
       zipped = results.zip(seq)
     } yield zipped.filter(_._1 != inverted).map(_._2)
 
+  def find[T](seq: List[T])(f: T => Fox[Boolean])(implicit ec: ExecutionContext): Fox[T] =
+    seq match {
+      case head :: tail =>
+        for {
+          currentResult <- f(head)
+          remainingResult <- if (currentResult) Fox.successful(head) else find(tail)(f)
+        } yield remainingResult
+      case Nil => Fox.empty
+    }
+
   def runOptional[A, B](input: Option[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[Option[B]] =
     input match {
       case Some(i) =>

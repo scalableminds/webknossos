@@ -271,7 +271,7 @@ function Infos() {
 
   const hasVisibleSegmentation = useSelector(state => getVisibleSegmentationLayer(state) != null);
   const hasUint64Segmentation = useSelector(state => {
-    const segmentationLayer = getVisibleSegmentationLayer(state.dataset);
+    const segmentationLayer = getVisibleSegmentationLayer(state);
     return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
   });
 

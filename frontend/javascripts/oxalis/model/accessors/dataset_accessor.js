@@ -555,25 +555,6 @@ export function getFirstSegmentationLayer(dataset: APIDataset): ?APISegmentation
   return null;
 }
 
-export function DEPRECATED_getSegmentationLayer(
-  dataset: APIMaybeUnimportedDataset,
-): ?APISegmentationLayer {
-  // todop: deprecate
-  if (!dataset.isActive) {
-    return null;
-  }
-
-  // $FlowIssue[incompatible-type]
-  // $FlowIssue[prop-missing]
-  const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
-    dataLayer => isSegmentationLayer(dataset, dataLayer.name),
-  );
-  if (segmentationLayers.length === 0) {
-    return null;
-  }
-  return segmentationLayers[0];
-}
-
 export function getSegmentationLayers(
   dataset: APIMaybeUnimportedDataset,
 ): Array<APISegmentationLayer> {

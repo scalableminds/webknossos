@@ -80,15 +80,6 @@ export class OxalisModel {
       );
   }
 
-  // DEPRECATED_getSegmentationLayer(): ?DataLayer {
-  //   console.error("DEPRECATED usage of getSegmentationLayer");
-  //   const layers = this.getSegmentationLayers();
-  //   if (layers.length > 0) {
-  //     return layers[0];
-  //   }
-  //   return null;
-  // }
-
   getSomeSegmentationLayer(): ?DataLayer {
     // Prefer the visible segmentation layer. If that does not exist,
     // simply use one of the available segmentation layers.
@@ -168,12 +159,6 @@ export class OxalisModel {
     const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
     return { id, isMapped: cube.isMappingEnabled() };
   }
-
-  // todop: remove
-  // DEPRECATED_getSegmentationLayerName(): ?string {
-  //   const segmentation = this.getSegmentationLayer();
-  //   return segmentation != null ? segmentation.name : undefined;
-  // }
 
   getCubeByLayerName(name: string): DataCube {
     if (!this.dataLayers[name]) {

@@ -175,11 +175,6 @@ export function getBaseBucketsForFallbackBucket(
     resolutions,
     betterZoomStep,
   );
-  if (zoomStepDifference > 1) {
-    // Due to the exponential complexity of calculating the "better bucket addresses",
-    // we currently only support this function if zoomStepDifference === 1
-    return [betterBucketAddress];
-  }
 
   // resolutionFactors is a [x, y, z] tuple with x, y, z being 1 or 2 each (because
   // zoomStepDifference === 1). In the case of isotropic resolutions, it's simply [2, 2, 2]

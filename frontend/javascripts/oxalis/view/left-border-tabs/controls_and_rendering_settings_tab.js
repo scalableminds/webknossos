@@ -4,7 +4,6 @@
  */
 
 import { Collapse, Tooltip } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -27,7 +26,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import messages, { settings as settingsLabels } from "messages";
+import messages, { settingsTooltips, settings as settingsLabels } from "messages";
 
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type ViewMode } from "oxalis/constants";
@@ -63,103 +62,108 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   }
 
   getViewportOptions = () => {
-    switch (this.props.viewMode) {
-      case Constants.MODE_PLANE_TRACING:
-        return (
-          <Panel header="Viewport Options" key="2">
-            <LogSliderSetting
-              label={settingsLabels.zoom}
-              roundTo={3}
-              min={this.props.validZoomRange[0]}
-              max={this.props.validZoomRange[1]}
-              value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
-            />
-            <SwitchSetting
-              label={settingsLabels.displayCrosshair}
-              value={this.props.userConfiguration.displayCrosshair}
-              onChange={this.onChangeUser.displayCrosshair}
-            />
-            <SwitchSetting
-              label={settingsLabels.displayScalebars}
-              value={this.props.userConfiguration.displayScalebars}
-              onChange={this.onChangeUser.displayScalebars}
-            />
-          </Panel>
-        );
-      case Constants.MODE_VOLUME:
-        return (
-          <Panel header="Viewport Options" key="2">
-            <LogSliderSetting
-              label={settingsLabels.zoom}
-              roundTo={3}
-              min={this.props.validZoomRange[0]}
-              max={this.props.validZoomRange[1]}
-              value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
-            />
-            <SwitchSetting
-              label={settingsLabels.displayCrosshair}
-              value={this.props.userConfiguration.displayCrosshair}
-              onChange={this.onChangeUser.displayCrosshair}
-            />
-            <SwitchSetting
-              label={settingsLabels.displayScalebars}
-              value={this.props.userConfiguration.displayScalebars}
-              onChange={this.onChangeUser.displayScalebars}
-            />
-          </Panel>
-        );
-      default:
-        return (
-          <Panel header="Flight Options" key="2">
-            <LogSliderSetting
-              label={settingsLabels.zoom}
-              roundTo={3}
-              min={this.props.validZoomRange[0]}
-              max={this.props.validZoomRange[1]}
-              value={this.props.zoomStep}
-              onChange={this.props.onChangeZoomStep}
-            />
-            <NumberSliderSetting
-              label={settingsLabels.mouseRotateValue}
-              min={userSettings.mouseRotateValue.minimum}
-              max={userSettings.mouseRotateValue.maximum}
-              step={0.001}
-              value={this.props.userConfiguration.mouseRotateValue}
-              onChange={this.onChangeUser.mouseRotateValue}
-            />
-            <NumberSliderSetting
-              label={settingsLabels.rotateValue}
-              min={userSettings.rotateValue.minimum}
-              max={userSettings.rotateValue.maximum}
-              step={0.001}
-              value={this.props.userConfiguration.rotateValue}
-              onChange={this.onChangeUser.rotateValue}
-            />
-            <NumberSliderSetting
-              label={settingsLabels.crosshairSize}
-              min={userSettings.crosshairSize.minimum}
-              max={userSettings.crosshairSize.maximum}
-              step={0.01}
-              value={this.props.userConfiguration.crosshairSize}
-              onChange={this.onChangeUser.crosshairSize}
-            />
-            <NumberSliderSetting
-              label={settingsLabels.sphericalCapRadius}
-              min={userSettings.sphericalCapRadius.minimum}
-              max={userSettings.sphericalCapRadius.maximum}
-              step={1}
-              value={this.props.userConfiguration.sphericalCapRadius}
-              onChange={this.onChangeUser.sphericalCapRadius}
-            />
-            <SwitchSetting
-              label={settingsLabels.displayCrosshair}
-              value={this.props.userConfiguration.displayCrosshair}
-              onChange={this.onChangeUser.displayCrosshair}
-            />
-          </Panel>
-        );
+    if (
+      this.props.viewMode === Constants.MODE_ARBITRARY ||
+      this.props.viewMode === Constants.MODE_ARBITRARY_PLANE
+    ) {
+      return (
+        <Panel header="Flight Options" key="2">
+          <LogSliderSetting
+            label={<Tooltip title={settingsTooltips.zoomFlight}>{settingsLabels.zoom}</Tooltip>}
+            roundTo={3}
+            min={this.props.validZoomRange[0]}
+            max={this.props.validZoomRange[1]}
+            value={this.props.zoomStep}
+            onChange={this.props.onChangeZoomStep}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.mouseRotateValue}>
+                {settingsLabels.mouseRotateValue}
+              </Tooltip>
+            }
+            min={userSettings.mouseRotateValue.minimum}
+            max={userSettings.mouseRotateValue.maximum}
+            step={0.001}
+            value={this.props.userConfiguration.mouseRotateValue}
+            onChange={this.onChangeUser.mouseRotateValue}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.rotateValue}>{settingsLabels.rotateValue}</Tooltip>
+            }
+            min={userSettings.rotateValue.minimum}
+            max={userSettings.rotateValue.maximum}
+            step={0.001}
+            value={this.props.userConfiguration.rotateValue}
+            onChange={this.onChangeUser.rotateValue}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.crosshairSize}>
+                {settingsLabels.crosshairSize}
+              </Tooltip>
+            }
+            min={userSettings.crosshairSize.minimum}
+            max={userSettings.crosshairSize.maximum}
+            step={0.01}
+            value={this.props.userConfiguration.crosshairSize}
+            onChange={this.onChangeUser.crosshairSize}
+          />
+          <NumberSliderSetting
+            label={
+              <Tooltip title={settingsTooltips.sphericalCapRadius}>
+                {settingsLabels.sphericalCapRadius}
+              </Tooltip>
+            }
+            min={userSettings.sphericalCapRadius.minimum}
+            max={userSettings.sphericalCapRadius.maximum}
+            step={1}
+            value={this.props.userConfiguration.sphericalCapRadius}
+            onChange={this.onChangeUser.sphericalCapRadius}
+          />
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.displayCrosshair}>
+                {settingsLabels.displayCrosshair}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.displayCrosshair}
+            onChange={this.onChangeUser.displayCrosshair}
+          />
+        </Panel>
+      );
+    } else {
+      return (
+        <Panel header="Viewport Options" key="2">
+          <LogSliderSetting
+            label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
+            roundTo={3}
+            min={this.props.validZoomRange[0]}
+            max={this.props.validZoomRange[1]}
+            value={this.props.zoomStep}
+            onChange={this.props.onChangeZoomStep}
+          />
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.displayCrosshair}>
+                {settingsLabels.displayCrosshair}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.displayCrosshair}
+            onChange={this.onChangeUser.displayCrosshair}
+          />
+          <SwitchSetting
+            label={
+              <Tooltip title={settingsTooltips.displayScalebars}>
+                {settingsLabels.displayScalebars}
+              </Tooltip>
+            }
+            value={this.props.userConfiguration.displayScalebars}
+            onChange={this.onChangeUser.displayScalebars}
+          />
+        </Panel>
+      );
     }
   };
 
@@ -189,7 +193,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   render() {
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label={settingsLabels.moveValue3d}
+        label={<Tooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</Tooltip>}
         min={userSettings.moveValue3d.minimum}
         max={userSettings.moveValue3d.maximum}
         step={10}
@@ -198,7 +202,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       />
     ) : (
       <NumberSliderSetting
-        label={settingsLabels.moveValue}
+        label={<Tooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</Tooltip>}
         min={userSettings.moveValue.minimum}
         max={userSettings.moveValue.maximum}
         step={10}
@@ -216,7 +220,11 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       >
         <Panel header="Controls" key="1">
           <NumberSliderSetting
-            label={settingsLabels.keyboardDelay}
+            label={
+              <Tooltip title={settingsTooltips.keyboardDelay}>
+                {settingsLabels.keyboardDelay}
+              </Tooltip>
+            }
             min={userSettings.keyboardDelay.minimum}
             max={userSettings.keyboardDelay.maximum}
             value={this.props.userConfiguration.keyboardDelay}
@@ -224,18 +232,19 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           {moveValueSetting}
           <SwitchSetting
-            label={settingsLabels.dynamicSpaceDirection}
+            label={
+              <Tooltip title={settingsTooltips.dynamicSpaceDirection}>
+                {settingsLabels.dynamicSpaceDirection}
+              </Tooltip>
+            }
             value={this.props.userConfiguration.dynamicSpaceDirection}
             onChange={this.onChangeUser.dynamicSpaceDirection}
           />
           <SwitchSetting
             label={
-              <React.Fragment>
-                {settingsLabels.useLegacyBindings}{" "}
-                <Tooltip title="When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              <Tooltip title={settingsTooltips.useLegacyBindings}>
+                {settingsLabels.useLegacyBindings}
+              </Tooltip>
             }
             value={this.props.userConfiguration.useLegacyBindings}
             onChange={this.onChangeUser.useLegacyBindings}
@@ -245,12 +254,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
             label={
-              <React.Fragment>
-                {settingsLabels.gpuMemoryFactor}{" "}
-                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              <Tooltip title={settingsTooltips.gpuMemoryFactor}>
+                {settingsLabels.gpuMemoryFactor}
+              </Tooltip>
             }
             value={(
               this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
@@ -263,12 +269,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           />
           <DropdownSetting
             label={
-              <React.Fragment>
-                {settingsLabels.loadingStrategy}{" "}
-                <Tooltip title={settingsLabels.loadingStrategyDescription}>
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              <Tooltip title={settingsTooltips.loadingStrategy}>
+                {settingsLabels.loadingStrategy}
+              </Tooltip>
             }
             value={this.props.datasetConfiguration.loadingStrategy}
             onChange={this.onChangeDataset.loadingStrategy}
@@ -278,32 +281,26 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             ]}
           />
           <SwitchSetting
-            label={
-              <React.Fragment>
-                {settingsLabels.fourBit}{" "}
-                <Tooltip title="Decrease size of transferred data by half using lossy compression. Recommended for poor and/or capped Internet connections.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
-            }
+            label={<Tooltip title={settingsTooltips.fourBit}>{settingsLabels.fourBit}</Tooltip>}
             value={this.props.datasetConfiguration.fourBit}
             onChange={this.onChangeDataset.fourBit}
           />
           {Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
             <SwitchSetting
-              label={settingsLabels.interpolation}
+              label={
+                <Tooltip title={settingsTooltips.interpolation}>
+                  {settingsLabels.interpolation}
+                </Tooltip>
+              }
               value={this.props.datasetConfiguration.interpolation}
               onChange={this.onChangeDataset.interpolation}
             />
           )}
           <SwitchSetting
             label={
-              <React.Fragment>
+              <Tooltip title={settingsTooltips.renderMissingDataBlack}>
                 {settingsLabels.renderMissingDataBlack}{" "}
-                <Tooltip title="If disabled, missing data will be rendered by using poorer resolutions.">
-                  <InfoCircleOutlined />
-                </Tooltip>
-              </React.Fragment>
+              </Tooltip>
             }
             value={this.props.datasetConfiguration.renderMissingDataBlack}
             onChange={this.onChangeRenderMissingDataBlack}

@@ -4,6 +4,7 @@
  */
 
 import { type RouterHistory, withRouter, Link } from "react-router-dom";
+import { AsyncButton } from "components/async_clickables";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -19,6 +20,7 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import { setViewModeAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
+import { switchToOrganization } from "admin/admin_rest_api";
 import LoginForm from "admin/auth/login_form";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -33,7 +35,7 @@ import Store, {
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import type { APIUser } from "types/api_flow_types";
+import type { APIUser, APIOrganization } from "types/api_flow_types";
 
 import app from "app";
 import constants, {
@@ -42,7 +44,7 @@ import constants, {
   type ViewMode,
 } from "oxalis/constants";
 import messages from "messages";
-import window, { document } from "libs/window";
+import window, { document, location } from "libs/window";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {|
@@ -61,6 +63,7 @@ type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   gotUnhandledError: boolean,
+  organizationToSwitchTo: ?APIOrganization,
 };
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
@@ -68,6 +71,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   isMounted: boolean;
   state = {
     gotUnhandledError: false,
+    organizationToSwitchTo: null,
   };
 
   // Main controller, responsible for setting modes and everything
@@ -120,9 +124,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         ) {
           Toast.error(messages["tracing.compound_project_not_found"], { sticky: true });
         }
-        // Don't throw errors for errors already handled by the model
-        // or "Not Found" errors because they are already handled elsewhere.
+        if (error.organizationToSwitchTo != null && this.props.user != null) {
+          this.setState({ organizationToSwitchTo: error.organizationToSwitchTo });
+        }
         if (error !== HANDLED_ERROR && !isNotFoundError) {
+          // Don't throw errors for errors already handled by the model
+          // or "Not Found" errors because they are already handled elsewhere.
           Toast.error(`${messages["tracing.unhandled_initialization_error"]} ${error.toString()}`, {
             sticky: true,
           });
@@ -137,7 +144,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || evt.pathname !== window.location.pathname) {
+      if (action === undefined || evt.pathname !== location.pathname) {
         const stateSaved = Model.stateSaved();
         if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
@@ -282,21 +289,41 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   render() {
     const status = this.props.controllerStatus;
     const { user, viewMode } = this.props;
-    const { gotUnhandledError } = this.state;
+    const { gotUnhandledError, organizationToSwitchTo } = this.state;
+    const switchToOwningOrganizationButton = (
+      <AsyncButton
+        type="primary"
+        style={{ marginRight: 26 }}
+        onClick={async () => {
+          if (organizationToSwitchTo != null) {
+            await switchToOrganization(organizationToSwitchTo.name);
+          }
+        }}
+      >
+        Switch to this Organization
+      </AsyncButton>
+    );
     if (status === "loading") {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
+      const message =
+        organizationToSwitchTo != null
+          ? `This dataset belongs to the organization ${
+              organizationToSwitchTo.displayName
+            } which is currently not your active organization. Do you want to switch to that organization?`
+          : "Either the dataset does not exist or you do not have the necessary access rights.";
       return (
         <BrainSpinner
           message={
             <div style={{ textAlign: "center" }}>
-              {gotUnhandledError
-                ? messages["tracing.unhandled_initialization_error"]
-                : "Either the dataset does not exist or you do not have the necessary access rights."}
+              {gotUnhandledError ? messages["tracing.unhandled_initialization_error"] : message}
               <br />
-              <Link to="/" style={{ marginTop: 16, display: "inline-block" }}>
-                <Button type="primary">Return to dashboard</Button>
-              </Link>
+              <div style={{ marginTop: 16, display: "inline-block" }}>
+                {organizationToSwitchTo != null ? switchToOwningOrganizationButton : null}
+                <Link to="/">
+                  <Button type="primary">Return to dashboard</Button>
+                </Link>
+              </div>
             </div>
           }
           isLoading={false}

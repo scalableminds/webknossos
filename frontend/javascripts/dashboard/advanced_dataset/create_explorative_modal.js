@@ -109,7 +109,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
             value={[lowResolutionIndex, highResolutionIndex]}
             style={{ flexGrow: 1 }}
           />
-          <div style={{ width: "5.5em", textAlign: "right" }}>
+          <div style={{ width: "6.5em", textAlign: "right" }}>
             {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
           </div>
         </div>

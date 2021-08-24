@@ -45,7 +45,7 @@ type PersistenceState = {
 
 const CONVERSION_JOBS_REFRESH_INTERVAL = 60 * 1000;
 const MAX_JOBS_TO_DISPLAY = 5;
-const RECENT_DATASET_DAY_THRESHOLD = 30;
+const RECENT_DATASET_DAY_THRESHOLD = 3;
 
 const persistence: Persistence<PersistenceState> = new Persistence(
   {

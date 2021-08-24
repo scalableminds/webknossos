@@ -2,8 +2,14 @@
 import React, { useEffect, type Node } from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import { AnnotationToolEnum } from "oxalis/constants";
-import type { Vector3, OrthoView } from "oxalis/constants";
+import {
+  type AnnotationTool,
+  AnnotationToolEnum,
+  type Vector3,
+  type OrthoView,
+  VolumeTools,
+} from "oxalis/constants";
+
 import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
@@ -68,7 +74,7 @@ type StateProps = {|
   zoomStep: number,
   currentMeshFile: ?string,
   volumeTracing: ?VolumeTracing,
-  isSkeletonToolActive: boolean,
+  activeTool: AnnotationTool,
   useLegacyBindings: boolean,
 |};
 
@@ -79,7 +85,7 @@ type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
 type NoNodeContextMenuProps = {|
   ...Props,
   segmentIdAtPosition: number,
-  isSkeletonToolActive: boolean,
+  activeTool: AnnotationTool,
 |};
 
 function copyIconWithTooltip(value: string | number, title: string) {
@@ -249,7 +255,7 @@ function NodeContextMenuOptions({
         key="delete-node"
         onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}
       >
-        Delete this Node {shortcutBuilder(["Del"])}
+        Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -284,7 +290,7 @@ function NodeContextMenuOptions({
 function NoNodeContextMenuOptions({
   skeletonTracing,
   volumeTracing,
-  isSkeletonToolActive,
+  activeTool,
   hideContextMenu,
   globalPosition,
   viewport,
@@ -314,6 +320,8 @@ function NoNodeContextMenuOptions({
     }
   };
 
+  const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
+
   const skeletonActions =
     skeletonTracing != null
       ? [
@@ -332,7 +340,7 @@ function NoNodeContextMenuOptions({
               setWaypoint(globalPosition, viewport, false);
             }}
           >
-            Create new Tree here {shortcutBuilder(["C"])}
+            Create new Tree here {!isVolumeBasedToolActive ? shortcutBuilder(["C"]) : null}
           </Menu.Item>,
         ]
       : [];
@@ -360,7 +368,8 @@ function NoNodeContextMenuOptions({
                 setActiveCell(segmentIdAtPosition);
               }}
             >
-              Select Segment ({segmentIdAtPosition}) {shortcutBuilder(["Shift", "leftMouse"])}
+              Select Segment ({segmentIdAtPosition}){" "}
+              {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
             </Menu.Item>
           ) : null,
           loadMeshItem,
@@ -376,6 +385,7 @@ function NoNodeContextMenuOptions({
   if (volumeTracing == null && segmentationLayer != null) {
     nonSkeletonActions.push(loadMeshItem);
   }
+  const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
 
   const allActions = isSkeletonToolActive
     ? skeletonActions.concat(nonSkeletonActions)
@@ -403,7 +413,7 @@ function ContextMenu(props: Props) {
 
   const {
     skeletonTracing,
-    isSkeletonToolActive,
+    activeTool,
     clickedNodeId,
     contextMenuPosition,
     hideContextMenu,
@@ -515,7 +525,7 @@ function ContextMenu(props: Props) {
         <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ isSkeletonToolActive, segmentIdAtPosition, ...props })}
+          : NoNodeContextMenuOptions({ activeTool, segmentIdAtPosition, ...props })}
 
         <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
         {infoRows}
@@ -553,7 +563,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     skeletonTracing: state.tracing.skeleton,
     volumeTracing: state.tracing.volume,
     datasetScale: state.dataset.dataSource.scale,
-    isSkeletonToolActive: state.uiInformation.activeTool === AnnotationToolEnum.SKELETON,
+    activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
     segmentationLayer: getSegmentationLayer(state.dataset),
     zoomStep: getRequestLogZoomStep(state),

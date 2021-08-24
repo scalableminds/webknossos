@@ -252,9 +252,10 @@ class Mappings {
     listenToStoreProperty(
       state => getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mapping,
       mapping => {
-        const { mappingKeys } = Store.getState().temporaryConfiguration.activeMapping[
-          this.layerName
-        ];
+        const { mappingKeys } = getMappingInfo(
+          Store.getState().temporaryConfiguration.activeMapping,
+          this.layerName,
+        );
         this.updateMappingTextures(mapping, mappingKeys);
       },
     );

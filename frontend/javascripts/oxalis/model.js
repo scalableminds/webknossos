@@ -16,6 +16,7 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
 import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import * as Utils from "libs/utils";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -38,24 +39,42 @@ export class OxalisModel {
     initialFetch: boolean,
     versions?: Versions,
   ) {
-    const initializationInformation = await initialize(
-      annotationType,
-      initialCommandType,
-      initialFetch,
-      versions,
-    );
-    if (initializationInformation) {
-      // Only executed on initial fetch
-      const {
-        dataLayers,
-        connectionInfo,
-        isMappingSupported,
-        maximumTextureCountForLayer,
-      } = initializationInformation;
-      this.dataLayers = dataLayers;
-      this.connectionInfo = connectionInfo;
-      this.isMappingSupported = isMappingSupported;
-      this.maximumTextureCountForLayer = maximumTextureCountForLayer;
+    try {
+      const initializationInformation = await initialize(
+        annotationType,
+        initialCommandType,
+        initialFetch,
+        versions,
+      );
+      if (initializationInformation) {
+        // Only executed on initial fetch
+        const {
+          dataLayers,
+          connectionInfo,
+          isMappingSupported,
+          maximumTextureCountForLayer,
+        } = initializationInformation;
+        this.dataLayers = dataLayers;
+        this.connectionInfo = connectionInfo;
+        this.isMappingSupported = isMappingSupported;
+        this.maximumTextureCountForLayer = maximumTextureCountForLayer;
+      }
+    } catch (error) {
+      try {
+        const maybeOrganizationToSwitchTo = await isDatasetAccessibleBySwitching(
+          annotationType,
+          initialCommandType,
+        );
+        if (maybeOrganizationToSwitchTo != null) {
+          error.organizationToSwitchTo = maybeOrganizationToSwitchTo;
+        }
+      } catch (accessibleBySwitchingError) {
+        console.error(
+          "An error occurred while requesting a organization the user can switch to to see the dataset.",
+          accessibleBySwitchingError,
+        );
+      }
+      throw error;
     }
   }
 

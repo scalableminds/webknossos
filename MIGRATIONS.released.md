@@ -29,7 +29,7 @@ SET recommendedconfiguration = jsonb_set(
 ### Postgres Evolutions:
 - [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)
 - [073-modern-controls-user-conf.sql](conf/evolutions/073-modern-controls-user-conf.sql)
-- [074-jobs-owner-foreign-key.sql](conf/evolutions/073-jobs-owner-foreign-key.sql)
+- [074-jobs-owner-foreign-key.sql](conf/evolutions/074-jobs-owner-foreign-key.sql)
 
 
 ## [21.06.0](https://github.com/scalableminds/webknossos/releases/tag/21.06.0) - 2021-06-01

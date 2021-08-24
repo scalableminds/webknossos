@@ -27,6 +27,8 @@ import {
   getBoundaries,
   getEnabledLayers,
   getUnrenderableLayersForCurrentZoom,
+  getSegmentationLayerWithEnabledMapping,
+  getMappingInfoForSupportedLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -275,8 +277,11 @@ class PlaneMaterialFactory {
       };
     }
 
-    // Add mapping
-    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    this.attachSegmentationTextures();
+  }
+
+  attachSegmentationTextures(): void {
+    const segmentationLayer = Model.getSegmentationLayerWithEnabledMapping();
     if (
       segmentationLayer != null &&
       segmentationLayer.mappings != null &&
@@ -287,16 +292,15 @@ class PlaneMaterialFactory {
         mappingLookupTexture,
         mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
-      const sanitizedSegmentationLayerName = sanitizeName(segmentationLayer.name);
-      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_texture`] = {
+      this.uniforms.segmentation_mapping_texture = {
         type: "t",
         value: mappingTexture,
       };
-      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_lookup_texture`] = {
+      this.uniforms.segmentation_mapping_lookup_texture = {
         type: "t",
         value: mappingLookupTexture,
       };
-      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_color_texture`] = {
+      this.uniforms.segmentation_mapping_color_texture = {
         type: "t",
         value: mappingColorTexture,
       };
@@ -395,7 +399,7 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
+        storeState => getMappingInfoForSupportedLayer(storeState).mappingSize,
         mappingSize => {
           this.uniforms.mappingSize.value = mappingSize;
         },
@@ -405,7 +409,7 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.activeMapping.hideUnmappedIds,
+        storeState => getMappingInfoForSupportedLayer(storeState).hideUnmappedIds,
         hideUnmappedIds => {
           this.uniforms.hideUnmappedIds.value = hideUnmappedIds;
         },
@@ -506,6 +510,15 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
+          storeState => getSegmentationLayerWithEnabledMapping(storeState),
+          _segmentationLayer => {
+            this.attachSegmentationTextures();
+          },
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
           storeState => storeState.userConfiguration.brushSize,
           brushSize => {
             this.uniforms.brushSizeInPixel.value = brushSize;
@@ -544,7 +557,7 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+          storeState => getMappingInfoForSupportedLayer(storeState).isMappingEnabled,
           () => this.updateActiveCellId(),
         ),
       );
@@ -552,9 +565,9 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           storeState =>
-            storeState.temporaryConfiguration.activeMapping.isMappingEnabled &&
+            getMappingInfoForSupportedLayer(storeState).isMappingEnabled &&
             // The shader should only know about the mapping when a JSON mapping exists
-            storeState.temporaryConfiguration.activeMapping.mappingType === "JSON",
+            getMappingInfoForSupportedLayer(storeState).mappingType === "JSON",
           isEnabled => {
             this.uniforms.isMappingEnabled.value = isEnabled;
           },
@@ -563,7 +576,7 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.activeMapping.mapping,
+          storeState => getMappingInfoForSupportedLayer(storeState).mapping,
           () => this.updateActiveCellId(),
         ),
       );

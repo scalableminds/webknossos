@@ -536,6 +536,24 @@ export function getSegmentationAnnotationLayer(state: OxalisState): ?APISegmenta
   return getVisibleSegmentationLayer(state);
 }
 
+export function getSegmentationLayerWithEnabledMapping(state: OxalisState): ?APISegmentationLayer {
+  const layerNames = Object.keys(state.temporaryConfiguration.activeMapping);
+  const layersWithEnabledMapping = layerNames.filter(
+    layerName => state.temporaryConfiguration.activeMapping[layerName].isMappingEnabled,
+  );
+
+  if (layersWithEnabledMapping.length === 0) {
+    return null;
+  }
+  const layer = getLayerByName(state.dataset, layersWithEnabledMapping[0]);
+  if (layer.category !== "segmentation") {
+    // Satisfy flow
+    throw new Error("Non-segmentation layer has an enabled mapping.");
+  }
+
+  return layer;
+}
+
 export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
@@ -790,7 +808,7 @@ export function is2dDataset(dataset: APIDataset): boolean {
 export function getMappingInfo(
   activeMappingInfos: { [layerName: string]: ActiveMappingInfo },
   layerName: ?string,
-) {
+): ActiveMappingInfo {
   if (layerName != null && activeMappingInfos[layerName]) {
     return activeMappingInfos[layerName];
   }
@@ -807,6 +825,11 @@ export function getMappingInfo(
     mappingSize: 0,
     mappingType: "JSON",
   };
+}
+
+export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
+  const layer = getSegmentationLayerWithEnabledMapping(state);
+  return getMappingInfo(state.temporaryConfiguration.activeMapping, layer ? layer.name : null);
 }
 
 export default {};

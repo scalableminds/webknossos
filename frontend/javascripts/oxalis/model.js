@@ -8,7 +8,11 @@ import _ from "lodash";
 
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
-import { getLayerByName, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSegmentationLayerWithEnabledMapping,
+  getLayerByName,
+  isLayerVisible,
+} from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import ConnectionInfo from "oxalis/model/data_connection_info";
@@ -176,6 +180,14 @@ export class OxalisModel {
       throw new Error(`Layer with name ${name} was not found.`);
     }
     return this.dataLayers[name];
+  }
+
+  getSegmentationLayerWithEnabledMapping(): ?DataLayer {
+    const layer = getSegmentationLayerWithEnabledMapping(Store.getState());
+    if (!layer) {
+      return null;
+    }
+    return this.getLayerByName(layer.name);
   }
 
   getLayerRenderingManagerByName(name: string): LayerRenderingManager {

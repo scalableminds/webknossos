@@ -152,7 +152,7 @@ function positionToString(pos: Vector3): string {
 }
 
 function shortcutBuilder(shortcuts: Array<string>): Node {
-  const lineColor = "var(--ant-text-primary)";
+  const lineColor = "var(--ant-text-secondary)";
   const mapNameToShortcutIcon = (name: string) => {
     switch (name) {
       case "leftMouse": {

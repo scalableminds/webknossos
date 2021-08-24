@@ -3,7 +3,7 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import io.swagger.annotations.Api
+import io.swagger.annotations.{Api, ApiOperation, ApiParam}
 import javax.inject.Inject
 import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.{InviteDAO, MultiUserDAO, UserDAO}
@@ -30,6 +30,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
 
+  @ApiOperation(hidden = true, value="")
   def organizationsIsEmpty: Action[AnyContent] = Action.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
@@ -38,7 +39,8 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def get(organizationName: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  @ApiOperation(value="get single organization")
+  def get(@ApiParam(value = "name of the organization to fetch") organizationName: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
       js <- organizationService.publicWrites(org, request.identity)

@@ -33,7 +33,12 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 
 export type ResolutionsMap = Map<number, Vector3>;
 
-type SmallerOrHigherInfo = { smaller: boolean, higher: boolean };
+export type SmallerOrHigherInfo = { smaller: boolean, higher: boolean };
+
+type UnrenderableLayersInfos = {
+  layer: DataLayerType,
+  smallerOrHigherInfo: SmallerOrHigherInfo,
+};
 
 export class ResolutionInfo {
   resolutions: $ReadOnlyArray<Vector3>;
@@ -164,13 +169,13 @@ export class ResolutionInfo {
   hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {
     const indices = this.getAllIndices();
     const hasSmallOrHigher = { smaller: false, higher: false };
-    indices.forEach(currentIndex => {
+    for (const currentIndex of indices) {
       if (currentIndex < index) {
         hasSmallOrHigher.smaller = true;
       } else if (currentIndex > index) {
         hasSmallOrHigher.higher = true;
       }
-    });
+    }
     return hasSmallOrHigher;
   }
 
@@ -592,12 +597,14 @@ export function getEnabledLayers(
 }
 
 /*
-  This function returns layers which cannot be rendered (since
-  the current resolution is missing), even though they should
-  be rendered (since they are enabled). The function takes fallback
-  resolutions into account if renderMissingDataBlack is disabled.
+  This function returns layers that cannot be rendered (since the current resolution is missing), 
+  even though they should be rendered (since they are enabled). For each layer, this method 
+  additionally returns whether data of this layer can be rendered by zooming in or out.
+  The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
  */
-function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
+function _getUnrenderableLayersInfosForCurrentZoom(
+  state: OxalisState,
+): Array<UnrenderableLayersInfos> {
   const { dataset } = state;
   const zoomStep = getRequestLogZoomStep(state);
 
@@ -631,15 +638,15 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
         return resolutionInfo.hasIndex(fallbackZoomStep);
       });
     })
-    .map<[DataLayerType, SmallerOrHigherInfo]>(({ layer, resolutionInfo }) => {
-      const hasSmallOrHigher = resolutionInfo.hasSmallerAndOrHigherIndex(zoomStep);
-      return [layer, hasSmallOrHigher];
+    .map<UnrenderableLayersInfos>(({ layer, resolutionInfo }) => {
+      const smallerOrHigherInfo = resolutionInfo.hasSmallerAndOrHigherIndex(zoomStep);
+      return { layer, smallerOrHigherInfo };
     });
   return unrenderableLayers;
 }
 
-export const getUnrenderableLayersForCurrentZoom = reuseInstanceOnEquality(
-  _getUnrenderableLayersForCurrentZoom,
+export const getUnrenderableLayersInfoForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayersInfosForCurrentZoom,
 );
 
 /*

@@ -6,22 +6,49 @@ import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";
 
 import { Tooltip } from "antd";
-import { getUnrenderableLayersForCurrentZoom } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getUnrenderableLayersInfoForCurrentZoom,
+  type SmallerOrHigherInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { usePolledState } from "libs/react_helpers";
 
 const { useState } = React;
+
+type UnrenderableLayerNamesInfo = {
+  layerName: string,
+  smallerOrHigherInfo: SmallerOrHigherInfo,
+};
+
+function getOptionalZoomMessage(
+  directionString: string,
+  unrenderableLayersWithInfo: Array<UnrenderableLayerNamesInfo>,
+) {
+  const renderableLayerNamesWithOtherZoomstep = unrenderableLayersWithInfo
+    .filter(({ smallerOrHigherInfo: { higher, smaller } }) =>
+      directionString === "in" ? smaller : higher,
+    )
+    .map(({ layerName }) => layerName);
+  if (renderableLayerNamesWithOtherZoomstep.length === 0) {
+    return null;
+  }
+
+  const pluralS = renderableLayerNamesWithOtherZoomstep.length > 1 ? "s" : "";
+  return `Zoom ${directionString} to see layer${pluralS} ${renderableLayerNamesWithOtherZoomstep.join(
+    ", ",
+  )}.`;
+}
 
 export default function ViewportStatusIndicator() {
   const [unrenderableLayersWithInfo, setUnrenderableLayersWithInfo] = useState([]);
   const [renderMissingDataBlack, setRenderMissingDataBlack] = useState(true);
 
   usePolledState(state => {
-    const newMissingLayersNames = getUnrenderableLayersForCurrentZoom(state);
-    const newAdjustedMissingLayersNames = newMissingLayersNames.map(
-      ([layer, smallerOrHigherInfo]) =>
+    const newMissingLayersNames = getUnrenderableLayersInfoForCurrentZoom(state);
+    const newAdjustedMissingLayersNames: Array<UnrenderableLayerNamesInfo> = newMissingLayersNames.map(
+      ({ layer, smallerOrHigherInfo }) =>
         layer.category === "segmentation"
-          ? ["Segmentation", smallerOrHigherInfo]
-          : [layer.name, smallerOrHigherInfo],
+          ? { layerName: "Segmentation", smallerOrHigherInfo }
+          : { layerName: layer.name, smallerOrHigherInfo },
     );
     if (!_.isEqual(unrenderableLayersWithInfo, newAdjustedMissingLayersNames)) {
       setUnrenderableLayersWithInfo(newAdjustedMissingLayersNames);
@@ -32,41 +59,18 @@ export default function ViewportStatusIndicator() {
   if (unrenderableLayersWithInfo.length === 0) {
     return null;
   }
-  const unrenderableLayerNamesWithSmallerZoomstep = unrenderableLayersWithInfo
-    .filter(([, { smaller }]) => smaller)
-    .map(([layerName]) => layerName);
-  const pluralSForSmallerZoomstep = unrenderableLayerNamesWithSmallerZoomstep.length > 1 ? "s" : "";
-  const unrenderableLayerNamesWithHigherZoomstep = unrenderableLayersWithInfo
-    .filter(([, { higher }]) => higher)
-    .map(([layerName]) => layerName);
-  const pluralSForHigherZoomstep = unrenderableLayerNamesWithHigherZoomstep.length > 1 ? "s" : "";
+  const zoomInMessage = getOptionalZoomMessage("in", unrenderableLayersWithInfo);
+  const zoomOutMessage = getOptionalZoomMessage("out", unrenderableLayersWithInfo);
 
-  const renderMissingDataBlackHint = renderMissingDataBlack
+  const missingDataHint = renderMissingDataBlack
     ? " Also consider disabling the option “Render Missing Data Black”."
     : null;
+  const sentencesString = [zoomInMessage, zoomOutMessage, missingDataHint]
+    .filter(message => message != null)
+    .join(" ");
 
   return (
-    <Tooltip
-      title={
-        <div>
-          {unrenderableLayerNamesWithSmallerZoomstep.length > 0
-            ? `Zoom in to see layer${pluralSForSmallerZoomstep} ${unrenderableLayerNamesWithSmallerZoomstep.join(
-                ", ",
-              )}.${
-                unrenderableLayerNamesWithHigherZoomstep.length > 0 || renderMissingDataBlackHint
-                  ? " "
-                  : ""
-              }`
-            : null}
-          {unrenderableLayerNamesWithHigherZoomstep.length > 0
-            ? `Zoom out to see layer${pluralSForHigherZoomstep} ${unrenderableLayerNamesWithHigherZoomstep.join(
-                ", ",
-              )}.${renderMissingDataBlackHint ? " " : ""}`
-            : null}
-          {renderMissingDataBlackHint}
-        </div>
-      }
-    >
+    <Tooltip title={<div>{sentencesString}</div>}>
       <div style={{ position: "absolute", bottom: "1%", left: "1%", color: "white" }}>
         <WarningOutlined
           style={{ fontSize: 16, background: "rgba(0, 0, 0, .3)", padding: 4, borderRadius: 2 }}

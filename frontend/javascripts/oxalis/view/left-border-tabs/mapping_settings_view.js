@@ -12,7 +12,10 @@ import { type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
 import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getSomeSegmentationLayer, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSegmentationLayerByName,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -290,7 +293,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     mappingColors: activeMappingInfo.mappingColors,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
-    segmentationLayer: getSomeSegmentationLayer(state),
+    segmentationLayer: getSegmentationLayerByName(state.dataset, ownProps.layerName),
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),

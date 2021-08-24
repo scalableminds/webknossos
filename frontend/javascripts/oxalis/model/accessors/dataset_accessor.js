@@ -300,6 +300,17 @@ export function getLayerByName(dataset: APIDataset, layerName: string): DataLaye
   return layer;
 }
 
+export function getSegmentationLayerByName(
+  dataset: APIDataset,
+  layerName: string,
+): APISegmentationLayer {
+  const layer = getLayerByName(dataset, layerName);
+  if (layer.category !== "segmentation") {
+    throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
+  }
+  return layer;
+}
+
 export function getMappings(dataset: APIDataset, layerName: string): string[] {
   return getLayerByName(dataset, layerName).mappings || [];
 }
@@ -543,6 +554,13 @@ export function getSegmentationLayerWithEnabledMapping(state: OxalisState): ?API
   );
 
   if (layersWithEnabledMapping.length === 0) {
+    const layerNamesWithMappings = layerNames.filter(
+      layerName => getLayerByName(state.dataset, layerName).mappings.length > 0,
+    );
+    if (layerNamesWithMappings.length > 0) {
+      // todo: clean up
+      return getLayerByName(state.dataset, layerNamesWithMappings[0]);
+    }
     return null;
   }
   const layer = getLayerByName(state.dataset, layersWithEnabledMapping[0]);

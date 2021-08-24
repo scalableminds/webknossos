@@ -52,7 +52,7 @@ export default function ViewportStatusIndicator() {
           {unrenderableLayerNamesWithSmallerZoomstep.length > 0
             ? `Zoom in to see layer${pluralSForSmallerZoomstep} ${unrenderableLayerNamesWithSmallerZoomstep.join(
                 ", ",
-              )}${
+              )}.${
                 unrenderableLayerNamesWithHigherZoomstep.length > 0 || renderMissingDataBlackHint
                   ? " "
                   : ""
@@ -61,7 +61,7 @@ export default function ViewportStatusIndicator() {
           {unrenderableLayerNamesWithHigherZoomstep.length > 0
             ? `Zoom out to see layer${pluralSForHigherZoomstep} ${unrenderableLayerNamesWithHigherZoomstep.join(
                 ", ",
-              )}${renderMissingDataBlackHint ? " " : ""}`
+              )}.${renderMissingDataBlackHint ? " " : ""}`
             : null}
           {renderMissingDataBlackHint}
         </div>

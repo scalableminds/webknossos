@@ -43,15 +43,15 @@ export default function ViewportStatusIndicator() {
   const [renderMissingDataBlack, setRenderMissingDataBlack] = useState(true);
 
   usePolledState(state => {
-    const newMissingLayersWithInfos = getUnrenderableLayerInfosForCurrentZoom(state);
-    const newAdjustedMissingLayersNamesWithInfos: Array<UnrenderableLayerNamesInfo> = newMissingLayersWithInfos.map(
+    const newUnrenderableLayersWithInfos = getUnrenderableLayerInfosForCurrentZoom(state);
+    const newUnrenderableLayersNamesWithInfos: Array<UnrenderableLayerNamesInfo> = newUnrenderableLayersWithInfos.map(
       ({ layer, smallerOrHigherInfo }) =>
         layer.category === "segmentation"
           ? { layerName: "Segmentation", smallerOrHigherInfo }
           : { layerName: layer.name, smallerOrHigherInfo },
     );
-    if (!_.isEqual(unrenderableLayerNamesWithInfo, newAdjustedMissingLayersNamesWithInfos)) {
-      setUnrenderableLayerNamesWithInfo(newAdjustedMissingLayersNamesWithInfos);
+    if (!_.isEqual(unrenderableLayerNamesWithInfo, newUnrenderableLayersNamesWithInfos)) {
+      setUnrenderableLayerNamesWithInfo(newUnrenderableLayersNamesWithInfos);
     }
 
     setRenderMissingDataBlack(state.datasetConfiguration.renderMissingDataBlack);

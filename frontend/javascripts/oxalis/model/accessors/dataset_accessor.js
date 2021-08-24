@@ -602,7 +602,7 @@ export function getEnabledLayers(
   additionally returns whether data of this layer can be rendered by zooming in or out.
   The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
  */
-function _getUnrenderableLayersInfosForCurrentZoom(
+function _getUnrenderableLayerInfosForCurrentZoom(
   state: OxalisState,
 ): Array<UnrenderableLayersInfos> {
   const { dataset } = state;
@@ -645,8 +645,8 @@ function _getUnrenderableLayersInfosForCurrentZoom(
   return unrenderableLayers;
 }
 
-export const getUnrenderableLayersInfoForCurrentZoom = reuseInstanceOnEquality(
-  _getUnrenderableLayersInfosForCurrentZoom,
+export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayerInfosForCurrentZoom,
 );
 
 /*

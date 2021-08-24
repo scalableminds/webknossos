@@ -7,7 +7,7 @@ import { WarningOutlined } from "@ant-design/icons";
 
 import { Tooltip } from "antd";
 import {
-  getUnrenderableLayersInfoForCurrentZoom,
+  getUnrenderableLayerInfosForCurrentZoom,
   type SmallerOrHigherInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { usePolledState } from "libs/react_helpers";
@@ -39,28 +39,28 @@ function getOptionalZoomMessage(
 }
 
 export default function ViewportStatusIndicator() {
-  const [unrenderableLayersWithInfo, setUnrenderableLayersWithInfo] = useState([]);
+  const [unrenderableLayerNamesWithInfo, setUnrenderableLayerNamesWithInfo] = useState([]);
   const [renderMissingDataBlack, setRenderMissingDataBlack] = useState(true);
 
   usePolledState(state => {
-    const newMissingLayersNames = getUnrenderableLayersInfoForCurrentZoom(state);
-    const newAdjustedMissingLayersNames: Array<UnrenderableLayerNamesInfo> = newMissingLayersNames.map(
+    const newMissingLayersWithInfos = getUnrenderableLayerInfosForCurrentZoom(state);
+    const newAdjustedMissingLayersNamesWithInfos: Array<UnrenderableLayerNamesInfo> = newMissingLayersWithInfos.map(
       ({ layer, smallerOrHigherInfo }) =>
         layer.category === "segmentation"
           ? { layerName: "Segmentation", smallerOrHigherInfo }
           : { layerName: layer.name, smallerOrHigherInfo },
     );
-    if (!_.isEqual(unrenderableLayersWithInfo, newAdjustedMissingLayersNames)) {
-      setUnrenderableLayersWithInfo(newAdjustedMissingLayersNames);
+    if (!_.isEqual(unrenderableLayerNamesWithInfo, newAdjustedMissingLayersNamesWithInfos)) {
+      setUnrenderableLayerNamesWithInfo(newAdjustedMissingLayersNamesWithInfos);
     }
 
     setRenderMissingDataBlack(state.datasetConfiguration.renderMissingDataBlack);
   });
-  if (unrenderableLayersWithInfo.length === 0) {
+  if (unrenderableLayerNamesWithInfo.length === 0) {
     return null;
   }
-  const zoomInMessage = getOptionalZoomMessage("in", unrenderableLayersWithInfo);
-  const zoomOutMessage = getOptionalZoomMessage("out", unrenderableLayersWithInfo);
+  const zoomInMessage = getOptionalZoomMessage("in", unrenderableLayerNamesWithInfo);
+  const zoomOutMessage = getOptionalZoomMessage("out", unrenderableLayerNamesWithInfo);
 
   const missingDataHint = renderMissingDataBlack
     ? " Also consider disabling the option “Render Missing Data Black”."

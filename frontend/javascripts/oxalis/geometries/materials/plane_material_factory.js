@@ -25,7 +25,7 @@ import {
   getElementClass,
   getBoundaries,
   getEnabledLayers,
-  getUnrenderableLayersInfoForCurrentZoom,
+  getUnrenderableLayerInfosForCurrentZoom,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -339,7 +339,7 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getUnrenderableLayersInfoForCurrentZoom(storeState).map(({ layer }) => layer),
+        storeState => getUnrenderableLayerInfosForCurrentZoom(storeState).map(({ layer }) => layer),
         unrenderableLayers => {
           const unrenderableLayerNames = unrenderableLayers.map(l => l.name);
           for (const dataLayer of Model.getAllLayers()) {

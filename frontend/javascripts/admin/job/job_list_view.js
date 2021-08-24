@@ -24,11 +24,13 @@ import * as Utils from "libs/utils";
 import type { OxalisState } from "oxalis/store";
 import FormattedDate from "components/formatted_date";
 
+// Unfortunately, the twoToneColor (nor the style) prop don't support
+// CSS variables.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
       "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
-    icon: <QuestionCircleTwoTone twoToneColor="grey" />,
+    icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" />,
   },
   SUCCESS: {
     tooltip: "This job has successfully been executed.",
@@ -36,18 +38,18 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
   },
   PENDING: {
     tooltip: "This job will run as soon as a worker becomes available.",
-    icon: <ClockCircleTwoTone twoToneColor="orange" />,
+    icon: <ClockCircleTwoTone twoToneColor="#d89614" />,
   },
   STARTED: { tooltip: "This job is currently running.", icon: <LoadingOutlined /> },
   FAILURE: {
     tooltip:
       "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
-    icon: <CloseCircleTwoTone twoToneColor="red" />,
+    icon: <CloseCircleTwoTone twoToneColor="#a61d24" />,
   },
   MANUAL: {
     tooltip:
       "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
-    icon: <ToolTwoTone twoToneColor="orange" />,
+    icon: <ToolTwoTone twoToneColor="#d89614" />,
   },
 };
 

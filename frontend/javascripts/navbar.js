@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Layout, Menu, Popover } from "antd";
+import { Avatar, Badge, Layout, Menu, Popover } from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -12,7 +12,7 @@ import {
 import { useHistory, Link } from "react-router-dom";
 import classnames from "classnames";
 import { connect } from "react-redux";
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 import Toast from "libs/toast";
 import type { APIUser, APIUserTheme } from "types/api_flow_types";
@@ -22,6 +22,8 @@ import {
   getUsersOrganizations,
   switchToOrganization,
   updateSelectedThemeOfUser,
+  updateNovelUserExperienceInfos,
+  sendAnalyticsEvent,
 } from "admin/admin_rest_api";
 import { logoutUserAction, setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
@@ -30,7 +32,7 @@ import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
-import { document } from "libs/window";
+import window, { document, location } from "libs/window";
 import features from "features";
 import { setThemeAction } from "oxalis/model/actions/ui_actions";
 
@@ -52,6 +54,58 @@ export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
+function useOlvy() {
+  const [isInitialized, setIsInitialized] = useState(false);
+  // Initialize Olvy after mounting
+  useEffect(() => {
+    if (!features().isDemoInstance) {
+      return;
+    }
+    const OlvyConfig = {
+      organisation: "webknossos",
+      // This target needs to be defined (otherwise, Olvy crashes when using .show()). However,
+      // we don't want Olvy to add any notification icons, since we do this on our own. Therefore,
+      // provide a dummy value here.
+      target: "#unused-olvy-target",
+      type: "modal",
+      view: {
+        showSearch: false,
+        compact: false,
+        showHeader: true, // only applies when widget type is embed. you cannot hide header for modal and sidebar widgets
+        showUnreadIndicator: false,
+        unreadIndicatorColor: "#cc1919",
+        unreadIndicatorPosition: "top-right",
+      },
+    };
+    window.Olvy.init(OlvyConfig);
+    setIsInitialized(true);
+  }, []);
+
+  return isInitialized;
+}
+
+function useOlvyUnreadReleasesCount(activeUser) {
+  const lastViewedTimestampWithFallback =
+    activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp != null
+      ? activeUser.novelUserExperienceInfos.lastViewedWhatsNewTimestamp
+      : activeUser.created;
+
+  const isInitialized = useOlvy();
+  const unreadCount = useFetch(
+    async () => {
+      if (!isInitialized || !features().isDemoInstance || !window.Olvy) {
+        return null;
+      }
+      return window.Olvy.getUnreadReleasesCount(
+        new Date(lastViewedTimestampWithFallback).toISOString(),
+      );
+    },
+    null,
+    [isInitialized, lastViewedTimestampWithFallback],
+  );
+  return unreadCount;
+}
+
 function NavbarMenuItem({ children, ...props }) {
   return (
     <Menu
@@ -67,17 +121,19 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
-function UserInitials({ activeUser, isMultiMember }) {
+function UserInitials({ activeUser, isMultiMember, showNotification }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
     <div style={{ position: "relative", display: "flex" }}>
-      <Avatar
-        className="hover-effect-via-opacity"
-        style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
-      >
-        {initialOf(firstName) + initialOf(lastName)}
-      </Avatar>
+      <Badge dot={showNotification}>
+        <Avatar
+          className="hover-effect-via-opacity"
+          style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
+        >
+          {initialOf(firstName) + initialOf(lastName)}
+        </Avatar>
+      </Badge>
       {isMultiMember ? (
         <SwapOutlined
           style={{
@@ -327,11 +383,33 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
 
   const isMultiMember = switchableOrganizations.length > 0;
 
+  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
+  const showNotification =
+    features().isDemoInstance && maybeUnreadReleaseCount != null
+      ? maybeUnreadReleaseCount > 0
+      : false;
+  const handleShowWhatsNewView = () => {
+    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
+      lastViewedWhatsNewTimestamp: new Date().getTime(),
+    });
+
+    Store.dispatch(setActiveUserAction(newUserSync));
+    sendAnalyticsEvent("open_whats_new_view");
+
+    window.Olvy.show();
+  };
+
   return (
     <NavbarMenuItem>
       <SubMenu
         key="loggedMenu"
-        title={<UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />}
+        title={
+          <UserInitials
+            showNotification={showNotification}
+            activeUser={activeUser}
+            isMultiMember={isMultiMember}
+          />
+        }
         style={{ padding: 0 }}
         className="sub-menu-without-padding vertical-center-flex-fix"
         {...other}
@@ -372,6 +450,17 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
             ),
           )}
         </Menu.SubMenu>
+
+        {/* The onClick has to be defined on <Menu.Item /> so that the entire menu item
+        is clickable. The dummy <a /> tag is still needed for styling. */}
+        {features().isDemoInstance ? (
+          <Menu.Item onClick={handleShowWhatsNewView}>
+            <Badge dot={showNotification}>
+              <a href="#">What&apos;s New</a>
+            </Badge>
+          </Menu.Item>
+        ) : null}
+
         <Menu.Item key="logout">
           <a href="/" onClick={handleLogout}>
             Logout
@@ -413,7 +502,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
     // Hard navigation
-    window.location.href = "/";
+    location.href = "/";
   };
 
   const version = useFetch(getAndTrackVersion, null, []);

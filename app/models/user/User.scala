@@ -120,8 +120,14 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                                and u.isUnlisted = false
                                and (u.isDeactivated = false or u.isDeactivated = $includeDeactivated)
                          order by _id""".as[UsersRow])
-        parsed <- Fox.combined(r.toList.map(parse))
+        parsed <- parseAll(r)
       } yield parsed
+
+  def findAllByMultiUser(multiUserId: ObjectId): Fox[List[User]] =
+    for {
+      r <- run(sql"""select #$columns from #$existingCollectionName where _multiUser = $multiUserId""".as[UsersRow])
+      parsed <- parseAll(r)
+    } yield parsed
 
   def findAdminsAndDatasetManagersByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {

@@ -140,6 +140,7 @@ const defaultState: OxalisState = {
     logoUrl: null,
     lastUsedByUser: 0,
     isForeign: false,
+    jobsEnabled: false,
     sortingKey: 123,
     publication: null,
   },

@@ -226,7 +226,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
           <StarOutlined className="info-tab-icon" style={{ fontSize: 18 }} />
         </td>
-        <Dropdown overlay={overlay}>
+        <Dropdown overlay={overlay} overlayStyle={{ minWidth: "unset" }}>
           <td>
             <Button type="link" style={{ padding: 0 }}>
               Process Dataset

@@ -9,6 +9,7 @@ import {
   getResolutions,
   isSegmentationLayer,
   getByteCountFromLayer,
+  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import ErrorHandling from "libs/error_handling";
 import { parseAsMaybe } from "libs/utils";
@@ -129,7 +130,7 @@ export async function requestFromStore(
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
 
-  const { activeMapping } = state.temporaryConfiguration;
+  const activeMapping = getMappingInfo(state.temporaryConfiguration.activeMapping, layerInfo.name);
   const applyAgglomerates =
     isSegmentation &&
     activeMapping != null &&

@@ -49,6 +49,7 @@ import {
 import {
   getVisibleSegmentationLayer,
   getResolutionInfoOfSegmentationLayer,
+  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
@@ -74,26 +75,32 @@ export const stlIsosurfaceConstants = {
 
 // This file defines the component MeshesView.
 
-const mapStateToProps = (state: OxalisState): * => ({
-  meshes: state.tracing != null ? state.tracing.meshes : [],
-  isImporting: state.uiInformation.isImportingMesh,
-  isosurfaces: state.isosurfaces,
-  datasetConfiguration: state.datasetConfiguration,
-  dataset: state.dataset,
-  mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
-  flycam: state.flycam,
-  activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
-  hasVolume: state.tracing.volume != null,
-  visibleSegmentationLayer: getVisibleSegmentationLayer(state),
-  zoomStep: getRequestLogZoomStep(state),
-  allowUpdate: state.tracing.restrictions.allowUpdate,
-  activeResolution: getCurrentResolution(state),
-  organization: state.dataset.owningOrganization,
-  datasetName: state.dataset.name,
-  availableMeshFiles: state.availableMeshFiles,
-  currentMeshFile: state.currentMeshFile,
-  activeUser: state.activeUser,
-});
+const mapStateToProps = (state: OxalisState): * => {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  return {
+    meshes: state.tracing != null ? state.tracing.meshes : [],
+    isImporting: state.uiInformation.isImportingMesh,
+    isosurfaces: state.isosurfaces,
+    datasetConfiguration: state.datasetConfiguration,
+    dataset: state.dataset,
+    mappingColors: getMappingInfo(
+      state.temporaryConfiguration.activeMapping,
+      visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+    ).mappingColors,
+    flycam: state.flycam,
+    activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
+    hasVolume: state.tracing.volume != null,
+    visibleSegmentationLayer,
+    zoomStep: getRequestLogZoomStep(state),
+    allowUpdate: state.tracing.restrictions.allowUpdate,
+    activeResolution: getCurrentResolution(state),
+    organization: state.dataset.owningOrganization,
+    datasetName: state.dataset.name,
+    availableMeshFiles: state.availableMeshFiles,
+    currentMeshFile: state.currentMeshFile,
+    activeUser: state.activeUser,
+  };
+};
 
 const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   updateRemoteMeshMetadata(id: string, meshMetaData: $Shape<RemoteMeshMetaData>) {

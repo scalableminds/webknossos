@@ -89,16 +89,7 @@ const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     hoveredIsosurfaceId: 0,
-    activeMapping: {
-      mappingName: null,
-      mapping: null,
-      mappingKeys: null,
-      mappingColors: null,
-      hideUnmappedIds: false,
-      isMappingEnabled: false,
-      mappingSize: 0,
-      mappingType: "JSON",
-    },
+    activeMapping: {},
     isMergerModeEnabled: false,
     isAutoBrushEnabled: false,
     gpuSetup: {

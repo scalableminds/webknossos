@@ -322,13 +322,23 @@ export type RecommendedConfiguration = $Shape<{
   segmentationOpacity: number,
 }>;
 
-export type Mapping = { [key: number]: number };
-
 export type HistogramDataForAllLayers = {
   [name: string]: APIHistogramData,
 };
 
+export type Mapping = { [key: number]: number };
 export type MappingType = "JSON" | "HDF5";
+export type ActiveMappingInfo = {
+  +mappingName: ?string,
+  +mapping: ?Mapping,
+  +mappingKeys: ?Array<number>,
+  +mappingColors: ?Array<number>,
+  +hideUnmappedIds: boolean,
+  +isMappingEnabled: boolean,
+  +mappingSize: number,
+  +mappingType: MappingType,
+};
+
 export type TemporaryConfiguration = {
   +histogramData: HistogramDataForAllLayers,
   +viewMode: ViewMode,
@@ -336,16 +346,7 @@ export type TemporaryConfiguration = {
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
   +hoveredIsosurfaceId: number,
-  +activeMapping: {
-    +mappingName: ?string,
-    +mapping: ?Mapping,
-    +mappingKeys: ?Array<number>,
-    +mappingColors: ?Array<number>,
-    +hideUnmappedIds: boolean,
-    +isMappingEnabled: boolean,
-    +mappingSize: number,
-    +mappingType: MappingType,
-  },
+  +activeMapping: { [layerName: string]: ActiveMappingInfo },
   +isMergerModeEnabled: boolean,
   +isAutoBrushEnabled: boolean,
   +gpuSetup: {

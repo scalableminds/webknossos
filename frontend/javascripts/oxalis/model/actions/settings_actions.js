@@ -53,7 +53,11 @@ type InitializeGpuSetupAction = {
   gpuFactor: number,
   maximumLayerCountToRender: number,
 };
-type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
+type SetMappingEnabledAction = {
+  type: "SET_MAPPING_ENABLED",
+  isMappingEnabled: boolean,
+  layerName: string,
+};
 type SetMappingAction = {
   type: "SET_MAPPING",
   mappingName: ?string,
@@ -62,11 +66,13 @@ type SetMappingAction = {
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
   mappingType: MappingType,
+  layerName: string,
 };
 
 type SetHideUnmappedIdsAction = {
   type: "SET_HIDE_UNMAPPED_IDS",
   hideUnmappedIds: boolean,
+  layerName: string,
 };
 
 export type SettingAction =
@@ -161,12 +167,17 @@ export const setControlModeAction = (controlMode: ControlMode): SetControlModeAc
   controlMode,
 });
 
-export const setMappingEnabledAction = (isMappingEnabled: boolean): SetMappingEnabledAction => ({
+export const setMappingEnabledAction = (
+  layerName: string,
+  isMappingEnabled: boolean,
+): SetMappingEnabledAction => ({
   type: "SET_MAPPING_ENABLED",
+  layerName,
   isMappingEnabled,
 });
 
 export const setMappingAction = (
+  layerName: string,
   mappingName: ?string,
   mapping: ?Mapping,
   mappingKeys: ?Array<number>,
@@ -175,6 +186,7 @@ export const setMappingAction = (
   mappingType: MappingType = "JSON",
 ): SetMappingAction => ({
   type: "SET_MAPPING",
+  layerName,
   mappingName,
   mapping,
   mappingKeys,
@@ -183,9 +195,13 @@ export const setMappingAction = (
   mappingType,
 });
 
-export const setHideUnmappedIdsAction = (hideUnmappedIds: boolean): SetHideUnmappedIdsAction => ({
+export const setHideUnmappedIdsAction = (
+  layerName: string,
+  hideUnmappedIds: boolean,
+): SetHideUnmappedIdsAction => ({
   type: "SET_HIDE_UNMAPPED_IDS",
   hideUnmappedIds,
+  layerName,
 });
 
 export const initializeGpuSetupAction = (

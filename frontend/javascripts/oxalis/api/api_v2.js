@@ -574,14 +574,14 @@ class DataApi {
       throw new Error(messages["mapping.too_few_textures"]);
     }
 
-    // todop: should be adapted to multiple segmentation layers
-    const segmentationLayer = this.model.getSomeSegmentationLayer();
+    const segmentationLayer = this.model.getLayerByName(layerName);
     const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
     Store.dispatch(
       setMappingAction(
+        layerName,
         "<custom mapping>",
         _.clone(mapping),
         Object.keys(mapping).map(x => parseInt(x, 10)),

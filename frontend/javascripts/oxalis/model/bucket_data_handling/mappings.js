@@ -10,7 +10,11 @@ import type { APIMapping } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { doWithToken } from "admin/admin_rest_api";
-import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMappings,
+  getMappingInfo,
+  getLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
@@ -103,15 +107,17 @@ class Mappings {
     _progressCallback?: ProgressCallback,
   ) {
     this.progressCallback = _progressCallback || noopProgressCallback;
-    const progressCallback = this.progressCallback;
+    const { progressCallback } = this;
     if (mappingName == null) {
-      Store.dispatch(setMappingAction(null));
+      Store.dispatch(setMappingAction(this.layerName, null));
       return;
     }
 
     if (mappingType === "HDF5") {
-      Store.dispatch(setMappingAction(mappingName, null, null, null, false, mappingType));
-      Store.dispatch(setMappingEnabledAction(true));
+      Store.dispatch(
+        setMappingAction(this.layerName, mappingName, null, null, null, false, mappingType),
+      );
+      Store.dispatch(setMappingEnabledAction(this.layerName, true));
       return;
     }
 
@@ -132,6 +138,7 @@ class Mappings {
     await progressCallback(false, "Applying mapping...");
     Store.dispatch(
       setMappingAction(
+        this.layerName,
         mappingName,
         mappingObject,
         mappingKeys,
@@ -243,9 +250,11 @@ class Mappings {
     );
 
     listenToStoreProperty(
-      state => state.temporaryConfiguration.activeMapping.mapping,
+      state => getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mapping,
       mapping => {
-        const { mappingKeys } = Store.getState().temporaryConfiguration.activeMapping;
+        const { mappingKeys } = Store.getState().temporaryConfiguration.activeMapping[
+          this.layerName
+        ];
         this.updateMappingTextures(mapping, mappingKeys);
       },
     );
@@ -254,7 +263,13 @@ class Mappings {
     // proper initialization of the texture with -1.
     // There is a race condition otherwise leading to hard-to-debug errors.
     listenToStoreProperty(
-      state => state.temporaryConfiguration.activeMapping.mappingColors,
+      state => {
+        const mappingInfo = state.temporaryConfiguration.activeMapping[this.layerName];
+        if (!mappingInfo) {
+          return null;
+        }
+        return mappingInfo.mappingColors;
+      },
       mappingColors => this.updateMappingColorTexture(mappingColors),
       true,
     );
@@ -320,7 +335,7 @@ class Mappings {
       uint8Values.length / MAPPING_TEXTURE_WIDTH / 4,
     );
     await progressCallback(true, "Mapping successfully applied.");
-    Store.dispatch(setMappingEnabledAction(true));
+    Store.dispatch(setMappingEnabledAction(this.layerName, true));
 
     // Reset progressCallback, so it doesn't trigger when setting mappings
     // programmatically, later, e.g. in merger mode

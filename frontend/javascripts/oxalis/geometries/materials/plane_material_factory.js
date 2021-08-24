@@ -706,9 +706,9 @@ class PlaneMaterialFactory {
       maximumLayerCountToRender - (hasSegmentation ? 1 : 0),
     );
     const packingDegreeLookup = getPackingDegreeLookup();
-    const segmentationLayerNames = Model.getSegmentationLayers().map(layer =>
-      sanitizeName(layer.name),
-    );
+    const segmentationLayerNames = hasSegmentation
+      ? Model.getSegmentationLayers().map(layer => sanitizeName(layer.name))
+      : [];
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
 
@@ -718,7 +718,6 @@ class PlaneMaterialFactory {
       colorLayerNames,
       segmentationLayerNames,
       packingDegreeLookup,
-      hasSegmentation,
       isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,

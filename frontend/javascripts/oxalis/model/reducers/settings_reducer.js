@@ -1,13 +1,7 @@
 // @flow
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
-import {
-  updateKey,
-  updateKey2,
-  updateKey3,
-  type StateShape1,
-  type StateShape2,
-} from "oxalis/model/helpers/deep_update";
+import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
+import { updateKey, updateKey3, type StateShape1 } from "oxalis/model/helpers/deep_update";
 import { clamp } from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
 
@@ -28,8 +22,9 @@ const updateTemporaryConfig = (state: OxalisState, shape: StateShape1<"temporary
 
 const updateActiveMapping = (
   state: OxalisState,
-  shape: StateShape2<"temporaryConfiguration", "activeMapping">,
-) => updateKey2(state, "temporaryConfiguration", "activeMapping", shape);
+  shape: $Shape<ActiveMappingInfo>,
+  layerName: string,
+) => updateKey3(state, "temporaryConfiguration", "activeMapping", layerName, shape);
 
 //
 // Reducer
@@ -123,16 +118,24 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
     case "SET_MAPPING_ENABLED": {
-      const { isMappingEnabled } = action;
-      return updateActiveMapping(state, {
-        isMappingEnabled,
-      });
+      const { isMappingEnabled, layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          isMappingEnabled,
+        },
+        layerName,
+      );
     }
     case "SET_HIDE_UNMAPPED_IDS": {
-      const { hideUnmappedIds } = action;
-      return updateActiveMapping(state, {
-        hideUnmappedIds,
-      });
+      const { hideUnmappedIds, layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          hideUnmappedIds,
+        },
+        layerName,
+      );
     }
     case "SET_MAPPING": {
       const {
@@ -142,16 +145,21 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         mappingColors,
         mappingType,
         hideUnmappedIds,
+        layerName,
       } = action;
-      return updateActiveMapping(state, {
-        mappingName,
-        mapping,
-        mappingKeys,
-        mappingColors,
-        mappingType,
-        mappingSize: mappingKeys != null ? mappingKeys.length : 0,
-        hideUnmappedIds: hideUnmappedIds || false,
-      });
+      return updateActiveMapping(
+        state,
+        {
+          mappingName,
+          mapping,
+          mappingKeys,
+          mappingColors,
+          mappingType,
+          mappingSize: mappingKeys != null ? mappingKeys.length : 0,
+          hideUnmappedIds: hideUnmappedIds || false,
+        },
+        layerName,
+      );
     }
     default:
     // pass;

@@ -53,6 +53,7 @@ import {
   getResolutionInfo,
   getVisibleSegmentationLayer,
   getSomeSegmentationLayer,
+  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -992,6 +993,7 @@ class DataApi {
     // todop: setMappingAction should take layer name
     Store.dispatch(
       setMappingAction(
+        layerName,
         "<custom mapping>",
         _.clone(mapping),
         // Object.keys is sorted for numerical keys according to the spec:
@@ -1006,8 +1008,8 @@ class DataApi {
   /**
    * Enables/Disables the active mapping.
    */
-  setMappingEnabled(isEnabled: boolean) {
-    Store.dispatch(setMappingEnabledAction(isEnabled));
+  setMappingEnabled(isEnabled: boolean, layerName: string) {
+    Store.dispatch(setMappingEnabledAction(layerName, isEnabled));
   }
 
   /**
@@ -1036,20 +1038,28 @@ class DataApi {
    * Sets the active mapping for the segmentation layer.
    *
    */
-  activateMapping(mappingName?: string, mappingType: MappingType = "JSON"): void {
-    const activeSegmentationLayer = this.model.getVisibleSegmentationLayer();
-    if (!activeSegmentationLayer) {
+  activateMapping(
+    mappingName?: string,
+    mappingType: MappingType = "JSON",
+    layerName: string,
+  ): void {
+    const segmentationLayer =
+      layerName != null
+        ? this.model.getLayerByName(layerName)
+        : this.model.getVisibleSegmentationLayer();
+    if (!segmentationLayer) {
       return;
     }
-    return activeSegmentationLayer.setActiveMapping(mappingName, mappingType);
+    segmentationLayer.setActiveMapping(mappingName, mappingType);
   }
 
   /**
    * Returns whether a mapping is currently enabled.
    *
    */
-  isMappingEnabled(): boolean {
-    return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
+  isMappingEnabled(layerName: string): boolean {
+    return getMappingInfo(Store.getState().temporaryConfiguration.activeMapping, layerName)
+      .isMappingEnabled;
   }
 
   refreshIsosurfaces() {

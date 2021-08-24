@@ -12,7 +12,7 @@ import { type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
 import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getSomeSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getSomeSegmentationLayer, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -42,8 +42,8 @@ type StateProps = {|
   hideUnmappedIds: ?boolean,
   mappingType: MappingType,
   mappingColors: ?Array<number>,
-  setMappingEnabled: boolean => void,
-  setHideUnmappedIds: boolean => void,
+  setMappingEnabled: (string, boolean) => void,
+  setHideUnmappedIds: (string, boolean) => void,
   setAvailableMappingsForLayer: (string, Array<string>, Array<string>) => void,
   activeViewport: OrthoView,
   activeCellId: number,
@@ -86,7 +86,7 @@ class MappingSettingsView extends React.Component<Props, State> {
   };
 
   handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
-    this.props.setHideUnmappedIds(hideUnmappedIds);
+    this.props.setHideUnmappedIds(this.props.layerName, hideUnmappedIds);
   };
 
   handleChangeMapping = (packedMappingNameWithCategory: string): void => {
@@ -142,7 +142,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     }
     this.setState({ shouldMappingBeEnabled });
     if (this.props.mappingName != null) {
-      this.props.setMappingEnabled(shouldMappingBeEnabled);
+      this.props.setMappingEnabled(this.props.layerName, shouldMappingBeEnabled);
     }
   };
 
@@ -274,16 +274,20 @@ const mapDispatchToProps = {
   setHideUnmappedIds: setHideUnmappedIdsAction,
 };
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
+  const activeMappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMapping,
+    ownProps.layerName,
+  );
   return {
     dataset: state.dataset,
     position: getPosition(state.flycam),
-    hideUnmappedIds: state.temporaryConfiguration.activeMapping.hideUnmappedIds,
-    isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
-    mapping: state.temporaryConfiguration.activeMapping.mapping,
-    mappingName: state.temporaryConfiguration.activeMapping.mappingName,
-    mappingType: state.temporaryConfiguration.activeMapping.mappingType,
-    mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
+    hideUnmappedIds: activeMappingInfo.hideUnmappedIds,
+    isMappingEnabled: activeMappingInfo.isMappingEnabled,
+    mapping: activeMappingInfo.mapping,
+    mappingName: activeMappingInfo.mappingName,
+    mappingType: activeMappingInfo.mappingType,
+    mappingColors: activeMappingInfo.mappingColors,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
     segmentationLayer: getSomeSegmentationLayer(state),

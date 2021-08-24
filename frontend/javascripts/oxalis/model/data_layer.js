@@ -52,6 +52,7 @@ class DataLayer {
       getResolutionInfo(this.resolutions),
       layerInfo.elementClass,
       this.isSegmentation,
+      this.name,
     );
 
     this.pullQueue = new PullQueue(

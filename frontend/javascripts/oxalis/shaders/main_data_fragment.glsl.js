@@ -17,7 +17,6 @@ type Params = {|
   colorLayerNames: string[],
   segmentationLayerNames: string[],
   packingDegreeLookup: { [string]: number },
-  hasSegmentation: boolean,
   isMappingSupported: boolean,
   dataTextureCountPerLayer: number,
   resolutions: Array<Vector3>,
@@ -37,7 +36,7 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 }
 
 export default function getMainFragmentShader(params: Params) {
-  const { hasSegmentation } = params;
+  const hasSegmentation = params.segmentationLayerNames.length > 0;
 
   return _.template(
     `

@@ -18,6 +18,7 @@ import type {
   DatasetConfiguration,
   BoundingBoxObject,
   OxalisState,
+  ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, {
@@ -529,6 +530,12 @@ export function getVisibleSegmentationLayer(state: OxalisState): ?APISegmentatio
   return null;
 }
 
+export function getSegmentationAnnotationLayer(state: OxalisState): ?APISegmentationLayer {
+  // Currently, this is a simple delegation. Later we should ask the user for which segmentaton layer,
+  // annotation layer should be created. That layer should then be returned here.
+  return getVisibleSegmentationLayer(state);
+}
+
 export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
@@ -778,6 +785,28 @@ export function is2dDataset(dataset: APIDataset): boolean {
   // which is usually switched to the 3D layout after the proper dataset has
   // been loaded.
   return getDatasetExtentInVoxel(dataset).depth === 1;
+}
+
+export function getMappingInfo(
+  activeMappingInfos: { [layerName: string]: ActiveMappingInfo },
+  layerName: ?string,
+) {
+  if (layerName != null && activeMappingInfos[layerName]) {
+    return activeMappingInfos[layerName];
+  }
+
+  // Return a dummy object (this mirrors webKnossos' behavior before the support of
+  // multiple segmentation layers)
+  return {
+    mappingName: null,
+    mapping: null,
+    mappingKeys: null,
+    mappingColors: null,
+    hideUnmappedIds: false,
+    isMappingEnabled: false,
+    mappingSize: 0,
+    mappingType: "JSON",
+  };
 }
 
 export default {};

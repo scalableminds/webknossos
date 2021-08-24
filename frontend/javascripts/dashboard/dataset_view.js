@@ -29,6 +29,7 @@ import { getJobs } from "admin/admin_rest_api";
 import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
+import { Unicode } from "oxalis/constants";
 const { Search, Group: InputGroup } = Input;
 
 type Props = {
@@ -42,7 +43,9 @@ type PersistenceState = {
   datasetFilteringMode: DatasetFilteringMode,
 };
 
-const CONVERSION_JOBS_REFRESH_INTERVAL = 60000; // 60 seconds
+const CONVERSION_JOBS_REFRESH_INTERVAL = 60 * 1000;
+const MAX_JOBS_TO_DISPLAY = 5;
+const RECENT_DATASET_DAY_THRESHOLD = 30;
 
 const persistence: Persistence<PersistenceState> = new Persistence(
   {
@@ -206,7 +209,8 @@ function DatasetView(props: Props) {
     const newJobs = jobs
       .filter(
         job =>
-          job.type === "convert_to_wkw" && moment.duration(now.diff(job.createdAt)).asDays() <= 3,
+          job.type === "convert_to_wkw" &&
+          moment.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
       )
       .sort((a, b) => b.createdAt - a.createdAt);
 
@@ -227,14 +231,14 @@ function DatasetView(props: Props) {
     );
     const newJobsList = (
       <div style={{ paddingTop: 8 }}>
-        {newJobs.slice(0, 5).map(job => {
+        {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map(job => {
           const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
           return (
             <Row key={job.id} gutter={16}>
               <Col span={10}>
                 <Tooltip title={tooltip}>{icon}</Tooltip>
                 {` ${job.datasetName || "UNKNOWN"}`}
-                &nbsp;(started at&nbsp;
+                {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
                 <FormattedDate timestamp={job.createdAt} />
                 <span>)</span>
               </Col>

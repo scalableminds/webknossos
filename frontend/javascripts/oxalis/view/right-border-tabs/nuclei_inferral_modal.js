@@ -17,13 +17,13 @@ type Props = {
 export default function NucleiInferralModal(props: Props) {
   const { dataset, handleClose } = props;
   const [selectedColorLayerName, setSelectedColorLayerName] = useState(null);
-  const colorLayers = getColorLayers(dataset);
+  const colorLayerNames = getColorLayers(dataset).map(layer => layer.name);
   useEffect(() => {
-    if (colorLayers.length === 1) {
-      setSelectedColorLayerName(colorLayers[0].name);
+    if (colorLayerNames.length === 1) {
+      setSelectedColorLayerName(colorLayerNames[0]);
     }
   });
-  if (colorLayers.length < 1) {
+  if (colorLayerNames.length < 1) {
     return null;
   }
 
@@ -83,7 +83,7 @@ export default function NucleiInferralModal(props: Props) {
         />
       </div>
       <br />
-      {colorLayers.length > 1 ? (
+      {colorLayerNames.length > 1 ? (
         <React.Fragment>
           <p>
             The detection approach uses a single color layer to predict the nuclei. Please select
@@ -100,9 +100,9 @@ export default function NucleiInferralModal(props: Props) {
                 option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
               }
             >
-              {colorLayers.map(colorLayer => (
-                <Select.Option key={colorLayer.name} value={colorLayer.name}>
-                  {colorLayer.name}
+              {colorLayerNames.map(colorLayerName => (
+                <Select.Option key={colorLayerName} value={colorLayerName}>
+                  {colorLayerName}
                 </Select.Option>
               ))}
             </Select>

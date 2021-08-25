@@ -221,7 +221,7 @@ function ShortcutsInfo() {
   );
 }
 
-function getCellInfo(dataset, globalMousePosition: ?Vector3) {
+function getCellInfo(globalMousePosition: ?Vector3) {
   const getSegmentIdString = () => {
     const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
     if (!hoveredCellInfo) {

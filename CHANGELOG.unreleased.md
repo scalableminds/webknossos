@@ -39,6 +39,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that creating a new node in merger mode did always turn of the "Hide unmapped segments" setting. [#5668](https://github.com/scalableminds/webknossos/pull/5668)
 - Fixed that undoing of volume annotations might overwrite the backend data on not loaded magnifications with nothing. [#5608](https://github.com/scalableminds/webknossos/pull/5608)
 - Fixed a bug where volume annotation downloads were occasionally cancelled with “Connection reset by peer” error. [#5660](https://github.com/scalableminds/webknossos/pull/5660)
+- Fixed that the ad-hoc mesh computation was disabled for volume annotations. [#5689](https://github.com/scalableminds/webknossos/pull/5689)
 
 ### Removed
 -

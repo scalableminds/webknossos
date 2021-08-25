@@ -40,6 +40,11 @@ export type InferSegmentationInViewportAction = {
 };
 export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
 export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
+export type AddBucketAddressesToSegment = {
+  type: "ADD_BUCKET_ADDRESSES_TO_SEGMENT",
+  segmentId: number,
+  bucketAddresses: Array<Vector4>,
+};
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -57,6 +62,7 @@ export type VolumeTracingAction =
   | CopySegmentationLayerAction
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
+  | AddBucketAddressesToSegment
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
@@ -106,6 +112,15 @@ export const finishEditingAction = (): FinishEditingAction => ({
 export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
   type: "SET_ACTIVE_CELL",
   cellId,
+});
+
+export const addBucketAddressesToSegment = (
+  segmentId: number,
+  bucketAddresses: Array<Vector4>,
+): AddBucketAddressesToSegment => ({
+  type: "ADD_BUCKET_ADDRESSES_TO_SEGMENT",
+  segmentId,
+  bucketAddresses,
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({

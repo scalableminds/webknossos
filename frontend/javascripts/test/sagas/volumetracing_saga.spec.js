@@ -38,6 +38,7 @@ const volumeTracing: VolumeTracing = {
   createdTimestamp: 0,
   tracingId: "tracingId",
   version: 0,
+  segments: new Map(),
   activeCellId: 0,
   cells: {},
   maxCellId: 0,

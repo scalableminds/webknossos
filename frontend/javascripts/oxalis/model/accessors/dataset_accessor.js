@@ -130,12 +130,20 @@ export class ResolutionInfo {
     return this.resolutionMap.get(powerOfTwo);
   }
 
+  getHighestResolutionPowerOf2(): number {
+    return _.max(Array.from(this.resolutionMap.keys()));
+  }
+
+  getLowestResolutionPowerOf2(): number {
+    return _.min(Array.from(this.resolutionMap.keys()));
+  }
+
   getHighestResolutionIndex(): number {
     return Math.log2(this.getHighestResolutionPowerOf2());
   }
 
-  getHighestResolutionPowerOf2(): number {
-    return _.max(Array.from(this.resolutionMap.keys()));
+  getLowestResolutionIndex(): number {
+    return Math.log2(this.getLowestResolutionPowerOf2());
   }
 
   getAllIndices(): Array<number> {

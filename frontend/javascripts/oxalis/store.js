@@ -42,6 +42,7 @@ import {
   type Rect,
   type Vector2,
   type Vector3,
+  type Vector4,
   type AnnotationTool,
 } from "oxalis/constants";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
@@ -217,9 +218,18 @@ export type SkeletonTracing = {|
   +showSkeletons: boolean,
 |};
 
+export type Segment = {
+  id: number,
+  name: string,
+  coveredBucketAddresses: Map<Vector4, boolean>,
+};
+
+export type SegmentsMap = Map<number, Segment>;
+
 export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
+  +segments: SegmentsMap,
   +maxCellId: number,
   +activeCellId: number,
   +lastCentroid: ?Vector3,

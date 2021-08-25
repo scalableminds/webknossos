@@ -35,6 +35,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       const volumeTracing: VolumeTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
+        segments: new Map(),
         activeCellId: 0,
         lastCentroid: null,
         contourTracingMode: ContourModeEnum.DRAW,
@@ -94,6 +95,44 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           // Possibly update the maxCellId after volume annotation
           const { activeCellId, maxCellId } = volumeTracing;
           return setMaxCellReducer(state, Math.max(activeCellId, maxCellId));
+        }
+
+        case "ADD_BUCKET_ADDRESSES_TO_SEGMENT": {
+          const { segmentId, bucketAddresses } = action;
+          const { segments } = volumeTracing;
+          const coveredBucketAddresses = new Map();
+          let newState = state;
+          for (const address of bucketAddresses) {
+            coveredBucketAddresses.set(address, true);
+          }
+          if (!segments.has(segmentId)) {
+            const newSegment = {
+              id: segmentId,
+              name: `Segment ${segmentId}`,
+              coveredBucketAddresses,
+            };
+            newState = update(state, {
+              tracing: {
+                volume: {
+                  // Immutability helper seems to automatically transform number keys to strings. Thus we also need a string here
+                  segments: { $add: [[`${segmentId}`, newSegment]] },
+                },
+              },
+            });
+          } else {
+            newState = update(state, {
+              tracing: {
+                volume: {
+                  segments: {
+                    [segmentId]: {
+                      coveredBucketAddresses: { $add: coveredBucketAddresses },
+                    },
+                  },
+                },
+              },
+            });
+          }
+          return newState;
         }
 
         default:

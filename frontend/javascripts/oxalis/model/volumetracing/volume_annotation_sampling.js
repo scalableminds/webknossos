@@ -5,6 +5,8 @@ import constants, { type Vector3, type LabeledVoxelsMap } from "oxalis/constants
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import Store from "oxalis/store";
+import { addBucketAddressesToSegment } from "oxalis/model/actions/volumetracing_actions";
 import messages from "messages";
 import type { DimensionMap } from "oxalis/model/dimensions";
 
@@ -290,6 +292,7 @@ export function applyVoxelMap(
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
 ) {
+  // TODO: handle case where the value is overwritten or erased (should be the same)
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
@@ -304,9 +307,11 @@ export function applyVoxelMap(
     dataCube.pushQueue.insert(bucket);
     bucket.trigger("bucketLabeled");
   }
-
+  const lowestResolutionIndex = dataCube.resolutionInfo.getLowestResolutionIndex();
+  const zoomedAddressesOfAnnotatedBuckets = [];
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
+    const isBucketInLowestResolution = labeledBucketZoomedAddress[3] === lowestResolutionIndex;
     if (bucket.type === "null") {
       continue;
     }
@@ -315,6 +320,7 @@ export function applyVoxelMap(
     get3DAddress(0, 0, out);
     const thirdDimensionValueInBucket = out[2];
     for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
+      let annotatedBucket = false;
       const newThirdDimValue = thirdDimensionValueInBucket + sliceCount;
       if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
@@ -336,6 +342,7 @@ export function applyVoxelMap(
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
+            annotatedBucket = isBucketInLowestResolution;
             get3DAddress(firstDim, secondDim, out);
             const voxelToLabel = out;
             voxelToLabel[thirdDimensionIndex] =
@@ -348,9 +355,15 @@ export function applyVoxelMap(
           }
         }
       }
+      if (annotatedBucket) {
+        zoomedAddressesOfAnnotatedBuckets.push(bucket.zoomedAddress);
+      }
     }
 
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);
+    if (zoomedAddressesOfAnnotatedBuckets.length > 0) {
+      Store.dispatch(addBucketAddressesToSegment(cellId, zoomedAddressesOfAnnotatedBuckets));
+    }
   }
 }

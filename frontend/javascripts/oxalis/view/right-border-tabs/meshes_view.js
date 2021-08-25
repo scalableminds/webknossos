@@ -84,6 +84,7 @@ const mapStateToProps = (state: OxalisState): * => ({
   mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
   flycam: state.flycam,
   activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
+  segments: state.tracing.volume ? state.tracing.volume.segments : null,
   hasVolume: state.tracing.volume != null,
   segmentationLayer: getSegmentationLayer(state.dataset),
   zoomStep: getRequestLogZoomStep(state),
@@ -621,9 +622,16 @@ class MeshesView extends React.Component<Props, State> {
         </div>
       </React.Fragment>
     );
-
+    const allSegments = this.props.segments ? Array.from(this.props.segments.values()) : [];
     return (
       <div className="padded-tab-content">
+        {allSegments.length > 0 ? (
+          <List size="small">
+            {allSegments.map(segment => (
+              <List.Item key={segment.id}>{segment.name}</List.Item>
+            ))}
+          </List>
+        ) : null}
         {getMeshesHeader()}
         <List
           size="small"

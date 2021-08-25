@@ -40,6 +40,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const isMappingEnabled = useSelector(
     state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
   );
+  // todop: fix activeMapping access
   const hideUnmappedIds = useSelector(
     state => state.temporaryConfiguration.activeMapping.hideUnmappedIds,
   );

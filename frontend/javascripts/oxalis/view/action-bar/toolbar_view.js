@@ -13,7 +13,10 @@ import Constants, {
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import { document } from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getRenderableResolutionForSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMappingInfoForSupportedLayer,
+  getRenderableResolutionForSegmentation,
+} from "oxalis/model/accessors/dataset_accessor";
 import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -225,10 +228,12 @@ function CreateCellButton() {
   );
 
   const mappingColors = useSelector(
-    state => state.temporaryConfiguration.activeMapping.mappingColors,
+    state =>
+      getMappingInfoForSupportedLayer(state.temporaryConfiguration.activeMapping).mappingColors,
   );
   const isMappingEnabled = useSelector(
-    state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
+    state =>
+      getMappingInfoForSupportedLayer(state.temporaryConfiguration.activeMapping).isMappingEnabled,
   );
   const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;

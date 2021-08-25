@@ -83,7 +83,7 @@ class Mappings {
     };
 
     listenToStoreProperty(
-      state => state.temporaryConfiguration.activeMapping,
+      state => getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName),
       mapping => {
         const shouldReload = isAgglomerate(oldMapping) || isAgglomerate(mapping);
         oldMapping = mapping;
@@ -258,19 +258,15 @@ class Mappings {
         );
         this.updateMappingTextures(mapping, mappingKeys);
       },
+      true,
     );
 
     // updateMappingColorTexture has to be called at least once to guarantee
     // proper initialization of the texture with -1.
     // There is a race condition otherwise leading to hard-to-debug errors.
     listenToStoreProperty(
-      state => {
-        const mappingInfo = state.temporaryConfiguration.activeMapping[this.layerName];
-        if (!mappingInfo) {
-          return null;
-        }
-        return mappingInfo.mappingColors;
-      },
+      state =>
+        getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mappingColors,
       mappingColors => this.updateMappingColorTexture(mappingColors),
       true,
     );

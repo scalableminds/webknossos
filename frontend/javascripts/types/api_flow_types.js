@@ -145,6 +145,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   logoUrl: ?string,
   lastUsedByUser: number,
   isForeign: boolean,
+  jobsEnabled: boolean,
   sortingKey: number,
   owningOrganization: string,
   publication: ?APIPublication,
@@ -203,6 +204,7 @@ export type APIUserBase = {
 export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
   shouldSeeModernControlsModal?: boolean,
+  lastViewedWhatsNewTimestamp?: number,
 |};
 
 export type APIUserTheme = "auto" | "light" | "dark";
@@ -249,16 +251,18 @@ export type APIRestrictions = {|
 
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";
 
+export type APIResolutionRestrictions = {
+  min?: number,
+  max?: number,
+};
+
 export type APISettings = {|
   +allowedModes: Array<APIAllowedMode>,
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
   +mergerMode?: boolean,
-  +resolutionRestrictions: {
-    min?: number,
-    max?: number,
-  },
+  +resolutionRestrictions: APIResolutionRestrictions,
 |};
 
 export const APIAnnotationTypeEnum = Enum.make({

@@ -21,6 +21,7 @@ import {
   type AddBucketToUndoAction,
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
+  type MaybeBucketLoadedPromise,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   _all,
@@ -75,7 +76,12 @@ import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const byteArrayToLz4Array = createWorker(compressLz4Block);
 
-type UndoBucket = { zoomedBucketAddress: Vector4, data: Uint8Array };
+type UndoBucket = {
+  zoomedBucketAddress: Vector4,
+  data: Uint8Array,
+  backendData?: Uint8Array,
+  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+};
 type VolumeAnnotationBatch = Array<UndoBucket>;
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
@@ -133,12 +139,13 @@ export function* collectUndoStates(): Saga<void> {
         }
         previousAction = skeletonUserAction;
       } else if (addBucketToUndoAction) {
-        const { zoomedBucketAddress, bucketData } = addBucketToUndoAction;
+        const { zoomedBucketAddress, bucketData, maybeBucketLoadedPromise } = addBucketToUndoAction;
         pendingCompressions.push(
           yield* fork(
             compressBucketAndAddToUndoBatch,
             zoomedBucketAddress,
             bucketData,
+            maybeBucketLoadedPromise,
             currentVolumeAnnotationBatch,
           ),
         );
@@ -207,6 +214,7 @@ function* getSkeletonTracingToUndoState(
 function* compressBucketAndAddToUndoBatch(
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
+  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
   undoBatch: VolumeAnnotationBatch,
 ): Saga<void> {
   const bucketDataAsByteArray = new Uint8Array(
@@ -216,7 +224,26 @@ function* compressBucketAndAddToUndoBatch(
   );
   const compressedBucketData = yield* call(byteArrayToLz4Array, bucketDataAsByteArray, true);
   if (compressedBucketData != null) {
-    undoBatch.push({ zoomedBucketAddress, data: compressedBucketData });
+    const volumeUndoPart: UndoBucket = {
+      zoomedBucketAddress,
+      data: compressedBucketData,
+      maybeBucketLoadedPromise,
+    };
+    if (maybeBucketLoadedPromise != null) {
+      maybeBucketLoadedPromise.then(async backendBucketData => {
+        // Once the backend data is fetched, do not directly merge it with the already saved undo data
+        // as this operation is only needed, when the volume action is undone. Additionally merging is more
+        // expensive than saving the backend data. Thus the data is only merged upon an undo action / when it is needed.
+        const backendDataAsByteArray = new Uint8Array(
+          backendBucketData.buffer,
+          backendBucketData.byteOffset,
+          backendBucketData.byteLength,
+        );
+        const compressedBackendData = await byteArrayToLz4Array(backendDataAsByteArray, true);
+        volumeUndoPart.backendData = compressedBackendData;
+      });
+    }
+    undoBatch.push(volumeUndoPart);
   }
 }
 
@@ -274,6 +301,15 @@ function* applyStateOfStack(
   }
 }
 
+function mergeDataWithBackendDataInPlace(
+  originalData: BucketDataArray,
+  backendData: BucketDataArray,
+) {
+  for (let i = 0; i < originalData.length; ++i) {
+    originalData[i] = originalData[i] || backendData[i];
+  }
+}
+
 function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
 ): Saga<VolumeUndoState> {
@@ -284,19 +320,51 @@ function* applyAndGetRevertingVolumeBatch(
   }
   const { cube } = segmentationLayer;
   const allCompressedBucketsOfCurrentState: VolumeAnnotationBatch = [];
-  for (const { zoomedBucketAddress, data: compressedBucketData } of volumeAnnotationBatch) {
+  for (const volumeUndoBucket of volumeAnnotationBatch) {
+    const {
+      zoomedBucketAddress,
+      data: compressedBucketData,
+      backendData: compressedBackendData,
+    } = volumeUndoBucket;
+    let { maybeBucketLoadedPromise } = volumeUndoBucket;
     const bucket = cube.getOrCreateBucket(zoomedBucketAddress);
     if (bucket.type === "null") {
       continue;
     }
     const bucketData = bucket.getData();
+    if (compressedBackendData != null) {
+      // If the backend data for the bucket has been fetched in the meantime,
+      // we can first merge the data with the current data and then add this to the undo batch.
+      const decompressedBackendData = yield* call(
+        byteArrayToLz4Array,
+        compressedBackendData,
+        false,
+      );
+      if (decompressedBackendData) {
+        mergeDataWithBackendDataInPlace(bucketData, decompressedBackendData);
+      }
+      maybeBucketLoadedPromise = null;
+    }
     yield* call(
       compressBucketAndAddToUndoBatch,
       zoomedBucketAddress,
       bucketData,
+      maybeBucketLoadedPromise,
       allCompressedBucketsOfCurrentState,
     );
-    const decompressedBucketData = yield* call(byteArrayToLz4Array, compressedBucketData, false);
+    let decompressedBucketData = null;
+    if (compressedBackendData != null) {
+      let decompressedBackendData;
+      [decompressedBucketData, decompressedBackendData] = yield _all([
+        _call(byteArrayToLz4Array, compressedBucketData, false),
+        _call(byteArrayToLz4Array, compressedBackendData, false),
+      ]);
+      if (decompressedBucketData && decompressedBackendData) {
+        mergeDataWithBackendDataInPlace(decompressedBucketData, decompressedBackendData);
+      }
+    } else {
+      decompressedBucketData = yield* call(byteArrayToLz4Array, compressedBucketData, false);
+    }
     if (decompressedBucketData) {
       // Set the new bucket data to add the bucket directly to the pushqueue.
       cube.setBucketData(zoomedBucketAddress, decompressedBucketData);

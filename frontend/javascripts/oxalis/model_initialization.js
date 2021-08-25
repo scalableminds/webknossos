@@ -116,7 +116,6 @@ export async function initialize(
     datasetId,
     versions,
   );
-
   const displayedVolumeTracings = [];
   if (tracing != null && tracing.volume != null) {
     displayedVolumeTracings.push(tracing.volume.id);

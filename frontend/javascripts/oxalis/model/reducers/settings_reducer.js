@@ -146,15 +146,11 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       );
     }
     case "SET_MAPPING": {
-      const {
-        mappingName,
-        mapping,
-        mappingKeys,
-        mappingColors,
-        mappingType,
-        hideUnmappedIds,
-        layerName,
-      } = action;
+      const { mappingName, mapping, mappingKeys, mappingColors, mappingType, layerName } = action;
+      const hideUnmappedIds =
+        action.hideUnmappedIds != null
+          ? action.hideUnmappedIds
+          : getMappingInfo(state.temporaryConfiguration.activeMapping, layerName).hideUnmappedIds;
       return updateActiveMapping(
         state,
         {
@@ -164,7 +160,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           mappingColors,
           mappingType,
           mappingSize: mappingKeys != null ? mappingKeys.length : 0,
-          hideUnmappedIds: hideUnmappedIds || false,
+          hideUnmappedIds,
         },
         layerName,
       );

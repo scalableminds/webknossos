@@ -26,7 +26,7 @@ import {
   getElementClass,
   getBoundaries,
   getEnabledLayers,
-  getUnrenderableLayersForCurrentZoom,
+  getUnrenderableLayerInfosForCurrentZoom,
   getSegmentationLayerWithEnabledMapping,
   getMappingInfoForSupportedLayer,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -348,7 +348,7 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getUnrenderableLayersForCurrentZoom(storeState),
+        storeState => getUnrenderableLayerInfosForCurrentZoom(storeState).map(({ layer }) => layer),
         unrenderableLayers => {
           const unrenderableLayerNames = unrenderableLayers.map(l => l.name);
           for (const dataLayer of Model.getAllLayers()) {

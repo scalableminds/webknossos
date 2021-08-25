@@ -34,6 +34,13 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 
 export type ResolutionsMap = Map<number, Vector3>;
 
+export type SmallerOrHigherInfo = { smaller: boolean, higher: boolean };
+
+type UnrenderableLayersInfos = {
+  layer: DataLayerType,
+  smallerOrHigherInfo: SmallerOrHigherInfo,
+};
+
 export class ResolutionInfo {
   resolutions: $ReadOnlyArray<Vector3>;
   resolutionMap: $ReadOnlyMap<number, Vector3>;
@@ -132,12 +139,16 @@ export class ResolutionInfo {
     return _.max(Array.from(this.resolutionMap.keys()));
   }
 
+  getAllIndices(): Array<number> {
+    return this.getResolutionsWithIndices().map(entry => entry[0]);
+  }
+
   getClosestExistingIndex(index: number): number {
     if (this.hasIndex(index)) {
       return index;
     }
 
-    const indices = this.getResolutionsWithIndices().map(entry => entry[0]);
+    const indices = this.getAllIndices();
     const indicesWithDistances = indices.map(_index => {
       const distance = index - _index;
       if (distance >= 0) {
@@ -154,6 +165,19 @@ export class ResolutionInfo {
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, entry => entry[1]));
     return bestIndexWithDistance[0];
+  }
+
+  hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {
+    const indices = this.getAllIndices();
+    const hasSmallOrHigher = { smaller: false, higher: false };
+    for (const currentIndex of indices) {
+      if (currentIndex < index) {
+        hasSmallOrHigher.smaller = true;
+      } else if (currentIndex > index) {
+        hasSmallOrHigher.higher = true;
+      }
+    }
+    return hasSmallOrHigher;
   }
 
   getIndexOrClosestHigherIndex(requestedIndex: number): ?number {
@@ -658,12 +682,14 @@ export function getEnabledLayers(
 }
 
 /*
-  This function returns layers which cannot be rendered (since
-  the current resolution is missing), even though they should
-  be rendered (since they are enabled). The function takes fallback
-  resolutions into account if renderMissingDataBlack is disabled.
+  This function returns layers that cannot be rendered (since the current resolution is missing), 
+  even though they should be rendered (since they are enabled). For each layer, this method 
+  additionally returns whether data of this layer can be rendered by zooming in or out.
+  The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
  */
-function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
+function _getUnrenderableLayerInfosForCurrentZoom(
+  state: OxalisState,
+): Array<UnrenderableLayersInfos> {
   const { dataset } = state;
   const zoomStep = getRequestLogZoomStep(state);
 
@@ -676,8 +702,8 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
       resolutionInfo: getResolutionInfo(layer.resolutions),
     }))
     .filter(({ resolutionInfo }) => {
-      const isMissing = !resolutionInfo.hasIndex(zoomStep);
-      if (!isMissing) {
+      const isPresent = resolutionInfo.hasIndex(zoomStep);
+      if (isPresent) {
         // The layer exists. Thus, it is not unrenderable.
         return false;
       }
@@ -697,12 +723,15 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
         return resolutionInfo.hasIndex(fallbackZoomStep);
       });
     })
-    .map<DataLayerType>(({ layer }) => layer);
+    .map<UnrenderableLayersInfos>(({ layer, resolutionInfo }) => {
+      const smallerOrHigherInfo = resolutionInfo.hasSmallerAndOrHigherIndex(zoomStep);
+      return { layer, smallerOrHigherInfo };
+    });
   return unrenderableLayers;
 }
 
-export const getUnrenderableLayersForCurrentZoom = reuseInstanceOnEquality(
-  _getUnrenderableLayersForCurrentZoom,
+export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayerInfosForCurrentZoom,
 );
 
 /*

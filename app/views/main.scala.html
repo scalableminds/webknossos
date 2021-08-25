@@ -58,6 +58,13 @@
     ></script>
     <script src="/assets/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    @if(conf.Features.isDemoInstance){
+    <script type="text/javascript" src="https://app.olvy.co/script.js" defer="defer"></script>
+    <script>
+      // Suppress warning emitted by Olvy because it tries to eagerly initialize
+      window.OlvyConfig = null;
+    </script>
+    }
   </head>
   <body>
     <main id="main-container"></main>

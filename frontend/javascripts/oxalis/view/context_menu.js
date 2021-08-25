@@ -1,9 +1,15 @@
 // @flow
-import React, { useEffect } from "react";
+import React, { useEffect, type Node } from "react";
 import { Menu, notification, Divider, Tooltip } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import { AnnotationToolEnum } from "oxalis/constants";
-import type { Vector3, OrthoView } from "oxalis/constants";
+import {
+  type AnnotationTool,
+  AnnotationToolEnum,
+  type Vector3,
+  type OrthoView,
+  VolumeTools,
+} from "oxalis/constants";
+
 import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
@@ -68,7 +74,8 @@ type StateProps = {|
   zoomStep: number,
   currentMeshFile: ?string,
   volumeTracing: ?VolumeTracing,
-  isSkeletonToolActive: boolean,
+  activeTool: AnnotationTool,
+  useLegacyBindings: boolean,
 |};
 
 /* eslint-enable react/no-unused-prop-types */
@@ -78,7 +85,7 @@ type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
 type NoNodeContextMenuProps = {|
   ...Props,
   segmentIdAtPosition: number,
-  isSkeletonToolActive: boolean,
+  activeTool: AnnotationTool,
 |};
 
 function copyIconWithTooltip(value: string | number, title: string) {
@@ -144,6 +151,52 @@ function positionToString(pos: Vector3): string {
   return pos.map(value => roundTo(value, 2)).join(", ");
 }
 
+function shortcutBuilder(shortcuts: Array<string>): Node {
+  const lineColor = "var(--ant-text-secondary)";
+  const mapNameToShortcutIcon = (name: string) => {
+    switch (name) {
+      case "leftMouse": {
+        return (
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-left.svg"
+            alt="Mouse Left Click"
+            style={{ margin: 0 }}
+          />
+        );
+      }
+      case "rightMouse": {
+        return (
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-right.svg"
+            alt="Mouse Right Click"
+            style={{ margin: 0 }}
+          />
+        );
+      }
+      default: {
+        return (
+          <span className="keyboard-key-icon-small" style={{ borderColor: lineColor }}>
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span style={{ position: "relative", top: -9 }}>{name}</span>
+          </span>
+        );
+      }
+    }
+  };
+  return (
+    <span style={{ float: "right", color: lineColor, marginLeft: 10 }}>
+      {shortcuts.map((name, index) => (
+        <React.Fragment key={name}>
+          {mapNameToShortcutIcon(name)}
+          {index < shortcuts.length - 1 ? " + " : null}
+        </React.Fragment>
+      ))}
+    </span>
+  );
+}
+
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
@@ -153,6 +206,7 @@ function NodeContextMenuOptions({
   deleteNode,
   setActiveNode,
   hideTree,
+  useLegacyBindings,
 }: NodeContextMenuOptionsProps) {
   if (skeletonTracing == null) {
     return null;
@@ -184,7 +238,8 @@ function NodeContextMenuOptions({
         disabled={areInSameTree}
         onClick={() => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null)}
       >
-        Create Edge & Merge with this Tree
+        Create Edge & Merge with this Tree{" "}
+        {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -192,14 +247,15 @@ function NodeContextMenuOptions({
         disabled={!areNodesConnected}
         onClick={() => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null)}
       >
-        Delete Edge to this Node
+        Delete Edge to this Node{" "}
+        {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
         key="delete-node"
         onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}
       >
-        Delete this Node
+        Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
@@ -234,7 +290,7 @@ function NodeContextMenuOptions({
 function NoNodeContextMenuOptions({
   skeletonTracing,
   volumeTracing,
-  isSkeletonToolActive,
+  activeTool,
   hideContextMenu,
   globalPosition,
   viewport,
@@ -270,6 +326,8 @@ function NoNodeContextMenuOptions({
     }
   };
 
+  const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
+
   const skeletonActions =
     skeletonTracing != null
       ? [
@@ -288,7 +346,7 @@ function NoNodeContextMenuOptions({
               setWaypoint(globalPosition, viewport, false);
             }}
           >
-            Create new Tree here
+            Create new Tree here {!isVolumeBasedToolActive ? shortcutBuilder(["C"]) : null}
           </Menu.Item>,
         ]
       : [];
@@ -316,7 +374,8 @@ function NoNodeContextMenuOptions({
                 setActiveCell(segmentIdAtPosition);
               }}
             >
-              Select Segment ({segmentIdAtPosition})
+              Select Segment ({segmentIdAtPosition}){" "}
+              {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
             </Menu.Item>
           ) : null,
           loadMeshItem,
@@ -332,6 +391,7 @@ function NoNodeContextMenuOptions({
   if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadMeshItem);
   }
+  const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
 
   const allActions = isSkeletonToolActive
     ? skeletonActions.concat(nonSkeletonActions)
@@ -359,7 +419,7 @@ function ContextMenu(props: Props) {
 
   const {
     skeletonTracing,
-    isSkeletonToolActive,
+    activeTool,
     clickedNodeId,
     contextMenuPosition,
     hideContextMenu,
@@ -451,6 +511,14 @@ function ContextMenu(props: Props) {
   return (
     <React.Fragment>
       <div
+        className="node-context-menu-overlay"
+        onClick={hideContextMenu}
+        onContextMenu={evt => {
+          evt.preventDefault();
+          hideContextMenu();
+        }}
+      />
+      <div
         style={{
           position: "absolute",
           left: contextMenuPosition[0],
@@ -458,13 +526,12 @@ function ContextMenu(props: Props) {
         }}
         className="node-context-menu"
         tabIndex={-1}
-        onBlur={hideContextMenu}
         ref={inputRef}
       >
         <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
         {clickedNodeId != null
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ isSkeletonToolActive, segmentIdAtPosition, ...props })}
+          : NoNodeContextMenuOptions({ activeTool, segmentIdAtPosition, ...props })}
 
         <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
         {infoRows}
@@ -502,11 +569,12 @@ function mapStateToProps(state: OxalisState): StateProps {
     skeletonTracing: state.tracing.skeleton,
     volumeTracing: state.tracing.volume,
     datasetScale: state.dataset.dataSource.scale,
-    isSkeletonToolActive: state.uiInformation.activeTool === AnnotationToolEnum.SKELETON,
+    activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
     visibleSegmentationLayer: getVisibleSegmentationLayer(state),
     zoomStep: getRequestLogZoomStep(state),
     currentMeshFile: state.currentMeshFile,
+    useLegacyBindings: state.userConfiguration.useLegacyBindings,
   };
 }
 

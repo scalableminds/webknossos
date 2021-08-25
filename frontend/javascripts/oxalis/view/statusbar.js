@@ -12,7 +12,6 @@ import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_acce
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 
 import { useKeyPress } from "libs/react_hooks";
-import Store from "oxalis/store";
 
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 
@@ -249,7 +248,6 @@ function maybeLabelWithSegmentationWarning(hasUint64Segmentation: boolean, label
 function Infos() {
   const activeResolution = useSelector(state => getCurrentResolution(state));
   const mousePosition = useSelector(state => state.temporaryConfiguration.mousePosition);
-  const activeViewport = useSelector(state => state.viewModeData.plane.activeViewport);
   const isPlaneMode = useSelector(state => getIsPlaneMode(state));
 
   const isSkeletonAnnotation = useSelector(state => state.tracing.skeleton != null);
@@ -274,12 +272,14 @@ function Infos() {
     const segmentationLayer = getVisibleSegmentationLayer(state);
     return segmentationLayer ? segmentationLayer.originalElementClass === "uint64" : false;
   });
-
-  let globalMousePosition;
-  if (mousePosition && activeViewport !== OrthoViews.TDView) {
-    const [x, y] = mousePosition;
-    globalMousePosition = calculateGlobalPos(Store.getState(), { x, y });
-  }
+  const globalMousePosition = useSelector(state => {
+    const { activeViewport } = state.viewModeData.plane;
+    if (mousePosition && activeViewport !== OrthoViews.TDView) {
+      const [x, y] = mousePosition;
+      return calculateGlobalPos(state, { x, y });
+    }
+    return undefined;
+  });
 
   return (
     <React.Fragment>

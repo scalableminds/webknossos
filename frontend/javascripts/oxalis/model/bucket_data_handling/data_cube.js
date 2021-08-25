@@ -425,7 +425,7 @@ class DataCube {
       );
     }
     const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);
-    const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
+    const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
     if (sourceCellId === cellId) {
       return null;
     }
@@ -441,7 +441,7 @@ class DataCube {
       ) {
         continue;
       }
-      const bucketData = currentBucket.getOrCreateData();
+      const { data: bucketData } = currentBucket.getOrCreateData();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
@@ -528,12 +528,14 @@ class DataCube {
     // needs to be examined for rendering.
 
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
+    const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     if (!(bucket instanceof DataBucket)) {
-      // This is a NullBucket (e.g., because it's out of the bounding box or in a not-existing
-      // magnification). This zoomstep is as good as all the other zoomsteps (as these will only
-      // hold null buckets, too).
-      return true;
+      // This is a NullBucket (e.g., because it's out of the bounding box or there exists no data for this zoomstep).
+      // If renderMissingDataBlack is turned on, this zoomstep is as good as all the other zoomsteps (as these will only
+      // hold null buckets, too). If this option is turned off, buckets of higher mags could be used for rendering,
+      // thus return false in this case.
+      return renderMissingDataBlack;
     }
 
     if (bucket.hasData() || bucket.isLoaded()) {

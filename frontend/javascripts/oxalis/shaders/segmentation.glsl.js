@@ -195,7 +195,7 @@ export const getSegmentationId: ShaderModule = {
         );
 
       // Depending on the packing degree, the returned volume color contains extra values
-      // which would should be ignored (in the binary search as well as when comparing
+      // which should be ignored (in the binary search as well as when comparing
       // a cell id with the hovered cell passed via uniforms, for example).
 
       <% if (packingDegreeLookup[segmentationName] === 4) { %>

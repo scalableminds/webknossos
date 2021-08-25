@@ -282,29 +282,25 @@ class PlaneMaterialFactory {
 
   attachSegmentationTextures(): void {
     const segmentationLayer = Model.getSegmentationLayerWithEnabledMapping();
-    if (
-      segmentationLayer != null &&
-      segmentationLayer.mappings != null &&
-      Model.isMappingSupported
-    ) {
-      const [
-        mappingTexture,
-        mappingLookupTexture,
-        mappingColorTexture,
-      ] = segmentationLayer.mappings.getMappingTextures();
-      this.uniforms.segmentation_mapping_texture = {
-        type: "t",
-        value: mappingTexture,
-      };
-      this.uniforms.segmentation_mapping_lookup_texture = {
-        type: "t",
-        value: mappingLookupTexture,
-      };
-      this.uniforms.segmentation_mapping_color_texture = {
-        type: "t",
-        value: mappingColorTexture,
-      };
-    }
+
+    const [mappingTexture, mappingLookupTexture, mappingColorTexture] =
+      Model.isMappingSupported && segmentationLayer != null && segmentationLayer.mappings != null
+        ? segmentationLayer.mappings.getMappingTextures()
+        : // It's important to set up the uniforms (even when they are null), since later
+          // additions to `this.uniforms` won't be properly attached otherwise.
+          [null, null, null];
+    this.uniforms.segmentation_mapping_texture = {
+      type: "t",
+      value: mappingTexture,
+    };
+    this.uniforms.segmentation_mapping_lookup_texture = {
+      type: "t",
+      value: mappingLookupTexture,
+    };
+    this.uniforms.segmentation_mapping_color_texture = {
+      type: "t",
+      value: mappingColorTexture,
+    };
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {

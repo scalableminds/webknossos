@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
+import { Unicode } from "oxalis/constants";
 
 import type { APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
@@ -181,7 +182,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               />
             ) : (
               <p style={disabledWhenReloadingStyle}>
-                New Annotation &nbsp;
+                New Annotation {Unicode.NonBreakingSpace}
                 <Tooltip title="Cannot create annotations for read-only datasets">
                   <InfoCircleOutlined style={{ color: "gray" }} />
                 </Tooltip>

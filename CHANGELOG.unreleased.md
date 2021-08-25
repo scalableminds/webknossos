@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added UI to infer nuclei for webknossos instances, which support jobs (e.g., webknossos.org). [#5669](https://github.com/scalableminds/webknossos/pull/5669)
 - Added the possibility to restrict the volume resolutions when creating explorative annotations. Use this to annotate larger structures without creating tons of high-res data. [#5645](https://github.com/scalableminds/webknossos/pull/5645)
 - Added tooltips for all elements of the Settings tab in the left sidebar. [#5673](https://github.com/scalableminds/webknossos/pull/5673)
+- Most recent dataset conversions are shown in dashboard (if the webKnossos instance supports processing jobs). [#5597](https://github.com/scalableminds/webknossos/pull/5597)
 
 ### Changed
 - Improved context menu for interactions with segmentation data which wasn't loaded completely, yet. [#5637](https://github.com/scalableminds/webknossos/pull/5637)

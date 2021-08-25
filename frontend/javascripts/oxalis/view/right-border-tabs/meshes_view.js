@@ -263,12 +263,7 @@ class MeshesView extends React.Component<Props, State> {
   getComputeMeshAdHocTooltipInfo = () => {
     let title = "";
     let disabled = true;
-    if (this.props.hasVolume) {
-      title =
-        this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer
-          ? "Meshes cannot be computed for volume annotations. However, you can open this dataset in view mode to compute meshes for the dataset's segmentation layer."
-          : "Meshes cannot be computed for volume annotations.";
-    } else if (this.props.segmentationLayer == null) {
+    if (this.props.segmentationLayer == null) {
       title = "There is no segmentation layer for which a mesh could be computed.";
     } else {
       title = "Compute mesh for the centered segment.";

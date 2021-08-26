@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/21.08.0...HEAD)
 
 ### Added
--
+- Added the possibility to download small datasets as zip from the datastore. [#5691](https://github.com/scalableminds/webknossos/pull/5691)
 
 ### Changed
 -

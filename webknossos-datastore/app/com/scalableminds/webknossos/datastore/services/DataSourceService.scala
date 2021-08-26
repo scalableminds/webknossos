@@ -1,13 +1,13 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, FileWriter}
+import java.io.{BufferedOutputStream, File, FileOutputStream, FileWriter}
 import java.nio.file.{Files, Path, Paths}
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.io.{NamedFileStream, NamedStream, PathUtils, ZipIO}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
@@ -16,18 +16,23 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
+import org.apache.commons.io.FileUtils
+import org.apache.commons.io.filefilter.TrueFileFilter
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import play.api.inject.ApplicationLifecycle
+import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.Source
+import scala.jdk.CollectionConverters.collectionAsScalaIterableConverter
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
+    temporaryFileCreator: TemporaryFileCreator,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends IntervalScheduler
@@ -218,6 +223,39 @@ class DataSourceService @Inject()(
       }
     } else {
       UnusableDataSource(id, "Not imported yet.")
+    }
+  }
+
+  def downloadZip(organizationName: String, dataSetName: String): Fox[play.api.libs.Files.TemporaryFile] = {
+    val zipped = temporaryFileCreator.create(dataSetName, ".zip")
+    val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
+
+    val dataSourcePath = dataBaseDir.resolve(organizationName).resolve(dataSetName)
+
+    val dataSourceSizeBytes: Long = FileUtils.sizeOfDirectoryAsBigInteger(dataSourcePath.toFile).longValue
+
+    val sizeLimit = config.Datastore.DataSourceDownload.sizeLimitBytes
+
+    if (dataSourceSizeBytes > sizeLimit) {
+      Fox.failure(s"Dataset is too big to download ($dataSourceSizeBytes bytes, limit is ${sizeLimit})")
+    } else {
+      logger.info(s"Zipping dataset $organizationName/$dataSetName for download...")
+
+      val files: Iterable[File] =
+        FileUtils.listFiles(dataSourcePath.toFile, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE).asScala
+      val fileStreams: Iterator[NamedStream] =
+        files.toIterator.map(file => NamedFileStream(dataSourcePath.relativize(Paths.get(file.getPath)).toString, file))
+
+      val zipResult = ZipIO.zip(fileStreams, os)
+
+      zipResult.onComplete {
+        case failure: scala.util.Failure[Unit] =>
+          logger.debug(
+            s"Failed to send zipped dataset $organizationName/$dataSetName: ${TextUtils.stackTraceAsString(failure.exception)}")
+        case _: scala.util.Success[Unit] =>
+          logger.debug(s"Successfully sent zipped volume data for $organizationName/$dataSetName")
+      }
+      zipResult.map(_ => zipped).toFox
     }
   }
 

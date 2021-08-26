@@ -349,4 +349,17 @@ class DataSourceController @Inject()(
         }
   }
 
+  def downloadZip(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      //accessTokenService
+      //.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      AllowRemoteOrigin {
+        for {
+          data <- dataSourceService.downloadZip(organizationName, dataSetName)
+        } yield
+          Ok.sendFile(data, fileName = _ => Some(dataSetName + ".zip")).withHeaders(("content-type", "application/zip"))
+      }
+      //      }
+  }
+
 }

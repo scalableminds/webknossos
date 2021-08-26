@@ -1,10 +1,13 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.file.Path
 
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
+import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWBucketStreamSink
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}

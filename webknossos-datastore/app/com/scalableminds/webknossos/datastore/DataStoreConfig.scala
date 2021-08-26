@@ -25,6 +25,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
     }
+    object DataSourceDownload {
+      val sizeLimitBytes: Long = get[Long]("datastore.dataSourceDownload.sizeLimitBytes")
+    }
     object Cache {
       object DataCube {
         val maxEntries: Int = get[Int]("datastore.cache.dataCube.maxEntries")

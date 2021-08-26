@@ -249,6 +249,16 @@ class Mappings {
       renderer,
     );
 
+    // updateMappingColorTexture has to be called at least once to guarantee
+    // proper initialization of the texture with -1.
+    // There is a race condition otherwise leading to hard-to-debug errors.
+    listenToStoreProperty(
+      state =>
+        getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mappingColors,
+      mappingColors => this.updateMappingColorTexture(mappingColors),
+      true,
+    );
+
     listenToStoreProperty(
       state => getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mapping,
       mapping => {
@@ -258,16 +268,6 @@ class Mappings {
         );
         this.updateMappingTextures(mapping, mappingKeys);
       },
-      true,
-    );
-
-    // updateMappingColorTexture has to be called at least once to guarantee
-    // proper initialization of the texture with -1.
-    // There is a race condition otherwise leading to hard-to-debug errors.
-    listenToStoreProperty(
-      state =>
-        getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mappingColors,
-      mappingColors => this.updateMappingColorTexture(mappingColors),
       true,
     );
   }
@@ -342,6 +342,13 @@ class Mappings {
   getMappingTextures() {
     if (this.mappingTexture == null) {
       this.setupMappingTextures();
+    }
+    if (
+      this.mappingTexture == null ||
+      this.mappingLookupTexture == null ||
+      this.mappingColorTexture == null
+    ) {
+      throw new Error("Mapping textures are null after initialization.");
     }
     return [this.mappingTexture, this.mappingLookupTexture, this.mappingColorTexture];
   }

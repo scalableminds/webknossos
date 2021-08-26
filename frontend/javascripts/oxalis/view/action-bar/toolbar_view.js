@@ -15,7 +15,7 @@ import { document } from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getMappingInfoForTracingLayer,
-  getRenderableResolutionForSegmentation,
+  getRenderableResolutionForSegmentationTracing,
 } from "oxalis/model/accessors/dataset_accessor";
 import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
@@ -339,7 +339,7 @@ export default function ToolbarView() {
 
   const activeTool = useSelector(state => state.uiInformation.activeTool);
 
-  const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentation);
+  const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentationTracing);
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
 

@@ -3,7 +3,7 @@ import type { OxalisState } from "oxalis/store";
 import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  getRenderableResolutionForSegmentation,
+  getRenderableResolutionForSegmentationTracing,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
@@ -130,7 +130,7 @@ export function getDisabledInfoForTools(
 ): { [key: AnnotationTool]: { isDisabled: boolean, explanation: string } } {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentation(state);
+  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentationTracing(state);
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const isSegmentationVisibleForMag = labeledResolution != null;

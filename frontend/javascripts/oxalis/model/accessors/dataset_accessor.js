@@ -299,17 +299,29 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getResolutionInfoOfSegmentationLayer(dataset: APIDataset): ResolutionInfo {
-  const segmentationLayer = getFirstSegmentationLayer(dataset);
+function _getResolutionInfoOfSegmentationTracingLayer(dataset: APIDataset): ResolutionInfo {
+  const segmentationLayer = getSegmentationTracingLayer(dataset);
   if (!segmentationLayer) {
     return new ResolutionInfo([]);
   }
   return getResolutionInfo(segmentationLayer.resolutions);
 }
 
-// todo: adapt to currently visible layer
-export const getResolutionInfoOfSegmentationLayer = memoizeOne(
-  _getResolutionInfoOfSegmentationLayer,
+export const getResolutionInfoOfSegmentationTracingLayer = memoizeOne(
+  _getResolutionInfoOfSegmentationTracingLayer,
+);
+
+function _getResolutionInfoOfSomeSegmentationLayer(state: OxalisState): ResolutionInfo {
+  const segmentationLayer = getSomeSegmentationLayer(state);
+  if (!segmentationLayer) {
+    return new ResolutionInfo([]);
+  }
+  return getResolutionInfo(segmentationLayer.resolutions);
+}
+
+// todop: remove again
+export const getResolutionInfoOfSomeSegmentationLayer = memoizeOne(
+  _getResolutionInfoOfSomeSegmentationLayer,
 );
 
 export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
@@ -565,12 +577,6 @@ export function getVisibleSegmentationLayer(state: OxalisState): ?APISegmentatio
   return null;
 }
 
-export function getSegmentationAnnotationLayer(state: OxalisState): ?APISegmentationLayer {
-  // Currently, this is a simple delegation. Later we should ask the user for which segmentaton layer,
-  // annotation layer should be created. That layer should then be returned here.
-  return getVisibleSegmentationLayer(state);
-}
-
 export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
@@ -609,6 +615,7 @@ export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?API
   return null;
 }
 
+// todo: remove again
 export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
   const segmentationLayers = getSegmentationLayers(state.dataset);
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
@@ -621,6 +628,7 @@ export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLa
   return null;
 }
 
+// todo: remove again
 export function getFirstSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
   const segmentationLayers = getSegmentationLayers(dataset);
   if (segmentationLayers.length > 0) {
@@ -759,14 +767,14 @@ export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
   layer is currently rendered (if it is rendered). These properties should be used
   when labeling volume data.
  */
-function _getRenderableResolutionForSegmentation(
+function _getRenderableResolutionForSegmentationTracing(
   state: OxalisState,
 ): ?{ resolution: Vector3, zoomStep: number } {
   const { dataset } = state;
   const requestedZoomStep = getRequestLogZoomStep(state);
   const { renderMissingDataBlack } = state.datasetConfiguration;
   const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
-  const resolutionInfo = getResolutionInfoOfSegmentationLayer(dataset);
+  const resolutionInfo = getResolutionInfoOfSegmentationTracingLayer(dataset);
   const segmentationLayer = getVisibleSegmentationLayer(state);
 
   if (!segmentationLayer) {
@@ -813,8 +821,8 @@ function _getRenderableResolutionForSegmentation(
   return null;
 }
 
-export const getRenderableResolutionForSegmentation = reuseInstanceOnEquality(
-  _getRenderableResolutionForSegmentation,
+export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableResolutionForSegmentationTracing,
 );
 
 export function getThumbnailURL(dataset: APIDataset): string {

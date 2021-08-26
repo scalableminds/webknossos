@@ -37,9 +37,9 @@ import {
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getResolutionInfoOfSegmentationLayer,
+  getResolutionInfoOfSegmentationTracingLayer,
   ResolutionInfo,
-  getRenderableResolutionForSegmentation,
+  getRenderableResolutionForSegmentationTracing,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   isVolumeDrawingTool,
@@ -126,7 +126,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
 
     const maybeLabeledResolutionWithZoomStep = yield* select(
-      getRenderableResolutionForSegmentation,
+      getRenderableResolutionForSegmentationTracing,
     );
     if (!maybeLabeledResolutionWithZoomStep) {
       // Volume data is currently not rendered. Don't annotate anything.
@@ -257,7 +257,7 @@ function* labelWithVoxelBuffer2D(
   const dimensionIndices = Dimensions.getIndices(activeViewport);
 
   const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationLayer(state.dataset),
+    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
   );
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
@@ -381,7 +381,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationLayer(state.dataset),
+    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
   );
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
@@ -475,7 +475,7 @@ export function* floodFill(): Saga<void> {
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const resolutionInfo = yield* select(state =>
-      getResolutionInfoOfSegmentationLayer(state.dataset),
+      getResolutionInfoOfSegmentationTracingLayer(state.dataset),
     );
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 

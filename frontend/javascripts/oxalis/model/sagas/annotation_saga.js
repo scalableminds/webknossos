@@ -16,7 +16,7 @@ import messages from "messages";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   getMappingInfo,
-  getSegmentationAnnotationLayer,
+  getSegmentationTracingLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 
 /* Note that this must stay in sync with the back-end constant
@@ -56,7 +56,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       return;
     }
     const isAgglomerateMappingEnabled = yield* select(storeState => {
-      const annotationLayer = getSegmentationAnnotationLayer(storeState);
+      const annotationLayer = getSegmentationTracingLayer(storeState.dataset);
       if (!annotationLayer) {
         return false;
       }

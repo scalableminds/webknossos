@@ -27,10 +27,12 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
                             rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  @ApiOperation(value="Information about the version of webKnossos")
-  @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "JSON object containing information about the version of webKnossos"),
-    new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")))
+  @ApiOperation(value = "Information about the version of webKnossos")
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "JSON object containing information about the version of webKnossos"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
@@ -65,12 +67,12 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       Ok
   }
 
-  @ApiOperation(hidden=true, value="")
+  @ApiOperation(hidden = true, value = "")
   def features: Action[AnyContent] = sil.UserAwareAction {
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 
-  @ApiOperation(value="Health endpoint")
+  @ApiOperation(value = "Health endpoint")
   def health: Action[AnyContent] = Action {
     Ok
   }

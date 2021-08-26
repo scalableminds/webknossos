@@ -30,7 +30,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
 
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
 
-  @ApiOperation(hidden = true, value="")
+  @ApiOperation(hidden = true, value = "")
   def organizationsIsEmpty: Action[AnyContent] = Action.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
@@ -39,15 +39,16 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  @ApiOperation(value="get single organization")
-  def get(@ApiParam(value = "name of the organization to fetch") organizationName: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    for {
-      org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      js <- organizationService.publicWrites(org, request.identity)
-    } yield {
-      Ok(Json.toJson(js))
+  @ApiOperation(value = "get single organization")
+  def get(@ApiParam(value = "name of the organization to fetch") organizationName: String): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      for {
+        org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+        js <- organizationService.publicWrites(org, request.identity)
+      } yield {
+        Ok(Json.toJson(js))
+      }
     }
-  }
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

@@ -224,9 +224,13 @@ class UserController @Inject()(userService: UserService,
   }
 
   @ApiOperation(value = "List all users for which you have read access")
-  @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "JSON list of objects containing user information, including team memberships and experiences"),
-    new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")))
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200,
+                      message =
+                        "JSON list of objects containing user information, including team memberships and experiences"),
+      new ApiResponse(code = 400, message = badRequestLabel)
+    ))
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable",

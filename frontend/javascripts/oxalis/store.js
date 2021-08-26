@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { createStore, applyMiddleware, type Dispatch } from "redux";
+import { createStore, applyMiddleware, compose, type Dispatch } from "redux";
 import createSagaMiddleware from "redux-saga";
 import { enableBatching } from "redux-batched-actions";
 

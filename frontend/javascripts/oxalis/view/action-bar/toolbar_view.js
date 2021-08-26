@@ -14,7 +14,7 @@ import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_setting
 import { document } from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  getMappingInfoForSupportedLayer,
+  getMappingInfoForTracingLayer,
   getRenderableResolutionForSegmentation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
@@ -218,7 +218,7 @@ function AdditionalSkeletonModesButtons() {
 }
 
 const mapId = id => {
-  const { cube } = Model.getEnforcedSomeSegmentationLayer();
+  const { cube } = Model.getEnforcedSegmentationTracingLayer();
   return cube.mapId(id);
 };
 
@@ -227,13 +227,9 @@ function CreateCellButton() {
     state => enforceVolumeTracing(state.tracing).activeCellId,
   );
 
-  const mappingColors = useSelector(
-    state =>
-      getMappingInfoForSupportedLayer(state.temporaryConfiguration.activeMapping).mappingColors,
-  );
+  const mappingColors = useSelector(state => getMappingInfoForTracingLayer(state).mappingColors);
   const isMappingEnabled = useSelector(
-    state =>
-      getMappingInfoForSupportedLayer(state.temporaryConfiguration.activeMapping).isMappingEnabled,
+    state => getMappingInfoForTracingLayer(state).isMappingEnabled,
   );
   const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;

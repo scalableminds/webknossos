@@ -630,6 +630,18 @@ export function getFirstSegmentationLayer(dataset: APIDataset): ?APISegmentation
   return null;
 }
 
+export function getSegmentationTracingLayer(
+  dataset: APIMaybeUnimportedDataset,
+): ?APISegmentationLayer {
+  const tracingLayers = getSegmentationLayers(dataset).filter(layer => layer.isTracingLayer);
+  if (tracingLayers.length > 0) {
+    return tracingLayers[0];
+  } else if (tracingLayers.length > 1) {
+    throw new Error("webKnossos only supports one volume tracing layer per annotation currently.");
+  }
+  return null;
+}
+
 export function getSegmentationLayers(
   dataset: APIMaybeUnimportedDataset,
 ): Array<APISegmentationLayer> {
@@ -884,6 +896,11 @@ export function getMappingInfo(
 
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
   const layer = getSegmentationLayerWithMappingSupport(state);
+  return getMappingInfo(state.temporaryConfiguration.activeMapping, layer ? layer.name : null);
+}
+
+export function getMappingInfoForTracingLayer(state: OxalisState): ActiveMappingInfo {
+  const layer = getSegmentationTracingLayer(state.dataset);
   return getMappingInfo(state.temporaryConfiguration.activeMapping, layer ? layer.name : null);
 }
 

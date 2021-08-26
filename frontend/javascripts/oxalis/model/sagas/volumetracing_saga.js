@@ -248,7 +248,7 @@ function* labelWithVoxelBuffer2D(
   if (!allowUpdate) return;
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const segmentationLayer = yield* call([Model, Model.getEnforcedSomeSegmentationLayer]);
+  const segmentationLayer = yield* call([Model, Model.getEnforcedSegmentationTracingLayer]);
   const { cube } = segmentationLayer;
 
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
@@ -374,7 +374,10 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
-  const segmentationLayer: DataLayer = yield* call([Model, Model.getEnforcedSomeSegmentationLayer]);
+  const segmentationLayer: DataLayer = yield* call([
+    Model,
+    Model.getEnforcedSegmentationTracingLayer,
+  ]);
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const resolutionInfo = yield* select(state =>
@@ -465,7 +468,7 @@ export function* floodFill(): Saga<void> {
       throw new Error("Unexpected action. Satisfy flow.");
     }
     const { position, planeId } = floodFillAction;
-    const segmentationLayer = Model.getEnforcedSomeSegmentationLayer();
+    const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { cube } = segmentationLayer;
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);

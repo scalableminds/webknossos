@@ -178,6 +178,7 @@ function* getInfoForIsosurfaceLoading(): Saga<{
   resolutionInfo: ResolutionInfo,
 }> {
   const dataset = yield* select(state => state.dataset);
+  // todo: support meshes for multiple segmentation layers
   const layer = Model.getEnforcedSomeSegmentationLayer();
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 

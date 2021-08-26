@@ -931,7 +931,7 @@ class DataApi {
    */
   getVolumeTracingLayerName(): string {
     // TODO: Rename method to getActiveSegmentationLayerName() and increase api version
-    const segmentationLayer = this.model.getEnforcedSomeSegmentationLayer();
+    const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
     return segmentationLayer.name;
   }
 
@@ -1308,7 +1308,7 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const segmentationLayer = this.model.getEnforcedSomeSegmentationLayer();
+    const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
 
     for (const voxel of voxels) {
       segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);

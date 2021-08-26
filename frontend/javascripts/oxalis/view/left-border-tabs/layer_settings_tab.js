@@ -379,7 +379,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   ) => {
     const { tracing } = this.props;
     const { intensityRange } = layerSettings;
-    const isVolumeTracing = tracing.volume != null;
+    const layer = getLayerByName(this.props.dataset, layerName);
+
+    const isVolumeTracing = layer.isTracingLayer != null;
     const isFallbackLayer = tracing.volume
       ? tracing.volume.fallbackLayer != null && !isColorLayer
       : false;
@@ -402,7 +404,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     };
     const hasHistogram = this.props.histogramData[layerName] != null;
 
-    const layer = getLayerByName(this.props.dataset, layerName);
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
 
     return (
@@ -433,7 +434,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
           {intensityRange[0] === intensityRange[1] && !isDisabled ? (
             <Tooltip
-              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values. 
+              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
             >
               <WarningOutlined style={{ color: "var(--ant-warning)" }} />
@@ -628,7 +629,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (volumeTracing == null) {
       return [];
     }
-    const segmentationLayer = Model.getEnforcedSomeSegmentationLayer();
+    const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetResolutions =
       fallbackLayerInfo != null

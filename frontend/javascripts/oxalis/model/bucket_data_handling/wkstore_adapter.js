@@ -84,7 +84,7 @@ export async function requestWithFallback(
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  const shouldUseDataStore = !isSegmentation || state.tracing.volume == null;
+  const shouldUseDataStore = !isSegmentation || !layerInfo.isTracingLayer;
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
 
   const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch);

@@ -12,6 +12,7 @@ import {
   getSegmentationLayerWithMappingSupport,
   getLayerByName,
   isLayerVisible,
+  getSegmentationTracingLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
@@ -140,6 +141,25 @@ export class OxalisModel {
 
   getEnforcedSomeSegmentationLayer(): DataLayer {
     const layer = this.getSomeSegmentationLayer();
+    if (layer == null) {
+      // The function should never be called if no segmentation layer exists.
+      throw new Error("No segmentation layer found.");
+    }
+    return layer;
+  }
+
+  getSegmentationTracingLayer(): ?DataLayer {
+    const { dataset } = Store.getState();
+    const layer = getSegmentationTracingLayer(dataset);
+    if (layer == null) {
+      return null;
+    }
+
+    return this.getLayerByName(layer.name);
+  }
+
+  getEnforcedSegmentationTracingLayer(): DataLayer {
+    const layer = this.getSegmentationTracingLayer();
     if (layer == null) {
       // The function should never be called if no segmentation layer exists.
       throw new Error("No segmentation layer found.");

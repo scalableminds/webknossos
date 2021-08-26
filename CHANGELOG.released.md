@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/21.07.0...21.08.0)
 
 ### Highlights
+- Added the possibility to restrict the volume resolutions when creating explorative annotations. Use this to annotate larger structures without creating tons of high-res data. [#5645](https://github.com/scalableminds/webknossos/pull/5645)
 - Most recent dataset conversions are shown in dashboard (if the webKnossos instance supports processing jobs). [#5597](https://github.com/scalableminds/webknossos/pull/5597)
 - Added UI to infer nuclei for webknossos instances, which support jobs (e.g., webknossos.org). [#5669](https://github.com/scalableminds/webknossos/pull/5669)
 
@@ -20,7 +21,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a route to call new webknossos-worker job for nuclei inferral. [#5626](https://github.com/scalableminds/webknossos/pull/5626)
 - Added shortcut information to the context menu. Some shortcuts that are only available for the classic controls are only shown when the classic controls are active. [#5677](https://github.com/scalableminds/webknossos/pull/5677)
 - For webknossos.org, a "What's New" notification was added to the navbar. [#5665](https://github.com/scalableminds/webknossos/pull/5665)
-- Added the possibility to restrict the volume resolutions when creating explorative annotations. Use this to annotate larger structures without creating tons of high-res data. [#5645](https://github.com/scalableminds/webknossos/pull/5645)
 - Added tooltips for all elements of the Settings tab in the left sidebar. [#5673](https://github.com/scalableminds/webknossos/pull/5673)
 
 ### Changed

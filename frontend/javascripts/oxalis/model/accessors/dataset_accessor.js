@@ -571,39 +571,47 @@ export function getSegmentationAnnotationLayer(state: OxalisState): ?APISegmenta
   return getVisibleSegmentationLayer(state);
 }
 
-export function getSegmentationLayerWithEnabledMapping(state: OxalisState): ?APISegmentationLayer {
-  const layerNames = Object.keys(state.temporaryConfiguration.activeMapping);
-  const layersWithEnabledMapping = layerNames.filter(
-    layerName => state.temporaryConfiguration.activeMapping[layerName].isMappingEnabled,
-  );
-
-  if (layersWithEnabledMapping.length === 0) {
-    const layerNamesWithMappings = layerNames.filter(
-      layerName => getLayerByName(state.dataset, layerName).mappings.length > 0,
-    );
-    if (layerNamesWithMappings.length > 0) {
-      // todo: clean up
-      return getLayerByName(state.dataset, layerNamesWithMappings[0]);
-    }
-    return null;
-  }
-  const layer = getLayerByName(state.dataset, layersWithEnabledMapping[0]);
-  if (layer.category !== "segmentation") {
-    // Satisfy flow
-    throw new Error("Non-segmentation layer has an enabled mapping.");
-  }
-
-  return layer;
-}
-
-export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;
-
   const segmentationLayers = getSegmentationLayers(state.dataset);
   const visibleSegmentationLayers = segmentationLayers.filter(layer =>
     isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode),
   );
+  return visibleSegmentationLayers;
+}
+
+export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?APISegmentationLayer {
+  // From the visible segmentation layers, return the first layer which has enabled mappings.
+  // If no layer has enabled mappings, pick a layer which has some mappings (this is important
+  // for the initialization of the mapping textures, since isMappingEnabled will be set to true
+  // after all mapping data was copied to the GPU, but getSegmentationLayerWithMappingSupport is
+  // already used before that to prepare the mapping for the correct layer).
+  // Currently, webKnossos only supports one active mapping at a given time. The UI should ensure
+  // that not more than one mapping is enabled.
+
+  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+
+  const layersWithEnabledMapping = visibleSegmentationLayers.filter(layer => {
+    const mappingInfo = state.temporaryConfiguration.activeMapping[layer.name];
+    return mappingInfo && mappingInfo.isMappingEnabled;
+  });
+
+  if (layersWithEnabledMapping.length > 0) {
+    return layersWithEnabledMapping[0];
+  }
+  const layersWithMappings = visibleSegmentationLayers.filter(
+    layer => layer.mappings && layer.mappings.length > 0,
+  );
+  if (layersWithMappings.length > 0) {
+    return layersWithMappings[0];
+  }
+  return null;
+}
+
+export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+  const segmentationLayers = getSegmentationLayers(state.dataset);
+  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
   if (visibleSegmentationLayers.length > 0) {
     return visibleSegmentationLayers[0];
   } else if (segmentationLayers.length > 0) {
@@ -682,8 +690,8 @@ export function getEnabledLayers(
 }
 
 /*
-  This function returns layers that cannot be rendered (since the current resolution is missing), 
-  even though they should be rendered (since they are enabled). For each layer, this method 
+  This function returns layers that cannot be rendered (since the current resolution is missing),
+  even though they should be rendered (since they are enabled). For each layer, this method
   additionally returns whether data of this layer can be rendered by zooming in or out.
   The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
  */
@@ -875,7 +883,7 @@ export function getMappingInfo(
 }
 
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
-  const layer = getSegmentationLayerWithEnabledMapping(state);
+  const layer = getSegmentationLayerWithMappingSupport(state);
   return getMappingInfo(state.temporaryConfiguration.activeMapping, layer ? layer.name : null);
 }
 

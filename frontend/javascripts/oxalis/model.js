@@ -9,7 +9,7 @@ import _ from "lodash";
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import {
-  getSegmentationLayerWithEnabledMapping,
+  getSegmentationLayerWithMappingSupport,
   getLayerByName,
   isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -201,8 +201,8 @@ export class OxalisModel {
     return this.dataLayers[name];
   }
 
-  getSegmentationLayerWithEnabledMapping(): ?DataLayer {
-    const layer = getSegmentationLayerWithEnabledMapping(Store.getState());
+  getSegmentationLayerWithMappingSupport(): ?DataLayer {
+    const layer = getSegmentationLayerWithMappingSupport(Store.getState());
     if (!layer) {
       return null;
     }

@@ -27,7 +27,7 @@ import {
   getBoundaries,
   getEnabledLayers,
   getUnrenderableLayerInfosForCurrentZoom,
-  getSegmentationLayerWithEnabledMapping,
+  getSegmentationLayerWithMappingSupport,
   getMappingInfoForSupportedLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
@@ -281,7 +281,7 @@ class PlaneMaterialFactory {
   }
 
   attachSegmentationTextures(): void {
-    const segmentationLayer = Model.getSegmentationLayerWithEnabledMapping();
+    const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
 
     const [mappingTexture, mappingLookupTexture, mappingColorTexture] =
       Model.isMappingSupported && segmentationLayer != null && segmentationLayer.mappings != null
@@ -506,7 +506,7 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => getSegmentationLayerWithEnabledMapping(storeState),
+          storeState => getSegmentationLayerWithMappingSupport(storeState),
           _segmentationLayer => {
             this.attachSegmentationTextures();
           },
@@ -560,6 +560,13 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
+          storeState => getMappingInfoForSupportedLayer(storeState).mapping,
+          () => this.updateActiveCellId(),
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
           storeState =>
             getMappingInfoForSupportedLayer(storeState).isMappingEnabled &&
             // The shader should only know about the mapping when a JSON mapping exists
@@ -567,13 +574,6 @@ class PlaneMaterialFactory {
           isEnabled => {
             this.uniforms.isMappingEnabled.value = isEnabled;
           },
-        ),
-      );
-
-      this.storePropertyUnsubscribers.push(
-        listenToStoreProperty(
-          storeState => getMappingInfoForSupportedLayer(storeState).mapping,
-          () => this.updateActiveCellId(),
         ),
       );
 

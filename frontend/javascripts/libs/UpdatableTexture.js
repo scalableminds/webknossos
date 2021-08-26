@@ -55,7 +55,7 @@ UpdatableTexture.prototype.isUpdatableTexture = true;
 UpdatableTexture.prototype.setRenderer = function setRenderer(renderer) {
   this.renderer = renderer;
   this.gl = this.renderer.getContext();
-  this.utils = THREE.WebGLUtils(this.gl, this.renderer.extensions);
+  this.utils = THREE.WebGLUtils(this.gl, this.renderer.extensions, this.renderer.capabilities);
 };
 
 UpdatableTexture.prototype.setSize = function setSize(width, height) {
@@ -89,11 +89,10 @@ UpdatableTexture.prototype.isInitialized = function isInitialized() {
 };
 
 UpdatableTexture.prototype.update = function update(src, x, y, width, height) {
-  this.setSize(width, width);
   if (!this.isInitialized()) {
-    console.warn("Update called before texture was initialized. This update is discarded");
-    return;
+    this.renderer.initTexture(this);
   }
+  this.setSize(width, width);
 
   const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
   const textureProperties = this.renderer.properties.get(this);

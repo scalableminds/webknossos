@@ -207,10 +207,6 @@ class PlaneMaterialFactory {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
-      activeSegmentationLayerIndex: {
-        type: "f",
-        value: -1,
-      },
     };
     for (const dataLayer of Model.getAllLayers()) {
       const layerName = sanitizeName(dataLayer.name);
@@ -355,21 +351,6 @@ class PlaneMaterialFactory {
           }
         },
         true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        storeState => getVisibleSegmentationLayer(storeState),
-        visibleSegmentationLayer => {
-          const activeSegmentationLayerIndex =
-            visibleSegmentationLayer != null
-              ? Model.getSegmentationLayers().find(
-                  layer => layer.name === visibleSegmentationLayer.name,
-                )
-              : null;
-          this.uniforms.activeSegmentationLayerIndex.value = activeSegmentationLayerIndex;
-        },
       ),
     );
 

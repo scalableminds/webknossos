@@ -75,7 +75,6 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   <% } %>
 <% } %>
 
-uniform float activeSegmentationLayerIndex;
 uniform float sphericalCapRadius;
 uniform float viewMode;
 uniform float alpha;

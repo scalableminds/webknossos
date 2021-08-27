@@ -5,7 +5,7 @@ import type { BoundingBoxType } from "oxalis/constants";
 import type { Tracing, AnnotationType } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import { startExportTiffJob } from "admin/admin_rest_api";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import features from "features";
 import * as Utils from "libs/utils";
@@ -37,19 +37,10 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const volumeTracing = tracing != null ? tracing.volume : null;
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
-  const isMappingEnabled = useSelector(
-    state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
-  );
-  // todop: fix activeMapping access
-  const hideUnmappedIds = useSelector(
-    state => state.temporaryConfiguration.activeMapping.hideUnmappedIds,
-  );
-  const mappingName = useSelector(state => state.temporaryConfiguration.activeMapping.mappingName);
-  const mappingType = useSelector(state => state.temporaryConfiguration.activeMapping.mappingType);
+  const activeMappingInfos = useSelector(state => state.temporaryConfiguration.activeMapping);
   const isMergerModeEnabled = useSelector(
     state => state.temporaryConfiguration.isMergerModeEnabled,
   );
-  const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
 
   const exportKey = (layerInfos: LayerInfos) =>
     (layerInfos.layerName || "") + (layerInfos.tracingId || "");
@@ -76,8 +67,13 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
   const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
+    const { isMappingEnabled, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
+      activeMappingInfos,
+      layer.name,
+    );
+    const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
     const isColorLayer = layer.category === "color";
-    if (layer.category === "color" || volumeTracing == null)
+    if (layer.category === "color" || !layer.isTracingLayer) {
       return {
         displayName: layer.name,
         layerName: layer.name,
@@ -91,7 +87,14 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
         mappingType: !isColorLayer && existsActivePersistentMapping ? mappingType : null,
         isColorLayer,
       };
-    if (layer.fallbackLayerInfo != null)
+    }
+    // The layer is a volume tracing layer, since isTracingLayer is true. Therefore, a volumeTracing
+    // must exist.
+    if (volumeTracing == null) {
+      // Satisfy flow.
+      throw new Error("Volume tracing is null, but layer.isTracingLayer === true.");
+    }
+    if (layer.fallbackLayerInfo != null) {
       return {
         displayName: "Volume annotation with fallback segmentation",
         layerName: layer.fallbackLayerInfo.name,
@@ -105,6 +108,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
         mappingType: existsActivePersistentMapping ? mappingType : null,
         isColorLayer: false,
       };
+    }
     return {
       displayName: "Volume annotation",
       layerName: null,
@@ -120,24 +124,30 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
     };
   });
 
-  const exportButtonsList = allLayerInfos.map(layerInfos =>
-    layerInfos ? (
+  const exportButtonsList = allLayerInfos.map(layerInfos => {
+    const parenthesesInfos = [
+      startedExports.includes(exportKey(layerInfos)) ? "started" : null,
+      layerInfos.mappingName != null ? `using mapping "${layerInfos.mappingName}"` : null,
+      !layerInfos.hasMag1 ? "resolution 1 missing" : null,
+    ].filter(el => el);
+    const parenthesesInfosString =
+      parenthesesInfos.length > 0 ? ` (${parenthesesInfos.join(", ")})` : "";
+    return layerInfos ? (
       <p key={exportKey(layerInfos)}>
         <Button
           onClick={() => handleStartExport(layerInfos)}
           disabled={
             startedExports.includes(exportKey(layerInfos)) ||
             !layerInfos.hasMag1 ||
-            (isMergerModeEnabled && !layerInfos.isColorLayer)
+            (isMergerModeEnabled && layerInfos.tracingId != null)
           }
         >
           {layerInfos.displayName}
-          {!layerInfos.hasMag1 ? " (resolution 1 missing)" : ""}
-          {startedExports.includes(exportKey(layerInfos)) ? " (started)" : ""}
+          {parenthesesInfosString}
         </Button>
       </p>
-    ) : null,
-  );
+    ) : null;
+  });
 
   const dimensions = boundingBox.max.map((maxItem, index) => maxItem - boundingBox.min[index]);
   const volume = dimensions[0] * dimensions[1] * dimensions[2];
@@ -179,9 +189,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   let activeMappingMessage = null;
   if (isMergerModeEnabled) {
     activeMappingMessage =
-      "Exporting a volume layer does not export merger mode currently. Please disable merger mode before exporting data.";
-  } else if (isMappingEnabled) {
-    activeMappingMessage = `The active mapping ${mappingName} will be applied to the exported data.`;
+      "Exporting a volume layer does not export merger mode currently. Please disable merger mode before exporting data of the volume layer.";
   }
 
   return (

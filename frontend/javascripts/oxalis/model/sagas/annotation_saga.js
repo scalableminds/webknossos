@@ -14,10 +14,7 @@ import Toast from "libs/toast";
 import constants from "oxalis/constants";
 import messages from "messages";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getMappingInfo,
-  getSegmentationTracingLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -56,13 +53,12 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       return;
     }
     const isAgglomerateMappingEnabled = yield* select(storeState => {
-      const annotationLayer = getSegmentationTracingLayer(storeState.dataset);
-      if (!annotationLayer) {
+      if (!segmentationLayer) {
         return false;
       }
       const mappingInfo = getMappingInfo(
         storeState.temporaryConfiguration.activeMapping,
-        annotationLayer.name,
+        segmentationLayer.name,
       );
       return mappingInfo.isMappingEnabled && mappingInfo.mappingType === "HDF5";
     });

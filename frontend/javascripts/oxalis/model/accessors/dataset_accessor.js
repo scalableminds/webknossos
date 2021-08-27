@@ -670,12 +670,14 @@ export function hasSegmentation(dataset: APIDataset): boolean {
   return getFirstSegmentationLayer(dataset) != null;
 }
 
-// todop: adapt to multiple segmentation layers (for which do we ask this question?)
-export function doesSupportVolumeWithFallback(dataset: APIMaybeUnimportedDataset): boolean {
+// todop: adapt callers to multiple segmentation layers (for which do we ask this question?)
+export function doesSupportVolumeWithFallback(
+  dataset: APIMaybeUnimportedDataset,
+  segmentationLayer: ?APISegmentationLayer,
+): boolean {
   if (!dataset.isActive) {
     return false;
   }
-  const segmentationLayer = getFirstSegmentationLayer(dataset);
   if (!segmentationLayer) {
     return false;
   }

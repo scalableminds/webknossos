@@ -990,7 +990,6 @@ class DataApi {
     if (!layer.isSegmentation) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    // todop: setMappingAction should take layer name
     Store.dispatch(
       setMappingAction(
         layerName,

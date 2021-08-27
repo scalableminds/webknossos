@@ -204,7 +204,6 @@ const defaultState: OxalisState = {
     isImportingMesh: false,
     isInAnnotationView: false,
     hasOrganizations: false,
-    isRefreshingIsosurfaces: false,
     borderOpenStatus: { right: false, left: false },
     theme:
       primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")

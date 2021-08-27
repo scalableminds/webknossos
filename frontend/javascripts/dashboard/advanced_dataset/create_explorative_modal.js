@@ -35,7 +35,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
         : null;
 
     const fallbackLayerGetParameter =
-      selectedSegmentationLayer != null ? `fallbackLayer=${selectedSegmentationLayer.name}` : "";
+      selectedSegmentationLayer != null ? `&fallbackLayer=${selectedSegmentationLayer.name}` : "";
 
     const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
     let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
@@ -141,11 +141,11 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
           <Link
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
-            }/createExplorative/${annotationType}/?${fallbackLayerGetParameter}&minRes=${Math.max(
+            }/createExplorative/${annotationType}/?minRes=${Math.max(
               ...datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
             )}&maxRes=${Math.max(
               ...datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
-            )}`}
+            )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >
             <Button size="large" type="primary">

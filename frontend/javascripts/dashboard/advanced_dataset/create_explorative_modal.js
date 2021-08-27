@@ -30,7 +30,9 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
   if (dataset !== null) {
     const segmentationLayers = getSegmentationLayers(dataset);
     const selectedSegmentationLayer =
-      segmentationLayers.length > 0 && selectedSegmentationLayerIndex != null
+      annotationType !== "skeleton" &&
+      segmentationLayers.length > 0 &&
+      selectedSegmentationLayerIndex != null
         ? segmentationLayers[selectedSegmentationLayerIndex]
         : null;
 
@@ -41,7 +43,7 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
     let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
     let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
 
-    if (annotationType !== "skeleton" && selectedSegmentationLayer != null) {
+    if (selectedSegmentationLayer != null) {
       const datasetFallbackLayerResolutionInfo = getResolutionInfo(
         selectedSegmentationLayer.resolutions,
       );
@@ -80,7 +82,6 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
               tooltipVisible={false}
               onChange={value => setUserDefinedResolutionIndices(value)}
               range
-              disabled={annotationType === "skeleton"}
               step={1}
               min={lowestResolutionIndex}
               max={highestResolutionIndex}

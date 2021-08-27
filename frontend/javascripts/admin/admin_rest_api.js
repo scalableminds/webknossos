@@ -675,14 +675,14 @@ export function getAnnotationInformation(
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
-  withFallback: boolean,
+  fallbackLayerName: ?string,
   resolutionRestrictions: ?APIResolutionRestrictions,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   return Request.sendJSONReceiveJSON(
     url,
-    Object.assign({}, { data: { typ, withFallback, resolutionRestrictions } }, options),
+    Object.assign({}, { data: { typ, fallbackLayerName, resolutionRestrictions } }, options),
   );
 }
 

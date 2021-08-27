@@ -139,17 +139,18 @@ class AnnotationService @Inject()(
       dataSet: DataSet,
       dataSource: DataSource,
       tracingType: TracingType.Value,
-      withFallback: Boolean,
+      fallbackLayerNameOpt: Option[String],
       resolutionRestrictions: ResolutionRestrictions,
       organizationName: String,
       oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = {
     def getFallbackLayer: Option[SegmentationLayer] =
-      if (withFallback) {
-        dataSource.dataLayers.flatMap {
+      // todo: probably should fail if the fallbackLayerName cannot be found
+      fallbackLayerNameOpt.map(fallbackLayerName =>
+        dataSource.dataLayers.filter(dl => dl.name == fallbackLayerName).flatMap {
           case layer: SegmentationLayer => Some(layer)
           case _                        => None
         }.headOption
-      } else None
+      ).getOrElse(None)
 
     tracingType match {
       case TracingType.skeleton =>
@@ -199,7 +200,7 @@ class AnnotationService @Inject()(
   def createExplorationalFor(user: User,
                              _dataSet: ObjectId,
                              tracingType: TracingType.Value,
-                             withFallback: Boolean,
+                             fallbackLayerName: Option[String],
                              resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext,
                                                                              m: MessagesProvider): Fox[Annotation] =
     for {
@@ -210,7 +211,7 @@ class AnnotationService @Inject()(
       tracingIds <- createTracingsForExplorational(dataSet,
                                                    usableDataSource,
                                                    tracingType,
-                                                   withFallback,
+                                                   fallbackLayerName,
                                                    resolutionRestrictions,
                                                    organization.name)
       teamId <- selectSuitableTeam(user, dataSet) ?~> "annotation.create.forbidden"
@@ -235,7 +236,7 @@ class AnnotationService @Inject()(
         createTracingsForExplorational(dataSet,
                                        dataSource,
                                        TracingType.volume,
-                                       withFallback = true,
+                                       fallbackLayerNameOpt = None, // todo
                                        ResolutionRestrictions.empty,
                                        organizationName).flatMap {
           case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
@@ -245,7 +246,7 @@ class AnnotationService @Inject()(
         createTracingsForExplorational(dataSet,
                                        dataSource,
                                        TracingType.skeleton,
-                                       withFallback = false,
+                                       fallbackLayerNameOpt = None, // In skeleton case, this is irrelevant.
                                        ResolutionRestrictions.empty,
                                        organizationName,
                                        annotation.volumeTracingId).flatMap {

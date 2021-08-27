@@ -466,7 +466,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:dataSetName/createExplorative/:type/:withFallback"
+                path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
@@ -474,8 +474,7 @@ class ReactRouter extends React.Component<Props> {
                       if (
                         !match.params.organizationName ||
                         !match.params.dataSetName ||
-                        !match.params.type ||
-                        !match.params.withFallback
+                        !match.params.type
                       ) {
                         // Typehint for flow
                         throw new Error("Invalid URL");
@@ -488,7 +487,7 @@ class ReactRouter extends React.Component<Props> {
                       const type =
                         Enum.coalesce(TracingTypeEnum, match.params.type) ||
                         TracingTypeEnum.skeleton;
-                      const withFallback = match.params.withFallback === "true";
+                      const fallbackLayerName = match.params.fallbackLayerName;
 
                       const params = Utils.getUrlParamsObjectFromString(location.search);
 
@@ -508,7 +507,7 @@ class ReactRouter extends React.Component<Props> {
                       const annotation = await createExplorational(
                         dataset,
                         type,
-                        withFallback,
+                        fallbackLayerName,
                         resolutionRestrictions,
                       );
                       trackAction(`Create ${type} tracing`);

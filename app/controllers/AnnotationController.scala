@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class CreateExplorationalParameters(typ: String,
-                                         withFallback: Option[Boolean],
+                                         fallbackLayerName: Option[String],
                                          resolutionRestrictions: Option[ResolutionRestrictions])
 object CreateExplorationalParameters {
   implicit val jsonFormat: OFormat[CreateExplorationalParameters] = Json.format[CreateExplorationalParameters]
@@ -159,7 +159,7 @@ class AnnotationController @Inject()(
           request.identity,
           dataSet._id,
           tracingType,
-          request.body.withFallback.getOrElse(true),
+          request.body.fallbackLayerName,
           request.body.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
         ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))

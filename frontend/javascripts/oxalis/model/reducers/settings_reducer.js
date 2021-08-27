@@ -4,7 +4,12 @@ import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
 import { updateKey, updateKey3, type StateShape1 } from "oxalis/model/helpers/deep_update";
 import { clamp } from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getLayerByName,
+  getSegmentationLayers,
+  getVisibleSegmentationLayers,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 
 //
 // Update helpers
@@ -33,6 +38,33 @@ const updateActiveMapping = (
   };
   return updateKey3(state, "temporaryConfiguration", "activeMapping", layerName, newMappingInfo);
 };
+
+function disableAllSegmentationLayers(state: OxalisState): OxalisState {
+  let newState = state;
+  for (const segmentationLayer of getSegmentationLayers(state.dataset)) {
+    newState = updateKey3(newState, "datasetConfiguration", "layers", segmentationLayer.name, {
+      isDisabled: true,
+    });
+  }
+  return newState;
+}
+
+function ensureOnlyOneVisibleSegmentationLayer(state: OxalisState): OxalisState {
+  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+  if (visibleSegmentationLayers.length <= 1) {
+    // Only one (or zero) segmentation layers are visible.
+    return state;
+  }
+  const firstSegmentationLayer = visibleSegmentationLayers[0];
+  if (!firstSegmentationLayer) {
+    return state;
+  }
+  const newState = disableAllSegmentationLayers(state);
+
+  return updateKey3(newState, "datasetConfiguration", "layers", firstSegmentationLayer.name, {
+    isDisabled: false,
+  });
+}
 
 //
 // Reducer
@@ -76,7 +108,17 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
-      return updateKey3(state, "datasetConfiguration", "layers", layerName, {
+      let newState = state;
+      if (
+        getLayerByName(state.dataset, layerName).category === "segmentation" &&
+        propertyName === "isDisabled" &&
+        !value
+      ) {
+        // A segmentation layer is about to be enabled. Disable all (other) segmentation layers
+        // so that only the requested layer is enabled.
+        newState = disableAllSegmentationLayers(newState);
+      }
+      return updateKey3(newState, "datasetConfiguration", "layers", layerName, {
         // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [propertyName]: value,
       });
@@ -87,7 +129,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "INITIALIZE_SETTINGS": {
-      return {
+      const newState = {
         ...state,
         datasetConfiguration: {
           ...state.datasetConfiguration,
@@ -98,6 +140,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           ...action.initialUserSettings,
         },
       };
+      return ensureOnlyOneVisibleSegmentationLayer(newState);
     }
     case "SET_VIEW_MODE": {
       const { allowedModes } = state.tracing.restrictions;

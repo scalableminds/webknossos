@@ -381,10 +381,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(this.props.dataset, layerName);
 
-    const isVolumeTracing = layer.isTracingLayer != null;
-    const isFallbackLayer = tracing.volume
-      ? tracing.volume.fallbackLayer != null && !isColorLayer
-      : false;
+    const isVolumeTracing = layer.category === "segmentation" ? layer.isTracingLayer : false;
+    const isFallbackLayer =
+      tracing.volume && isVolumeTracing
+        ? tracing.volume.fallbackLayer != null && !isColorLayer
+        : false;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };

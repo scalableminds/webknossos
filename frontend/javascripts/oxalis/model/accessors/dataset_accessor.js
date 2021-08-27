@@ -629,7 +629,12 @@ export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLa
 }
 
 // todo: remove again
-export function getFirstSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
+export function getFirstSegmentationLayer(
+  dataset: APIMaybeUnimportedDataset,
+): ?APISegmentationLayer {
+  if (!dataset.isActive) {
+    return null;
+  }
   const segmentationLayers = getSegmentationLayers(dataset);
   if (segmentationLayers.length > 0) {
     return segmentationLayers[0];

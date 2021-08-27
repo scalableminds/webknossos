@@ -34,6 +34,7 @@ import ToolbarView from "oxalis/view/action-bar/toolbar_view";
 import {
   is2dDataset,
   doesSupportVolumeWithFallback,
+  getFirstSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 
 const VersionRestoreWarning = (
@@ -97,9 +98,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
   createTracing = async (dataset: APIMaybeUnimportedDataset) => {
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
-    const withFallback = doesSupportVolumeWithFallback(dataset);
+    const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
+    const fallbackLayerName =
+      firstSegmentationLayer && doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
+        ? firstSegmentationLayer.name
+        : null;
 
-    const annotation = await createExplorational(dataset, "hybrid", withFallback);
+    const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName);
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
       location.hash

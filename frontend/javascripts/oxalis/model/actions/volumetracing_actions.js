@@ -46,6 +46,13 @@ export type AddBucketAddressesToSegment = {
   bucketAddresses: Array<Vector4>,
 };
 
+export type RemoveBucketAddressesFromSegments = {
+  type: "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS",
+  segmentIdToBucketAddressList: {
+    [number]: Array<Vector4>,
+  },
+};
+
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
@@ -63,6 +70,7 @@ export type VolumeTracingAction =
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
   | AddBucketAddressesToSegment
+  | RemoveBucketAddressesFromSegments
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
@@ -121,6 +129,13 @@ export const addBucketAddressesToSegment = (
   type: "ADD_BUCKET_ADDRESSES_TO_SEGMENT",
   segmentId,
   bucketAddresses,
+});
+
+export const removeBucketAddressesFromSegments = (segmentIdToBucketAddressList: {
+  [number]: Array<Vector4>,
+}): RemoveBucketAddressesFromSegments => ({
+  type: "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS",
+  segmentIdToBucketAddressList,
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({

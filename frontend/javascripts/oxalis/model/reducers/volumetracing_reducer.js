@@ -5,7 +5,7 @@
 import update from "immutability-helper";
 
 import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { ContourModeEnum } from "oxalis/constants";
+import { ContourModeEnum, type Vector4 } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
@@ -100,12 +100,12 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         case "ADD_BUCKET_ADDRESSES_TO_SEGMENT": {
           const { segmentId, bucketAddresses } = action;
           const { segments } = volumeTracing;
-          const coveredBucketAddresses = new Map();
+          const coveredBucketAddresses = new Set();
           let newState = state;
           for (const address of bucketAddresses) {
-            coveredBucketAddresses.set(address, true);
+            coveredBucketAddresses.add(address);
           }
-          if (!segments.has(segmentId)) {
+          if (!segments.has(`${segmentId}`)) {
             const newSegment = {
               id: segmentId,
               name: `Segment ${segmentId}`,
@@ -125,13 +125,52 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
                 volume: {
                   segments: {
                     [segmentId]: {
-                      coveredBucketAddresses: { $add: coveredBucketAddresses },
+                      coveredBucketAddresses: {
+                        $add: Array.from(coveredBucketAddresses.values()),
+                      },
                     },
                   },
                 },
               },
             });
           }
+          console.log(newState.tracing.volume.segments);
+          return newState;
+        }
+
+        case "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS": {
+          const { segmentIdToBucketAddressList } = action;
+          if (!state.tracing.volume) {
+            return state;
+          }
+          let { segments } = state.tracing.volume;
+          // $FlowFixMe[incompatible-type]
+          for (const [segmentId, bucketAddressList]: [string, Array<Vector4>] of Object.entries(
+            segmentIdToBucketAddressList,
+          )) {
+            // TODO: somehow update this efficently
+            if (segments.has(segmentId)) {
+              segments = update(segments, {
+                [segmentId]: {
+                  coveredBucketAddresses: {
+                    $remove: bucketAddressList,
+                  },
+                },
+              });
+              console.log("removed", bucketAddressList, "from", segmentId, segments);
+            }
+          }
+          const newState = update(state, {
+            tracing: {
+              volume: {
+                segments: {
+                  $set: segments,
+                },
+              },
+            },
+          });
+          console.log(newState.tracing.volume.segments);
+
           return newState;
         }
 

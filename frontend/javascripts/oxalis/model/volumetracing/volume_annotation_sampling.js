@@ -6,7 +6,10 @@ import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import Store from "oxalis/store";
-import { addBucketAddressesToSegment } from "oxalis/model/actions/volumetracing_actions";
+import {
+  addBucketAddressesToSegment,
+  removeBucketAddressesFromSegments,
+} from "oxalis/model/actions/volumetracing_actions";
 import messages from "messages";
 import type { DimensionMap } from "oxalis/model/dimensions";
 
@@ -292,6 +295,7 @@ export function applyVoxelMap(
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
 ) {
+  console.log("drawing");
   // TODO: handle case where the value is overwritten or erased (should be the same)
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
@@ -309,6 +313,7 @@ export function applyVoxelMap(
   }
   const lowestResolutionIndex = dataCube.resolutionInfo.getLowestResolutionIndex();
   const zoomedAddressesOfAnnotatedBuckets = [];
+  const removeBucketsFromSegments = {};
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     const isBucketInLowestResolution = labeledBucketZoomedAddress[3] === lowestResolutionIndex;
@@ -338,6 +343,7 @@ export function applyVoxelMap(
       if (bucket.type === "null") {
         continue;
       }
+      const overwrittenSegmentIds = new Set();
       const { data } = bucket.getOrCreateData();
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
@@ -349,7 +355,15 @@ export function applyVoxelMap(
               (voxelToLabel[thirdDimensionIndex] + sliceCount) % constants.BUCKET_WIDTH;
             // The voxelToLabel is already within the bucket and in the correct resolution.
             const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
-            if (shouldOverwrite || (!shouldOverwrite && data[voxelAddress] === overwritableValue)) {
+            const currentSegmentId = data[voxelAddress];
+            if (shouldOverwrite || currentSegmentId === overwritableValue) {
+              if (
+                isBucketInLowestResolution &&
+                currentSegmentId > 0 &&
+                currentSegmentId !== cellId
+              ) {
+                overwrittenSegmentIds.add(currentSegmentId);
+              }
               data[voxelAddress] = cellId;
             }
           }
@@ -358,12 +372,29 @@ export function applyVoxelMap(
       if (annotatedBucket) {
         zoomedAddressesOfAnnotatedBuckets.push(bucket.zoomedAddress);
       }
+      for (const value of overwrittenSegmentIds.values()) {
+        let isValueIncluded = false;
+        for (let index = 0; index < data.length && !isValueIncluded; ++index) {
+          isValueIncluded = data[index] === value;
+        }
+        if (!isValueIncluded) {
+          if (removeBucketsFromSegments[value])
+            removeBucketsFromSegments[value].push(bucket.zoomedAddress);
+        } else {
+          removeBucketsFromSegments[value] = [bucket.zoomedAddress];
+        }
+      }
     }
-
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);
-    if (zoomedAddressesOfAnnotatedBuckets.length > 0) {
-      Store.dispatch(addBucketAddressesToSegment(cellId, zoomedAddressesOfAnnotatedBuckets));
-    }
+  }
+  if (Object.getOwnPropertyNames(removeBucketsFromSegments).length > 0) {
+    console.log("removing");
+    // TODO: looks like too eager removing to me
+    Store.dispatch(removeBucketAddressesFromSegments(removeBucketsFromSegments));
+  }
+  if (zoomedAddressesOfAnnotatedBuckets.length > 0) {
+    // TODO:  somehow far more buckets are added than actually annotated
+    Store.dispatch(addBucketAddressesToSegment(cellId, zoomedAddressesOfAnnotatedBuckets));
   }
 }

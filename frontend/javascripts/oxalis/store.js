@@ -221,10 +221,10 @@ export type SkeletonTracing = {|
 export type Segment = {
   id: number,
   name: string,
-  coveredBucketAddresses: Map<Vector4, boolean>,
+  coveredBucketAddresses: Set<Vector4>,
 };
 
-export type SegmentsMap = Map<number, Segment>;
+export type SegmentsMap = Map<string, Segment>;
 
 export type VolumeTracing = {|
   ...TracingBase,

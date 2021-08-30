@@ -52,7 +52,6 @@ import {
   getLayerByName,
   getResolutionInfo,
   getVisibleSegmentationLayer,
-  getSomeSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
@@ -1397,7 +1396,7 @@ class DataApi {
     switch (key) {
       case "segmentationOpacity": {
         printDeprecationWarning();
-        const segmentationLayer = Model.getSomeSegmentationLayer();
+        const segmentationLayer = Model.getVisibleSegmentationLayer();
         const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "alpha", value));
@@ -1406,7 +1405,7 @@ class DataApi {
       }
       case "isSegmentationDisabled": {
         printDeprecationWarning();
-        const segmentationLayer = Model.getSomeSegmentationLayer();
+        const segmentationLayer = Model.getVisibleSegmentationLayer();
         const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "isDisabled", value));
@@ -1509,7 +1508,7 @@ class DataApi {
       );
     }
 
-    const segmentationLayer = getSomeSegmentationLayer(state);
+    const segmentationLayer = getLayerByName(dataset, effectiveLayerName);
     if (!segmentationLayer) {
       throw new Error("No segmentation layer was found.");
     }

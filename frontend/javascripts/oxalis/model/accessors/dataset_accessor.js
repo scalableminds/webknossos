@@ -311,17 +311,16 @@ export const getResolutionInfoOfSegmentationTracingLayer = memoizeOne(
   _getResolutionInfoOfSegmentationTracingLayer,
 );
 
-function _getResolutionInfoOfSomeSegmentationLayer(state: OxalisState): ResolutionInfo {
-  const segmentationLayer = getSomeSegmentationLayer(state);
+function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): ResolutionInfo {
+  const segmentationLayer = getVisibleSegmentationLayer(state);
   if (!segmentationLayer) {
     return new ResolutionInfo([]);
   }
   return getResolutionInfo(segmentationLayer.resolutions);
 }
 
-// todop: remove again
-export const getResolutionInfoOfSomeSegmentationLayer = memoizeOne(
-  _getResolutionInfoOfSomeSegmentationLayer,
+export const getResolutionInfoOfVisibleSegmentationLayer = memoizeOne(
+  _getResolutionInfoOfVisibleSegmentationLayer,
 );
 
 export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {

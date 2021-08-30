@@ -43,7 +43,7 @@ import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getVisibleSegmentationLayer,
-  getResolutionInfoOfSomeSegmentationLayer,
+  getResolutionInfoOfVisibleSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
@@ -448,7 +448,7 @@ class MeshesView extends React.Component<Props, State> {
 
   render() {
     const startComputingMeshfile = async () => {
-      const datasetResolutionInfo = getResolutionInfoOfSomeSegmentationLayer(Store.getState());
+      const datasetResolutionInfo = getResolutionInfoOfVisibleSegmentationLayer(Store.getState());
       const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
         defaultMeshfileGenerationResolutionIndex,
       );

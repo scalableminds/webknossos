@@ -24,8 +24,9 @@ import {
   getDataLayers,
   getDatasetCenter,
   getResolutionUnion,
-  getFirstSegmentationLayer,
+  hasSegmentation,
   isElementClassSupported,
+  getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -255,7 +256,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
 
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
       ErrorHandling.assert(
-        getFirstSegmentationLayer(dataset) != null,
+        getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
       );
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
@@ -413,8 +414,7 @@ function initializeDataLayerInstances(
     );
   }
 
-  const segmentationLayer = getFirstSegmentationLayer(dataset);
-  if (segmentationLayer != null && isMappingSupported) {
+  if (hasSegmentation(dataset) != null && isMappingSupported) {
     window.mappings = setupGlobalMappingsObject();
   }
 

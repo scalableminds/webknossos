@@ -614,20 +614,6 @@ export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?API
   return null;
 }
 
-// todo: remove again
-export function getSomeSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
-  const segmentationLayers = getSegmentationLayers(state.dataset);
-  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
-  if (visibleSegmentationLayers.length > 0) {
-    return visibleSegmentationLayers[0];
-  } else if (segmentationLayers.length > 0) {
-    return segmentationLayers[0];
-  }
-
-  return null;
-}
-
-// todo: remove again
 export function getFirstSegmentationLayer(
   dataset: APIMaybeUnimportedDataset,
 ): ?APISegmentationLayer {
@@ -671,7 +657,7 @@ export function getSegmentationLayers(
 }
 
 export function hasSegmentation(dataset: APIDataset): boolean {
-  return getFirstSegmentationLayer(dataset) != null;
+  return getSegmentationLayers(dataset).length > 0;
 }
 
 // todop: adapt callers to multiple segmentation layers (for which do we ask this question?)

@@ -15,8 +15,9 @@ import _ from "lodash";
 
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
-import type { RemoteMeshMetaData } from "types/api_flow_types";
-import type { OxalisState, IsosurfaceInformation } from "oxalis/store";
+
+import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
+import type { OxalisState, Flycam, IsosurfaceInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import {
@@ -26,7 +27,6 @@ import {
   triggerActiveIsosurfaceDownloadAction,
   triggerIsosurfaceDownloadAction,
   updateIsosurfaceVisibilityAction,
-  updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
   updateCurrentMeshFileAction,
@@ -40,11 +40,7 @@ import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_h
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import {
-  getPosition,
-  getRequestLogZoomStep,
-  getCurrentResolution,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getVisibleSegmentationLayer,
   getResolutionInfoOfSomeSegmentationLayer,
@@ -74,28 +70,39 @@ export const stlIsosurfaceConstants = {
 
 // This file defines the component MeshesView.
 
-const mapStateToProps = (state: OxalisState): * => {
+type StateProps = {|
+  isImporting: boolean,
+  isosurfaces: { [segmentId: number]: IsosurfaceInformation },
+  dataset: APIDataset,
+  mappingColors: ?Array<number>,
+  flycam: Flycam,
+  hasVolume: boolean,
+  visibleSegmentationLayer: ?APISegmentationLayer,
+  allowUpdate: boolean,
+  organization: string,
+  datasetName: string,
+  availableMeshFiles: ?Array<string>,
+  currentMeshFile: ?string,
+  activeUser: ?APIUser,
+|};
+
+const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   return {
-    meshes: state.tracing != null ? state.tracing.meshes : [],
     isImporting: state.uiInformation.isImportingMesh,
     isosurfaces:
       visibleSegmentationLayer != null
         ? state.isosurfacesByLayer[visibleSegmentationLayer.name]
-        : null,
-    datasetConfiguration: state.datasetConfiguration,
+        : {},
     dataset: state.dataset,
     mappingColors: getMappingInfo(
       state.temporaryConfiguration.activeMapping,
       visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
     ).mappingColors,
     flycam: state.flycam,
-    activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
     hasVolume: state.tracing.volume != null,
     visibleSegmentationLayer,
-    zoomStep: getRequestLogZoomStep(state),
     allowUpdate: state.tracing.restrictions.allowUpdate,
-    activeResolution: getCurrentResolution(state),
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:
@@ -111,9 +118,6 @@ const mapStateToProps = (state: OxalisState): * => {
 };
 
 const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
-  updateRemoteMeshMetadata(id: string, meshMetaData: $Shape<RemoteMeshMetaData>) {
-    dispatch(updateRemoteMeshMetaDataAction(id, meshMetaData));
-  },
   onChangeDatasetSettings(propertyName, value) {
     dispatch(updateDatasetSettingAction(propertyName, value));
   },
@@ -150,7 +154,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
 });
 
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
-type StateProps = ExtractReturn<typeof mapStateToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
 

@@ -270,6 +270,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     _.extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
+        // If there are multiple, disabled segmentation layers, we don't know currently
+        // which layer was visible least recently. Therefore, we just pick the first layer.
         const segmentationLayer = Model.getSomeSegmentationLayer();
         if (!segmentationLayer) {
           return;

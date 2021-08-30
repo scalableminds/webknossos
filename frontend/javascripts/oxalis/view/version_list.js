@@ -53,7 +53,7 @@ export async function previewVersion(versions?: Versions) {
   await api.tracing.restart(annotationType, annotationId, ControlModeEnum.TRACE, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
 
-  const segmentationLayer = Model.getVisibleSegmentationLayer();
+  const segmentationLayer = Model.getSegmentationTracingLayer();
   const shouldPreviewVolumeVersion = versions != null && versions.volume != null;
   const shouldPreviewNewestVersion = versions == null;
   if (segmentationLayer != null && (shouldPreviewVolumeVersion || shouldPreviewNewestVersion)) {

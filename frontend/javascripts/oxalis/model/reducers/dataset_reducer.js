@@ -24,6 +24,19 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
         isosurfacesByLayer: createDictsForKeys(segmentationLayerNames, () => ({})),
         availableMeshFilesByLayer: createDictsForKeys(segmentationLayerNames, () => null),
         currentMeshFileByLayer: createDictsForKeys(segmentationLayerNames, () => null),
+        temporaryConfiguration: {
+          ...state.temporaryConfiguration,
+          activeMapping: createDictsForKeys(segmentationLayerNames, () => ({
+            mappingName: null,
+            mapping: null,
+            mappingKeys: null,
+            mappingColors: null,
+            hideUnmappedIds: false,
+            isMappingEnabled: false,
+            mappingSize: 0,
+            mappingType: "JSON",
+          })),
+        },
       };
     }
     case "SET_LAYER_MAPPINGS": {

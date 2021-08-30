@@ -59,6 +59,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       case _ => Fox.successful(None)
     }
 
+  @ApiOperation(hidden = true, value = "")
   def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {
     implicit request =>
       request.identity.foreach { user =>

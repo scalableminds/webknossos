@@ -5,7 +5,6 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
@@ -22,7 +21,6 @@ import models.user.Theme.Theme
 
 import scala.concurrent.ExecutionContext
 
-@Api
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
@@ -223,14 +221,6 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  @ApiOperation(value = "List all users for which you have read access")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200,
-                      message =
-                        "JSON list of objects containing user information, including team memberships and experiences"),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable",

@@ -186,16 +186,16 @@ async function fetchParallel(
   ]);
 }
 
-function validateSpecsForLayers(layers: Array<APIDataLayer>, requiredBucketCapacity: number): * {
+function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: number): * {
+  const layers = dataset.dataSource.dataLayers;
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
 
-  const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
     layer => getBitDepth(layer) >> 3,
-    hasSegmentation,
+    hasSegmentation(dataset),
     requiredBucketCapacity,
   );
 
@@ -383,7 +383,6 @@ function initializeDataLayerInstances(
   maximumLayerCountToRender: number,
 } {
   const { dataset } = Store.getState();
-  const layers = dataset.dataSource.dataLayers;
 
   const requiredBucketCapacity =
     constants.GPU_FACTOR_MULTIPLIER *
@@ -395,11 +394,12 @@ function initializeDataLayerInstances(
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
     maximumTextureCountForLayer,
-  } = validateSpecsForLayers(layers, requiredBucketCapacity);
+  } = validateSpecsForLayers(dataset, requiredBucketCapacity);
 
   console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
   const connectionInfo = new ConnectionInfo();
+  const layers = dataset.dataSource.dataLayers;
   const dataLayers = {};
   for (const layer of layers) {
     const textureInformation = textureInformationPerLayer.get(layer);

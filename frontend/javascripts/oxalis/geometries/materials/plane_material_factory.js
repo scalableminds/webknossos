@@ -19,7 +19,6 @@ import {
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
-  getVisibleSegmentationLayer,
   getDataLayers,
   getResolutions,
   getByteCount,

@@ -487,19 +487,19 @@ class ReactRouter extends React.Component<Props> {
                       const type =
                         Enum.coalesce(TracingTypeEnum, match.params.type) ||
                         TracingTypeEnum.skeleton;
-                      const fallbackLayerName = match.params.fallbackLayerName;
 
-                      const params = Utils.getUrlParamsObjectFromString(location.search);
+                      const getParams = Utils.getUrlParamsObjectFromString(location.search);
+                      const { fallbackLayerName } = getParams;
 
                       const resolutionRestrictions = {};
-                      if (params.minRes !== undefined) {
-                        resolutionRestrictions.min = parseInt(params.minRes);
+                      if (getParams.minRes !== undefined) {
+                        resolutionRestrictions.min = parseInt(getParams.minRes);
                         if (!_.isNumber(resolutionRestrictions.min)) {
                           throw new Error("Invalid minRes parameter");
                         }
                       }
-                      if (params.maxRes !== undefined) {
-                        resolutionRestrictions.max = parseInt(params.maxRes);
+                      if (getParams.maxRes !== undefined) {
+                        resolutionRestrictions.max = parseInt(getParams.maxRes);
                         if (!_.isNumber(resolutionRestrictions.max)) {
                           throw new Error("Invalid maxRes parameter");
                         }

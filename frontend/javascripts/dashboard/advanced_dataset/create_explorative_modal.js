@@ -37,7 +37,9 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
         : null;
 
     const fallbackLayerGetParameter =
-      selectedSegmentationLayer != null ? `&fallbackLayer=${selectedSegmentationLayer.name}` : "";
+      selectedSegmentationLayer != null
+        ? `&fallbackLayerName=${selectedSegmentationLayer.name}`
+        : "";
 
     const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
     let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();

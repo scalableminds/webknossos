@@ -434,10 +434,6 @@ function* refreshIsosurfaces(): Saga<void> {
   if (!segmentationLayer) {
     return;
   }
-
-  if (!segmentationLayer) {
-    return;
-  }
   // First create an array containing information about all loaded isosurfaces as the map is manipulated within the loop.
   for (const [cellId, threeDMap] of Array.from(
     isosurfacesMapByLayer[segmentationLayer.name].entries(),

@@ -177,15 +177,14 @@ function* ensureSuitableIsosurface(
   yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
 }
 
-function* getInfoForIsosurfaceLoading(): Saga<{
+function* getInfoForIsosurfaceLoading(
+  layer: DataLayer,
+): Saga<{
   dataset: APIDataset,
-  layer: ?DataLayer,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
 }> {
   const dataset = yield* select(state => state.dataset);
-  // todo: support meshes for multiple segmentation layers
-  const layer = Model.getEnforcedSomeSegmentationLayer();
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
@@ -198,11 +197,11 @@ function* loadIsosurfaceForSegmentId(
   seedPosition: ?Vector3,
   removeExistingIsosurface: boolean = false,
 ): Saga<void> {
-  const { dataset, layer, zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading);
-
+  const layer = Model.getVisibleSegmentationLayer();
   if (!layer) {
     return;
   }
+  const { dataset, zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading, layer);
 
   batchCounterPerSegment[segmentId] = 0;
   yield* call(

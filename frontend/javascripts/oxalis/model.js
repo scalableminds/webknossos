@@ -139,15 +139,6 @@ export class OxalisModel {
     return this.getSegmentationLayers().length > 0;
   }
 
-  getEnforcedSomeSegmentationLayer(): DataLayer {
-    const layer = this.getSomeSegmentationLayer();
-    if (layer == null) {
-      // The function should never be called if no segmentation layer exists.
-      throw new Error("No segmentation layer found.");
-    }
-    return layer;
-  }
-
   getSegmentationTracingLayer(): ?DataLayer {
     const { dataset } = Store.getState();
     const layer = getSegmentationTracingLayer(dataset);

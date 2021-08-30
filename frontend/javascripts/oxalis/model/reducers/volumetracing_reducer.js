@@ -101,6 +101,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           const { segmentId, bucketAddresses } = action;
           const { segments } = volumeTracing;
           const coveredBucketAddresses = new Set();
+          // TODO: Check whether a set is really needed here or whether a array is enough if there is already a entry
           let newState = state;
           for (const address of bucketAddresses) {
             coveredBucketAddresses.add(address);
@@ -108,6 +109,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           if (!segments.has(`${segmentId}`)) {
             const newSegment = {
               id: segmentId,
+              somePosition: [0, 0, 0],
               name: `Segment ${segmentId}`,
               coveredBucketAddresses,
             };

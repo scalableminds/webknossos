@@ -70,7 +70,7 @@ export class ResolutionInfo {
   }
 
   getResolutionList(): Array<Vector3> {
-    return Array.from(this.resolutionMap.entries()).map(entry => entry[1]);
+    return Array.from(this.resolutionMap.values());
   }
 
   getResolutionsWithIndices(): Array<[number, Vector3]> {

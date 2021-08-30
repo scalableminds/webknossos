@@ -18,7 +18,11 @@ import {
 import { VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
 import { getResolutions, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import { V3 } from "libs/mjs";
+import {
+  globalPositionToBucketPosition,
+  bucketPositionToGlobalAddress,
+} from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -586,6 +590,26 @@ class DataCube {
 
   getVoxelIndexByVoxelOffset([x, y, z]: Vector3 | Float32Array): number {
     return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
+  }
+
+  getPositionOfVoxelIndex(index: number): Vector3 {
+    const { BUCKET_WIDTH } = constants;
+    const z = Math.floor(index / BUCKET_WIDTH ** 2);
+    const rest = index - z * BUCKET_WIDTH ** 2;
+    const y = Math.floor(rest / BUCKET_WIDTH);
+    const x = rest - y * BUCKET_WIDTH;
+    return [x, y, z];
+  }
+
+  getGlobalPositionOfBucketIndex(
+    index: number,
+    bucketAddress: Vector4,
+    resolutions: Array<Vector3>,
+  ): Vector3 {
+    const topLeftOfBucket = bucketPositionToGlobalAddress(bucketAddress, resolutions);
+    const positionWithinBucket = this.getPositionOfVoxelIndex(index);
+    const globalPosition = V3.add(topLeftOfBucket, positionWithinBucket);
+    return globalPosition;
   }
 
   /*

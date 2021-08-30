@@ -53,6 +53,12 @@ export type RemoveBucketAddressesFromSegments = {
   },
 };
 
+export type SetSomePositionOfSegment = {
+  type: "SET_SOME_POSITION_OF_SEGMENT",
+  segmentId: number,
+  somePosition: Vector3,
+};
+
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
   | CreateCellAction
@@ -71,6 +77,7 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | AddBucketAddressesToSegment
   | RemoveBucketAddressesFromSegments
+  | SetSomePositionOfSegment
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
@@ -136,6 +143,15 @@ export const removeBucketAddressesFromSegments = (segmentIdToBucketAddressList: 
 }): RemoveBucketAddressesFromSegments => ({
   type: "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS",
   segmentIdToBucketAddressList,
+});
+
+export const setSomePositionOfSegment = (
+  segmentId: number,
+  somePosition: Vector3,
+): SetSomePositionOfSegment => ({
+  type: "SET_SOME_POSITION_OF_SEGMENT",
+  segmentId,
+  somePosition,
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({

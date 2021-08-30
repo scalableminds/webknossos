@@ -221,6 +221,7 @@ export type SkeletonTracing = {|
 export type Segment = {
   id: number,
   name: string,
+  somePosition: Vector3,
   coveredBucketAddresses: Set<Vector4>,
 };
 

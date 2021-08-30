@@ -251,3 +251,19 @@ test("Garbage Collection should not throw an exception if no bucket is collectab
   cube.getOrCreateBucket([3, 3, 3, 0]);
   t.true(true);
 });
+
+test("getVoxelIndexByVoxelOffset should return the correct index of a position within a bucket", t => {
+  const { cube } = t.context;
+  let index = cube.getVoxelIndexByVoxelOffset([0, 0, 0]);
+  t.is(index, 0);
+  index = cube.getVoxelIndexByVoxelOffset([10, 10, 10]);
+  t.is(index, 10570);
+});
+
+test("getPositionOfVoxelIndex should return the correct index of a position within a bucket", t => {
+  const { cube } = t.context;
+  let position = cube.getPositionOfVoxelIndex(0);
+  t.deepEqual(position, [0, 0, 0]);
+  position = cube.getPositionOfVoxelIndex(10570);
+  t.deepEqual(position, [10, 10, 10]);
+});

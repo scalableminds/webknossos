@@ -1,14 +1,17 @@
 // @flow
 
 import _ from "lodash";
-import constants, { type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
+import constants, { type Vector3, type Vector4, type LabeledVoxelsMap } from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import Store from "oxalis/store";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import {
   addBucketAddressesToSegment,
   removeBucketAddressesFromSegments,
+  setSomePositionOfSegment,
 } from "oxalis/model/actions/volumetracing_actions";
 import messages from "messages";
 import type { DimensionMap } from "oxalis/model/dimensions";
@@ -296,7 +299,6 @@ export function applyVoxelMap(
   overwritableValue: number = 0,
 ) {
   console.log("drawing");
-  // TODO: handle case where the value is overwritten or erased (should be the same)
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
@@ -313,7 +315,7 @@ export function applyVoxelMap(
   }
   const lowestResolutionIndex = dataCube.resolutionInfo.getLowestResolutionIndex();
   const zoomedAddressesOfAnnotatedBuckets = [];
-  const removeBucketsFromSegments = {};
+  const overwrittenBucketAddressesOfSegments = {};
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     const isBucketInLowestResolution = labeledBucketZoomedAddress[3] === lowestResolutionIndex;
@@ -343,7 +345,6 @@ export function applyVoxelMap(
       if (bucket.type === "null") {
         continue;
       }
-      const overwrittenSegmentIds = new Set();
       const { data } = bucket.getOrCreateData();
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
@@ -362,7 +363,10 @@ export function applyVoxelMap(
                 currentSegmentId > 0 &&
                 currentSegmentId !== cellId
               ) {
-                overwrittenSegmentIds.add(currentSegmentId);
+                if (!overwrittenBucketAddressesOfSegments[currentSegmentId]) {
+                  overwrittenBucketAddressesOfSegments[currentSegmentId] = new Set();
+                }
+                overwrittenBucketAddressesOfSegments[currentSegmentId].add(bucket.zoomedAddress);
               }
               data[voxelAddress] = cellId;
             }
@@ -372,27 +376,154 @@ export function applyVoxelMap(
       if (annotatedBucket) {
         zoomedAddressesOfAnnotatedBuckets.push(bucket.zoomedAddress);
       }
-      for (const value of overwrittenSegmentIds.values()) {
-        let isValueIncluded = false;
-        for (let index = 0; index < data.length && !isValueIncluded; ++index) {
-          isValueIncluded = data[index] === value;
-        }
-        if (!isValueIncluded) {
-          if (removeBucketsFromSegments[value]) {
-            removeBucketsFromSegments[value].push(bucket.zoomedAddress);
-          } else {
-            removeBucketsFromSegments[value] = [bucket.zoomedAddress];
-          }
-        }
-      }
     }
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);
   }
+  manageRemovingBucketAddressesOfOverdrawnSegments(
+    dataCube,
+    overwrittenBucketAddressesOfSegments,
+    lowestResolutionIndex,
+  );
+  addAnnotatedBucketAddressesToCoveredBucketsOfSegment(cellId, zoomedAddressesOfAnnotatedBuckets);
+}
+
+function addAnnotatedBucketAddressesToCoveredBucketsOfSegment(
+  segmentId: number,
+  newlyCoveredBucketAddresses: Array<Vector4>,
+) {
+  if (newlyCoveredBucketAddresses.length > 0) {
+    Store.dispatch(addBucketAddressesToSegment(segmentId, newlyCoveredBucketAddresses));
+  }
+}
+
+function assignSegmentNewPositionFromIndexWithinBucket(
+  segmentId: number,
+  index: number,
+  bucketAddress: Vector4,
+  resolutions: Array<Vector3>,
+  dataCube: DataCube,
+) {
+  const globalPositionForSegment = dataCube.getGlobalPositionOfBucketIndex(
+    index,
+    bucketAddress,
+    resolutions,
+  );
+  Store.dispatch(setSomePositionOfSegment(segmentId, globalPositionForSegment));
+}
+
+function findAndSetNewValidPositionForSegments(
+  segmentsWithInvalidPosition: Array<number>,
+  removeBucketsFromSegments: { [number]: Array<Vector4> },
+  resolutions: Array<Vector3>,
+  dataCube: DataCube,
+) {
+  const currentSegmentList = enforceVolumeTracing(Store.getState().tracing).segments;
+  for (const currentSegmentId of segmentsWithInvalidPosition) {
+    const currentSegmentIdString = `${currentSegmentId}`;
+    const currentSegmentEntry = currentSegmentList.get(currentSegmentIdString);
+    if (currentSegmentEntry == null) {
+      continue;
+    }
+    const bucketAddressesWithDataOfCurrentSegment = [
+      ...currentSegmentEntry.coveredBucketAddresses,
+    ].filter(address => !removeBucketsFromSegments[currentSegmentId].includes(address));
+    if (bucketAddressesWithDataOfCurrentSegment.length === 0) {
+      // TODO: Mange this special case, where a segment was completely overdrawn / think about how this can be handled.
+      // One way would be to remove that segment from the list.
+      continue;
+    }
+    const firstBucketAddressWithDataOfCurrentSegment = bucketAddressesWithDataOfCurrentSegment[0];
+    const bucketWithSegmentData = dataCube.getOrCreateBucket(
+      firstBucketAddressWithDataOfCurrentSegment,
+    );
+    if (bucketWithSegmentData.type === "null") {
+      continue;
+    }
+    const { data: bucketData } = bucketWithSegmentData.getOrCreateData();
+    let firstPositionWithCurrentSegment = 0;
+    for (; firstPositionWithCurrentSegment < bucketData.length; ++firstPositionWithCurrentSegment) {
+      if (bucketData[firstPositionWithCurrentSegment] === currentSegmentId) {
+        break;
+      }
+    }
+    assignSegmentNewPositionFromIndexWithinBucket(
+      currentSegmentId,
+      firstPositionWithCurrentSegment,
+      firstBucketAddressWithDataOfCurrentSegment,
+      resolutions,
+      dataCube,
+    );
+  }
+}
+
+function manageRemovingBucketAddressesOfOverdrawnSegments(
+  dataCube: DataCube,
+  overwrittenBucketAddressesOfSegments: { [string]: Set<Vector4> },
+  lowestResolutionIndex: number,
+) {
+  const removeBucketsFromSegments = {};
+  const segmentsWithInvalidPosition = [];
+  const currentSegmentList = enforceVolumeTracing(Store.getState().tracing).segments;
+  const resolutions: Array<Vector3> = (_.cloneDeep(dataCube.resolutionInfo.resolutions): any);
+  // $FlowFixMe[incompatible-type]
+  for (const [currentSegmentId, bucketAddress]: [number, Vector4] of Object.entries(
+    overwrittenBucketAddressesOfSegments,
+  )) {
+    const bucket = dataCube.getOrCreateBucket(bucketAddress);
+    if (bucket.type === "null") {
+      continue;
+    }
+    const { data: bucketData } = bucket.getOrCreateData();
+    const currentSegmentIdString = `${currentSegmentId}`;
+    const currentSegmentEntry = currentSegmentList.get(currentSegmentIdString);
+    if (currentSegmentEntry == null) {
+      continue;
+    }
+    const currentSegmentPosition = currentSegmentEntry.somePosition;
+    let isSegmentPositionFaulty = false;
+    const bucketOfCurrentSegmentPosition = globalPositionToBucketPosition(
+      currentSegmentPosition,
+      resolutions,
+      lowestResolutionIndex,
+    );
+    if (_.isEqual(bucketAddress, bucketOfCurrentSegmentPosition)) {
+      const indexInBucketData = dataCube.getVoxelIndex(currentSegmentPosition);
+      isSegmentPositionFaulty = bucketData[indexInBucketData] !== currentSegmentId;
+    }
+    let isValueIncluded = false;
+    for (let index = 0; index < bucketData.length && !isValueIncluded; ++index) {
+      isValueIncluded = bucketData[index] === currentSegmentId;
+      if (isValueIncluded && isSegmentPositionFaulty) {
+        assignSegmentNewPositionFromIndexWithinBucket(
+          currentSegmentId,
+          index,
+          bucketAddress,
+          resolutions,
+          dataCube,
+        );
+        isSegmentPositionFaulty = false;
+      }
+    }
+    if (!isValueIncluded) {
+      if (removeBucketsFromSegments[currentSegmentIdString]) {
+        removeBucketsFromSegments[currentSegmentIdString].push(bucketAddress);
+      } else {
+        removeBucketsFromSegments[currentSegmentIdString] = [bucketAddress];
+      }
+    }
+    if (isSegmentPositionFaulty) {
+      segmentsWithInvalidPosition.push(currentSegmentId);
+    }
+  }
+  findAndSetNewValidPositionForSegments(
+    segmentsWithInvalidPosition,
+    removeBucketsFromSegments,
+    resolutions,
+    dataCube,
+  );
+
   if (Object.getOwnPropertyNames(removeBucketsFromSegments).length > 0) {
     Store.dispatch(removeBucketAddressesFromSegments(removeBucketsFromSegments));
-  }
-  if (zoomedAddressesOfAnnotatedBuckets.length > 0) {
-    Store.dispatch(addBucketAddressesToSegment(cellId, zoomedAddressesOfAnnotatedBuckets));
   }
 }

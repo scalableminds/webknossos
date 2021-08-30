@@ -4,6 +4,7 @@ import _ from "lodash";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
+  setSomePositionOfSegment,
   finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
@@ -210,6 +211,9 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       overwriteMode,
       labeledZoomStep,
     );
+    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+
+    yield* put(setSomePositionOfSegment(activeCellId, lastPosition));
     yield* put(finishAnnotationStrokeAction());
   }
 }

@@ -305,7 +305,7 @@ function NoNodeContextMenuOptions({
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
     })();
-  }, []);
+  }, [visibleSegmentationLayer, dataset]);
 
   const loadMesh = async () => {
     if (!currentMeshFile) return;

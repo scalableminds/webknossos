@@ -154,11 +154,11 @@ export default function parse(data) {
       }
     }
 
-    geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(vertices), 3));
-    geometry.addAttribute("normal", new THREE.BufferAttribute(new Float32Array(normals), 3));
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertices), 3));
+    geometry.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(normals), 3));
 
     if (hasColors) {
-      geometry.addAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
       geometry.hasColors = true;
       geometry.alpha = alpha;
     }
@@ -220,8 +220,8 @@ export default function parse(data) {
       faceCounter++;
     }
 
-    geometry.addAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.addAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
 
     return geometry;
   }

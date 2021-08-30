@@ -79,7 +79,8 @@ const mapStateToProps = (state: OxalisState): * => {
   return {
     meshes: state.tracing != null ? state.tracing.meshes : [],
     isImporting: state.uiInformation.isImportingMesh,
-    isosurfaces: state.isosurfaces,
+    isosurfaces:
+      visibleSegmentationLayer != null ? state.isosurfaces[visibleSegmentationLayer.name] : null,
     datasetConfiguration: state.datasetConfiguration,
     dataset: state.dataset,
     mappingColors: getMappingInfo(
@@ -141,8 +142,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
     }
     dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
   },
-  setCurrentMeshFile(fileName) {
-    dispatch(updateCurrentMeshFileAction(fileName));
+  setCurrentMeshFile(layerName: string, fileName: string) {
+    dispatch(updateCurrentMeshFileAction(layerName, fileName));
   },
 });
 
@@ -562,8 +563,8 @@ class MeshesView extends React.Component<Props, State> {
     const handleMeshFileSelected = async mesh => {
       if (mesh.key === "refresh") {
         maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
-      } else {
-        this.props.setCurrentMeshFile(mesh.key);
+      } else if (this.props.visibleSegmentationLayer != null) {
+        this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
         loadPrecomputedMesh();
       }
     };

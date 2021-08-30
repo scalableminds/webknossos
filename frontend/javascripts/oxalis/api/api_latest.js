@@ -1480,7 +1480,7 @@ class DataApi {
       );
     }
 
-    Store.dispatch(updateCurrentMeshFileAction(meshFile));
+    Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFile));
   }
 
   /**

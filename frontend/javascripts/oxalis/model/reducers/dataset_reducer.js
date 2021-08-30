@@ -2,14 +2,28 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
+import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+
+function createDictsForKeys<T>(
+  keys: Array<string>,
+  makeDefaultValue: () => T,
+): { [key: string]: T } {
+  return Object.fromEntries(keys.map(key => [key, makeDefaultValue()]));
+}
 
 function DatasetReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "SET_DATASET": {
       const { dataset } = action;
+
+      const segmentationLayerNames = getSegmentationLayers(dataset).map(layer => layer.name);
+
       return {
         ...state,
         dataset,
+        isosurfaces: createDictsForKeys(segmentationLayerNames, () => ({})),
+        availableMeshFiles: createDictsForKeys(segmentationLayerNames, () => null),
+        currentMeshFile: createDictsForKeys(segmentationLayerNames, () => null),
       };
     }
     case "SET_LAYER_MAPPINGS": {

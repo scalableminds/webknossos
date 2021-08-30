@@ -47,13 +47,13 @@ type BufferCollection = {
 type BufferOperation = (position: BufferPosition) => Array<typeof THREE.BufferAttribute>;
 
 const NodeBufferHelperType = {
-  addAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
-    geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
-    geometry.addAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.addAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.addAttribute("isCommented", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.addAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
-    geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+  setAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
+    geometry.setAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("isCommented", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
   },
 
   buildMesh(
@@ -67,9 +67,9 @@ const NodeBufferHelperType = {
 };
 
 const EdgeBufferHelperType = {
-  addAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
-    geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
-    geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
+  setAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
+    geometry.setAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
   buildMesh(
@@ -195,7 +195,7 @@ class Skeleton {
     helper: BufferHelper,
   ): Buffer {
     const geometry = new THREE.BufferGeometry();
-    helper.addAttributes(geometry, capacity);
+    helper.setAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
     this.rootGroup.add(mesh);
     if (helper.supportsPicking) {

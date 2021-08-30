@@ -48,7 +48,11 @@ export async function maybeFetchMeshFiles(
       getBaseLayerName(segmentationLayer),
     );
     Store.dispatch(updateMeshFileListAction(layerName, availableMeshFiles));
-    if (!Store.getState().currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
+    if (
+      !Store.getState().currentMeshFile[layerName] &&
+      availableMeshFiles.length > 0 &&
+      autoActivate
+    ) {
       Store.dispatch(updateCurrentMeshFileAction(layerName, availableMeshFiles[0]));
     }
     return availableMeshFiles;

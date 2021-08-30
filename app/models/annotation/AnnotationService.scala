@@ -145,12 +145,17 @@ class AnnotationService @Inject()(
       oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = {
     def getFallbackLayer: Option[SegmentationLayer] =
       // todo: probably should fail if the fallbackLayerName cannot be found
-      fallbackLayerNameOpt.map(fallbackLayerName =>
-        dataSource.dataLayers.filter(dl => dl.name == fallbackLayerName).flatMap {
-          case layer: SegmentationLayer => Some(layer)
-          case _                        => None
-        }.headOption
-      ).getOrElse(None)
+      fallbackLayerNameOpt
+        .map(
+          fallbackLayerName =>
+            dataSource.dataLayers
+              .filter(dl => dl.name == fallbackLayerName)
+              .flatMap {
+                case layer: SegmentationLayer => Some(layer)
+                case _                        => None
+              }
+              .headOption)
+        .getOrElse(None)
 
     tracingType match {
       case TracingType.skeleton =>
@@ -243,13 +248,15 @@ class AnnotationService @Inject()(
           case _                   => Fox.failure("unexpectedReturn")
         }
       case TracingType.volume =>
-        createTracingsForExplorational(dataSet,
-                                       dataSource,
-                                       TracingType.skeleton,
-                                       fallbackLayerNameOpt = None, // In skeleton case, this is irrelevant.
-                                       ResolutionRestrictions.empty,
-                                       organizationName,
-                                       annotation.volumeTracingId).flatMap {
+        createTracingsForExplorational(
+          dataSet,
+          dataSource,
+          TracingType.skeleton,
+          fallbackLayerNameOpt = None, // In skeleton case, this is irrelevant.
+          ResolutionRestrictions.empty,
+          organizationName,
+          annotation.volumeTracingId
+        ).flatMap {
           case (Some(skeletonId), _) => annotationDAO.updateSkeletonTracingId(annotation._id, skeletonId)
           case _                     => Fox.failure("unexpectedReturn")
         }

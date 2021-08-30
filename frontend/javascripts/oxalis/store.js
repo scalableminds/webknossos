@@ -488,9 +488,11 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
-  +isosurfaces: { [segmentationLayerName: string]: { [segmentId: number]: IsosurfaceInformation } },
-  +availableMeshFiles: { [segmentationLayerName: string]: ?Array<string> },
-  +currentMeshFile: { [segmentationLayerName: string]: ?string },
+  +isosurfacesByLayer: {
+    [segmentationLayerName: string]: { [segmentId: number]: IsosurfaceInformation },
+  },
+  +availableMeshFilesByLayer: { [segmentationLayerName: string]: ?Array<string> },
+  +currentMeshFileByLayer: { [segmentationLayerName: string]: ?string },
 |};
 
 const sagaMiddleware = createSagaMiddleware();

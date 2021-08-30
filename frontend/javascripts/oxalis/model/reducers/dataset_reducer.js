@@ -21,9 +21,9 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
       return {
         ...state,
         dataset,
-        isosurfaces: createDictsForKeys(segmentationLayerNames, () => ({})),
-        availableMeshFiles: createDictsForKeys(segmentationLayerNames, () => null),
-        currentMeshFile: createDictsForKeys(segmentationLayerNames, () => null),
+        isosurfacesByLayer: createDictsForKeys(segmentationLayerNames, () => ({})),
+        availableMeshFilesByLayer: createDictsForKeys(segmentationLayerNames, () => null),
+        currentMeshFileByLayer: createDictsForKeys(segmentationLayerNames, () => null),
       };
     }
     case "SET_LAYER_MAPPINGS": {

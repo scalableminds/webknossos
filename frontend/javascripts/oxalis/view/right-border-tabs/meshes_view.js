@@ -80,7 +80,9 @@ const mapStateToProps = (state: OxalisState): * => {
     meshes: state.tracing != null ? state.tracing.meshes : [],
     isImporting: state.uiInformation.isImportingMesh,
     isosurfaces:
-      visibleSegmentationLayer != null ? state.isosurfaces[visibleSegmentationLayer.name] : null,
+      visibleSegmentationLayer != null
+        ? state.isosurfacesByLayer[visibleSegmentationLayer.name]
+        : null,
     datasetConfiguration: state.datasetConfiguration,
     dataset: state.dataset,
     mappingColors: getMappingInfo(
@@ -98,11 +100,11 @@ const mapStateToProps = (state: OxalisState): * => {
     datasetName: state.dataset.name,
     availableMeshFiles:
       visibleSegmentationLayer != null
-        ? state.availableMeshFiles[visibleSegmentationLayer.name]
+        ? state.availableMeshFilesByLayer[visibleSegmentationLayer.name]
         : null,
     currentMeshFile:
       visibleSegmentationLayer != null
-        ? state.currentMeshFile[visibleSegmentationLayer.name]
+        ? state.currentMeshFileByLayer[visibleSegmentationLayer.name]
         : null,
     activeUser: state.activeUser,
   };

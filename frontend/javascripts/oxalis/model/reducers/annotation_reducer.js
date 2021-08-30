@@ -104,7 +104,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfaces", layerName, id, {
+      return updateKey3(state, "isosurfacesByLayer", layerName, id, {
         isVisible: visibility,
       });
     }
@@ -123,14 +123,14 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "REMOVE_ISOSURFACE": {
       const { layerName, cellId } = action;
       return update(state, {
-        isosurfaces: { [layerName]: { $unset: [cellId] } },
+        isosurfacesByLayer: { [layerName]: { $unset: [cellId] } },
       });
     }
 
     case "ADD_ISOSURFACE": {
       const { layerName, cellId, seedPosition, isPrecomputed } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfaces", layerName, cellId, {
+      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
         segmentId: cellId,
         seedPosition,
         isLoading: false,
@@ -142,7 +142,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "STARTED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfaces", layerName, cellId, {
+      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
         isLoading: true,
       });
     }
@@ -150,19 +150,19 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "FINISHED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfaces", layerName, cellId, {
+      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
         isLoading: false,
       });
     }
 
     case "UPDATE_MESH_FILE_LIST": {
       const { layerName, meshFiles } = action;
-      return update(state, { availableMeshFiles: { [layerName]: { $set: meshFiles } } });
+      return update(state, { availableMeshFilesByLayer: { [layerName]: { $set: meshFiles } } });
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
       const { layerName, meshFile } = action;
-      return update(state, { currentMeshFile: { [layerName]: { $set: meshFile } } });
+      return update(state, { currentMeshFileByLayer: { [layerName]: { $set: meshFile } } });
     }
 
     default:

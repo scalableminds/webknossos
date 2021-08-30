@@ -660,7 +660,6 @@ export function hasSegmentation(dataset: APIDataset): boolean {
   return getSegmentationLayers(dataset).length > 0;
 }
 
-// todop: adapt callers to multiple segmentation layers (for which do we ask this question?)
 export function doesSupportVolumeWithFallback(
   dataset: APIMaybeUnimportedDataset,
   segmentationLayer: ?APISegmentationLayer,

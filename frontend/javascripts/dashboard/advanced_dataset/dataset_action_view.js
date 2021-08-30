@@ -16,7 +16,10 @@ import { Unicode } from "oxalis/constants";
 
 import type { APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
-import { doesSupportVolumeWithFallback } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getFirstSegmentationLayer,
+  doesSupportVolumeWithFallback,
+} from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
@@ -33,7 +36,14 @@ function NewAnnotationLink({
   onShowCreateExplorativeModal,
   onCloseCreateExplorativeModal,
 }) {
-  const withFallback = doesSupportVolumeWithFallback(dataset) ? "true" : "false";
+  const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
+  const supportsFallback = doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
+    ? "true"
+    : "false";
+  const fallbackLayerGetParameter =
+    firstSegmentationLayer != null && supportsFallback
+      ? `?fallbackLayerName=${firstSegmentationLayer.name}`
+      : "";
 
   return (
     <React.Fragment>
@@ -42,7 +52,7 @@ function NewAnnotationLink({
           <LinkWithDisabled
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
-            }/createExplorative/hybrid/${withFallback}`}
+            }/createExplorative/hybrid${fallbackLayerGetParameter}`}
             style={{ display: "inline-block" }}
             title="New Annotation (Skeleton + Volume)"
             disabled={isReloading}

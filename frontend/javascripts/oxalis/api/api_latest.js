@@ -49,6 +49,7 @@ import {
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
+  getSegmentationLayerByName,
   getLayerByName,
   getResolutionInfo,
   getVisibleSegmentationLayer,
@@ -99,7 +100,6 @@ import {
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import Model, { type OxalisModel } from "oxalis/model";
 import Store, {
-  type DataLayerType,
   type AnnotationType,
   type MappingType,
   type DatasetConfiguration,
@@ -121,7 +121,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass } from "types/api_flow_types";
+import { type ElementClass, type APISegmentationLayer } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
 import {
   loadMeshFromFile,
@@ -151,27 +151,31 @@ function assertVolume(tracing: Tracing): VolumeTracing {
   return tracing.volume;
 }
 
-function getRequestedLayerOrVisibleLayer(state: OxalisState, layerName: ?string): ?DataLayerType {
-  const requestedLayer = layerName != null ? getLayerByName(state.dataset, layerName) : null;
+function getRequestedSegmentationLayerOrVisibleLayer(
+  state: OxalisState,
+  layerName: ?string,
+): ?APISegmentationLayer {
+  const requestedLayer =
+    layerName != null ? getSegmentationLayerByName(state.dataset, layerName) : null;
   return requestedLayer || getVisibleSegmentationLayer(state);
 }
 
 function getRequestedLayerNameOrVisibleLayerEnforced(
   state: OxalisState,
   layerName: ?string,
-): DataLayerType {
-  const effectiveLayer = getRequestedLayerOrVisibleLayer(state, layerName);
+): APISegmentationLayer {
+  const effectiveLayer = getRequestedSegmentationLayerOrVisibleLayer(state, layerName);
   if (effectiveLayer != null) {
     return effectiveLayer;
   }
-  // If a layerName is passed and invalid, an exception will be raised by getRequestedLayerOrVisibleLayer.
+  // If a layerName is passed and invalid, an exception will be raised by getRequestedSegmentationLayerOrVisibleLayer.
   throw new Error(
     "No segmentation layer is currently visible. Pass a valid layerName (you may want to use `getSegmentationLayerName`)",
   );
 }
 
 function getRequestedLayerNameOrVisibleLayer(state: OxalisState, layerName: ?string): ?string {
-  const layer = getRequestedLayerOrVisibleLayer(state, layerName);
+  const layer = getRequestedSegmentationLayerOrVisibleLayer(state, layerName);
   return layer != null ? layer.name : null;
 }
 
@@ -1017,8 +1021,6 @@ class DataApi {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
     }
-    // Note: As there is at most one segmentation layer now, the layerName is unneccessary
-    // However, we probably want to support multiple segmentation layers in the future
     const layer = this.model.getLayerByName(layerName);
     if (!layer.isSegmentation) {
       throw new Error(messages["mapping.unsupported_layer"]);
@@ -1038,45 +1040,45 @@ class DataApi {
   }
 
   /**
-   * Enables/Disables the active mapping.
+   * Enables/Disables the active mapping. If layerName is not passed,
+   * the currently visible segmentation layer will be used.
    */
-  setMappingEnabled(isEnabled: boolean, layerName: string) {
-    Store.dispatch(setMappingEnabledAction(layerName, isEnabled));
+  setMappingEnabled(isEnabled: boolean, layerName?: string) {
+    const effectiveLayerName = getRequestedLayerNameOrVisibleLayerEnforced(
+      Store.getState(),
+      layerName,
+    ).name;
+    Store.dispatch(setMappingEnabledAction(effectiveLayerName, isEnabled));
   }
 
   /**
-   * Gets all available mapping names for a given layer. When the layer name
-   * is omitted, the visible segmentation layer is assumed.
+   * Gets all available mapping names for a given layer. If the layerName
+   * is not passed, the currently visible segmentation layer will be used.
    *
    */
   async getMappingNames(layerName?: string): Promise<Array<string>> {
     const { dataset } = Store.getState();
-    const segmentationLayer =
-      layerName != null
-        ? this.model.getLayerByName(layerName)
-        : this.model.getVisibleSegmentationLayer();
-    if (!segmentationLayer) {
-      if (layerName != null) {
-        throw new Error(`Segmentation layer named "${layerName}" could not be looked up.`);
-      } else {
-        throw new Error(
-          "No segmentation layer is currently visible. Pass a valid layerName (you may want to use `getSegmentationLayerName`)",
-        );
-      }
-    }
+    const segmentationLayer = getRequestedLayerNameOrVisibleLayerEnforced(
+      Store.getState(),
+      layerName,
+    );
     return getMappingsForDatasetLayer(dataset.dataStore.url, dataset, segmentationLayer.name);
   }
 
   /**
-   * Gets the active mapping for the currently visible segmentation layer.
+   * Gets the active mapping for the currently visible segmentation layer. If layerName is not
+   * passed, the currently visible segmentation layer will be used.
    *
    */
-  getActiveMapping(): ?string {
-    const activeSegmentationLayer = this.model.getVisibleSegmentationLayer();
-    if (!activeSegmentationLayer) {
+  getActiveMapping(layerName?: string): ?string {
+    const segmentationLayer = getRequestedSegmentationLayerOrVisibleLayer(
+      Store.getState(),
+      layerName,
+    );
+    if (!segmentationLayer) {
       return null;
     }
-    return activeSegmentationLayer.activeMapping;
+    return this.model.getLayerByName(segmentationLayer.name).activeMapping;
   }
 
   /**
@@ -1465,7 +1467,7 @@ class DataApi {
    * const availableMeshFileNames = api.data.getAvailableMeshFiles();
    */
   async getAvailableMeshFiles(layerName?: string): Promise<Array<string>> {
-    const effectiveLayer = getRequestedLayerOrVisibleLayer(Store.getState(), layerName);
+    const effectiveLayer = getRequestedSegmentationLayerOrVisibleLayer(Store.getState(), layerName);
     if (!effectiveLayer) {
       return Promise.resolve([]);
     }
@@ -1483,7 +1485,7 @@ class DataApi {
    * const activeMeshFile = api.data.getActiveMeshFile();
    */
   getActiveMeshFile(layerName?: string): ?string {
-    const effectiveLayer = getRequestedLayerOrVisibleLayer(Store.getState(), layerName);
+    const effectiveLayer = getRequestedSegmentationLayerOrVisibleLayer(Store.getState(), layerName);
 
     if (!effectiveLayer) {
       return null;

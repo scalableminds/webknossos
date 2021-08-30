@@ -111,6 +111,7 @@ import Store, {
   type TreeMap,
   type UserConfiguration,
   type VolumeTracing,
+  type OxalisState,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
 import PriorityQueue from "js-priority-queue";
@@ -149,6 +150,17 @@ function assertVolume(tracing: Tracing): VolumeTracing {
   }
   return tracing.volume;
 }
+
+function getRequestedLayerNameOrVisibleLayer(state: OxalisState, layerName: ?string): ?string {
+  const segmentationLayer = getVisibleSegmentationLayer(state);
+  let effectiveLayerName = layerName != null ? layerName : null;
+  if (!effectiveLayerName) {
+    effectiveLayerName = segmentationLayer != null ? segmentationLayer.name : null;
+  }
+
+  return effectiveLayerName;
+}
+
 /**
  * All tracing related API methods. This is the newest version of the API (version 3).
  * @version 3
@@ -1428,7 +1440,13 @@ class DataApi {
    * const activeMeshFile = api.data.getActiveMeshFile();
    */
   getActiveMeshFile(): ?string {
-    return Store.getState().currentMeshFile;
+    const state = Store.getState();
+    const segmentationLayer = getVisibleSegmentationLayer(state);
+
+    if (!segmentationLayer) {
+      return null;
+    }
+    return Store.getState().currentMeshFile[segmentationLayer.name];
   }
 
   /**
@@ -1440,16 +1458,24 @@ class DataApi {
    *   api.data.setActiveMeshFile(availableMeshFileNames[0]);
    * }
    */
-  setActiveMeshFile(meshFile: ?string) {
+  setActiveMeshFile(meshFile: ?string, layerName?: string) {
+    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    if (!effectiveLayerName) {
+      return;
+    }
+
     if (meshFile == null) {
-      Store.dispatch(updateCurrentMeshFileAction(meshFile));
+      Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFile));
       return;
     }
     const state = Store.getState();
-    if (state.availableMeshFiles == null || !state.availableMeshFiles.includes(meshFile)) {
+    if (
+      state.availableMeshFiles[effectiveLayerName] == null ||
+      !state.availableMeshFiles[effectiveLayerName].includes(meshFile)
+    ) {
       throw new Error(
         `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
-          state.availableMeshFiles || []
+          state.availableMeshFiles[effectiveLayerName] || []
         ).join(", ")}`,
       );
     }
@@ -1469,9 +1495,14 @@ class DataApi {
    *
    * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
-  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3) {
+  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
     const state = Store.getState();
-    const { currentMeshFile, dataset } = state;
+    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    if (!effectiveLayerName) {
+      return;
+    }
+    const { dataset } = state;
+    const currentMeshFile = state.currentMeshFile[effectiveLayerName];
     if (currentMeshFile == null) {
       throw new Error(
         "No mesh file was activated. Please call `api.data.setActiveMeshFile` first (use `api.data.getAvailableMeshFiles` to retrieve candidates).",
@@ -1503,9 +1534,13 @@ class DataApi {
    * @example
    * api.data.setMeshVisibility(segmentId, false);
    */
-  setMeshVisibility(segmentId: number, isVisible: boolean) {
-    if (Store.getState().isosurfaces[segmentId] != null) {
-      Store.dispatch(updateIsosurfaceVisibilityAction(segmentId, isVisible));
+  setMeshVisibility(segmentId: number, isVisible: boolean, layerName?: string) {
+    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    if (!effectiveLayerName) {
+      return;
+    }
+    if (Store.getState().isosurfaces[effectiveLayerName][segmentId] != null) {
+      Store.dispatch(updateIsosurfaceVisibilityAction(effectiveLayerName, segmentId, isVisible));
     }
   }
 
@@ -1513,11 +1548,16 @@ class DataApi {
    * Remove the mesh for a given segment.
    *
    * @example
-   * api.data.removeMesh(segmentId);
+   * api.data.removeMesh(segmentId, layerName);
    */
-  removeMesh(segmentId: number) {
-    if (Store.getState().isosurfaces[segmentId] != null) {
-      Store.dispatch(removeIsosurfaceAction(segmentId));
+  removeMesh(segmentId: number, layerName?: string): void {
+    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    if (!effectiveLayerName) {
+      return;
+    }
+
+    if (Store.getState().isosurfaces[effectiveLayerName][segmentId] != null) {
+      Store.dispatch(removeIsosurfaceAction(effectiveLayerName, segmentId));
     }
   }
 
@@ -1527,10 +1567,14 @@ class DataApi {
    * @example
    * api.data.resetMeshes();
    */
-  resetMeshes() {
+  resetMeshes(layerName?: string) {
+    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    if (!effectiveLayerName) {
+      return;
+    }
     const segmentIds = Object.keys(Store.getState().isosurfaces);
     for (const segmentId of segmentIds) {
-      Store.dispatch(removeIsosurfaceAction(Number(segmentId)));
+      Store.dispatch(removeIsosurfaceAction(effectiveLayerName, Number(segmentId)));
     }
   }
 }

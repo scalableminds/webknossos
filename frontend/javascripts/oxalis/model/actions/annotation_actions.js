@@ -57,6 +57,7 @@ export type UpdateLocalMeshMetaDataAction = {
 };
 export type UpdateIsosurfaceVisibilityAction = {
   type: "UPDATE_ISOSURFACE_VISIBILITY",
+  layerName: string,
   id: number,
   visibility: boolean,
 };
@@ -95,38 +96,46 @@ export type FinishedRefreshingIsosurfacesAction = {
 };
 export type RefreshIsosurfaceAction = {
   type: "REFRESH_ISOSURFACE",
+  layerName: string,
   cellId: number,
 };
 export type StartedLoadingIsosurfaceAction = {
   type: "STARTED_LOADING_ISOSURFACE",
+  layerName: string,
   cellId: number,
 };
 export type FinishedLoadingIsosurfaceAction = {
   type: "FINISHED_LOADING_ISOSURFACE",
+  layerName: string,
   cellId: number,
 };
 
 export type UpdateMeshFileListAction = {
   type: "UPDATE_MESH_FILE_LIST",
+  layerName: string,
   meshFiles: Array<string>,
 };
 export type UpdateCurrentMeshFileAction = {
   type: "UPDATE_CURRENT_MESH_FILE",
+  layerName: string,
   meshFile: ?string,
 };
 
 export type ImportIsosurfaceFromStlAction = {
   type: "IMPORT_ISOSURFACE_FROM_STL",
+  layerName: string,
   buffer: ArrayBuffer,
 };
 
 export type RemoveIsosurfaceAction = {
   type: "REMOVE_ISOSURFACE",
+  layerName: string,
   cellId: number,
 };
 
 export type AddIsosurfaceAction = {
   type: "ADD_ISOSURFACE",
+  layerName: string,
   cellId: number,
   seedPosition: Vector3,
   isPrecomputed: boolean,
@@ -226,10 +235,12 @@ export const updateLocalMeshMetaDataAction = (
   meshShape,
 });
 export const updateIsosurfaceVisibilityAction = (
+  layerName: string,
   id: number,
   visibility: boolean,
 ): UpdateIsosurfaceVisibilityAction => ({
   type: "UPDATE_ISOSURFACE_VISIBILITY",
+  layerName,
   id,
   visibility,
 });
@@ -271,51 +282,77 @@ export const finishedRefreshingIsosurfacesAction = (): FinishedRefreshingIsosurf
   type: "FINISHED_REFRESHING_ISOSURFACES",
 });
 
-export const refreshIsosurfaceAction = (cellId: number): RefreshIsosurfaceAction => ({
+export const refreshIsosurfaceAction = (
+  layerName: string,
+  cellId: number,
+): RefreshIsosurfaceAction => ({
   type: "REFRESH_ISOSURFACE",
+  layerName,
   cellId,
 });
 
-export const startedLoadingIsosurfaceAction = (cellId: number): StartedLoadingIsosurfaceAction => ({
+export const startedLoadingIsosurfaceAction = (
+  layerName: string,
+  cellId: number,
+): StartedLoadingIsosurfaceAction => ({
   type: "STARTED_LOADING_ISOSURFACE",
+  layerName,
   cellId,
 });
 
 export const finishedLoadingIsosurfaceAction = (
+  layerName: string,
   cellId: number,
 ): FinishedLoadingIsosurfaceAction => ({
   type: "FINISHED_LOADING_ISOSURFACE",
+  layerName,
   cellId,
 });
 
-export const updateMeshFileListAction = (meshFiles: Array<string>): UpdateMeshFileListAction => ({
+export const updateMeshFileListAction = (
+  layerName: string,
+  meshFiles: Array<string>,
+): UpdateMeshFileListAction => ({
   type: "UPDATE_MESH_FILE_LIST",
+  layerName,
   meshFiles,
 });
 
-export const updateCurrentMeshFileAction = (meshFile: ?string): UpdateCurrentMeshFileAction => ({
+export const updateCurrentMeshFileAction = (
+  layerName: string,
+  meshFile: ?string,
+): UpdateCurrentMeshFileAction => ({
   type: "UPDATE_CURRENT_MESH_FILE",
+  layerName,
   meshFile,
 });
 
 export const importIsosurfaceFromStlAction = (
+  layerName: string,
   buffer: ArrayBuffer,
 ): ImportIsosurfaceFromStlAction => ({
   type: "IMPORT_ISOSURFACE_FROM_STL",
+  layerName,
   buffer,
 });
 
-export const removeIsosurfaceAction = (cellId: number): RemoveIsosurfaceAction => ({
+export const removeIsosurfaceAction = (
+  layerName: string,
+  cellId: number,
+): RemoveIsosurfaceAction => ({
   type: "REMOVE_ISOSURFACE",
+  layerName,
   cellId,
 });
 
 export const addIsosurfaceAction = (
+  layerName: string,
   cellId: number,
   seedPosition: Vector3,
   isPrecomputed: boolean,
 ): AddIsosurfaceAction => ({
   type: "ADD_ISOSURFACE",
+  layerName,
   cellId,
   seedPosition,
   isPrecomputed,

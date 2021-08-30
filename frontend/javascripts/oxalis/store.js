@@ -187,6 +187,8 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +annotationType: AnnotationType,
+  // This property contains back-end stored mesh objects for which
+  // the support is about to end. See webknossos/#5633.
   +meshes: Array<MeshMetaData>,
   +user: ?APIUserBase,
 |};
@@ -486,9 +488,9 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
-  +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
-  +availableMeshFiles: ?Array<string>,
-  +currentMeshFile: ?string,
+  +isosurfaces: { [segmentationLayerName: string]: { [segmentId: number]: IsosurfaceInformation } },
+  +availableMeshFiles: { [segmentationLayerName: string]: ?Array<string> },
+  +currentMeshFile: { [segmentationLayerName: string]: ?string },
 |};
 
 const sagaMiddleware = createSagaMiddleware();

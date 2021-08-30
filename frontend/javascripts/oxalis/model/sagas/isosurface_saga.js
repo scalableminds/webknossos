@@ -52,7 +52,7 @@ import messages from "messages";
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
 
-const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
+const isosurfacesMapByLayer: { [layerName: string]: Map<number, ThreeDMap<boolean>> } = {};
 const cubeSize = [256, 256, 256];
 const modifiedCells: Set<number> = new Set();
 
@@ -64,7 +64,10 @@ export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   return isIsosurface;
 }
 
-function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
+function getMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
+  isosurfacesMapByLayer[layerName] = isosurfacesMapByLayer[layerName] || new Map();
+  const isosurfacesMap = isosurfacesMapByLayer[layerName];
+
   const maybeMap = isosurfacesMap.get(segmentId);
   if (maybeMap == null) {
     const newMap = new ThreeDMap();
@@ -74,8 +77,11 @@ function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
   return maybeMap;
 }
 
-function removeMapForSegment(segmentId: number): void {
-  isosurfacesMap.delete(segmentId);
+function removeMapForSegment(layerName: string, segmentId: number): void {
+  if (isosurfacesMapByLayer[layerName] == null) {
+    return;
+  }
+  isosurfacesMapByLayer[layerName].delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
@@ -226,11 +232,11 @@ function* loadIsosurfaceWithNeighbors(
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
 
-  const hasIsosurface = yield* select(state => state.isosurfaces[segmentId] != null);
+  const hasIsosurface = yield* select(state => state.isosurfaces[layer.name][segmentId] != null);
   if (!hasIsosurface) {
-    yield* put(addIsosurfaceAction(segmentId, position, false));
+    yield* put(addIsosurfaceAction(layer.name, segmentId, position, false));
   }
-  yield* put(startedLoadingIsosurfaceAction(segmentId));
+  yield* put(startedLoadingIsosurfaceAction(layer.name, segmentId));
 
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
@@ -249,7 +255,7 @@ function* loadIsosurfaceWithNeighbors(
     positionsToRequest = positionsToRequest.concat(neighbors);
   }
 
-  yield* put(finishedLoadingIsosurfaceAction(segmentId));
+  yield* put(finishedLoadingIsosurfaceAction(layer.name, segmentId));
 }
 
 function hasBatchCounterExceededLimit(segmentId: number): boolean {
@@ -268,7 +274,7 @@ function* maybeLoadIsosurface(
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
 ): Saga<Array<Vector3>> {
-  const threeDMap = getMapForSegment(segmentId);
+  const threeDMap = getMapForSegment(layer.name, segmentId);
 
   if (threeDMap.get(clippedPosition)) {
     return [];
@@ -370,7 +376,7 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
-  const { buffer } = action;
+  const { layerName, buffer } = action;
   const dataView = new DataView(buffer);
   const segmentId = dataView.getUint32(stlIsosurfaceConstants.cellIdIndex, true);
   const geometry = yield* call(parseStlBuffer, buffer);
@@ -380,18 +386,18 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.
   const seedPosition = yield* select(state => getFlooredPosition(state.flycam));
-  yield* put(addIsosurfaceAction(segmentId, seedPosition, true));
+  yield* put(addIsosurfaceAction(layerName, segmentId, seedPosition, true));
 }
 
 function* removeIsosurface(
   action: RemoveIsosurfaceAction,
   removeFromScene: boolean = true,
 ): Saga<void> {
-  const { cellId } = action;
+  const { layerName, cellId } = action;
   if (removeFromScene) {
     getSceneController().removeIsosurfaceById(cellId);
   }
-  removeMapForSegment(cellId);
+  removeMapForSegment(layerName, cellId);
 
   // Set batch counter to maximum so that potentially running requests are aborted
   batchCounterPerSegment[cellId] = 1 + (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE);
@@ -419,8 +425,20 @@ function* refreshIsosurfaces(): Saga<void> {
   // By that we avoid that removing cells that got annotated during reloading from the modifiedCells set.
   const currentlyModifiedCells = new Set(modifiedCells);
   modifiedCells.clear();
+
+  // Also load the Isosurface at the current flycam position.
+  const segmentationLayer = Model.getVisibleSegmentationLayer();
+  if (!segmentationLayer) {
+    return;
+  }
+
+  if (!segmentationLayer) {
+    return;
+  }
   // First create an array containing information about all loaded isosurfaces as the map is manipulated within the loop.
-  for (const [cellId, threeDMap] of Array.from(isosurfacesMap.entries())) {
+  for (const [cellId, threeDMap] of Array.from(
+    isosurfacesMapByLayer[segmentationLayer.name].entries(),
+  )) {
     if (!currentlyModifiedCells.has(cellId)) {
       continue;
     }
@@ -429,7 +447,7 @@ function* refreshIsosurfaces(): Saga<void> {
       continue;
     }
     // Removing Isosurface from cache.
-    yield* call(removeIsosurface, removeIsosurfaceAction(cellId), false);
+    yield* call(removeIsosurface, removeIsosurfaceAction(segmentationLayer.name, cellId), false);
     // The isosurface should only be removed once after re-fetching the isosurface first position.
     let shouldBeRemoved = true;
     for (const [, position] of isosurfacePositions) {
@@ -438,11 +456,6 @@ function* refreshIsosurfaces(): Saga<void> {
       yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
       shouldBeRemoved = false;
     }
-  }
-  // Also load the Isosurface at the current flycam position.
-  const segmentationLayer = Model.getVisibleSegmentationLayer();
-  if (!segmentationLayer) {
-    return;
   }
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const cellIdAtFlycamPosition = segmentationLayer.cube.getDataValue(position);
@@ -453,16 +466,16 @@ function* refreshIsosurfaces(): Saga<void> {
 function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   const { cellId } = action;
 
-  const threeDMap = isosurfacesMap.get(cellId);
+  const threeDMap = isosurfacesMapByLayer[action.layerName].get(cellId);
   const isosurfacePositions = threeDMap
     ? threeDMap.entries().filter(([value, _position]) => value)
     : [];
   if (isosurfacePositions.length === 0) {
     return;
   }
-  yield* put(startedLoadingIsosurfaceAction(cellId));
+  yield* put(startedLoadingIsosurfaceAction(action.layerName, cellId));
   // Removing Isosurface from cache.
-  yield* call(removeIsosurface, removeIsosurfaceAction(cellId), false);
+  yield* call(removeIsosurface, removeIsosurfaceAction(action.layerName, cellId), false);
   // The isosurface should only be removed once after re-fetching the isosurface first position.
   let shouldBeRemoved = true;
   for (const [, position] of isosurfacePositions) {
@@ -471,7 +484,7 @@ function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
     yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
     shouldBeRemoved = false;
   }
-  yield* put(finishedLoadingIsosurfaceAction(cellId));
+  yield* put(finishedLoadingIsosurfaceAction(action.layerName, cellId));
 }
 
 function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {

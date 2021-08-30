@@ -4,7 +4,12 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
-import { type StateShape1, updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
+import {
+  type StateShape1,
+  updateKey,
+  updateKey2,
+  updateKey3,
+} from "oxalis/model/helpers/deep_update";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
@@ -97,9 +102,9 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "UPDATE_ISOSURFACE_VISIBILITY": {
-      const { id, visibility } = action;
+      const { layerName, id, visibility } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey2(state, "isosurfaces", id, {
+      return updateKey3(state, "isosurfaces", layerName, id, {
         isVisible: visibility,
       });
     }
@@ -116,16 +121,16 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "REMOVE_ISOSURFACE": {
-      const { cellId } = action;
+      const { layerName, cellId } = action;
       return update(state, {
-        isosurfaces: { $unset: [cellId] },
+        isosurfaces: { [layerName]: { $unset: [cellId] } },
       });
     }
 
     case "ADD_ISOSURFACE": {
-      const { cellId, seedPosition, isPrecomputed } = action;
+      const { layerName, cellId, seedPosition, isPrecomputed } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey2(state, "isosurfaces", cellId, {
+      return updateKey3(state, "isosurfaces", layerName, cellId, {
         segmentId: cellId,
         seedPosition,
         isLoading: false,
@@ -135,29 +140,29 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "STARTED_LOADING_ISOSURFACE": {
-      const { cellId } = action;
+      const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey2(state, "isosurfaces", cellId, {
+      return updateKey3(state, "isosurfaces", layerName, cellId, {
         isLoading: true,
       });
     }
 
     case "FINISHED_LOADING_ISOSURFACE": {
-      const { cellId } = action;
+      const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey2(state, "isosurfaces", cellId, {
+      return updateKey3(state, "isosurfaces", layerName, cellId, {
         isLoading: false,
       });
     }
 
     case "UPDATE_MESH_FILE_LIST": {
-      const { meshFiles } = action;
-      return update(state, { availableMeshFiles: { $set: meshFiles } });
+      const { layerName, meshFiles } = action;
+      return update(state, { availableMeshFiles: { [layerName]: { $set: meshFiles } } });
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
-      const { meshFile } = action;
-      return update(state, { currentMeshFile: { $set: meshFile } });
+      const { layerName, meshFile } = action;
+      return update(state, { currentMeshFile: { [layerName]: { $set: meshFile } } });
     }
 
     default:

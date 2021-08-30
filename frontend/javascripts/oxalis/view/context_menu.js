@@ -565,6 +565,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 });
 
 function mapStateToProps(state: OxalisState): StateProps {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+
   return {
     skeletonTracing: state.tracing.skeleton,
     volumeTracing: state.tracing.volume,
@@ -573,7 +575,10 @@ function mapStateToProps(state: OxalisState): StateProps {
     dataset: state.dataset,
     visibleSegmentationLayer: getVisibleSegmentationLayer(state),
     zoomStep: getRequestLogZoomStep(state),
-    currentMeshFile: state.currentMeshFile,
+    currentMeshFile:
+      visibleSegmentationLayer != null
+        ? state.currentMeshFile[visibleSegmentationLayer.name]
+        : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
   };
 }

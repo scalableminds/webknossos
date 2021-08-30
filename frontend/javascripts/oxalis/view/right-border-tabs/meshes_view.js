@@ -29,7 +29,6 @@ import {
   updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
-  addIsosurfaceAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import features from "features";
@@ -96,8 +95,14 @@ const mapStateToProps = (state: OxalisState): * => {
     activeResolution: getCurrentResolution(state),
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
-    availableMeshFiles: state.availableMeshFiles,
-    currentMeshFile: state.currentMeshFile,
+    availableMeshFiles:
+      visibleSegmentationLayer != null
+        ? state.availableMeshFiles[visibleSegmentationLayer.name]
+        : null,
+    currentMeshFile:
+      visibleSegmentationLayer != null
+        ? state.currentMeshFile[visibleSegmentationLayer.name]
+        : null,
     activeUser: state.activeUser,
   };
 };
@@ -112,16 +117,16 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   deleteMesh(id: string) {
     dispatch(deleteMeshAction(id));
   },
-  onChangeVisibility(id, isVisible: boolean) {
-    dispatch(updateIsosurfaceVisibilityAction(id, isVisible));
+  onChangeVisibility(layerName: string, id: number, isVisible: boolean) {
+    dispatch(updateIsosurfaceVisibilityAction(layerName, id, isVisible));
   },
-  async onStlUpload(info) {
+  async onStlUpload(layerName: string, info) {
     dispatch(setImportingMeshStateAction(true));
     const buffer = await readFileAsArrayBuffer(info.file);
 
     if (isIsosurfaceStl(buffer)) {
       trackAction("Import Isosurface Mesh from STL");
-      dispatch(importIsosurfaceFromStlAction(buffer));
+      dispatch(importIsosurfaceFromStlAction(layerName, buffer));
     } else {
       trackAction("Import STL");
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
@@ -135,12 +140,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
       return;
     }
     dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
-  },
-  addPrecomputedMesh(cellId, seedPosition) {
-    if (cellId == null) {
-      return;
-    }
-    dispatch(addIsosurfaceAction(cellId, seedPosition, true));
   },
   setCurrentMeshFile(fileName) {
     dispatch(updateCurrentMeshFileAction(fileName));
@@ -308,7 +307,12 @@ class MeshesView extends React.Component<Props, State> {
           <LoadingOutlined
             key="refresh-button"
             onClick={() => {
-              Store.dispatch(refreshIsosurfaceAction(segmentId));
+              if (!this.props.visibleSegmentationLayer) {
+                return;
+              }
+              Store.dispatch(
+                refreshIsosurfaceAction(this.props.visibleSegmentationLayer.name, segmentId),
+              );
             }}
           />
         );
@@ -318,7 +322,12 @@ class MeshesView extends React.Component<Props, State> {
             <ReloadOutlined
               key="refresh-button"
               onClick={() => {
-                Store.dispatch(refreshIsosurfaceAction(segmentId));
+                if (!this.props.visibleSegmentationLayer) {
+                  return;
+                }
+                Store.dispatch(
+                  refreshIsosurfaceAction(this.props.visibleSegmentationLayer.name, segmentId),
+                );
               }}
             />
           </Tooltip>
@@ -330,7 +339,12 @@ class MeshesView extends React.Component<Props, State> {
         <DeleteOutlined
           key="delete-button"
           onClick={() => {
-            Store.dispatch(removeIsosurfaceAction(segmentId));
+            if (!this.props.visibleSegmentationLayer) {
+              return;
+            }
+            Store.dispatch(
+              removeIsosurfaceAction(this.props.visibleSegmentationLayer.name, segmentId),
+            );
             // reset the active mesh id so the deleted one is not reloaded immediately
             this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
           }}
@@ -347,7 +361,14 @@ class MeshesView extends React.Component<Props, State> {
         <Checkbox
           checked={isVisible}
           onChange={(event: SyntheticInputEvent<>) => {
-            this.props.onChangeVisibility(segmentId, event.target.checked);
+            if (!this.props.visibleSegmentationLayer) {
+              return;
+            }
+            this.props.onChangeVisibility(
+              this.props.visibleSegmentationLayer.name,
+              segmentId,
+              event.target.checked,
+            );
           }}
         />
       </Tooltip>
@@ -484,7 +505,10 @@ class MeshesView extends React.Component<Props, State> {
         accept=".stl"
         beforeUpload={() => false}
         onChange={file => {
-          this.props.onStlUpload(file);
+          if (!this.props.visibleSegmentationLayer) {
+            return;
+          }
+          this.props.onStlUpload(this.props.visibleSegmentationLayer.name, file);
         }}
         showUploadList={false}
         style={{ fontSize: 16, cursor: "pointer" }}

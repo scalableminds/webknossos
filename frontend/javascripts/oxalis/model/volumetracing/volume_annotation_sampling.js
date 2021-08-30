@@ -378,10 +378,11 @@ export function applyVoxelMap(
           isValueIncluded = data[index] === value;
         }
         if (!isValueIncluded) {
-          if (removeBucketsFromSegments[value])
+          if (removeBucketsFromSegments[value]) {
             removeBucketsFromSegments[value].push(bucket.zoomedAddress);
-        } else {
-          removeBucketsFromSegments[value] = [bucket.zoomedAddress];
+          } else {
+            removeBucketsFromSegments[value] = [bucket.zoomedAddress];
+          }
         }
       }
     }
@@ -389,12 +390,9 @@ export function applyVoxelMap(
     postprocessBucket(bucket);
   }
   if (Object.getOwnPropertyNames(removeBucketsFromSegments).length > 0) {
-    console.log("removing");
-    // TODO: looks like too eager removing to me
     Store.dispatch(removeBucketAddressesFromSegments(removeBucketsFromSegments));
   }
   if (zoomedAddressesOfAnnotatedBuckets.length > 0) {
-    // TODO:  somehow far more buckets are added than actually annotated
     Store.dispatch(addBucketAddressesToSegment(cellId, zoomedAddressesOfAnnotatedBuckets));
   }
 }

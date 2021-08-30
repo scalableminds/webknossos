@@ -134,7 +134,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
               },
             });
           }
-          console.log(newState.tracing.volume.segments);
           return newState;
         }
 
@@ -144,12 +143,14 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
             return state;
           }
           let { segments } = state.tracing.volume;
+          let updatedSegments = false;
           // $FlowFixMe[incompatible-type]
           for (const [segmentId, bucketAddressList]: [string, Array<Vector4>] of Object.entries(
             segmentIdToBucketAddressList,
           )) {
             // TODO: somehow update this efficently
             if (segments.has(segmentId)) {
+              updatedSegments = true;
               segments = update(segments, {
                 [segmentId]: {
                   coveredBucketAddresses: {
@@ -157,8 +158,10 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
                   },
                 },
               });
-              console.log("removed", bucketAddressList, "from", segmentId, segments);
             }
+          }
+          if (!updatedSegments) {
+            return state;
           }
           const newState = update(state, {
             tracing: {
@@ -169,8 +172,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
               },
             },
           });
-          console.log(newState.tracing.volume.segments);
-
           return newState;
         }
 

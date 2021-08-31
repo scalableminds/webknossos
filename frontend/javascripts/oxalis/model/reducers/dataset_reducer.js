@@ -26,7 +26,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
         currentMeshFileByLayer: createDictsForKeys(segmentationLayerNames, () => null),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,
-          activeMapping: createDictsForKeys(segmentationLayerNames, () => ({
+          activeMappingByLayer: createDictsForKeys(segmentationLayerNames, () => ({
             mappingName: null,
             mapping: null,
             mappingKeys: null,

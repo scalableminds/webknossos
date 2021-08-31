@@ -143,19 +143,19 @@ class AnnotationService @Inject()(
       resolutionRestrictions: ResolutionRestrictions,
       organizationName: String,
       oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = {
-    def getFallbackLayer: Option[SegmentationLayer] =
-      // todo: probably should fail if the fallbackLayerName cannot be found
-      fallbackLayerNameOpt
-        .map(
-          fallbackLayerName =>
-            dataSource.dataLayers
-              .filter(dl => dl.name == fallbackLayerName)
-              .flatMap {
-                case layer: SegmentationLayer => Some(layer)
-                case _                        => None
-              }
-              .headOption)
-        .getOrElse(None)
+
+    def getFallbackLayer(fallbackLayerName: String): Fox[SegmentationLayer] =
+      for {
+        fallbackLayer <- dataSource.dataLayers
+          .filter(dl => dl.name == fallbackLayerName)
+          .flatMap {
+            case layer: SegmentationLayer => Some(layer)
+            case _                        => None
+          }
+          .headOption
+          .toFox
+        _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
+      } yield fallbackLayer
 
     tracingType match {
       case TracingType.skeleton =>
@@ -176,8 +176,7 @@ class AnnotationService @Inject()(
       case TracingType.volume =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
-          fallbackLayer = getFallbackLayer
-          _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+          fallbackLayer <- Fox.runOptional(fallbackLayerNameOpt)(getFallbackLayer)
           volumeTracing <- createVolumeTracing(dataSource,
                                                organizationName,
                                                fallbackLayer,
@@ -187,8 +186,7 @@ class AnnotationService @Inject()(
       case TracingType.hybrid =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
-          fallbackLayer = getFallbackLayer
-          _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+          fallbackLayer <- Fox.runOptional(fallbackLayerNameOpt)(getFallbackLayer)
           skeletonTracingId <- client.saveSkeletonTracing(
             SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,
                                                         editPosition = dataSource.center,
@@ -234,14 +232,14 @@ class AnnotationService @Inject()(
       annotation
     }
 
-  def makeAnnotationHybrid(annotation: Annotation, organizationName: String)(
+  def makeAnnotationHybrid(annotation: Annotation, organizationName: String, fallbackLayerName: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
       case TracingType.skeleton =>
         createTracingsForExplorational(dataSet,
                                        dataSource,
                                        TracingType.volume,
-                                       fallbackLayerNameOpt = None, // todo
+                                       fallbackLayerName,
                                        ResolutionRestrictions.empty,
                                        organizationName).flatMap {
           case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
@@ -252,7 +250,7 @@ class AnnotationService @Inject()(
           dataSet,
           dataSource,
           TracingType.skeleton,
-          fallbackLayerNameOpt = None, // In skeleton case, this is irrelevant.
+          fallbackLayerNameOpt = None, // unused when creating skeleton
           ResolutionRestrictions.empty,
           organizationName,
           annotation.volumeTracingId

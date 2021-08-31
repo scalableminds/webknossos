@@ -4,12 +4,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
-import type {
-  APIDataset,
-  APIUser,
-  APIMaybeUnimportedDataset,
-  TracingType,
-} from "types/api_flow_types";
+import type { APIDataset, APIUser, TracingType } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
 import {
   layoutEmitter,
@@ -23,7 +18,7 @@ import AuthenticationModal from "admin/auth/authentication_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
 import constants, { type ViewMode, type ControlMode, ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
-import { type OxalisState } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import TracingActionsView, {
   LayoutMenu,
   type LayoutProps,
@@ -34,7 +29,7 @@ import ToolbarView from "oxalis/view/action-bar/toolbar_view";
 import {
   is2dDataset,
   doesSupportVolumeWithFallback,
-  getFirstSegmentationLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 
 const VersionRestoreWarning = (
@@ -95,13 +90,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createTracing = async (dataset: APIMaybeUnimportedDataset) => {
+  createTracing = async (dataset: APIDataset) => {
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
-    const firstSegmentationLayer = getFirstSegmentationLayer(dataset);
+    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
     const fallbackLayerName =
-      firstSegmentationLayer && doesSupportVolumeWithFallback(dataset, firstSegmentationLayer)
-        ? firstSegmentationLayer.name
+      maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
+        ? maybeSegmentationLayer.name
         : null;
 
     const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName);
@@ -115,7 +110,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const { activeUser, dataset } = this.props;
     const needsAuthentication = activeUser == null;
 
-    const handleCreateTracing = async (_dataset: APIMaybeUnimportedDataset, _type: TracingType) => {
+    const handleCreateTracing = async (_dataset: APIDataset, _type: TracingType) => {
       if (needsAuthentication) {
         this.setState({ isAuthenticationModalVisible: true });
       } else {

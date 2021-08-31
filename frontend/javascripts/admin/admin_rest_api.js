@@ -761,9 +761,13 @@ export async function importVolumeTracing(tracing: Tracing, dataFile: File): Pro
   );
 }
 
-export function convertToHybridTracing(annotationId: string): Promise<void> {
+export function convertToHybridTracing(
+  annotationId: string,
+  fallbackLayerName: ?string,
+): Promise<void> {
   return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
     method: "PATCH",
+    fallbackLayerName,
   });
 }
 

@@ -298,7 +298,6 @@ export function applyVoxelMap(
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
 ) {
-  console.log("drawing");
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
@@ -527,3 +526,5 @@ function manageRemovingBucketAddressesOfOverdrawnSegments(
     Store.dispatch(removeBucketAddressesFromSegments(removeBucketsFromSegments));
   }
 }
+// TODO: Fix tests
+// Add undo and redo

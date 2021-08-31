@@ -188,7 +188,40 @@ class TaskListView extends React.PureComponent<Props, State> {
             value={searchQuery}
           />
         </div>
-        <h3>Tasks</h3>
+        <h3 style={{ display: "inline-block" }}>Tasks</h3>
+        <a
+          href="https://webknossos.org/services/annotations"
+          className="crosslink-box"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background:
+              'url("/assets/images/vx/manual-annotations-horizontal.png") center center / 110%',
+            height: "73px",
+            padding: "0px",
+            width: "800px",
+            overflow: "hidden",
+            display: "inline-block",
+            marginLeft: "100px",
+            marginBottom: 0,
+            opacity: "0.9",
+            marginTop: 0,
+          }}
+        >
+          <div
+            style={{
+              padding: "10px 170px",
+              background:
+                "linear-gradient(181deg, #1414147a, rgb(59 59 59 / 45%), rgba(20, 19, 31, 0.84))",
+            }}
+            className
+          >
+            <h4 style={{ color: "white", textAlign: "center" }}>
+              Need more workforce for annotating your dataset? Have a look at our annotation
+              services.
+            </h4>
+          </div>
+        </a>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
         <Card title="Search for Tasks">

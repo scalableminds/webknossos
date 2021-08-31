@@ -201,56 +201,29 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
   );
 };
 
-function VoxelyticsBanner() {
-  const [showSegmentationBanner] = useState(Math.random() > 0.5);
-
-  if (!features().isDemoInstance) {
-    return null;
-  }
-
-  const segmentationBanner = (
+const segmentationBanner = (
+  <div
+    className="crosslink-box"
+    style={{
+      background: "url(/assets/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
+      height: 500,
+      backgroundSize: "110%",
+      padding: 0,
+      backgroundPosition: "center",
+    }}
+  >
     <div
-      className="crosslink-box"
       style={{
-        background: "url(/assets/images/vx/segmentation-l4dense_motta_et_al_demo_rotated.jpg)",
-        height: 500,
-        backgroundSize: "110%",
-        padding: 0,
+        padding: "180px 10px 213px",
+        background:
+          "linear-gradient(181deg, transparent, rgb(59 59 59 / 20%), rgba(20, 19, 31, 0.84), #48484833, transparent)",
       }}
     >
-      <div
-        style={{
-          padding: "180px 10px 213px",
-          background:
-            "linear-gradient(181deg, transparent, rgb(59 59 59 / 20%), rgba(20, 19, 31, 0.84), #48484833, transparent)",
-        }}
-      >
-        <h4 style={{ color: "white", textAlign: "center" }}>
-          Are you looking for an automated segmentation of this dataset?
-        </h4>
-        <Button
-          href="https://webknossos.org/services/automated-segmentation"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: "block", margin: "10px auto", width: "50%" }}
-        >
-          Learn More
-        </Button>
-      </div>
-    </div>
-  );
-  const alignBanner = (
-    <div className="crosslink-box">
-      <h4 style={{ fontWeight: "bold", textAlign: "center" }}>
-        Are you looking for dataset alignment or stitching?
+      <h4 style={{ color: "white", textAlign: "center" }}>
+        Are you looking for an automated segmentation of this dataset?
       </h4>
-      <img
-        src="/assets/images/vx/alignment-schema.png"
-        alt="Schematic Alignment"
-        style={{ width: "100%" }}
-      />
       <Button
-        href="https://webknossos.org/services/alignment"
+        href="https://webknossos.org/services/automated-segmentation"
         target="_blank"
         rel="noopener noreferrer"
         style={{ display: "block", margin: "10px auto", width: "50%" }}
@@ -258,11 +231,72 @@ function VoxelyticsBanner() {
         Learn More
       </Button>
     </div>
-  );
+  </div>
+);
+const alignBanner = (
+  <div className="crosslink-box">
+    <h4 style={{ fontWeight: "bold", textAlign: "center" }}>
+      Are you looking for dataset alignment or stitching?
+    </h4>
+    <img
+      src="/assets/images/vx/alignment-schema.png"
+      alt="Schematic Alignment"
+      style={{ width: "100%" }}
+    />
+    <Button
+      href="https://webknossos.org/services/alignment"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ display: "block", margin: "10px auto", width: "50%" }}
+    >
+      Learn More
+    </Button>
+  </div>
+);
+
+const manualAnnotationBanner = (
+  <div
+    className="crosslink-box"
+    style={{
+      background: "url(/assets/images/vx/manual-annotations-vertical.png)",
+      height: 500,
+      backgroundSize: "110%",
+      padding: 0,
+      backgroundPosition: "center",
+    }}
+  >
+    <div
+      style={{
+        padding: "330px 10px 10px",
+        background:
+          "linear-gradient(181deg , transparent, rgba(59, 59, 59, 0.2), rgba(20, 19, 31, 0.84))",
+      }}
+    >
+      <h4 style={{ color: "white", textAlign: "center" }}>
+        Need more workforce for annotating your dataset? Have a look at our annotation services.
+      </h4>
+      <Button
+        href="https://webknossos.org/services/annotations"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block", margin: "10px auto", width: "50%" }}
+      >
+        Learn More
+      </Button>
+    </div>
+  </div>
+);
+const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
+
+function VoxelyticsBanner() {
+  const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
+  if (!features().isDemoInstance) {
+    return null;
+  }
 
   return (
     <Sider className="hide-on-small-screen" width={300}>
-      {showSegmentationBanner ? segmentationBanner : alignBanner}
+      {banners[bannerIndex]}
     </Sider>
   );
 }

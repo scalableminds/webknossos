@@ -7,4 +7,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
 
+- For webknossos.org: Change `publicDemoDatasetUrl` in the `features`-block within `application.conf` to be an actionable URL. For example, append `/createExplorative/hybrid?fallbackLayerName=segmentation` to the URL so that a new annotation is created if a user clicks on `Open a Demo Dataset` in the dashboard.
+
 ### Postgres Evolutions:

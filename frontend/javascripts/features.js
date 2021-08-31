@@ -19,11 +19,7 @@ export function getDemoDatasetUrl() {
     throw new Error("Features not yet loaded.");
   }
 
-  // todop: how to pass the fallback layer here?
-  // Only create a tracing on the demo instance, as the user might not be logged in there
-  // otherwise.
-  const suffix = features.isDemoInstance ? "/createExplorative/hybrid/true" : "/view";
-  return features.publicDemoDatasetUrl + suffix;
+  return features.publicDemoDatasetUrl;
 }
 
 export default () => {

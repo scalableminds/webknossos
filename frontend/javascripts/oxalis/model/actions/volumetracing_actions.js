@@ -5,7 +5,7 @@
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-
+import type { SegmentsMap } from "oxalis/store";
 type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
   tracing: ServerVolumeTracing,
@@ -40,20 +40,24 @@ export type InferSegmentationInViewportAction = {
 };
 export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
 export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
-export type AddBucketAddressesToSegment = {
+export type SetSegmentsAction = {
+  type: "SET_SEGMENTS",
+  segments: SegmentsMap,
+};
+export type AddBucketAddressesToSegmentAction = {
   type: "ADD_BUCKET_ADDRESSES_TO_SEGMENT",
   segmentId: number,
   bucketAddresses: Array<Vector4>,
 };
 
-export type RemoveBucketAddressesFromSegments = {
+export type RemoveBucketAddressesFromSegmentsAction = {
   type: "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS",
   segmentIdToBucketAddressList: {
     [number]: Array<Vector4>,
   },
 };
 
-export type SetSomePositionOfSegment = {
+export type SetSomePositionOfSegmentAction = {
   type: "SET_SOME_POSITION_OF_SEGMENT",
   segmentId: number,
   somePosition: Vector3,
@@ -75,9 +79,10 @@ export type VolumeTracingAction =
   | CopySegmentationLayerAction
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
-  | AddBucketAddressesToSegment
-  | RemoveBucketAddressesFromSegments
-  | SetSomePositionOfSegment
+  | SetSegmentsAction
+  | AddBucketAddressesToSegmentAction
+  | RemoveBucketAddressesFromSegmentsAction
+  | SetSomePositionOfSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
@@ -129,26 +134,31 @@ export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
   cellId,
 });
 
-export const addBucketAddressesToSegment = (
+export const setSegmentsActions = (segments: SegmentsMap): SetSegmentsAction => ({
+  type: "SET_SEGMENTS",
+  segments,
+});
+
+export const addBucketAddressesToSegmentAction = (
   segmentId: number,
   bucketAddresses: Array<Vector4>,
-): AddBucketAddressesToSegment => ({
+): AddBucketAddressesToSegmentAction => ({
   type: "ADD_BUCKET_ADDRESSES_TO_SEGMENT",
   segmentId,
   bucketAddresses,
 });
 
-export const removeBucketAddressesFromSegments = (segmentIdToBucketAddressList: {
+export const removeBucketAddressesFromSegmentsAction = (segmentIdToBucketAddressList: {
   [number]: Array<Vector4>,
-}): RemoveBucketAddressesFromSegments => ({
+}): RemoveBucketAddressesFromSegmentsAction => ({
   type: "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS",
   segmentIdToBucketAddressList,
 });
 
-export const setSomePositionOfSegment = (
+export const setSomePositionOfSegmentAction = (
   segmentId: number,
   somePosition: Vector3,
-): SetSomePositionOfSegment => ({
+): SetSomePositionOfSegmentAction => ({
   type: "SET_SOME_POSITION_OF_SEGMENT",
   segmentId,
   somePosition,

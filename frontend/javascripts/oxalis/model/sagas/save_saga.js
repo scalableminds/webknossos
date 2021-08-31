@@ -6,7 +6,9 @@
 import { type Saga, type Task } from "redux-saga";
 import Maybe from "data.maybe";
 
+import _ from "lodash";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
@@ -14,10 +16,18 @@ import {
   UNDO_HISTORY_SIZE,
   maximumActionCountPerSave,
 } from "oxalis/model/sagas/save_saga_constants";
-import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry, CameraData } from "oxalis/store";
+import type {
+  Tracing,
+  SkeletonTracing,
+  Flycam,
+  SaveQueueEntry,
+  CameraData,
+  SegmentsMap,
+} from "oxalis/store";
 import { type UpdateAction, updateTdCamera } from "oxalis/model/sagas/update_actions";
 import {
   VolumeTracingSaveRelevantActions,
+  setSegmentsActions,
   type AddBucketToUndoAction,
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
@@ -82,7 +92,8 @@ type UndoBucket = {
   backendData?: Uint8Array,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
 };
-type VolumeAnnotationBatch = Array<UndoBucket>;
+type VolumeUndoBuckets = Array<UndoBucket>;
+type VolumeAnnotationBatch = { buckets: VolumeUndoBuckets, segments: SegmentsMap };
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
 type WarnUndoState = { type: "warning", reason: string };
@@ -103,10 +114,16 @@ export function* collectUndoStates(): Saga<void> {
   let previousAction: ?any = null;
   let prevSkeletonTracingOrNull: ?SkeletonTracing = null;
   let pendingCompressions: Array<Task<void>> = [];
-  let currentVolumeAnnotationBatch: VolumeAnnotationBatch = [];
+  let currentVolumeUndoBuckets: VolumeUndoBuckets = [];
+  let prevSegmentsList = new Map();
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
+  const volumeTracingOrNull = yield* select(state => state.tracing.volume);
+  if (volumeTracingOrNull != null) {
+    const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
+    prevSegmentsList = _.cloneDeep(segments);
+  }
   while (true) {
     const {
       skeletonUserAction,
@@ -142,18 +159,23 @@ export function* collectUndoStates(): Saga<void> {
         const { zoomedBucketAddress, bucketData, maybeBucketLoadedPromise } = addBucketToUndoAction;
         pendingCompressions.push(
           yield* fork(
-            compressBucketAndAddToUndoBatch,
+            compressBucketAndAddToList,
             zoomedBucketAddress,
             bucketData,
             maybeBucketLoadedPromise,
-            currentVolumeAnnotationBatch,
+            currentVolumeUndoBuckets,
           ),
         );
       } else if (finishAnnotationStrokeAction) {
         yield* join([...pendingCompressions]);
         bucketsAlreadyInUndoState.clear();
-        undoStack.push({ type: "volume", data: currentVolumeAnnotationBatch });
-        currentVolumeAnnotationBatch = [];
+        undoStack.push({
+          type: "volume",
+          data: { buckets: currentVolumeUndoBuckets, segments: prevSegmentsList },
+        });
+        const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
+        prevSegmentsList = _.cloneDeep(segments);
+        currentVolumeUndoBuckets = [];
         pendingCompressions = [];
       }
       if (shouldClearRedoState) {
@@ -211,11 +233,11 @@ function* getSkeletonTracingToUndoState(
   return null;
 }
 
-function* compressBucketAndAddToUndoBatch(
+function* compressBucketAndAddToList(
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
-  undoBatch: VolumeAnnotationBatch,
+  undoBucketList: VolumeUndoBuckets,
 ): Saga<void> {
   const bucketDataAsByteArray = new Uint8Array(
     bucketData.buffer,
@@ -243,7 +265,7 @@ function* compressBucketAndAddToUndoBatch(
         volumeUndoPart.backendData = compressedBackendData;
       });
     }
-    undoBatch.push(volumeUndoPart);
+    undoBucketList.push(volumeUndoPart);
   }
 }
 
@@ -318,8 +340,8 @@ function* applyAndGetRevertingVolumeBatch(
     throw new Error("Undoing a volume annotation but no volume layer exists.");
   }
   const { cube } = segmentationLayer;
-  const allCompressedBucketsOfCurrentState: VolumeAnnotationBatch = [];
-  for (const volumeUndoBucket of volumeAnnotationBatch) {
+  const allCompressedBucketsOfCurrentState: VolumeUndoBuckets = [];
+  for (const volumeUndoBucket of volumeAnnotationBatch.buckets) {
     const {
       zoomedBucketAddress,
       data: compressedBucketData,
@@ -345,7 +367,7 @@ function* applyAndGetRevertingVolumeBatch(
       maybeBucketLoadedPromise = null;
     }
     yield* call(
-      compressBucketAndAddToUndoBatch,
+      compressBucketAndAddToList,
       zoomedBucketAddress,
       bucketData,
       maybeBucketLoadedPromise,
@@ -369,10 +391,14 @@ function* applyAndGetRevertingVolumeBatch(
       cube.setBucketData(zoomedBucketAddress, decompressedBucketData);
     }
   }
+  const currentSegments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
+  const currentSegmentsCopy = _.cloneDeep(currentSegments);
+
+  yield* put(setSegmentsActions(volumeAnnotationBatch.segments));
   cube.triggerPushQueue();
   return {
     type: "volume",
-    data: allCompressedBucketsOfCurrentState,
+    data: { buckets: allCompressedBucketsOfCurrentState, segments: currentSegmentsCopy },
   };
 }
 

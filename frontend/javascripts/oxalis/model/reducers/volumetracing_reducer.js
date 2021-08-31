@@ -97,6 +97,11 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           return setMaxCellReducer(state, Math.max(activeCellId, maxCellId));
         }
 
+        case "SET_SEGMENTS": {
+          const { segments } = action;
+          return update(state, { tracing: { volume: { segments: { $set: segments } } } });
+        }
+
         case "ADD_BUCKET_ADDRESSES_TO_SEGMENT": {
           const { segmentId, bucketAddresses } = action;
           const { segments } = volumeTracing;
@@ -141,17 +146,14 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
 
         case "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS": {
           const { segmentIdToBucketAddressList } = action;
-          if (!state.tracing.volume) {
-            return state;
-          }
-          let { segments } = state.tracing.volume;
+          let { segments } = volumeTracing;
           let updatedSegments = false;
           // $FlowFixMe[incompatible-type]
           for (const [segmentId, bucketAddressList]: [string, Array<Vector4>] of Object.entries(
             segmentIdToBucketAddressList,
           )) {
-            // TODO: somehow update this efficently
-            if (segments.has(segmentId)) {
+            // TODO: consider updating this more efficiently
+            if (segments.has(`${segmentId}`)) {
               updatedSegments = true;
               segments = update(segments, {
                 [segmentId]: {
@@ -175,6 +177,18 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
             },
           });
           return newState;
+        }
+        case "SET_SOME_POSITION_OF_SEGMENT": {
+          const { segmentId, somePosition } = action;
+          const { segments } = volumeTracing;
+          if (!segments.has(`${segmentId}`)) {
+            return state;
+          }
+          return update(state, {
+            tracing: {
+              volume: { segments: { [`${segmentId}`]: { somePosition: { $set: somePosition } } } },
+            },
+          });
         }
 
         default:

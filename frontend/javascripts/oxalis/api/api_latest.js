@@ -1099,7 +1099,7 @@ class DataApi {
 
     if (bucket.type === "null") return 0;
 
-    // todo: use new getBucket api here instead
+    // TODO: use new getLoadedBucket api here instead
 
     let needsToAwaitBucket = false;
     if (bucket.isRequested()) {
@@ -1125,6 +1125,7 @@ class DataApi {
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
     const cube = this.model.getCubeByLayerName(layerName);
     const pullQueue = this.model.getPullQueueByLayerName(layerName);
+    // Move this to a method in the cube class ---------------------------
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type === "null") return bucket;
@@ -1144,6 +1145,7 @@ class DataApi {
     }
     // Bucket has been loaded by now or was loaded already
     return bucket;
+    // ---------------------------------------------------------------------
   }
 
   async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType) {

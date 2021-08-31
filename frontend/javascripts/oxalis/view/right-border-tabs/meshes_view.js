@@ -140,6 +140,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   setCurrentMeshFile(fileName) {
     dispatch(updateCurrentMeshFileAction(fileName));
   },
+  setPosition(position: Vector3, dimensionToSkip: ?number, shouldRefreshIsosurface?: boolean) {
+    dispatch(setPositionAction(position, dimensionToSkip, shouldRefreshIsosurface));
+  },
 });
 
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
@@ -261,6 +264,11 @@ class MeshesView extends React.Component<Props, State> {
     };
   };
 
+  convertCellIdToCSS = (id: number) => {
+    const [h, s, l, a] = jsConvertCellIdToHSLA(id, this.props.mappingColors);
+    return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+  };
+
   getComputeMeshAdHocTooltipInfo = () => {
     let title = "";
     let disabled = true;
@@ -281,7 +289,7 @@ class MeshesView extends React.Component<Props, State> {
     const hasSegmentation = Model.getSegmentationLayer() != null;
 
     const moveTo = (seedPosition: Vector3) => {
-      Store.dispatch(setPositionAction(seedPosition, null, false));
+      this.props.setPosition(seedPosition, null, false);
     };
 
     const getDownloadButton = (segmentId: number) => (
@@ -327,10 +335,6 @@ class MeshesView extends React.Component<Props, State> {
         />
       </Tooltip>
     );
-    const convertHSLAToCSSString = ([h, s, l, a]) =>
-      `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-    const convertCellIdToCSS = id =>
-      convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
     const getToggleVisibilityCheckbox = (segmentId: number, isVisible: boolean) => (
       <Tooltip title="Change visibility">
@@ -379,7 +383,7 @@ class MeshesView extends React.Component<Props, State> {
                   className="circle"
                   style={{
                     paddingLeft: "10px",
-                    backgroundColor: convertCellIdToCSS(segmentId),
+                    backgroundColor: this.convertCellIdToCSS(segmentId),
                   }}
                 />
               )}{" "}
@@ -621,9 +625,23 @@ class MeshesView extends React.Component<Props, State> {
     return (
       <div className="padded-tab-content">
         {allSegments.length > 0 ? (
-          <List size="small">
+          <List size="small" split={false}>
             {allSegments.map(segment => (
-              <List.Item key={segment.id}>{segment.name}</List.Item>
+              <List.Item
+                key={segment.id}
+                style={{ padding: "2px 10px" }}
+                onClick={() => this.props.setPosition(segment.somePosition)}
+              >
+                {/* TODO: Deduplicate this span below */}
+                <span
+                  className="circle"
+                  style={{
+                    paddingLeft: "10px",
+                    backgroundColor: this.convertCellIdToCSS(segment.id),
+                  }}
+                />
+                {segment.name}
+              </List.Item>
             ))}
           </List>
         ) : null}

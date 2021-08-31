@@ -5,6 +5,7 @@ import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 
+import { Unicode } from "oxalis/constants";
 import type { APIDataStore, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { addWkConnectDataset } from "admin/admin_rest_api";
@@ -138,7 +139,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
             name="authFile"
             label={
               <React.Fragment>
-                Google&nbsp;
+                Google{Unicode.NonBreakingSpace}
                 <a
                   href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
                   target="_blank"
@@ -146,7 +147,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
                 >
                   Service Account
                 </a>
-                &nbsp;Key (Optional)
+                {Unicode.NonBreakingSpace}Key (Optional)
               </React.Fragment>
             }
             hasFeedback

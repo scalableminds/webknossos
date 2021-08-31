@@ -57,7 +57,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
         return false;
       }
       const mappingInfo = getMappingInfo(
-        storeState.temporaryConfiguration.activeMapping,
+        storeState.temporaryConfiguration.activeMappingByLayer,
         segmentationLayer.name,
       );
       return mappingInfo.isMappingEnabled && mappingInfo.mappingType === "HDF5";

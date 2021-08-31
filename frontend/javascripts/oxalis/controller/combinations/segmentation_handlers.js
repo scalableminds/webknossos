@@ -28,7 +28,7 @@ export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
   const state = Store.getState();
 
   const { mappingName, mappingType, isMappingEnabled } = getMappingInfo(
-    state.temporaryConfiguration.activeMapping,
+    state.temporaryConfiguration.activeMappingByLayer,
     segmentation.name,
   );
   if (mappingName == null || !isMappingEnabled) {

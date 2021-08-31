@@ -96,7 +96,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
         : {},
     dataset: state.dataset,
     mappingColors: getMappingInfo(
-      state.temporaryConfiguration.activeMapping,
+      state.temporaryConfiguration.activeMappingByLayer,
       visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
     ).mappingColors,
     flycam: state.flycam,

@@ -598,7 +598,7 @@ export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?API
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
 
   const layersWithEnabledMapping = visibleSegmentationLayers.filter(layer => {
-    const mappingInfo = state.temporaryConfiguration.activeMapping[layer.name];
+    const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layer.name];
     return mappingInfo && mappingInfo.isMappingEnabled;
   });
 
@@ -895,12 +895,18 @@ export function getMappingInfo(
 
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
   const layer = getSegmentationLayerWithMappingSupport(state);
-  return getMappingInfo(state.temporaryConfiguration.activeMapping, layer ? layer.name : null);
+  return getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layer ? layer.name : null,
+  );
 }
 
 export function getMappingInfoForTracingLayer(state: OxalisState): ActiveMappingInfo {
   const layer = getSegmentationTracingLayer(state.dataset);
-  return getMappingInfo(state.temporaryConfiguration.activeMapping, layer ? layer.name : null);
+  return getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layer ? layer.name : null,
+  );
 }
 
 export default {};

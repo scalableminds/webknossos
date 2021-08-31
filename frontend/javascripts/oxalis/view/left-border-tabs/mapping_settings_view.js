@@ -278,7 +278,7 @@ const mapDispatchToProps = {
 
 function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
   const activeMappingInfo = getMappingInfo(
-    state.temporaryConfiguration.activeMapping,
+    state.temporaryConfiguration.activeMappingByLayer,
     ownProps.layerName,
   );
   return {

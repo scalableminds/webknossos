@@ -83,7 +83,7 @@ class Mappings {
     };
 
     listenToStoreProperty(
-      state => getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName),
+      state => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName),
       mapping => {
         const shouldReload = isAgglomerate(oldMapping) || isAgglomerate(mapping);
         oldMapping = mapping;
@@ -254,16 +254,18 @@ class Mappings {
     // There is a race condition otherwise leading to hard-to-debug errors.
     listenToStoreProperty(
       state =>
-        getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mappingColors,
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName)
+          .mappingColors,
       mappingColors => this.updateMappingColorTexture(mappingColors),
       true,
     );
 
     listenToStoreProperty(
-      state => getMappingInfo(state.temporaryConfiguration.activeMapping, this.layerName).mapping,
+      state =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
       mapping => {
         const { mappingKeys } = getMappingInfo(
-          Store.getState().temporaryConfiguration.activeMapping,
+          Store.getState().temporaryConfiguration.activeMappingByLayer,
           this.layerName,
         );
         this.updateMappingTextures(mapping, mappingKeys);

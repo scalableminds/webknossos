@@ -131,7 +131,10 @@ export async function requestFromStore(
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
 
-  const activeMapping = getMappingInfo(state.temporaryConfiguration.activeMapping, layerInfo.name);
+  const activeMapping = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerInfo.name,
+  );
   const applyAgglomerates =
     isSegmentation &&
     activeMapping != null &&

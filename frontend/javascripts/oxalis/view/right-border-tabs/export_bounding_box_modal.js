@@ -37,7 +37,9 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const volumeTracing = tracing != null ? tracing.volume : null;
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
-  const activeMappingInfos = useSelector(state => state.temporaryConfiguration.activeMapping);
+  const activeMappingInfos = useSelector(
+    state => state.temporaryConfiguration.activeMappingByLayer,
+  );
   const isMergerModeEnabled = useSelector(
     state => state.temporaryConfiguration.isMergerModeEnabled,
   );

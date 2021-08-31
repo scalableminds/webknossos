@@ -162,7 +162,7 @@ class DataCube {
 
   isMappingEnabled(): boolean {
     const activeMapping = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMapping,
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
     return this.isSegmentation ? activeMapping.isMappingEnabled : false;
@@ -170,7 +170,7 @@ class DataCube {
 
   getMapping(): ?Mapping {
     const activeMapping = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMapping,
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
     return this.isSegmentation ? activeMapping.mapping : null;
@@ -178,7 +178,7 @@ class DataCube {
 
   shouldHideUnmappedIds(): boolean {
     const activeMapping = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMapping,
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
     return this.isSegmentation ? activeMapping.hideUnmappedIds : false;

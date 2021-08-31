@@ -31,12 +31,21 @@ const updateActiveMapping = (
   shape: $Shape<ActiveMappingInfo>,
   layerName: string,
 ) => {
-  const oldMappingInfo = getMappingInfo(state.temporaryConfiguration.activeMapping, layerName);
+  const oldMappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
   const newMappingInfo = {
     ...oldMappingInfo,
     ...shape,
   };
-  return updateKey3(state, "temporaryConfiguration", "activeMapping", layerName, newMappingInfo);
+  return updateKey3(
+    state,
+    "temporaryConfiguration",
+    "activeMappingByLayer",
+    layerName,
+    newMappingInfo,
+  );
 };
 
 function disableAllSegmentationLayers(state: OxalisState): OxalisState {
@@ -193,7 +202,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const hideUnmappedIds =
         action.hideUnmappedIds != null
           ? action.hideUnmappedIds
-          : getMappingInfo(state.temporaryConfiguration.activeMapping, layerName).hideUnmappedIds;
+          : getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName)
+              .hideUnmappedIds;
       return updateActiveMapping(
         state,
         {

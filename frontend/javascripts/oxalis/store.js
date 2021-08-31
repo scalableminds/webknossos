@@ -348,7 +348,7 @@ export type TemporaryConfiguration = {
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
   +hoveredIsosurfaceId: number,
-  +activeMapping: { [layerName: string]: ActiveMappingInfo },
+  +activeMappingByLayer: { [layerName: string]: ActiveMappingInfo },
   +isMergerModeEnabled: boolean,
   +isAutoBrushEnabled: boolean,
   +gpuSetup: {

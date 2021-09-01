@@ -10,14 +10,14 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
-import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+import io.swagger.annotations._
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
 import models.annotation.AnnotationState._
@@ -63,6 +63,22 @@ class AnnotationIOController @Inject()(
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
+  @ApiOperation(
+    value =
+      """Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation.
+Expects:
+ - As file attachment: any number of NML files or ZIP files containing NMLs, optionally with at most one volume data ZIP referenced from an NML in a ZIP
+ - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
+   - If "true": in merged annotation, create tree group wrapping the trees of each file
+   - If "false": in merged annotation, rename trees with the respective file name as prefix""")
+  @ApiResponses(
+    Array(
+      new ApiResponse(
+        code = 200,
+        message =
+          "JSON object containing annotation information about the newly created annotation, including the assigned id"),
+      new ApiResponse(code = 400, message = badRequestLabel)
+    ))
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>
       log() {
@@ -205,15 +221,22 @@ class AnnotationIOController @Inject()(
 
   @ApiOperation(value = "Download an annotation as NML/ZIP")
   @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "NML or Zip file containing skeleton and/or volume data of this annotation."),
-      new ApiResponse(code = 400, message = badRequestLabel)))
-  def download(@ApiParam(value = "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-    example = "Explorational") typ: String,
-               @ApiParam(value = "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
-               id: String,
-               skeletonVersion: Option[Long],
-               volumeVersion: Option[Long],
-               skipVolumeData: Option[Boolean]): Action[AnyContent] =
+    Array(
+      new ApiResponse(code = 200,
+                      message = "NML or Zip file containing skeleton and/or volume data of this annotation."),
+      new ApiResponse(code = 400, message = badRequestLabel)
+    ))
+  def download(
+      @ApiParam(value =
+                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
+                example = "Explorational") typ: String,
+      @ApiParam(
+        value =
+          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
+      id: String,
+      skeletonVersion: Option[Long],
+      volumeVersion: Option[Long],
+      skipVolumeData: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {

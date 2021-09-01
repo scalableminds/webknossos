@@ -10,7 +10,6 @@ POST          /triggers/initialData                                            c
 GET           /maintenance                                                     controllers.MaintenanceController.info
 POST          /maintenance                                                     controllers.MaintenanceController.initMaintenance
 DELETE        /maintenance                                                     controllers.MaintenanceController.closeMaintenance
-GET           /swagger.json                                                    controllers.ApiHelpController.getResources
 
 # Authentication
 POST          /auth/register                                                   controllers.AuthenticationController.register

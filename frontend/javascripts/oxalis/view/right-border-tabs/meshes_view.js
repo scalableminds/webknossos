@@ -376,17 +376,9 @@ class MeshesView extends React.Component<Props, State> {
                 "is-centered-cell": segmentId === isCenteredCell,
               })}
             >
-              {isHoveredItem ? (
-                getToggleVisibilityCheckbox(segmentId, isVisible)
-              ) : (
-                <span
-                  className="circle"
-                  style={{
-                    paddingLeft: "10px",
-                    backgroundColor: this.convertCellIdToCSS(segmentId),
-                  }}
-                />
-              )}{" "}
+              {isHoveredItem
+                ? getToggleVisibilityCheckbox(segmentId, isVisible)
+                : this.getColoredDotIconForSegment(segmentId)}{" "}
               <span
                 onClick={() => {
                   this.props.changeActiveIsosurfaceId(segmentId, seedPosition, !isPrecomputed);
@@ -413,6 +405,16 @@ class MeshesView extends React.Component<Props, State> {
       getIsosurfaceListItem(isosurface),
     );
   };
+
+  getColoredDotIconForSegment = (segmentId: number) => (
+    <span
+      className="circle"
+      style={{
+        paddingLeft: "10px",
+        backgroundColor: this.convertCellIdToCSS(segmentId),
+      }}
+    />
+  );
 
   render() {
     const startComputingMeshfile = async () => {
@@ -632,14 +634,7 @@ class MeshesView extends React.Component<Props, State> {
                 style={{ padding: "2px 10px" }}
                 onClick={() => this.props.setPosition(segment.somePosition)}
               >
-                {/* TODO: Deduplicate this span below */}
-                <span
-                  className="circle"
-                  style={{
-                    paddingLeft: "10px",
-                    backgroundColor: this.convertCellIdToCSS(segment.id),
-                  }}
-                />
+                {this.getColoredDotIconForSegment(segment.id)}
                 {segment.name}
               </List.Item>
             ))}

@@ -19,7 +19,6 @@ import Constants, {
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import {
   type Bucket,
   getConstructorForElementClass,
@@ -1093,27 +1092,8 @@ class DataApi {
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
-    const pullQueue = this.model.getPullQueueByLayerName(layerName);
     const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
-    const bucket = cube.getOrCreateBucket(bucketAddress);
-
-    if (bucket.type === "null") return 0;
-
-    // TODO: use new getLoadedBucket api here instead
-
-    let needsToAwaitBucket = false;
-    if (bucket.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (bucket.needsRequest()) {
-      pullQueue.add({ bucket: bucketAddress, priority: PullQueueConstants.PRIORITY_HIGHEST });
-      pullQueue.pull();
-      needsToAwaitBucket = true;
-    }
-    if (needsToAwaitBucket) {
-      await new Promise(resolve => {
-        bucket.on("bucketLoaded", resolve);
-      });
-    }
+    await this.getLoadedBucket(layerName, bucketAddress);
     // Bucket has been loaded by now or was loaded already
     return cube.getDataValue(position, null, zoomStep);
   }
@@ -1124,28 +1104,8 @@ class DataApi {
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
     const cube = this.model.getCubeByLayerName(layerName);
-    const pullQueue = this.model.getPullQueueByLayerName(layerName);
-    // Move this to a method in the cube class ---------------------------
-    const bucket = cube.getOrCreateBucket(bucketAddress);
-
-    if (bucket.type === "null") return bucket;
-
-    let needsToAwaitBucket = false;
-    if (bucket.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (bucket.needsRequest()) {
-      pullQueue.add({ bucket: bucketAddress, priority: -1 });
-      pullQueue.pull();
-      needsToAwaitBucket = true;
-    }
-    if (needsToAwaitBucket) {
-      await new Promise(resolve => {
-        bucket.on("bucketLoaded", resolve);
-      });
-    }
-    // Bucket has been loaded by now or was loaded already
+    const bucket = await cube.getLoadedBucket(bucketAddress);
     return bucket;
-    // ---------------------------------------------------------------------
   }
 
   async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType) {

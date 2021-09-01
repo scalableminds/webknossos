@@ -314,7 +314,7 @@ export function applyVoxelMap(
   }
   const lowestResolutionIndex = dataCube.resolutionInfo.getLowestResolutionIndex();
   const zoomedAddressesOfAnnotatedBuckets = [];
-  const overwrittenBucketAddressesOfSegments = {};
+  const overwrittenBucketAddressesOfSegments = new Map();
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     const isBucketInLowestResolution = labeledBucketZoomedAddress[3] === lowestResolutionIndex;
@@ -345,6 +345,13 @@ export function applyVoxelMap(
         continue;
       }
       const { data } = bucket.getOrCreateData();
+      // TODO: In case a segment part that already exists in the backend and the bucket is overdrawn,
+      // but the bucket data isn't fetched until this step, we do not know that this segment part is overdrawn.
+      // This breaks the housekeeping of the covered buckets by a segment.
+      //
+      // A possible solution would be that when the incoming backend data is merged with the frontend data,
+      // the merging automatically updates the covered buckets. The merge operation could use the
+      // manageRemovingBucketAddressesOfOverdrawnSegments-method to do that. Then it only needs to track which segments were overwritten
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
@@ -362,10 +369,13 @@ export function applyVoxelMap(
                 currentSegmentId > 0 &&
                 currentSegmentId !== cellId
               ) {
-                if (!overwrittenBucketAddressesOfSegments[currentSegmentId]) {
-                  overwrittenBucketAddressesOfSegments[currentSegmentId] = new Set();
+                if (!overwrittenBucketAddressesOfSegments.has(currentSegmentId)) {
+                  overwrittenBucketAddressesOfSegments.set(currentSegmentId, new Set());
                 }
-                overwrittenBucketAddressesOfSegments[currentSegmentId].add(bucket.zoomedAddress);
+                overwrittenBucketAddressesOfSegments
+                  .get(currentSegmentId)
+                  //  $FlowFixMe[incompatible-use]
+                  .add(bucket.zoomedAddress);
               }
               data[voxelAddress] = cellId;
             }
@@ -411,7 +421,7 @@ function assignSegmentNewPositionFromIndexWithinBucket(
   Store.dispatch(setSomePositionOfSegmentAction(segmentId, globalPositionForSegment));
 }
 
-function findAndSetNewValidPositionForSegments(
+async function findAndSetNewValidPositionForSegments(
   segmentsWithInvalidPosition: Array<number>,
   removeBucketsFromSegments: { [number]: Array<Vector4> },
   resolutions: Array<Vector3>,
@@ -433,90 +443,147 @@ function findAndSetNewValidPositionForSegments(
       continue;
     }
     const firstBucketAddressWithDataOfCurrentSegment = bucketAddressesWithDataOfCurrentSegment[0];
-    const bucketWithSegmentData = dataCube.getOrCreateBucket(
-      firstBucketAddressWithDataOfCurrentSegment,
-    );
-    if (bucketWithSegmentData.type === "null") {
-      continue;
-    }
-    const { data: bucketData } = bucketWithSegmentData.getOrCreateData();
-    let firstPositionWithCurrentSegment = 0;
-    for (; firstPositionWithCurrentSegment < bucketData.length; ++firstPositionWithCurrentSegment) {
-      if (bucketData[firstPositionWithCurrentSegment] === currentSegmentId) {
-        break;
-      }
-    }
-    assignSegmentNewPositionFromIndexWithinBucket(
-      currentSegmentId,
-      firstPositionWithCurrentSegment,
-      firstBucketAddressWithDataOfCurrentSegment,
-      resolutions,
-      dataCube,
-    );
+    dataCube
+      .getLoadedBucket(firstBucketAddressWithDataOfCurrentSegment)
+      .then(bucketWithSegmentData => {
+        if (bucketWithSegmentData.type === "null") {
+          return;
+        }
+        const { data: bucketData, triggeredBucketFetch } = bucketWithSegmentData.getOrCreateData();
+        console.assert(triggeredBucketFetch === false); // TODO: Remove me
+        let firstPositionWithCurrentSegment = 0;
+        for (
+          ;
+          firstPositionWithCurrentSegment < bucketData.length;
+          ++firstPositionWithCurrentSegment
+        ) {
+          if (bucketData[firstPositionWithCurrentSegment] === currentSegmentId) {
+            break;
+          }
+        }
+        assignSegmentNewPositionFromIndexWithinBucket(
+          currentSegmentId,
+          firstPositionWithCurrentSegment,
+          firstBucketAddressWithDataOfCurrentSegment,
+          resolutions,
+          dataCube,
+        );
+      });
   }
 }
 
-function manageRemovingBucketAddressesOfOverdrawnSegments(
+async function manageRemovingBucketAddressesOfOverdrawnSegments(
   dataCube: DataCube,
-  overwrittenBucketAddressesOfSegments: { [string]: Set<Vector4> },
+  overwrittenBucketAddressesOfSegments: Map<number, Set<Vector4>>,
   lowestResolutionIndex: number,
 ) {
   const removeBucketsFromSegments = {};
   const segmentsWithInvalidPosition = [];
+  const promisesToWaitFor = [];
   const currentSegmentList = enforceVolumeTracing(Store.getState().tracing).segments;
   const resolutions: Array<Vector3> = (_.cloneDeep(dataCube.resolutionInfo.resolutions): any);
-  // $FlowFixMe[incompatible-type]
-  for (const [currentSegmentId, bucketAddressSet]: [number, Set<Vector4>] of Object.entries(
-    overwrittenBucketAddressesOfSegments,
-  )) {
-    const currentSegmentIdString = `${currentSegmentId}`;
-    const currentSegmentEntry = currentSegmentList.get(currentSegmentIdString);
-    if (currentSegmentEntry == null) {
-      continue;
-    }
-    let isSegmentPositionFaulty = false;
-    const currentSegmentPosition = currentSegmentEntry.somePosition;
-    const bucketOfCurrentSegmentPosition = globalPositionToBucketPosition(
-      currentSegmentPosition,
+
+  const checkIfSegmentPositionIsStillValid = async (
+    segmentId: number,
+    segmentPosition: Vector3,
+    bucketAddressSet: Set<Vector4>,
+  ) => {
+    const bucketAddressOfCurrentSegmentPosition = globalPositionToBucketPosition(
+      segmentPosition,
       resolutions,
       lowestResolutionIndex,
     );
-    for (const bucketAddress of bucketAddressSet.values()) {
-      const bucket = dataCube.getOrCreateBucket(bucketAddress);
+    let bucket = dataCube.getOrCreateBucket(bucketAddressOfCurrentSegmentPosition);
+    if (bucket.type === "null") {
+      return true;
+    }
+    if (bucketAddressSet.has(bucket.zoomedAddress)) {
+      bucket = await dataCube.getLoadedBucket(bucketAddressOfCurrentSegmentPosition);
+      if (bucket.type !== "null") {
+        const { data: bucketData, triggeredBucketFetch } = bucket.getOrCreateData();
+        console.assert(triggeredBucketFetch === false); // TODO: Remove me
+        const indexInBucketData = dataCube.getVoxelIndex(segmentPosition);
+        const isSegmentPositionFaulty = bucketData[indexInBucketData] !== segmentId;
+        return isSegmentPositionFaulty;
+      }
+    }
+    return false;
+  };
+
+  const checkBucketAddressSetForBucketsWithoutPartsOfSegment = async (
+    bucketAddressSet: Set<Vector4>,
+    segmentId: number,
+    segmentIdString: string,
+    isSegmentPositionFaulty: boolean,
+  ) => {
+    const bucketCheckPromises = [];
+    let isSegmentPositionStillFaulty = isSegmentPositionFaulty;
+    const lookForSegmentDataInBucket = (bucket: Bucket, bucketAddress: Vector4) => {
       if (bucket.type === "null") {
-        continue;
+        return;
       }
-      const { data: bucketData } = bucket.getOrCreateData();
-      if (_.isEqual(bucketAddress, bucketOfCurrentSegmentPosition)) {
-        const indexInBucketData = dataCube.getVoxelIndex(currentSegmentPosition);
-        isSegmentPositionFaulty = bucketData[indexInBucketData] !== currentSegmentId;
-      }
+      const { data: bucketData, triggeredBucketFetch } = bucket.getOrCreateData();
+      console.assert(triggeredBucketFetch === false); // TODO: Remove me
       let isValueIncluded = false;
       for (let index = 0; index < bucketData.length && !isValueIncluded; ++index) {
-        isValueIncluded = bucketData[index] === currentSegmentId;
+        isValueIncluded = bucketData[index] === segmentId;
         if (isValueIncluded && isSegmentPositionFaulty) {
           assignSegmentNewPositionFromIndexWithinBucket(
-            currentSegmentId,
+            segmentId,
             index,
             bucketAddress,
             resolutions,
             dataCube,
           );
-          isSegmentPositionFaulty = false;
+          isSegmentPositionStillFaulty = false;
         }
       }
       if (!isValueIncluded) {
-        if (removeBucketsFromSegments[currentSegmentIdString]) {
-          removeBucketsFromSegments[currentSegmentIdString].push(bucketAddress);
+        if (removeBucketsFromSegments[segmentIdString]) {
+          removeBucketsFromSegments[segmentIdString].push(bucketAddress);
         } else {
-          removeBucketsFromSegments[currentSegmentIdString] = [bucketAddress];
+          removeBucketsFromSegments[segmentIdString] = [bucketAddress];
         }
       }
+    };
+    for (const bucketAddress of bucketAddressSet.values()) {
+      bucketCheckPromises.push(
+        dataCube
+          .getLoadedBucket(bucketAddress)
+          .then((bucket: Bucket) => lookForSegmentDataInBucket(bucket, bucketAddress)),
+      );
     }
-    if (isSegmentPositionFaulty) {
-      segmentsWithInvalidPosition.push(currentSegmentId);
+    await Promise.all(bucketCheckPromises);
+    if (isSegmentPositionStillFaulty) {
+      segmentsWithInvalidPosition.push(segmentId);
     }
+  };
+  for (const [
+    currentSegmentId,
+    bucketAddressSet,
+  ] of overwrittenBucketAddressesOfSegments.entries()) {
+    const currentSegmentIdString = `${currentSegmentId}`;
+    const currentSegmentEntry = currentSegmentList.get(currentSegmentIdString);
+    if (currentSegmentEntry == null) {
+      continue;
+    }
+    const currentSegmentPosition = currentSegmentEntry.somePosition;
+    promisesToWaitFor.push(
+      checkIfSegmentPositionIsStillValid(
+        currentSegmentId,
+        currentSegmentPosition,
+        bucketAddressSet,
+      ).then(async (isSegmentPositionFaulty: boolean) => {
+        await checkBucketAddressSetForBucketsWithoutPartsOfSegment(
+          bucketAddressSet,
+          currentSegmentId,
+          currentSegmentIdString,
+          isSegmentPositionFaulty,
+        );
+      }),
+    );
   }
+  await Promise.all(promisesToWaitFor);
   findAndSetNewValidPositionForSegments(
     segmentsWithInvalidPosition,
     removeBucketsFromSegments,
@@ -528,5 +595,3 @@ function manageRemovingBucketAddressesOfOverdrawnSegments(
     Store.dispatch(removeBucketAddressesFromSegmentsAction(removeBucketsFromSegments));
   }
 }
-// TODO: Fix tests
-// Add undo and redo

@@ -188,7 +188,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             value={searchQuery}
           />
         </div>
-        <h3 style={{ display: "inline-block" }}>Tasks</h3>
+        <h3 style={{ display: "inline-block", verticalAlign: "top" }}>Tasks</h3>
         <a
           href="https://webknossos.org/services/annotations"
           className="crosslink-box"

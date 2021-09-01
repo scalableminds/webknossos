@@ -281,7 +281,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           // the local variable here).
           segmentationLayer = leastRecentlyUsedSegmentationLayer;
         } else {
-          // As a fallback, simply use some segmentatoin layer
+          // As a fallback, simply use some segmentation layer
           segmentationLayer = Model.getSomeSegmentationLayer();
         }
         if (segmentationLayer == null) {

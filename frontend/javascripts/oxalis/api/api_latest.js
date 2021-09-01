@@ -1069,7 +1069,7 @@ class DataApi {
   }
 
   /**
-   * Gets the active mapping for the currently visible segmentation layer. If layerName is not
+   * Gets the active mapping for a given layer. If layerName is not
    * passed, the currently visible segmentation layer will be used.
    *
    */
@@ -1082,7 +1082,8 @@ class DataApi {
   }
 
   /**
-   * Sets the active mapping for the currently visible segmentation layer.
+   * Sets the active mapping for a given layer.  If layerName is not passed,
+   * the currently visible segmentation layer will be used.
    *
    */
   activateMapping(
@@ -1547,10 +1548,7 @@ class DataApi {
    */
   async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
     const state = Store.getState();
-    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
-      Store.getState(),
-      layerName,
-    );
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
     if (!effectiveLayerName) {
       return;
     }

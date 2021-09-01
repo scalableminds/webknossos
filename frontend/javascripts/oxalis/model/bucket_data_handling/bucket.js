@@ -17,6 +17,7 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import { manageRemovingBucketAddressesOfOverdrawnSegments } from "oxalis/model/volumetracing/volume_annotation_sampling";
 import Constants, {
   type Vector2,
   type Vector3,
@@ -412,11 +413,38 @@ export class DataBucket {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
-
-    for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-      // Only overwrite with the new value if the old value was 0
-      this.data[i] = this.data[i] || newData[i];
+    const currentData = this.data;
+    const lowestResolutionIndex = this.cube.resolutionInfo.getLowestResolutionIndex();
+    const isBucketInLowestResolution = lowestResolutionIndex === this.zoomedAddress[3];
+    if (!isBucketInLowestResolution) {
+      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
+        // Only overwrite with the new value if the old value was 0
+        currentData[i] = currentData[i] || newData[i];
+      }
+    } else {
+      // TODO: Better add tests for this, as this is likely hard to test manually
+      const overwrittenBucketAddressesOfSegments = new Map();
+      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
+        // Only overwrite with the new value if the old value was 0
+        const mergedInSegment = newData[i];
+        const currentSegment = currentData[i];
+        if (currentSegment !== 0 && mergedInSegment !== 0 && currentSegment !== mergedInSegment) {
+          if (!overwrittenBucketAddressesOfSegments.has(mergedInSegment)) {
+            overwrittenBucketAddressesOfSegments.set(
+              mergedInSegment,
+              new Set([this.zoomedAddress]),
+            );
+          }
+        }
+        currentData[i] = currentData[i] || newData[i];
+      }
+      manageRemovingBucketAddressesOfOverdrawnSegments(
+        this.cube,
+        overwrittenBucketAddressesOfSegments,
+        lowestResolutionIndex,
+      );
     }
+    this.data = currentData;
   }
 
   // The following three methods can be used for debugging purposes.

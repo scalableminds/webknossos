@@ -413,6 +413,7 @@ function assignSegmentNewPositionFromIndexWithinBucket(
   resolutions: Array<Vector3>,
   dataCube: DataCube,
 ) {
+  // TODO: Test this manually. Looks like this is broken :/
   const globalPositionForSegment = dataCube.getGlobalPositionOfBucketIndex(
     index,
     bucketAddress,
@@ -451,28 +452,27 @@ async function findAndSetNewValidPositionForSegments(
         }
         const { data: bucketData, triggeredBucketFetch } = bucketWithSegmentData.getOrCreateData();
         console.assert(triggeredBucketFetch === false); // TODO: Remove me
-        let firstPositionWithCurrentSegment = 0;
-        for (
-          ;
-          firstPositionWithCurrentSegment < bucketData.length;
-          ++firstPositionWithCurrentSegment
-        ) {
-          if (bucketData[firstPositionWithCurrentSegment] === currentSegmentId) {
+        let firstPositionWithCurrentSegment = -1;
+        for (let index = 0; index < bucketData.length; ++index) {
+          if (bucketData[index] === currentSegmentId) {
+            firstPositionWithCurrentSegment = index;
             break;
           }
         }
-        assignSegmentNewPositionFromIndexWithinBucket(
-          currentSegmentId,
-          firstPositionWithCurrentSegment,
-          firstBucketAddressWithDataOfCurrentSegment,
-          resolutions,
-          dataCube,
-        );
+        if (firstPositionWithCurrentSegment !== -1) {
+          assignSegmentNewPositionFromIndexWithinBucket(
+            currentSegmentId,
+            firstPositionWithCurrentSegment,
+            firstBucketAddressWithDataOfCurrentSegment,
+            resolutions,
+            dataCube,
+          );
+        }
       });
   }
 }
 
-async function manageRemovingBucketAddressesOfOverdrawnSegments(
+export async function manageRemovingBucketAddressesOfOverdrawnSegments(
   dataCube: DataCube,
   overwrittenBucketAddressesOfSegments: Map<number, Set<Vector4>>,
   lowestResolutionIndex: number,

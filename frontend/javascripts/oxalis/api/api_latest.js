@@ -151,7 +151,7 @@ function assertVolume(tracing: Tracing): VolumeTracing {
   return tracing.volume;
 }
 
-function getRequestedSegmentationLayerOrVisibleLayer(
+function getRequestedOrVisibleSegmentationLayer(
   state: OxalisState,
   layerName: ?string,
 ): ?APISegmentationLayer {
@@ -160,22 +160,25 @@ function getRequestedSegmentationLayerOrVisibleLayer(
   return requestedLayer || getVisibleSegmentationLayer(state);
 }
 
-function getRequestedLayerNameOrVisibleLayerEnforced(
+function getRequestedOrVisibleSegmentationLayerEnforced(
   state: OxalisState,
   layerName: ?string,
 ): APISegmentationLayer {
-  const effectiveLayer = getRequestedSegmentationLayerOrVisibleLayer(state, layerName);
+  const effectiveLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
   if (effectiveLayer != null) {
     return effectiveLayer;
   }
-  // If a layerName is passed and invalid, an exception will be raised by getRequestedSegmentationLayerOrVisibleLayer.
+  // If a layerName is passed and invalid, an exception will be raised by getRequestedOrVisibleSegmentationLayer.
   throw new Error(
     "No segmentation layer is currently visible. Pass a valid layerName (you may want to use `getSegmentationLayerName`)",
   );
 }
 
-function getRequestedLayerNameOrVisibleLayer(state: OxalisState, layerName: ?string): ?string {
-  const layer = getRequestedSegmentationLayerOrVisibleLayer(state, layerName);
+function getNameOfRequestedOrVisibleSegmentationLayer(
+  state: OxalisState,
+  layerName: ?string,
+): ?string {
+  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
   return layer != null ? layer.name : null;
 }
 
@@ -1044,7 +1047,7 @@ class DataApi {
    * the currently visible segmentation layer will be used.
    */
   setMappingEnabled(isEnabled: boolean, layerName?: string) {
-    const effectiveLayerName = getRequestedLayerNameOrVisibleLayerEnforced(
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
     ).name;
@@ -1058,7 +1061,7 @@ class DataApi {
    */
   async getMappingNames(layerName?: string): Promise<Array<string>> {
     const { dataset } = Store.getState();
-    const segmentationLayer = getRequestedLayerNameOrVisibleLayerEnforced(
+    const segmentationLayer = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
     );
@@ -1071,10 +1074,7 @@ class DataApi {
    *
    */
   getActiveMapping(layerName?: string): ?string {
-    const segmentationLayer = getRequestedSegmentationLayerOrVisibleLayer(
-      Store.getState(),
-      layerName,
-    );
+    const segmentationLayer = getRequestedOrVisibleSegmentationLayer(Store.getState(), layerName);
     if (!segmentationLayer) {
       return null;
     }
@@ -1105,7 +1105,10 @@ class DataApi {
    * the currently visible segmentation layer will be used.
    */
   isMappingEnabled(layerName?: string): boolean {
-    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
+      Store.getState(),
+      layerName,
+    );
     if (!effectiveLayerName) {
       return false;
     }
@@ -1467,7 +1470,7 @@ class DataApi {
    * const availableMeshFileNames = api.data.getAvailableMeshFiles();
    */
   async getAvailableMeshFiles(layerName?: string): Promise<Array<string>> {
-    const effectiveLayer = getRequestedSegmentationLayerOrVisibleLayer(Store.getState(), layerName);
+    const effectiveLayer = getRequestedOrVisibleSegmentationLayer(Store.getState(), layerName);
     if (!effectiveLayer) {
       return Promise.resolve([]);
     }
@@ -1485,7 +1488,7 @@ class DataApi {
    * const activeMeshFile = api.data.getActiveMeshFile();
    */
   getActiveMeshFile(layerName?: string): ?string {
-    const effectiveLayer = getRequestedSegmentationLayerOrVisibleLayer(Store.getState(), layerName);
+    const effectiveLayer = getRequestedOrVisibleSegmentationLayer(Store.getState(), layerName);
 
     if (!effectiveLayer) {
       return null;
@@ -1503,7 +1506,10 @@ class DataApi {
    * }
    */
   setActiveMeshFile(meshFile: ?string, layerName?: string) {
-    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
+      Store.getState(),
+      layerName,
+    );
     if (!effectiveLayerName) {
       return;
     }
@@ -1541,7 +1547,10 @@ class DataApi {
    */
   async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
     const state = Store.getState();
-    const effectiveLayerName = getRequestedLayerNameOrVisibleLayer(Store.getState(), layerName);
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
+      Store.getState(),
+      layerName,
+    );
     if (!effectiveLayerName) {
       return;
     }
@@ -1579,7 +1588,7 @@ class DataApi {
    * api.data.setMeshVisibility(segmentId, false);
    */
   setMeshVisibility(segmentId: number, isVisible: boolean, layerName?: string) {
-    const effectiveLayerName = getRequestedLayerNameOrVisibleLayerEnforced(
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
     ).name;
@@ -1595,7 +1604,7 @@ class DataApi {
    * api.data.removeMesh(segmentId, layerName);
    */
   removeMesh(segmentId: number, layerName?: string): void {
-    const effectiveLayerName = getRequestedLayerNameOrVisibleLayerEnforced(
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
     ).name;
@@ -1612,7 +1621,7 @@ class DataApi {
    * api.data.resetMeshes();
    */
   resetMeshes(layerName?: string) {
-    const effectiveLayerName = getRequestedLayerNameOrVisibleLayerEnforced(
+    const effectiveLayerName = getRequestedOrVisibleSegmentationLayerEnforced(
       Store.getState(),
       layerName,
     ).name;

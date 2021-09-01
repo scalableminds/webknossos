@@ -690,12 +690,12 @@ class PlaneMaterialFactory {
     } = Store.getState().temporaryConfiguration.gpuSetup;
 
     // Don't compile code for segmentation in arbitrary mode
-    const hasSegmentation = this.isOrthogonal && Model.hasSegmentationLayer();
+    const shouldRenderSegmentation = this.isOrthogonal && Model.hasSegmentationLayer();
     const colorLayerNames = this.getLayersToRender(
-      maximumLayerCountToRender - (hasSegmentation ? 1 : 0),
+      maximumLayerCountToRender - (shouldRenderSegmentation ? 1 : 0),
     );
     const packingDegreeLookup = getPackingDegreeLookup();
-    const segmentationLayerNames = hasSegmentation
+    const segmentationLayerNames = shouldRenderSegmentation
       ? Model.getSegmentationLayers().map(layer => sanitizeName(layer.name))
       : [];
     const { dataset } = Store.getState();

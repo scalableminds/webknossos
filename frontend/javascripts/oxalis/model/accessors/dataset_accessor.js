@@ -563,12 +563,7 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
 }
 
 export function getVisibleSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
-  const { datasetConfiguration } = state;
-  const { viewMode } = state.temporaryConfiguration;
-
-  const visibleSegmentationLayers = getSegmentationLayers(state.dataset).filter(layer =>
-    isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode),
-  );
+  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
   if (visibleSegmentationLayers.length > 0) {
     return visibleSegmentationLayers[0];
   }
@@ -593,7 +588,8 @@ export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?API
   // after all mapping data was copied to the GPU, but getSegmentationLayerWithMappingSupport is
   // already used before that to prepare the mapping for the correct layer).
   // Currently, webKnossos only supports one active mapping at a given time. The UI should ensure
-  // that not more than one mapping is enabled.
+  // that not more than one mapping is enabled (currently, this is achieved by only allowing one
+  // visible segmentation layer, anyway).
 
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
 

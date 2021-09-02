@@ -23,7 +23,7 @@ import processTaskWithPool from "libs/task_pool";
 
 const PARALLEL_MESH_LOADING_COUNT = 6;
 
-function getBaseLayerName(segmentationLayer: APIDataLayer) {
+export function getBaseSegmentationName(segmentationLayer: APIDataLayer) {
   return segmentationLayer.fallbackLayer || segmentationLayer.name;
 }
 
@@ -45,7 +45,7 @@ export async function maybeFetchMeshFiles(
     const availableMeshFiles = await getMeshfilesForDatasetLayer(
       dataset.dataStore.url,
       dataset,
-      getBaseLayerName(segmentationLayer),
+      getBaseSegmentationName(segmentationLayer),
     );
     Store.dispatch(updateMeshFileListAction(layerName, availableMeshFiles));
     if (
@@ -76,7 +76,7 @@ export async function loadMeshFromFile(
     availableChunks = await getMeshfileChunksForSegment(
       dataset.dataStore.url,
       dataset,
-      getBaseLayerName(segmentationLayer),
+      getBaseSegmentationName(segmentationLayer),
       fileName,
       id,
     );

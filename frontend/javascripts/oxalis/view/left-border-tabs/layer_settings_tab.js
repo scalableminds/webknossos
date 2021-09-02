@@ -41,6 +41,7 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
+  isColorLayer as getIsColorLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { userSettings } from "types/schemas/user_settings.schema";
 import {
@@ -789,7 +790,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { layers } = this.props.datasetConfiguration;
     const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
-      const isColorLayer = getLayerByName(this.props.dataset, layerName).category === "color";
+      const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
       // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });

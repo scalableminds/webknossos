@@ -139,8 +139,11 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
         <Button
           onClick={() => handleStartExport(layerInfos)}
           disabled={
+            // The export is already running or...
             startedExports.includes(exportKey(layerInfos)) ||
+            // The layer has no mag 1 or...
             !layerInfos.hasMag1 ||
+            // Merger mode is enabled and this layer is the volume tracing layer.
             (isMergerModeEnabled && layerInfos.tracingId != null)
           }
         >

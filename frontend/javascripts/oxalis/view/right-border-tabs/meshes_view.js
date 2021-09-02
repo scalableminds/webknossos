@@ -35,6 +35,7 @@ import features from "features";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
+  getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
@@ -460,8 +461,7 @@ class MeshesView extends React.Component<Props, State> {
         const job = await startComputeMeshFileJob(
           this.props.organization,
           this.props.datasetName,
-          this.props.visibleSegmentationLayer.fallbackLayer ||
-            this.props.visibleSegmentationLayer.name,
+          getBaseSegmentationName(this.props.visibleSegmentationLayer),
           meshfileResolution,
         );
         this.setState({ activeMeshJobId: job.id });

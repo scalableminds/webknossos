@@ -12,6 +12,18 @@ object InstallScript {
     s"""#!/bin/bash
        |set -euo pipefail
        |
+       |retry() {
+       |	read variable
+       |
+       |	if $$(eval $$1); then
+       |		echo "$$2" >$$(tty)
+       |		echo "Please try again!" >$$(tty)
+       |		retry "$$1" "$$2"
+       |	else
+       |		echo $$variable
+       |	fi
+       |}
+       |
        |declare -A config_keys
        |config_keys[uri]=http.uri
        |config_keys[port]=https.port
@@ -44,15 +56,10 @@ object InstallScript {
        |
        |echo "Please enter the installation path and press [ENTER] or simply press [ENTER] if the Datastore should be installed in the current directory: "
        |
-       |read install_path
+       |install_path=$$(retry "[[ !(-z \\$$variable) && !(-d \\$$variable) ]]" "The provided installation path does not exist or is not a directory.")
        |
        |if [[ -z $$install_path ]]; then
-       |	install_path="`pwd`"
-       |fi
-       |
-       |if [[ !(-d $$install_path) ]]; then
-       |	echo "The provided installation path does not exist or is not a directory."
-       |	exit 1
+       |	install_path="$$(pwd)"
        |fi
        |
        |echo "Downloading the necessary files..."
@@ -64,20 +71,9 @@ object InstallScript {
        |
        |echo "Creating initial config. We will ask for some of the most important config fields, but there are more configuration options. Please consult the documentation at TODO to learn more."
        |echo "Please enter the path where the datasets are located and press [ENTER]:"
-       |read base_dir
+       |base_dir=$$(retry "[[ !(-d \\$$variable) ]]" "The provided dataset path does not exist or is not a directory.")
        |
        |config_values[base_dir]=$$base_dir
-       |
-       |if [[ -z $${config_values[base_dir]} ]]; then
-       |	echo "Please enter a valid path that is not empty."
-       |	exit 1
-       |else
-       |	# mkdir -p config_values[base_dir]
-       |	if [[ ! (-d $${config_values[base_dir]}) ]]; then
-       |		echo "The provided dataset path does not exist or is not a directory. Please provide a valid path."
-       |		exit 1
-       |	fi
-       |fi
        |
        |echo "webKnossos checks your file system periodically to discover new datasets. If you wish to disable this function, please type [n]. Otherwise, just press [ENTER]."
        |read -n 1 disableFileSystemWatching
@@ -96,8 +92,7 @@ object InstallScript {
        |echo "3. You have not setup HTTPS yet."
        |echo "Please enter your option [1/2/3]."
        |
-       |read -n 1 https_option
-       |echo
+       |https_option=$$(retry "[[ !(\\$$variable == 1 || \\$$variable == 2 || \\$$variable == 3) ]]" "Unknown option")
        |
        |if [[ $$https_option == "1" ]]; then
        |	echo "Please update your webKnossos config accordingly. You will need to change the HTTP configuration, namely the URI and the PORT."
@@ -106,13 +101,8 @@ object InstallScript {
        |elif [[ $$https_option == "2" ]]; then
        |	echo "To enable the datastore to use your HTTPS configuration, it needs access to your key store and the corresponding password. You can enter these values now, but also change them later in the my-datastore.conf file."
        |	echo "Please enter the path to the key store and press [ENTER]."
-       |	read key_store_path
+       |	key_store_path=$$(retry "[[ !(-f \\$$variable) ]]" "The provided key store path does not exist or is not a file.")
        |	config_values[key_store_path]=$$key_store_path
-       |
-       |	if [[ ! (-f $${config_values[key_store_path]}) ]]; then
-       |		echo "The provided key store path does not exist or is not a file. Please provide a valid path."
-       |		exit 1
-       |	fi
        |
        |	echo "Please enter the password for the key store and press [ENTER]."
        |	read key_store_password
@@ -135,12 +125,7 @@ object InstallScript {
        |	fi
        |
        |	echo "Next, we need to tie your URL to a valid e-mail address to get a SSL certificate. Please provide a email address and press [ENTER]."
-       |	read email
-       |
-       |	if [[ -z $$email ]]; then
-       |		echo "Invalid email. Exiting..."
-       |		exit 1
-       |	fi
+       |	email=$$(retry "[[ -z \\$$variable ]]" "Empty email is not allowed.")
        |
        |	curl https://get.acme.sh | sh -s email=$$email
        |
@@ -159,9 +144,6 @@ object InstallScript {
        |
        |	config_values[key_store_path]=wKKeyStore.jks
        |	config_values[key_store_password]=$$password
-       |else
-       |	echo "Unknown option"
-       |	exit 1
        |fi
        |
        |echo "In case the HTTPS setup fails, you can always change the play.server.https.keyStore values in the my-datastore.conf file. If you need more information regarding the HTTPS setup, please consult the documentation."

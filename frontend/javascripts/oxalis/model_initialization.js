@@ -442,10 +442,10 @@ function setupLayerForVolumeTracing(
 
   // The tracing always contains the layer information for the user segmentation.
   // Two possible cases:
-  // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer - it needs
-  //    to be created and inserted.
-  // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
-  //    property specifies its name, to be able to merge the two layers
+  // 1) The volume layer should not be based on an existing layer. In that case, fallbackLayer is undefined
+  //    and a new layer is created and added.
+  // 2) The volume layer should be based on a fallback layer. In that case, merge the original fallbackLayer
+  //    with the new volume layer.
   const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);

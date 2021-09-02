@@ -1498,7 +1498,8 @@ class DataApi {
   }
 
   /**
-   * Set currently active mesh file (can be set to null).
+   * Set currently active mesh file (can be set to null). If layerName is not passed,
+   * the currently visible segmentation layer will be used.
    *
    * @example
    * const availableMeshFileNames = api.data.getAvailableMeshFiles();
@@ -1535,7 +1536,8 @@ class DataApi {
   }
 
   /**
-   * If a mesh file is active, loadPrecomputedMesh can be used to load a mesh for a given segment at a given seed position.
+   * If a mesh file is active, loadPrecomputedMesh can be used to load a mesh for a given segment at a given seed position for
+   * a specified segmentation layer. If layerName is not passed, the currently visible segmentation layer will be used.
    * If there is no mesh file for the dataset's segmentation layer available, you can use api.data.computeMeshOnDemand instead.
    *
    * @example
@@ -1581,6 +1583,7 @@ class DataApi {
 
   /**
    * Set the visibility for a loaded mesh by providing the corresponding segment id.
+   * If layerName is not passed, the currently visible segmentation layer will be used.
    *
    * @example
    * api.data.setMeshVisibility(segmentId, false);
@@ -1596,7 +1599,8 @@ class DataApi {
   }
 
   /**
-   * Remove the mesh for a given segment.
+   * Remove the mesh for a given segment and segmentation layer. If layerName is not passed,
+   * the currently visible segmentation layer will be used.
    *
    * @example
    * api.data.removeMesh(segmentId, layerName);
@@ -1613,7 +1617,8 @@ class DataApi {
   }
 
   /**
-   * Removes all meshes from the scene.
+   * Removes all meshes from the scene for a given segmentation layer. If layerName is not passed,
+   * the currently visible segmentation layer will be used.
    *
    * @example
    * api.data.resetMeshes();

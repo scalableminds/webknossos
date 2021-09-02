@@ -147,6 +147,9 @@ object InstallScript {
        |	sanitised_uri=$$(echo $${config_values[uri]} | cut -d "/" -f 3)
        |	password=$$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20 ; echo '')
        |
+       |	touch renew_certificate.sh
+       |	rm renew_certificate.sh
+       |
        |	echo "openssl pkcs12 -export -in ~/.acme.sh/$$sanitised_uri/fullchain.cer -inkey ~/.acme.sh/$$sanitised_uri/$$sanitised_uri.key -out $$(pwd)/cert_and_key.p12 -CAfile ~/.acme.sh/$$sanitised_uri/ca.cer -caname root -passout pass:test" >> renew_certificate.sh
        |	echo "keytool -importkeystore -destkeystore $$(pwd)/wKKeyStore.jks -srckeystore $$(pwd)/cert_and_key.p12 -srcstoretype PKCS12 -srcstorepass test -deststorepass $$password -noprompt" >> renew_certificate.sh
        |	echo "rm cert_and_key.p12" >> renew_certificate.sh
@@ -165,13 +168,13 @@ object InstallScript {
        |
        |echo "Generating config file"
        |touch my-datastore.conf
+       |rm my-datastore.conf
+       |
        |echo "include \\"/standalone-datastore.conf\\"" >> my-datastore.conf
        |
        |for i in "$${!config_values[@]}"
        |do
        |	echo "$${config_keys[$$i]} = \\"$${config_values[$$i]}\\"" >> my-datastore.conf
-       |  # echo "key  : $$i"
-       |  # echo "value: $${array[$$i]}"
        |done
        |
        |echo "Generated config file"

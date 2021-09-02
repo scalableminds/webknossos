@@ -6,6 +6,7 @@ start_webknossos() {
 		echo "Restarting webKnossos"
 		mv update.jar webknossos.jar
 		if [[ -f "update.sh" ]]; then
+			chmod +x update.sh
 			exec ./update.sh
 		else
 			start_webknossos

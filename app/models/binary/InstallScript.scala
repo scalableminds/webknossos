@@ -14,7 +14,7 @@ object InstallScript {
        |
        |declare -A config_keys
        |config_keys[uri]=http.uri
-       |config_keys[port]=http.port
+       |config_keys[port]=https.port
        |config_keys[key]=datastore.key
        |config_keys[name]=datastore.name
        |config_keys[webKnossos]=datastore.webKnossos.uri
@@ -24,7 +24,7 @@ object InstallScript {
        |config_keys[key_store_password]=play.server.https.keyStore.password
        |config_keys[ephemeral_key_size]=jdk.tls.ephemeralDHKeySize
        |config_keys[reject_client_renegotiation]=jdk.tls.rejectClientInitiatedRenegotiation
-       |config_keys[watchFileSystem]=datastore.watchFileSystem
+       |config_keys[watchFileSystem]=datastore.watchFileSystem.enabled
        |
        |declare -A config_values
        |
@@ -90,6 +90,7 @@ object InstallScript {
        |fi
        |
        |echo "To use your own webKnossos datastore, it must support HTTPS when communicating with the webKnossos server. There are multiple ways to implement this."
+       |echo "Please note that you have to renew the certificate, when not using option 3."
        |echo "1. You use your own proxy, e.g. nginx."
        |echo "2. You already setup HTTPS for your machine"
        |echo "3. You have not setup HTTPS yet."
@@ -124,7 +125,7 @@ object InstallScript {
        |	echo
        |
        |	if [[ $$auto_install == "y" ]]; then
-       |		sudo apt install socat keytool openssl curl
+       |		sudo apt install socat openssl curl
        |	elif [[ $$auto_install == "n" ]]; then
        |		echo "Please press [ENTER] after installing all of the required packages."
        |		read auto_install
@@ -143,16 +144,18 @@ object InstallScript {
        |
        |	curl https://get.acme.sh | sh -s email=$$email
        |
-       |	acme.sh --issue -d $$config_values[uri] --standalone
+       |	sanitised_uri=$$(echo $${config_values[uri]} | cut -d "/" -f 3)
+       |	password=$$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20 ; echo '')
        |
-       |	openssl pkcs12 -export -in .acme.sh/$$config_values[uri]/fullchain.cer -inkey .acme.sh/$$config_values[uri]/$$config_values[uri].key -out cert_and_key.p12 -CAfile .acme.sh/$$config_values[uri]/ca.cer -caname root -passout pass:test
+       |	echo "openssl pkcs12 -export -in ~/.acme.sh/$$sanitised_uri/fullchain.cer -inkey ~/.acme.sh/$$sanitised_uri/$$sanitised_uri.key -out $$(pwd)/cert_and_key.p12 -CAfile ~/.acme.sh/$$sanitised_uri/ca.cer -caname root -passout pass:test" >> renew_certificate.sh
+       |	echo "keytool -importkeystore -destkeystore $$(pwd)/wKKeyStore.jks -srckeystore $$(pwd)/cert_and_key.p12 -srcstoretype PKCS12 -srcstorepass test -deststorepass $$password -noprompt" >> renew_certificate.sh
+       |	echo "rm cert_and_key.p12" >> renew_certificate.sh
+       |	chmod +x renew_certificate.sh
        |
-       |	keytool -importkeystore -destkeystore wKKeyStore.jks -srckeystore cert_and_key.p12 -srcstoretype PKCS12
-       |
-       |	rm cert_and_key.p12
+       |	~/.acme.sh/acme.sh --issue -d $$sanitised_uri --standalone --reloadcmd "$$(pwd)/renew_certificate.sh"
        |
        |	config_values[key_store_path]=wKKeyStore.jks
-       |	config_values[key_store_password]=testkeystorepassword
+       |	config_values[key_store_password]=$$password
        |else
        |	echo "Unknown option"
        |	exit 1
@@ -162,10 +165,11 @@ object InstallScript {
        |
        |echo "Generating config file"
        |touch my-datastore.conf
+       |echo "include \\"/standalone-datastore.conf\\"" >> my-datastore.conf
        |
        |for i in "$${!config_values[@]}"
        |do
-       |	echo "$${config_keys[$$i]} = $${config_values[$$i]}" >> my-datastore.conf
+       |	echo "$${config_keys[$$i]} = \\"$${config_values[$$i]}\\"" >> my-datastore.conf
        |  # echo "key  : $$i"
        |  # echo "value: $${array[$$i]}"
        |done

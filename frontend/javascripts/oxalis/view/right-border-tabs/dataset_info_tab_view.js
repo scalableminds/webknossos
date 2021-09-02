@@ -3,8 +3,8 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip, Button } from "antd";
-import { EditOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Tooltip, Button, Dropdown, Menu } from "antd";
+import { EditOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -26,7 +26,9 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
+import features from "features";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
+import NucleiInferralModal from "oxalis/view/right-border-tabs/nuclei_inferral_modal";
 
 type StateProps = {|
   tracing: Tracing,
@@ -41,6 +43,10 @@ type DispatchProps = {|
 |};
 
 type Props = {| ...StateProps, ...DispatchProps |};
+
+type State = {
+  showNucleiInferralModal: boolean,
+};
 
 const shortcuts = [
   {
@@ -122,7 +128,11 @@ export function convertPixelsToNm(
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
-class DatasetInfoTabView extends React.PureComponent<Props> {
+class DatasetInfoTabView extends React.PureComponent<Props, State> {
+  state = {
+    showNucleiInferralModal: false,
+  };
+
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
@@ -184,6 +194,48 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       />
     ) : null;
   }
+
+  getProcessingJobsMenu = () => {
+    if (!this.props.dataset.jobsEnabled) {
+      return (
+        <tr>
+          <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+            <StarOutlined className="info-tab-icon" width={24} height={24} />
+          </td>
+          <td>
+            <Tooltip title="Dataset Processing features are only available for datasets hosted natively and not on other datastores.">
+              <Button disabled type="link" style={{ padding: 0 }}>
+                Process Dataset
+              </Button>
+            </Tooltip>
+          </td>
+        </tr>
+      );
+    }
+    const overlay = (
+      <Menu>
+        <Menu.Item onClick={() => this.setState({ showNucleiInferralModal: true })}>
+          <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
+            Start Nuclei Inferral
+          </Tooltip>
+        </Menu.Item>
+      </Menu>
+    );
+    return (
+      <tr>
+        <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+          <StarOutlined className="info-tab-icon" style={{ fontSize: 18 }} />
+        </td>
+        <Dropdown overlay={overlay} overlayStyle={{ minWidth: "unset" }}>
+          <td>
+            <Button type="link" style={{ padding: 0 }}>
+              Process Dataset
+            </Button>
+          </td>
+        </Dropdown>
+      </tr>
+    );
+  };
 
   getDatasetName(isDatasetViewMode: boolean) {
     const {
@@ -370,7 +422,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   }
 
   render() {
-    const { dataset, activeResolution } = this.props;
+    const { dataset, activeResolution, activeUser } = this.props;
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
@@ -450,8 +502,20 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 </tr>
               </Tooltip>
               {resolutionInfo}
+
+              {features().jobsEnabled &&
+              activeUser != null &&
+              (activeUser.isDatasetManager || activeUser.isAdmin)
+                ? this.getProcessingJobsMenu()
+                : null}
             </tbody>
           </table>
+          {this.state.showNucleiInferralModal ? (
+            <NucleiInferralModal
+              dataset={dataset}
+              handleClose={() => this.setState({ showNucleiInferralModal: false })}
+            />
+          ) : null}
         </div>
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>

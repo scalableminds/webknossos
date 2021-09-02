@@ -30,7 +30,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
-    if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
+    if (request.uri.matches("^(/api/|/data/|/tracings/|/swagger).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
       val path = request.path.replaceFirst("^(/assets/)", "")

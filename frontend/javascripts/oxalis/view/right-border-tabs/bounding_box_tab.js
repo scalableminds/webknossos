@@ -86,10 +86,13 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
             color={bb.color}
             name={bb.name}
+            isExportEnabled={dataset.jobsEnabled}
             isVisible={bb.isVisible}
             onChange={_.partial(handleChangeUserBoundingBox, bb.id)}
             onDelete={_.partial(handleDeleteUserBoundingBox, bb.id)}
-            onExport={_.partial(setSelectedBoundingBoxForExport, bb)}
+            onExport={
+              dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
+            }
           />
         ))
       ) : (

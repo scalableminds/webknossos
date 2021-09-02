@@ -2,7 +2,7 @@
 
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
-import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin } from "antd";
+import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin, Tooltip, Alert } from "antd";
 import {
   CloudUploadOutlined,
   LoadingOutlined,
@@ -10,10 +10,13 @@ import {
   ReloadOutlined,
   RocketOutlined,
   SettingOutlined,
+  InfoCircleOutlined,
+  HourglassOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import useInterval from "@use-it/interval";
 
-import type { APIUser } from "types/api_flow_types";
+import type { APIJob, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
@@ -22,7 +25,11 @@ import * as Utils from "libs/utils";
 import features, { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
-
+import { getJobs } from "admin/admin_rest_api";
+import moment from "moment";
+import FormattedDate from "components/formatted_date";
+import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
+import { Unicode } from "oxalis/constants";
 const { Search, Group: InputGroup } = Input;
 
 type Props = {
@@ -35,6 +42,10 @@ type PersistenceState = {
   searchQuery: string,
   datasetFilteringMode: DatasetFilteringMode,
 };
+
+const CONVERSION_JOBS_REFRESH_INTERVAL = 60 * 1000;
+const MAX_JOBS_TO_DISPLAY = 5;
+const RECENT_DATASET_DAY_THRESHOLD = 3;
 
 const persistence: Persistence<PersistenceState> = new Persistence(
   {
@@ -62,6 +73,7 @@ function DatasetView(props: Props) {
   const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
     "onlyShowReported",
   );
+  const [jobs, setJobs] = useState<Array<APIJob>>([]);
 
   useEffect(() => {
     const state = persistence.load(history);
@@ -71,6 +83,7 @@ function DatasetView(props: Props) {
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
+    getJobs().then(newJobs => setJobs(newJobs));
     context.fetchDatasets({
       applyUpdatePredicate: _newDatasets => {
         // Only update the datasets when there are none currently.
@@ -84,6 +97,10 @@ function DatasetView(props: Props) {
       },
     });
   }, []);
+
+  useInterval(() => {
+    getJobs().then(newJobs => setJobs(newJobs));
+  }, CONVERSION_JOBS_REFRESH_INTERVAL);
 
   useEffect(() => {
     persistence.persist(history, {
@@ -187,6 +204,69 @@ function DatasetView(props: Props) {
     );
   }
 
+  function renderNewJobsAlert() {
+    const now = moment();
+    const newJobs = jobs
+      .filter(
+        job =>
+          job.type === "convert_to_wkw" &&
+          moment.duration(now.diff(job.createdAt)).asDays() <= RECENT_DATASET_DAY_THRESHOLD,
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    if (newJobs.length === 0) {
+      return null;
+    }
+
+    const newJobsHeader = (
+      <React.Fragment>
+        Recent Dataset Conversions{" "}
+        <Tooltip
+          title="The conversion of the displayed datasets were started in the last 3 days."
+          placement="right"
+        >
+          <InfoCircleOutlined />
+        </Tooltip>
+      </React.Fragment>
+    );
+    const newJobsList = (
+      <div style={{ paddingTop: 8 }}>
+        {newJobs.slice(0, MAX_JOBS_TO_DISPLAY).map(job => {
+          const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
+          return (
+            <Row key={job.id} gutter={16}>
+              <Col span={10}>
+                <Tooltip title={tooltip}>{icon}</Tooltip>
+                {` ${job.datasetName || "UNKNOWN"}`}
+                {Unicode.NonBreakingSpace}(started at{Unicode.NonBreakingSpace}
+                <FormattedDate timestamp={job.createdAt} />
+                <span>)</span>
+              </Col>
+            </Row>
+          );
+        })}
+        <Row key="overview" style={{ marginTop: 12 }}>
+          <Col span={10}>
+            <Link to="/jobs" title="Jobs Overview">
+              See complete list
+            </Link>
+          </Col>
+        </Row>
+      </div>
+    );
+
+    return (
+      <Alert
+        message={newJobsHeader}
+        description={newJobsList}
+        type="info"
+        style={{ marginTop: 20 }}
+        showIcon
+        icon={<HourglassOutlined />}
+      />
+    );
+  }
+
   const margin = { marginRight: 5 };
   const createFilteringModeRadio = (key, label) => (
     <Radio
@@ -269,6 +349,8 @@ function DatasetView(props: Props) {
   return (
     <div>
       {adminHeader}
+      <div className="clearfix" style={{ margin: "20px 0px" }} />
+      {renderNewJobsAlert()}
       <div className="clearfix" style={{ margin: "20px 0px" }} />
 
       <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>

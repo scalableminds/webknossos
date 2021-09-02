@@ -22,6 +22,8 @@ trait Controller
     with I18nSupport
     with LazyLogging {
 
+  final val badRequestLabel = "Operation could not be performed. See JSON body for more information."
+
   def jsonErrorWrites(errors: JsError)(implicit m: MessagesProvider): JsObject =
     Json.obj(
       "errors" -> errors.errors.map(error =>

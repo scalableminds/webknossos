@@ -2,7 +2,7 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
+import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO, DataStoreService, UserDataStoreConfig}
 import net.liftweb.common.Empty
@@ -14,6 +14,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.{ExecutionContext, Future}
 
+@Api
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -38,7 +39,10 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ 'isForeign).readNullable[Boolean] and
       (__ \ 'isConnector).readNullable[Boolean] and
       (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromUpdateForm _)
-
+  @ApiOperation(value = "List all available datastores")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON list of objects containing datastore information"),
+          new ApiResponse(code = 400, message = badRequestLabel)))
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       dataStores <- dataStoreDAO.findAll ?~> "dataStore.list.failed"
@@ -48,6 +52,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataStoreReads) { dataStore =>
       dataStoreDAO.findOneByName(dataStore.name).futureBox.flatMap {
@@ -75,6 +80,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
@@ -82,6 +88,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     } yield Ok
   }
 
+  @ApiOperation(hidden = true, value = "")
   def update(name: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataStorePublicReads) { dataStore =>
       for {

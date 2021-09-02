@@ -145,6 +145,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   logoUrl: ?string,
   lastUsedByUser: number,
   isForeign: boolean,
+  jobsEnabled: boolean,
   sortingKey: number,
   owningOrganization: string,
   publication: ?APIPublication,
@@ -203,6 +204,7 @@ export type APIUserBase = {
 export type NovelUserExperienceInfoType = {|
   hasSeenDashboardWelcomeBanner?: boolean,
   shouldSeeModernControlsModal?: boolean,
+  lastViewedWhatsNewTimestamp?: number,
 |};
 
 export type APIUserTheme = "auto" | "light" | "dark";

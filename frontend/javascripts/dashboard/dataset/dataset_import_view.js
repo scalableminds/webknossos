@@ -16,6 +16,7 @@ import type {
   APIDatasetId,
   APIMessage,
 } from "types/api_flow_types";
+import { Unicode } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import LinkButton from "components/link_button";
@@ -794,7 +795,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
               <Button type="primary" htmlType="submit">
                 {confirmString}
               </Button>
-              &nbsp;
+              {Unicode.NonBreakingSpace}
               <Button onClick={this.props.onCancel}>Cancel</Button>
             </FormItem>
           </Spin>

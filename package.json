@@ -138,6 +138,7 @@
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.6.1",
     "@tensorflow/tfjs": "^1.0.0",
+    "@use-it/interval": "^1.0.0",
     "Enumjs": "https://github.com/ryan953/Enumjs#master",
     "airbrake-js": "^1.4.0",
     "antd": "^4.15.0",

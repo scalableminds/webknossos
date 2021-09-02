@@ -10,6 +10,7 @@ import {
   ReloadOutlined,
   ScanOutlined,
   StopOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -374,8 +375,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isInEditMode: boolean,
     layerName: string,
     elementClass: string,
+    layerSettings: DatasetLayerConfiguration,
   ) => {
     const { tracing } = this.props;
+    const { intensityRange } = layerSettings;
     const isVolumeTracing = tracing.volume != null;
     const isFallbackLayer = tracing.volume
       ? tracing.volume.fallbackLayer != null && !isColorLayer
@@ -428,6 +431,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             <InfoCircleOutlined style={{ marginLeft: 4 }} />
           </Tooltip>
 
+          {intensityRange[0] === intensityRange[1] && !isDisabled ? (
+            <Tooltip
+              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values. 
+            If you want to hide this layer, you can also disable it with the switch on the left.`}
+            >
+              <WarningOutlined style={{ color: "var(--ant-warning)" }} />
+            </Tooltip>
+          ) : null}
           {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
 
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
@@ -534,6 +545,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           isInEditMode,
           layerName,
           elementClass,
+          layerConfiguration,
         )}
         {isDisabled ? null : (
           <div style={{ marginBottom: 30, marginLeft: 10 }}>
@@ -606,24 +618,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
-  };
-
-  onChangeRenderMissingDataBlack = async (value: boolean): Promise<void> => {
-    Toast.info(
-      value
-        ? messages["data.enabled_render_missing_data_black"]
-        : messages["data.disabled_render_missing_data_black"],
-      { timeout: 8000 },
-    );
-    this.props.onChange("renderMissingDataBlack", value);
-    const { layers } = this.props.datasetConfiguration;
-    const reloadAllLayersPromises = Object.keys(layers).map(async layerName => {
-      await clearCache(this.props.dataset, layerName);
-      await api.data.reloadBuckets(layerName);
-    });
-    await Promise.all(reloadAllLayersPromises);
-    window.needsRerender = true;
-    Toast.success("Successfully reloaded data of all layers.");
   };
 
   getVolumeMagsToDownsample = (): Array<Vector3> => {

@@ -515,12 +515,14 @@ class DataCube {
     // needs to be examined for rendering.
 
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
+    const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     if (!(bucket instanceof DataBucket)) {
-      // This is a NullBucket (e.g., because it's out of the bounding box or in a not-existing
-      // magnification). This zoomstep is as good as all the other zoomsteps (as these will only
-      // hold null buckets, too).
-      return true;
+      // This is a NullBucket (e.g., because it's out of the bounding box or there exists no data for this zoomstep).
+      // If renderMissingDataBlack is turned on, this zoomstep is as good as all the other zoomsteps (as these will only
+      // hold null buckets, too). If this option is turned off, buckets of higher mags could be used for rendering,
+      // thus return false in this case.
+      return renderMissingDataBlack;
     }
 
     if (bucket.hasData() || bucket.isLoaded()) {

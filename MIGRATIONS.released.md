@@ -5,6 +5,10 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.08.0](https://github.com/scalableminds/webknossos/releases/tag/21.08.0) - 2021-08-26
+[Commits](https://github.com/scalableminds/webknossos/compare/21.07.0...21.08.0)
+No migrations necessary.
+
 ## [21.07.0](https://github.com/scalableminds/webknossos/releases/tag/21.07.0) - 2021-07-21
 
 - Consider setting `defaultToLegacyBindings` to `true` in application.conf if you want that new users use the classic controls by default.
@@ -29,7 +33,7 @@ SET recommendedconfiguration = jsonb_set(
 ### Postgres Evolutions:
 - [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)
 - [073-modern-controls-user-conf.sql](conf/evolutions/073-modern-controls-user-conf.sql)
-- [074-jobs-owner-foreign-key.sql](conf/evolutions/073-jobs-owner-foreign-key.sql)
+- [074-jobs-owner-foreign-key.sql](conf/evolutions/074-jobs-owner-foreign-key.sql)
 
 
 ## [21.06.0](https://github.com/scalableminds/webknossos/releases/tag/21.06.0) - 2021-06-01

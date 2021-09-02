@@ -54,11 +54,16 @@ import {
   type TracingType,
   type WkConnectDatasetConfig,
 } from "types/api_flow_types";
-import type { DatasetConfiguration, Tracing } from "oxalis/store";
+import type {
+  DatasetConfiguration,
+  Tracing,
+  TraceOrViewCommand,
+  AnnotationType,
+} from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import DataLayer from "oxalis/model/data_layer";
@@ -915,6 +920,16 @@ export function startComputeMeshFileJob(
   );
 }
 
+export function startNucleiInferralJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {
@@ -1468,6 +1483,25 @@ export async function updateOrganization(
     method: "PATCH",
     data: { displayName, newUserMailingList },
   });
+}
+
+export async function isDatasetAccessibleBySwitching(
+  annotationType: AnnotationType,
+  commandType: TraceOrViewCommand,
+): Promise<?APIOrganization> {
+  if (commandType.type === ControlModeEnum.VIEW) {
+    return Request.receiveJSON(
+      `/api/auth/accessibleBySwitching?organizationName=${
+        commandType.owningOrganization
+      }&dataSetName=${commandType.name}`,
+    );
+  } else {
+    return Request.receiveJSON(
+      `/api/auth/accessibleBySwitching?annotationTyp=${annotationType}&annotationId=${
+        commandType.annotationId
+      }`,
+    );
+  }
 }
 
 // ### BuildInfo webknossos

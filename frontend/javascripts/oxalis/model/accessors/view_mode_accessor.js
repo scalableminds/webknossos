@@ -16,6 +16,7 @@ import constants, {
 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
@@ -96,7 +97,7 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
   return [xScale, yScale];
 }
 
-export function calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector3 {
+function _calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector3 {
   let position;
   const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
@@ -139,6 +140,8 @@ export function calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector
 
   return position;
 }
+
+export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
 
 export function getViewMode(state: OxalisState): ViewMode {
   return state.temporaryConfiguration.viewMode;

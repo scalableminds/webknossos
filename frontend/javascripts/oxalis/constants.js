@@ -210,6 +210,7 @@ export const ensureSmallerEdge = false;
 
 export const Unicode = {
   ThinSpace: "\u202f",
+  NonBreakingSpace: "\u00a0",
   MultiplicationSymbol: "×",
 };
 

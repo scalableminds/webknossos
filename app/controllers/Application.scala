@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.config.ConfigRenderOptions
+import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FrontendAnalyticsEvent}
 import models.user.{MultiUserDAO, User}
@@ -16,6 +17,7 @@ import utils.{SQLClient, SimpleSQLDAO, StoreModules, WkConf}
 
 import scala.concurrent.ExecutionContext
 
+@Api
 class Application @Inject()(multiUserDAO: MultiUserDAO,
                             analyticsService: AnalyticsService,
                             releaseInformationDAO: ReleaseInformationDAO,
@@ -25,6 +27,12 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
                             rpc: RPC)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  @ApiOperation(value = "Information about the version of webKnossos")
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "JSON object containing information about the version of webKnossos"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
@@ -51,6 +59,7 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       case _ => Fox.successful(None)
     }
 
+  @ApiOperation(hidden = true, value = "")
   def trackAnalyticsEvent(eventType: String): Action[JsObject] = sil.UserAwareAction(validateJson[JsObject]) {
     implicit request =>
       request.identity.foreach { user =>
@@ -59,11 +68,13 @@ class Application @Inject()(multiUserDAO: MultiUserDAO,
       Ok
   }
 
+  @ApiOperation(hidden = true, value = "")
   def features: Action[AnyContent] = sil.UserAwareAction {
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 
-  def health: Action[AnyContent] = sil.UserAwareAction { implicit request =>
+  @ApiOperation(value = "Health endpoint")
+  def health: Action[AnyContent] = Action {
     Ok
   }
 

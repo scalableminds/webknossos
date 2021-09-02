@@ -238,6 +238,9 @@ class MeshesView extends React.Component<Props, State> {
       title = "Computation jobs are not enabled for this webKnossos instance.";
     } else if (this.props.activeUser == null) {
       title = "Please log in to precompute the meshes of this dataset.";
+    } else if (!this.props.dataset.jobsEnabled) {
+      title =
+        "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
     } else if (this.props.hasVolume) {
       title =
         this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer
@@ -260,12 +263,7 @@ class MeshesView extends React.Component<Props, State> {
   getComputeMeshAdHocTooltipInfo = () => {
     let title = "";
     let disabled = true;
-    if (this.props.hasVolume) {
-      title =
-        this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer
-          ? "Meshes cannot be computed for volume annotations. However, you can open this dataset in view mode to compute meshes for the dataset's segmentation layer."
-          : "Meshes cannot be computed for volume annotations.";
-    } else if (this.props.segmentationLayer == null) {
+    if (this.props.segmentationLayer == null) {
       title = "There is no segmentation layer for which a mesh could be computed.";
     } else {
       title = "Compute mesh for the centered segment.";

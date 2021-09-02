@@ -51,7 +51,7 @@ const defaultState: OxalisState = {
     layers: {},
     loadingStrategy: "PROGRESSIVE_QUALITY",
     segmentationPatternOpacity: 40,
-    renderMissingDataBlack: true,
+    renderMissingDataBlack: false,
   },
   userConfiguration: {
     autoSaveLayouts: true,

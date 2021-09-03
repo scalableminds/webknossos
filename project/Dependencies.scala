@@ -41,6 +41,7 @@ object Dependencies {
   private val redis = "net.debasishg" %% "redisclient" % "3.9"
   private val spire = "org.typelevel" %% "spire" % "0.14.1"
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
+  private val swagger = "io.swagger" %% "swagger-play2" % "1.7.1"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -77,6 +78,7 @@ object Dependencies {
     filters,
     ws,
     guice,
+    swagger,
     spire,
     akkaHttp
   )

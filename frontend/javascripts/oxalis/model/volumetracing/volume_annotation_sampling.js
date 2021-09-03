@@ -351,7 +351,9 @@ export function applyVoxelMap(
       //
       // A possible solution would be that when the incoming backend data is merged with the frontend data,
       // the merging automatically updates the covered buckets. The merge operation could use the
-      // manageRemovingBucketAddressesOfOverdrawnSegments-method to do that. Then it only needs to track which segments were overwritten
+      // manageRemovingBucketAddressesOfOverdrawnSegments-method to do that. Then it only needs to track which segments were overwritten.
+      //
+      // ^ This is already done in bucket.js - merge. Look there for more details
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
@@ -369,12 +371,15 @@ export function applyVoxelMap(
                 currentSegmentId > 0 &&
                 currentSegmentId !== cellId
               ) {
+                // Track all overwritten segments-bucket address combinations to later check whether the bucket
+                // no longer contains the segment id and thus must the bucket's address must be removed
+                // from the segment in the segment list.
                 if (!overwrittenBucketAddressesOfSegments.has(currentSegmentId)) {
                   overwrittenBucketAddressesOfSegments.set(currentSegmentId, new Set());
                 }
                 overwrittenBucketAddressesOfSegments
                   .get(currentSegmentId)
-                  //  $FlowFixMe[incompatible-use]
+                  //  $FlowFixMe[incompatible-use] Flow does not know that at this point the entry must exist.
                   .add(bucket.zoomedAddress);
               }
               data[voxelAddress] = cellId;
@@ -428,6 +433,8 @@ async function findAndSetNewValidPositionForSegments(
   resolutions: Array<Vector3>,
   dataCube: DataCube,
 ) {
+  // Looks for in the first bucket with that is still covered by the segment for a voxel
+  // that has the segments id and set this as the new position fo the segment.
   const currentSegmentList = enforceVolumeTracing(Store.getState().tracing).segments;
   for (const currentSegmentId of segmentsWithInvalidPosition) {
     const currentSegmentIdString = `${currentSegmentId}`;
@@ -450,8 +457,7 @@ async function findAndSetNewValidPositionForSegments(
         if (bucketWithSegmentData.type === "null") {
           return;
         }
-        const { data: bucketData, triggeredBucketFetch } = bucketWithSegmentData.getOrCreateData();
-        console.assert(triggeredBucketFetch === false); // TODO: Remove me
+        const { data: bucketData } = bucketWithSegmentData.getOrCreateData();
         let firstPositionWithCurrentSegment = -1;
         for (let index = 0; index < bucketData.length; ++index) {
           if (bucketData[index] === currentSegmentId) {
@@ -472,6 +478,8 @@ async function findAndSetNewValidPositionForSegments(
   }
 }
 
+// Based on the segment-bucket address combination of overwritten segments check whether a bucket's address needs to be removed from the
+// segments entry in the segment list. Additionally check whether the position of a segment also needs to be updated an look for a new valid position.
 export async function manageRemovingBucketAddressesOfOverdrawnSegments(
   dataCube: DataCube,
   overwrittenBucketAddressesOfSegments: Map<number, Set<Vector4>>,
@@ -483,7 +491,7 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
   const currentSegmentList = enforceVolumeTracing(Store.getState().tracing).segments;
   const resolutions: Array<Vector3> = (_.cloneDeep(dataCube.resolutionInfo.resolutions): any);
 
-  const checkIfSegmentPositionIsStillValid = async (
+  const checkIfSegmentPositionIsNowInvalid = async (
     segmentId: number,
     segmentPosition: Vector3,
     bucketAddressSet: Set<Vector4>,
@@ -500,8 +508,7 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
     if (bucketAddressSet.has(bucket.zoomedAddress)) {
       bucket = await dataCube.getLoadedBucket(bucketAddressOfCurrentSegmentPosition);
       if (bucket.type !== "null") {
-        const { data: bucketData, triggeredBucketFetch } = bucket.getOrCreateData();
-        console.assert(triggeredBucketFetch === false); // TODO: Remove me
+        const { data: bucketData } = bucket.getOrCreateData();
         const indexInBucketData = dataCube.getVoxelIndex(segmentPosition);
         const isSegmentPositionFaulty = bucketData[indexInBucketData] !== segmentId;
         return isSegmentPositionFaulty;
@@ -522,8 +529,7 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
       if (bucket.type === "null") {
         return;
       }
-      const { data: bucketData, triggeredBucketFetch } = bucket.getOrCreateData();
-      console.assert(triggeredBucketFetch === false); // TODO: Remove me
+      const { data: bucketData } = bucket.getOrCreateData();
       let isValueIncluded = false;
       for (let index = 0; index < bucketData.length && !isValueIncluded; ++index) {
         isValueIncluded = bucketData[index] === segmentId;
@@ -539,6 +545,8 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
         }
       }
       if (!isValueIncluded) {
+        // If the value is not included, add the segment-bucket address combination to a object, that will be used
+        // in the removeBucketAddressesFromSegmentsAction to remove the bucket address from the segments covered buckets list.
         if (removeBucketsFromSegments[segmentIdString]) {
           removeBucketsFromSegments[segmentIdString].push(bucketAddress);
         } else {
@@ -547,6 +555,8 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
       }
     };
     for (const bucketAddress of bucketAddressSet.values()) {
+      // For each bucket in the "segments overwritten bucket addresses set" perform the check for looking for data.
+      // Save these promises to wait for them
       bucketCheckPromises.push(
         dataCube
           .getLoadedBucket(bucketAddress)
@@ -554,6 +564,8 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
       );
     }
     await Promise.all(bucketCheckPromises);
+    // If the position is still faulty, meaning in one of the bucket of bucketAddressSet no voxel with the current segment id could be found,
+    // add this segment id to the array of segments with faulty positions to find a valid position later.
     if (isSegmentPositionStillFaulty) {
       segmentsWithInvalidPosition.push(segmentId);
     }
@@ -562,6 +574,8 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
     currentSegmentId,
     bucketAddressSet,
   ] of overwrittenBucketAddressesOfSegments.entries()) {
+    // For each segment that got overwritten, identify whether a bucket needs to be removed from its
+    // covered bucket addresses list or whether its position needs to be updated.
     const currentSegmentIdString = `${currentSegmentId}`;
     const currentSegmentEntry = currentSegmentList.get(currentSegmentIdString);
     if (currentSegmentEntry == null) {
@@ -569,7 +583,7 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
     }
     const currentSegmentPosition = currentSegmentEntry.somePosition;
     promisesToWaitFor.push(
-      checkIfSegmentPositionIsStillValid(
+      checkIfSegmentPositionIsNowInvalid(
         currentSegmentId,
         currentSegmentPosition,
         bucketAddressSet,
@@ -583,7 +597,9 @@ export async function manageRemovingBucketAddressesOfOverdrawnSegments(
       }),
     );
   }
+  // Wait for all async checks
   await Promise.all(promisesToWaitFor);
+  // Now all segments with invalid positions are know. Thus find new positions for them.
   findAndSetNewValidPositionForSegments(
     segmentsWithInvalidPosition,
     removeBucketsFromSegments,

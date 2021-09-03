@@ -122,6 +122,8 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
               tracing: {
                 volume: {
                   // Immutability helper seems to automatically transform number keys to strings. Thus we also need a string here
+                  // TODO: Maybe find a way to save this data more efficient.
+                  // Always transforming the id to a string does not sound very fast and the conversion needs to be done at multiple points in the code.
                   segments: { $add: [[`${segmentId}`, newSegment]] },
                 },
               },
@@ -178,6 +180,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           });
           return newState;
         }
+
         case "SET_SOME_POSITION_OF_SEGMENT": {
           const { segmentId, somePosition } = action;
           const { segments } = volumeTracing;

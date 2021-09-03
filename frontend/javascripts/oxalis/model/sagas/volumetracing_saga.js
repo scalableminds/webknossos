@@ -211,6 +211,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       overwriteMode,
       labeledZoomStep,
     );
+    // Update the position of the current segment to the last position of the most recent annotation stroke.
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     yield* put(setSomePositionOfSegmentAction(activeCellId, lastPosition));
     yield* put(finishAnnotationStrokeAction());

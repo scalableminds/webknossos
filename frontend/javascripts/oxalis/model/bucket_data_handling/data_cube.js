@@ -39,7 +39,7 @@ import constants, {
   type LabeledVoxelsMap,
 } from "oxalis/constants";
 import { type ElementClass } from "types/api_flow_types";
-import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching, mod } from "libs/utils";
 class CubeEntry {
   data: Map<number, Bucket>;
   boundary: Vector3;
@@ -593,7 +593,8 @@ class DataCube {
   }
 
   getPositionOfVoxelIndex(index: number): Vector3 {
-    const { BUCKET_WIDTH } = constants;
+    const { BUCKET_WIDTH, BUCKET_SIZE } = constants;
+    index = mod(index, BUCKET_SIZE);
     const z = Math.floor(index / BUCKET_WIDTH ** 2);
     const rest = index - z * BUCKET_WIDTH ** 2;
     const y = Math.floor(rest / BUCKET_WIDTH);

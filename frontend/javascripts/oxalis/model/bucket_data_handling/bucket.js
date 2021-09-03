@@ -422,6 +422,12 @@ export class DataBucket {
         currentData[i] = currentData[i] || newData[i];
       }
     } else {
+      // In case there is already annotated frontend data for this bucket, this data is merged with loaded backend data here.
+      // The merge might overwrite all parts of a segment id that exists in the backend data of the bucket. Therefore to detect this case,
+      // we need to track the segments that are overwritten by the merge and afterwards check whether the overwritten ids
+      // are no longer existing within the merged bucket data. If an id no longer exists in the bucket, this bucket's address must be removed from the
+      // covered bucket address list of the segment in the segment list.
+      //
       // TODO: Better add tests for this, as this is likely hard to test manually
       const overwrittenBucketAddressesOfSegments = new Map();
       for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
@@ -429,6 +435,7 @@ export class DataBucket {
         const mergedInSegment = newData[i];
         const currentSegment = currentData[i];
         if (currentSegment !== 0 && mergedInSegment !== 0 && currentSegment !== mergedInSegment) {
+          // Gather all overwritten segment ids together with the bucket in which they were overwritten
           if (!overwrittenBucketAddressesOfSegments.has(mergedInSegment)) {
             overwrittenBucketAddressesOfSegments.set(
               mergedInSegment,
@@ -438,6 +445,9 @@ export class DataBucket {
         }
         currentData[i] = currentData[i] || newData[i];
       }
+      // Reuse this method to detect completely overwritten segment ids and also handle the case where segment positions were overwritten.
+      // The major problem here is, that this operation/ the store updates are asynchronous and thus the displayed data is not necessarily
+      // in sync with the segment list.
       manageRemovingBucketAddressesOfOverdrawnSegments(
         this.cube,
         overwrittenBucketAddressesOfSegments,

@@ -115,6 +115,7 @@ export function* collectUndoStates(): Saga<void> {
   let prevSkeletonTracingOrNull: ?SkeletonTracing = null;
   let pendingCompressions: Array<Task<void>> = [];
   let currentVolumeUndoBuckets: VolumeUndoBuckets = [];
+  // The copy of the segment list that needs to be added to the next volume undo stack entry.
   let prevSegmentsList = new Map();
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
@@ -174,6 +175,7 @@ export function* collectUndoStates(): Saga<void> {
           data: { buckets: currentVolumeUndoBuckets, segments: prevSegmentsList },
         });
         const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
+        // Get a copy of the current segment list to be able to add it to the next upcoming volume undo stack entry.
         prevSegmentsList = _.cloneDeep(segments);
         currentVolumeUndoBuckets = [];
         pendingCompressions = [];

@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.datastore.models.{
   _
 }
 import com.scalableminds.webknossos.datastore.services._
+import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
@@ -33,6 +34,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHea
 
 import scala.concurrent.ExecutionContext
 
+@Api
 class BinaryDataController @Inject()(
     dataSourceRepository: DataSourceRepository,
     config: DataStoreConfig,
@@ -52,6 +54,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestViaWebKnossos(
       organizationName: String,
       dataSetName: String,
@@ -85,18 +88,24 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP GET.
     */
+  @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer")
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "Raw bytes from the dataset"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
   def requestRawCuboid(
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      x: Int,
-      y: Int,
-      z: Int,
-      width: Int,
-      height: Int,
-      depth: Int,
-      resolution: Int,
-      halfByte: Boolean
+      @ApiParam(value = "Name of the dataset’s organization") organizationName: String,
+      @ApiParam(value = "Dataset name") dataSetName: String,
+      @ApiParam(value = "Layer name of the dataset") dataLayerName: String,
+      @ApiParam(value = "x coordinate of the top-left corner of the bounding box") x: Int,
+      @ApiParam(value = "y coordinate of the top-left corner of the bounding box") y: Int,
+      @ApiParam(value = "z coordinate of the top-left corner of the bounding box") z: Int,
+      @ApiParam(value = "width of the bounding box") width: Int,
+      @ApiParam(value = "height of the bounding box") height: Int,
+      @ApiParam(value = "depth of the bounding box") depth: Int,
+      @ApiParam(value = "Exponent of the dataset mag (e.g. 4 for mag 16-16-8)") resolution: Int,
+      @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
@@ -118,6 +127,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP GET for debugging.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestViaAjaxDebug(
       organizationName: String,
       dataSetName: String,
@@ -144,6 +154,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestViaKnossos(organizationName: String,
                         dataSetName: String,
                         dataLayerName: String,
@@ -174,6 +185,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for data sprite sheets.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestSpriteSheet(
       organizationName: String,
       dataSetName: String,
@@ -215,6 +227,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for data images.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestImage(organizationName: String,
                    dataSetName: String,
                    dataLayerName: String,
@@ -251,6 +264,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for dataset thumbnail images as JPEG.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestImageThumbnailJpeg(organizationName: String,
                                 dataSetName: String,
                                 dataLayerName: String,
@@ -287,6 +301,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for dataset thumbnail images as base64-encoded JSON.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestImageThumbnailJson(
       organizationName: String,
       dataSetName: String,
@@ -322,6 +337,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles mapping requests.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestMapping(
       organizationName: String,
       dataSetName: String,
@@ -343,6 +359,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles isosurface requests.
     */
+  @ApiOperation(hidden = true, value = "")
   def requestIsosurface(organizationName: String,
                         dataSetName: String,
                         dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
@@ -382,6 +399,7 @@ class BinaryDataController @Inject()(
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
+  @ApiOperation(hidden = true, value = "")
   def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
@@ -397,6 +415,7 @@ class BinaryDataController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def findData(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
@@ -412,6 +431,7 @@ class BinaryDataController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {

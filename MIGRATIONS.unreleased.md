@@ -8,3 +8,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 
 ### Postgres Evolutions:
+
+- [075-tasktype-remove-hovered-cell-id.sql](conf/evolutions/075-tasktype-remove-hovered-cell-id.sql)

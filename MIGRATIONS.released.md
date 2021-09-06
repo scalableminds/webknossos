@@ -5,6 +5,10 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.08.0](https://github.com/scalableminds/webknossos/releases/tag/21.08.0) - 2021-08-26
+[Commits](https://github.com/scalableminds/webknossos/compare/21.07.0...21.08.0)
+No migrations necessary.
+
 ## [21.07.0](https://github.com/scalableminds/webknossos/releases/tag/21.07.0) - 2021-07-21
 
 - Consider setting `defaultToLegacyBindings` to `true` in application.conf if you want that new users use the classic controls by default.
@@ -25,6 +29,7 @@ SET recommendedconfiguration = jsonb_set(
         to_jsonb('true'::boolean))
 ```
 - The health check at api/health does not longer include checking data/health and tracings/health if the respective local modules are enabled. Consider monitoring those routes separately.
+- Run as sql: `UPDATE webknossos.tasktypes SET recommendedconfiguration = recommendedconfiguration - 'highlightHoveredCellId';` to avoid invalid recommended configurations in existing task types. This was added later as evolution 75, but should be run already here (note that it is idempotent).
 
 ### Postgres Evolutions:
 - [072-jobs-manually-repaired.sql](conf/evolutions/072-jobs-manually-repaired.sql)

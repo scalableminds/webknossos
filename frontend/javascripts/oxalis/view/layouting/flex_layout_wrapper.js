@@ -105,6 +105,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       }),
     );
     this.unbindListeners.push(this.attachMaximizeListener());
+    this.unbindListeners.push(this.attachToggleBorderListener());
   }
 
   unbindAllListeners() {
@@ -133,6 +134,14 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.updateToModelStateAndAdjustIt(model);
     this.setState({ model });
     setTimeout(this.onLayoutChange, 1);
+  }
+
+  attachToggleBorderListener() {
+    const keyboardNoLoop = new InputKeyboardNoLoop(
+      { k: () => this.toggleBorder("left"), l: () => this.toggleBorder("right") },
+      { supportInputElements: false },
+    );
+    return () => keyboardNoLoop.destroy();
   }
 
   attachMaximizeListener() {

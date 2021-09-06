@@ -27,6 +27,7 @@ With classic controls, several mouse controls are modifier-driven and may also u
 | G                             | Decrease the Move Value                     |
 | Q                             | Download Screenshot(s) of Viewport(s)       |
 | .                             | Toggle Viewport Maximization                |
+| K, L                          | Toggle Sidebars                             |
 
 ## Skeleton Annotation Mode
 

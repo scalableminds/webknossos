@@ -5,7 +5,6 @@
 
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
-import Clipboard from "clipboard-js";
 import * as React from "react";
 import _ from "lodash";
 import api from "oxalis/api/internal_api";
@@ -353,9 +352,9 @@ class PlaneController extends React.PureComponent<Props> {
             mapping,
             getRequestLogZoomStep(Store.getState()),
           );
-          Clipboard.copy(String(hoveredId)).then(() =>
-            Toast.success(`Segment id ${hoveredId} copied to clipboard.`),
-          );
+          navigator.clipboard
+            .writeText(String(hoveredId))
+            .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
         } else {
           Toast.warning("No segment under cursor.");
         }

@@ -2,7 +2,6 @@
 import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
 import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
-import Clipboard from "clipboard-js";
 import React, { useState, useEffect } from "react";
 import type { APIDataset, APIAnnotationVisibility, APIAnnotationType } from "types/api_flow_types";
 import {
@@ -68,7 +67,7 @@ export function getUrl(sharingToken: string, includeToken: boolean) {
 }
 
 export async function copyUrlToClipboard(url: string) {
-  await Clipboard.copy(url);
+  await navigator.clipboard.writeText(url);
   Toast.success("URL copied to clipboard.");
 }
 

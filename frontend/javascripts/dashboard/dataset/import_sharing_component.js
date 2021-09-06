@@ -1,7 +1,6 @@
 // @flow
 
 import { Button, Input, Checkbox, Tooltip } from "antd";
-import Clipboard from "clipboard-js";
 import React, { useState, useEffect } from "react";
 
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";
@@ -61,7 +60,11 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   }
 
   async function handleCopySharingLink(): Promise<void> {
-    await Clipboard.copy(getSharingLink());
+    const link = getSharingLink();
+    if (!link) {
+      return;
+    }
+    await navigator.clipboard.writeText(link);
     Toast.success("Sharing Link copied to clipboard");
   }
 
@@ -72,7 +75,7 @@ export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTe
   }
 
   async function handleCopyAllowUsageCode(): Promise<void> {
-    await Clipboard.copy(getAllowUsageCode());
+    await navigator.clipboard.writeText(getAllowUsageCode());
     Toast.success("Code copied to clipboard");
   }
 

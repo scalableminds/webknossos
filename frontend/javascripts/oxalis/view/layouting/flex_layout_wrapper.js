@@ -104,8 +104,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         this.toggleBorder(side);
       }),
     );
-    this.unbindListeners.push(this.attachMaximizeListener());
-    this.unbindListeners.push(this.attachToggleBorderListener());
+    this.unbindListeners.push(this.attachKeyboardShortcuts());
   }
 
   unbindAllListeners() {
@@ -136,15 +135,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     setTimeout(this.onLayoutChange, 1);
   }
 
-  attachToggleBorderListener() {
-    const keyboardNoLoop = new InputKeyboardNoLoop(
-      { k: () => this.toggleBorder("left"), l: () => this.toggleBorder("right") },
-      { supportInputElements: false },
-    );
-    return () => keyboardNoLoop.destroy();
-  }
-
-  attachMaximizeListener() {
+  attachKeyboardShortcuts() {
     const toggleMaximize = () => {
       const { model } = this.state;
       const activeNode = model.getActiveTabset();
@@ -157,7 +148,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     };
 
     const keyboardNoLoop = new InputKeyboardNoLoop(
-      { ".": toggleMaximize },
+      {
+        ".": toggleMaximize,
+        k: () => this.toggleBorder("left"),
+        l: () => this.toggleBorder("right"),
+      },
       { supportInputElements: false },
     );
     return () => keyboardNoLoop.destroy();

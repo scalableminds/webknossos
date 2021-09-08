@@ -960,12 +960,25 @@ class DataApi {
   }
 
   /**
-   * Returns the name of the volume tracing layer (only exists for a volume annotation).
-   * Use `getVolumeLayerNames` if you want to get actual segmentation layers (independent of a tracing).
+   * Returns the name of the volume tracing layer (only exists for a volume annotation) or the visible
+   * segmentation layer.
+   * Use `getSegmentationLayerNames` if you want to get actual segmentation layers (independent of a tracing).
    */
   getVolumeTracingLayerName(): string {
-    const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
-    return segmentationLayer.name;
+    const segmentationLayer = this.model.getSegmentationTracingLayer();
+    if (segmentationLayer != null) {
+      return segmentationLayer.name;
+    }
+    const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+    if (visibleLayer != null) {
+      console.warn(
+        "getVolumeTracingLayerName was called, but there is no volume tracing. Falling back to the visible segmentation layer. Please use getSegmentationLayerNames instead.",
+      );
+      return visibleLayer.name;
+    }
+    throw new Error(
+      "getVolumeTracingLayerName was called, but there is no volume tracing and also no visible segmentation layer.",
+    );
   }
 
   /**

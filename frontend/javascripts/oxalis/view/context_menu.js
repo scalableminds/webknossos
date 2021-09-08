@@ -36,7 +36,6 @@ import {
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
-import Clipboard from "clipboard-js";
 import messages from "messages";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -94,7 +93,7 @@ function copyIconWithTooltip(value: string | number, title: string) {
       <CopyOutlined
         style={{ margin: "0 0 0 5px" }}
         onClick={async () => {
-          await Clipboard.copy(value);
+          await navigator.clipboard.writeText(value.toString());
           Toast.success(`"${value}" copied to clipboard`);
         }}
       />

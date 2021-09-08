@@ -147,7 +147,6 @@
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^0.30.5",
     "classnames": "^2.2.5",
-    "clipboard-js": "^0.2.0",
     "comlink": "^4.3.0",
     "copy-webpack-plugin": "^4.6.0",
     "cross-fetch": "^3.0.1",

@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import { Input, Button, Col, Row, Spin, Form } from "antd";
-import Clipboard from "clipboard-js";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 
@@ -35,7 +34,7 @@ function AuthTokenView() {
   };
 
   const copyTokenToClipboard = async () => {
-    await Clipboard.copy(currentToken);
+    await navigator.clipboard.writeText(currentToken);
     Toast.success("Token copied to clipboard");
   };
 

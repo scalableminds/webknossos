@@ -15,6 +15,7 @@ import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   setViewportAction,
   setTDCameraAction,
@@ -212,7 +213,12 @@ class TDController extends React.PureComponent<Props> {
         } else if (event.ctrlKey) {
           const storeState = Store.getState();
           const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
-          Store.dispatch(removeIsosurfaceAction(hoveredIsosurfaceId));
+          const segmentationLayer = getVisibleSegmentationLayer(storeState);
+
+          if (!segmentationLayer) {
+            return;
+          }
+          Store.dispatch(removeIsosurfaceAction(segmentationLayer.name, hoveredIsosurfaceId));
         }
       },
     };

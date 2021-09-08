@@ -15,7 +15,11 @@ import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getDatasetExtentAsString,
+  getResolutions,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { location } from "libs/window";
@@ -359,7 +363,12 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   handleConvertToHybrid = async () => {
     await Model.ensureSavedState();
-    await convertToHybridTracing(this.props.tracing.annotationId);
+
+    const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
+    await convertToHybridTracing(
+      this.props.tracing.annotationId,
+      maybeSegmentationLayer != null ? maybeSegmentationLayer.name : null,
+    );
     location.reload();
   };
 

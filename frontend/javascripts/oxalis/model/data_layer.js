@@ -26,6 +26,7 @@ class DataLayer {
   resolutions: Array<Vector3>;
   fallbackLayer: ?string;
   fallbackLayerInfo: ?DataLayerType;
+  isSegmentation: boolean;
 
   constructor(
     layerInfo: DataLayerType,
@@ -38,11 +39,11 @@ class DataLayer {
     this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
     this.fallbackLayerInfo =
       layerInfo.fallbackLayerInfo != null ? layerInfo.fallbackLayerInfo : null;
+    this.isSegmentation = layerInfo.category === "segmentation";
 
     this.resolutions = layerInfo.resolutions;
 
     const { dataset } = Store.getState();
-    const isSegmentation = layerInfo.category === "segmentation";
 
     ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
 
@@ -50,7 +51,8 @@ class DataLayer {
       getLayerBoundaries(dataset, this.name).upperBoundary,
       getResolutionInfo(this.resolutions),
       layerInfo.elementClass,
-      isSegmentation,
+      this.isSegmentation,
+      this.name,
     );
 
     this.pullQueue = new PullQueue(
@@ -62,7 +64,7 @@ class DataLayer {
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     const fallbackLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
-    if (isSegmentation) this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
+    if (this.isSegmentation) this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
     this.layerRenderingManager = new LayerRenderingManager(
       this.name,
       this.pullQueue,

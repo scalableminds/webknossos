@@ -187,6 +187,8 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +annotationType: AnnotationType,
+  // This property contains back-end stored mesh objects for which
+  // the support is about to end. See webknossos/#5633.
   +meshes: Array<MeshMetaData>,
   +user: ?APIUserBase,
 |};
@@ -322,13 +324,23 @@ export type RecommendedConfiguration = $Shape<{
   segmentationOpacity: number,
 }>;
 
-export type Mapping = { [key: number]: number };
-
 export type HistogramDataForAllLayers = {
   [name: string]: APIHistogramData,
 };
 
+export type Mapping = { [key: number]: number };
 export type MappingType = "JSON" | "HDF5";
+export type ActiveMappingInfo = {
+  +mappingName: ?string,
+  +mapping: ?Mapping,
+  +mappingKeys: ?Array<number>,
+  +mappingColors: ?Array<number>,
+  +hideUnmappedIds: boolean,
+  +isMappingEnabled: boolean,
+  +mappingSize: number,
+  +mappingType: MappingType,
+};
+
 export type TemporaryConfiguration = {
   +histogramData: HistogramDataForAllLayers,
   +viewMode: ViewMode,
@@ -336,16 +348,7 @@ export type TemporaryConfiguration = {
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
   +hoveredIsosurfaceId: number,
-  +activeMapping: {
-    +mappingName: ?string,
-    +mapping: ?Mapping,
-    +mappingKeys: ?Array<number>,
-    +mappingColors: ?Array<number>,
-    +hideUnmappedIds: boolean,
-    +isMappingEnabled: boolean,
-    +mappingSize: number,
-    +mappingType: MappingType,
-  },
+  +activeMappingByLayer: { [layerName: string]: ActiveMappingInfo },
   +isMergerModeEnabled: boolean,
   +isAutoBrushEnabled: boolean,
   +gpuSetup: {
@@ -460,7 +463,6 @@ type UiInformation = {
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
-  +isRefreshingIsosurfaces: boolean,
   +borderOpenStatus: BorderOpenStatus,
   +theme: Theme,
 };
@@ -486,9 +488,11 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
-  +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
-  +availableMeshFiles: ?Array<string>,
-  +currentMeshFile: ?string,
+  +isosurfacesByLayer: {
+    [segmentationLayerName: string]: { [segmentId: number]: IsosurfaceInformation },
+  },
+  +availableMeshFilesByLayer: { [segmentationLayerName: string]: ?Array<string> },
+  +currentMeshFileByLayer: { [segmentationLayerName: string]: ?string },
 |};
 
 const sagaMiddleware = createSagaMiddleware();

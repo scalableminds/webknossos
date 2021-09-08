@@ -14,6 +14,7 @@ import Toast from "libs/toast";
 import constants from "oxalis/constants";
 import messages from "messages";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -34,10 +35,11 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
 function shouldDisplaySegmentationData(): boolean {
   const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
   const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
-  const segmentationLayerName = Model.getSegmentationLayerName();
-  if (!segmentationLayerName || !canModeDisplaySegmentationData) {
+  const segmentationLayer = Model.getVisibleSegmentationLayer();
+  if (!segmentationLayer || !canModeDisplaySegmentationData) {
     return false;
   }
+  const segmentationLayerName = segmentationLayer.name;
   const isSegmentationLayerDisabled = Store.getState().datasetConfiguration.layers[
     segmentationLayerName
   ].isDisabled;
@@ -46,15 +48,20 @@ function shouldDisplaySegmentationData(): boolean {
 
 export function* warnAboutSegmentationZoom(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (!segmentationLayer) {
       return;
     }
-    const isAgglomerateMappingEnabled = yield* select(
-      storeState =>
-        storeState.temporaryConfiguration.activeMapping.isMappingEnabled &&
-        storeState.temporaryConfiguration.activeMapping.mappingType === "HDF5",
-    );
+    const isAgglomerateMappingEnabled = yield* select(storeState => {
+      if (!segmentationLayer) {
+        return false;
+      }
+      const mappingInfo = getMappingInfo(
+        storeState.temporaryConfiguration.activeMappingByLayer,
+        segmentationLayer.name,
+      );
+      return mappingInfo.isMappingEnabled && mappingInfo.mappingType === "HDF5";
+    });
 
     const isZoomThresholdExceeded = yield* select(
       storeState => getRequestLogZoomStep(storeState) > Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
@@ -76,7 +83,8 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
   yield* warnMaybe();
 
   while (true) {
-    const segmentationLayerName = Model.getSegmentationLayerName();
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
     yield* take([
       "ZOOM_IN",
       "ZOOM_OUT",

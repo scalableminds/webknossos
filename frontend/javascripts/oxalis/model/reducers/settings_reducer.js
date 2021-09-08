@@ -1,15 +1,15 @@
 // @flow
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
-import {
-  updateKey,
-  updateKey2,
-  updateKey3,
-  type StateShape1,
-  type StateShape2,
-} from "oxalis/model/helpers/deep_update";
+import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
+import { updateKey, updateKey3, type StateShape1 } from "oxalis/model/helpers/deep_update";
 import { clamp } from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
+import {
+  getLayerByName,
+  getSegmentationLayers,
+  getVisibleSegmentationLayers,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 
 //
 // Update helpers
@@ -28,8 +28,52 @@ const updateTemporaryConfig = (state: OxalisState, shape: StateShape1<"temporary
 
 const updateActiveMapping = (
   state: OxalisState,
-  shape: StateShape2<"temporaryConfiguration", "activeMapping">,
-) => updateKey2(state, "temporaryConfiguration", "activeMapping", shape);
+  shape: $Shape<ActiveMappingInfo>,
+  layerName: string,
+) => {
+  const oldMappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerName,
+  );
+  const newMappingInfo = {
+    ...oldMappingInfo,
+    ...shape,
+  };
+  return updateKey3(
+    state,
+    "temporaryConfiguration",
+    "activeMappingByLayer",
+    layerName,
+    newMappingInfo,
+  );
+};
+
+function disableAllSegmentationLayers(state: OxalisState): OxalisState {
+  let newState = state;
+  for (const segmentationLayer of getSegmentationLayers(state.dataset)) {
+    newState = updateKey3(newState, "datasetConfiguration", "layers", segmentationLayer.name, {
+      isDisabled: true,
+    });
+  }
+  return newState;
+}
+
+function ensureOnlyOneVisibleSegmentationLayer(state: OxalisState): OxalisState {
+  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+  if (visibleSegmentationLayers.length <= 1) {
+    // Only one (or zero) segmentation layers are visible.
+    return state;
+  }
+  const firstSegmentationLayer = visibleSegmentationLayers[0];
+  if (!firstSegmentationLayer) {
+    return state;
+  }
+  const newState = disableAllSegmentationLayers(state);
+
+  return updateKey3(newState, "datasetConfiguration", "layers", firstSegmentationLayer.name, {
+    isDisabled: false,
+  });
+}
 
 //
 // Reducer
@@ -73,7 +117,17 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
-      return updateKey3(state, "datasetConfiguration", "layers", layerName, {
+      let newState = state;
+      if (
+        getLayerByName(state.dataset, layerName).category === "segmentation" &&
+        propertyName === "isDisabled" &&
+        !value
+      ) {
+        // A segmentation layer is about to be enabled. Disable all (other) segmentation layers
+        // so that only the requested layer is enabled.
+        newState = disableAllSegmentationLayers(newState);
+      }
+      return updateKey3(newState, "datasetConfiguration", "layers", layerName, {
         // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [propertyName]: value,
       });
@@ -84,7 +138,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "INITIALIZE_SETTINGS": {
-      return {
+      const newState = {
         ...state,
         datasetConfiguration: {
           ...state.datasetConfiguration,
@@ -95,6 +149,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           ...action.initialUserSettings,
         },
       };
+      return ensureOnlyOneVisibleSegmentationLayer(newState);
     }
     case "SET_VIEW_MODE": {
       const { allowedModes } = state.tracing.restrictions;
@@ -123,32 +178,45 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
     case "SET_MAPPING_ENABLED": {
-      const { isMappingEnabled } = action;
-      return updateActiveMapping(state, {
-        isMappingEnabled,
-      });
+      const { isMappingEnabled, layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          isMappingEnabled,
+        },
+        layerName,
+      );
     }
     case "SET_HIDE_UNMAPPED_IDS": {
-      const { hideUnmappedIds } = action;
-      return updateActiveMapping(state, {
-        hideUnmappedIds,
-      });
+      const { hideUnmappedIds, layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          hideUnmappedIds,
+        },
+        layerName,
+      );
     }
     case "SET_MAPPING": {
-      const { mappingName, mapping, mappingKeys, mappingColors, mappingType } = action;
+      const { mappingName, mapping, mappingKeys, mappingColors, mappingType, layerName } = action;
       const hideUnmappedIds =
         action.hideUnmappedIds != null
           ? action.hideUnmappedIds
-          : state.temporaryConfiguration.activeMapping.hideUnmappedIds;
-      return updateActiveMapping(state, {
-        mappingName,
-        mapping,
-        mappingKeys,
-        mappingColors,
-        mappingType,
-        hideUnmappedIds,
-        mappingSize: mappingKeys != null ? mappingKeys.length : 0,
-      });
+          : getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName)
+              .hideUnmappedIds;
+      return updateActiveMapping(
+        state,
+        {
+          mappingName,
+          mapping,
+          mappingKeys,
+          mappingColors,
+          mappingType,
+          mappingSize: mappingKeys != null ? mappingKeys.length : 0,
+          hideUnmappedIds,
+        },
+        layerName,
+      );
     }
     default:
     // pass;

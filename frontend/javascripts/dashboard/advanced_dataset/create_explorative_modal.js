@@ -1,5 +1,5 @@
 // @flow
-import { Modal, Radio, Button, Checkbox, Tooltip, Slider, Spin } from "antd";
+import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import type { APIDatasetId } from "types/api_flow_types";
@@ -8,10 +8,10 @@ import { useFetch } from "libs/react_helpers";
 import { getDataset } from "admin/admin_rest_api";
 
 import {
-  getSegmentationLayer,
   doesSupportVolumeWithFallback,
   getDatasetResolutionInfo,
-  getResolutionInfoOfSegmentationLayer,
+  getSegmentationLayers,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 
 type Props = {
@@ -22,52 +22,33 @@ type Props = {
 const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
-  const [userDefinedWithFallback, setUserDefinedWithFallback] = useState(true);
   const [userDefinedResolutionIndices, setUserDefinedResolutionIndices] = useState([0, 10000]);
+  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState(null);
 
   let modalContent = <Spin />;
 
   if (dataset !== null) {
-    const segmentationLayer = getSegmentationLayer(dataset);
+    const segmentationLayers = getSegmentationLayers(dataset);
+    const selectedSegmentationLayer =
+      annotationType !== "skeleton" &&
+      segmentationLayers.length > 0 &&
+      selectedSegmentationLayerIndex != null
+        ? segmentationLayers[selectedSegmentationLayerIndex]
+        : null;
 
-    const isFallbackSegmentationAlwaysOff =
-      segmentationLayer == null ||
-      (!doesSupportVolumeWithFallback(dataset) && annotationType !== "skeleton");
-    const isFallbackSegmentationAlwaysOn =
-      !isFallbackSegmentationAlwaysOff && annotationType === "skeleton";
-
-    const isFallbackSegmentationOptional =
-      !isFallbackSegmentationAlwaysOff && !isFallbackSegmentationAlwaysOn;
-
-    const isFallbackSegmentationSelected =
-      isFallbackSegmentationAlwaysOn ||
-      (userDefinedWithFallback && !isFallbackSegmentationAlwaysOff);
-
-    const isFallbackSegmentationSelectedString = isFallbackSegmentationSelected ? "true" : "false";
-
-    const fallbackCheckbox = (
-      <Checkbox
-        onChange={e => setUserDefinedWithFallback(e.target.checked)}
-        checked={isFallbackSegmentationSelected}
-        disabled={!isFallbackSegmentationOptional}
-        style={{ marginBottom: 16 }}
-      >
-        With Existing Segmentation{" "}
-        <Tooltip
-          title="Base your volume annotation on an existing segmentation layer of this dataset. Note that skeleton-only annotations always show the existing segmentation by default."
-          placement="right"
-        >
-          <InfoCircleOutlined />
-        </Tooltip>
-      </Checkbox>
-    );
+    const fallbackLayerGetParameter =
+      selectedSegmentationLayer != null
+        ? `&fallbackLayerName=${selectedSegmentationLayer.name}`
+        : "";
 
     const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
     let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
     let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
 
-    if (isFallbackSegmentationSelected && annotationType !== "skeleton") {
-      const datasetFallbackLayerResolutionInfo = getResolutionInfoOfSegmentationLayer(dataset);
+    if (selectedSegmentationLayer != null) {
+      const datasetFallbackLayerResolutionInfo = getResolutionInfo(
+        selectedSegmentationLayer.resolutions,
+      );
       highestResolutionIndex = datasetFallbackLayerResolutionInfo.getHighestResolutionIndex();
       lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getClosestExistingIndex(0);
     }
@@ -75,46 +56,46 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
     const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
 
-    const resolutionSlider = (
-      <React.Fragment>
-        <h5 style={{ marginBottom: 0 }}>
-          Volume Resolutions{" "}
-          <Tooltip
-            title="Select which of the dataset resolutions the volume data should be created at. Restricting the available resolutions can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
-            placement="right"
+    const resolutionSlider =
+      annotationType !== "skeleton" ? (
+        <React.Fragment>
+          <h5 style={{ marginBottom: 0 }}>
+            Restrict Volume Resolutions{" "}
+            <Tooltip
+              title="Select which of the dataset resolutions the volume data should be created at. Restricting the available resolutions can greatly improve the performance when annotating large structures, such as nuclei, since the volume data does not need to be stored in all quality levels. How to read: Resolution 1 is the most detailed, 4-4-2 is downsampled by factor 4 in x and y, and by factor 2 in z."
+              placement="right"
+            >
+              <InfoCircleOutlined />
+            </Tooltip>
+          </h5>
+          <div
+            style={{
+              marginBottom: 16,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              alignContent: "center",
+            }}
           >
-            <InfoCircleOutlined />
-          </Tooltip>
-        </h5>
-        <div
-          style={{
-            marginBottom: 16,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            alignContent: "center",
-          }}
-        >
-          <div style={{ width: "5em" }}>
-            {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+            <div style={{ width: "5em" }}>
+              {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+            </div>
+            <Slider
+              tooltipVisible={false}
+              onChange={value => setUserDefinedResolutionIndices(value)}
+              range
+              step={1}
+              min={lowestResolutionIndex}
+              max={highestResolutionIndex}
+              value={[lowResolutionIndex, highResolutionIndex]}
+              style={{ flexGrow: 1 }}
+            />
+            <div style={{ width: "6.5em", textAlign: "right" }}>
+              {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
+            </div>
           </div>
-          <Slider
-            tooltipVisible={false}
-            onChange={value => setUserDefinedResolutionIndices(value)}
-            range
-            disabled={annotationType === "skeleton"}
-            step={1}
-            min={lowestResolutionIndex}
-            max={highestResolutionIndex}
-            value={[lowResolutionIndex, highResolutionIndex]}
-            style={{ flexGrow: 1 }}
-          />
-          <div style={{ width: "6.5em", textAlign: "right" }}>
-            {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
-          </div>
-        </div>
-      </React.Fragment>
-    );
+        </React.Fragment>
+      ) : null;
 
     modalContent = (
       <React.Fragment>
@@ -125,17 +106,49 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
             <Radio value="volume">Volume only</Radio>
           </Radio.Group>
         </div>
-        {doesSupportVolumeWithFallback(dataset) ? fallbackCheckbox : null}
+
+        {annotationType !== "skeleton" && segmentationLayers.length > 0 ? (
+          <div style={{ marginBottom: 16 }}>
+            Base Volume Annotation On{" "}
+            <Tooltip
+              title="Base your volume annotation on an existing segmentation layer of this dataset or create a new (empty) layer for the annotation."
+              placement="right"
+            >
+              <InfoCircleOutlined />
+            </Tooltip>
+            <Radio.Group
+              onChange={e => {
+                const index = parseInt(e.target.value);
+                setSelectedSegmentationLayerIndex(index !== -1 ? index : null);
+              }}
+              value={selectedSegmentationLayerIndex != null ? selectedSegmentationLayerIndex : -1}
+            >
+              <Radio key={-1} value={-1}>
+                Create empty layer
+              </Radio>
+              {segmentationLayers.map((segmentationLayer, index) => (
+                <Radio
+                  key={segmentationLayer.name}
+                  value={index}
+                  disabled={!doesSupportVolumeWithFallback(dataset, segmentationLayer)}
+                >
+                  {segmentationLayer.name}
+                </Radio>
+              ))}
+            </Radio.Group>
+          </div>
+        ) : null}
+
         {lowestResolutionIndex < highestResolutionIndex ? resolutionSlider : null}
         <div style={{ textAlign: "right" }}>
           <Link
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
-            }/createExplorative/${annotationType}/${isFallbackSegmentationSelectedString}?minRes=${Math.max(
+            }/createExplorative/${annotationType}/?minRes=${Math.max(
               ...datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
             )}&maxRes=${Math.max(
               ...datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
-            )}`}
+            )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >
             <Button size="large" type="primary">

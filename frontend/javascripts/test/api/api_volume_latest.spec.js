@@ -42,7 +42,7 @@ test("setAnnotationTool should throw an error for an invalid tool", t => {
 
 test("Data API: labelVoxels should label a list of voxels", t => {
   const { api, model } = t.context;
-  const { cube } = model.getSegmentationLayer();
+  const { cube } = model.getSegmentationTracingLayer();
 
   api.data.labelVoxels([[1, 2, 3], [7, 8, 9]], 34);
   // The specified voxels should be labeled with the new value

@@ -267,13 +267,27 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       });
     }
 
+    let leastRecentlyUsedSegmentationLayer = null;
     _.extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
-        const segmentationLayerName = Model.getSegmentationLayerName();
-        if (!segmentationLayerName) {
+        let segmentationLayer = Model.getVisibleSegmentationLayer();
+        if (segmentationLayer != null) {
+          // If there is a visible segmentation layer, disable and remember it.
+          leastRecentlyUsedSegmentationLayer = segmentationLayer;
+        } else if (leastRecentlyUsedSegmentationLayer != null) {
+          // If no segmentation layer is visible, use the least recently toggled
+          // layer (note that toggling the layer via the switch-button won't update
+          // the local variable here).
+          segmentationLayer = leastRecentlyUsedSegmentationLayer;
+        } else {
+          // As a fallback, simply use some segmentation layer
+          segmentationLayer = Model.getSomeSegmentationLayer();
+        }
+        if (segmentationLayer == null) {
           return;
         }
+        const segmentationLayerName = segmentationLayer.name;
         const isSegmentationDisabled = Store.getState().datasetConfiguration.layers[
           segmentationLayerName
         ].isDisabled;

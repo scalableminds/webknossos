@@ -13,8 +13,7 @@ test("Shader syntax: Ortho Mode", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: { color_layer_1: 4.0, color_layer_2: 4.0 },
-    hasSegmentation: false,
-    segmentationName: "",
+    segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -33,8 +32,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: { color_layer_1: 4.0, color_layer_2: 4.0, segmentationLayer: 1.0 },
-    hasSegmentation: true,
-    segmentationName: "segmentationLayer",
+    segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: false,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -53,8 +51,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: { color_layer_1: 4.0, color_layer_2: 4.0, segmentationLayer: 1.0 },
-    hasSegmentation: true,
-    segmentationName: "segmentationLayer",
+    segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -73,8 +70,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: { color_layer_1: 4.0, color_layer_2: 4.0 },
-    hasSegmentation: false,
-    segmentationName: "",
+    segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -93,8 +89,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: { color_layer_1: 4.0, color_layer_2: 4.0, segmentationLayer: 1.0 },
-    hasSegmentation: true,
-    segmentationName: "segmentationLayer",
+    segmentationLayerNames: ["segmentationLayer"],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -113,8 +108,7 @@ test("Shader syntax: Ortho Mode (rgb and float layer)", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
     packingDegreeLookup: { color_layer_1: 1.0, color_layer_2: 4.0 },
-    hasSegmentation: false,
-    segmentationName: "",
+    segmentationLayerNames: [],
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,

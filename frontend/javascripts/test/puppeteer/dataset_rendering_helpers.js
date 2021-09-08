@@ -42,7 +42,7 @@ export async function screenshotDataset(
   const createdExplorational = await createExplorational(
     datasetId,
     "skeleton",
-    false,
+    null,
     null,
     options,
   );
@@ -63,7 +63,7 @@ export async function screenshotDatasetWithMapping(
   const createdExplorational = await createExplorational(
     datasetId,
     "skeleton",
-    false,
+    null,
     null,
     options,
   );

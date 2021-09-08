@@ -337,7 +337,7 @@ class PlaneController extends React.PureComponent<Props> {
   getNotLoopedKeyboardControls(): Object {
     const baseControls = {
       "ctrl + i": event => {
-        const segmentationLayer = Model.getSegmentationLayer();
+        const segmentationLayer = Model.getVisibleSegmentationLayer();
         if (!segmentationLayer) {
           return;
         }

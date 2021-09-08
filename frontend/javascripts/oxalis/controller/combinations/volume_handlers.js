@@ -56,16 +56,12 @@ export function handlePickCell(pos: Point2) {
 }
 
 export function getSegmentIdForPosition(globalPos: Vector3) {
-  const layer = Model.getSegmentationLayer();
+  const layer = Model.getVisibleSegmentationLayer();
   if (!layer) {
     return 0;
   }
   const segmentationCube = layer.cube;
   const segmentationLayerName = layer.name;
-
-  if (!segmentationLayerName) {
-    return 0;
-  }
 
   const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
     segmentationLayerName,

@@ -582,11 +582,27 @@ export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegme
 }
 
 export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?APISegmentationLayer {
+  // If there are zero or one segmentation layers, the selection is trivial.
+  const segmentationLayers = getSegmentationLayers(state.dataset);
+  if (segmentationLayers.length === 0) {
+    return null;
+  } else if (segmentationLayers.length === 1) {
+    return segmentationLayers[0];
+  }
+
+  // If there is more than one segmentation layer and merger mode is enabled,
+  // prefer the volume tracing or visible layer.
+  if (state.temporaryConfiguration.isMergerModeEnabled) {
+    return getSegmentationTracingOrVisibleLayer(state);
+  }
+
+  // There are multiple segmentation layers and merger mode is not enabled.
   // From the visible segmentation layers, return the first layer which has enabled mappings.
   // If no layer has enabled mappings, pick a layer which has some mappings (this is important
   // for the initialization of the mapping textures, since isMappingEnabled will be set to true
   // after all mapping data was copied to the GPU, but getSegmentationLayerWithMappingSupport is
   // already used before that to prepare the mapping for the correct layer).
+  // This handling should be refactored. See https://github.com/scalableminds/webknossos/issues/5695.
   // Currently, webKnossos only supports one active mapping at a given time. The UI should ensure
   // that not more than one mapping is enabled (currently, this is achieved by only allowing one
   // visible segmentation layer, anyway).
@@ -634,6 +650,10 @@ export function getSegmentationTracingLayer(
     throw new Error("webKnossos only supports one volume tracing layer per annotation currently.");
   }
   return null;
+}
+
+export function getSegmentationTracingOrVisibleLayer(state: OxalisState): ?APISegmentationLayer {
+  return getSegmentationTracingLayer(state.dataset) || getVisibleSegmentationLayer(state);
 }
 
 export function getSegmentationLayers(

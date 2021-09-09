@@ -210,7 +210,7 @@ class DataSetController @Inject()(userService: UserService,
       } yield Ok(Json.toJson(usersJs))
   }
 
-  @ApiOperation(value = "Get information about this dataset")
+  @ApiOperation(value = "Get information about this dataset", nickname = "datasetInfo")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing dataset information"),
           new ApiResponse(code = 400, message = badRequestLabel)))

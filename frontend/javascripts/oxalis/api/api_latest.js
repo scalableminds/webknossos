@@ -1126,8 +1126,10 @@ class DataApi {
     if (!effectiveLayerName) {
       return false;
     }
-    return getMappingInfo(Store.getState().temporaryConfiguration.activeMappingByLayer, layerName)
-      .isMappingEnabled;
+    return getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      effectiveLayerName,
+    ).isMappingEnabled;
   }
 
   refreshIsosurfaces() {

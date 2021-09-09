@@ -34,7 +34,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHea
 
 import scala.concurrent.ExecutionContext
 
-@Api
+@Api(tags = Array("datastore"))
 class BinaryDataController @Inject()(
     dataSourceRepository: DataSourceRepository,
     config: DataStoreConfig,
@@ -88,7 +88,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP GET.
     */
-  @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer")
+  @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer", nickname = "datasetDownload")
   @ApiResponses(
     Array(
       new ApiResponse(code = 200, message = "Raw bytes from the dataset"),

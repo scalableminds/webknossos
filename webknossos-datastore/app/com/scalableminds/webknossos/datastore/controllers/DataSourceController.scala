@@ -102,7 +102,8 @@ Expects:
   - totalFileCount (string): total file count of the upload
   - resumableIdentifier (string): identifier of the resumable upload and file ("{uploadId}/{filepath}")
 """,
-    nickname = "datasetUploadChunk")
+    nickname = "datasetUploadChunk"
+  )
   @ApiResponses(
     Array(
       new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
@@ -162,7 +163,8 @@ Expects:
   - initialTeams (list of string): names of the webknossos teams dataset should be accessible for
   - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
 """,
-    nickname = "datasetFinishUpload")
+    nickname = "datasetFinishUpload"
+  )
   @ApiResponses(
     Array(
       new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),

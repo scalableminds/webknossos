@@ -88,7 +88,7 @@ class BinaryDataController @Inject()(
   /**
     * Handles requests for raw binary data via HTTP GET.
     */
-  @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer", nickname="datasetDownload")
+  @ApiOperation(value = "Get raw binary data from a bounding box in a dataset layer", nickname = "datasetDownload")
   @ApiResponses(
     Array(
       new ApiResponse(code = 200, message = "Raw bytes from the dataset"),

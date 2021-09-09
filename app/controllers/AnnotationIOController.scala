@@ -71,7 +71,8 @@ Expects:
  - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
    - If "true": in merged annotation, create tree group wrapping the trees of each file
    - If "false": in merged annotation, rename trees with the respective file name as prefix""",
-    nickname = "annotationUpload")
+    nickname = "annotationUpload"
+  )
   @ApiResponses(
     Array(
       new ApiResponse(

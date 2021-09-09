@@ -9,6 +9,7 @@ import {
   getResolutions,
   isSegmentationLayer,
   getByteCountFromLayer,
+  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import ErrorHandling from "libs/error_handling";
 import { parseAsMaybe } from "libs/utils";
@@ -83,7 +84,8 @@ export async function requestWithFallback(
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  const shouldUseDataStore = !isSegmentation || state.tracing.volume == null;
+  const isTracingLayer = layerInfo.category === "segmentation" ? layerInfo.isTracingLayer : false;
+  const shouldUseDataStore = !isSegmentation || !isTracingLayer;
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
 
   const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch);
@@ -129,7 +131,10 @@ export async function requestFromStore(
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
 
-  const { activeMapping } = state.temporaryConfiguration;
+  const activeMapping = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerInfo.name,
+  );
   const applyAgglomerates =
     isSegmentation &&
     activeMapping != null &&

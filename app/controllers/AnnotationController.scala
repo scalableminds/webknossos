@@ -29,7 +29,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class CreateExplorationalParameters(typ: String,
-                                         withFallback: Option[Boolean],
+                                         fallbackLayerName: Option[String],
                                          resolutionRestrictions: Option[ResolutionRestrictions])
 object CreateExplorationalParameters {
   implicit val jsonFormat: OFormat[CreateExplorationalParameters] = Json.format[CreateExplorationalParameters]
@@ -178,7 +178,7 @@ class AnnotationController @Inject()(
           request.identity,
           dataSet._id,
           tracingType,
-          request.body.withFallback.getOrElse(true),
+          request.body.fallbackLayerName,
           request.body.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
         ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
@@ -188,16 +188,17 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def makeHybrid(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
-      annotation <- provider.provideAnnotation(typ, id, request.identity)
-      organization <- organizationDAO.findOne(request.identity._organization)
-      _ <- annotationService.makeAnnotationHybrid(annotation, organization.name) ?~> "annotation.makeHybrid.failed"
-      updated <- provider.provideAnnotation(typ, id, request.identity)
-      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
-    } yield JsonOk(json)
-  }
+  def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        organization <- organizationDAO.findOne(request.identity._organization)
+        _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
+        updated <- provider.provideAnnotation(typ, id, request.identity)
+        json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+      } yield JsonOk(json)
+    }
 
   @ApiOperation(hidden = true, value = "")
   def downsample(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

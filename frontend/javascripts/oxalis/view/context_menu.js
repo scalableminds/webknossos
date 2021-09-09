@@ -37,7 +37,7 @@ import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { roundTo } from "libs/utils";
@@ -68,7 +68,7 @@ type DispatchProps = {|
 type StateProps = {|
   skeletonTracing: ?SkeletonTracing,
   datasetScale: Vector3,
-  segmentationLayer: ?APIDataLayer,
+  visibleSegmentationLayer: ?APIDataLayer,
   dataset: APIDataset,
   zoomStep: number,
   currentMeshFile: ?string,
@@ -295,27 +295,33 @@ function NoNodeContextMenuOptions({
   viewport,
   createTree,
   segmentIdAtPosition,
-  segmentationLayer,
+  visibleSegmentationLayer,
   dataset,
   currentMeshFile,
   setActiveCell,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
     (async () => {
-      await maybeFetchMeshFiles(segmentationLayer, dataset, false);
+      await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
     })();
-  }, []);
+  }, [visibleSegmentationLayer, dataset]);
 
   const loadMesh = async () => {
     if (!currentMeshFile) return;
 
-    if (segmentationLayer) {
+    if (visibleSegmentationLayer) {
       const id = getSegmentIdForPosition(globalPosition);
       if (id === 0) {
         Toast.info("No segment found at the clicked position");
         return;
       }
-      await loadMeshFromFile(id, globalPosition, currentMeshFile, segmentationLayer, dataset);
+      await loadMeshFromFile(
+        id,
+        globalPosition,
+        currentMeshFile,
+        visibleSegmentationLayer,
+        dataset,
+      );
     }
   };
 
@@ -381,7 +387,7 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
-  if (volumeTracing == null && segmentationLayer != null) {
+  if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadMeshItem);
   }
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
@@ -558,15 +564,20 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 });
 
 function mapStateToProps(state: OxalisState): StateProps {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+
   return {
     skeletonTracing: state.tracing.skeleton,
     volumeTracing: state.tracing.volume,
     datasetScale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
-    segmentationLayer: getSegmentationLayer(state.dataset),
+    visibleSegmentationLayer: getVisibleSegmentationLayer(state),
     zoomStep: getRequestLogZoomStep(state),
-    currentMeshFile: state.currentMeshFile,
+    currentMeshFile:
+      visibleSegmentationLayer != null
+        ? state.currentMeshFileByLayer[visibleSegmentationLayer.name]
+        : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
   };
 }

@@ -13,7 +13,10 @@ import Constants, {
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import { document } from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getRenderableResolutionForSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMappingInfoForTracingLayer,
+  getRenderableResolutionForSegmentationTracing,
+} from "oxalis/model/accessors/dataset_accessor";
 import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -215,7 +218,7 @@ function AdditionalSkeletonModesButtons() {
 }
 
 const mapId = id => {
-  const { cube } = Model.getSegmentationLayer();
+  const { cube } = Model.getEnforcedSegmentationTracingLayer();
   return cube.mapId(id);
 };
 
@@ -224,11 +227,9 @@ function CreateCellButton() {
     state => enforceVolumeTracing(state.tracing).activeCellId,
   );
 
-  const mappingColors = useSelector(
-    state => state.temporaryConfiguration.activeMapping.mappingColors,
-  );
+  const mappingColors = useSelector(state => getMappingInfoForTracingLayer(state).mappingColors);
   const isMappingEnabled = useSelector(
-    state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
+    state => getMappingInfoForTracingLayer(state).isMappingEnabled,
   );
   const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;
@@ -338,7 +339,7 @@ export default function ToolbarView() {
 
   const activeTool = useSelector(state => state.uiInformation.activeTool);
 
-  const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentation);
+  const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentationTracing);
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
 

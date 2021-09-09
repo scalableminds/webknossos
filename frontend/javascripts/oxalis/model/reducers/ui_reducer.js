@@ -35,14 +35,6 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", { hasOrganizations: action.value });
     }
 
-    case "REFRESH_ISOSURFACES": {
-      return updateKey(state, "uiInformation", { isRefreshingIsosurfaces: true });
-    }
-
-    case "FINISHED_REFRESHING_ISOSURFACES": {
-      return updateKey(state, "uiInformation", { isRefreshingIsosurfaces: false });
-    }
-
     case "SET_BORDER_OPEN_STATUS": {
       return updateKey(state, "uiInformation", { borderOpenStatus: action.borderOpenStatus });
     }

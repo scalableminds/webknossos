@@ -192,7 +192,7 @@
     "redux-saga": "^1.0.0",
     "resumablejs": "^1.1.0",
     "saxophone": "^0.7.1",
-    "three": "^0.106.0",
+    "three": "^0.110.0",
     "tween.js": "^16.3.1",
     "url-join": "^4.0.0",
     "worker-loader": "^2.0.0",

@@ -428,7 +428,7 @@ class Skeleton {
   // ######### API ###############
 
   /**
-   * Combined node/edge id and a treeId to a single unique id using recursive cantor pairings.
+   * Combine node, edge and tree ids to a single unique id.
    * @param numbers - Array of node/edge id and treeId
    */
   combineIds(...numbers: Array<number>): string {

@@ -26,6 +26,8 @@ import {
   getBoundaries,
   getEnabledLayers,
   getUnrenderableLayerInfosForCurrentZoom,
+  getSegmentationLayerWithMappingSupport,
+  getMappingInfoForSupportedLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -270,32 +272,30 @@ class PlaneMaterialFactory {
       };
     }
 
-    // Add mapping
-    const segmentationLayer = Model.getSegmentationLayer();
-    if (
-      segmentationLayer != null &&
-      segmentationLayer.mappings != null &&
-      Model.isMappingSupported
-    ) {
-      const [
-        mappingTexture,
-        mappingLookupTexture,
-        mappingColorTexture,
-      ] = segmentationLayer.mappings.getMappingTextures();
-      const sanitizedSegmentationLayerName = sanitizeName(segmentationLayer.name);
-      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_texture`] = {
-        type: "t",
-        value: mappingTexture,
-      };
-      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_lookup_texture`] = {
-        type: "t",
-        value: mappingLookupTexture,
-      };
-      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_color_texture`] = {
-        type: "t",
-        value: mappingColorTexture,
-      };
-    }
+    this.attachSegmentationTextures();
+  }
+
+  attachSegmentationTextures(): void {
+    const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
+
+    const [mappingTexture, mappingLookupTexture, mappingColorTexture] =
+      Model.isMappingSupported && segmentationLayer != null && segmentationLayer.mappings != null
+        ? segmentationLayer.mappings.getMappingTextures()
+        : // It's important to set up the uniforms (even when they are null), since later
+          // additions to `this.uniforms` won't be properly attached otherwise.
+          [null, null, null];
+    this.uniforms.segmentation_mapping_texture = {
+      type: "t",
+      value: mappingTexture,
+    };
+    this.uniforms.segmentation_mapping_lookup_texture = {
+      type: "t",
+      value: mappingLookupTexture,
+    };
+    this.uniforms.segmentation_mapping_color_texture = {
+      type: "t",
+      value: mappingColorTexture,
+    };
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
@@ -375,7 +375,7 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
+        storeState => getMappingInfoForSupportedLayer(storeState).mappingSize,
         mappingSize => {
           this.uniforms.mappingSize.value = mappingSize;
         },
@@ -385,7 +385,7 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.activeMapping.hideUnmappedIds,
+        storeState => getMappingInfoForSupportedLayer(storeState).hideUnmappedIds,
         hideUnmappedIds => {
           this.uniforms.hideUnmappedIds.value = hideUnmappedIds;
         },
@@ -430,13 +430,12 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         state => state.datasetConfiguration.layers,
         layerSettings => {
-          const segmentationLayerName = Model.getSegmentationLayerName();
           for (const dataLayer of Model.getAllLayers()) {
             const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
             if (settings != null) {
               const isLayerEnabled = !settings.isDisabled;
-              const isSegmentationLayer = segmentationLayerName === dataLayer.name;
+              const isSegmentationLayer = dataLayer.isSegmentation;
               if (
                 !isSegmentationLayer &&
                 oldVisibilityPerLayer[dataLayer.name] != null &&
@@ -460,8 +459,7 @@ class PlaneMaterialFactory {
       ),
     );
 
-    const hasSegmentation = Model.getSegmentationLayer() != null;
-    if (hasSegmentation) {
+    if (Model.hasSegmentationLayer()) {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           storeState => storeState.temporaryConfiguration.mousePosition,
@@ -483,6 +481,15 @@ class PlaneMaterialFactory {
             this.uniforms.isMouseInCanvas.value = true;
           },
           true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => getSegmentationLayerWithMappingSupport(storeState),
+          _segmentationLayer => {
+            this.attachSegmentationTextures();
+          },
         ),
       );
 
@@ -526,7 +533,14 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+          storeState => getMappingInfoForSupportedLayer(storeState).isMappingEnabled,
+          () => this.updateActiveCellId(),
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => getMappingInfoForSupportedLayer(storeState).mapping,
           () => this.updateActiveCellId(),
         ),
       );
@@ -534,19 +548,12 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           storeState =>
-            storeState.temporaryConfiguration.activeMapping.isMappingEnabled &&
+            getMappingInfoForSupportedLayer(storeState).isMappingEnabled &&
             // The shader should only know about the mapping when a JSON mapping exists
-            storeState.temporaryConfiguration.activeMapping.mappingType === "JSON",
+            getMappingInfoForSupportedLayer(storeState).mappingType === "JSON",
           isEnabled => {
             this.uniforms.isMappingEnabled.value = isEnabled;
           },
-        ),
-      );
-
-      this.storePropertyUnsubscribers.push(
-        listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.activeMapping.mapping,
-          () => this.updateActiveCellId(),
         ),
       );
 
@@ -564,7 +571,11 @@ class PlaneMaterialFactory {
 
   updateActiveCellId() {
     const activeCellId = Utils.maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
-    const mappedActiveCellId = Model.getSegmentationLayer().cube.mapId(activeCellId);
+    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    if (segmentationLayer == null) {
+      return;
+    }
+    const mappedActiveCellId = segmentationLayer.cube.mapId(activeCellId);
     // Convert the id into 4 bytes (little endian)
     const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
     this.uniforms.activeCellId.value.set(r, g, b, a);
@@ -678,24 +689,24 @@ class PlaneMaterialFactory {
       maximumLayerCountToRender,
     } = Store.getState().temporaryConfiguration.gpuSetup;
 
-    const segmentationLayer = Model.getSegmentationLayer();
+    // Don't compile code for segmentation in arbitrary mode
+    const shouldRenderSegmentation = this.isOrthogonal && Model.hasSegmentationLayer();
     const colorLayerNames = this.getLayersToRender(
-      maximumLayerCountToRender - (segmentationLayer ? 1 : 0),
+      maximumLayerCountToRender - (shouldRenderSegmentation ? 1 : 0),
     );
     const packingDegreeLookup = getPackingDegreeLookup();
-    const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
+    const segmentationLayerNames = shouldRenderSegmentation
+      ? Model.getSegmentationLayers().map(layer => sanitizeName(layer.name))
+      : [];
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
-    // Don't compile code for segmentation in arbitrary mode
-    const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
     const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
 
     return getMainFragmentShader({
       colorLayerNames,
+      segmentationLayerNames,
       packingDegreeLookup,
-      hasSegmentation,
-      segmentationName,
       isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumTextureCountForLayer,

@@ -41,6 +41,7 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
+  isColorLayer as getIsColorLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { userSettings } from "types/schemas/user_settings.schema";
 import {
@@ -379,10 +380,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   ) => {
     const { tracing } = this.props;
     const { intensityRange } = layerSettings;
-    const isVolumeTracing = tracing.volume != null;
-    const isFallbackLayer = tracing.volume
-      ? tracing.volume.fallbackLayer != null && !isColorLayer
-      : false;
+    const layer = getLayerByName(this.props.dataset, layerName);
+
+    const isVolumeTracing = layer.category === "segmentation" ? layer.isTracingLayer : false;
+    const isFallbackLayer =
+      tracing.volume && isVolumeTracing
+        ? tracing.volume.fallbackLayer != null && !isColorLayer
+        : false;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
@@ -402,7 +406,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     };
     const hasHistogram = this.props.histogramData[layerName] != null;
 
-    const layer = getLayerByName(this.props.dataset, layerName);
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
 
     return (
@@ -433,7 +436,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
           {intensityRange[0] === intensityRange[1] && !isDisabled ? (
             <Tooltip
-              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values. 
+              title={`No data is being rendered for this layer as the minimum and maximum of the range have the same values.
             If you want to hide this layer, you can also disable it with the switch on the left.`}
             >
               <WarningOutlined style={{ color: "var(--ant-warning)" }} />
@@ -502,7 +505,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Row>
   );
 
-  getVolumeAnnotationSpecificSettings = () => {
+  getVolumeAnnotationSpecificSettings = (layerName: string) => {
     const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
     const { tracing } = this.props;
 
@@ -521,7 +524,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <div>
         {segmentationOpacitySetting}
         {!isPublicViewMode && tracing.volume != null ? this.maybeGetAutoBrushUi() : null}
-        <MappingSettingsView />
+        <MappingSettingsView layerName={layerName} />
       </div>
     );
   };
@@ -561,7 +564,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             {isColorLayer
               ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
-              : this.getVolumeAnnotationSpecificSettings()}
+              : this.getVolumeAnnotationSpecificSettings(layerName)}
           </div>
         )}
       </div>
@@ -628,7 +631,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (volumeTracing == null) {
       return [];
     }
-    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetResolutions =
       fallbackLayerInfo != null
@@ -785,10 +788,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const segmentationLayerName = Model.getSegmentationLayerName();
     const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
-      const isColorLayer = segmentationLayerName !== layerName;
+      const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
       // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });

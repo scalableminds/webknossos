@@ -8,7 +8,12 @@ import _ from "lodash";
 
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSegmentationLayerWithMappingSupport,
+  getLayerByName,
+  isLayerVisible,
+  getSegmentationTracingLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import ConnectionInfo from "oxalis/model/data_connection_info";
@@ -90,13 +95,67 @@ export class OxalisModel {
     );
   }
 
-  // Todo: Make return type optional
-  getSegmentationLayer(): DataLayer {
-    return _.find(
-      this.dataLayers,
-      dataLayer =>
-        getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
+  getSegmentationLayers(): Array<DataLayer> {
+    return Object.keys(this.dataLayers)
+      .map(k => this.dataLayers[k])
+      .filter(
+        dataLayer =>
+          getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
+      );
+  }
+
+  getSomeSegmentationLayer(): ?DataLayer {
+    // Prefer the visible segmentation layer. If that does not exist,
+    // simply use one of the available segmentation layers.
+
+    const visibleSegmentationLayer = this.getVisibleSegmentationLayer();
+    const segmentationLayers = this.getSegmentationLayers();
+    if (visibleSegmentationLayer) {
+      return visibleSegmentationLayer;
+    } else if (segmentationLayers.length > 0) {
+      return segmentationLayers[0];
+    }
+
+    return null;
+  }
+
+  getVisibleSegmentationLayer(): ?DataLayer {
+    const state = Store.getState();
+    const { datasetConfiguration } = state;
+    const { viewMode } = state.temporaryConfiguration;
+
+    const segmentationLayers = this.getSegmentationLayers();
+    const visibleSegmentationLayers = segmentationLayers.filter(layer =>
+      isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode),
     );
+    if (visibleSegmentationLayers.length > 0) {
+      return visibleSegmentationLayers[0];
+    }
+
+    return null;
+  }
+
+  hasSegmentationLayer(): boolean {
+    return this.getSegmentationLayers().length > 0;
+  }
+
+  getSegmentationTracingLayer(): ?DataLayer {
+    const { dataset } = Store.getState();
+    const layer = getSegmentationTracingLayer(dataset);
+    if (layer == null) {
+      return null;
+    }
+
+    return this.getLayerByName(layer.name);
+  }
+
+  getEnforcedSegmentationTracingLayer(): DataLayer {
+    const layer = this.getSegmentationTracingLayer();
+    if (layer == null) {
+      // The function should never be called if no segmentation layer exists.
+      throw new Error("No segmentation layer found.");
+    }
+    return layer;
   }
 
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
@@ -115,7 +174,7 @@ export class OxalisModel {
   }
 
   getHoveredCellId(globalMousePosition: ?Vector3): ?{ id: number, isMapped: boolean } {
-    const segmentationLayer = this.getSegmentationLayer();
+    const segmentationLayer = this.getVisibleSegmentationLayer();
     if (!segmentationLayer || !globalMousePosition) {
       return null;
     }
@@ -135,11 +194,6 @@ export class OxalisModel {
     return { id, isMapped: cube.isMappingEnabled() };
   }
 
-  getSegmentationLayerName(): ?string {
-    const segmentation = this.getSegmentationLayer();
-    return segmentation != null ? segmentation.name : undefined;
-  }
-
   getCubeByLayerName(name: string): DataCube {
     if (!this.dataLayers[name]) {
       throw new Error(`Layer with name ${name} was not found.`);
@@ -148,10 +202,22 @@ export class OxalisModel {
   }
 
   getPullQueueByLayerName(name: string): PullQueue {
+    return this.getLayerByName(name).pullQueue;
+  }
+
+  getLayerByName(name: string): DataLayer {
     if (!this.dataLayers[name]) {
       throw new Error(`Layer with name ${name} was not found.`);
     }
-    return this.dataLayers[name].pullQueue;
+    return this.dataLayers[name];
+  }
+
+  getSegmentationLayerWithMappingSupport(): ?DataLayer {
+    const layer = getSegmentationLayerWithMappingSupport(Store.getState());
+    if (!layer) {
+      return null;
+    }
+    return this.getLayerByName(layer.name);
   }
 
   getLayerRenderingManagerByName(name: string): LayerRenderingManager {

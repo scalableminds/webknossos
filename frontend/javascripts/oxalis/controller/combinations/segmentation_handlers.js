@@ -2,6 +2,7 @@
 import type { Point2, Vector3 } from "oxalis/constants";
 import Model from "oxalis/model";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -19,14 +20,17 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
 }
 
 export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
-  const segmentation = Model.getSegmentationLayer();
+  const segmentation = Model.getVisibleSegmentationLayer();
   if (!segmentation) {
     return;
   }
 
   const state = Store.getState();
 
-  const { mappingName, mappingType, isMappingEnabled } = state.temporaryConfiguration.activeMapping;
+  const { mappingName, mappingType, isMappingEnabled } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    segmentation.name,
+  );
   if (mappingName == null || !isMappingEnabled) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
     return;

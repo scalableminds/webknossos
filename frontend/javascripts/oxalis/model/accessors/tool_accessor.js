@@ -3,9 +3,9 @@ import type { OxalisState } from "oxalis/store";
 import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  isLayerVisible,
-  getRenderableResolutionForSegmentation,
-  getSegmentationLayer,
+  getRenderableResolutionForSegmentationTracing,
+  getSegmentationTracingLayer,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import memoizeOne from "memoize-one";
@@ -15,13 +15,13 @@ const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 const isZoomStepTooHighFor = (state, tool) => isVolumeAnnotationDisallowedForZoom(tool, state);
 
 const getExplanationForDisabledVolume = (
-  isSegmentationActivated,
+  isSegmentationTracingVisible,
   isInMergerMode,
-  isSegmentationVisibleForMag,
+  isSegmentationTracingVisibleForMag,
   isZoomInvalidForTracing,
 ) => {
-  if (!isSegmentationActivated) {
-    return "Volume annotation is disabled since the segmentation layer is invisible. Enable it in the left settings sidebar.";
+  if (!isSegmentationTracingVisible) {
+    return "Volume annotation is disabled since the segmentation tracing layer is disabled. Enable it in the left settings sidebar.";
   }
   if (isZoomInvalidForTracing) {
     return "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.";
@@ -29,7 +29,7 @@ const getExplanationForDisabledVolume = (
   if (isInMergerMode) {
     return "Volume annotation is disabled while the merger mode is active.";
   }
-  if (!isSegmentationVisibleForMag) {
+  if (!isSegmentationTracingVisibleForMag) {
     return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
   }
   return "Volume annotation is currently disabled.";
@@ -131,34 +131,31 @@ export function getDisabledInfoForTools(
 ): { [key: AnnotationTool]: { isDisabled: boolean, explanation: string } } {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentation(state);
+  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentationTracing(state);
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
-  const isSegmentationVisibleForMag = labeledResolution != null;
+  const isSegmentationTracingVisibleForMag = labeledResolution != null;
 
   const hasVolume = state.tracing.volume != null;
   const hasSkeleton = state.tracing.skeleton != null;
-  const isSegmentationActivated = (() => {
-    const segmentationLayer = getSegmentationLayer(state.dataset);
-    if (segmentationLayer == null) {
-      return false;
-    }
-    return isLayerVisible(
-      state.dataset,
-      segmentationLayer.name,
-      state.datasetConfiguration,
-      state.temporaryConfiguration.viewMode,
-    );
-  })();
+  const segmentationTracingLayer = getSegmentationTracingLayer(state.dataset);
+  const isSegmentationTracingVisible =
+    segmentationTracingLayer != null &&
+    getVisibleSegmentationLayer(state) === segmentationTracingLayer;
 
   const genericDisabledExplanation = getExplanationForDisabledVolume(
-    isSegmentationActivated,
+    isSegmentationTracingVisible,
     isInMergerMode,
-    isSegmentationVisibleForMag,
+    isSegmentationTracingVisibleForMag,
     isZoomInvalidForTracing,
   );
 
-  if (!hasVolume || !isSegmentationActivated || !isSegmentationVisibleForMag || isInMergerMode) {
+  if (
+    !hasVolume ||
+    !isSegmentationTracingVisible ||
+    !isSegmentationTracingVisibleForMag ||
+    isInMergerMode
+  ) {
     // All segmentation-related tools are disabled.
     return getDisabledInfoWhenVolumeIsDisabled(genericDisabledExplanation, hasSkeleton);
   }

@@ -10,6 +10,7 @@ import {
   getValidTaskZoomRange,
   isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
+import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
@@ -19,7 +20,7 @@ import {
   updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
-import Model from "oxalis/model";
+
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
 import Store from "oxalis/store";
@@ -50,16 +51,24 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const userConfiguration = yield* select(state => state.userConfiguration);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
   const zoomStep = yield* select(state => state.flycam.zoomStep);
-  const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
-  const segmentationOpacity =
-    segmentationLayerName != null ? datasetConfiguration.layers[segmentationLayerName].alpha : 0;
+  const segmentationLayers = yield* select(state => getSegmentationLayers(state.dataset));
 
   // $FlowFixMe[incompatible-call] Cannot call `_.find` because number [1] is incompatible with boolean [2] in property `brushSize` of type argument `T`.
   const configurationDifference = _.find(recommendedConfiguration, (value, key: string) => {
     if (key === "zoom" && zoomStep !== value) {
       return true;
-    } else if (key === "segmentationOpacity" && segmentationOpacity !== value) {
-      return true;
+    } else if (key === "segmentationOpacity") {
+      const opacities = _.uniq(
+        segmentationLayers.map(layer => datasetConfiguration.layers[layer.name].alpha),
+      );
+
+      // If there are different opacity values for the segmentation layers, the recommendation
+      // differs. Otherwise, we compare the one opacity value with the recommended one.
+      if (opacities.length > 1 || opacities[0] !== value) {
+        return true;
+      } else {
+        return false;
+      }
     } else if (key in userConfiguration && userConfiguration[key] !== value) {
       return true;
     } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
@@ -86,10 +95,16 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
     for (const key of Object.keys(recommendedConfiguration)) {
       if (key === "zoom") {
         yield* put(setZoomStepAction(recommendedConfiguration[key]));
-      } else if (key === "segmentationOpacity" && segmentationLayerName != null) {
-        yield* put(
-          updateLayerSettingAction(segmentationLayerName, "alpha", recommendedConfiguration[key]),
-        );
+      } else if (key === "segmentationOpacity") {
+        for (const segmentationLayer of segmentationLayers) {
+          yield* put(
+            updateLayerSettingAction(
+              segmentationLayer.name,
+              "alpha",
+              recommendedConfiguration[key],
+            ),
+          );
+        }
       } else if (key in userConfiguration) {
         // $FlowFixMe[prop-missing] Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
         yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));

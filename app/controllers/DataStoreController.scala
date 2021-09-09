@@ -39,7 +39,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ 'isForeign).readNullable[Boolean] and
       (__ \ 'isConnector).readNullable[Boolean] and
       (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromUpdateForm _)
-  @ApiOperation(value = "List all available datastores")
+  @ApiOperation(value = "List all available datastores", nickname = "datastoreList")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON list of objects containing datastore information"),
           new ApiResponse(code = 400, message = badRequestLabel)))

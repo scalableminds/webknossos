@@ -52,7 +52,7 @@ class ContourGeometry {
     const edgeGeometry = new THREE.BufferGeometry();
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
     positionAttribute.setDynamic(true);
-    edgeGeometry.addAttribute("position", positionAttribute);
+    edgeGeometry.setAttribute("position", positionAttribute);
 
     this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }));
     this.edge.vertexBuffer = new ResizableBuffer(3, Float32Array);
@@ -84,7 +84,7 @@ class ContourGeometry {
       positionAttribute.setDynamic(true);
 
       mesh.geometry.dispose();
-      mesh.geometry.addAttribute("position", positionAttribute);
+      mesh.geometry.setAttribute("position", positionAttribute);
     }
 
     mesh.geometry.attributes.position.needsUpdate = true;

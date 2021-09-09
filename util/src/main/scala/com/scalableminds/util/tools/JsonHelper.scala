@@ -125,4 +125,7 @@ object JsonHelper extends BoxImplicits with LazyLogging {
       case _ =>
         None
     }
+
+  def getJsObjectFieldAsOptional[T: Reads](jsObject: JsObject, key: String): Option[T] =
+    jsObject.value.get(key).flatMap(_.validate[T].asOpt)
 }

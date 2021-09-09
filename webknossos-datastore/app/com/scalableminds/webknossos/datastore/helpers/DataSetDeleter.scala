@@ -9,7 +9,6 @@ import scala.concurrent.ExecutionContext
 
 trait DataSetDeleter extends LazyLogging with SingleOrganizationAdapter {
   def dataBaseDir: Path
-  def singleOrganizationName: Option[String]
 
   def deleteOnDisk(organizationName: String,
                    dataSetName: String,

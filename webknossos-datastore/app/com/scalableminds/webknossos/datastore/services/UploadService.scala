@@ -1,12 +1,10 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, RandomAccessFile}
-import java.nio.file.{Files, Path}
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, SingleOrganizationAdapter}
+import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
@@ -14,6 +12,8 @@ import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{Files, Path}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -34,8 +34,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     with FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
-  val singleOrganizationName: Option[String] =
-    dataSourceService.config.Datastore.SingleOrganizationDatastore.organizationName
+  val isSingleOrganizationDataStore: Boolean = dataSourceService.config.Datastore.SingleOrganizationDatastore.enabled
+  val singleOrganizationName: String = dataSourceService.config.Datastore.SingleOrganizationDatastore.organizationName
   private val uploadingDir: String = ".uploading"
 
   // structure: uploadId → (fileCount, fileName → (totalChunkCount, receivedChunkIndices))

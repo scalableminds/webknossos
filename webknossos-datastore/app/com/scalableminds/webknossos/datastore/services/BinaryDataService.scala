@@ -1,25 +1,30 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, SingleOrganizationAdapter}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.SingleOrganizationAdapter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
 
+import java.nio.file.{Path, Paths}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(val dataBaseDir: Path,
-                        maxCacheSize: Int,
+class BinaryDataService(val config: Option[DataStoreConfig],
                         val agglomerateService: AgglomerateService,
-                        val singleOrganizationName: Option[String])
+                        maxCacheSize: Int)
     extends FoxImplicits
     with SingleOrganizationAdapter
     with LazyLogging {
+
+  val dataBaseDir: Path = config.map(c => Paths.get(c.Datastore.baseFolder)).getOrElse(Paths.get(""))
+  val isSingleOrganizationDataStore: Boolean = config.exists(c => c.Datastore.SingleOrganizationDatastore.enabled)
+  val singleOrganizationName: String =
+    config.map(c => c.Datastore.SingleOrganizationDatastore.organizationName).getOrElse("")
 
   /* Note that this must stay in sync with the back-end constant
     compare https://github.com/scalableminds/webknossos/issues/5223 */

@@ -30,6 +30,7 @@ object InstallScript {
        |config_keys[key]=datastore.key
        |config_keys[name]=datastore.name
        |config_keys[webKnossos]=datastore.webKnossos.uri
+       |config_keys[single_org_datastore]=datastore.singleOrganizationDatastore.enabled
        |config_keys[org_name]=datastore.singleOrganizationDatastore.organizationName
        |config_keys[base_dir]=datastore.baseFolder
        |config_keys[key_store_path]=play.server.https.keyStore.path
@@ -45,6 +46,7 @@ object InstallScript {
        |config_values[key]=$key
        |config_values[name]=$name
        |config_values[webKnossos]=$webKnossosUrl
+       |config_values[single_org_datastore]="true"
        |config_values[org_name]=$organizationName
        |config_values[ephemeral_key_size]="2048"
        |config_values[reject_client_renegotiation]="true"

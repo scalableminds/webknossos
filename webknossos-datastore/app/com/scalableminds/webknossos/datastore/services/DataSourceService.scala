@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, FileWriter}
-import java.nio.file.{Files, Path, Paths}
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
@@ -10,11 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
-import com.scalableminds.webknossos.datastore.helpers.{
-  IntervalScheduler,
-  SingleOrganizationAdapter,
-  SingleOrganizationConfigAdapter
-}
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, SingleOrganizationConfigAdapter}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.typesafe.scalalogging.LazyLogging
@@ -24,6 +18,8 @@ import org.joda.time.format.ISODateTimeFormat
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
+import java.io.{File, FileWriter}
+import java.nio.file.{Files, Path, Paths}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.Source
@@ -59,7 +55,8 @@ class DataSourceService @Inject()(
     if (isSingleOrganizationDataStore) {
       for {
         _ <- Fox.successful(())
-        foundInboxSources = organizationNameAwareInboxSources(dataBaseDir, getSingleOrganizationName)
+        organizationName <- option2Fox(getSingleOrganizationName)
+        foundInboxSources = organizationNameAwareInboxSources(dataBaseDir, organizationName)
         _ = logFoundDatasources(foundInboxSources, verbose)
         _ <- dataSourceRepository.updateDataSources(foundInboxSources)
       } yield ()

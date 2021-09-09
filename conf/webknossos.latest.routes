@@ -90,6 +90,7 @@ POST          /datastores/:name/deleteErroneous                                c
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create
 POST          /userDatastores                                                  controllers.DataStoreController.createNewUserDataStore
+DELETE        /userDatastores                                                  controllers.DataStoreController.deleteUserDataStore(name: String)
 DELETE        /datastores/:name                                                controllers.DataStoreController.delete(name: String)
 PUT           /datastores/:name                                                controllers.DataStoreController.update(name: String)
 

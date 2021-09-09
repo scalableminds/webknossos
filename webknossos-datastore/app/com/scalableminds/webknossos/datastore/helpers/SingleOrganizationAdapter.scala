@@ -2,34 +2,45 @@ package com.scalableminds.webknossos.datastore.helpers
 
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSource
+import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.Path
 
-trait SingleOrganizationAdapter {
-  protected def singleOrganizationName: Option[String]
+trait SingleOrganizationAdapter extends LazyLogging {
+  protected def isSingleOrganizationDataStore: Boolean
+  protected def singleOrganizationName: String
 
   def resolveOrganizationFolderIfExists(path: Path, organizationName: String): Path =
-    singleOrganizationName match {
-      case Some(_) => path
-      case None    => path.resolve(organizationName)
+    if (isSingleOrganizationDataStore) {
+      path
+    } else {
+      path.resolve(organizationName)
     }
 
-  protected def isSingleOrganizationDataStore: Boolean =
-    singleOrganizationName.isDefined
-
-  // Previously check if datastore is single organization, otherwise no guarantees on name
-  protected def getSingleOrganizationName: String =
-    singleOrganizationName.getOrElse("")
+  protected def getSingleOrganizationName: Option[String] =
+    if (isSingleOrganizationDataStore)
+      assertNonEmptyName(singleOrganizationName)
+    else None
 
   protected def replaceDataSourceOrganizationIfNeeded(dataSource: DataSource): DataSource =
-    singleOrganizationName match {
-      case Some(_) => dataSource.copy(id = dataSource.id.copy(team = ""))
-      case None    => dataSource
+    if (isSingleOrganizationDataStore) {
+      dataSource.copy(id = dataSource.id.copy(team = ""))
+    } else {
+      dataSource
+    }
+
+  private def assertNonEmptyName(organizationName: String): Option[String] =
+    if (organizationName == "") {
+      logger.error("Config error: empty organization name. Please provide a non empty name")
+      None
+    } else {
+      Some(organizationName)
     }
 }
 
 trait SingleOrganizationConfigAdapter extends SingleOrganizationAdapter {
   protected def config: DataStoreConfig
 
-  val singleOrganizationName: Option[String] = config.Datastore.SingleOrganizationDatastore.organizationName
+  val singleOrganizationName: String = config.Datastore.SingleOrganizationDatastore.organizationName
+  val isSingleOrganizationDataStore: Boolean = config.Datastore.SingleOrganizationDatastore.enabled
 }

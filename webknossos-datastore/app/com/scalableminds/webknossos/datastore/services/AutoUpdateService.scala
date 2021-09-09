@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
+import com.scalableminds.util.tools.JsonHelper.getJsObjectFieldAsOptional
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -25,24 +26,19 @@ trait GithubReleaseChecker {
     for {
       // TODO migrate to webknossos repo once released
       jsObject <- rpc("https://api.github.com/repos/youri-k/ComparingUnrelatedTypesExample/releases/latest")
-        .addHeader("Accept" -> "application/vnd.github.v3+json")
+        .accepts("application/vnd.github.v3+json")
         .getWithJsonResponse[JsObject]
-      tag_name <- jsObject.value.get("tag_name").flatMap(_.validate[JsString].asOpt)
-      assets <- jsObject.value.get("assets").flatMap(_.validate[JsArray].asOpt)
+      tag_name <- getJsObjectFieldAsOptional[JsString](jsObject, "tag_name")
+      assets <- getJsObjectFieldAsOptional[JsArray](jsObject, "assets")
       assetObjects = assets.value.flatMap(_.validate[JsObject].asOpt).toList
     } yield (BuildInfo.ciTag != tag_name.value, assetObjects)
 
   def getUrlForFileEnding(assets: List[JsObject], fileEnding: String): String = {
-    for {
-      asset <- assets
-      name = asset.value.get("name").flatMap(_.validate[JsString].asOpt).map(_.value)
-      url = asset.value.get("url").flatMap(_.validate[JsString].asOpt).map(_.value)
-    } yield {
-      if (name.getOrElse("").endsWith(fileEnding) && url.getOrElse("") != "") {
-        return url.getOrElse("")
-      }
+    val asset = assets.find(a => getJsObjectFieldAsOptional[JsString](a, "name").exists(_.value.endsWith(fileEnding)))
+    asset match {
+      case Some(assetValue) => getJsObjectFieldAsOptional[JsString](assetValue, "url").map(_.value).getOrElse("")
+      case None             => ""
     }
-    ""
   }
 }
 

@@ -89,6 +89,10 @@ jobs:
           name: Assemble webknossos-datastore fat-jar (sbt)
           command: docker-compose run base sbt -no-colors "project webknossosDatastore" assembly
 
+      - run:
+          name: Upload webknossos-datastore artifacts
+          command: .circleci/upload_datastore_artifacts.sh
+
       - save_cache:
           name: Save target cache
           key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}

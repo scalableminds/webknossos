@@ -2,7 +2,8 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO, DataStoreService, UserDataStoreConfig}
 import net.liftweb.common.Empty
@@ -67,6 +68,18 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     }
   }
 
+  @ApiOperation(
+    value = """Create a new user datastore and get a custom install script to setup the datastore
+Expects:
+  - As JSON object body with keys:
+    - name (string): datastore name
+    - url (string): url, where the datastore is reachable
+    - port (string): port, where the datastore is reachable (usually 443 for HTTPS)""",
+    nickname = "userDatastoreCreation"
+  )
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "install script to setup the newly created datastore"),
+          new ApiResponse(code = 400, message = badRequestLabel)))
   def createNewUserDataStore: Action[UserDataStoreConfig] = sil.SecuredAction.async(validateJson[UserDataStoreConfig]) {
     implicit request =>
       val dataStore = request.body
@@ -79,6 +92,21 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
         case _ => Future.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
       }
   }
+
+  @ApiOperation(value = "Delete a user datastore", nickname = "userDatastoreDeletion")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "Empty body, datastore was removed"),
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def deleteUserDataStore(
+      @ApiParam(value = "Name of the datastore", required = true) name: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+        dataStore <- dataStoreDAO.findOneByName(name) ?~> "dataStore.notFound" ~> NOT_FOUND
+        _ <- bool2Fox(dataStore.onlyAllowedOrganization.contains(request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- dataStoreDAO.deleteOneByName(name) ?~> "dataStore.remove.failure"
+      } yield Ok
+    }
 
   @ApiOperation(hidden = true, value = "")
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

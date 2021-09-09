@@ -1,6 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.io.FileIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.GithubReleaseChecker
@@ -102,15 +103,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO,
       result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
 
-  def createNewUserDataStore(config: UserDataStoreConfig, organizationId: ObjectId): Fox[TemporaryFile] = {
-    def writeInstallScriptToFile(fileContent: String): TemporaryFile = {
-      val file = temporaryFileCreator.create()
-      val fw = new FileWriter(file)
-      fw.write(fileContent)
-      fw.close()
-      file
-    }
-
+  def createNewUserDataStore(config: UserDataStoreConfig, organizationId: ObjectId): Fox[TemporaryFile] =
     for {
       key <- new CompactRandomIDGenerator().generate
       organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
@@ -131,10 +124,10 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO,
                                                      conf.Http.uri,
                                                      updateScriptURL,
                                                      jarURL)
+      tmpFile = temporaryFileCreator.create()
+      _ <- FileIO.printToFile(tmpFile)(_.write(installScript))
+    } yield tmpFile
 
-    } yield writeInstallScriptToFile(installScript)
-
-  }
 }
 
 class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

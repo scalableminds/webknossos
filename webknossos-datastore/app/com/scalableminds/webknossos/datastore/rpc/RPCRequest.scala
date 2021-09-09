@@ -43,8 +43,8 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     this
   }
 
-  def addHeader(header: (String, String)) = {
-    request = request.addHttpHeaders(header)
+  def accepts(contentType: String): RPCRequest = {
+    request = request.addHttpHeaders(("Accept", contentType))
     this
   }
 

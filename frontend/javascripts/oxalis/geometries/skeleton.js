@@ -38,7 +38,7 @@ type BufferPosition = {
 
 type BufferCollection = {
   buffers: Array<Buffer>,
-  idToBufferPosition: Map<number, BufferPosition>,
+  idToBufferPosition: Map<string, BufferPosition>,
   freeList: Array<BufferPosition>,
   helper: BufferHelper,
   material: typeof THREE.Material,
@@ -218,7 +218,7 @@ class Skeleton {
    * @param updateBoundingSphere - toggle to update ThreeJS's internals
    * @param createFunc - callback(buffer, index) that actually creates a node / edge
    */
-  create(id: number, collection: BufferCollection, createFunc: BufferOperation) {
+  create(id: string, collection: BufferCollection, createFunc: BufferOperation) {
     let currentBuffer = collection.buffers[0];
     if (collection.freeList.length === 0 && currentBuffer.nextIndex >= currentBuffer.capacity) {
       currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.material, collection.helper);
@@ -242,7 +242,7 @@ class Skeleton {
    * @param collection - collection of all buffers
    * @param deleteFunc - callback(buffer, index) that actually deletes/invalidates a node / edge
    */
-  delete(id: number, collection: BufferCollection, deleteFunc: BufferOperation) {
+  delete(id: string, collection: BufferCollection, deleteFunc: BufferOperation) {
     const bufferPosition = collection.idToBufferPosition.get(id);
     if (bufferPosition != null) {
       const changedAttributes = deleteFunc(bufferPosition);
@@ -262,7 +262,7 @@ class Skeleton {
    * @param collection - collection of all buffers
    * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
    */
-  update(id: number, collection: BufferCollection, updateFunc: BufferOperation) {
+  update(id: string, collection: BufferCollection, updateFunc: BufferOperation) {
     const bufferPosition = collection.idToBufferPosition.get(id);
     if (bufferPosition != null) {
       const changedAttributes = updateFunc(bufferPosition);
@@ -431,8 +431,8 @@ class Skeleton {
    * Combined node/edge id and a treeId to a single unique id using recursive cantor pairings.
    * @param numbers - Array of node/edge id and treeId
    */
-  combineIds(...numbers: Array<number>) {
-    return numbers.reduce((acc, value) => 0.5 * (acc + value) * (acc + value + 1) + value);
+  combineIds(...numbers: Array<number>): string {
+    return numbers.join(",");
   }
 
   /**
@@ -513,7 +513,7 @@ class Skeleton {
 
     const edgePositionUpdater = (edge: Edge, isIngoingEdge: boolean) => {
       // The changed node is the target node of the edge which is saved
-      // after the source node in the buffer. THus we need an offset.
+      // after the source node in the buffer. Thus we need an offset.
       const indexOffset = isIngoingEdge ? 3 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {

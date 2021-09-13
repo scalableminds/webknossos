@@ -64,10 +64,6 @@ class DataCube {
   temporalBucketManager: TemporalBucketManager;
   isSegmentation: boolean;
   elementClass: ElementClass;
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-  on: Function;
-  off: Function;
   resolutionInfo: ResolutionInfo;
   layerName: string;
 
@@ -254,7 +250,6 @@ class DataCube {
 
   createBucket(address: Vector4): Bucket {
     const bucket = new DataBucket(this.elementClass, address, this.temporalBucketManager, this);
-    bucket.on("bucketLoaded", () => this.trigger("bucketLoaded", address));
     this.addBucketToGarbageCollection(bucket);
 
     const bucketIndex = this.getBucketIndex(address);
@@ -341,8 +336,6 @@ class DataCube {
         }
       }
     }
-
-    this.trigger("volumeLabeled");
   }
 
   labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
@@ -520,7 +513,6 @@ class DataCube {
 
   triggerPushQueue() {
     this.pushQueue.push();
-    this.trigger("volumeLabeled");
   }
 
   isZoomStepRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {

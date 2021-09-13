@@ -1385,7 +1385,6 @@ class DataApi {
     }
 
     segmentationLayer.cube.pushQueue.push();
-    segmentationLayer.cube.trigger("volumeLabeled");
   }
 
   /**

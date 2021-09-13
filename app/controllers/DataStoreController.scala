@@ -3,8 +3,10 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO, DataStoreService}
+import models.user.MultiUserDAO
 import net.liftweb.common.Empty
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
@@ -17,7 +19,8 @@ import scala.concurrent.{ExecutionContext, Future}
 @Api
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
-                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                                    sil: Silhouette[WkEnv],
+                                    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
@@ -70,7 +73,8 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
   @ApiOperation(hidden = true, value = "")
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+      multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+      _ <- bool2Fox(multiUser.isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
       _ <- dataStoreDAO.deleteOneByName(name) ?~> "dataStore.remove.failure"
     } yield Ok
   }

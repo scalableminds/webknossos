@@ -364,15 +364,15 @@ export class DataBucket {
     }
   }
 
-  push(): void {
-    switch (this.state) {
-      case BucketStateEnum.LOADED:
-        this.dirty = false;
-        break;
-      default:
-        this.unexpectedState();
-    }
-  }
+  // push(): void {
+  //   switch (this.state) {
+  //     case BucketStateEnum.LOADED:
+  //       this.dirty = false;
+  //       break;
+  //     default:
+  //       this.unexpectedState();
+  //   }
+  // }
 
   unexpectedState(): void {
     throw new Error(`Unexpected state: ${this.state}`);

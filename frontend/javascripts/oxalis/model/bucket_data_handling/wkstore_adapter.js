@@ -20,6 +20,7 @@ import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import window from "libs/window";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const byteArrayToLz4Base64 = createWorker(ByteArrayToLz4Base64Worker);
@@ -223,6 +224,7 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     // eslint-disable-next-line no-await-in-loop
     const compressedBase64 = await byteArrayToLz4Base64(byteArray);
     items.push(updateBucket(bucketInfo, compressedBase64));
+    bucket.markAsPushed();
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));
 }

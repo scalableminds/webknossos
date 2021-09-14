@@ -2,6 +2,7 @@
 import Maybe from "data.maybe";
 import update from "immutability-helper";
 
+import { getVolumeTracingOrFail } from "test/helpers/apiHelpers";
 import type { Tracing, VolumeTracing } from "oxalis/store";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -24,13 +25,6 @@ const volumeTracing = {
   contourList: [],
   lastCentroid: null,
 };
-
-export function getVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
-  if (tracing.volume != null) {
-    return Maybe.Just(tracing.volume);
-  }
-  throw new Error("Tracing is not of type volume!");
-}
 
 const notEmptyViewportRect = {
   top: 0,

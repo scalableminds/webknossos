@@ -97,6 +97,7 @@
     "test": "tools/test.sh test --timeout=30s",
     "test-verbose": "xvfb-run -s '-ac -screen 0 1280x1024x24' tools/test.sh test --timeout=60s --verbose",
     "test-only": "tools/test.sh test --timeout=30s",
+    "test-debug": "tools/test.sh test-debug",
     "test-watch": "tools/test.sh test --watch",
     "test-debug": "tools/test.sh test --debug",
     "test-prepare": "tools/test.sh prepare",
@@ -204,6 +205,9 @@
   "ava": {
     "files": [
       "./public/test-bundle/**/*.{js,jsx}"
+    ],
+    "ignoredByWatcher": [
+      "./binaryData/**/*.*"
     ],
     "require": [
       "./frontend/javascripts/test/_ava_polyfill_provider.js"

@@ -69,7 +69,7 @@ class PullQueue {
 
         if (bucket.type === "data" && bucket.needsRequest()) {
           batch.push(address);
-          bucket.pull();
+          bucket.markAsPulled();
         }
       }
 
@@ -139,7 +139,7 @@ class PullQueue {
       }
     } finally {
       this.batchCount--;
-      this.pull();
+      this.markAsPulled();
     }
   }
 

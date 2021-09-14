@@ -330,6 +330,9 @@ function* applyAndGetRevertingVolumeBatch(
     if (bucket.type === "null") {
       continue;
     }
+    // todo: getData might fail. getOrCreateData might be enough to fix this?
+    // but that would initiate another bucket fetch. how about using `setData`
+    // directly?
     const bucketData = bucket.getData();
     if (compressedBackendData != null) {
       // If the backend data for the bucket has been fetched in the meantime,

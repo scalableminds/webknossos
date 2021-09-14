@@ -104,6 +104,13 @@ const modelData = {
   },
 };
 
+export function getVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
+  if (tracing.volume != null) {
+    return Maybe.Just(tracing.volume);
+  }
+  throw new Error("Tracing is not of type volume!");
+}
+
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 
@@ -117,6 +124,7 @@ export function __setupOxalis(t, mode, apiVersion) {
     position: [1, 2, 3],
   };
   t.context.model = Model;
+  t.context.mocks = { Request };
 
   const webknossos = new OxalisApi(Model);
   const organizationName = "Connectomics Department";

@@ -26,7 +26,10 @@ import Constants, {
 import type { DimensionMap } from "oxalis/model/dimensions";
 import window from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  addBucketToUndoAction,
+  type MaybeBucketLoadedPromise,
+} from "oxalis/model/actions/volumetracing_actions";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -125,6 +128,7 @@ export class DataBucket {
   _fallbackBucket: ?Bucket;
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
+  maybeBucketLoadedPromise: MaybeBucketLoadedPromise;
 
   constructor(
     elementClass: ElementClass,
@@ -133,6 +137,7 @@ export class DataBucket {
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();
+    this.maybeBucketLoadedPromise = null;
 
     this.elementClass = elementClass;
     this.cube = cube;
@@ -255,18 +260,23 @@ export class DataBucket {
   }
 
   markAndAddBucketForUndo() {
+    console.log("markAndAddBucketForUndo");
     this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
+      console.log("markAndAddBucketForUndo add to undo batch");
       bucketsAlreadyInUndoState.add(this);
-      let maybeBucketLoadedPromise = null;
       const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
       if (triggeredBucketFetch) {
-        maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
-          this.once("bucketLoaded", resolve);
+        console.log("markAndAddBucketForUndo: attach fetch-promise");
+        this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
+          this.once("bucketLoaded", data => {
+            this.maybeBucketLoadedPromise = null;
+            resolve(data);
+          });
         });
       }
       Store.dispatch(
-        addBucketToUndoAction(this.zoomedAddress, dataClone, maybeBucketLoadedPromise),
+        addBucketToUndoAction(this.zoomedAddress, dataClone, this.maybeBucketLoadedPromise),
       );
     }
   }
@@ -316,7 +326,7 @@ export class DataBucket {
     return { data: this.getData(), triggeredBucketFetch };
   }
 
-  pull(): void {
+  markAsPulled(): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED:
         this.state = BucketStateEnum.REQUESTED;
@@ -364,15 +374,16 @@ export class DataBucket {
     }
   }
 
-  // push(): void {
-  //   switch (this.state) {
-  //     case BucketStateEnum.LOADED:
-  //       this.dirty = false;
-  //       break;
-  //     default:
-  //       this.unexpectedState();
-  //   }
-  // }
+  markAsPushed(): void {
+    console.log("markAsPushed");
+    switch (this.state) {
+      case BucketStateEnum.LOADED:
+        this.dirty = false;
+        break;
+      default:
+        this.unexpectedState();
+    }
+  }
 
   unexpectedState(): void {
     throw new Error(`Unexpected state: ${this.state}`);

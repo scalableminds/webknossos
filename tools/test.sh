@@ -10,6 +10,7 @@ fi
 
 cmd=$1
 shift;
+additionalParams=$@
 
 # Create test-bundle dir if it does not exist
 mkdir -p "$testBundlePath"
@@ -20,7 +21,7 @@ function prepare {
   pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
   # --copy-files will copy files that are present in the source dir but are not transpiled (e.g.: json files)
-  BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files
+  BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files $additionalParams
 }
 
 function ensureUpToDateTests {
@@ -41,11 +42,16 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.spec.js") "$@"
+  # export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "volumetracing_saga_integration.spec.js") "$@"
+
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava $(find "$testBundlePath" -name "volumetracing_saga_integration.spec.js") "$@"
+elif [ $cmd == "test-debug" ]
+then
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava debug --inspect $(find "$testBundlePath" -name "volumetracing_saga_integration.spec.js") "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
+  # export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
 elif [ $cmd == "test-screenshot" ]
 then
   ensureUpToDateTests

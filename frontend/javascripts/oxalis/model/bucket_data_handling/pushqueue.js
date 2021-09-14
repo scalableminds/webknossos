@@ -26,7 +26,7 @@ class PushQueue {
 
     const autoSaveFailureMessage = "Auto-Save failed!";
     this.taskQueue.on("failure", () => {
-      console.log("PushQueue failure");
+      console.error("PushQueue failure");
       if (document.body != null) {
         document.body.classList.add("save-error");
       }

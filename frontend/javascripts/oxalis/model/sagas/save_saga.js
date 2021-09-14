@@ -330,7 +330,8 @@ function* applyAndGetRevertingVolumeBatch(
     if (bucket.type === "null") {
       continue;
     }
-    // todo: getData might fail. getOrCreateData might be enough to fix this?
+    // Todo: See https://github.com/scalableminds/webknossos/issues/5729:
+    // getData might fail. getOrCreateData might be enough to fix this?
     // but that would initiate another bucket fetch. how about using `setData`
     // directly?
     const bucketData = bucket.getData();

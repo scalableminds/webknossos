@@ -90,7 +90,6 @@ test.serial("Brushing/Tracing with a new segment id should update the maxCellId"
   );
 
   const paintCenter = [0, 0, 0];
-  // const oldDataValue = await t.context.api.data.getDataValue("segmentation", paintCenter);
   const brushSize = 10;
 
   const newCellId = 2;

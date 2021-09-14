@@ -238,16 +238,3 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   const addresses = cube.buckets.map(b => b.zoomedAddress);
   t.deepEqual(addresses, [[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
 });
-
-test("Garbage Collection should not throw an exception if no bucket is collectable", t => {
-  const { cube } = t.context;
-  cube.MAXIMUM_BUCKET_COUNT = 3;
-  cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
-
-  cube.getOrCreateBucket([0, 0, 0, 0]).markAsPulled();
-  cube.getOrCreateBucket([1, 1, 1, 0]).markAsPulled();
-  cube.getOrCreateBucket([2, 2, 2, 0]).markAsPulled();
-
-  cube.getOrCreateBucket([3, 3, 3, 0]);
-  t.true(true);
-});

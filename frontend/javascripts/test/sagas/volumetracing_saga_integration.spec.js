@@ -258,11 +258,10 @@ test.serial(
 );
 
 async function testLabelingManyBuckets(t, saveInbetween) {
-  // We set MAXIMUM_BUCKET_COUNT_PER_LAYER to 75 and then label 100 buckets in total.
+  // We set MAXIMUM_BUCKET_COUNT to 75 and then label 100 buckets in total.
   // In between, we will save the data which allows the first 50 buckets to be GC'ed.
   // Therefore, saving the second 50 buckets should not cause any problems.
-  const originalValue = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
-  constants.MAXIMUM_BUCKET_COUNT_PER_LAYER = 75;
+  t.context.model.getCubeByLayerName("segmentation").MAXIMUM_BUCKET_COUNT = 75;
 
   const oldCellId = 11;
   const brushSize = 10;
@@ -305,5 +304,4 @@ async function testLabelingManyBuckets(t, saveInbetween) {
   }
 
   await t.context.api.tracing.save();
-  constants.MAXIMUM_BUCKET_COUNT_PER_LAYER = originalValue;
 }

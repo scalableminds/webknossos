@@ -39,15 +39,15 @@ function ensureUpToDateTests {
   fi
 }
 
+# For faster, local testing, you may want to remove the `nyc` part of the following statement.
+# Also, removing `istanbul` from .babelrc, allows to debug uninstrumented source code.
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  # export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "volumetracing_saga_integration.spec.js") "$@"
-
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava $(find "$testBundlePath" -name "volumetracing_saga_integration.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean --exclude binaryData ava $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-debug" ]
 then
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava debug --inspect $(find "$testBundlePath" -name "volumetracing_saga_integration.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test ava debug $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests

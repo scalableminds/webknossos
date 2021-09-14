@@ -7,7 +7,7 @@ import _ from "lodash";
 import "test/sagas/saga_integration.mock.js";
 import { __setupOxalis, getVolumeTracingOrFail } from "test/helpers/apiHelpers";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import constants, { OrthoViews } from "oxalis/constants";
+import { OrthoViews } from "oxalis/constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";

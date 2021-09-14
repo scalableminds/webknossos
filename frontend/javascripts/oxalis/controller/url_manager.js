@@ -1,7 +1,4 @@
-/**
- * url_manager.js
- * @flow
- */
+// @flow
 
 import _ from "lodash";
 
@@ -9,10 +6,10 @@ import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store, { type Tracing } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type ViewMode, ViewModeValues, type Vector3 } from "oxalis/constants";
-import window, { document, location } from "libs/window";
+import window, { location } from "libs/window";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
@@ -29,13 +26,13 @@ class UrlManager {
   initialState: UrlManagerState;
 
   initialize() {
-    this.baseUrl = document.location.pathname + document.location.search;
-    this.initialState = this.parseUrl();
+    this.baseUrl = location.pathname + location.search;
+    this.initialState = this.parseUrlHash();
   }
 
   reset(): void {
-    // don't use document.location.hash = ""; since it refreshes the page
-    window.history.replaceState({}, null, document.location.pathname + document.location.search);
+    // don't use location.hash = ""; since it refreshes the page
+    window.history.replaceState({}, null, location.pathname + location.search);
     this.initialize();
   }
 
@@ -47,19 +44,48 @@ class UrlManager {
   }
 
   onHashChange = () => {
-    const stateString = location.hash.slice(1);
-    if (stateString.includes("=")) {
-      // The hash was changed by a comment link, for example `activeNode=12`
-      const [key, value] = stateString.split("=");
-      // The value can either be a single number or multiple numbers delimited by a ,
-      applyState({ [key]: value.includes(",") ? value.split(",").map(Number) : Number(value) });
-    } else {
-      // The hash was changed by the user
-      applyState(this.parseUrl());
-    }
+    const urlState = this.parseUrlHash();
+    applyState(urlState);
   };
 
-  parseUrl(): UrlManagerState {
+  parseUrlHash(): UrlManagerState {
+    const stateString = location.hash.slice(1);
+    if (stateString.includes("{")) {
+      // The hash is in json format
+      return this.parseUrlHashJson();
+    } else if (stateString.includes("=")) {
+      // The hash was changed by a comment link
+      return this.parseUrlHashCommentLink();
+    } else {
+      // The hash is in legacy format
+      return this.parseUrlHashLegacy();
+    }
+  }
+
+  parseUrlHashCommentLink(): UrlManagerState {
+    // Comment link format:
+    // activeNode=12 or position=1,2,3
+
+    const stateString = location.hash.slice(1);
+    const [key, value] = stateString.split("=");
+    // The value can either be a single number or multiple numbers delimited by a ,
+    return { [key]: value.includes(",") ? value.split(",").map(Number) : Number(value) };
+  }
+
+  parseUrlHashJson(): UrlManagerState {
+    // State json format:
+    // { "position"?: Vector3, "mode"?: number, "zoomStep"?: number, "rotation"?: Vector3, "activeNode"?: number}
+
+    const stateString = location.hash.slice(1);
+    try {
+      return JSON.parse(stateString);
+    } catch (e) {
+      console.error(e);
+      return {};
+    }
+  }
+
+  parseUrlHashLegacy(): UrlManagerState {
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
@@ -103,28 +129,33 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  buildHash(tracing: Tracing) {
-    const position = V3.floor(getPosition(Store.getState().flycam));
-    const { viewMode } = Store.getState().temporaryConfiguration;
-    const viewModeIndex = ViewModeValues.indexOf(viewMode);
-    const zoomStep = Store.getState().flycam.zoomStep.toFixed(3);
-    const rotation = constants.MODES_ARBITRARY.includes(viewMode)
-      ? getRotation(Store.getState().flycam).map(e => e.toFixed(2))
-      : [];
+  buildUrlHash(state: OxalisState) {
+    const position = V3.floor(getPosition(state.flycam));
+    const { viewMode: mode } = state.temporaryConfiguration;
+    const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
+    const rotationOptional = constants.MODES_ARBITRARY.includes(mode)
+      ? { rotation: getRotation(state.flycam).map(e => Utils.roundTo(e, 2)) }
+      : {};
 
-    const activeNodeId = getSkeletonTracing(tracing)
+    const activeNodeOptional = getSkeletonTracing(state.tracing)
       .chain(skeletonTracing => getActiveNode(skeletonTracing))
-      .map(node => [node.id])
-      .getOrElse([]);
+      .map(node => ({ activeNode: node.id }))
+      .getOrElse({});
 
-    return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeId].join(",");
+    // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+    const urlState = { position, mode, zoomStep, ...rotationOptional, ...activeNodeOptional };
+
+    return JSON.stringify(urlState);
   }
 
   buildUrl(): string {
-    const { tracing } = Store.getState();
-
-    const hash = this.buildHash(tracing);
-    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.annotationType, tracing.annotationId);
+    const state = Store.getState();
+    const hash = this.buildUrlHash(state);
+    const newBaseUrl = updateTypeAndId(
+      this.baseUrl,
+      state.tracing.annotationType,
+      state.tracing.annotationId,
+    );
     return `${newBaseUrl}#${hash}`;
   }
 }

@@ -276,6 +276,9 @@ class DataCube {
       }
 
       if (!this.buckets[this.bucketIterator].shouldCollect()) {
+        if (process.env.BABEL_ENV === "test") {
+          throw new Error("Bucket was forcefully evicted/garbage-collected.");
+        }
         const errorMessage =
           "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.";
         console.error(errorMessage);

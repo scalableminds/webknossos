@@ -1,9 +1,7 @@
 // @flow
-import Maybe from "data.maybe";
 import update from "immutability-helper";
 
 import { getVolumeTracingOrFail } from "test/helpers/apiHelpers";
-import type { Tracing, VolumeTracing } from "oxalis/store";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";

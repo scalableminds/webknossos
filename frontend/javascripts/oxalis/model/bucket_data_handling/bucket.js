@@ -260,22 +260,23 @@ export class DataBucket {
   }
 
   markAndAddBucketForUndo() {
-    console.log("markAndAddBucketForUndo");
     this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
-      console.log("markAndAddBucketForUndo add to undo batch");
       bucketsAlreadyInUndoState.add(this);
       const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
       if (triggeredBucketFetch) {
-        console.log("markAndAddBucketForUndo: attach fetch-promise");
         this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
           this.once("bucketLoaded", data => {
+            // Once the bucket was loaded, maybeBucketLoadedPromise can be null'ed
             this.maybeBucketLoadedPromise = null;
             resolve(data);
           });
         });
       }
       Store.dispatch(
+        // Always use the current state of this.maybeBucketLoadedPromise, since
+        // this bucket could be added to multiple undo batches while it's fetched. All entries
+        // need to have the corresponding promise for the undo to work correctly.
         addBucketToUndoAction(this.zoomedAddress, dataClone, this.maybeBucketLoadedPromise),
       );
     }
@@ -375,7 +376,6 @@ export class DataBucket {
   }
 
   markAsPushed(): void {
-    console.log("markAsPushed");
     switch (this.state) {
       case BucketStateEnum.LOADED:
         this.dirty = false;

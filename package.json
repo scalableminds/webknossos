@@ -99,7 +99,6 @@
     "test-only": "tools/test.sh test --timeout=30s",
     "test-debug": "tools/test.sh test-debug",
     "test-watch": "tools/test.sh test --watch",
-    "test-debug": "tools/test.sh test --debug",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w --verbose",
     "test-e2e": "tools/postgres/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",

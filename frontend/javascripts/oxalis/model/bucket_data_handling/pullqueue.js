@@ -139,7 +139,7 @@ class PullQueue {
       }
     } finally {
       this.batchCount--;
-      this.markAsPulled();
+      this.pull();
     }
   }
 

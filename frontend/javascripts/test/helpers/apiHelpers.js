@@ -1,7 +1,9 @@
 // @noflow
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
+import Maybe from "data.maybe";
 
+import type { Tracing, VolumeTracing } from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import mockRequire from "mock-require";
 import sinon from "sinon";

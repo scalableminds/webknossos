@@ -36,6 +36,12 @@ export default function* rootSaga(): Saga<void> {
   }
 }
 
+let rootSagaCrashed = false;
+
+export function hasRootSagaCrashed() {
+  return rootSagaCrashed;
+}
+
 function* restartableSaga(): Saga<void> {
   try {
     yield _all([
@@ -59,13 +65,16 @@ function* restartableSaga(): Saga<void> {
       _call(watchMaximumRenderableLayers),
     ]);
   } catch (err) {
+    rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
-    ErrorHandling.notify(err, {});
-    toggleErrorHighlighting(true);
-    alert(`\
+    if (process.env.BABEL_ENV !== "test") {
+      ErrorHandling.notify(err, {});
+      toggleErrorHighlighting(true);
+      alert(`\
 Internal error.
 Please reload the page to avoid losing data.
 
 ${JSON.stringify(err)} ${err.stack || ""}`);
+    }
   }
 }

@@ -203,9 +203,11 @@ test.serial(
 test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
   const data = new Uint8Array(2);
   const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube);
-  bucket1.data = data;
+  bucket1.markAsPulled();
+  bucket1.receiveData(data);
   const bucket2 = new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube);
-  bucket2.data = data;
+  bucket2.markAsPulled();
+  bucket2.receiveData(data);
   const batch = [bucket1, bucket2];
 
   const getBucketData = sinon.stub();

@@ -10,6 +10,9 @@ import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type ViewMode, ViewModeValues, type Vector3 } from "oxalis/constants";
 import window, { location } from "libs/window";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import messages from "messages";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
@@ -49,51 +52,50 @@ class UrlManager {
   };
 
   parseUrlHash(): UrlManagerState {
-    const stateString = location.hash.slice(1);
-    if (stateString.includes("{")) {
+    const urlHash = decodeURIComponent(location.hash.slice(1));
+    if (urlHash.includes("{")) {
       // The hash is in json format
-      return this.parseUrlHashJson();
-    } else if (stateString.includes("=")) {
+      return this.parseUrlHashJson(urlHash);
+    } else if (urlHash.includes("=")) {
       // The hash was changed by a comment link
-      return this.parseUrlHashCommentLink();
+      return this.parseUrlHashCommentLink(urlHash);
     } else {
       // The hash is in legacy format
-      return this.parseUrlHashLegacy();
+      return this.parseUrlHashLegacy(urlHash);
     }
   }
 
-  parseUrlHashCommentLink(): UrlManagerState {
+  parseUrlHashCommentLink(urlHash: string): UrlManagerState {
     // Comment link format:
     // activeNode=12 or position=1,2,3
 
-    const stateString = location.hash.slice(1);
-    const [key, value] = stateString.split("=");
+    const [key, value] = urlHash.split("=");
     // The value can either be a single number or multiple numbers delimited by a ,
     return { [key]: value.includes(",") ? value.split(",").map(Number) : Number(value) };
   }
 
-  parseUrlHashJson(): UrlManagerState {
+  parseUrlHashJson(urlHash: string): UrlManagerState {
     // State json format:
     // { "position"?: Vector3, "mode"?: number, "zoomStep"?: number, "rotation"?: Vector3, "activeNode"?: number}
 
-    const stateString = location.hash.slice(1);
     try {
-      return JSON.parse(stateString);
+      return JSON.parse(urlHash);
     } catch (e) {
+      Toast.error(messages["tracing.invalid_json_url_hash"]);
       console.error(e);
+      ErrorHandling.notify(e);
       return {};
     }
   }
 
-  parseUrlHashLegacy(): UrlManagerState {
+  parseUrlHashLegacy(urlHash: string): UrlManagerState {
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
-    const stateString = location.hash.slice(1);
     const state: UrlManagerState = {};
 
-    if (stateString) {
-      const stateArray = stateString.split(",").map(Number);
+    if (urlHash) {
+      const stateArray = urlHash.split(",").map(Number);
       const validStateArray = stateArray.map(value => (!isNaN(value) ? value : 0));
       if (validStateArray.length >= 5) {
         const positionValues = validStateArray.slice(0, 3);
@@ -145,7 +147,7 @@ class UrlManager {
     // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
     const urlState = { position, mode, zoomStep, ...rotationOptional, ...activeNodeOptional };
 
-    return JSON.stringify(urlState);
+    return encodeURIComponent(JSON.stringify(urlState));
   }
 
   buildUrl(): string {

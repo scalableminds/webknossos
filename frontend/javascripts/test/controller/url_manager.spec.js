@@ -27,7 +27,7 @@ test("UrlManager should replace tracing in url", t => {
   );
 });
 
-test("UrlManager should parse full legacy location hash", t => {
+test("UrlManager should parse full legacy url hash", t => {
   const state = {
     position: [555, 278, 482],
     mode: "flight",
@@ -47,7 +47,7 @@ test("UrlManager should parse full legacy location hash", t => {
   t.deepEqual(UrlManager.parseUrlHash(), state);
 });
 
-test("UrlManager should parse legacy location hash without optional values", t => {
+test("UrlManager should parse legacy url hash without optional values", t => {
   const state = {
     position: [555, 278, 482],
     mode: "flight",
@@ -87,7 +87,7 @@ test("UrlManager should parse legacy location hash without optional values", t =
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutOptionalValues);
 });
 
-test("UrlManager should parse location hash with comment links", t => {
+test("UrlManager should parse url hash with comment links", t => {
   const state = {
     position: [555, 278, 482],
     activeNode: 2,
@@ -100,7 +100,7 @@ test("UrlManager should parse location hash with comment links", t => {
   }
 });
 
-test("UrlManager should parse json location hash", t => {
+test("UrlManager should parse json url hash", t => {
   const state = {
     position: [555, 278, 482],
     mode: "flight",
@@ -109,12 +109,12 @@ test("UrlManager should parse json location hash", t => {
     activeNode: 2,
   };
 
-  location.hash = `#${JSON.stringify(state)}`;
+  location.hash = `#${encodeURIComponent(JSON.stringify(state))}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), state);
 });
 
-test("UrlManager should parse incomplete json location hash", t => {
+test("UrlManager should parse incomplete json url hash", t => {
   const state = {
     position: [555, 278, 482],
     mode: "flight",
@@ -125,18 +125,18 @@ test("UrlManager should parse incomplete json location hash", t => {
 
   const { rotation, ...stateWithoutRotation } = state;
 
-  location.hash = `#${JSON.stringify(stateWithoutRotation)}`;
+  location.hash = `#${encodeURIComponent(JSON.stringify(stateWithoutRotation))}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation);
 
   const { activeNode, ...stateWithoutActiveNode } = state;
 
-  location.hash = `#${JSON.stringify(stateWithoutActiveNode)}`;
+  location.hash = `#${encodeURIComponent(JSON.stringify(stateWithoutActiveNode))}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutActiveNode);
 });
 
-test("UrlManager should build json location hash and parse it again", t => {
+test("UrlManager should build json url hash and parse it again", t => {
   const mode = Constants.MODE_ARBITRARY;
   const urlState = {
     position: [0, 0, 0],

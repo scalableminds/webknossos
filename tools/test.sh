@@ -50,7 +50,7 @@ then
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  # export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial -C 1 "$@"
 elif [ $cmd == "test-screenshot" ]
 then
   ensureUpToDateTests

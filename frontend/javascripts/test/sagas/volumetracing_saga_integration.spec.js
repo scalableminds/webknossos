@@ -84,7 +84,7 @@ test.serial(
   },
 );
 
-test.serial("Brushing/Tracing with a new segment id should update the maxCellId", async t => {
+test.serial("Brushing/Tracing with a new segment id should update the bucket data", async t => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
     Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
   );
@@ -116,6 +116,14 @@ test.serial("Brushing/Tracing with a new segment id should update the maxCellId"
   t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0]), 0);
   t.is(await t.context.api.data.getDataValue("segmentation", [0, 5, 0]), 0);
   t.is(await t.context.api.data.getDataValue("segmentation", [0, 0, 1]), 0);
+
+  t.snapshot(
+    await t.context.api.data.getDataFor2DBoundingBox("segmentation", {
+      min: [0, 0, 0],
+      max: [32, 32, 32],
+    }),
+    { id: "volumetracing_brush_without_fallback_data" },
+  );
 });
 
 test.serial("Brushing/Tracing with already existing backend data", async t => {
@@ -153,6 +161,14 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
   t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0]), oldCellId);
   t.is(await t.context.api.data.getDataValue("segmentation", [0, 5, 0]), oldCellId);
   t.is(await t.context.api.data.getDataValue("segmentation", [0, 0, 1]), oldCellId);
+
+  t.snapshot(
+    await t.context.api.data.getDataFor2DBoundingBox("segmentation", {
+      min: [0, 0, 0],
+      max: [32, 32, 32],
+    }),
+    { id: "volumetracing_brush_with_fallback_data" },
+  );
 });
 
 test.serial("Brushing/Tracing with undo (I)", async t => {
@@ -239,7 +255,8 @@ test.serial(
     // This test provokes that webKnossos crashes (a hard crash is only done during testing; in dev/prod
     // a soft warning is emitted via the devtools).
     // The corresponding sibling test checks that saving inbetween does not make webKnossos crash.
-    t.plan(1);
+    t.plan(2);
+    t.false(hasRootSagaCrashed());
     const failedSagaPromise = waitForCondition(hasRootSagaCrashed, 500);
     await Promise.race([testLabelingManyBuckets(t, false), failedSagaPromise]);
     t.true(hasRootSagaCrashed());
@@ -249,10 +266,10 @@ test.serial(
 test.serial(
   "Brushing/Tracing should send buckets to backend and restore dirty flag afterwards",
   async t => {
-    t.plan(1);
+    t.plan(2);
+    t.false(hasRootSagaCrashed());
     await testLabelingManyBuckets(t, true);
-    // If nothing crashed, the test was successful.
-    t.true(true);
+    t.false(hasRootSagaCrashed());
   },
 );
 

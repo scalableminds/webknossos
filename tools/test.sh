@@ -11,15 +11,6 @@ fi
 cmd=$1
 shift;
 
-# Pass params to prepare, but omit potential --timeout
-# parameters as babel does not accept these.
-additionalParamsWithoutTimeout=( )
-for arg in $@; do
-  shift
-  [ "${arg:0:9}" = "--timeout" ] && continue
-  additionalParamsWithoutTimeout+=("$arg")
-done
-
 # Create test-bundle dir if it does not exist
 mkdir -p "$testBundlePath"
 
@@ -29,7 +20,7 @@ function prepare {
   pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
   # --copy-files will copy files that are present in the source dir but are not transpiled (e.g.: json files)
-  BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files $additionalParamsWithoutTimeout
+  BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files "$@"
 }
 
 function ensureUpToDateTests {

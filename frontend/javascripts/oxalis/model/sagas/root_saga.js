@@ -28,15 +28,15 @@ import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import loadHistogramData from "oxalis/model/sagas/load_histogram_data_saga";
 
+let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
   while (true) {
+    rootSagaCrashed = false;
     const task = yield* fork(restartableSaga);
     yield* take("RESTART_SAGA");
     yield _cancel(task);
   }
 }
-
-let rootSagaCrashed = false;
 
 export function hasRootSagaCrashed() {
   return rootSagaCrashed;

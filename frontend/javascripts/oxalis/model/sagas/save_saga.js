@@ -6,6 +6,7 @@
 import { type Saga, type Task } from "redux-saga";
 import Maybe from "data.maybe";
 
+import type { Action } from "oxalis/model/actions/actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   PUSH_THROTTLE_TIME,
@@ -14,8 +15,25 @@ import {
   UNDO_HISTORY_SIZE,
   maximumActionCountPerSave,
 } from "oxalis/model/sagas/save_saga_constants";
+import {
+  SkeletonTracingSaveRelevantActions,
+  type SkeletonTracingAction,
+  setTracingAction,
+  centerActiveNodeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry, CameraData } from "oxalis/store";
+import {
+  type UndoAction,
+  type RedoAction,
+  shiftSaveQueueAction,
+  setSaveBusyAction,
+  setLastSaveTimestampAction,
+  pushSaveQueueTransaction,
+  setVersionNumberAction,
+} from "oxalis/model/actions/save_actions";
 import { type UpdateAction, updateTdCamera } from "oxalis/model/sagas/update_actions";
+import type { Vector4 } from "oxalis/constants";
+import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
 import {
   VolumeTracingSaveRelevantActions,
   type AddBucketToUndoAction,
@@ -37,41 +55,26 @@ import {
   fork,
 } from "oxalis/model/sagas/effect-generators";
 import {
-  SkeletonTracingSaveRelevantActions,
-  type SkeletonTracingAction,
-  setTracingAction,
-  centerActiveNodeAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
-import type { Action } from "oxalis/model/actions/actions";
+  bucketsAlreadyInUndoState,
+  type BucketDataArray,
+} from "oxalis/model/bucket_data_handling/bucket";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { doWithToken } from "admin/admin_rest_api";
-import {
-  type UndoAction,
-  type RedoAction,
-  shiftSaveQueueAction,
-  setSaveBusyAction,
-  setLastSaveTimestampAction,
-  pushSaveQueueTransaction,
-  setVersionNumberAction,
-} from "oxalis/model/actions/save_actions";
-import Model from "oxalis/model";
+import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/accessors/dataset_accessor";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import Date from "libs/date";
+import ErrorHandling from "libs/error_handling";
+import Model from "oxalis/model";
 import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
+import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
-import ErrorHandling from "libs/error_handling";
-import type { Vector4 } from "oxalis/constants";
-import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
-import {
-  bucketsAlreadyInUndoState,
-  type BucketDataArray,
-} from "oxalis/model/bucket_data_handling/bucket";
+
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const byteArrayToLz4Array = createWorker(compressLz4Block);
@@ -484,6 +487,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
       yield* put(setLastSaveTimestampAction(tracingType));
       yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
+      yield* call(markBucketsAsNotDirty, compactedSaveQueue);
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {
@@ -513,6 +517,34 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         forcePush: _take("SAVE_NOW"),
       });
       retryCount++;
+    }
+  }
+}
+
+function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
+  const segmentationLayer = Model.getSegmentationTracingLayer();
+  const dataset = yield* select(state => state.dataset);
+  const segmentationResolutionInfo = getResolutionInfoOfSegmentationTracingLayer(dataset);
+  if (segmentationLayer != null) {
+    for (const saveEntry of saveQueue) {
+      for (const updateAction of saveEntry.actions) {
+        if (updateAction.name === "updateBucket") {
+          const { position, zoomStep } = updateAction.value;
+          const zoomedBucketAddress = globalPositionToBucketPosition(
+            position,
+            segmentationResolutionInfo.getDenseResolutions(),
+            zoomStep,
+          );
+          const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
+          if (bucket.type === "null") {
+            continue;
+          }
+          bucket.dirtyCount--;
+          if (bucket.dirtyCount === 0) {
+            bucket.markAsPushed();
+          }
+        }
+      }
     }
   }
 }

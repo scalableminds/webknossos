@@ -117,6 +117,7 @@ export class DataBucket {
   elementClass: ElementClass;
   visualizedMesh: ?Object;
   visualizationColor: number;
+  dirtyCount: number = 0;
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -186,7 +187,11 @@ export class DataBucket {
   }
 
   shouldCollect(): boolean {
-    const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
+    const collect =
+      !this.accessed &&
+      !this.dirty &&
+      this.state !== BucketStateEnum.REQUESTED &&
+      this.dirtyCount === 0;
     return collect;
   }
 
@@ -378,7 +383,6 @@ export class DataBucket {
   markAsPushed(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
-        // todo
         this.dirty = false;
         break;
       default:

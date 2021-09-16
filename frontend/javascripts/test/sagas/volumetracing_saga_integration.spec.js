@@ -268,7 +268,8 @@ test.serial(
   async t => {
     t.plan(2);
     t.false(hasRootSagaCrashed());
-    await testLabelingManyBuckets(t, true);
+    const failedSagaPromise = waitForCondition(hasRootSagaCrashed, 500);
+    await Promise.race([testLabelingManyBuckets(t, true), failedSagaPromise]);
     t.false(hasRootSagaCrashed());
   },
 );

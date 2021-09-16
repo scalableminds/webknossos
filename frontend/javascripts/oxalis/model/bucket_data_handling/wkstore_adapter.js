@@ -224,7 +224,6 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     // eslint-disable-next-line no-await-in-loop
     const compressedBase64 = await byteArrayToLz4Base64(byteArray);
     items.push(updateBucket(bucketInfo, compressedBase64));
-    bucket.markAsPushed();
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));
 }

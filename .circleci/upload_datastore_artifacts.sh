@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
-if [[ -n $CIRCLE_TAG ]]; then
+if [[ -n "$CIRCLE_TAG" ]]; then
   GITHUB_TOKEN=ToDo
   JAR_FILE=webknossos-datastore/target/scala-2.12/webknossos-datastore-dev.jar
   SCRIPT_FILE=tools/auto_update/run.sh

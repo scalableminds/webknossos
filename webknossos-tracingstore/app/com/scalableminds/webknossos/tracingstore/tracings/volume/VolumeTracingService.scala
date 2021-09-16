@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io._
-import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}

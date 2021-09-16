@@ -9,19 +9,23 @@ object InstallScript {
                        webKnossosUrl: String,
                        updateScriptURL: String,
                        jarURL: String): String =
-    s"""#!/bin/bash
+    s"""#!/usr/bin/env bash
        |set -euo pipefail
        |
        |retry() {
-       |	read variable
+       |	read -r variable
        |
-       |	if $$(eval $$1); then
-       |		echo "$$2" >$$(tty)
-       |		echo "Please try again!" >$$(tty)
+       |	if eval "eval $$1"; then
+       |		echo "$$2" ">$$(tty)"
+       |		echo "Please try again!" ">$$(tty)"
        |		retry "$$1" "$$2"
        |	else
-       |		echo $$variable
+       |		echo "$$variable"
        |	fi
+       |}
+       |
+       |make_file_path_absolute() {
+       |  echo "$$(cd "$$(dirname "$$1")"; pwd)/$$(basename "$$1")"
        |}
        |
        |declare -A config_keys
@@ -54,20 +58,22 @@ object InstallScript {
        |update_script=$updateScriptURL
        |jar=$jarURL
        |
-       |echo "This script helps you to install a webKnossos Datastore on your machine. In the progress some commands may need root permissions, but these are not required."
+       |echo "This script helps you to install a webKnossos datastore on your machine. In the progress some commands may need root permissions, but these are not required. If you have to abort the installation, you can simply restart process and all necessary files will be overwritten."
        |
-       |echo "Please enter the installation path and press [ENTER] or simply press [ENTER] if the Datastore should be installed in the current directory: "
+       |echo "Please enter the installation path and press [ENTER] or simply press [ENTER] if the datastore should be installed in the current directory: "
        |
        |install_path=$$(retry "[[ !(-z \\$$variable) && !(-d \\$$variable) ]]" "The provided installation path does not exist or is not a directory.")
        |
        |if [[ -z $$install_path ]]; then
        |	install_path="$$(pwd)"
+       |else
+       | install_path=$$(make_file_path_absolute "$$install_path")
        |fi
        |
        |echo "Downloading the necessary files..."
-       |curl -L -H "Accept: application/octet-stream" -o webknossos.jar $$jar
-       |curl -L -H "Accept: application/octet-stream" -o run.sh $$update_script
-       |chmod +x run.sh
+       |curl -L -H "Accept: application/octet-stream" -o "$$install_path/webknossos-datastore.jar" $$jar
+       |curl -L -H "Accept: application/octet-stream" -o "$$install_path/run.sh" $$update_script
+       |chmod +x "$$install_path/run.sh"
        |
        |echo "Downloaded all necessary files."
        |
@@ -77,8 +83,8 @@ object InstallScript {
        |
        |config_values[base_dir]=$$base_dir
        |
-       |echo "webKnossos checks your file system periodically to discover new datasets. If you wish to disable this function, please type [n]. Otherwise, just press [ENTER]."
-       |read -n 1 disableFileSystemWatching
+       |echo "The webKnossos datastore checks your file system periodically to discover new datasets. If you wish to disable this function, please type [n]. Otherwise, just press [ENTER]."
+       |read -r -n 1 disableFileSystemWatching
        |echo
        |
        |if [[ $$disableFileSystemWatching == "n" ]]; then
@@ -88,7 +94,7 @@ object InstallScript {
        |fi
        |
        |echo "To use your own webKnossos datastore, it must support HTTPS when communicating with the webKnossos server. There are multiple ways to implement this."
-       |echo "Please note that you have to renew the certificate, when not using option 3."
+       |echo "Option 3 will guide you to retrieve a SSL certificate and automatically renew the certificate for you. However, this option requires root permissions. Please note that you have renew the certificate by yourself when not using option 3."
        |echo "1. You use your own proxy, e.g. nginx."
        |echo "2. You already setup HTTPS for your machine"
        |echo "3. You have not setup HTTPS yet."
@@ -97,76 +103,74 @@ object InstallScript {
        |https_option=$$(retry "[[ !(\\$$variable == 1 || \\$$variable == 2 || \\$$variable == 3) ]]" "Unknown option")
        |
        |if [[ $$https_option == "1" ]]; then
-       |	echo "Please update your webKnossos config accordingly. You will need to change the HTTP configuration, namely the URI and the PORT."
+       |	echo "Please update your webKnossos datastore config accordingly. You will need to change the HTTP configuration, namely the URI and the PORT."
        |	config_values[uri]="CHANGE_ME"
        |	config_values[port]="CHANGE_ME"
        |elif [[ $$https_option == "2" ]]; then
        |	echo "To enable the datastore to use your HTTPS configuration, it needs access to your key store and the corresponding password. You can enter these values now, but also change them later in the my-datastore.conf file."
        |	echo "Please enter the path to the key store and press [ENTER]."
        |	key_store_path=$$(retry "[[ !(-f \\$$variable) ]]" "The provided key store path does not exist or is not a file.")
+       |  key_store_path=$$(make_file_path_absolute "$$key_store_path")
        |	config_values[key_store_path]=$$key_store_path
        |
        |	echo "Please enter the password for the key store and press [ENTER]."
-       |	read key_store_password
+       |	read -r key_store_password
        |	config_values[key_store_password]=$$key_store_password
        |
        |elif [[ $$https_option == "3" ]]; then
        |	echo "Setting up HTTPS requires a few steps. First of all, we need to install some packages. These include socat, keytool, openssl, curl."
        |	echo "Do you wish to attempt to install these packages automatically? Type [y] or [n]. Please note that this script tries to use apt to install the packages. If that does not work, please install the packages by yourself and proceed afterwards."
-       |	read -n 1 auto_install
+       |	read -r -n 1 auto_install
        |	echo
        |
        |	if [[ $$auto_install == "y" ]]; then
        |		sudo apt install socat openssl curl
-       |	elif [[ $$auto_install == "n" ]]; then
-       |		echo "Please press [ENTER] after installing all of the required packages."
-       |		read auto_install
        |	else
-       |		echo "Unknown option. Exiting..."
-       |		exit 1
+       |		echo "Please press [ENTER] after installing all of the required packages."
+       |		read -r auto_install
        |	fi
        |
        |	echo "Next, we need to tie your URL to a valid e-mail address to get a SSL certificate. Please provide a email address and press [ENTER]."
        |	email=$$(retry "[[ -z \\$$variable ]]" "Empty email is not allowed.")
        |
-       |	curl https://get.acme.sh | sh -s email=$$email
+       |	curl https://get.acme.sh | sudo sh -s email="$$email"
        |
-       |	sanitised_uri=$$(echo $${config_values[uri]} | cut -d "/" -f 3)
+       |	sanitised_uri=$$(echo "$${config_values[uri]}" | cut -d "/" -f 3)
        |	password=$$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20 ; echo '')
        |
-       |	touch renew_certificate.sh
-       |	rm renew_certificate.sh
+       |	touch "$$install_path/renew_certificate.sh"
+       |	rm "$$install_path/renew_certificate.sh"
        |
-       |	echo "openssl pkcs12 -export -in ~/.acme.sh/$$sanitised_uri/fullchain.cer -inkey ~/.acme.sh/$$sanitised_uri/$$sanitised_uri.key -out $$(pwd)/cert_and_key.p12 -CAfile ~/.acme.sh/$$sanitised_uri/ca.cer -caname root -passout pass:test" >> renew_certificate.sh
-       |	echo "keytool -importkeystore -destkeystore $$(pwd)/wKKeyStore.jks -srckeystore $$(pwd)/cert_and_key.p12 -srcstoretype PKCS12 -srcstorepass test -deststorepass $$password -noprompt" >> renew_certificate.sh
-       |	echo "rm cert_and_key.p12" >> renew_certificate.sh
-       |	chmod +x renew_certificate.sh
+       |	echo "openssl pkcs12 -export -in ~/.acme.sh/$$sanitised_uri/fullchain.cer -inkey ~/.acme.sh/$$sanitised_uri/$$sanitised_uri.key -out $$install_path/cert_and_key.p12 -CAfile ~/.acme.sh/$$sanitised_uri/ca.cer -caname root -passout pass:test" >> "$$install_path/renew_certificate.sh"
+       |	echo "keytool -importkeystore -destkeystore $$install_path/wKKeyStore.jks -srckeystore $$install_path/cert_and_key.p12 -srcstoretype PKCS12 -srcstorepass test -deststorepass $$password -noprompt" >> "$$install_path/renew_certificate.sh"
+       |	echo "rm $$install_path/cert_and_key.p12" >> "$$install_path/renew_certificate.sh"
+       |	chmod +x "$$install_path/renew_certificate.sh"
        |
-       |	~/.acme.sh/acme.sh --issue -d $$sanitised_uri --standalone --reloadcmd "$$(pwd)/renew_certificate.sh"
+       |	sudo ~/.acme.sh/acme.sh --issue -d "$$sanitised_uri" --standalone --reloadcmd "$$install_path/renew_certificate.sh"
        |
-       |	config_values[key_store_path]=wKKeyStore.jks
+       |	config_values[key_store_path]=$$install_path/wKKeyStore.jks
        |	config_values[key_store_password]=$$password
        |fi
        |
        |echo "In case the HTTPS setup fails, you can always change the play.server.https.keyStore values in the my-datastore.conf file. If you need more information regarding the HTTPS setup, please consult the documentation."
        |
        |echo "Generating config file"
-       |touch my-datastore.conf
-       |rm my-datastore.conf
+       |touch "$$install_path/my-datastore.conf"
+       |rm "$$install_path/my-datastore.conf"
        |
-       |echo "include \\"/standalone-datastore.conf\\"" >> my-datastore.conf
+       |echo "include \\"/standalone-datastore.conf\\"" >> "$$install_path/my-datastore.conf"
        |
        |for i in "$${!config_values[@]}"
        |do
-       |	echo "$${config_keys[$$i]} = \\"$${config_values[$$i]}\\"" >> my-datastore.conf
+       |	echo "$${config_keys[$$i]} = \\"$${config_values[$$i]}\\"" >> "$$install_path/my-datastore.conf"
        |done
        |
        |echo "Generated config file"
        |
-       |echo "Additionally, webKnossos can be installed as a systemd service. This allows startup on boot and restarts on failure. To configure the service, you'll need root privileges."
-       |echo "Do you want to install webKnossos as a systemd service? Type [y] or [n]"
+       |echo "Additionally, the webKnossos datastore can be installed as a systemd service. This allows startup on boot and restarts on failure. To configure the service, you'll need root privileges."
+       |echo "Do you want to install the webKnossos datastore as a systemd service? Type [y] or [n]"
        |
-       |read -n 1 install_service
+       |read -r -n 1 install_service
        |echo
        |
        |if [[ $$install_service == "y" ]]; then
@@ -188,7 +192,7 @@ object InstallScript {
        |WantedBy=multi-user.target
        |"
        |
-       |	echo $$service_file_definition > webknossos-datastore.service
+       |	echo "$$service_file_definition" > webknossos-datastore.service
        |	chmod 640 webknossos-datastore.service
        |	sudo chown root webknossos-datastore.service
        |	sudo chgrp root webknossos-datastore.service
@@ -196,7 +200,7 @@ object InstallScript {
        |	sudo systemctl daemon-reload
        |
        |	echo "Do you wish to enable startup on boot? Type [y] or [n]"
-       |	read -n 1 startup_on_boot
+       |	read -r -n 1 startup_on_boot
        |	echo
        |
        |	if [[ $$startup_on_boot == "y" ]]; then
@@ -204,7 +208,7 @@ object InstallScript {
        |	fi
        |
        |	echo "Do you wish to start the service now? You can always start the service later by calling \"sudo systemctl start webknossos-datastore.service\". Type [y] or [n]"
-       |	read -n 1 start_now
+       |	read -r -n 1 start_now
        |	echo
        |
        |	if [[ $$start_now == "y" ]]; then
@@ -215,6 +219,7 @@ object InstallScript {
        |
        |fi
        |
-       |echo "Install completed! Have fun using your own webKnossos datastore."
+       |echo "Installation completed! Your own webKnossos datastore is now ready to use. In case you experience any problems, please contact hello@webknossos.org."
+       |echo "If you are not using the datastore as a service, simply execute the run.sh to start it."
        |""".stripMargin
 }

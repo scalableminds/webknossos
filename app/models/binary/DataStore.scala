@@ -8,8 +8,6 @@ import com.scalableminds.webknossos.datastore.services.GithubReleaseChecker
 import com.scalableminds.webknossos.schema.Tables._
 import models.organization.OrganizationDAO
 import oxalis.security.CompactRandomIDGenerator
-
-import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.{Format, JsObject, Json}
@@ -18,7 +16,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
-import java.io.{FileWriter, PrintWriter}
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 case class UserDataStoreConfig(name: String, url: String, port: String)

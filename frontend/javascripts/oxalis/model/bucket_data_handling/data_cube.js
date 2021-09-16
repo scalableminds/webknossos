@@ -15,7 +15,7 @@ import {
   NullBucket,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
-import { VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
+import { VoxelNeighborStack3D } from "oxalis/model/volumetracing/volumelayer";
 import {
   getResolutions,
   ResolutionInfo,
@@ -37,6 +37,7 @@ import constants, {
   type Vector4,
   type BoundingBoxType,
   type LabeledVoxelsMap,
+  type LabelMasksByBucketAndW,
 } from "oxalis/constants";
 import { type ElementClass } from "types/api_flow_types";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
@@ -391,14 +392,15 @@ class DataCube {
   }
 
   floodFill(
-    seedVoxel: Vector3,
+    globalSeedVoxel: Vector3,
     cellId: number,
-    get3DAddress: Vector2 => Vector3,
-    get2DAddress: Vector3 => Vector2,
+    get3DAddress: Vector3 => Vector3,
+    get2DAddress: Vector3 => Vector3,
     dimensionIndices: DimensionMap,
     viewportBoundings: BoundingBoxType,
     zoomStep: number,
-  ): ?LabeledVoxelsMap {
+    // todo: returns LabeledVoxelsMap which only holds 2D slices without 3rd dim
+  ): ?LabelMasksByBucketAndW {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
     // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
@@ -409,8 +411,8 @@ class DataCube {
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
-    const bucketsWithLabeledVoxelsMap: LabeledVoxelsMap = new Map();
-    const seedBucketAddress = this.positionToZoomedAddress(seedVoxel, zoomStep);
+    const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
+    const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     if (seedBucket.type === "null") {
       return null;
@@ -420,14 +422,15 @@ class DataCube {
         `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current resolution.`,
       );
     }
-    const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);
+    const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
     if (sourceCellId === cellId) {
       return null;
     }
     const bucketsToFill: Array<[DataBucket, Vector3]> = [
-      [seedBucket, this.getVoxelOffset(seedVoxel, zoomStep)],
+      [seedBucket, this.getVoxelOffset(globalSeedVoxel, zoomStep)],
     ];
+    console.log("viewportBoundings", viewportBoundings);
     // Iterate over all buckets within the area and flood fill each of them.
     while (bucketsToFill.length > 0) {
       const [currentBucket, initialVoxelInBucket] = bucketsToFill.pop();
@@ -449,16 +452,23 @@ class DataCube {
       bucketData[initialVoxelIndex] = cellId;
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
-        bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) ||
-        new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
-      const markVoxelOfSliceAsLabeled = ([firstCoord, secondCoord]) => {
-        currentLabeledVoxelMap[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
+        bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
+      const markVoxelOfSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]) => {
+        if (!currentLabeledVoxelMap.has(thirdCoord)) {
+          currentLabeledVoxelMap.set(
+            thirdCoord,
+            new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0),
+          );
+        }
+        currentLabeledVoxelMap.get(thirdCoord)[
+          firstCoord * constants.BUCKET_WIDTH + secondCoord
+        ] = 1;
       };
 
-      // Use a VoxelNeighborStack2D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
+      // Use a VoxelNeighborStack3D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
       const initialVoxelInSlice = get2DAddress(initialVoxelInBucket);
       markVoxelOfSliceAsLabeled(initialVoxelInSlice);
-      const neighbourVoxelStack = new VoxelNeighborStack2D(initialVoxelInSlice);
+      const neighbourVoxelStack = new VoxelNeighborStack3D(initialVoxelInBucket);
       // Iterating over all neighbours from the initialAddress.
       while (!neighbourVoxelStack.isEmpty()) {
         const neighbours = neighbourVoxelStack.popVoxelAndGetNeighbors();
@@ -473,7 +483,7 @@ class DataCube {
             isVoxelOutside,
             neighbourBucketAddress,
             adjustedVoxel: adjustedNeighbourVoxel,
-          } = currentBucket.is2DVoxelInsideBucket(neighbourVoxel, dimensionIndices, zoomStep);
+          } = currentBucket.is3DVoxelInsideBucket(neighbourVoxel, dimensionIndices, zoomStep);
           const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel);
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.

@@ -219,6 +219,7 @@ export const Unicode = {
 // are stored in a Uint8Array in a binary way (which cell
 // id the voxels should be changed to is not encoded).
 export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+export type LabelMasksByBucketAndW = Map<Vector4, Map<number, Uint8Array>>;
 
 export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoView) => void;
 

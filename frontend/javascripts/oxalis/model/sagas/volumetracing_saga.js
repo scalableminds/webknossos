@@ -479,14 +479,15 @@ export function* floodFill(): Saga<void> {
     );
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
-    const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-    // The floodfill and applyVoxelMap methods iterate within the bucket.
-    // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
-    const thirdDimensionValue =
-      Math.floor(seedVoxel[dimensionIndices[2]] / labeledResolution[dimensionIndices[2]]) %
-      Constants.BUCKET_WIDTH;
-    const get3DAddress = (voxel: Vector2) => {
-      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], thirdDimensionValue];
+    // const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+    // // The floodfill and applyVoxelMap methods iterate within the bucket.
+    // // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
+    // const thirdDimensionValue =
+    //   Math.floor(seedVoxel[dimensionIndices[2]] / labeledResolution[dimensionIndices[2]]) %
+    //   Constants.BUCKET_WIDTH;
+    const get3DAddress = (voxel: Vector3) => {
+      // todo: rename to uvwToXyz or something similar
+      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], voxel[2]];
       const orderedVoxelWithThirdDimension = [
         unorderedVoxelWithThirdDimension[dimensionIndices[0]],
         unorderedVoxelWithThirdDimension[dimensionIndices[1]],
@@ -494,12 +495,15 @@ export function* floodFill(): Saga<void> {
       ];
       return orderedVoxelWithThirdDimension;
     };
-    const get2DAddress = (voxel: Vector3): Vector2 => [
+    // todo: rename to xyzToUvw or something similar
+    const get2DAddress = (voxel: Vector3): Vector3 => [
       voxel[dimensionIndices[0]],
       voxel[dimensionIndices[1]],
+      voxel[dimensionIndices[2]],
     ];
-    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 1);
-    const labeledVoxelMapFromFloodFill = cube.floodFill(
+    // todo: replace with other bounding box.
+    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 10);
+    const labelMasksByBucketAndW = cube.floodFill(
       seedVoxel,
       activeCellId,
       get3DAddress,
@@ -508,19 +512,36 @@ export function* floodFill(): Saga<void> {
       currentViewportBounding,
       labeledZoomStep,
     );
-    if (labeledVoxelMapFromFloodFill == null) {
+    if (labelMasksByBucketAndW == null) {
       continue;
     }
-    applyLabeledVoxelMapToAllMissingResolutions(
-      labeledVoxelMapFromFloodFill,
-      labeledZoomStep,
-      dimensionIndices,
-      resolutionInfo,
-      cube,
-      activeCellId,
-      seedVoxel[dimensionIndices[2]],
-      true,
-    );
+
+    const indexSet = new Set();
+    for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
+      for (const zIndex of labelMaskByIndex.keys()) {
+        indexSet.add(zIndex);
+      }
+    }
+    for (const indexZ of indexSet) {
+      const labeledVoxelMapFromFloodFill = new Map();
+      for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
+        const map = labelMaskByIndex.get(indexZ);
+        if (map != null) {
+          labeledVoxelMapFromFloodFill.set(bucketAddress, map);
+        }
+      }
+
+      applyLabeledVoxelMapToAllMissingResolutions(
+        labeledVoxelMapFromFloodFill,
+        labeledZoomStep,
+        dimensionIndices,
+        resolutionInfo,
+        cube,
+        activeCellId,
+        seedVoxel[dimensionIndices[2]],
+        true,
+      );
+    }
     yield* put(finishAnnotationStrokeAction());
     cube.triggerPushQueue();
   }

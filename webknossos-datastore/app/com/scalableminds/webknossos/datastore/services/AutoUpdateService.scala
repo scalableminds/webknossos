@@ -24,8 +24,7 @@ trait GithubReleaseChecker {
 
   def checkForUpdate(): Fox[(Boolean, List[JsObject])] =
     for {
-      // TODO migrate to webknossos repo once released
-      jsObject <- rpc("https://api.github.com/repos/youri-k/ComparingUnrelatedTypesExample/releases/latest")
+      jsObject <- rpc("https://api.github.com/repos/scalableminds/webknossos/releases/latest")
         .accepts("application/vnd.github.v3+json")
         .getWithJsonResponse[JsObject]
       tag_name <- getJsObjectFieldAsOptional[JsString](jsObject, "tag_name")

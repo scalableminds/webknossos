@@ -485,18 +485,15 @@ export function* floodFill(): Saga<void> {
     // const thirdDimensionValue =
     //   Math.floor(seedVoxel[dimensionIndices[2]] / labeledResolution[dimensionIndices[2]]) %
     //   Constants.BUCKET_WIDTH;
-    const get3DAddress = (voxel: Vector3) => {
-      // todo: rename to uvwToXyz or something similar
-      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], voxel[2]];
+    const uvwToXyz = (voxel: Vector3) => {
       const orderedVoxelWithThirdDimension = [
-        unorderedVoxelWithThirdDimension[dimensionIndices[0]],
-        unorderedVoxelWithThirdDimension[dimensionIndices[1]],
-        unorderedVoxelWithThirdDimension[dimensionIndices[2]],
+        voxel[dimensionIndices[0]],
+        voxel[dimensionIndices[1]],
+        voxel[dimensionIndices[2]],
       ];
       return orderedVoxelWithThirdDimension;
     };
-    // todo: rename to xyzToUvw or something similar
-    const get2DAddress = (voxel: Vector3): Vector3 => [
+    const xyzToUvw = (voxel: Vector3): Vector3 => [
       voxel[dimensionIndices[0]],
       voxel[dimensionIndices[1]],
       voxel[dimensionIndices[2]],
@@ -506,8 +503,8 @@ export function* floodFill(): Saga<void> {
     const labelMasksByBucketAndW = cube.floodFill(
       seedVoxel,
       activeCellId,
-      get3DAddress,
-      get2DAddress,
+      uvwToXyz,
+      xyzToUvw,
       dimensionIndices,
       currentViewportBounding,
       labeledZoomStep,

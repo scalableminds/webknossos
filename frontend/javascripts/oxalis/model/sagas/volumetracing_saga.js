@@ -538,7 +538,7 @@ export function* floodFill(): Saga<void> {
         resolutionInfo,
         cube,
         activeCellId,
-        seedVoxel[dimensionIndices[2]],
+        indexZ,
         true,
       );
     }

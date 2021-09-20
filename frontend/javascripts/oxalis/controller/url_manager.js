@@ -159,7 +159,7 @@ class UrlManager {
 
   buildUrlHashJson(state: OxalisState): string {
     const urlState = this.getUrlState(state);
-    return encodeURIComponent(JSON.stringify(urlState));
+    return encodeUrlHash(JSON.stringify(urlState));
   }
 
   buildUrl(): string {
@@ -187,6 +187,27 @@ export function updateTypeAndId(
     /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
     (all, base, type, id, rest) => `${base}/${annotationType}/${annotationId}${rest}`,
   );
+}
+
+// encodeURIComponent encodes all characters except [A-Za-z0-9] - _ . ! ~ * ' ( )
+// see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
+// The url hash can contain ! $ & ' ( ) * + , ; =  - . _ ~ : @ / ? or [a-zA-Z0-9] or %[0-9a-fA-F]{2}
+// see https://stackoverflow.com/a/2849800
+// Whitelist the characters that are part of the second list, but not of the first as they don't need to be encoded
+// for better url readability
+const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
+// Build lookup table from encoded to decoded value
+const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
+  obj[encodeURIComponent(decodedValue)] = decodedValue;
+  return obj;
+}, {});
+// Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
+const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
+const decodeWhitelistedCharacters = matched => encodedCharacterToDecodedCharacter[matched];
+
+export function encodeUrlHash(unencodedHash: string): string {
+  const urlEncodedHash = encodeURIComponent(unencodedHash);
+  return urlEncodedHash.replace(re, decodeWhitelistedCharacters);
 }
 
 export default new UrlManager();

@@ -1,7 +1,7 @@
 // @flow
 import test from "ava";
 
-import UrlManager, { updateTypeAndId } from "oxalis/controller/url_manager";
+import UrlManager, { updateTypeAndId, encodeUrlHash } from "oxalis/controller/url_manager";
 import { location } from "libs/window";
 import Constants, { ViewModeValues } from "oxalis/constants";
 import defaultState from "oxalis/default_state";
@@ -131,7 +131,7 @@ test("UrlManager should parse json url hash", t => {
     activeNode: 2,
   };
 
-  location.hash = `#${encodeURIComponent(JSON.stringify(state))}`;
+  location.hash = `#${encodeUrlHash(JSON.stringify(state))}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), state);
 });
@@ -147,13 +147,13 @@ test("UrlManager should parse incomplete json url hash", t => {
 
   const { rotation, ...stateWithoutRotation } = state;
 
-  location.hash = `#${encodeURIComponent(JSON.stringify(stateWithoutRotation))}`;
+  location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutRotation))}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation);
 
   const { activeNode, ...stateWithoutActiveNode } = state;
 
-  location.hash = `#${encodeURIComponent(JSON.stringify(stateWithoutActiveNode))}`;
+  location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutActiveNode))}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutActiveNode);
 });

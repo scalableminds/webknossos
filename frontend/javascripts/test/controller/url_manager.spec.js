@@ -27,7 +27,7 @@ test("UrlManager should replace tracing in url", t => {
   );
 });
 
-test("UrlManager should parse full legacy url hash", t => {
+test("UrlManager should parse full csv url hash", t => {
   const state = {
     position: [555, 278, 482],
     mode: "flight",
@@ -47,7 +47,7 @@ test("UrlManager should parse full legacy url hash", t => {
   t.deepEqual(UrlManager.parseUrlHash(), state);
 });
 
-test("UrlManager should parse legacy url hash without optional values", t => {
+test("UrlManager should parse csv url hash without optional values", t => {
   const state = {
     position: [555, 278, 482],
     mode: "flight",
@@ -85,6 +85,28 @@ test("UrlManager should parse legacy url hash without optional values", t => {
   )}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutOptionalValues);
+});
+
+test("UrlManager should build csv url hash and parse it again", t => {
+  const mode = Constants.MODE_ARBITRARY;
+  const urlState = {
+    position: [0, 0, 0],
+    mode,
+    zoomStep: 1.3,
+    rotation: [0, 0, 180],
+  };
+
+  const initialState = update(defaultState, {
+    temporaryConfiguration: {
+      viewMode: { $set: mode },
+    },
+  });
+
+  const hash = UrlManager.buildUrlHashCsv(initialState);
+
+  location.hash = `#${hash}`;
+
+  t.deepEqual(UrlManager.parseUrlHash(), urlState);
 });
 
 test("UrlManager should parse url hash with comment links", t => {
@@ -151,9 +173,16 @@ test("UrlManager should build json url hash and parse it again", t => {
     },
   });
 
-  const hash = UrlManager.buildUrlHash(initialState);
+  const hash = UrlManager.buildUrlHashJson(initialState);
 
   location.hash = `#${hash}`;
 
   t.deepEqual(UrlManager.parseUrlHash(), urlState);
+});
+
+test("UrlManager should build default url in csv format", t => {
+  UrlManager.initialize();
+  const url = UrlManager.buildUrl();
+
+  t.is(url, "#0,0,0,0,1.3");
 });

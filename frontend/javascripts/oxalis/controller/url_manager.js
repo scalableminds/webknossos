@@ -16,17 +16,19 @@ import messages from "messages";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
-export type UrlManagerState = {
-  position?: Vector3,
-  mode?: ViewMode,
-  zoomStep?: number,
+export type FullUrlManagerState = {
+  position: Vector3,
+  mode: ViewMode,
+  zoomStep: number,
   activeNode?: number,
   rotation?: Vector3,
 };
 
+export type PartialUrlManagerState = $Shape<FullUrlManagerState>;
+
 class UrlManager {
   baseUrl: string;
-  initialState: UrlManagerState;
+  initialState: PartialUrlManagerState;
 
   initialize() {
     this.baseUrl = location.pathname + location.search;
@@ -51,7 +53,7 @@ class UrlManager {
     applyState(urlState);
   };
 
-  parseUrlHash(): UrlManagerState {
+  parseUrlHash(): PartialUrlManagerState {
     const urlHash = decodeURIComponent(location.hash.slice(1));
     if (urlHash.includes("{")) {
       // The hash is in json format
@@ -60,12 +62,12 @@ class UrlManager {
       // The hash was changed by a comment link
       return this.parseUrlHashCommentLink(urlHash);
     } else {
-      // The hash is in legacy format
-      return this.parseUrlHashLegacy(urlHash);
+      // The hash is in csv format
+      return this.parseUrlHashCsv(urlHash);
     }
   }
 
-  parseUrlHashCommentLink(urlHash: string): UrlManagerState {
+  parseUrlHashCommentLink(urlHash: string): PartialUrlManagerState {
     // Comment link format:
     // activeNode=12 or position=1,2,3
 
@@ -74,7 +76,7 @@ class UrlManager {
     return { [key]: value.includes(",") ? value.split(",").map(Number) : Number(value) };
   }
 
-  parseUrlHashJson(urlHash: string): UrlManagerState {
+  parseUrlHashJson(urlHash: string): PartialUrlManagerState {
     // State json format:
     // { "position"?: Vector3, "mode"?: number, "zoomStep"?: number, "rotation"?: Vector3, "activeNode"?: number}
 
@@ -88,11 +90,11 @@ class UrlManager {
     }
   }
 
-  parseUrlHashLegacy(urlHash: string): UrlManagerState {
+  parseUrlHashCsv(urlHash: string): PartialUrlManagerState {
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
-    const state: UrlManagerState = {};
+    const state: PartialUrlManagerState = {};
 
     if (urlHash) {
       const stateArray = urlHash.split(",").map(Number);
@@ -131,12 +133,12 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  buildUrlHash(state: OxalisState) {
-    const position = V3.floor(getPosition(state.flycam));
+  getUrlState(state: OxalisState): FullUrlManagerState {
+    const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
     const rotationOptional = constants.MODES_ARBITRARY.includes(mode)
-      ? { rotation: getRotation(state.flycam).map(e => Utils.roundTo(e, 2)) }
+      ? { rotation: Utils.map3(e => Utils.roundTo(e, 2), getRotation(state.flycam)) }
       : {};
 
     const activeNodeOptional = getSkeletonTracing(state.tracing)
@@ -145,14 +147,24 @@ class UrlManager {
       .getOrElse({});
 
     // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
-    const urlState = { position, mode, zoomStep, ...rotationOptional, ...activeNodeOptional };
+    return { position, mode, zoomStep, ...rotationOptional, ...activeNodeOptional };
+  }
 
+  buildUrlHashCsv(state: OxalisState): string {
+    const { position, mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
+    const viewModeIndex = ViewModeValues.indexOf(mode);
+    const activeNodeArray = activeNode != null ? [activeNode] : [];
+    return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeArray].join(",");
+  }
+
+  buildUrlHashJson(state: OxalisState): string {
+    const urlState = this.getUrlState(state);
     return encodeURIComponent(JSON.stringify(urlState));
   }
 
   buildUrl(): string {
     const state = Store.getState();
-    const hash = this.buildUrlHash(state);
+    const hash = this.buildUrlHashCsv(state);
     const newBaseUrl = updateTypeAndId(
       this.baseUrl,
       state.tracing.annotationType,

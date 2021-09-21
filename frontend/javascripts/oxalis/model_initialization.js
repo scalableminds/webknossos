@@ -44,6 +44,7 @@ import {
   initializeGpuSetupAction,
   setControlModeAction,
   setViewModeAction,
+  setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { serverTracingAsSkeletonTracingMaybe } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -51,6 +52,7 @@ import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volume
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
+  loadAgglomerateSkeletonAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -494,6 +496,13 @@ function determineDefaultState(
   urlState: PartialUrlManagerState,
   tracing: ?HybridServerTracing,
 ): PartialUrlManagerState {
+  const {
+    position: urlStatePosition,
+    zoomStep: urlStateZoomStep,
+    rotation: urlStateRotation,
+    activeNode: urlStateActiveNode,
+    ...rest
+  } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
@@ -505,29 +514,29 @@ function determineDefaultState(
   if (tracing != null) {
     position = Utils.point3ToVector3(getSomeServerTracing(tracing).editPosition);
   }
-  if (urlState.position != null) {
-    ({ position } = urlState);
+  if (urlStatePosition != null) {
+    position = urlStatePosition;
   }
 
   let zoomStep = datasetConfiguration.zoom;
   if (tracing != null) {
     zoomStep = getSomeServerTracing(tracing).zoomLevel;
   }
-  if (urlState.zoomStep != null) {
-    ({ zoomStep } = urlState);
+  if (urlStateZoomStep != null) {
+    zoomStep = urlStateZoomStep;
   }
 
   let { rotation } = datasetConfiguration;
   if (tracing) {
     rotation = Utils.point3ToVector3(getSomeServerTracing(tracing).editRotation);
   }
-  if (urlState.rotation != null) {
-    ({ rotation } = urlState);
+  if (urlStateRotation != null) {
+    rotation = urlStateRotation;
   }
 
-  const { activeNode } = urlState;
+  const activeNode = urlStateActiveNode;
 
-  return { position, zoomStep, rotation, activeNode };
+  return { position, zoomStep, rotation, activeNode, ...rest };
 }
 
 export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = false) {
@@ -544,5 +553,19 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
   }
   if (state.rotation != null) {
     Store.dispatch(setRotationAction(state.rotation));
+  }
+  if (state.activeMappingByLayer != null) {
+    for (const layerName of Object.keys(state.activeMappingByLayer)) {
+      const { mappingName, mappingType, agglomerateIdsToImport } = state.activeMappingByLayer[
+        layerName
+      ];
+      Store.dispatch(setMappingAction(layerName, mappingName, mappingType));
+
+      if (mappingType === "HDF5" && agglomerateIdsToImport != null) {
+        for (const agglomerateId of agglomerateIdsToImport) {
+          Store.dispatch(loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId));
+        }
+      }
+    }
   }
 }

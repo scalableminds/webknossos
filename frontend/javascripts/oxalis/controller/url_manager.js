@@ -6,7 +6,7 @@ import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store, { type OxalisState } from "oxalis/store";
+import Store, { type OxalisState, type MappingType } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type ViewMode, ViewModeValues, type Vector3 } from "oxalis/constants";
 import window, { location } from "libs/window";
@@ -16,13 +16,20 @@ import messages from "messages";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
-export type FullUrlManagerState = {
+export type FullUrlManagerState = {|
   position: Vector3,
   mode: ViewMode,
   zoomStep: number,
   activeNode?: number,
   rotation?: Vector3,
-};
+  activeMappingByLayer?: {
+    [layerName: string]: {
+      mappingName: string,
+      mappingType: MappingType,
+      agglomerateIdsToImport?: [number],
+    },
+  },
+|};
 
 export type PartialUrlManagerState = $Shape<FullUrlManagerState>;
 
@@ -78,7 +85,7 @@ class UrlManager {
 
   parseUrlHashJson(urlHash: string): PartialUrlManagerState {
     // State json format:
-    // { "position"?: Vector3, "mode"?: number, "zoomStep"?: number, "rotation"?: Vector3, "activeNode"?: number}
+    // { "position": Vector3, "mode": number, "zoomStep": number, ...}
 
     try {
       return JSON.parse(urlHash);
@@ -146,8 +153,25 @@ class UrlManager {
       .map(node => ({ activeNode: node.id }))
       .getOrElse({});
 
-    // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
-    return { position, mode, zoomStep, ...rotationOptional, ...activeNodeOptional };
+    const activeMappingByLayer = {};
+    for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {
+      const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layerName];
+      if (mappingInfo.isMappingEnabled) {
+        const { mappingName, mappingType } = mappingInfo;
+        activeMappingByLayer[layerName] = { mappingName, mappingType };
+      }
+    }
+
+    // $FlowIssue[incompatible-exact] See https://github.com/facebook/flow/issues/2977
+    return {
+      position,
+      mode,
+      zoomStep,
+      ...rotationOptional,
+      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+      ...activeNodeOptional,
+      activeMappingByLayer,
+    };
   }
 
   buildUrlHashCsv(state: OxalisState): string {
@@ -164,7 +188,8 @@ class UrlManager {
 
   buildUrl(): string {
     const state = Store.getState();
-    const hash = this.buildUrlHashCsv(state);
+    // TODO: Switch back to buildUrlHashCsv before merging
+    const hash = this.buildUrlHashJson(state);
     const newBaseUrl = updateTypeAndId(
       this.baseUrl,
       state.tracing.annotationType,

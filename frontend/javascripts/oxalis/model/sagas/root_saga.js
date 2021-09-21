@@ -19,7 +19,10 @@ import {
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
-import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
+import {
+  watchSkeletonTracingAsync,
+  watchAgglomerateLoading,
+} from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
@@ -59,6 +62,7 @@ function* restartableSaga(): Saga<void> {
       _call(handleMeshChanges),
       _call(watchMaximumRenderableLayers),
       _call(watchActivatedMappings),
+      _call(watchAgglomerateLoading),
     ]);
   } catch (err) {
     console.error("The sagas crashed because of the following error:", err);

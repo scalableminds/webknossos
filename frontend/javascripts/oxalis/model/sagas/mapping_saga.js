@@ -2,11 +2,12 @@
 import _ from "lodash";
 import {
   type Saga,
-  _takeEvery,
+  _takeLatest,
   call,
   select,
   take,
   put,
+  _actionChannel,
 } from "oxalis/model/sagas/effect-generators";
 
 import {
@@ -23,8 +24,10 @@ import ErrorHandling from "libs/error_handling";
 type APIMappings = { [string]: APIMapping };
 
 export default function* watchActivatedMappings(): Saga<void> {
+  // Buffer actions since they might be dispatched before WK_READY
+  const actionChannel = yield _actionChannel("SET_MAPPING");
   yield* take("WK_READY");
-  yield _takeEvery("SET_MAPPING", maybeFetchMapping);
+  yield _takeLatest(actionChannel, maybeFetchMapping);
 }
 
 function* maybeFetchMapping(action: SetMappingAction): Saga<void> {

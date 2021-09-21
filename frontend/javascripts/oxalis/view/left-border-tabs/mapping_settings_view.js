@@ -219,7 +219,6 @@ class MappingSettingsView extends React.Component<Props, State> {
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || this.props.isMappingEnabled;
 
     const isFetchingJsonMapping =
-      shouldMappingBeEnabled &&
       this.props.mappingType === "JSON" &&
       this.props.mappingName != null &&
       this.props.mapping == null;

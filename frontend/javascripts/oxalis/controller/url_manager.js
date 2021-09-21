@@ -161,6 +161,8 @@ class UrlManager {
         activeMappingByLayer[layerName] = { mappingName, mappingType };
       }
     }
+    const activeMappingByLayerOptional =
+      _.size(activeMappingByLayer) > 0 ? { activeMappingByLayer } : {};
 
     // $FlowIssue[incompatible-exact] See https://github.com/facebook/flow/issues/2977
     return {
@@ -168,9 +170,9 @@ class UrlManager {
       mode,
       zoomStep,
       ...rotationOptional,
-      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...activeNodeOptional,
-      activeMappingByLayer,
+      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+      ...activeMappingByLayerOptional,
     };
   }
 
@@ -188,8 +190,7 @@ class UrlManager {
 
   buildUrl(): string {
     const state = Store.getState();
-    // TODO: Switch back to buildUrlHashCsv before merging
-    const hash = this.buildUrlHashJson(state);
+    const hash = this.buildUrlHashCsv(state);
     const newBaseUrl = updateTypeAndId(
       this.baseUrl,
       state.tracing.annotationType,

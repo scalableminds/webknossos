@@ -6,7 +6,6 @@ import React from "react";
 import _ from "lodash";
 import debounceRender from "react-debounce-render";
 
-import createProgressCallback from "libs/progress_callback";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { type OrthoView, type Vector3 } from "oxalis/constants";
 import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
@@ -21,6 +20,7 @@ import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
   setMappingEnabledAction,
   setHideUnmappedIdsAction,
+  setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
@@ -47,6 +47,15 @@ type StateProps = {|
   setMappingEnabled: (string, boolean) => void,
   setHideUnmappedIds: (string, boolean) => void,
   setAvailableMappingsForLayer: (string, Array<string>, Array<string>) => void,
+  setMapping: (
+    string,
+    ?string,
+    MappingType,
+    ?Mapping,
+    ?Array<number>,
+    ?Array<number>,
+    ?boolean,
+  ) => void,
   activeViewport: OrthoView,
   activeCellId: number,
   isMergerModeEnabled: boolean,
@@ -98,15 +107,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       throw new Error("Invalid mapping type");
     }
 
-    const progressCallback = createProgressCallback({
-      pauseDelay: 500,
-      successMessageDelay: 2000,
-    });
-    Model.getLayerByName(this.props.layerName).setActiveMapping(
-      mappingName,
-      mappingType,
-      progressCallback,
-    );
+    this.props.setMapping(this.props.layerName, mappingName, mappingType);
 
     if (document.activeElement) document.activeElement.blur();
   };
@@ -217,6 +218,12 @@ class MappingSettingsView extends React.Component<Props, State> {
     // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || this.props.isMappingEnabled;
 
+    const isFetchingJsonMapping =
+      shouldMappingBeEnabled &&
+      this.props.mappingType === "JSON" &&
+      this.props.mappingName != null &&
+      this.props.mapping == null;
+
     const renderHideUnmappedSegmentsSwitch =
       (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
       this.props.mapping &&
@@ -233,7 +240,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                 onChange={this.handleSetMappingEnabled}
                 value={shouldMappingBeEnabled}
                 label="ID Mapping"
-                loading={this.state.isRefreshingMappingList}
+                loading={this.state.isRefreshingMappingList || isFetchingJsonMapping}
               />
             </div>
 
@@ -274,6 +281,7 @@ const mapDispatchToProps = {
   setMappingEnabled: setMappingEnabledAction,
   setAvailableMappingsForLayer: setLayerMappingsAction,
   setHideUnmappedIds: setHideUnmappedIdsAction,
+  setMapping: setMappingAction,
 };
 
 function mapStateToProps(state: OxalisState, ownProps: OwnProps) {

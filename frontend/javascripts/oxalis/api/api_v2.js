@@ -583,6 +583,7 @@ class DataApi {
       setMappingAction(
         layerName,
         "<custom mapping>",
+        "JSON",
         _.clone(mapping),
         Object.keys(mapping).map(x => parseInt(x, 10)),
       ),

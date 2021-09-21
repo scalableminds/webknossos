@@ -58,7 +58,7 @@ type SetMappingEnabledAction = {
   isMappingEnabled: boolean,
   layerName: string,
 };
-type SetMappingAction = {
+export type SetMappingAction = {
   type: "SET_MAPPING",
   mappingName: ?string,
   mapping: ?Mapping,
@@ -179,20 +179,20 @@ export const setMappingEnabledAction = (
 export const setMappingAction = (
   layerName: string,
   mappingName: ?string,
+  mappingType: MappingType = "JSON",
   mapping: ?Mapping,
   mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
-  mappingType: MappingType = "JSON",
 ): SetMappingAction => ({
   type: "SET_MAPPING",
   layerName,
   mappingName,
+  mappingType,
   mapping,
   mappingKeys,
   mappingColors,
   hideUnmappedIds,
-  mappingType,
 });
 
 export const setHideUnmappedIdsAction = (

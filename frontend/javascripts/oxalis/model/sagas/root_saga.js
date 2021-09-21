@@ -27,6 +27,7 @@ import { watchMaximumRenderableLayers } from "oxalis/model/sagas/dataset_saga";
 import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import loadHistogramData from "oxalis/model/sagas/load_histogram_data_saga";
+import watchActivatedMappings from "oxalis/model/sagas/mapping_saga";
 
 export default function* rootSaga(): Saga<void> {
   while (true) {
@@ -57,6 +58,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchTasksAsync),
       _call(handleMeshChanges),
       _call(watchMaximumRenderableLayers),
+      _call(watchActivatedMappings),
     ]);
   } catch (err) {
     console.error("The sagas crashed because of the following error:", err);

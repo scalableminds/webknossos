@@ -1045,6 +1045,7 @@ class DataApi {
       setMappingAction(
         layerName,
         "<custom mapping>",
+        "JSON",
         _.clone(mapping),
         // Object.keys is sorted for numerical keys according to the spec:
         // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
@@ -1087,15 +1088,21 @@ class DataApi {
    *
    */
   getActiveMapping(layerName?: string): ?string {
-    const segmentationLayer = getRequestedOrVisibleSegmentationLayer(Store.getState(), layerName);
-    if (!segmentationLayer) {
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
+      Store.getState(),
+      layerName,
+    );
+    if (!effectiveLayerName) {
       return null;
     }
-    return this.model.getLayerByName(segmentationLayer.name).activeMapping;
+    return getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      effectiveLayerName,
+    ).mappingName;
   }
 
   /**
-   * Sets the active mapping for a given layer.  If layerName is not passed,
+   * Sets the active mapping for a given layer. If layerName is not passed,
    * the currently visible segmentation layer will be used.
    *
    */
@@ -1104,14 +1111,14 @@ class DataApi {
     mappingType: MappingType = "JSON",
     layerName?: string,
   ): void {
-    const segmentationLayer =
-      layerName != null
-        ? this.model.getLayerByName(layerName)
-        : this.model.getVisibleSegmentationLayer();
-    if (!segmentationLayer) {
-      return;
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
+      Store.getState(),
+      layerName,
+    );
+    if (!effectiveLayerName) {
+      throw new Error(messages["mapping.unsupported_layer"]);
     }
-    segmentationLayer.setActiveMapping(mappingName, mappingType);
+    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
   }
 
   /**

@@ -27,7 +27,12 @@ import {
 import { connect } from "react-redux";
 import * as React from "react";
 
-import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "types/api_flow_types";
+import {
+  APIAnnotationTypeEnum,
+  type APIAnnotationType,
+  type APIUser,
+  TracingTypeEnum,
+} from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   type LayoutKeys,
@@ -38,12 +43,15 @@ import {
   downloadNml,
   finishAnnotation,
   reOpenAnnotation,
+  createExplorational,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { undoAction, redoAction, disableSavingAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
@@ -55,6 +63,8 @@ import messages from "messages";
 import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
+import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
+import Toast from "libs/toast";
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -268,6 +278,33 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
 
+  handleCopySandboxToAccount = async () => {
+    const { tracing: sandboxTracing, dataset } = Store.getState();
+    const tracingType = getTracingType(sandboxTracing);
+
+    if (tracingType !== TracingTypeEnum.skeleton) {
+      const message = "Sandbox copying functionality is only implemented for skeleton tracings.";
+      Toast.error(message);
+      throw Error(message);
+    }
+
+    const fallbackLayer =
+      sandboxTracing.volume != null ? sandboxTracing.volume.fallbackLayer : null;
+
+    const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
+    await api.tracing.restart(newAnnotation.typ, newAnnotation.id, ControlModeEnum.TRACE);
+
+    const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    // Update the sandbox tracing with the new tracingId and createdTimestamp
+    const newSkeletonTracing = {
+      ...sandboxSkeletonTracing,
+      tracingId: skeletonTracing.tracingId,
+      createdTimestamp: skeletonTracing.createdTimestamp,
+    };
+    Store.dispatch(setTracingAction(newSkeletonTracing));
+  };
+
   handleFinish = async () => {
     await Model.ensureSavedState();
 
@@ -385,15 +422,24 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           restrictions.allowSave ? (
             <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />
           ) : (
-            <Tooltip
-              placement="bottom"
-              title="This annotation was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
-              key="sandbox-tooltip"
-            >
-              <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
-                <span className="hide-on-small-screen">Sandbox</span>
-              </Button>
-            </Tooltip>
+            [
+              <Tooltip
+                placement="bottom"
+                title="This annotation was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
+                key="sandbox-tooltip"
+              >
+                <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
+                  <span className="hide-on-small-screen">Sandbox</span>
+                </Button>
+              </Tooltip>,
+              <AsyncButton
+                key="copy-sandbox-button"
+                icon={<FileAddOutlined />}
+                onClick={this.handleCopySandboxToAccount}
+              >
+                <span className="hide-on-small-screen">Copy To My Account</span>
+              </AsyncButton>,
+            ]
           ),
         ]
       : [

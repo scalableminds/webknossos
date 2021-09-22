@@ -28,6 +28,7 @@ import {
   hasSegmentation,
   isElementClassSupported,
   getSegmentationLayers,
+  getSegmentationLayerByNameOrFallbackName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -562,12 +563,27 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
       const { mappingName, mappingType, agglomerateIdsToImport } = state.activeMappingByLayer[
         layerName
       ];
+
+      let effectiveLayerName;
+      try {
+        const { dataset } = Store.getState();
+        // The name of the layer could have changed if a volume tracing was created from a viewed annotation
+        effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+      } catch (e) {
+        console.error(e);
+        // TODO: Proper error message
+        Toast.error(e);
+        continue;
+      }
+
       message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
-      Store.dispatch(setMappingAction(layerName, mappingName, mappingType));
+      Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
 
       if (mappingType === "HDF5" && agglomerateIdsToImport != null) {
         for (const agglomerateId of agglomerateIdsToImport) {
-          Store.dispatch(loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId));
+          Store.dispatch(
+            loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
+          );
         }
       }
     }

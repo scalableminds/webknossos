@@ -4,6 +4,13 @@ package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
 
+message Segment {
+	  required int64 id = 1;
+	  optional Point3D anchorPosition = 2;
+	  optional string name = 3;
+	  optional int64 creationTime = 4;
+}
+
 message VolumeTracing {
     enum ElementClass {
         uint8 = 1;
@@ -28,6 +35,7 @@ message VolumeTracing {
     repeated NamedBoundingBox userBoundingBoxes = 13;
     optional string organizationName = 14; // to identify the dataset (may differ from annotation orga)
     repeated Point3D resolutions = 15;
+    repeated Segment segments = 16;
 }
 
 message VolumeTracingOpt {

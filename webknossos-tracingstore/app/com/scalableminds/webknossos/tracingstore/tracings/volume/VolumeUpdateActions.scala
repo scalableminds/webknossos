@@ -4,7 +4,8 @@ import java.util.Base64
 
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
-import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction}
 import play.api.libs.json._
 
 case class UpdateBucketVolumeAction(position: Point3D,
@@ -132,6 +133,43 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[Str
 
 object UpdateTdCamera {
   implicit val jsonFormat: OFormat[UpdateTdCamera] = Json.format[UpdateTdCamera]
+}
+
+case class CreateSegment(id: Long,
+                         anchorPosition: Option[Point3D],
+                         name: Option[String],
+                         creationTime: Option[Long],
+                         actionTimestamp: Option[Long] = None)
+    extends VolumeUpdateAction {
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact: UpdateAction[VolumeTracing] =
+    CompactVolumeUpdateAction("createSegment", actionTimestamp, Json.obj("id" -> id))
+}
+
+case class UpdateSegment(id: Long,
+                         anchorPosition: Option[Point3D],
+                         name: Option[String],
+                         creationTime: Option[Long],
+                         actionTimestamp: Option[Long] = None)
+    extends VolumeUpdateAction {
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact: UpdateAction[VolumeTracing] =
+    CompactVolumeUpdateAction("updateSegment", actionTimestamp, Json.obj("id" -> id))
+}
+
+case class DeleteSegment(id: Long, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction {
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact: UpdateAction[VolumeTracing] =
+    CompactVolumeUpdateAction("deleteSegment", actionTimestamp, Json.obj("id" -> id))
 }
 
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)

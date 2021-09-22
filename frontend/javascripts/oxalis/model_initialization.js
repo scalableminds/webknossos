@@ -1,5 +1,6 @@
 // @flow
 import _ from "lodash";
+import { message } from "antd";
 
 import type {
   APIAnnotation,
@@ -61,7 +62,10 @@ import {
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
-import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
+import {
+  setupGlobalMappingsObject,
+  MAPPING_MESSAGE_KEY,
+} from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
@@ -202,8 +206,7 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   );
 
   if (!setupDetails.isMappingSupported) {
-    const message = messages["mapping.too_few_textures"];
-    console.warn(message);
+    console.warn(messages["mapping.too_few_textures"]);
   }
 
   maybeWarnAboutUnsupportedLayers(layers);
@@ -559,6 +562,7 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
       const { mappingName, mappingType, agglomerateIdsToImport } = state.activeMappingByLayer[
         layerName
       ];
+      message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
       Store.dispatch(setMappingAction(layerName, mappingName, mappingType));
 
       if (mappingType === "HDF5" && agglomerateIdsToImport != null) {

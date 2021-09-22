@@ -1,6 +1,6 @@
 // @flow
 
-import { Select, Tooltip } from "antd";
+import { Select, Tooltip, message } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -28,6 +28,7 @@ import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { AsyncButton } from "components/async_clickables";
 import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
+import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 
 const { Option, OptGroup } = Select;
 
@@ -106,6 +107,8 @@ class MappingSettingsView extends React.Component<Props, State> {
     if (mappingType !== "JSON" && mappingType !== "HDF5") {
       throw new Error("Invalid mapping type");
     }
+
+    message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
 
     this.props.setMapping(this.props.layerName, mappingName, mappingType);
 

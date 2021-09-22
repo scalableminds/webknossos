@@ -9,6 +9,7 @@ import {
   put,
   _actionChannel,
 } from "oxalis/model/sagas/effect-generators";
+import { message } from "antd";
 
 import {
   setMappingAction,
@@ -20,6 +21,7 @@ import type { APIMapping } from "types/api_flow_types";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { type Mapping } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
+import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 
 type APIMappings = { [string]: APIMapping };
 
@@ -40,6 +42,7 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
   if (mappingType !== "JSON") {
     // JSON mappings will be activated once they have been fetched
     yield* put(setMappingEnabledAction(layerName, true));
+    message.destroy(MAPPING_MESSAGE_KEY);
     return;
   }
 

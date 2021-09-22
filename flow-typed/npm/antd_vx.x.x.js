@@ -1,3 +1,13 @@
+// @flow
+
+type MessageConfig = {
+  content?: string | React$Node,
+  key?: string,
+  duration?: number,
+  onClose?: Function,
+};
+type MessageContent = string | React$Node | MessageConfig;
+
 declare module "antd" {
   declare export class Alert<P> extends React$Component<P> {}
   declare export class AutoComplete<P> extends React$Component<P> {
@@ -73,12 +83,13 @@ declare module "antd" {
     static SubMenu: typeof MenuSubMenu;
   }
   declare export var message: {
-    success(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    error(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    info(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    warning(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    warn(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    loading(content: string | React$Node, duration?: number, onClose?: Function): Function,
+    success(content: MessageContent, duration?: number, onClose?: Function): Function,
+    error(content: MessageContent, duration?: number, onClose?: Function): Function,
+    info(content: MessageContent, duration?: number, onClose?: Function): Function,
+    warning(content: MessageContent, duration?: number, onClose?: Function): Function,
+    warn(content: MessageContent, duration?: number, onClose?: Function): Function,
+    loading(content: MessageContent, duration?: number, onClose?: Function): Function,
+    destroy(key: string): Function,
   };
   declare export class Modal<P> extends React$Component<P> {
     static confirm: Function;

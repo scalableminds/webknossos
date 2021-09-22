@@ -1,5 +1,6 @@
 // @flow
 import * as THREE from "three";
+import { message } from "antd";
 
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { getMappings, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -12,6 +13,8 @@ import messages from "messages";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
+
+export const MAPPING_MESSAGE_KEY = "mappings";
 
 // Remove soon (e.g., October 2021)
 export function setupGlobalMappingsObject() {
@@ -177,6 +180,9 @@ class Mappings {
       MAPPING_TEXTURE_WIDTH,
       uint8Values.length / MAPPING_TEXTURE_WIDTH / 4,
     );
+
+    message.destroy(MAPPING_MESSAGE_KEY);
+
     Store.dispatch(setMappingEnabledAction(this.layerName, true));
   }
 

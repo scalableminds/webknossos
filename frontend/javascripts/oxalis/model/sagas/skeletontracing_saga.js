@@ -189,11 +189,15 @@ export function* watchVersionRestoreParam(): Saga<void> {
 export function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const actionChannel = yield _actionChannel("LOAD_AGGLOMERATE_SKELETON");
+  yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield _takeEvery(actionChannel, loadAgglomerateSkeletonWithId);
 }
 
 function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
   const { layerName, mappingName, agglomerateId } = action;
   if (agglomerateId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);

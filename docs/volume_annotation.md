@@ -1,9 +1,9 @@
-## Volume Annotations
+## Volume Annotations & Proof-Reading
 
 In addition to [skeleton annotations](./skeleton_annotation.md), webKnossos also supports volume / segmentation annotations.
 With this type of annotation, you can label groups of voxels with efficient drawing tools.
 
-{% embed url="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=372s" %}
+![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=372s)
 
 
 ### Tools
@@ -34,12 +34,12 @@ The "merger mode" is available in skeleton and hybrid annotation mode. Mark conn
 
 "Merger mode" can be enabled in the settings under "Nodes & Trees" with the option "Enable Merger Mode". As soon as you enable it, all already existing trees will be used to form merged segments.
 
-{% embed url="https://www.youtube.com/watch?v=Sq4AuWanK14" %}
+![Video: Proof-Reading Volume Annotations](https://www.youtube.com/watch?v=Sq4AuWanK14)
 
 ### Mappings / On-Demand Agglomeration
 With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmented volume annotations on demand. This alleviates the demand to materialize agglomeration results prematurely and allows researchers to apply different agglomerations to the data for experimentation. We typically produce several agglomeration results based on different thresholds and methods and use webKnossos to quickly review these results on subsets of a dataset in an interactive session.
 
-{% embed url="https://www.youtube.com/watch?v=ZmUqyIoA9Gw" %}
+![Video: Segmentation Mappings](https://www.youtube.com/watch?v=ZmUqyIoA9Gw)
 
 Mapping files are automatically identified by webKnossos when being placed in a "mappings" folder within the [segmentation folder](./data_formats.md#wkw-folder-structure). All available mappings can be activated from a dropdown in the "Segmentation" information pane, typically on the right-hand side of the screen. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and webKnossos will update accordingly.
 
@@ -76,10 +76,9 @@ Volume annotations can be downloaded and imported using ZIP files that contain [
 The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
 Additionally, there is another embedded ZIP file that contains the volume annotations in WKW file format.
 
-{% hint style='info' %}
-In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
-Therefore, also the addressing of the WKW files (e.g. `z48/y5444/x5748.wkw`) is in steps of 32 instead of 1024.
-{% endhint %}
+!!!info
+    In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
+    Therefore, also the addressing of the WKW files (e.g. `z48/y5444/x5748.wkw`) is in steps of 32 instead of 1024.
 
 ```
 volumetracing.zip # A ZIP file containing the volume annotation

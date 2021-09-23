@@ -65,6 +65,8 @@ import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
+import UrlManager from "oxalis/controller/url_manager";
+import { withAuthentication } from "admin/auth/authentication_modal";
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -292,6 +294,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       sandboxTracing.volume != null ? sandboxTracing.volume.fallbackLayer : null;
 
     const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
+    // A potential sharingToken is no longer valid after switching to a new tracing
+    // TODO: Check whether this is still needed with the proper sandbox tracings
+    UrlManager.removeToken();
     await api.tracing.restart(newAnnotation.typ, newAnnotation.id, ControlModeEnum.TRACE);
 
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
@@ -397,6 +402,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     } = this.props;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
 
+    const AsyncButtonWithAuthentication = withAuthentication(AsyncButton);
+
     const saveButton = restrictions.allowUpdate
       ? [
           hasTracing
@@ -432,13 +439,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   <span className="hide-on-small-screen">Sandbox</span>
                 </Button>
               </Tooltip>,
-              <AsyncButton
+              <AsyncButtonWithAuthentication
+                activeUser={activeUser}
+                message="Please register or login to copy the sandbox tracing to your account."
                 key="copy-sandbox-button"
                 icon={<FileAddOutlined />}
                 onClick={this.handleCopySandboxToAccount}
+                title="Copy To My Account"
               >
                 <span className="hide-on-small-screen">Copy To My Account</span>
-              </AsyncButton>,
+              </AsyncButtonWithAuthentication>,
             ]
           ),
         ]
@@ -451,15 +461,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           >
             Read only
           </ButtonComponent>,
-          activeUser != null ? (
-            <AsyncButton
-              key="copy-button"
-              icon={<FileAddOutlined />}
-              onClick={this.handleCopyToAccount}
-            >
-              Copy To My Account
-            </AsyncButton>
-          ) : null,
+          <AsyncButtonWithAuthentication
+            activeUser={activeUser}
+            message="Please register or login to copy the tracing to your account."
+            key="copy-button"
+            icon={<FileAddOutlined />}
+            onClick={this.handleCopyToAccount}
+            title="Copy To My Account"
+          >
+            <span className="hide-on-small-screen">Copy To My Account</span>
+          </AsyncButtonWithAuthentication>,
         ];
 
     const finishAndNextTaskButton =

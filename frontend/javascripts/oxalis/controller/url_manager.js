@@ -48,6 +48,12 @@ class UrlManager {
     this.initialize();
   }
 
+  removeToken(): void {
+    const url = new URL(location.href);
+    url.searchParams.delete("token");
+    window.history.replaceState({}, null, url);
+  }
+
   update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
 
   updateUnthrottled() {

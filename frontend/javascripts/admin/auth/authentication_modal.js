@@ -1,6 +1,6 @@
 // @flow
 import { Modal, Alert } from "antd";
-import React, { useState } from "react";
+import React, { useState, type ComponentType } from "react";
 
 import Toast from "libs/toast";
 import messages from "messages";
@@ -11,13 +11,13 @@ import LinkButton from "components/link_button";
 import RegistrationForm from "./registration_form";
 import LoginForm from "./login_form";
 
-type Props = {
+type Props = {|
   onLoggedIn: (userJustRegistered: boolean) => mixed,
   onCancel: () => void,
   visible: boolean,
   alertMessage: string,
   inviteToken?: string,
-};
+|};
 
 export default function AuthenticationModal({
   onLoggedIn,
@@ -66,4 +66,33 @@ export default function AuthenticationModal({
       )}
     </Modal>
   );
+}
+
+type AuthenticationProps<R> = {| activeUser: any, message: string, onClick: Function, ...R |};
+
+export function withAuthentication<P, C: ComponentType<P>>(
+  WrappedComponent: C,
+): ComponentType<AuthenticationProps<P>> {
+  return (props: AuthenticationProps<P>) => {
+    const [isAuthenticationModalVisible, setIsAuthenticationModalVisible] = useState(false);
+    const { activeUser, message, onClick: originalOnClick, ...rest } = props;
+    if (activeUser != null) {
+      return <WrappedComponent {...rest} onClick={originalOnClick} />;
+    } else {
+      return (
+        <>
+          <WrappedComponent {...rest} onClick={() => setIsAuthenticationModalVisible(true)} />
+          <AuthenticationModal
+            alertMessage={message}
+            onLoggedIn={() => {
+              setIsAuthenticationModalVisible(false);
+              originalOnClick();
+            }}
+            onCancel={() => setIsAuthenticationModalVisible(false)}
+            visible={isAuthenticationModalVisible}
+          />
+        </>
+      );
+    }
+  };
 }

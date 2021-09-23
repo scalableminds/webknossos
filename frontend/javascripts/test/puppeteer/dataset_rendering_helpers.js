@@ -75,6 +75,25 @@ export async function screenshotDatasetWithMapping(
   return screenshotTracingView(page);
 }
 
+export async function screenshotDatasetWithMappingLink(
+  page: Page,
+  baseUrl: string,
+  datasetId: APIDatasetId,
+  optionalViewOverride: ?string,
+): Promise<Screenshot> {
+  const options = getDefaultRequestOptions(baseUrl);
+  const createdExplorational = await createExplorational(
+    datasetId,
+    "skeleton",
+    null,
+    null,
+    options,
+  );
+  await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
+  await waitForMappingEnabled(page);
+  return screenshotTracingView(page);
+}
+
 async function waitForMappingEnabled(page: Page) {
   let isMappingEnabled;
   while (!isMappingEnabled) {

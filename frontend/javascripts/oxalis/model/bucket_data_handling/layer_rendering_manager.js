@@ -134,6 +134,7 @@ export default class LayerRenderingManager {
 
   refresh() {
     this.needsRefresh = true;
+    window.needsRerender = true;
   }
 
   setupDataTextures(): void {

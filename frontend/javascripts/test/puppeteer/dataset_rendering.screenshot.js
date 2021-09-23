@@ -10,6 +10,7 @@ import { compareScreenshot } from "./screenshot_helpers";
 import {
   screenshotDataset,
   screenshotDatasetWithMapping,
+  screenshotDatasetWithMappingLink,
   WK_AUTH_TOKEN,
 } from "./dataset_rendering_helpers";
 
@@ -199,6 +200,42 @@ test.serial("it should render a dataset with mappings correctly", async t => {
     },
   );
 });
+
+test.serial(
+  "it should render a dataset linked to with an active mapping and agglomerate skeletons correctly",
+  async t => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride =
+      '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"activeMappingByLayer":{"segmentation":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}';
+    await withRetry(
+      3,
+      async () => {
+        const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
+        const { screenshot, width, height } = await screenshotDatasetWithMappingLink(
+          await getNewPage(t.context.browser),
+          URL,
+          datasetId,
+          viewOverride,
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          BASE_PATH,
+          `${datasetName}_with_mapping_link`,
+        );
+
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      condition => {
+        t.true(
+          condition,
+          `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeletons does not look the same.`,
+        );
+      },
+    );
+  },
+);
 
 test.afterEach(async t => {
   await t.context.browser.close();

@@ -43,10 +43,9 @@ docker-compose up -d webknossos nginx nginx-letsencrypt
 docker-compose down
 ```
 
-{% hint style='info' %}
-This setup does not support regular backups or monitoring.
-Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.
-{% endhint %}
+!!! info
+    This setup does not support regular backups or monitoring.
+    Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.
 
 For installations on localhost, please refer to the [Code Readme](../README.md#docker).
 

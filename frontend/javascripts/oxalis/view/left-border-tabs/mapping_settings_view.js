@@ -97,6 +97,18 @@ class MappingSettingsView extends React.Component<Props, State> {
     didRefreshMappingList: false,
   };
 
+  componentDidUpdate(prevProps) {
+    if (this.props.isMappingEnabled) {
+      this.refreshLayerMappings();
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.isMappingEnabled !== prevProps.isMappingEnabled) {
+      this.refreshLayerMappings();
+    }
+  }
+
   handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
     this.props.setHideUnmappedIds(this.props.layerName, hideUnmappedIds);
   };
@@ -116,7 +128,7 @@ class MappingSettingsView extends React.Component<Props, State> {
   };
 
   async refreshLayerMappings() {
-    if (this.state.didRefreshMappingList) {
+    if (this.state.didRefreshMappingList || this.state.isRefreshingMappingList) {
       return;
     }
     const { segmentationLayer } = this.props;

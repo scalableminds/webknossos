@@ -12,7 +12,7 @@ webKnossos has a task system that is useful for efficiently managing large annot
 
 It is possible to download all annotations that belong to either a Project or a Task Type for further processing.
 
-{% embed url="https://www.youtube.com/watch?v=YC4vaia6MkY "%}
+![Video: Managing Projects and Tasks](https://www.youtube.com/watch?v=YC4vaia6MkY)
 
 ## How To Create Tasks
 
@@ -44,13 +44,12 @@ Alternatively, you can upload an NML file that contains nodes which will be used
 
 ![Create a Task](./images/tasks_task.png)
 
-{% hint style='info' %}
-Note that you need to specify required Experiences for a Task. Your Task can only be assigned if there are users that have the required Experience.
+!!!info
+    Note that you need to specify required Experiences for a Task. Your Task can only be assigned if there are users that have the required Experience.
 
-You can assign an Experience to a user on the `Users` screen.
+    You can assign an Experience to a user on the `Users` screen.
 
-![Assigning Experiences to users](./images/users_experience.png)
-{% endhint %}
+    ![Assigning Experiences to users](./images/users_experience.png)
 
 After your Task has been created, users can request Tasks in their dashboard.
 If there are no other Tasks, they will get your Task assigned.
@@ -62,7 +61,7 @@ Finally, collect the completed data from the `Projects` screen by downloading a 
 
 ![Download all Tasks of a Project](./images/tasks_download.png)
 
-{% embed url="https://www.youtube.com/watch?v=2A3en7Kxl3M "%}
+![Video: Focused Annotation and High-Speed Tasks](https://www.youtube.com/watch?v=2A3en7Kxl3M)
 
 ## Task Assignment Criteria
 

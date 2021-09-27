@@ -57,7 +57,6 @@ import Constants, {
   OverwriteModeEnum,
   type OrthoView,
   type AnnotationTool,
-  type Vector2,
   type Vector3,
   AnnotationToolEnum,
   type LabeledVoxelsMap,

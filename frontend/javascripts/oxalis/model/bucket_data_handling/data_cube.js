@@ -426,13 +426,13 @@ class DataCube {
     if (sourceCellId === cellId) {
       return null;
     }
-    const bucketsToFill: Array<[DataBucket, Vector3]> = [
+    const bucketsWithXyzSeedsToFill: Array<[DataBucket, Vector3]> = [
       [seedBucket, this.getVoxelOffset(globalSeedVoxel, zoomStep)],
     ];
     console.log("viewportBoundings", viewportBoundings);
     // Iterate over all buckets within the area and flood fill each of them.
-    while (bucketsToFill.length > 0) {
-      const [currentBucket, initialVoxelInBucket] = bucketsToFill.pop();
+    while (bucketsWithXyzSeedsToFill.length > 0) {
+      const [currentBucket, initialXyzVoxelInBucket] = bucketsWithXyzSeedsToFill.pop();
       // Check if the bucket overlaps the active viewport bounds.
       if (
         !areBoundingBoxesOverlappingOrTouching(currentBucket.getBoundingBox(), viewportBoundings)
@@ -440,7 +440,7 @@ class DataCube {
         continue;
       }
       const { data: bucketData } = currentBucket.getOrCreateData();
-      const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialVoxelInBucket);
+      const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
         continue;
@@ -452,7 +452,7 @@ class DataCube {
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
-      const markVoxelOfSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]) => {
+      const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]) => {
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
           currentLabeledVoxelMap.set(
             thirdCoord,
@@ -465,38 +465,38 @@ class DataCube {
       };
 
       // Use a VoxelNeighborStack3D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
-      const initialVoxelInSliceUvw = xyzToUvw(initialVoxelInBucket);
-      markVoxelOfSliceAsLabeled(initialVoxelInSliceUvw);
-      const neighbourVoxelStack = new VoxelNeighborStack3D(initialVoxelInSliceUvw);
+      const initialVoxelInSliceUvw = xyzToUvw(initialXyzVoxelInBucket);
+      markUvwInSliceAsLabeled(initialVoxelInSliceUvw);
+      const neighbourVoxelStackUvw = new VoxelNeighborStack3D(initialVoxelInSliceUvw);
       // Iterating over all neighbours from the initialAddress.
-      while (!neighbourVoxelStack.isEmpty()) {
-        const neighbours = neighbourVoxelStack.popVoxelAndGetNeighbors();
+      while (!neighbourVoxelStackUvw.isEmpty()) {
+        const neighbours = neighbourVoxelStackUvw.popVoxelAndGetNeighbors();
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxelUvw = neighbours[neighbourIndex];
           const neighbourVoxelXyz = uvwToXyz(neighbourVoxelUvw);
 
           // If the current neighbour is not in the current bucket, calculate its
-          // bucket's zoomed address and add the bucket to bucketsToFill.
+          // bucket's zoomed address and add the bucket to bucketsWithXyzSeedsToFill.
           // adjustedNeighbourVoxelUvw is a copy of neighbourVoxelUvw whose value are robust
           // against the modulo operation used in getVoxelOffset.
           const {
             isVoxelOutside,
             neighbourBucketAddress,
             adjustedVoxel: adjustedNeighbourVoxelXyz,
-          } = currentBucket.is3DVoxelInsideBucket(neighbourVoxelXyz, dimensionIndices, zoomStep);
+          } = currentBucket.is3DVoxelInsideBucket(neighbourVoxelXyz, zoomStep);
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
             if (neighbourBucket.type !== "null") {
-              bucketsToFill.push([neighbourBucket, adjustedNeighbourVoxelXyz]);
+              bucketsWithXyzSeedsToFill.push([neighbourBucket, adjustedNeighbourVoxelXyz]);
             }
           } else {
-            // Label the current neighbour and add it to the neighbourVoxelStack to iterate over its neighbours.
+            // Label the current neighbour and add it to the neighbourVoxelStackUvw to iterate over its neighbours.
             const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
               bucketData[neighbourVoxelIndex] = cellId;
-              markVoxelOfSliceAsLabeled(neighbourVoxelUvw);
-              neighbourVoxelStack.pushVoxel(neighbourVoxelUvw);
+              markUvwInSliceAsLabeled(neighbourVoxelUvw);
+              neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
             }
           }
         }

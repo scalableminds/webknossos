@@ -1,6 +1,7 @@
 // @flow
 import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
 import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
+import ButtonComponent from "oxalis/view/components/button_component";
 import { useSelector } from "react-redux";
 import React, { useState, useEffect } from "react";
 import type { APIDataset, APIAnnotationVisibility, APIAnnotationType } from "types/api_flow_types";
@@ -72,6 +73,24 @@ export function getUrl(sharingToken: string, includeToken: boolean) {
 export async function copyUrlToClipboard(url: string) {
   await navigator.clipboard.writeText(url);
   Toast.success("URL copied to clipboard.");
+}
+
+export function ShareButton(props: { dataset: APIDataset }) {
+  const sharingToken = useDatasetSharingToken(props.dataset);
+  const copySharingUrl = () => {
+    // Copy the url on-demand as it constantly changes
+    const url = getUrl(sharingToken, !props.dataset.isPublic);
+    copyUrlToClipboard(url);
+  };
+
+  return (
+    <ButtonComponent
+      icon={<ShareAltOutlined />}
+      style={{ marginLeft: 12 }}
+      title="Copy Sharing Link"
+      onClick={copySharingUrl}
+    />
+  );
 }
 
 export default function ShareModalView(props: Props) {

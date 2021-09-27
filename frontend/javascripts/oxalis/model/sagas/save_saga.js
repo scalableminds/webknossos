@@ -487,7 +487,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
       yield* put(setLastSaveTimestampAction(tracingType));
       yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
-      yield* call(markBucketsAsNotDirty, compactedSaveQueue);
+      yield _call(markBucketsAsNotDirty, compactedSaveQueue);
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {

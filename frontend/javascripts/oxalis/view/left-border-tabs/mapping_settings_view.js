@@ -97,7 +97,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     didRefreshMappingList: false,
   };
 
-  componentDidUpdate(prevProps) {
+  componentDidMount() {
     if (this.props.isMappingEnabled) {
       this.refreshLayerMappings();
     }

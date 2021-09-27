@@ -75,11 +75,10 @@ In the registration form, they need to specify some basic information, and confi
 
 If there is just one organization in the webKnossos instance, they are assigned to that organization automatically but need to be activated by an administrator, compare below.
 
-{% hint style='info' %}
-You can also invite users to your webKnossos organization, by clicking the `Invite Users` button at the top of the user list. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
+!!!info
+    You can also invite users to your webKnossos organization, by clicking the `Invite Users` button at the top of the user list. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
 
-![Send an invite link to new users](./images/users_invite.png)
-{% endhint %}
+    ![Send an invite link to new users](./images/users_invite.png)
 
 
 ## Activating New Users

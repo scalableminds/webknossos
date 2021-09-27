@@ -67,9 +67,9 @@ Most of the time these are **scale** which represents the physical size of one v
 Once you entered the required properties, you can click the `Import` button to complete the process.
 The dataset is now ready to use.
 
-{% hint style='info' %}
-If you uploaded the dataset along with a `datasource-properties.json` metadata file the dataset will be imported automatically without any additional manual steps.
-{% endhint %}
+!!! info
+    If you uploaded the dataset along with a `datasource-properties.json` metadata file the dataset will be imported automatically without any additional manual steps.
+
 
 ### Sample Datasets
 
@@ -149,4 +149,4 @@ This may be useful when dealing with large datasets that should remain in your d
 scalable minds also offers a dataset alignment tool called **Voxelytics Align**.
 [Learn more.](https://scalableminds.com/voxelytics-align)
 
-{% embed url="https://www.youtube.com/watch?v=yYauIHZcI_4 "%}
+![Dataset Alignment](https://www.youtube.com/watch?v=yYauIHZcI_4)

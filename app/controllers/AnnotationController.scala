@@ -61,7 +61,7 @@ class AnnotationController @Inject()(
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
 
-  @ApiOperation(value = "Information about an annotation")
+  @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
           new ApiResponse(code = 400, message = badRequestLabel)))
@@ -73,7 +73,7 @@ class AnnotationController @Inject()(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
       id: String,
-      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)") timestamp: Long)
+      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)", required = true) timestamp: Long)
     : Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       val notFoundMessage =

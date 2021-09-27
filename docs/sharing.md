@@ -18,9 +18,9 @@ Sharing a dataset is useful for multiple scenarios:
 
 webKnossos shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
 
-{% embed url="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=512s" %}
+![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=512s)
 
-{% embed url="https://www.youtube.com/watch?v=Ut4m6L3nYdY "%}
+![Video: Connect webKnossos with Your Publications](https://www.youtube.com/watch?v=Ut4m6L3nYdY)
 
 ### Private Sharing for Review
 A privately shared dataset can only be accessed from outside users your using the correct URL.
@@ -41,10 +41,9 @@ That's all you need to do.
 
 To revoke a sharing link in the future, click the `Revoke` button to the right-hand side of the link.
 
-{% hint style='danger' %}
-Do not enable the `Make dataset publicly accessible` checkbox or otherwise, your dataset will be featured on the front page of your webKnossos instance.
-Public access rights are not required for private sharing.
-{% endhint %}
+!!! warning
+    Do not enable the `Make dataset publicly accessible` checkbox or otherwise, your dataset will be featured on the front page of your webKnossos instance.
+    Public access rights are not required for private sharing.
 
 ### Public Sharing
 Public sharing provides access to your dataset to the general public.
@@ -67,10 +66,9 @@ To share a dataset publicly, follow these steps:
 
 That's all you need to do.
 
-{% hint style='info' %}
-We recommend giving your datasets a meaningful display name and description.
-Both are featured next to a preview of the dataset in the gallery of promoted public datasets. 
-{% endhint %}
+!!! info
+    We recommend giving your datasets a meaningful display name and description.
+    Both are featured next to a preview of the dataset in the gallery of promoted public datasets.
 
 
 ## Annotation Sharing
@@ -137,8 +135,7 @@ If members of these teams open their [Shared Annotations Dashboard Tab](./dashbo
 
 ![Enable Team Sharing for your annotation](images/sharing_modal_team.png)
 
-{% hint style='info' %}
-Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.
-{% endhint %}
+!!! info
+    Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.
 
-{% embed url="https://www.youtube.com/watch?v=hcm8Jx22DG8 "%}
+![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)

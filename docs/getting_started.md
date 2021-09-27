@@ -6,7 +6,7 @@ Since it is a web-based tool, [collaboration](./sharing.md), [crowdsourcing](./t
 
 Feel free to [drop us a line](mailto:hello@webknossos.org) or [create a Pull Request](https://github.com/scalableminds/webknossos/pulls) if you have any suggestions for improving the documentation.
 
-{% embed url="https://www.youtube.com/watch?v=jsz0tc3tuKI" %}
+![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI)
 
 ## Create a webknossos.org Account
 Signing up to [webknossos.org](https://webknossos.org) is the easiest way to get started with webKnossos.

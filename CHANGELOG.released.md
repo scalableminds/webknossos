@@ -931,7 +931,7 @@ Also the data viewing and tracing workflow is smoothed further:
 ### Highlights
 
 - The Dataset Gallery was redesigned to be a Publication Gallery instead. It will feature scientific publications together with their published datasets and information such as the species, brain region or acquisition method of such datasets. [#3653](https://github.com/scalableminds/webknossos/pull/3653)
-  Please see the [migration guide](MIGRATIONS.md#19020---2019-02-04) on how to add publications.
+  Please see the [migration guide](MIGRATIONS.released.md#19020---2019-02-04) on how to add publications.
 - Also, this release includes new features that enrich the view of your data:
    - Isosurface computation can now be triggered for whole segments (shift + click on a segment in view mode). [#3655](https://github.com/scalableminds/webknossos/pull/3655)
    - Added the possibility to fade the alpha value of data layers. Also, a dataset can now contain both RGB and grayscale layers. [#3670](https://github.com/scalableminds/webknossos/pull/3670)

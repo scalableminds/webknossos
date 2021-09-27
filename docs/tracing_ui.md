@@ -92,7 +92,7 @@ In order to increase the brightness, move the range to the left. To decrease the
 - `Color`: Every data layer can be colored to make them easily identifiable. By default, all layers have a white overlay, showing the true, raw black & white data.
 - `Visibility`: Use the eye icon on the right side of the name of the data layer to enable/disable this layer. If you hold CTRL while toggling the visibility of a layer, that layer will be made exclusively visible.
 
-{% embed url="https://www.youtube.com/watch?v=JZLKB9GfMgQ "%}
+![Video: Visualize Machine-Learning Predictions](https://www.youtube.com/watch?v=JZLKB9GfMgQ)
 
 #### Segmentation
 - `Segmentation Opacity`: Increases / Decreases the opacity of the segmentation layer. A low value will make the segmentation almost transparent letting you see the underlying data layers more clearly. A high value will make the segmentation opaque which is useful for adjusting and reviewing the exact fit of the segmentation layer. Only possible if your dataset has a segmentation layer.

@@ -49,11 +49,8 @@ class PushQueue {
   }
 
   insert(bucket: DataBucket): void {
-    const oldSize = this.queue.size;
-    this.queue.add(bucket);
-    const newSize = this.queue.size;
-
-    if (newSize > oldSize) {
+    if (!this.queue.has(bucket)) {
+      this.queue.add(bucket);
       bucket.dirtyCount++;
     }
 

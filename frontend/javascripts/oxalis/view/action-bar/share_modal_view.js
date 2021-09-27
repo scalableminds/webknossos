@@ -16,6 +16,8 @@ import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import Store from "oxalis/store";
+import UrlManager from "oxalis/controller/url_manager";
 
 const RadioGroup = Radio.Group;
 
@@ -60,9 +62,10 @@ export function useDatasetSharingToken(dataset: APIDataset) {
 }
 
 export function getUrl(sharingToken: string, includeToken: boolean) {
-  const { pathname, origin, hash } = location;
+  const { pathname, origin } = location;
+  const hash = UrlManager.buildUrlHashJson(Store.getState());
   const query = includeToken ? `?token=${sharingToken}` : "";
-  const url = `${origin}${pathname}${query}${hash}`;
+  const url = `${origin}${pathname}${query}#${hash}`;
   return url;
 }
 

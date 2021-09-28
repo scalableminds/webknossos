@@ -201,6 +201,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
   "tracing.skeletons_are_hidden_warning":
     'All skeletons are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
+  "tracing.invalid_json_url_hash":
+    "Cannot parse JSON URL hash. More information was printed to the browser's console.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

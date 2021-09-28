@@ -1,7 +1,4 @@
-/**
- * url_manager.js
- * @flow
- */
+// @flow
 
 import _ from "lodash";
 
@@ -9,33 +6,38 @@ import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store, { type Tracing } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type ViewMode, ViewModeValues, type Vector3 } from "oxalis/constants";
-import window, { document, location } from "libs/window";
+import window, { location } from "libs/window";
+import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
+import messages from "messages";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
-export type UrlManagerState = {
-  position?: Vector3,
-  mode?: ViewMode,
-  zoomStep?: number,
+export type FullUrlManagerState = {
+  position: Vector3,
+  mode: ViewMode,
+  zoomStep: number,
   activeNode?: number,
   rotation?: Vector3,
 };
 
+export type PartialUrlManagerState = $Shape<FullUrlManagerState>;
+
 class UrlManager {
   baseUrl: string;
-  initialState: UrlManagerState;
+  initialState: PartialUrlManagerState;
 
   initialize() {
-    this.baseUrl = document.location.pathname + document.location.search;
-    this.initialState = this.parseUrl();
+    this.baseUrl = location.pathname + location.search;
+    this.initialState = this.parseUrlHash();
   }
 
   reset(): void {
-    // don't use document.location.hash = ""; since it refreshes the page
-    window.history.replaceState({}, null, document.location.pathname + document.location.search);
+    // don't use location.hash = ""; since it refreshes the page
+    window.history.replaceState({}, null, location.pathname + location.search);
     this.initialize();
   }
 
@@ -47,27 +49,55 @@ class UrlManager {
   }
 
   onHashChange = () => {
-    const stateString = location.hash.slice(1);
-    if (stateString.includes("=")) {
-      // The hash was changed by a comment link, for example `activeNode=12`
-      const [key, value] = stateString.split("=");
-      // The value can either be a single number or multiple numbers delimited by a ,
-      applyState({ [key]: value.includes(",") ? value.split(",").map(Number) : Number(value) });
-    } else {
-      // The hash was changed by the user
-      applyState(this.parseUrl());
-    }
+    const urlState = this.parseUrlHash();
+    applyState(urlState);
   };
 
-  parseUrl(): UrlManagerState {
+  parseUrlHash(): PartialUrlManagerState {
+    const urlHash = decodeURIComponent(location.hash.slice(1));
+    if (urlHash.includes("{")) {
+      // The hash is in json format
+      return this.parseUrlHashJson(urlHash);
+    } else if (urlHash.includes("=")) {
+      // The hash was changed by a comment link
+      return this.parseUrlHashCommentLink(urlHash);
+    } else {
+      // The hash is in csv format
+      return this.parseUrlHashCsv(urlHash);
+    }
+  }
+
+  parseUrlHashCommentLink(urlHash: string): PartialUrlManagerState {
+    // Comment link format:
+    // activeNode=12 or position=1,2,3
+
+    const [key, value] = urlHash.split("=");
+    // The value can either be a single number or multiple numbers delimited by a ,
+    return { [key]: value.includes(",") ? value.split(",").map(Number) : Number(value) };
+  }
+
+  parseUrlHashJson(urlHash: string): PartialUrlManagerState {
+    // State json format:
+    // { "position"?: Vector3, "mode"?: number, "zoomStep"?: number, "rotation"?: Vector3, "activeNode"?: number}
+
+    try {
+      return JSON.parse(urlHash);
+    } catch (e) {
+      Toast.error(messages["tracing.invalid_json_url_hash"]);
+      console.error(e);
+      ErrorHandling.notify(e);
+      return {};
+    }
+  }
+
+  parseUrlHashCsv(urlHash: string): PartialUrlManagerState {
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
-    const stateString = location.hash.slice(1);
-    const state: UrlManagerState = {};
+    const state: PartialUrlManagerState = {};
 
-    if (stateString) {
-      const stateArray = stateString.split(",").map(Number);
+    if (urlHash) {
+      const stateArray = urlHash.split(",").map(Number);
       const validStateArray = stateArray.map(value => (!isNaN(value) ? value : 0));
       if (validStateArray.length >= 5) {
         const positionValues = validStateArray.slice(0, 3);
@@ -103,28 +133,43 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  buildHash(tracing: Tracing) {
-    const position = V3.floor(getPosition(Store.getState().flycam));
-    const { viewMode } = Store.getState().temporaryConfiguration;
-    const viewModeIndex = ViewModeValues.indexOf(viewMode);
-    const zoomStep = Store.getState().flycam.zoomStep.toFixed(3);
-    const rotation = constants.MODES_ARBITRARY.includes(viewMode)
-      ? getRotation(Store.getState().flycam).map(e => e.toFixed(2))
-      : [];
+  getUrlState(state: OxalisState): FullUrlManagerState {
+    const position: Vector3 = V3.floor(getPosition(state.flycam));
+    const { viewMode: mode } = state.temporaryConfiguration;
+    const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
+    const rotationOptional = constants.MODES_ARBITRARY.includes(mode)
+      ? { rotation: Utils.map3(e => Utils.roundTo(e, 2), getRotation(state.flycam)) }
+      : {};
 
-    const activeNodeId = getSkeletonTracing(tracing)
+    const activeNodeOptional = getSkeletonTracing(state.tracing)
       .chain(skeletonTracing => getActiveNode(skeletonTracing))
-      .map(node => [node.id])
-      .getOrElse([]);
+      .map(node => ({ activeNode: node.id }))
+      .getOrElse({});
 
-    return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeId].join(",");
+    // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+    return { position, mode, zoomStep, ...rotationOptional, ...activeNodeOptional };
+  }
+
+  buildUrlHashCsv(state: OxalisState): string {
+    const { position, mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
+    const viewModeIndex = ViewModeValues.indexOf(mode);
+    const activeNodeArray = activeNode != null ? [activeNode] : [];
+    return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeArray].join(",");
+  }
+
+  buildUrlHashJson(state: OxalisState): string {
+    const urlState = this.getUrlState(state);
+    return encodeUrlHash(JSON.stringify(urlState));
   }
 
   buildUrl(): string {
-    const { tracing } = Store.getState();
-
-    const hash = this.buildHash(tracing);
-    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.annotationType, tracing.annotationId);
+    const state = Store.getState();
+    const hash = this.buildUrlHashCsv(state);
+    const newBaseUrl = updateTypeAndId(
+      this.baseUrl,
+      state.tracing.annotationType,
+      state.tracing.annotationId,
+    );
     return `${newBaseUrl}#${hash}`;
   }
 }
@@ -142,6 +187,27 @@ export function updateTypeAndId(
     /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
     (all, base, type, id, rest) => `${base}/${annotationType}/${annotationId}${rest}`,
   );
+}
+
+// encodeURIComponent encodes all characters except [A-Za-z0-9] - _ . ! ~ * ' ( )
+// see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
+// The url hash can contain ! $ & ' ( ) * + , ; =  - . _ ~ : @ / ? or [a-zA-Z0-9] or %[0-9a-fA-F]{2}
+// see https://stackoverflow.com/a/2849800
+// Whitelist the characters that are part of the second list, but not of the first as they don't need to be encoded
+// for better url readability
+const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
+// Build lookup table from encoded to decoded value
+const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
+  obj[encodeURIComponent(decodedValue)] = decodedValue;
+  return obj;
+}, {});
+// Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
+const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
+const decodeWhitelistedCharacters = matched => encodedCharacterToDecodedCharacter[matched];
+
+export function encodeUrlHash(unencodedHash: string): string {
+  const urlEncodedHash = encodeURIComponent(unencodedHash);
+  return urlEncodedHash.replace(re, decodeWhitelistedCharacters);
 }
 
 export default new UrlManager();

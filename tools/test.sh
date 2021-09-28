@@ -20,6 +20,7 @@ function prepare {
   pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
   pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
   # --copy-files will copy files that are present in the source dir but are not transpiled (e.g.: json files)
+  # "$@" inside this function refers to all arguments of the prepare function, not all arguments of this bash script
   BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files "$@"
 }
 

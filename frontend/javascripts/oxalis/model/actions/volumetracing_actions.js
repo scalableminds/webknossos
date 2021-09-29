@@ -13,7 +13,12 @@ type InitializeVolumeTracingAction = {
 type CreateCellAction = { type: "CREATE_CELL" };
 type StartEditingAction = { type: "START_EDITING", position: Vector3, planeId: OrthoView };
 type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
-type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
+type FloodFillAction = {
+  type: "FLOOD_FILL",
+  position: Vector3,
+  planeId: OrthoView,
+  callback?: () => void,
+};
 type FinishEditingAction = { type: "FINISH_EDITING" };
 type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
 
@@ -93,10 +98,15 @@ export const addToLayerAction = (position: Vector3): AddToLayerAction => ({
   position,
 });
 
-export const floodFillAction = (position: Vector3, planeId: OrthoView): FloodFillAction => ({
+export const floodFillAction = (
+  position: Vector3,
+  planeId: OrthoView,
+  callback?: () => void,
+): FloodFillAction => ({
   type: "FLOOD_FILL",
   position,
   planeId,
+  callback,
 });
 
 export const finishEditingAction = (): FinishEditingAction => ({

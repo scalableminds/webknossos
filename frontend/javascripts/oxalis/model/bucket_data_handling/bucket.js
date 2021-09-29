@@ -30,6 +30,7 @@ import {
   addBucketToUndoAction,
   type MaybeBucketLoadedPromise,
 } from "oxalis/model/actions/volumetracing_actions";
+import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -76,6 +77,10 @@ export class NullBucket {
 
   getData(): BucketDataArray {
     throw new Error("NullBucket has no data.");
+  }
+
+  ensureLoaded(): NullBucket {
+    return this;
   }
 }
 
@@ -184,6 +189,20 @@ export class DataBucket {
       min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
     ];
     return { min, max };
+  }
+
+  getGlobalPosition(): Vector3 {
+    console.log("getGlobalPosition", { zoomedAddress: this.zoomedAddress });
+    const resolutions = getResolutions(Store.getState().dataset);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+  }
+
+  getTopLeftInMag(): Vector3 {
+    return [
+      this.zoomedAddress[0] * Constants.BUCKET_WIDTH,
+      this.zoomedAddress[1] * Constants.BUCKET_WIDTH,
+      this.zoomedAddress[2] * Constants.BUCKET_WIDTH,
+    ];
   }
 
   shouldCollect(): boolean {
@@ -468,5 +487,25 @@ export class DataBucket {
     if (this.visualizedMesh != null) {
       this.visualizedMesh.material.color = color;
     }
+  }
+
+  async ensureLoaded(): Promise<void> {
+    let needsToAwaitBucket = false;
+    if (this.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (this.needsRequest()) {
+      this.cube.pullQueue.add({
+        bucket: this.zoomedAddress,
+        priority: PullQueueConstants.PRIORITY_HIGHEST,
+      });
+      this.cube.pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
+      await new Promise(resolve => {
+        this.on("bucketLoaded", resolve);
+      });
+    }
+    // Bucket has been loaded by now or was loaded already
   }
 }

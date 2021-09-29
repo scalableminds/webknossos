@@ -12,9 +12,12 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import Deferred from "libs/deferred";
 
 const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
-const { setPositionAction } = mockRequire.reRequire("oxalis/model/actions/flycam_actions");
+const { setPositionAction, setZoomStepAction } = mockRequire.reRequire(
+  "oxalis/model/actions/flycam_actions",
+);
 
 const {
   setActiveCellAction,
@@ -50,24 +53,164 @@ function createBucketResponseFunction(fillValue, delay) {
   };
 }
 
-test.serial("Executing a floodfill with a new segment id should update the maxCellId", t => {
-  const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
-  const oldMaxCellId = volumeTracing.maxCellId;
+test.serial("Executing a floodfill in mag 1", async t => {
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
+    Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
+  );
 
-  const newCellId = 13371337;
+  const paintCenter = [0, 0, 43];
+  const brushSize = 10;
+
+  const newCellId = 2;
+
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 43]));
+  Store.dispatch(setToolAction("BRUSH"));
   Store.dispatch(setActiveCellAction(newCellId));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
 
-  // maxCellId should not have changed since no voxel was annotated yet
-  getVolumeTracingOrFail(Store.getState().tracing).map(tracing => {
-    t.is(tracing.maxCellId, oldMaxCellId);
-  });
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    console.log("testing zoomStep", zoomStep);
+    t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep), newCellId);
+    // A brush size of 10 means a radius of 5 (so, from 0 to 4).
+    t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep), newCellId);
+    // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
+    // (and not at 4,4)
+    t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep), newCellId);
+  }
+  await t.context.api.tracing.save();
 
-  Store.dispatch(floodFillAction([12, 12, 12], OrthoViews.PLANE_XY));
+  const floodingCellId = 3;
 
-  // maxCellId should be updated after flood fill
-  getVolumeTracingOrFail(Store.getState().tracing).map(tracing => {
-    t.is(tracing.maxCellId, newCellId);
-  });
+  Store.dispatch(setActiveCellAction(floodingCellId));
+
+  const readyDeferred = new Deferred();
+  Store.dispatch(floodFillAction([0, 0, 43], OrthoViews.PLANE_XY, () => readyDeferred.resolve()));
+
+  await readyDeferred.promise();
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep),
+      floodingCellId,
+    );
+    // A brush size of 10 means a radius of 5 (so, from 0 to 4).
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep),
+      floodingCellId,
+    );
+    // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
+    // (and not at 4,4)
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep),
+      floodingCellId,
+    );
+  }
+});
+
+test.only("Executing a floodfill in mag 2", async t => {
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
+    Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
+  );
+
+  const paintCenter = [0, 0, 43];
+  const brushSize = 10;
+
+  const newCellId = 2;
+
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 43]));
+  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setActiveCellAction(newCellId));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    console.log("testing zoomStep", zoomStep);
+    t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep), newCellId);
+    // A brush size of 10 means a radius of 5 (so, from 0 to 4).
+    t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep), newCellId);
+    // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
+    // (and not at 4,4)
+    t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep), newCellId);
+  }
+  await t.context.api.tracing.save();
+
+  const floodingCellId = 3;
+
+  Store.dispatch(setActiveCellAction(floodingCellId));
+  console.log("#############################");
+  console.log("#############################");
+  console.log("############################# flood fill");
+  console.log("#############################");
+
+  const readyDeferred = new Deferred();
+  Store.dispatch(setZoomStepAction(2));
+  Store.dispatch(floodFillAction([0, 0, 43], OrthoViews.PLANE_XY, () => readyDeferred.resolve()));
+
+  await readyDeferred.promise();
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    console.log("testing zoomStep", zoomStep);
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep),
+      floodingCellId,
+    );
+    // A brush size of 10 means a radius of 5 (so, from 0 to 4).
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep),
+      floodingCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep),
+      floodingCellId,
+    );
+    // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
+    // (and not at 4,4)
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep),
+      floodingCellId,
+    );
+  }
 });
 
 test.serial(
@@ -102,20 +245,22 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0]), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 0]), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 0]), newCellId);
-  // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-  t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 0]), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 0]), newCellId);
-  // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
-  // (and not at 4,4)
-  t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 0]), newCellId);
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 0], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 0], zoomStep), newCellId);
+    // A brush size of 10 means a radius of 5 (so, from 0 to 4).
+    t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 0], zoomStep), newCellId);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 0], zoomStep), newCellId);
+    // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
+    // (and not at 4,4)
+    t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 0], zoomStep), newCellId);
 
-  t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0]), 0);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 5, 0]), 0);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 0, 1]), 0);
+    t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0], zoomStep), 0);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 5, 0], zoomStep), 0);
+    t.is(await t.context.api.data.getDataValue("segmentation", [0, 0, 1], zoomStep), 0);
+  }
 
   t.snapshot(
     await t.context.api.data.getDataFor2DBoundingBox("segmentation", {

@@ -36,6 +36,7 @@ import {
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
+import createProgressCallback from "libs/progress_callback";
 import {
   getResolutionInfoOfSegmentationTracingLayer,
   ResolutionInfo,
@@ -213,20 +214,22 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingsFromPosition(
+function* getBoundingBoxForFloodFill(
+  position: Vector3,
   currentViewport: OrthoView,
   numberOfSlices: number,
 ): Saga<BoundingBoxType> {
-  const position = yield* select(state => getFlooredPosition(state.flycam));
-  const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
-  const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
-  const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
+  // const position = yield* select(state => getFlooredPosition(state.flycam));
+  // const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
+  // const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
+  const halfViewportExtentsUVW = [128, 128, 128];
+  // const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
   const currentViewportBounding = {
     min: V3.sub(position, halfViewportExtentsUVW),
     max: V3.add(position, halfViewportExtentsUVW),
   };
-  currentViewportBounding.max[thirdDimension] =
-    currentViewportBounding.min[thirdDimension] + numberOfSlices;
+  // currentViewportBounding.max[thirdDimension] =
+  //   currentViewportBounding.min[thirdDimension] + numberOfSlices;
   return currentViewportBounding;
 }
 
@@ -473,6 +476,7 @@ export function* floodFill(): Saga<void> {
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
+    console.log({ requestedZoomStep });
     const resolutionInfo = yield* select(state =>
       getResolutionInfoOfSegmentationTracingLayer(state.dataset),
     );
@@ -498,8 +502,18 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[2]],
     ];
     // todo: replace with other bounding box.
-    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 10);
-    const labelMasksByBucketAndW = cube.floodFill(
+    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, position, planeId, 10);
+
+    const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
+    yield* call(progressCallback, false, "Performing floodfill...");
+
+    console.time("cube.floodFill");
+
+    const {
+      bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
+      wasBoundingBoxExceeded,
+    } = yield* call(
+      [cube, cube.floodFill],
       seedVoxel,
       activeCellId,
       uvwToXyz,
@@ -507,7 +521,12 @@ export function* floodFill(): Saga<void> {
       dimensionIndices,
       currentViewportBounding,
       labeledZoomStep,
+      progressCallback,
     );
+    console.timeEnd("cube.floodFill");
+
+    yield* call(progressCallback, false, "Finalizing floodfill...");
+
     if (labelMasksByBucketAndW == null) {
       continue;
     }
@@ -527,6 +546,9 @@ export function* floodFill(): Saga<void> {
         }
       }
 
+      // floodFill
+      // console.log("apply labeled map to missing resolutions for z=", indexZ);
+      console.time(`applyLabeledVoxelMapToAllMissingResolutions ${indexZ}`);
       applyLabeledVoxelMapToAllMissingResolutions(
         labeledVoxelMapFromFloodFill,
         labeledZoomStep,
@@ -537,9 +559,24 @@ export function* floodFill(): Saga<void> {
         indexZ,
         true,
       );
+      console.timeEnd(`applyLabeledVoxelMapToAllMissingResolutions ${indexZ}`);
     }
     yield* put(finishAnnotationStrokeAction());
+
+    if (wasBoundingBoxExceeded) {
+      yield* call(
+        progressCallback,
+        true,
+        "Floodfill is done, but terminated since the labeled volume got too large.",
+      );
+    } else {
+      yield* call(progressCallback, true, "Floodfill done.");
+    }
+
     cube.triggerPushQueue();
+    if (floodFillAction.callback != null) {
+      floodFillAction.callback();
+    }
   }
 }
 

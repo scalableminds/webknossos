@@ -41,6 +41,10 @@ import constants, {
 } from "oxalis/constants";
 import { type ElementClass } from "types/api_flow_types";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import { zoomedPositionToGlobalPosition } from "oxalis/model/helpers/position_converter";
+import { type ProgressCallback } from "libs/progress_callback";
+
 class CubeEntry {
   data: Map<number, Bucket>;
   boundary: Vector3;
@@ -391,7 +395,7 @@ class DataCube {
     }
   }
 
-  floodFill(
+  async floodFill(
     globalSeedVoxel: Vector3,
     cellId: number,
     uvwToXyz: Vector3 => Vector3,
@@ -399,7 +403,11 @@ class DataCube {
     dimensionIndices: DimensionMap,
     viewportBoundings: BoundingBoxType,
     zoomStep: number,
-  ): ?LabelMasksByBucketAndW {
+    progressCallback: ProgressCallback,
+  ): Promise<{
+    bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW,
+    wasBoundingBoxExceeded: boolean,
+  }> {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
     // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
@@ -414,7 +422,7 @@ class DataCube {
     const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     if (seedBucket.type === "null") {
-      return null;
+      return bucketsWithLabeledVoxelsMap;
     }
     if (!this.resolutionInfo.hasIndex(zoomStep)) {
       throw new Error(
@@ -424,12 +432,14 @@ class DataCube {
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
     if (sourceCellId === cellId) {
-      return null;
+      return bucketsWithLabeledVoxelsMap;
     }
     const bucketsWithXyzSeedsToFill: Array<[DataBucket, Vector3]> = [
       [seedBucket, this.getVoxelOffset(globalSeedVoxel, zoomStep)],
     ];
     console.log("viewportBoundings", viewportBoundings);
+    let labeledVoxelCount = 0;
+    let wasBoundingBoxExceeded = false;
     // Iterate over all buckets within the area and flood fill each of them.
     while (bucketsWithXyzSeedsToFill.length > 0) {
       const [currentBucket, initialXyzVoxelInBucket] = bucketsWithXyzSeedsToFill.pop();
@@ -437,8 +447,11 @@ class DataCube {
       if (
         !areBoundingBoxesOverlappingOrTouching(currentBucket.getBoundingBox(), viewportBoundings)
       ) {
+        wasBoundingBoxExceeded = true;
         continue;
       }
+      // eslint-disable-next-line no-await-in-loop
+      await currentBucket.ensureLoaded();
       const { data: bucketData } = currentBucket.getOrCreateData();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
@@ -452,7 +465,16 @@ class DataCube {
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
         bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
+      const resolutions = getResolutions(Store.getState().dataset);
+      const currentResolution = resolutions[currentBucket.zoomedAddress[3]];
+
       const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]) => {
+        // Convert bucket local W coordinate to global W (both mag-dependent)
+        const w = dimensionIndices[2];
+        thirdCoord += currentBucket.getTopLeftInMag()[w];
+        // Convert mag-dependent W to mag-independent W
+        thirdCoord = thirdCoord * currentResolution[w];
+
         if (!currentLabeledVoxelMap.has(thirdCoord)) {
           currentLabeledVoxelMap.set(
             thirdCoord,
@@ -497,6 +519,14 @@ class DataCube {
               bucketData[neighbourVoxelIndex] = cellId;
               markUvwInSliceAsLabeled(neighbourVoxelUvw);
               neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
+              labeledVoxelCount++;
+              if (labeledVoxelCount % 1000000 === 0) {
+                // eslint-disable-next-line no-await-in-loop
+                await progressCallback(
+                  false,
+                  `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing`,
+                );
+              }
             }
           }
         }
@@ -511,7 +541,8 @@ class DataCube {
       this.pushQueue.insert(bucket);
       bucket.trigger("bucketLabeled");
     }
-    return bucketsWithLabeledVoxelsMap;
+
+    return { bucketsWithLabeledVoxelsMap, wasBoundingBoxExceeded };
   }
 
   setBucketData(zoomedAddress: Vector4, data: Uint8Array) {
@@ -580,9 +611,14 @@ class DataCube {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
+    // console.log("getDataValue", {
+    //   voxelIndex,
+    // });
+
     if (bucket.hasData()) {
       const data = bucket.getData();
       const dataValue = data[voxelIndex];
+      // console.log("read data in ", bucket.zoomedAddress, "at", voxelIndex, ". result: ", dataValue);
 
       if (mapping) {
         const mappedValue = mapping[dataValue];
@@ -636,6 +672,12 @@ class DataCube {
 
   positionToBaseAddress(position: Vector3): Vector4 {
     return this.positionToZoomedAddress(position, 0);
+  }
+
+  async getLoadedBucket(bucketAddress: Vector4) {
+    const bucket = this.getOrCreateBucket(bucketAddress);
+
+    return bucket.ensureLoaded();
   }
 }
 

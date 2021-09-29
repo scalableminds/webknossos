@@ -14,6 +14,14 @@ export const tracing: ServerVolumeTracing = {
   largestSegmentId: 21890,
   version: 0,
   zoomLevel: 0,
+  resolutions: [
+    { x: 1, y: 1, z: 1 },
+    { x: 2, y: 2, z: 2 },
+    { x: 4, y: 4, z: 4 },
+    { x: 8, y: 8, z: 8 },
+    { x: 16, y: 16, z: 16 },
+    { x: 32, y: 32, z: 32 },
+  ],
 };
 
 export const annotation: APIAnnotation = {

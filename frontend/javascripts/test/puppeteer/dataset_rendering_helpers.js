@@ -94,6 +94,17 @@ export async function screenshotDatasetWithMappingLink(
   return screenshotTracingView(page);
 }
 
+export async function screenshotSandboxWithMappingLink(
+  page: Page,
+  baseUrl: string,
+  datasetId: APIDatasetId,
+  optionalViewOverride: ?string,
+): Promise<Screenshot> {
+  await openSandboxView(page, baseUrl, datasetId, optionalViewOverride);
+  await waitForMappingEnabled(page);
+  return screenshotTracingView(page);
+}
+
 async function waitForMappingEnabled(page: Page) {
   let isMappingEnabled;
   while (!isMappingEnabled) {
@@ -139,6 +150,27 @@ async function openTracingView(
   await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`), {
     timeout: 0,
   });
+
+  await waitForTracingViewLoad(page);
+  await waitForRenderingFinish(page);
+}
+
+async function openSandboxView(
+  page: Page,
+  baseUrl: string,
+  datasetId: APIDatasetId,
+  optionalViewOverride: ?string,
+) {
+  const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
+  await page.goto(
+    urljoin(
+      baseUrl,
+      `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
+    ),
+    {
+      timeout: 0,
+    },
+  );
 
   await waitForTracingViewLoad(page);
   await waitForRenderingFinish(page);

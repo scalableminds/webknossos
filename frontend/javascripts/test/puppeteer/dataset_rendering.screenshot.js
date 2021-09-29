@@ -11,6 +11,7 @@ import {
   screenshotDataset,
   screenshotDatasetWithMapping,
   screenshotDatasetWithMappingLink,
+  screenshotSandboxWithMappingLink,
   WK_AUTH_TOKEN,
 } from "./dataset_rendering_helpers";
 
@@ -87,6 +88,8 @@ const viewOverrides: { [key: string]: string } = {
   ROI2017_wkw_fallback: "535,536,600,0,1.18",
   dsA_2: "1024,1024,64,0,0.424",
   "Multi-Channel-Test": "1201,1072,7,0,0.683",
+  "test-agglomerate-file":
+    '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"activeMappingByLayer":{"segmentation":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}',
 };
 
 const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
@@ -205,8 +208,7 @@ test.serial(
   "it should render a dataset linked to with an active mapping and agglomerate skeletons correctly",
   async t => {
     const datasetName = "test-agglomerate-file";
-    const viewOverride =
-      '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"activeMappingByLayer":{"segmentation":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}';
+    const viewOverride = viewOverrides[datasetName];
     await withRetry(
       3,
       async () => {
@@ -231,6 +233,42 @@ test.serial(
         t.true(
           condition,
           `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeletons does not look the same.`,
+        );
+      },
+    );
+  },
+);
+
+test.serial(
+  "it should render a dataset sandbox linked to with an active mapping and agglomerate skeletons correctly",
+  async t => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides[datasetName];
+    await withRetry(
+      3,
+      async () => {
+        const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
+        const { screenshot, width, height } = await screenshotSandboxWithMappingLink(
+          await getNewPage(t.context.browser),
+          URL,
+          datasetId,
+          viewOverride,
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          BASE_PATH,
+          // Should look the same as an explorative tracing on the same dataset with the same mapping link
+          `${datasetName}_with_mapping_link`,
+        );
+
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      condition => {
+        t.true(
+          condition,
+          `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeletons does not look the same.`,
         );
       },
     );

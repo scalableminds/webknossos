@@ -380,7 +380,11 @@ export default class TextureBucketManager {
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
         }
       } else if (address !== -1) {
-        const baseBucketAddresses = this._getBaseBucketAddresses(bucket, zoomStepDifference);
+        const baseBucketAddresses = this._getBaseBucketAddresses(
+          bucket,
+          zoomStepDifference,
+          maxZoomStepDiff,
+        );
         for (const baseBucketAddress of baseBucketAddresses) {
           const lookUpIdx = this._getBucketIndex(baseBucketAddress);
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
@@ -431,7 +435,13 @@ export default class TextureBucketManager {
     );
   }
 
-  _getBaseBucketAddresses(bucket: DataBucket, zoomStepDifference: number): Array<Vector4> {
+  _getBaseBucketAddresses(
+    bucket: DataBucket,
+    zoomStepDifference: number,
+    maxZoomStepDifference: number,
+  ): Array<Vector4> {
+    if (zoomStepDifference > maxZoomStepDifference) return [];
+
     const resolutions = getResolutions(Store.getState().dataset);
     return getBaseBucketsForFallbackBucket(bucket.zoomedAddress, zoomStepDifference, resolutions);
   }

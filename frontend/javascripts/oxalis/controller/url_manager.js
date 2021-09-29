@@ -42,16 +42,17 @@ class UrlManager {
     this.initialState = this.parseUrlHash();
   }
 
-  reset(): void {
+  reset(keepUrlState?: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
-    window.history.replaceState({}, null, location.pathname + location.search);
+    if (!keepUrlState) {
+      window.history.replaceState({}, null, location.pathname + location.search);
+    }
     this.initialize();
   }
 
-  removeToken(): void {
-    const url = new URL(location.href);
-    url.searchParams.delete("token");
-    window.history.replaceState({}, null, url);
+  changeBaseUrl(newBaseUrl: string) {
+    this.baseUrl = newBaseUrl;
+    this.updateUnthrottled();
   }
 
   update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);

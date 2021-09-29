@@ -584,12 +584,13 @@ class TracingApi {
     newAnnotationId: string,
     newControlMode: ControlMode,
     versions?: Versions,
+    keepUrlState?: boolean = false,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
       throw new Error("Restarting with view option is not supported");
 
     Store.dispatch(restartSagaAction());
-    UrlManager.reset();
+    UrlManager.reset(keepUrlState);
     await Model.fetch(
       newAnnotationType,
       { annotationId: newAnnotationId, type: newControlMode },

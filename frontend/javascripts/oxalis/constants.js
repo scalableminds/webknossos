@@ -143,6 +143,7 @@ export const OrthoViewGrayCrosshairColor = 0x222222;
 
 export const ControlModeEnum = {
   TRACE: "TRACE",
+  SANDBOX: "SANDBOX",
   VIEW: "VIEW",
 };
 export type ControlMode = $Keys<typeof ControlModeEnum>;

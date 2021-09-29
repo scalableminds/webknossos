@@ -294,10 +294,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       sandboxTracing.volume != null ? sandboxTracing.volume.fallbackLayer : null;
 
     const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
-    // A potential sharingToken is no longer valid after switching to a new tracing
-    // TODO: Check whether this is still needed with the proper sandbox tracings
-    UrlManager.removeToken();
-    await api.tracing.restart(newAnnotation.typ, newAnnotation.id, ControlModeEnum.TRACE);
+    UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
+    await api.tracing.restart(
+      newAnnotation.typ,
+      newAnnotation.id,
+      ControlModeEnum.TRACE,
+      undefined,
+      true,
+    );
 
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
     const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
@@ -432,7 +436,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             [
               <Tooltip
                 placement="bottom"
-                title="This annotation was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
+                title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
                 key="sandbox-tooltip"
               >
                 <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
@@ -544,7 +548,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       />,
     );
 
-    if (isSkeletonMode && activeUser != null) {
+    if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
       elements.push(
         <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
           <FolderOpenOutlined />
@@ -560,12 +564,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       );
     }
 
-    elements.push(
-      <Menu.Item key="restore-button" onClick={this.handleRestore}>
-        <BarsOutlined />
-        Restore Older Version
-      </Menu.Item>,
-    );
+    if (restrictions.allowSave) {
+      elements.push(
+        <Menu.Item key="restore-button" onClick={this.handleRestore}>
+          <BarsOutlined />
+          Restore Older Version
+        </Menu.Item>,
+      );
+    }
 
     elements.push(layoutMenu);
 

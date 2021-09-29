@@ -34,6 +34,7 @@ import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingForAnnotations,
   getAnnotationInformation,
+  getSandboxAnnotationInformation,
   getDataset,
   getSharingToken,
   getUserConfiguration,
@@ -114,6 +115,10 @@ export async function initialize(
     });
 
     Store.dispatch(setTaskAction(annotation.task));
+  } else if (initialCommandType.type === ControlModeEnum.SANDBOX) {
+    const { name, owningOrganization } = initialCommandType;
+    datasetId = { name, owningOrganization };
+    annotation = await getSandboxAnnotationInformation(datasetId, initialCommandType.tracingType);
   } else {
     const { name, owningOrganization } = initialCommandType;
     datasetId = { name, owningOrganization };
@@ -237,8 +242,8 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
   _.extend(annotation.settings, { allowedModes, preferredMode });
 
   const { controlMode } = Store.getState().temporaryConfiguration;
-  if (controlMode === ControlModeEnum.TRACE) {
-    if (Utils.getUrlParamValue("sandbox")) {
+  if (controlMode !== ControlModeEnum.VIEW) {
+    if (controlMode === ControlModeEnum.SANDBOX) {
       annotation = {
         ...annotation,
         restrictions: {
@@ -247,7 +252,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
           allowSave: false,
         },
       };
-    } else {
+    } else if (controlMode === ControlModeEnum.TRACE) {
       annotation = {
         ...annotation,
         restrictions: {

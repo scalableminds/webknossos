@@ -24,6 +24,7 @@ import type {
   APIUser,
   APIUserBase,
   MeshMetaData,
+  TracingType,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
@@ -247,14 +248,19 @@ export type HybridTracing = {|
 export type Tracing = HybridTracing;
 
 export type TraceOrViewCommand =
-  | {
+  | {|
       +type: typeof ControlModeEnum.VIEW,
       ...$Exact<APIDatasetId>,
-    }
-  | {
+    |}
+  | {|
       +type: typeof ControlModeEnum.TRACE,
       +annotationId: string,
-    };
+    |}
+  | {|
+      +type: typeof ControlModeEnum.SANDBOX,
+      +tracingType: TracingType,
+      ...$Exact<APIDatasetId>,
+    |};
 
 export type DatasetLayerConfiguration = {|
   +color: Vector3,

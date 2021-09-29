@@ -673,6 +673,17 @@ export function getAnnotationInformation(
   return Request.receiveJSON(infoUrl, options);
 }
 
+export function getSandboxAnnotationInformation(
+  datasetId: APIDatasetId,
+  tracingType: TracingType,
+  options?: RequestOptions = {},
+): Promise<APIAnnotation> {
+  const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${
+    datasetId.name
+  }/sandbox/${tracingType}`;
+  return Request.receiveJSON(infoUrl, options);
+}
+
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
@@ -1509,17 +1520,17 @@ export async function isDatasetAccessibleBySwitching(
   annotationType: AnnotationType,
   commandType: TraceOrViewCommand,
 ): Promise<?APIOrganization> {
-  if (commandType.type === ControlModeEnum.VIEW) {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${
-        commandType.owningOrganization
-      }&dataSetName=${commandType.name}`,
-    );
-  } else {
+  if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
       `/api/auth/accessibleBySwitching?annotationTyp=${annotationType}&annotationId=${
         commandType.annotationId
       }`,
+    );
+  } else {
+    return Request.receiveJSON(
+      `/api/auth/accessibleBySwitching?organizationName=${
+        commandType.owningOrganization
+      }&dataSetName=${commandType.name}`,
     );
   }
 }

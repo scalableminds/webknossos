@@ -65,7 +65,7 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
-import type { Vector4 } from "oxalis/constants";
+import { type Vector4, ControlModeEnum } from "oxalis/constants";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import {
@@ -483,10 +483,11 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {
-      const annotationType = yield* select(state => state.tracing.annotationType);
-      const isViewMode = annotationType === "View";
-      if (!isViewMode) {
-        // In view only mode we do not need to show the error as it is not so important and distracts the user.
+      const controlMode = yield* select(state => state.temporaryConfiguration.controlMode);
+      const isViewOrSandboxMode =
+        controlMode === ControlModeEnum.VIEW || controlMode === ControlModeEnum.SANDBOX;
+      if (!isViewOrSandboxMode) {
+        // In view or sandbox mode we do not need to show the error as it is not so important and distracts the user.
         yield* call(toggleErrorHighlighting, true);
       } else {
         // Still log the error to airbrake. Also compactedSaveQueue needs to be within an object

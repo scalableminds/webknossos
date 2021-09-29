@@ -130,8 +130,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
       hasSkeleton,
       layoutProps,
     } = this.props;
-    const isTraceMode = controlMode === ControlModeEnum.TRACE;
-    const isArbitrarySupported = hasSkeleton || controlMode === ControlModeEnum.VIEW;
+    const isViewMode = controlMode === ControlModeEnum.VIEW;
+    const isArbitrarySupported = hasSkeleton || isViewMode;
 
     const layoutMenu = (
       <LayoutMenu
@@ -149,10 +149,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         <div className="action-bar">
-          {isTraceMode && !showVersionRestore ? (
-            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
-          ) : (
+          {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
+          ) : (
+            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
@@ -160,7 +160,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             <ToolbarView />
           ) : null}
           {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}
-          {isTraceMode ? null : this.renderStartTracingButton()}
+          {isViewMode ? this.renderStartTracingButton() : null}
           <ShareButton dataset={this.props.dataset} />
         </div>
         <AddNewLayoutModal

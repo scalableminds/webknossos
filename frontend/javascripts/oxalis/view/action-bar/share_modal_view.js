@@ -101,6 +101,7 @@ export default function ShareModalView(props: Props) {
   const [visibility, setVisibility] = useState(tracingVisibility);
   const [sharedTeams, setSharedTeams] = useState([]);
   const sharingToken = useDatasetSharingToken(dataset);
+  const hasUpdatePermissions = restrictions.allowUpdate && restrictions.allowSave;
   useEffect(() => setVisibility(tracingVisibility), [tracingVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
@@ -136,7 +137,7 @@ export default function ShareModalView(props: Props) {
 
   const maybeShowWarning = () => {
     let message;
-    if (!restrictions.allowUpdate) {
+    if (!hasUpdatePermissions) {
       message = "You don't have the permission to edit the visibility of this annotation.";
     } else if (!dataset.isPublic && visibility === "Public") {
       message =
@@ -171,8 +172,8 @@ export default function ShareModalView(props: Props) {
       title="Share this Annotation"
       visible={isVisible}
       width={800}
-      okText={restrictions.allowUpdate ? "Save" : "Ok"}
-      onOk={handleOk}
+      okText={hasUpdatePermissions ? "Save" : "Ok"}
+      onOk={hasUpdatePermissions ? handleOk : onOk}
       onCancel={onOk}
     >
       <Row>
@@ -206,14 +207,14 @@ export default function ShareModalView(props: Props) {
         </Col>
         <Col span={18}>
           <RadioGroup onChange={handleCheckboxChange} value={visibility}>
-            <Radio style={radioStyle} value="Private" disabled={!restrictions.allowUpdate}>
+            <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
               Private
             </Radio>
             <Hint style={{ marginLeft: 24 }}>
               Only you and your team manager can view this annotation.
             </Hint>
 
-            <Radio style={radioStyle} value="Internal" disabled={!restrictions.allowUpdate}>
+            <Radio style={radioStyle} value="Internal" disabled={!hasUpdatePermissions}>
               Internal
             </Radio>
             <Hint style={{ marginLeft: 24 }}>
@@ -222,7 +223,7 @@ export default function ShareModalView(props: Props) {
               and copy it to their accounts to edit it.
             </Hint>
 
-            <Radio style={radioStyle} value="Public" disabled={!restrictions.allowUpdate}>
+            <Radio style={radioStyle} value="Public" disabled={!hasUpdatePermissions}>
               Public
             </Radio>
             <Hint style={{ marginLeft: 24 }}>
@@ -245,7 +246,7 @@ export default function ShareModalView(props: Props) {
             allowNonEditableTeams
             value={sharedTeams}
             onChange={value => setSharedTeams(_.flatten([value]))}
-            disabled={!restrictions.allowUpdate || visibility === "Private"}
+            disabled={!hasUpdatePermissions || visibility === "Private"}
           />
           <Hint style={{ margin: "6px 12px" }}>
             Choose the teams to share your annotation with. Members of these teams can see this

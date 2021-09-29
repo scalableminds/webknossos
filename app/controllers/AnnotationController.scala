@@ -4,7 +4,7 @@ import akka.util.Timeout
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import models.annotation.AnnotationState.Cancelled
@@ -173,7 +173,7 @@ class AnnotationController @Inject()(
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataSet.notFound",
           dataSetName) ~> NOT_FOUND
-        tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
+        tracingType <- TracingType.fromString(request.body.typ).toFox
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataSet._id,
@@ -184,6 +184,31 @@ class AnnotationController @Inject()(
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasAnnotated)
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"
+      } yield JsonOk(json)
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def getSandbox(organizationName: String, dataSetName: String, typ: String): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          organizationName) ~> NOT_FOUND
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataSet.notFound",
+          dataSetName) ~> NOT_FOUND
+        tracingType <- TracingType.fromString(typ).toFox
+        _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
+        annotation = Annotation(
+          ObjectId.dummyId,
+          dataSet._id,
+          None,
+          ObjectId.dummyId,
+          ObjectId.dummyId,
+          Some(TracingIds.dummyTracingId),
+          None
+        )
+        json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
 

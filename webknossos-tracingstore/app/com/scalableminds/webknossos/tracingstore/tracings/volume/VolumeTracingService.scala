@@ -89,13 +89,13 @@ class VolumeTracingService @Inject()(
     for {
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
-          case Full(t) =>
+          case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                updateBucket(tracingId, t, a, updateGroup.version)
+                updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
-                  t.copy(
+                  tracing.copy(
                     activeSegmentId = Some(a.activeSegmentId),
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
@@ -103,13 +103,10 @@ class VolumeTracingService @Inject()(
                     zoomLevel = a.zoomLevel
                   ))
               case a: RevertToVersionVolumeAction =>
-                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
-              case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
-              case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
-              case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
-              case a: ImportVolumeData                => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
-              case _: UpdateTdCamera                  => Fox.successful(t)
-              case _                                  => Fox.failure("Unknown action.")
+                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)
+              case _: UpdateTdCamera        => Fox.successful(tracing)
+              case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
+              case _                        => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty
@@ -163,18 +160,6 @@ class VolumeTracingService @Inject()(
           }
     }
     sourceTracing
-  }
-
-  private def updateBoundingBoxVisibility(tracing: VolumeTracing, boundingBoxId: Option[Int], isVisible: Boolean) = {
-    def updateUserBoundingBoxes() =
-      tracing.userBoundingBoxes.map { boundingBox =>
-        if (boundingBoxId.forall(_ == boundingBox.id))
-          boundingBox.copy(isVisible = Some(isVisible))
-        else
-          boundingBox
-      }
-
-    Fox.successful(tracing.withUserBoundingBoxes(updateUserBoundingBoxes()))
   }
 
   def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Point3D]] = {

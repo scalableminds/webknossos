@@ -5,7 +5,7 @@ package com.scalableminds.webknossos.datastore;
 import "geometry.proto";
 
 message Segment {
-	  required int64 id = 1;
+	  required int64 segmentId = 1;
 	  optional Point3D anchorPosition = 2;
 	  optional string name = 3;
 	  optional int64 creationTime = 4;

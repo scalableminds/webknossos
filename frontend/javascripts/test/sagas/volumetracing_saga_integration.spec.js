@@ -27,7 +27,7 @@ const {
   startEditingAction,
   finishEditingAction,
 } = mockRequire.reRequire("oxalis/model/actions/volumetracing_actions");
-const { undoAction, discardSaveQueuesAction } = mockRequire.reRequire(
+const { undoAction, redoAction, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
 );
 
@@ -221,6 +221,9 @@ test.only("Executing a floodfill in mag 1 (long operation)", async t => {
   const paintCenter = [128, 128, 128];
   Store.dispatch(setPositionAction(paintCenter));
 
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0), 0);
+
   const floodingCellId = 3;
 
   Store.dispatch(setActiveCellAction(floodingCellId));
@@ -232,17 +235,74 @@ test.only("Executing a floodfill in mag 1 (long operation)", async t => {
   await readyDeferred.promise();
 
   console.timeEnd("Floodfill");
-  console.time("Save");
 
-  await t.context.api.tracing.save();
-  console.timeEnd("Save");
+  // console.time("Save");
+  // await t.context.api.tracing.save();
+  // console.timeEnd("Save");
 
-  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, 0), floodingCellId);
+  async function assertFloodFilledState() {
+    console.log("assert 1");
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0),
+      floodingCellId,
+    );
+    console.log("assert 2");
+    t.false(hasRootSagaCrashed());
+    console.log("assert 3");
 
+    const cuboidData = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+      min: [127, 127, 127],
+      max: [131, 131, 131],
+    });
+    const index = cuboidData.findIndex(el => el !== floodingCellId);
+    if (index === 0) {
+      console.log("cuboidData", cuboidData);
+    }
+    console.log({ index });
+    t.is(index, -1);
+  }
+
+  async function assertInitialState() {
+    console.log("assert 1");
+    t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0), 0);
+    console.log("assert 2");
+    t.false(hasRootSagaCrashed());
+    console.log("assert 3");
+    const cuboidData = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+      min: [0, 0, 0],
+      max: [256, 256, 256],
+    });
+    const index = cuboidData.findIndex(el => el !== 0);
+    console.log({ index });
+    t.is(index, -1);
+  }
+
+  // Assert state after flood-fill
+  await assertFloodFilledState();
+
+  // Undo and assert initial state
+  Store.dispatch(undoAction());
+  await assertInitialState();
+
+  // Reload all buckets, "redo" and assert flood-filled state
+  t.context.api.data.reloadAllBuckets();
+  Store.dispatch(redoAction());
+  await assertFloodFilledState();
+
+  // Reload all buckets, "redo" and assert flood-filled state
   t.context.api.data.reloadAllBuckets();
   Store.dispatch(undoAction());
+  await assertInitialState();
 
-  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, 0), 0);
+  // "Redo", reload all buckets and assert flood-filled state
+  Store.dispatch(redoAction());
+  t.context.api.data.reloadAllBuckets();
+  await assertFloodFilledState();
+
+  // "Undo", reload all buckets and assert flood-filled state
+  Store.dispatch(undoAction());
+  t.context.api.data.reloadAllBuckets();
+  await assertInitialState();
 
   // for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
   //   t.is(

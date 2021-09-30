@@ -401,7 +401,7 @@ class DataCube {
     uvwToXyz: Vector3 => Vector3,
     xyzToUvw: Vector3 => Vector3,
     dimensionIndices: DimensionMap,
-    viewportBoundings: BoundingBoxType,
+    floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
     progressCallback: ProgressCallback,
   ): Promise<{
@@ -437,15 +437,34 @@ class DataCube {
     const bucketsWithXyzSeedsToFill: Array<[DataBucket, Vector3]> = [
       [seedBucket, this.getVoxelOffset(globalSeedVoxel, zoomStep)],
     ];
-    console.log("viewportBoundings", viewportBoundings);
+    console.log("floodfillBoundingBox", floodfillBoundingBox);
     let labeledVoxelCount = 0;
     let wasBoundingBoxExceeded = false;
+
+    const voxelThreshold = 100 * 1000000;
+
+    let minBucketCoords = [10000, 10000, 10000];
+    let maxBucketCoords = [0, 0, 0];
+
     // Iterate over all buckets within the area and flood fill each of them.
     while (bucketsWithXyzSeedsToFill.length > 0) {
       const [currentBucket, initialXyzVoxelInBucket] = bucketsWithXyzSeedsToFill.pop();
+
+      minBucketCoords = [
+        Math.min(minBucketCoords[0], currentBucket.zoomedAddress[0]),
+        Math.min(minBucketCoords[1], currentBucket.zoomedAddress[1]),
+        Math.min(minBucketCoords[2], currentBucket.zoomedAddress[2]),
+      ];
+      maxBucketCoords = [
+        Math.max(maxBucketCoords[0], currentBucket.zoomedAddress[0]),
+        Math.max(maxBucketCoords[1], currentBucket.zoomedAddress[1]),
+        Math.max(maxBucketCoords[2], currentBucket.zoomedAddress[2]),
+      ];
+
       // Check if the bucket overlaps the active viewport bounds.
       if (
-        !areBoundingBoxesOverlappingOrTouching(currentBucket.getBoundingBox(), viewportBoundings)
+        !areBoundingBoxesOverlappingOrTouching(currentBucket.getBoundingBox(), floodfillBoundingBox)
+        // || labeledVoxelCount > voxelThreshold
       ) {
         wasBoundingBoxExceeded = true;
         continue;
@@ -491,7 +510,8 @@ class DataCube {
       markUvwInSliceAsLabeled(initialVoxelInSliceUvw);
       const neighbourVoxelStackUvw = new VoxelNeighborStack3D(initialVoxelInSliceUvw);
       // Iterating over all neighbours from the initialAddress.
-      while (!neighbourVoxelStackUvw.isEmpty()) {
+
+      while (!neighbourVoxelStackUvw.isEmpty() && labeledVoxelCount < voxelThreshold) {
         const neighbours = neighbourVoxelStackUvw.popVoxelAndGetNeighbors();
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxelUvw = neighbours[neighbourIndex];
@@ -521,6 +541,7 @@ class DataCube {
               neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
               labeledVoxelCount++;
               if (labeledVoxelCount % 1000000 === 0) {
+                console.log(`Labeled ${labeledVoxelCount} Vx. Continuing`);
                 // eslint-disable-next-line no-await-in-loop
                 await progressCallback(
                   false,
@@ -542,7 +563,11 @@ class DataCube {
       bucket.trigger("bucketLabeled");
     }
 
-    return { bucketsWithLabeledVoxelsMap, wasBoundingBoxExceeded };
+    console.log({ labeledVoxelCount, wasBoundingBoxExceeded, minBucketCoords, maxBucketCoords });
+    return {
+      bucketsWithLabeledVoxelsMap,
+      wasBoundingBoxExceeded,
+    };
   }
 
   setBucketData(zoomedAddress: Vector4, data: Uint8Array) {

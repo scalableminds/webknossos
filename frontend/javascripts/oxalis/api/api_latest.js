@@ -1010,7 +1010,10 @@ class DataApi {
   /**
    * Invalidates all downloaded buckets so that they are reloaded.
    */
-  reloadAllBuckets(): void {
+  async reloadAllBuckets(): Promise<void> {
+    if (this.model.getSegmentationTracingLayer() != null) {
+      await Model.ensureSavedState();
+    }
     _.forEach(this.model.dataLayers, dataLayer => {
       dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();

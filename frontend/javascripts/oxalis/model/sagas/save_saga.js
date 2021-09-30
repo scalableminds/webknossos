@@ -22,6 +22,7 @@ import {
   centerActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry, CameraData } from "oxalis/store";
+import createProgressCallback from "libs/progress_callback";
 import {
   type UndoAction,
   type RedoAction,
@@ -145,7 +146,7 @@ export function* collectUndoStates(): Saga<void> {
         const { zoomedBucketAddress, bucketData, maybeBucketLoadedPromise } = addBucketToUndoAction;
         pendingCompressions.push(
           yield* fork(
-            compressBucketAndAddToUndoBatch,
+            compressBucketAndAppendTo,
             zoomedBucketAddress,
             bucketData,
             maybeBucketLoadedPromise,
@@ -176,6 +177,12 @@ export function* collectUndoStates(): Saga<void> {
       if (undoStack.length > 0 && undoStack[undoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
+      const progressCallback = createProgressCallback({
+        pauseDelay: 100,
+        successMessageDelay: 2000,
+      });
+      yield* call(progressCallback, false, "Performing undo...");
+
       yield* call(
         applyStateOfStack,
         undoStack,
@@ -183,10 +190,16 @@ export function* collectUndoStates(): Saga<void> {
         prevSkeletonTracingOrNull,
         messages["undo.no_undo"],
       );
+      yield* call(progressCallback, true, "Finished undo...");
     } else if (redo) {
       if (redoStack.length > 0 && redoStack[redoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
+      const progressCallback = createProgressCallback({
+        pauseDelay: 100,
+        successMessageDelay: 2000,
+      });
+      yield* call(progressCallback, false, "Performing redo...");
       yield* call(
         applyStateOfStack,
         redoStack,
@@ -194,6 +207,7 @@ export function* collectUndoStates(): Saga<void> {
         prevSkeletonTracingOrNull,
         messages["undo.no_redo"],
       );
+      yield* call(progressCallback, true, "Finished redo...");
     }
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
@@ -214,7 +228,7 @@ function* getSkeletonTracingToUndoState(
   return null;
 }
 
-function* compressBucketAndAddToUndoBatch(
+function* compressBucketAndAppendTo(
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
@@ -316,6 +330,9 @@ function mergeDataWithBackendDataInPlace(
 function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
 ): Saga<VolumeUndoState> {
+  // Applies a VolumeAnnotationBatch and returns a VolumeUndoState (which simply wraps
+  // another VolumeAnnotationBatch) for reverting the undo operation.
+
   const segmentationLayer = Model.getSegmentationTracingLayer();
   if (!segmentationLayer) {
     throw new Error("Undoing a volume annotation but no volume layer exists.");
@@ -337,22 +354,32 @@ function* applyAndGetRevertingVolumeBatch(
     // getData might fail. getOrCreateData might be enough to fix this?
     // but that would initiate another bucket fetch. how about using `setData`
     // directly?
-    const bucketData = bucket.getData();
-    if (compressedBackendData != null) {
-      // If the backend data for the bucket has been fetched in the meantime,
-      // we can first merge the data with the current data and then add this to the undo batch.
-      const decompressedBackendData = yield* call(
-        byteArrayToLz4Array,
-        compressedBackendData,
-        false,
-      );
-      if (decompressedBackendData) {
-        mergeDataWithBackendDataInPlace(bucketData, decompressedBackendData);
+    let bucketData = null;
+    if (bucket.hasData()) {
+      bucketData = bucket.getData();
+      if (compressedBackendData != null) {
+        // If the backend data for the bucket has been fetched in the meantime,
+        // we can first merge the data with the current data and then add this to the undo batch.
+        const decompressedBackendData = yield* call(
+          byteArrayToLz4Array,
+          compressedBackendData,
+          false,
+        );
+        if (decompressedBackendData) {
+          mergeDataWithBackendDataInPlace(bucketData, decompressedBackendData);
+        }
+        maybeBucketLoadedPromise = null;
       }
-      maybeBucketLoadedPromise = null;
+    } else {
+      // The bucket was gc'ed in the meantime (which means its state must have been persisted
+      // to the server). Thus, it's enough to persist an essentially empty data array (which is
+      // created by getOrCreateData) and passing maybeBucketLoadedPromise around so that
+      // the back-end data is fetched upon undo/redo.
+      bucketData = bucket.getOrCreateData().data;
+      maybeBucketLoadedPromise = bucket.maybeBucketLoadedPromise;
     }
     yield* call(
-      compressBucketAndAddToUndoBatch,
+      compressBucketAndAppendTo,
       zoomedBucketAddress,
       bucketData,
       maybeBucketLoadedPromise,

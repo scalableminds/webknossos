@@ -87,7 +87,7 @@ export class VoxelNeighborStack3D {
     if (this.isEmpty()) {
       return [];
     }
-    const currentVoxel = this.stack.pop();
+    const currentVoxel = this.stack.shift();
     // 6-neighborhood in 3D
     return [
       [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],

@@ -130,7 +130,7 @@ test.serial("Executing a floodfill in mag 1", async t => {
   }
 });
 
-test.only("Executing a floodfill in mag 2", async t => {
+test.serial("Executing a floodfill in mag 2", async t => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
     Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
   );
@@ -211,6 +211,72 @@ test.only("Executing a floodfill in mag 2", async t => {
       floodingCellId,
     );
   }
+});
+
+test.only("Executing a floodfill in mag 1 (long operation)", async t => {
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
+    Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
+  );
+
+  const paintCenter = [128, 128, 128];
+  Store.dispatch(setPositionAction(paintCenter));
+
+  const floodingCellId = 3;
+
+  Store.dispatch(setActiveCellAction(floodingCellId));
+
+  console.time("Floodfill");
+  const readyDeferred = new Deferred();
+  Store.dispatch(floodFillAction(paintCenter, OrthoViews.PLANE_XY, () => readyDeferred.resolve()));
+
+  await readyDeferred.promise();
+
+  console.timeEnd("Floodfill");
+  console.time("Save");
+
+  await t.context.api.tracing.save();
+  console.timeEnd("Save");
+
+  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, 0), floodingCellId);
+
+  t.context.api.data.reloadAllBuckets();
+  Store.dispatch(undoAction());
+
+  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, 0), 0);
+
+  // for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+  //   t.is(
+  //     await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep),
+  //     floodingCellId,
+  //   );
+  //   t.is(
+  //     await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep),
+  //     floodingCellId,
+  //   );
+  //   t.is(
+  //     await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep),
+  //     floodingCellId,
+  //   );
+  //   t.is(
+  //     await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep),
+  //     floodingCellId,
+  //   );
+  //   // A brush size of 10 means a radius of 5 (so, from 0 to 4).
+  //   t.is(
+  //     await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep),
+  //     floodingCellId,
+  //   );
+  //   t.is(
+  //     await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep),
+  //     floodingCellId,
+  //   );
+  //   // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
+  //   // (and not at 4,4)
+  //   t.is(
+  //     await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep),
+  //     floodingCellId,
+  //   );
+  // }
 });
 
 test.serial(

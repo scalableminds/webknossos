@@ -191,6 +191,10 @@ case class CreateSegmentVolumeAction(id: Long,
   }
 }
 
+object CreateSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[CreateSegmentVolumeAction] = Json.format[CreateSegmentVolumeAction]
+}
+
 case class UpdateSegmentVolumeAction(id: Long,
                                      anchorPosition: Option[Point3D],
                                      name: Option[String],
@@ -217,6 +221,10 @@ case class UpdateSegmentVolumeAction(id: Long,
   }
 }
 
+object UpdateSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentVolumeAction] = Json.format[UpdateSegmentVolumeAction]
+}
+
 case class DeleteSegmentVolumeAction(id: Long, actionTimestamp: Option[Long] = None) extends ApplyableVolumeAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
@@ -228,6 +236,10 @@ case class DeleteSegmentVolumeAction(id: Long, actionTimestamp: Option[Long] = N
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegments(tracing.segments.filter(_.segmentId != id))
 
+}
+
+object DeleteSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
 }
 
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)
@@ -260,6 +272,9 @@ object VolumeUpdateAction {
         case "removeFallbackLayer"             => (json \ "value").validate[RemoveFallbackLayer]
         case "importVolumeTracing"             => (json \ "value").validate[ImportVolumeData]
         case "updateTdCamera"                  => (json \ "value").validate[UpdateTdCamera]
+        case "createSegment "                  => (json \ "value").validate[CreateSegmentVolumeAction]
+        case "updateSegment "                  => (json \ "value").validate[UpdateSegmentVolumeAction]
+        case "deleteSegment "                  => (json \ "value").validate[DeleteSegmentVolumeAction]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 
@@ -281,6 +296,12 @@ object VolumeUpdateAction {
         Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeData.jsonFormat))
       case s: UpdateTdCamera =>
         Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCamera.jsonFormat))
+      case s: CreateSegmentVolumeAction =>
+        Json.obj("name" -> "createSegment", "value" -> Json.toJson(s)(CreateSegmentVolumeAction.jsonFormat))
+      case s: UpdateSegmentVolumeAction =>
+        Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(UpdateSegmentVolumeAction.jsonFormat))
+      case s: DeleteSegmentVolumeAction =>
+        Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }

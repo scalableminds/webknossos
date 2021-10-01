@@ -399,12 +399,12 @@ function* applyAndGetRevertingVolumeBatch(
     if (bucket.type === "null") {
       continue;
     }
-    // Todo: See https://github.com/scalableminds/webknossos/issues/5729:
-    // getData might fail. getOrCreateData might be enough to fix this?
-    // but that would initiate another bucket fetch. how about using `setData`
-    // directly?
+
+    // Prepare a snapshot of the bucket's current data so that it can be
+    // saved in an VolumeUndoState.
     let bucketData = null;
     if (bucket.hasData()) {
+      // The bucket's data is currently available.
       bucketData = bucket.getData();
       if (compressedBackendData != null) {
         // If the backend data for the bucket has been fetched in the meantime,
@@ -420,13 +420,16 @@ function* applyAndGetRevertingVolumeBatch(
         maybeBucketLoadedPromise = null;
       }
     } else {
-      // The bucket was gc'ed in the meantime (which means its state must have been persisted
-      // to the server). Thus, it's enough to persist an essentially empty data array (which is
-      // created by getOrCreateData) and passing maybeBucketLoadedPromise around so that
+      // The bucket's data is not available, since it was gc'ed in the meantime (which
+      // means its state must have been persisted to the server). Thus, it's enough to
+      // persist an essentially empty data array (which is created by getOrCreateData)
+      // and passing maybeBucketLoadedPromise around so that
       // the back-end data is fetched upon undo/redo.
       bucketData = bucket.getOrCreateData().data;
       maybeBucketLoadedPromise = bucket.maybeBucketLoadedPromise;
     }
+
+    // Append the compressed snapshot to allCompressedBucketsOfCurrentState.
     yield* call(
       compressBucketAndAppendTo,
       zoomedBucketAddress,
@@ -434,6 +437,8 @@ function* applyAndGetRevertingVolumeBatch(
       maybeBucketLoadedPromise,
       allCompressedBucketsOfCurrentState,
     );
+
+    // Decompress the bucket data which should be applied.
     let decompressedBucketData = null;
     if (compressedBackendData != null) {
       let decompressedBackendData;
@@ -453,6 +458,7 @@ function* applyAndGetRevertingVolumeBatch(
     }
   }
   cube.triggerPushQueue();
+
   return {
     type: "volume",
     data: allCompressedBucketsOfCurrentState,

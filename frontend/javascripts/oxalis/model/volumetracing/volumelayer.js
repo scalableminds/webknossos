@@ -68,7 +68,7 @@ export class VoxelBuffer2D {
   }
 }
 
-export class VoxelNeighborStack3D {
+export class VoxelNeighborQueue3D {
   stack: Array<Vector3>;
 
   constructor(initialPosition: Vector3) {
@@ -83,7 +83,7 @@ export class VoxelNeighborStack3D {
     return this.stack.length === 0;
   }
 
-  popVoxelAndGetNeighbors(): Array<Vector3> {
+  getVoxelAndGetNeighbors(): Array<Vector3> {
     if (this.isEmpty()) {
       return [];
     }

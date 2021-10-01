@@ -15,7 +15,7 @@ import {
   NullBucket,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
-import { VoxelNeighborStack3D } from "oxalis/model/volumetracing/volumelayer";
+import { VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import {
   getResolutions,
   ResolutionInfo,
@@ -503,15 +503,15 @@ class DataCube {
         dataArray[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
       };
 
-      // Use a VoxelNeighborStack3D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
+      // Use a VoxelNeighborQueue3D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
       const initialVoxelInSliceUvw = xyzToUvw(initialXyzVoxelInBucket);
       markUvwInSliceAsLabeled(initialVoxelInSliceUvw);
-      const neighbourVoxelStackUvw = new VoxelNeighborStack3D(initialVoxelInSliceUvw);
+      const neighbourVoxelStackUvw = new VoxelNeighborQueue3D(initialVoxelInSliceUvw);
       // Iterating over all neighbours from the initialAddress.
 
       //  && labeledVoxelCount < voxelThreshold
       while (!neighbourVoxelStackUvw.isEmpty()) {
-        const neighbours = neighbourVoxelStackUvw.popVoxelAndGetNeighbors();
+        const neighbours = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxelUvw = neighbours[neighbourIndex];
           const neighbourVoxelXyz = uvwToXyz(neighbourVoxelUvw);

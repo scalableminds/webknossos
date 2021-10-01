@@ -154,7 +154,7 @@ function ShortcutsInfo() {
   const moreShortcutsLink = (
     <a
       target="_blank"
-      href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+      href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
       rel="noopener noreferrer"
       style={moreLinkStyle}
     >

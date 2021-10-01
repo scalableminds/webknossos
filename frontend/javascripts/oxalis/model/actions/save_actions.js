@@ -3,7 +3,6 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { getUid } from "libs/uid_generator";
 import Date from "libs/date";
 import Deferred from "libs/deferred";
-import { type Dispatch } from "redux";
 
 type Tracing = "skeleton" | "volume";
 
@@ -109,14 +108,16 @@ export const disableSavingAction = (): DisableSavingAction => ({
   type: "DISABLE_SAVING",
 });
 
-export const dispatchUndoAsync = async (dispatch: Dispatch<*>): Promise<void> => {
+// Unfortunately, using type Dispatch produces countless Flow errors.
+export const dispatchUndoAsync = async (dispatch: any => any): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = undoAction(() => readyDeferred.resolve());
   dispatch(action);
   await readyDeferred.promise();
 };
 
-export const dispatchRedoAsync = async (dispatch: Dispatch<*>): Promise<void> => {
+// Unfortunately, using type Dispatch produces countless Flow errors.
+export const dispatchRedoAsync = async (dispatch: any => any): Promise<void> => {
   const readyDeferred = new Deferred();
   const action = redoAction(() => readyDeferred.resolve());
   dispatch(action);

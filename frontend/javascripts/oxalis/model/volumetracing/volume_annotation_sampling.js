@@ -343,6 +343,7 @@ export function applyVoxelMap(
             // The voxelToLabel is already within the bucket and in the correct resolution.
             const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
             if (shouldOverwrite || (!shouldOverwrite && data[voxelAddress] === overwritableValue)) {
+              // console.log("applyVoxelMap::write", { voxelToLabel, voxelAddress, cellId });
               data[voxelAddress] = cellId;
             }
           }

@@ -2,6 +2,8 @@
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { getUid } from "libs/uid_generator";
 import Date from "libs/date";
+import Deferred from "libs/deferred";
+import { type Dispatch } from "redux";
 
 type Tracing = "skeleton" | "volume";
 
@@ -29,8 +31,8 @@ type SetVersionNumberAction = {
   version: number,
   tracingType: Tracing,
 };
-export type UndoAction = { type: "UNDO" };
-export type RedoAction = { type: "REDO" };
+export type UndoAction = { type: "UNDO", callback?: () => void };
+export type RedoAction = { type: "REDO", callback?: () => void };
 type DisableSavingAction = { type: "DISABLE_SAVING" };
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -93,14 +95,30 @@ export const setVersionNumberAction = (
   tracingType,
 });
 
-export const undoAction = (): UndoAction => ({
+export const undoAction = (callback?: () => void): UndoAction => ({
   type: "UNDO",
+  callback,
 });
 
-export const redoAction = (): RedoAction => ({
+export const redoAction = (callback?: () => void): RedoAction => ({
   type: "REDO",
+  callback,
 });
 
 export const disableSavingAction = (): DisableSavingAction => ({
   type: "DISABLE_SAVING",
 });
+
+export const dispatchUndoAsync = async (dispatch: Dispatch<*>): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = undoAction(() => readyDeferred.resolve());
+  dispatch(action);
+  await readyDeferred.promise();
+};
+
+export const dispatchRedoAsync = async (dispatch: Dispatch<*>): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = redoAction(() => readyDeferred.resolve());
+  dispatch(action);
+  await readyDeferred.promise();
+};

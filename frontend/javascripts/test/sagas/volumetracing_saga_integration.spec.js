@@ -1,18 +1,18 @@
 // @flow
+/* eslint-disable no-await-in-loop */
+
 import mockRequire from "mock-require";
 import test from "ava";
 import { waitForCondition, sleep } from "libs/utils";
 import _ from "lodash";
 
-import "test/sagas/saga_integration.mock.js";
+import "test/sagas/saga_integration.mock";
 import { __setupOxalis, getVolumeTracingOrFail } from "test/helpers/apiHelpers";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { OrthoViews } from "oxalis/constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
-import Deferred from "libs/deferred";
 
 const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
 const { setPositionAction, setZoomStepAction } = mockRequire.reRequire(
@@ -22,12 +22,12 @@ const { setPositionAction, setZoomStepAction } = mockRequire.reRequire(
 const {
   setActiveCellAction,
   addToLayerAction,
-  floodFillAction,
+  dispatchFloodfillAsync,
   copySegmentationLayerAction,
   startEditingAction,
   finishEditingAction,
 } = mockRequire.reRequire("oxalis/model/actions/volumetracing_actions");
-const { undoAction, redoAction, discardSaveQueuesAction } = mockRequire.reRequire(
+const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
 );
 
@@ -90,10 +90,7 @@ test.serial("Executing a floodfill in mag 1", async t => {
 
   Store.dispatch(setActiveCellAction(floodingCellId));
 
-  const readyDeferred = new Deferred();
-  Store.dispatch(floodFillAction([0, 0, 43], OrthoViews.PLANE_XY, () => readyDeferred.resolve()));
-
-  await readyDeferred.promise();
+  await dispatchFloodfillAsync(Store.dispatch, [0, 0, 43], OrthoViews.PLANE_XY);
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     t.is(
@@ -171,11 +168,8 @@ test.serial("Executing a floodfill in mag 2", async t => {
   console.log("############################# flood fill");
   console.log("#############################");
 
-  const readyDeferred = new Deferred();
   Store.dispatch(setZoomStepAction(2));
-  Store.dispatch(floodFillAction([0, 0, 43], OrthoViews.PLANE_XY, () => readyDeferred.resolve()));
-
-  await readyDeferred.promise();
+  await dispatchFloodfillAsync(Store.dispatch, [0, 0, 43], OrthoViews.PLANE_XY);
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     console.log("testing zoomStep", zoomStep);
@@ -215,7 +209,8 @@ test.serial("Executing a floodfill in mag 2", async t => {
 
 test.only("Executing a floodfill in mag 1 (long operation)", async t => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
-    Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
+    // todo: can the bucket recognize the case where the buffer is too small?
+    Promise.resolve({ buffer: new Uint8Array(2 * 32 ** 3), headers: { "missing-buckets": "[]" } }),
   );
 
   const paintCenter = [128, 128, 128];
@@ -229,114 +224,64 @@ test.only("Executing a floodfill in mag 1 (long operation)", async t => {
   Store.dispatch(setActiveCellAction(floodingCellId));
 
   console.time("Floodfill");
-  const readyDeferred = new Deferred();
-  Store.dispatch(floodFillAction(paintCenter, OrthoViews.PLANE_XY, () => readyDeferred.resolve()));
-
-  await readyDeferred.promise();
+  await dispatchFloodfillAsync(Store.dispatch, paintCenter, OrthoViews.PLANE_XY);
 
   console.timeEnd("Floodfill");
 
-  // console.time("Save");
-  // await t.context.api.tracing.save();
-  // console.timeEnd("Save");
-
   async function assertFloodFilledState() {
-    console.log("assert 1");
     t.is(
       await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0),
       floodingCellId,
     );
-    console.log("assert 2");
     t.false(hasRootSagaCrashed());
-    console.log("assert 3");
 
     const cuboidData = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
-      min: [127, 127, 127],
-      max: [131, 131, 131],
+      min: [128 - 64, 128 - 64, 128 - 32],
+      max: [128 + 64, 128 + 64, 128 + 32],
     });
-    const index = cuboidData.findIndex(el => el !== floodingCellId);
-    if (index === 0) {
-      console.log("cuboidData", cuboidData);
-    }
-    console.log({ index });
-    t.is(index, -1);
+    // There should be no item which does not equal floodingCellId
+    t.is(cuboidData.findIndex(el => el !== floodingCellId), -1);
   }
 
   async function assertInitialState() {
-    console.log("assert 1");
     t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0), 0);
-    console.log("assert 2");
+
     t.false(hasRootSagaCrashed());
-    console.log("assert 3");
+
     const cuboidData = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
       min: [0, 0, 0],
       max: [256, 256, 256],
     });
-    const index = cuboidData.findIndex(el => el !== 0);
-    console.log({ index });
-    t.is(index, -1);
+    // There should be no non-zero item
+    t.is(cuboidData.findIndex(el => el !== 0), -1);
   }
 
   // Assert state after flood-fill
   await assertFloodFilledState();
 
   // Undo and assert initial state
-  Store.dispatch(undoAction());
+  await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();
 
-  // Reload all buckets, "redo" and assert flood-filled state
+  // // Reload all buckets, "redo" and assert flood-filled state
   t.context.api.data.reloadAllBuckets();
-  Store.dispatch(redoAction());
+  await dispatchRedoAsync(Store.dispatch);
   await assertFloodFilledState();
 
   // Reload all buckets, "redo" and assert flood-filled state
   t.context.api.data.reloadAllBuckets();
-  Store.dispatch(undoAction());
+  await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();
 
   // "Redo", reload all buckets and assert flood-filled state
-  Store.dispatch(redoAction());
+  await dispatchRedoAsync(Store.dispatch);
   t.context.api.data.reloadAllBuckets();
   await assertFloodFilledState();
 
   // "Undo", reload all buckets and assert flood-filled state
-  Store.dispatch(undoAction());
+  await dispatchUndoAsync(Store.dispatch);
   t.context.api.data.reloadAllBuckets();
   await assertInitialState();
-
-  // for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-  //   t.is(
-  //     await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep),
-  //     floodingCellId,
-  //   );
-  //   t.is(
-  //     await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep),
-  //     floodingCellId,
-  //   );
-  //   t.is(
-  //     await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep),
-  //     floodingCellId,
-  //   );
-  //   t.is(
-  //     await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep),
-  //     floodingCellId,
-  //   );
-  //   // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-  //   t.is(
-  //     await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep),
-  //     floodingCellId,
-  //   );
-  //   t.is(
-  //     await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep),
-  //     floodingCellId,
-  //   );
-  //   // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
-  //   // (and not at 4,4)
-  //   t.is(
-  //     await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep),
-  //     floodingCellId,
-  //   );
-  // }
 });
 
 test.serial(
@@ -470,7 +415,7 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
 
   await sleep(2000);
 
-  Store.dispatch(undoAction());
+  await dispatchUndoAsync(Store.dispatch);
 
   t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId);
   t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0]), newCellId);
@@ -510,7 +455,7 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
 
   await sleep(2000);
 
-  Store.dispatch(undoAction());
+  await dispatchUndoAsync(Store.dispatch);
 
   t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId + 1);
   t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0]), newCellId + 1);

@@ -214,22 +214,22 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingBoxForFloodFill(
+function getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
-  numberOfSlices: number,
-): Saga<BoundingBoxType> {
-  // const position = yield* select(state => getFlooredPosition(state.flycam));
-  // const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
-  // const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
-  const halfViewportExtentsUVW = [128, 128, 128];
-  // const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
+  numberOfSlices: ?number,
+): BoundingBoxType {
+  const halfViewportExtentsUVW = process.env.BABEL_ENV === "test" ? [64, 64, 32] : [128, 128, 128];
+  const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
   const currentViewportBounding = {
     min: V3.sub(position, halfViewportExtentsUVW),
     max: V3.add(position, halfViewportExtentsUVW),
   };
-  // currentViewportBounding.max[thirdDimension] =
-  //   currentViewportBounding.min[thirdDimension] + numberOfSlices;
+  if (numberOfSlices != null) {
+    currentViewportBounding.min[thirdDimension] = position[thirdDimension];
+    currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
+  }
+  console.log({ currentViewportBounding });
   return currentViewportBounding;
 }
 
@@ -476,18 +476,11 @@ export function* floodFill(): Saga<void> {
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
-    console.log({ requestedZoomStep });
     const resolutionInfo = yield* select(state =>
       getResolutionInfoOfSegmentationTracingLayer(state.dataset),
     );
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
-    // const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-    // // The floodfill and applyVoxelMap methods iterate within the bucket.
-    // // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
-    // const thirdDimensionValue =
-    //   Math.floor(seedVoxel[dimensionIndices[2]] / labeledResolution[dimensionIndices[2]]) %
-    //   Constants.BUCKET_WIDTH;
     const uvwToXyz = (voxel: Vector3) => {
       const orderedVoxelWithThirdDimension = [
         voxel[dimensionIndices[0]],
@@ -501,8 +494,14 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[1]],
       voxel[dimensionIndices[2]],
     ];
-    // todo: replace with other bounding box.
-    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, position, planeId, 10);
+
+    const numberOfSlices = null;
+    const currentViewportBounding = yield* call(
+      getBoundingBoxForFloodFill,
+      position,
+      planeId,
+      numberOfSlices,
+    );
 
     const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
     yield* call(progressCallback, false, "Performing floodfill...");
@@ -546,8 +545,6 @@ export function* floodFill(): Saga<void> {
         }
       }
 
-      // floodFill
-      // console.log("apply labeled map to missing resolutions for z=", indexZ);
       console.time(`applyLabeledVoxelMapToAllMissingResolutions ${indexZ}`);
       applyLabeledVoxelMapToAllMissingResolutions(
         labeledVoxelMapFromFloodFill,

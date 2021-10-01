@@ -1205,7 +1205,8 @@ class DataApi {
       });
     }
     // Bucket has been loaded by now or was loaded already
-    return cube.getDataValue(position, null, zoomStep);
+    const dataValue = cube.getDataValue(position, null, zoomStep);
+    return dataValue;
   }
 
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {

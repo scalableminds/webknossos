@@ -22,7 +22,6 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -32,17 +31,14 @@ import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import constants, {
-  type Vector2,
   type Vector3,
   type Vector4,
   type BoundingBoxType,
-  type LabeledVoxelsMap,
   type LabelMasksByBucketAndW,
 } from "oxalis/constants";
 import { type ElementClass } from "types/api_flow_types";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import { zoomedPositionToGlobalPosition } from "oxalis/model/helpers/position_converter";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { type ProgressCallback } from "libs/progress_callback";
 
 class CubeEntry {
@@ -422,7 +418,7 @@ class DataCube {
     const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     if (seedBucket.type === "null") {
-      return bucketsWithLabeledVoxelsMap;
+      return { bucketsWithLabeledVoxelsMap, wasBoundingBoxExceeded: false };
     }
     if (!this.resolutionInfo.hasIndex(zoomStep)) {
       throw new Error(
@@ -432,16 +428,15 @@ class DataCube {
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
     if (sourceCellId === cellId) {
-      return bucketsWithLabeledVoxelsMap;
+      return { bucketsWithLabeledVoxelsMap, wasBoundingBoxExceeded: false };
     }
     const bucketsWithXyzSeedsToFill: Array<[DataBucket, Vector3]> = [
       [seedBucket, this.getVoxelOffset(globalSeedVoxel, zoomStep)],
     ];
-    console.log("floodfillBoundingBox", floodfillBoundingBox);
     let labeledVoxelCount = 0;
     let wasBoundingBoxExceeded = false;
 
-    const voxelThreshold = 100 * 1000000;
+    // const voxelThreshold = 100 * 1000000;
 
     let minBucketCoords = [10000, 10000, 10000];
     let maxBucketCoords = [0, 0, 0];
@@ -500,9 +495,12 @@ class DataCube {
             new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0),
           );
         }
-        currentLabeledVoxelMap.get(thirdCoord)[
-          firstCoord * constants.BUCKET_WIDTH + secondCoord
-        ] = 1;
+        const dataArray = currentLabeledVoxelMap.get(thirdCoord);
+        if (!dataArray) {
+          // Satisfy flow
+          throw new Error("Map entry does not exist, even though it was just set.");
+        }
+        dataArray[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
       };
 
       // Use a VoxelNeighborStack3D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
@@ -511,7 +509,8 @@ class DataCube {
       const neighbourVoxelStackUvw = new VoxelNeighborStack3D(initialVoxelInSliceUvw);
       // Iterating over all neighbours from the initialAddress.
 
-      while (!neighbourVoxelStackUvw.isEmpty() && labeledVoxelCount < voxelThreshold) {
+      //  && labeledVoxelCount < voxelThreshold
+      while (!neighbourVoxelStackUvw.isEmpty()) {
         const neighbours = neighbourVoxelStackUvw.popVoxelAndGetNeighbors();
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxelUvw = neighbours[neighbourIndex];
@@ -563,7 +562,6 @@ class DataCube {
       bucket.trigger("bucketLabeled");
     }
 
-    console.log({ labeledVoxelCount, wasBoundingBoxExceeded, minBucketCoords, maxBucketCoords });
     return {
       bucketsWithLabeledVoxelsMap,
       wasBoundingBoxExceeded,

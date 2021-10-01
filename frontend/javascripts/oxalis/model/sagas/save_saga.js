@@ -191,6 +191,9 @@ export function* collectUndoStates(): Saga<void> {
         messages["undo.no_undo"],
       );
       yield* call(progressCallback, true, "Finished undo...");
+      if (undo.callback != null) {
+        undo.callback();
+      }
     } else if (redo) {
       if (redoStack.length > 0 && redoStack[redoStack.length - 1].type === "skeleton") {
         previousAction = null;
@@ -208,6 +211,9 @@ export function* collectUndoStates(): Saga<void> {
         messages["undo.no_redo"],
       );
       yield* call(progressCallback, true, "Finished redo...");
+      if (redo.callback != null) {
+        redo.callback();
+      }
     }
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);

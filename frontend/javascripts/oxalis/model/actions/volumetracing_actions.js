@@ -5,6 +5,8 @@
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import Deferred from "libs/deferred";
+import { type Dispatch } from "redux";
 
 type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
@@ -176,3 +178,14 @@ export const setMaxCellAction = (cellId: number): SetMaxCellAction => ({
   type: "SET_MAX_CELL",
   cellId,
 });
+
+export const dispatchFloodfillAsync = async (
+  dispatch: Dispatch<*>,
+  position: Vector3,
+  planeId: OrthoView,
+): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = floodFillAction(position, planeId, () => readyDeferred.resolve());
+  dispatch(action);
+  await readyDeferred.promise();
+};

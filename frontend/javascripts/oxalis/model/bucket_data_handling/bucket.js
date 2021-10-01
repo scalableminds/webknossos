@@ -17,20 +17,14 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, {
-  type Vector2,
-  type Vector3,
-  type Vector4,
-  type BoundingBoxType,
-} from "oxalis/constants";
-import type { DimensionMap } from "oxalis/model/dimensions";
+import Constants, { type Vector3, type Vector4, type BoundingBoxType } from "oxalis/constants";
 import window from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
 import {
   addBucketToUndoAction,
   type MaybeBucketLoadedPromise,
 } from "oxalis/model/actions/volumetracing_actions";
-import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",

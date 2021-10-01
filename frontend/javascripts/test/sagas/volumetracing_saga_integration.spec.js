@@ -72,7 +72,6 @@ test.serial("Executing a floodfill in mag 1", async t => {
   Store.dispatch(finishEditingAction());
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    console.log("testing zoomStep", zoomStep);
     t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
     t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep), newCellId);
     t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep), newCellId);
@@ -134,7 +133,6 @@ test.serial("Executing a floodfill in mag 2", async t => {
 
   const paintCenter = [0, 0, 43];
   const brushSize = 10;
-
   const newCellId = 2;
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -146,7 +144,6 @@ test.serial("Executing a floodfill in mag 2", async t => {
   Store.dispatch(finishEditingAction());
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    console.log("testing zoomStep", zoomStep);
     t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
     t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep), newCellId);
     t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep), newCellId);
@@ -163,16 +160,10 @@ test.serial("Executing a floodfill in mag 2", async t => {
   const floodingCellId = 3;
 
   Store.dispatch(setActiveCellAction(floodingCellId));
-  console.log("#############################");
-  console.log("#############################");
-  console.log("############################# flood fill");
-  console.log("#############################");
-
   Store.dispatch(setZoomStepAction(2));
   await dispatchFloodfillAsync(Store.dispatch, [0, 0, 43], OrthoViews.PLANE_XY);
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    console.log("testing zoomStep", zoomStep);
     t.is(
       await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep),
       floodingCellId,
@@ -223,10 +214,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
 
   Store.dispatch(setActiveCellAction(floodingCellId));
 
-  console.time("Floodfill");
   await dispatchFloodfillAsync(Store.dispatch, paintCenter, OrthoViews.PLANE_XY);
-
-  console.timeEnd("Floodfill");
 
   async function assertFloodFilledState() {
     t.is(

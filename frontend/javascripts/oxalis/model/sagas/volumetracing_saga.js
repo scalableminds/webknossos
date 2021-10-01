@@ -155,9 +155,9 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 
     let lastPosition = startEditingAction.position;
 
-    const requestChan = yield _actionChannel(["ADD_TO_LAYER", "FINISH_EDITING"]);
+    const actionChannel = yield _actionChannel(["ADD_TO_LAYER", "FINISH_EDITING"]);
     while (true) {
-      const currentAction = yield* take(requestChan);
+      const currentAction = yield* take(actionChannel);
       const { addToLayerAction, finishEditingAction } = {
         addToLayerAction: currentAction.type === "ADD_TO_LAYER" ? currentAction : null,
         finishEditingAction: currentAction.type === "FINISH_EDITING" ? currentAction : null,

@@ -150,7 +150,7 @@ export function* collectUndoStates(): Saga<void> {
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
 
-  const requestChan = yield _actionChannel([
+  const actionChannel = yield _actionChannel([
     ...SkeletonTracingSaveRelevantActions,
     "ADD_BUCKET_TO_UNDO",
     "FINISH_ANNOTATION_STROKE",
@@ -159,7 +159,7 @@ export function* collectUndoStates(): Saga<void> {
     "REDO",
   ]);
   while (true) {
-    const currentAction = yield* take(requestChan);
+    const currentAction = yield* take(actionChannel);
 
     const {
       skeletonUserAction,

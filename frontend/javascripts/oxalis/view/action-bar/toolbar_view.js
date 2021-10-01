@@ -561,6 +561,15 @@ export default function ToolbarView() {
                 }}
               />
             </RadioButtonWithTooltip>
+            <RadioButtonWithTooltip
+              title="Bounding Box Tool."
+              disabledTitle="I am disabled."
+              disabled={false}
+              style={narrowButtonStyle}
+              value={AnnotationToolEnum.BOUNDING_BOX}
+            >
+              BBox
+            </RadioButtonWithTooltip>
           </React.Fragment>
         ) : null}
       </Radio.Group>

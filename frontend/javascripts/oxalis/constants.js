@@ -156,6 +156,7 @@ export const AnnotationToolEnum = {
   ERASE_TRACE: "ERASE_TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
+  BOUNDING_BOX: "BOUNDING_BOX",
 };
 export const VolumeTools = [
   AnnotationToolEnum.BRUSH,

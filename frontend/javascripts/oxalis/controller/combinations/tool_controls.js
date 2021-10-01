@@ -17,8 +17,10 @@ import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
+import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
@@ -521,9 +523,82 @@ export class FillCellTool {
   }
 }
 
+export class BoundingBoxTool {
+  static getPlaneMouseControls(
+    _planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): * {
+    return {
+      leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
+        MoveHandlers.handleMovePlane(delta);
+      },
+      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        console.log("BoundingBox tool left down");
+      },
+
+      leftMouseUp: () => {
+        console.log("BoundingBox tool left up");
+      },
+
+      rightDownMove: (delta: Point2, pos: Point2) => {
+        console.log("BoundingBox tool right down move");
+      },
+
+      rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        console.log("BoundingBox tool right down");
+      },
+
+      rightMouseUp: () => {
+        console.log("BoundingBox tool right up");
+      },
+
+      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
+        const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
+        const boundingBoxId = highestBoundingBoxId + 1;
+        const newUserBoundingBox = {
+          boundingBox: { min: [100, 100, 100], max: [200, 200, 200] },
+          id: boundingBoxId,
+          name: `user bounding box ${boundingBoxId}`,
+          color: Utils.getRandomColor(),
+          isVisible: true,
+        };
+        const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+        Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
+      },
+
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        console.log("BoundingBox right click");
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    activeTool: AnnotationTool,
+    useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    let rightClick;
+    if (!useLegacyBindings) {
+      rightClick = "Context Menu";
+    } else {
+      rightClick = `Erase (${activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace"})`;
+    }
+
+    return {
+      leftDrag: activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace",
+      rightClick,
+    };
+  }
+}
+
 const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
+  [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,
   [AnnotationToolEnum.ERASE_TRACE]: EraseTool,

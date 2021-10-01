@@ -41,6 +41,7 @@ import {
   EraseTool,
   PickCellTool,
   FillCellTool,
+  BoundingBoxTool,
 } from "oxalis/controller/combinations/tool_controls";
 import constants, {
   type ShowContextMenuFunction,
@@ -228,6 +229,11 @@ class PlaneController extends React.PureComponent<Props> {
     );
     const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
     const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
+    const boundingBoxControls = BoundingBoxTool.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showContextMenuAt,
+    );
 
     const allControlKeys = _.union(
       Object.keys(moveControls),
@@ -236,6 +242,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(eraseControls),
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
+      Object.keys(boundingBoxControls),
     );
     const controls = {};
 
@@ -249,6 +256,7 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.ERASE_TRACE]: eraseControls[controlKey],
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
+        [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
       });
     }
 

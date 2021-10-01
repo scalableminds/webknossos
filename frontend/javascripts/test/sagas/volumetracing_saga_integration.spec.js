@@ -207,7 +207,7 @@ test.serial("Executing a floodfill in mag 2", async t => {
   }
 });
 
-test.only("Executing a floodfill in mag 1 (long operation)", async t => {
+test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
     // todo: can the bucket recognize the case where the buffer is too small?
     Promise.resolve({ buffer: new Uint8Array(2 * 32 ** 3), headers: { "missing-buckets": "[]" } }),

@@ -8,15 +8,14 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   type Saga,
-  _take,
   _takeEvery,
   _takeLeading,
   call,
   fork,
   put,
-  race,
   select,
   take,
+  _actionChannel,
 } from "oxalis/model/sagas/effect-generators";
 import {
   type UpdateAction,
@@ -155,11 +154,14 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
 
     let lastPosition = startEditingAction.position;
+
+    const requestChan = yield _actionChannel(["ADD_TO_LAYER", "FINISH_EDITING"]);
     while (true) {
-      const { addToLayerAction, finishEditingAction } = yield* race({
-        addToLayerAction: _take("ADD_TO_LAYER"),
-        finishEditingAction: _take("FINISH_EDITING"),
-      });
+      const currentAction = yield* take(requestChan);
+      const { addToLayerAction, finishEditingAction } = {
+        addToLayerAction: currentAction.type === "ADD_TO_LAYER" ? currentAction : null,
+        finishEditingAction: currentAction.type === "FINISH_EDITING" ? currentAction : null,
+      };
 
       if (finishEditingAction) break;
 

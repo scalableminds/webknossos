@@ -41,14 +41,18 @@ import {
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { undoAction, redoAction, disableSavingAction } from "oxalis/model/actions/save_actions";
+import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from "oxalis/store";
+import {
+  dispatchUndoAsync,
+  dispatchRedoAsync,
+  disableSavingAction,
+} from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from "oxalis/store";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
@@ -247,8 +251,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     Model.forceSave();
   };
 
-  handleUndo = () => {
-    Store.dispatch(undoAction());
+  handleUndo = async () => {
+    await dispatchUndoAsync(Store.dispatch);
   };
 
   handleRestore = async () => {
@@ -256,8 +260,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     Store.dispatch(setVersionRestoreVisibilityAction(true));
   };
 
-  handleRedo = () => {
-    Store.dispatch(redoAction());
+  handleRedo = async () => {
+    await dispatchRedoAsync(Store.dispatch);
   };
 
   handleCopyToAccount = async () => {
@@ -364,22 +368,24 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       ? [
           hasTracing
             ? [
-                <ButtonComponent
+                <AsyncButton
                   className="narrow"
                   key="undo-button"
                   title="Undo (Ctrl+Z)"
                   onClick={this.handleUndo}
+                  hideContentWhenLoading
                 >
                   <i className="fas fa-undo" aria-hidden="true" />
-                </ButtonComponent>,
-                <ButtonComponent
+                </AsyncButton>,
+                <AsyncButton
                   className="narrow hide-on-small-screen"
                   key="redo-button"
                   title="Redo (Ctrl+Y)"
                   onClick={this.handleRedo}
+                  hideContentWhenLoading
                 >
                   <i className="fas fa-redo" aria-hidden="true" />
-                </ButtonComponent>,
+                </AsyncButton>,
               ]
             : null,
           restrictions.allowSave ? (

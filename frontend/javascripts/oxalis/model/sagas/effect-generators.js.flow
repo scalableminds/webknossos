@@ -9,8 +9,10 @@ import {
   delay as typedDelay,
   takeEvery as typedTakeEvery,
   takeLeading as typedTakeLeading,
+  takeLatest as typedTakeLatest,
   throttle as typedThrottle,
   cancel as typedCancel,
+  actionChannel as typedActionChannel,
 } from "redux-saga/effects";
 
 import type { Action } from "oxalis/model/actions/actions";
@@ -164,8 +166,10 @@ declare export var _all: typeof typedAll;
 declare export var _take: typeof typedTake;
 declare export var _call: typeof typedCall;
 declare export var _takeEvery: typeof typedTakeEvery;
+declare export var _takeLatest: typeof typedTakeLatest;
 declare export var _takeLeading: typeof typedTakeLeading;
 declare export var _throttle: typeof typedThrottle;
 declare export var _cancel: typeof typedCancel;
+declare export var _actionChannel: typeof typedActionChannel;
 declare export var _delay: typeof typedDelay;
 export type Saga<T> = _Saga<T>;

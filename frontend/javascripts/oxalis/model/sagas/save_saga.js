@@ -54,6 +54,7 @@ import {
   select,
   join,
   fork,
+  _actionChannel,
 } from "oxalis/model/sagas/effect-generators";
 import {
   bucketsAlreadyInUndoState,
@@ -92,14 +93,57 @@ type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
 type WarnUndoState = { type: "warning", reason: string };
 type UndoState = SkeletonUndoState | VolumeUndoState | WarnUndoState;
 
-type racedActionsNeededForUndoRedo = {
-  skeletonUserAction: ?SkeletonTracingAction,
-  addBucketToUndoAction: ?AddBucketToUndoAction,
-  finishAnnotationStrokeAction: ?FinishAnnotationStrokeAction,
-  importVolumeTracingAction: ?ImportVolumeTracingAction,
-  undo: ?UndoAction,
-  redo: ?RedoAction,
+type RacedActionsNeededForUndoRedo = {
+  skeletonUserAction?: SkeletonTracingAction,
+  addBucketToUndoAction?: AddBucketToUndoAction,
+  finishAnnotationStrokeAction?: FinishAnnotationStrokeAction,
+  importVolumeTracingAction?: ImportVolumeTracingAction,
+  undo?: UndoAction,
+  redo?: RedoAction,
 };
+
+function unpackAction(action): RacedActionsNeededForUndoRedo {
+  // skeletonUserAction,
+  // addBucketToUndoAction,
+  // finishAnnotationStrokeAction,
+  // importVolumeTracingAction,
+  // undo,
+  // redo,
+  if (action.type === "ADD_BUCKET_TO_UNDO") {
+    return {
+      addBucketToUndoAction: action,
+    };
+  }
+
+  if (action.type === "FINISH_ANNOTATION_STROKE") {
+    return {
+      finishAnnotationStrokeAction: action,
+    };
+  }
+  if (action.type === "IMPORT_VOLUMETRACING") {
+    return {
+      importTracingAction: action,
+    };
+  }
+  if (action.type === "UNDO") {
+    return {
+      undo: action,
+    };
+  }
+  if (action.type === "REDO") {
+    return {
+      redo: action,
+    };
+  }
+
+  if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
+    return {
+      skeletonUserAction: action,
+    };
+  }
+
+  throw new Error("Could not unpack redux action from channel");
+}
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
@@ -111,7 +155,18 @@ export function* collectUndoStates(): Saga<void> {
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
+
+  const requestChan = yield _actionChannel([
+    ...SkeletonTracingSaveRelevantActions,
+    "ADD_BUCKET_TO_UNDO",
+    "FINISH_ANNOTATION_STROKE",
+    "IMPORT_VOLUMETRACING",
+    "UNDO",
+    "REDO",
+  ]);
   while (true) {
+    const currentAction = yield* take(requestChan);
+
     const {
       skeletonUserAction,
       addBucketToUndoAction,
@@ -119,14 +174,8 @@ export function* collectUndoStates(): Saga<void> {
       importVolumeTracingAction,
       undo,
       redo,
-    } = ((yield* race({
-      skeletonUserAction: _take(SkeletonTracingSaveRelevantActions),
-      addBucketToUndoAction: _take("ADD_BUCKET_TO_UNDO"),
-      finishAnnotationStrokeAction: _take("FINISH_ANNOTATION_STROKE"),
-      importTracingAction: _take("IMPORT_VOLUMETRACING"),
-      undo: _take("UNDO"),
-      redo: _take("REDO"),
-    }): any): racedActionsNeededForUndoRedo);
+    } = unpackAction(currentAction);
+
     if (skeletonUserAction || addBucketToUndoAction || finishAnnotationStrokeAction) {
       let shouldClearRedoState =
         addBucketToUndoAction != null || finishAnnotationStrokeAction != null;

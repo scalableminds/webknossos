@@ -93,7 +93,7 @@ type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
 type WarnUndoState = { type: "warning", reason: string };
 type UndoState = SkeletonUndoState | VolumeUndoState | WarnUndoState;
 
-type RacedActionsNeededForUndoRedo = {
+type RelevantActionsForUndoRedo = {
   skeletonUserAction?: SkeletonTracingAction,
   addBucketToUndoAction?: AddBucketToUndoAction,
   finishAnnotationStrokeAction?: FinishAnnotationStrokeAction,
@@ -102,13 +102,7 @@ type RacedActionsNeededForUndoRedo = {
   redo?: RedoAction,
 };
 
-function unpackAction(action): RacedActionsNeededForUndoRedo {
-  // skeletonUserAction,
-  // addBucketToUndoAction,
-  // finishAnnotationStrokeAction,
-  // importVolumeTracingAction,
-  // undo,
-  // redo,
+function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
   if (action.type === "ADD_BUCKET_TO_UNDO") {
     return {
       addBucketToUndoAction: action,
@@ -138,7 +132,7 @@ function unpackAction(action): RacedActionsNeededForUndoRedo {
 
   if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
     return {
-      skeletonUserAction: action,
+      skeletonUserAction: ((action: any): SkeletonTracingAction),
     };
   }
 
@@ -174,7 +168,7 @@ export function* collectUndoStates(): Saga<void> {
       importVolumeTracingAction,
       undo,
       redo,
-    } = unpackAction(currentAction);
+    } = unpackRelevantActionForUndo(currentAction);
 
     if (skeletonUserAction || addBucketToUndoAction || finishAnnotationStrokeAction) {
       let shouldClearRedoState =

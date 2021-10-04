@@ -3,12 +3,17 @@ ARG VERSION_NODE="12.x"
 
 ENV DEBIAN_FRONTEND noninteractive
 
-# add node package source
-RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -
-
 # Fixes "The method driver /usr/lib/apt/methods/https could not be found."
 # See https://unix.stackexchange.com/a/478009
 RUN apt-get update && apt-get install apt-transport-https
+
+# Fixes "The repository 'https://deb.nodesource.com/node_12.x stretch Release' does no longer have a Release file."
+# https://github.com/nodesource/distributions/issues/1266#issuecomment-931467582
+# https://github.com/nodesource/distributions/issues/1266#issuecomment-931481002
+RUN apt-get install openssl ca-certificates libgnutls30
+
+# add node package source
+RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -
 
 # add yarn package source
 RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \

@@ -100,6 +100,22 @@ export class VoxelNeighborQueue3D {
   }
 }
 
+export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
+  getVoxelAndGetNeighbors(): Array<Vector3> {
+    if (this.isEmpty()) {
+      return [];
+    }
+    const currentVoxel = this.stack.shift();
+    // 4-neighborhood in 2D
+    return [
+      [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
+      [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
+      [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
+      [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
+    ];
+  }
+}
+
 class VolumeLayer {
   /*
   From the outside, the VolumeLayer accepts only global positions. Internally,

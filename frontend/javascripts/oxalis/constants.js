@@ -187,8 +187,15 @@ export const OverwriteModeEnum = {
   OVERWRITE_ALL: "OVERWRITE_ALL",
   OVERWRITE_EMPTY: "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
 };
-
 export type OverwriteMode = $Keys<typeof OverwriteModeEnum>;
+
+export const FillModeEnum = {
+  // The leading underscore is a workaround, since leading letters are not valid identifiers
+  // in JS.
+  _2D: "_2D",
+  _3D: "_3D",
+};
+export type FillMode = $Keys<typeof FillModeEnum>;
 
 export const TDViewDisplayModeEnum = {
   NONE: "NONE",

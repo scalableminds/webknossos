@@ -60,6 +60,7 @@ import Constants, {
   type Vector3,
   AnnotationToolEnum,
   type LabeledVoxelsMap,
+  FillModeEnum,
 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import DataLayer from "oxalis/model/data_layer";
@@ -216,18 +217,21 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function getBoundingBoxForFloodFill(
+function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
-  numberOfSlices: ?number,
-): BoundingBoxType {
+): Saga<BoundingBoxType> {
   const halfViewportExtentsUVW = process.env.BABEL_ENV === "test" ? [64, 64, 32] : [128, 128, 128];
   const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
   const currentViewportBounding = {
     min: V3.sub(position, halfViewportExtentsUVW),
     max: V3.add(position, halfViewportExtentsUVW),
   };
-  if (numberOfSlices != null) {
+
+  const fillMode = yield* select(state => state.userConfiguration.fillMode);
+  if (fillMode === FillModeEnum._2D) {
+    // Only use current plane
+    const numberOfSlices = 1;
     currentViewportBounding.min[thirdDimension] = position[thirdDimension];
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
@@ -497,19 +501,14 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[2]],
     ];
 
-    const numberOfSlices = null;
-    const currentViewportBounding = yield* call(
-      getBoundingBoxForFloodFill,
-      position,
-      planeId,
-      numberOfSlices,
-    );
+    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, position, planeId);
 
     const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
     yield* call(progressCallback, false, "Performing floodfill...");
 
     console.time("cube.floodFill");
 
+    const fillMode = yield* select(state => state.userConfiguration.fillMode);
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
       wasBoundingBoxExceeded,
@@ -523,6 +522,7 @@ export function* floodFill(): Saga<void> {
       currentViewportBounding,
       labeledZoomStep,
       progressCallback,
+      fillMode === FillModeEnum._3D,
     );
     console.timeEnd("cube.floodFill");
 

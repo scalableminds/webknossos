@@ -15,7 +15,7 @@ import {
   NullBucket,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
-import { VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
 import {
   getResolutions,
   ResolutionInfo,
@@ -400,6 +400,7 @@ class DataCube {
     floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
     progressCallback: ProgressCallback,
+    use3D: boolean,
   ): Promise<{
     bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW,
     wasBoundingBoxExceeded: boolean,
@@ -503,10 +504,11 @@ class DataCube {
         dataArray[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
       };
 
-      // Use a VoxelNeighborQueue3D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
+      // Use a VoxelNeighborQueue2D/3D to iterate over the bucket and using bucket-local addresses and not global addresses.
       const initialVoxelInSliceUvw = xyzToUvw(initialXyzVoxelInBucket);
       markUvwInSliceAsLabeled(initialVoxelInSliceUvw);
-      const neighbourVoxelStackUvw = new VoxelNeighborQueue3D(initialVoxelInSliceUvw);
+      const VoxelNeighborQueueClass = use3D ? VoxelNeighborQueue3D : VoxelNeighborQueue2D;
+      const neighbourVoxelStackUvw = new VoxelNeighborQueueClass(initialVoxelInSliceUvw);
       // Iterating over all neighbours from the initialAddress.
 
       //  && labeledVoxelCount < voxelThreshold

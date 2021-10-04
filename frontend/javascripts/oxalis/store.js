@@ -34,6 +34,7 @@ import {
   type BoundingBoxType,
   type ContourMode,
   type OverwriteMode,
+  type FillMode,
   type ControlMode,
   ControlModeEnum,
   type TDViewDisplayMode,
@@ -314,6 +315,7 @@ export type UserConfiguration = {|
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
   +overwriteMode: OverwriteMode,
+  +fillMode: FillMode,
   +useLegacyBindings: boolean,
 |};
 

@@ -3,12 +3,12 @@ ARG VERSION_NODE="12.x"
 
 ENV DEBIAN_FRONTEND noninteractive
 
+# add node package source
+RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -
+
 # Fixes "The method driver /usr/lib/apt/methods/https could not be found."
 # See https://unix.stackexchange.com/a/478009
 RUN apt-get update && apt-get install apt-transport-https
-
-# add node package source
-RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -
 
 # add yarn package source
 RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \

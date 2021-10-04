@@ -98,7 +98,7 @@ export async function loadMeshFromFile(
     const stlData = await getMeshfileChunkData(
       dataset.dataStore.url,
       dataset,
-      layerName,
+      getBaseSegmentationName(segmentationLayer),
       fileName,
       id,
       chunkPos,

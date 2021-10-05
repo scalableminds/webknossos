@@ -69,7 +69,10 @@ import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import Toast from "libs/toast";
-import UrlManager, { type PartialUrlManagerState } from "oxalis/controller/url_manager";
+import UrlManager, {
+  type PartialUrlManagerState,
+  type UrlStateByLayer,
+} from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
@@ -563,36 +566,56 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
     Store.dispatch(setRotationAction(state.rotation));
   }
   if (state.stateByLayer != null) {
-    for (const layerName of Object.keys(state.stateByLayer)) {
-      const layerState = state.stateByLayer[layerName];
+    applyLayerState(state.stateByLayer);
+  }
+}
 
-      if (layerState.mappingInfo != null) {
-        const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
+function applyLayerState(stateByLayer: UrlStateByLayer) {
+  for (const layerName of Object.keys(stateByLayer)) {
+    const layerState = stateByLayer[layerName];
 
-        let effectiveLayerName;
-        try {
-          const { dataset } = Store.getState();
-          // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-          effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
-        } catch (e) {
-          console.error(e);
-          // TODO: Proper error message
-          Toast.error(e);
+    if (layerState.mappingInfo != null) {
+      const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
+
+      let effectiveLayerName;
+      try {
+        const { dataset } = Store.getState();
+        // The name of the layer could have changed if a volume tracing was created from a viewed annotation
+        effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+      } catch (e) {
+        console.error(e);
+        Toast.error(
+          `URL configuration values for the layer "${layerName}" are ignored, because: ${
+            e.message
+          }`,
+        );
+        ErrorHandling.notify(e, { urlLayerState: stateByLayer });
+        continue;
+      }
+
+      Store.dispatch(
+        setMappingAction(effectiveLayerName, mappingName, mappingType, {
+          showLoadingIndicator: true,
+        }),
+      );
+
+      if (agglomerateIdsToImport != null) {
+        const { tracing } = Store.getState();
+
+        if (tracing.skeleton == null) {
+          Toast.error(messages["tracing.agglomerate_skeleton.no_skeleton_tracing"]);
           continue;
         }
 
-        Store.dispatch(
-          setMappingAction(effectiveLayerName, mappingName, mappingType, {
-            showLoadingIndicator: true,
-          }),
-        );
+        if (mappingType !== "HDF5") {
+          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+          continue;
+        }
 
-        if (mappingType === "HDF5" && agglomerateIdsToImport != null) {
-          for (const agglomerateId of agglomerateIdsToImport) {
-            Store.dispatch(
-              loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
-            );
-          }
+        for (const agglomerateId of agglomerateIdsToImport) {
+          Store.dispatch(
+            loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
+          );
         }
       }
     }

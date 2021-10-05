@@ -16,21 +16,23 @@ import messages from "messages";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
+export type UrlStateByLayer = {
+  [layerName: string]: {
+    mappingInfo?: {
+      mappingName: string,
+      mappingType: MappingType,
+      agglomerateIdsToImport?: [number],
+    },
+  },
+};
+
 export type FullUrlManagerState = {|
   position: Vector3,
   mode: ViewMode,
   zoomStep: number,
   activeNode?: number,
   rotation?: Vector3,
-  stateByLayer?: {
-    [layerName: string]: {
-      mappingInfo?: {
-        mappingName: string,
-        mappingType: MappingType,
-        agglomerateIdsToImport?: [number],
-      },
-    },
-  },
+  stateByLayer?: UrlStateByLayer,
 |};
 
 export type PartialUrlManagerState = $Shape<FullUrlManagerState>;

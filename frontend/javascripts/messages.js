@@ -200,6 +200,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Please activate an agglomerate file mapping to load a skeleton for a segment.",
   "tracing.agglomerate_skeleton.no_agglomerate_file":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_skeleton.no_skeleton_tracing":
+    "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
     'All skeletons are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":

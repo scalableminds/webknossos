@@ -23,6 +23,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry, CameraData } from "oxalis/store";
 import createProgressCallback from "libs/progress_callback";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   type UndoAction,
   type RedoAction,
@@ -220,6 +221,13 @@ export function* collectUndoStates(): Saga<void> {
       if (undoStack.length > 0 && undoStack[undoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
+      const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+      if (busyBlockingInfo.isBusy) {
+        console.warn(`Ignoring undo request (reason: ${busyBlockingInfo.reason || "null"})`);
+        continue;
+      }
+      yield* put(setBusyBlockingInfoAction(true, "Undo is being performed."));
+
       const progressCallback = createProgressCallback({
         pauseDelay: 100,
         successMessageDelay: 2000,
@@ -237,10 +245,17 @@ export function* collectUndoStates(): Saga<void> {
       if (undo.callback != null) {
         undo.callback();
       }
+      yield* put(setBusyBlockingInfoAction(false));
     } else if (redo) {
       if (redoStack.length > 0 && redoStack[redoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
+      const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+      if (busyBlockingInfo.isBusy) {
+        console.warn(`Ignoring undo request (reason: ${busyBlockingInfo.reason || "null"})`);
+        continue;
+      }
+      yield* put(setBusyBlockingInfoAction(true, "Redo is being performed."));
       const progressCallback = createProgressCallback({
         pauseDelay: 100,
         successMessageDelay: 2000,
@@ -257,6 +272,7 @@ export function* collectUndoStates(): Saga<void> {
       if (redo.callback != null) {
         redo.callback();
       }
+      yield* put(setBusyBlockingInfoAction(false));
     }
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);

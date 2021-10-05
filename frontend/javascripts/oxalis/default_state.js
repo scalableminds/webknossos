@@ -211,6 +211,10 @@ const defaultState: OxalisState = {
       primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
         ? "dark"
         : "light",
+    busyBlockingInfo: {
+      isBusy: false,
+      reason: null,
+    },
   },
   isosurfacesByLayer: {},
   currentMeshFileByLayer: {},

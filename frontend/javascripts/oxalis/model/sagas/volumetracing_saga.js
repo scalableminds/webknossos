@@ -1,6 +1,7 @@
 // @flow
 import _ from "lodash";
 
+import * as Utils from "libs/utils";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
@@ -48,7 +49,7 @@ import {
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
@@ -477,6 +478,15 @@ export function* floodFill(): Saga<void> {
     if (floodFillAction.type !== "FLOOD_FILL") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
+
+    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+    if (busyBlockingInfo.isBusy) {
+      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "null"})`);
+      return;
+    }
+
+    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
+
     const { position: positionFloat, planeId } = floodFillAction;
     const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { cube } = segmentationLayer;
@@ -586,7 +596,7 @@ export function* floodFill(): Saga<void> {
             name: `Limits of flood-fill (target_id=${activeCellId}, seed=${seedPosition.join(
               ",",
             )}, timestamp=${new Date().getTime()})`,
-            color: [255, 255, 255],
+            color: Utils.getRandomColor(),
             isVisible: true,
           },
         ]),
@@ -596,6 +606,7 @@ export function* floodFill(): Saga<void> {
     }
 
     cube.triggerPushQueue();
+    yield* put(setBusyBlockingInfoAction(false, "Floodfill is being computed."));
     if (floodFillAction.callback != null) {
       floodFillAction.callback();
     }

@@ -3,7 +3,11 @@ import * as React from "react";
 import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import Store, { type OxalisState, type BorderOpenStatus } from "oxalis/store";
+import Store, {
+  type OxalisState,
+  type BusyBlockingInfo,
+  type BorderOpenStatus,
+} from "oxalis/store";
 import { Layout, Tooltip } from "antd";
 import _ from "lodash";
 import Toast from "libs/toast";
@@ -47,6 +51,7 @@ type Action = typeof FlexLayout.Action;
 type StateProps = {|
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
+  busyBlockingInfo: BusyBlockingInfo,
 |};
 
 type OwnProps = {|
@@ -217,23 +222,36 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   renderViewport(id: string): ?React.Node {
-    const { displayScalebars, isUpdateTracingAllowed } = this.props;
+    const { displayScalebars, isUpdateTracingAllowed, busyBlockingInfo } = this.props;
     switch (id) {
       case OrthoViews.PLANE_XY:
       case OrthoViews.PLANE_YZ:
       case OrthoViews.PLANE_XZ: {
-        return <InputCatcher viewportID={id} displayScalebars={displayScalebars} />;
+        return (
+          <InputCatcher
+            busyBlockingInfo={busyBlockingInfo}
+            viewportID={id}
+            displayScalebars={displayScalebars}
+          />
+        );
       }
       case OrthoViews.TDView: {
         return (
-          <InputCatcher viewportID={id} displayScalebars={displayScalebars}>
+          <InputCatcher
+            busyBlockingInfo={busyBlockingInfo}
+            viewportID={id}
+            displayScalebars={displayScalebars}
+          >
             <TDViewControls />
           </InputCatcher>
         );
       }
       case ArbitraryViews.arbitraryViewport: {
         return (
-          <InputCatcher viewportID={ArbitraryViews.arbitraryViewport}>
+          <InputCatcher
+            busyBlockingInfo={busyBlockingInfo}
+            viewportID={ArbitraryViews.arbitraryViewport}
+          >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );
@@ -422,6 +440,7 @@ function mapStateToProps(state: OxalisState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }
 function mapDispatchToProps(dispatch: Dispatch<*>) {

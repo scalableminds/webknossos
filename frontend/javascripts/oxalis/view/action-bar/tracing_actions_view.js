@@ -41,7 +41,12 @@ import {
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from "oxalis/store";
+import Store, {
+  type BusyBlockingInfo,
+  type OxalisState,
+  type RestrictionsAndSettings,
+  type Task,
+} from "oxalis/store";
 import {
   dispatchUndoAsync,
   dispatchRedoAsync,
@@ -71,6 +76,7 @@ type StateProps = {|
   task: ?Task,
   activeUser: ?APIUser,
   hasTracing: boolean,
+  busyBlockingInfo: BusyBlockingInfo,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -361,6 +367,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       annotationId,
       activeUser,
       layoutMenu,
+      busyBlockingInfo,
     } = this.props;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
 
@@ -373,6 +380,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   key="undo-button"
                   title="Undo (Ctrl+Z)"
                   onClick={this.handleUndo}
+                  disabled={busyBlockingInfo.isBusy}
                   hideContentWhenLoading
                 >
                   <i className="fas fa-undo" aria-hidden="true" />
@@ -382,6 +390,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   key="redo-button"
                   title="Redo (Ctrl+Y)"
                   onClick={this.handleRedo}
+                  disabled={busyBlockingInfo.isBusy}
                   hideContentWhenLoading
                 >
                   <i className="fas fa-redo" aria-hidden="true" />
@@ -554,6 +563,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     task: state.task,
     activeUser: state.activeUser,
     hasTracing: (state.tracing.skeleton || state.tracing.volume) != null,
+    busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }
 

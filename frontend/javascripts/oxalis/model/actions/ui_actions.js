@@ -42,6 +42,14 @@ type SetHasOrganizationsAction = {
   value: boolean,
 };
 
+type SetBusyBlockingInfoAction = {
+  type: "SET_BUSY_BLOCKING_INFO_ACTION",
+  value: {
+    isBusy: boolean,
+    reason: ?string,
+  },
+};
+
 export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
   type: "SET_TOOL",
   tool,
@@ -66,7 +74,8 @@ export type UiAction =
   | SetHasOrganizationsAction
   | SetToolAction
   | CycleToolAction
-  | SetThemeAction;
+  | SetThemeAction
+  | SetBusyBlockingInfoAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -112,4 +121,15 @@ export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAc
 export const setThemeAction = (value: Theme): SetThemeAction => ({
   type: "SET_THEME",
   value,
+});
+
+export const setBusyBlockingInfoAction = (
+  isBusy: boolean,
+  reason: ?string,
+): SetBusyBlockingInfoAction => ({
+  type: "SET_BUSY_BLOCKING_INFO_ACTION",
+  value: {
+    isBusy,
+    reason,
+  },
 });

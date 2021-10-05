@@ -7,6 +7,7 @@ const { useState, useEffect, useRef } = React;
 type Props = {
   onClick: (SyntheticInputEvent<>) => Promise<any>,
   hideContentWhenLoading?: boolean,
+  overrideLoading?: boolean,
   children?: React.Node,
 };
 

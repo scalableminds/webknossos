@@ -6,6 +6,8 @@ import {
   updateDirectionAction,
   finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   type Saga,
   _takeEvery,
@@ -101,7 +103,7 @@ function* warnOfTooLowOpacity(): Saga<void> {
   }
 }
 
-export function* editVolumeLayerAsync(): Generator<any, any, any> {
+export function* editVolumeLayerAsync(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
 
@@ -222,7 +224,6 @@ function* getBoundingBoxForFloodFill(
   currentViewport: OrthoView,
 ): Saga<BoundingBoxType> {
   const halfViewportExtentsUVW = process.env.BABEL_ENV === "test" ? [64, 64, 32] : [128, 128, 128];
-  const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
   const currentViewportBounding = {
     min: V3.sub(position, halfViewportExtentsUVW),
     max: V3.add(position, halfViewportExtentsUVW),
@@ -231,6 +232,7 @@ function* getBoundingBoxForFloodFill(
   const fillMode = yield* select(state => state.userConfiguration.fillMode);
   if (fillMode === FillModeEnum._2D) {
     // Only use current plane
+    const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
     const numberOfSlices = 1;
     currentViewportBounding.min[thirdDimension] = position[thirdDimension];
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
@@ -475,10 +477,10 @@ export function* floodFill(): Saga<void> {
     if (floodFillAction.type !== "FLOOD_FILL") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
-    const { position, planeId } = floodFillAction;
+    const { position: positionFloat, planeId } = floodFillAction;
     const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { cube } = segmentationLayer;
-    const seedVoxel = Dimensions.roundCoordinate(position);
+    const seedPosition = Dimensions.roundCoordinate(positionFloat);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
@@ -501,7 +503,7 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[2]],
     ];
 
-    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, position, planeId);
+    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
 
     const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
     yield* call(progressCallback, false, "Performing floodfill...");
@@ -512,9 +514,10 @@ export function* floodFill(): Saga<void> {
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
       wasBoundingBoxExceeded,
+      coveredBoundingBox,
     } = yield* call(
       [cube, cube.floodFill],
-      seedVoxel,
+      seedPosition,
       activeCellId,
       uvwToXyz,
       xyzToUvw,
@@ -567,6 +570,26 @@ export function* floodFill(): Saga<void> {
         progressCallback,
         true,
         "Floodfill is done, but terminated since the labeled volume got too large.",
+      );
+
+      const userBoundingBoxes = yield* select(
+        state => getSomeTracing(state.tracing).userBoundingBoxes,
+      );
+      const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
+      const boundingBoxId = highestBoundingBoxId + 1;
+
+      yield* put(
+        addUserBoundingBoxesAction([
+          {
+            id: boundingBoxId,
+            boundingBox: coveredBoundingBox,
+            name: `Limits of flood-fill (target_id=${activeCellId}, seed=${seedPosition.join(
+              ",",
+            )}, timestamp=${new Date().getTime()})`,
+            color: [255, 255, 255],
+            isVisible: true,
+          },
+        ]),
       );
     } else {
       yield* call(progressCallback, true, "Floodfill done.");

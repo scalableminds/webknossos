@@ -5,6 +5,7 @@
 
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
+import { V3 } from "libs/mjs";
 
 import ErrorHandling from "libs/error_handling";
 import {
@@ -50,6 +51,9 @@ class CubeEntry {
     this.boundary = boundary;
   }
 }
+
+const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
+const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 class DataCube {
   MAXIMUM_BUCKET_COUNT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
@@ -404,6 +408,7 @@ class DataCube {
   ): Promise<{
     bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW,
     wasBoundingBoxExceeded: boolean,
+    coveredBoundingBox: BoundingBoxType,
   }> {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
@@ -418,8 +423,21 @@ class DataCube {
     const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
     const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
+    let coveredBBoxMin = [
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+    ];
+    let coveredBBoxMax = [0, 0, 0];
     if (seedBucket.type === "null") {
-      return { bucketsWithLabeledVoxelsMap, wasBoundingBoxExceeded: false };
+      return {
+        bucketsWithLabeledVoxelsMap,
+        wasBoundingBoxExceeded: false,
+        coveredBoundingBox: {
+          min: coveredBBoxMin,
+          max: coveredBBoxMax,
+        },
+      };
     }
     if (!this.resolutionInfo.hasIndex(zoomStep)) {
       throw new Error(
@@ -429,7 +447,14 @@ class DataCube {
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
     if (sourceCellId === cellId) {
-      return { bucketsWithLabeledVoxelsMap, wasBoundingBoxExceeded: false };
+      return {
+        bucketsWithLabeledVoxelsMap,
+        wasBoundingBoxExceeded: false,
+        coveredBoundingBox: {
+          min: coveredBBoxMin,
+          max: coveredBBoxMax,
+        },
+      };
     }
     const bucketsWithXyzSeedsToFill: Array<[DataBucket, Vector3]> = [
       [seedBucket, this.getVoxelOffset(globalSeedVoxel, zoomStep)],
@@ -437,32 +462,42 @@ class DataCube {
     let labeledVoxelCount = 0;
     let wasBoundingBoxExceeded = false;
 
-    // const voxelThreshold = 100 * 1000000;
-
-    let minBucketCoords = [10000, 10000, 10000];
-    let maxBucketCoords = [0, 0, 0];
-
     // Iterate over all buckets within the area and flood fill each of them.
     while (bucketsWithXyzSeedsToFill.length > 0) {
       const [currentBucket, initialXyzVoxelInBucket] = bucketsWithXyzSeedsToFill.pop();
 
-      minBucketCoords = [
-        Math.min(minBucketCoords[0], currentBucket.zoomedAddress[0]),
-        Math.min(minBucketCoords[1], currentBucket.zoomedAddress[1]),
-        Math.min(minBucketCoords[2], currentBucket.zoomedAddress[2]),
-      ];
-      maxBucketCoords = [
-        Math.max(maxBucketCoords[0], currentBucket.zoomedAddress[0]),
-        Math.max(maxBucketCoords[1], currentBucket.zoomedAddress[1]),
-        Math.max(maxBucketCoords[2], currentBucket.zoomedAddress[2]),
-      ];
+      const currentBucketBoundingBox = currentBucket.getBoundingBox();
+      const currentGlobalBucketPosition = currentBucket.getGlobalPosition();
 
       // Check if the bucket overlaps the active viewport bounds.
-      if (
-        !areBoundingBoxesOverlappingOrTouching(currentBucket.getBoundingBox(), floodfillBoundingBox)
-        // || labeledVoxelCount > voxelThreshold
+      while (
+        !areBoundingBoxesOverlappingOrTouching(currentBucketBoundingBox, floodfillBoundingBox)
       ) {
-        wasBoundingBoxExceeded = true;
+        if (!USE_FLOODFILL_VOXEL_THRESHOLD || labeledVoxelCount > FLOODFILL_VOXEL_THRESHOLD) {
+          wasBoundingBoxExceeded = true;
+          break;
+        } else {
+          // Increase the size of the bounding box by moving the bbox surface
+          // which is closest to the seed.
+          const seedToMinDiff = V3.sub(globalSeedVoxel, floodfillBoundingBox.min);
+          const seedToMaxDiff = V3.sub(floodfillBoundingBox.max, globalSeedVoxel);
+          const smallestDiffToMin = Math.min(...seedToMinDiff);
+          const smallestDiffToMax = Math.min(...seedToMaxDiff);
+
+          if (smallestDiffToMin < smallestDiffToMax) {
+            // Decrease min
+            // $FlowIgnore[invalid-tuple-index]
+            floodfillBoundingBox.min[Array.from(seedToMinDiff).indexOf(smallestDiffToMin)] -=
+              constants.BUCKET_WIDTH;
+          } else {
+            // Increase max
+            // $FlowIgnore[invalid-tuple-index]
+            floodfillBoundingBox.max[Array.from(seedToMaxDiff).indexOf(smallestDiffToMax)] +=
+              constants.BUCKET_WIDTH;
+          }
+        }
+      }
+      if (wasBoundingBoxExceeded) {
         continue;
       }
       // eslint-disable-next-line no-await-in-loop
@@ -511,7 +546,6 @@ class DataCube {
       const neighbourVoxelStackUvw = new VoxelNeighborQueueClass(initialVoxelInSliceUvw);
       // Iterating over all neighbours from the initialAddress.
 
-      //  && labeledVoxelCount < voxelThreshold
       while (!neighbourVoxelStackUvw.isEmpty()) {
         const neighbours = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
@@ -541,6 +575,23 @@ class DataCube {
               markUvwInSliceAsLabeled(neighbourVoxelUvw);
               neighbourVoxelStackUvw.pushVoxel(neighbourVoxelUvw);
               labeledVoxelCount++;
+
+              const currentGlobalPosition = V3.add(
+                currentGlobalBucketPosition,
+                V3.scale3(adjustedNeighbourVoxelXyz, currentResolution),
+              );
+
+              coveredBBoxMin = [
+                Math.min(coveredBBoxMin[0], currentGlobalPosition[0]),
+                Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),
+                Math.min(coveredBBoxMin[2], currentGlobalPosition[2]),
+              ];
+              coveredBBoxMax = [
+                Math.max(coveredBBoxMax[0], currentGlobalPosition[0]),
+                Math.max(coveredBBoxMax[1], currentGlobalPosition[1]),
+                Math.max(coveredBBoxMax[2], currentGlobalPosition[2]),
+              ];
+
               if (labeledVoxelCount % 1000000 === 0) {
                 console.log(`Labeled ${labeledVoxelCount} Vx. Continuing`);
                 // eslint-disable-next-line no-await-in-loop
@@ -567,6 +618,10 @@ class DataCube {
     return {
       bucketsWithLabeledVoxelsMap,
       wasBoundingBoxExceeded,
+      coveredBoundingBox: {
+        min: coveredBBoxMin,
+        max: coveredBBoxMax,
+      },
     };
   }
 

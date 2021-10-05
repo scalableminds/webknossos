@@ -186,7 +186,6 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    console.log("getGlobalPosition", { zoomedAddress: this.zoomedAddress });
     const resolutions = getResolutions(Store.getState().dataset);
     return bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
   }

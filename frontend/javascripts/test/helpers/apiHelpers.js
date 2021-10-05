@@ -3,6 +3,7 @@ import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Maybe from "data.maybe";
 
+import { sleep } from "libs/utils";
 import type { Tracing, VolumeTracing } from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import mockRequire from "mock-require";
@@ -32,9 +33,18 @@ const Request = {
   always: () => Promise.resolve(),
 };
 
-Request.sendJSONReceiveArraybufferWithHeaders.returns(
-  Promise.resolve({ buffer: new Uint8Array(1), headers: { "missing-buckets": "[]" } }),
-);
+export function createBucketResponseFunction(fillValue, delay = 0) {
+  return async function getBucketData(url, payload) {
+    const bucketCount = payload.data.length;
+    await sleep(delay);
+    return {
+      buffer: new Uint8Array(2 * bucketCount * 32 ** 3).fill(fillValue).buffer,
+      headers: { "missing-buckets": "[]" },
+    };
+  };
+}
+
+Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
 
 const ErrorHandling = {
   assertExtendContext: _.noop,

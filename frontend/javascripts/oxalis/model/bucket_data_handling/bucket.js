@@ -380,6 +380,14 @@ export class DataBucket {
             arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
           )
         : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+    if (data.length !== channelCount * Constants.BUCKET_SIZE) {
+      console.warn("bucket.data has unexpected length", {
+        arrayBuffer,
+        actual: data.length,
+        expected: channelCount * Constants.BUCKET_SIZE,
+        channelCount,
+      });
+    }
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         if (this.dirty) {

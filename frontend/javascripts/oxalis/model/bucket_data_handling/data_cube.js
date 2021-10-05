@@ -470,11 +470,13 @@ class DataCube {
       const currentGlobalBucketPosition = currentBucket.getGlobalPosition();
 
       // Check if the bucket overlaps the active viewport bounds.
+      let shouldIgnoreBucket = false;
       while (
         !areBoundingBoxesOverlappingOrTouching(currentBucketBoundingBox, floodfillBoundingBox)
       ) {
         if (!USE_FLOODFILL_VOXEL_THRESHOLD || labeledVoxelCount > FLOODFILL_VOXEL_THRESHOLD) {
           wasBoundingBoxExceeded = true;
+          shouldIgnoreBucket = true;
           break;
         } else {
           // Increase the size of the bounding box by moving the bbox surface
@@ -497,7 +499,7 @@ class DataCube {
           }
         }
       }
-      if (wasBoundingBoxExceeded) {
+      if (shouldIgnoreBucket) {
         continue;
       }
       // eslint-disable-next-line no-await-in-loop
@@ -586,10 +588,12 @@ class DataCube {
                 Math.min(coveredBBoxMin[1], currentGlobalPosition[1]),
                 Math.min(coveredBBoxMin[2], currentGlobalPosition[2]),
               ];
+
+              // The maximum is exclusive which is why we add 1 to the position
               coveredBBoxMax = [
-                Math.max(coveredBBoxMax[0], currentGlobalPosition[0]),
-                Math.max(coveredBBoxMax[1], currentGlobalPosition[1]),
-                Math.max(coveredBBoxMax[2], currentGlobalPosition[2]),
+                Math.max(coveredBBoxMax[0], currentGlobalPosition[0] + 1),
+                Math.max(coveredBBoxMax[1], currentGlobalPosition[1] + 1),
+                Math.max(coveredBBoxMax[2], currentGlobalPosition[2] + 1),
               ];
 
               if (labeledVoxelCount % 1000000 === 0) {

@@ -223,7 +223,7 @@ function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
 ): Saga<BoundingBoxType> {
-  const halfViewportExtentsUVW = process.env.BABEL_ENV === "test" ? [64, 64, 32] : [128, 128, 128];
+  const halfViewportExtentsUVW = process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96];
   const currentViewportBounding = {
     min: V3.sub(position, halfViewportExtentsUVW),
     max: V3.add(position, halfViewportExtentsUVW),

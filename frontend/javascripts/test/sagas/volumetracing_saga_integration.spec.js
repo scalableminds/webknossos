@@ -7,8 +7,12 @@ import { waitForCondition, sleep } from "libs/utils";
 import _ from "lodash";
 
 import "test/sagas/saga_integration.mock";
-import { __setupOxalis, getVolumeTracingOrFail } from "test/helpers/apiHelpers";
-import { OrthoViews } from "oxalis/constants";
+import {
+  __setupOxalis,
+  createBucketResponseFunction,
+  getVolumeTracingOrFail,
+} from "test/helpers/apiHelpers";
+import { OrthoViews, FillModeEnum } from "oxalis/constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -42,21 +46,8 @@ test.beforeEach(async t => {
   Store.dispatch(wkReadyAction());
 });
 
-function createBucketResponseFunction(fillValue, delay) {
-  return async function getBucketData(url, payload) {
-    const bucketCount = payload.data.length;
-    await sleep(delay);
-    return {
-      buffer: new Uint8Array(new Uint16Array(bucketCount * 32 ** 3).fill(fillValue).buffer),
-      headers: { "missing-buckets": "[]" },
-    };
-  };
-}
-
 test.serial("Executing a floodfill in mag 1", async t => {
-  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
-    Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
-  );
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
 
   const paintCenter = [0, 0, 43];
   const brushSize = 10;
@@ -88,6 +79,7 @@ test.serial("Executing a floodfill in mag 1", async t => {
   const floodingCellId = 3;
 
   Store.dispatch(setActiveCellAction(floodingCellId));
+  Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
 
   await dispatchFloodfillAsync(Store.dispatch, [0, 0, 43], OrthoViews.PLANE_XY);
 
@@ -127,9 +119,7 @@ test.serial("Executing a floodfill in mag 1", async t => {
 });
 
 test.serial("Executing a floodfill in mag 2", async t => {
-  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
-    Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
-  );
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
 
   const paintCenter = [0, 0, 43];
   const brushSize = 10;
@@ -161,6 +151,7 @@ test.serial("Executing a floodfill in mag 2", async t => {
 
   Store.dispatch(setActiveCellAction(floodingCellId));
   Store.dispatch(setZoomStepAction(2));
+  Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
   await dispatchFloodfillAsync(Store.dispatch, [0, 0, 43], OrthoViews.PLANE_XY);
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
@@ -199,10 +190,7 @@ test.serial("Executing a floodfill in mag 2", async t => {
 });
 
 test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
-  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
-    // todo: can the bucket recognize the case where the buffer is too small?
-    Promise.resolve({ buffer: new Uint8Array(2 * 32 ** 3), headers: { "missing-buckets": "[]" } }),
-  );
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
 
   const paintCenter = [128, 128, 128];
   Store.dispatch(setPositionAction(paintCenter));
@@ -213,6 +201,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
   const floodingCellId = 3;
 
   Store.dispatch(setActiveCellAction(floodingCellId));
+  Store.dispatch(updateUserSettingAction("fillMode", FillModeEnum._3D));
 
   await dispatchFloodfillAsync(Store.dispatch, paintCenter, OrthoViews.PLANE_XY);
 
@@ -287,8 +276,9 @@ test.serial(
 );
 
 test.serial("Brushing/Tracing with a new segment id should update the bucket data", async t => {
-  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders.returns(
-    Promise.resolve({ buffer: new Uint16Array(32 ** 3), headers: { "missing-buckets": "[]" } }),
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    0,
+    0,
   );
 
   const paintCenter = [0, 0, 0];
@@ -316,9 +306,19 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
     // (and not at 4,4)
     t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 0], zoomStep), newCellId);
 
-    t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0], zoomStep), 0);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 5, 0], zoomStep), 0);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 0, 1], zoomStep), 0);
+    // In mag 1 and mag 2,
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [5, 0, 0], zoomStep),
+      zoomStep === 0 ? 0 : newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [0, 5, 0], zoomStep),
+      zoomStep === 0 ? 0 : newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue("segmentation", [0, 0, 1], zoomStep),
+      zoomStep === 0 ? 0 : newCellId,
+    );
   }
 
   t.snapshot(

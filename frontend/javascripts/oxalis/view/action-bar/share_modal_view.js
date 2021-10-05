@@ -76,10 +76,11 @@ export async function copyUrlToClipboard(url: string) {
   Toast.success("URL copied to clipboard.");
 }
 
-export function ShareButton(props: { dataset: APIDataset }) {
+export function ShareButton(props: { dataset: APIDataset, style?: Object }) {
+  const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
   const tracingVisibility = useSelector(state => state.tracing.visibility);
-  const includeToken = !props.dataset.isPublic && tracingVisibility === "Public";
+  const includeToken = !dataset.isPublic && tracingVisibility === "Public";
   const copySharingUrl = () => {
     // Copy the url on-demand as it constantly changes
     const url = getUrl(sharingToken, includeToken);
@@ -89,9 +90,9 @@ export function ShareButton(props: { dataset: APIDataset }) {
   return (
     <ButtonComponent
       icon={<ShareAltOutlined />}
-      style={{ marginLeft: 12 }}
-      title="Copy Sharing Link"
+      title={messages["tracing.copy_sharing_link"]}
       onClick={copySharingUrl}
+      style={style}
     />
   );
 }

@@ -31,7 +31,6 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { AsyncButton } from "components/async_clickables";
-import { ShareButton } from "oxalis/view/action-bar/share_modal_view";
 
 const VersionRestoreWarning = (
   <Alert
@@ -123,7 +122,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
-      dataset,
       hasVolumeFallback,
       is2d,
       isReadOnly,
@@ -162,7 +160,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
-          <ShareButton dataset={dataset} />
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}

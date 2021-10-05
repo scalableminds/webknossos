@@ -129,8 +129,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.out_of_dataset_bounds":
     "The current position is outside of the dataset's bounding box. No data will be shown here.",
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
-  "tracing.copy_position": "Copy position to clipboard.",
-  "tracing.copy_rotation": "Copy rotation to clipboard.",
+  "tracing.copy_position": "Copy position to clipboard",
+  "tracing.copy_rotation": "Copy rotation to clipboard",
+  "tracing.copy_sharing_link": "Copy sharing link to clipboard",
   "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
     `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>

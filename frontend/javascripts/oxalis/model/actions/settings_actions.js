@@ -67,6 +67,7 @@ export type SetMappingAction = {
   hideUnmappedIds: ?boolean,
   mappingType: MappingType,
   layerName: string,
+  showLoadingIndicator: ?boolean,
 };
 
 type SetHideUnmappedIdsAction = {
@@ -176,14 +177,25 @@ export const setMappingEnabledAction = (
   isMappingEnabled,
 });
 
+export type OptionalMappingProperties = {|
+  mapping?: Mapping,
+  mappingKeys?: Array<number>,
+  mappingColors?: Array<number>,
+  hideUnmappedIds?: boolean,
+  showLoadingIndicator?: boolean,
+|};
+
 export const setMappingAction = (
   layerName: string,
   mappingName: ?string,
   mappingType: MappingType = "JSON",
-  mapping: ?Mapping,
-  mappingKeys: ?Array<number>,
-  mappingColors: ?Array<number>,
-  hideUnmappedIds: ?boolean,
+  {
+    mapping,
+    mappingKeys,
+    mappingColors,
+    hideUnmappedIds,
+    showLoadingIndicator,
+  }: OptionalMappingProperties = {},
 ): SetMappingAction => ({
   type: "SET_MAPPING",
   layerName,
@@ -193,6 +205,7 @@ export const setMappingAction = (
   mappingKeys,
   mappingColors,
   hideUnmappedIds,
+  showLoadingIndicator,
 });
 
 export const setHideUnmappedIdsAction = (

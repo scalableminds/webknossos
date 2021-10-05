@@ -123,12 +123,15 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
+      dataset,
       hasVolumeFallback,
+      is2d,
       isReadOnly,
       showVersionRestore,
       controlMode,
       hasSkeleton,
       layoutProps,
+      viewMode,
     } = this.props;
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
@@ -156,12 +159,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && constants.MODES_PLANE.indexOf(this.props.viewMode) > -1 ? (
-            <ToolbarView />
-          ) : null}
-          {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}
+          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
+          {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
-          <ShareButton dataset={this.props.dataset} />
+          <ShareButton dataset={dataset} />
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}

@@ -1,6 +1,6 @@
 // @flow
 
-import { Select, Tooltip, message } from "antd";
+import { Select, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -21,6 +21,7 @@ import {
   setMappingEnabledAction,
   setHideUnmappedIdsAction,
   setMappingAction,
+  type OptionalMappingProperties,
 } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
@@ -28,7 +29,6 @@ import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { AsyncButton } from "components/async_clickables";
 import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
-import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 
 const { Option, OptGroup } = Select;
 
@@ -52,10 +52,7 @@ type StateProps = {|
     string,
     ?string,
     MappingType,
-    ?Mapping,
-    ?Array<number>,
-    ?Array<number>,
-    ?boolean,
+    optionalProperties?: OptionalMappingProperties,
   ) => void,
   activeViewport: OrthoView,
   activeCellId: number,
@@ -120,9 +117,9 @@ class MappingSettingsView extends React.Component<Props, State> {
       throw new Error("Invalid mapping type");
     }
 
-    message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
-
-    this.props.setMapping(this.props.layerName, mappingName, mappingType);
+    this.props.setMapping(this.props.layerName, mappingName, mappingType, {
+      showLoadingIndicator: true,
+    });
 
     if (document.activeElement) document.activeElement.blur();
   };
@@ -233,11 +230,6 @@ class MappingSettingsView extends React.Component<Props, State> {
     // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || this.props.isMappingEnabled;
 
-    const isFetchingJsonMapping =
-      this.props.mappingType === "JSON" &&
-      this.props.mappingName != null &&
-      this.props.mapping == null;
-
     const renderHideUnmappedSegmentsSwitch =
       (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
       this.props.mapping &&
@@ -254,7 +246,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                 onChange={this.handleSetMappingEnabled}
                 value={shouldMappingBeEnabled}
                 label="ID Mapping"
-                loading={this.state.isRefreshingMappingList || isFetchingJsonMapping}
+                loading={this.state.isRefreshingMappingList}
               />
             </div>
 

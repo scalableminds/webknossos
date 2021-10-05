@@ -19,6 +19,7 @@ import _ from "lodash";
 import messages from "messages";
 import Store from "oxalis/store";
 import UrlManager from "oxalis/controller/url_manager";
+import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
 
 const RadioGroup = Radio.Group;
 
@@ -77,9 +78,11 @@ export async function copyUrlToClipboard(url: string) {
 
 export function ShareButton(props: { dataset: APIDataset }) {
   const sharingToken = useDatasetSharingToken(props.dataset);
+  const tracingVisibility = useSelector(state => state.tracing.visibility);
+  const includeToken = !props.dataset.isPublic && tracingVisibility === "Public";
   const copySharingUrl = () => {
     // Copy the url on-demand as it constantly changes
-    const url = getUrl(sharingToken, !props.dataset.isPublic);
+    const url = getUrl(sharingToken, includeToken);
     copyUrlToClipboard(url);
   };
 
@@ -122,6 +125,8 @@ export default function ShareModalView(props: Props) {
     await editAnnotation(annotationId, annotationType, {
       visibility,
     });
+
+    Store.dispatch(setAnnotationVisibilityAction(visibility));
 
     if (visibility !== "Private") {
       await updateTeamsForSharedAnnotation(

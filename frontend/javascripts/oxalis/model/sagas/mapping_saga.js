@@ -33,10 +33,20 @@ export default function* watchActivatedMappings(): Saga<void> {
 }
 
 function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
-  const { layerName, mappingName, mappingType, mapping: existingMapping } = action;
+  const {
+    layerName,
+    mappingName,
+    mappingType,
+    mapping: existingMapping,
+    showLoadingIndicator,
+  } = action;
 
   if (mappingName == null || existingMapping != null) {
     return;
+  }
+
+  if (showLoadingIndicator) {
+    message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
   }
 
   if (mappingType !== "JSON") {
@@ -59,18 +69,9 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
     fetchedMappings,
     assignNewIds,
   );
+  const mappingProperties = { mapping: mappingObject, mappingKeys, mappingColors, hideUnmappedIds };
 
-  yield* put(
-    setMappingAction(
-      layerName,
-      mappingName,
-      mappingType,
-      mappingObject,
-      mappingKeys,
-      mappingColors,
-      hideUnmappedIds,
-    ),
-  );
+  yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
 }
 
 function* fetchMappings(

@@ -1033,7 +1033,11 @@ class DataApi {
   setMapping(
     layerName: string,
     mapping: Mapping,
-    options?: { colors?: Array<number>, hideUnmappedIds?: boolean } = {},
+    options?: {
+      colors?: Array<number>,
+      hideUnmappedIds?: boolean,
+      showLoadingIndicator?: boolean,
+    } = {},
   ) {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
@@ -1042,19 +1046,17 @@ class DataApi {
     if (!layer.isSegmentation) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(
-      setMappingAction(
-        layerName,
-        "<custom mapping>",
-        "JSON",
-        _.clone(mapping),
-        // Object.keys is sorted for numerical keys according to the spec:
-        // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
-        Object.keys(mapping).map(x => parseInt(x, 10)),
-        options.colors,
-        options.hideUnmappedIds,
-      ),
-    );
+    const { colors: mappingColors, hideUnmappedIds, showLoadingIndicator } = options;
+    const mappingProperties = {
+      mapping: _.clone(mapping),
+      // Object.keys is sorted for numerical keys according to the spec:
+      // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
+      mappingKeys: Object.keys(mapping).map(x => parseInt(x, 10)),
+      mappingColors,
+      hideUnmappedIds,
+      showLoadingIndicator,
+    };
+    Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }
 
   /**

@@ -56,8 +56,8 @@ Note that skeleton-specific mouse actions are usually only available, when the s
 | Left Click                            | Select Node (Mark as Active Node) if one was hovered  |
 | Left Drag                             | Move node if one was hovered                |
 | C                                     | Create New Tree                             |
-| CTRL + .                              | Navigate to subsequent Node (Mark as Active)|
-| CTRL + ,                              | Navigate to preceding Node (Mark as Active) |
+| CTRL + .                              | Navigate to next Node (Mark as Active)|
+| CTRL + ,                              | Navigate to previous Node (Mark as Active) |
 | CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
 | Del                           | Delete Node / Split Trees                           |
 | B                             | Mark Node as New Branchpoint                        |

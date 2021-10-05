@@ -27,4 +27,4 @@ For example, the webKnossos main component could be hosted on commercial cloud i
 ## Can I further analyze my annotations outside of webKnossos with Python/MATLAB?
 Yes, you can. webKnossos allows the download and export of skeleton annotations as NML files and segmentations/volume data as binary/wkw files.
 
-See the [Tooling](./tooling.md) section for a recommendation of Python/MATLAB libaries to work with the webKnossos standard formats.
+See the [Tooling](./tooling.md) section for a recommendation of Python/MATLAB libraries to work with the webKnossos standard formats.

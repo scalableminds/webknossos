@@ -30,7 +30,7 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 
 webKnossos support proof-reading of segments from automatic segmentation. With "Merger Mode" individual segments (e.g. from over-segmentation) can be combined ("merged") to refine the segmentation and fix split errors. 
 
-The "merger mode" is available in skeleton and hybrid annotation mode. Mark connected -segments by right-clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
+The "merger mode" is available in skeleton and hybrid annotation mode. Mark connected segments by right-clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
 
 "Merger mode" can be enabled in the settings under "Nodes & Trees" with the option "Enable Merger Mode". As soon as you enable it, all already existing trees will be used to form merged segments.
 

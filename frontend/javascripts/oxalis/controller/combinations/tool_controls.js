@@ -531,9 +531,11 @@ export class BoundingBoxTool {
   ): * {
     return {
       leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
+        planeView.throttledPerformBoundingBoxHitTest([_pos.x, _pos.y]);
         MoveHandlers.handleMovePlane(delta);
       },
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+        planeView.performBoundingBoxHitTest([pos.x, pos.y]);
         console.log("BoundingBox tool left down");
       },
 
@@ -551,6 +553,10 @@ export class BoundingBoxTool {
 
       rightMouseUp: () => {
         console.log("BoundingBox tool right up");
+      },
+      mouseMove: (delta: Point2, position: Point2, id, event) => {
+        // planeView.performIsosurfaceHitTest([position.x, position.y]);
+        planeView.throttledPerformBoundingBoxHitTest([position.x, position.y]);
       },
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {

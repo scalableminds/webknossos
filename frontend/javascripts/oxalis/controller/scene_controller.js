@@ -449,7 +449,7 @@ class SceneController {
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     const newUserBoundingBoxGroup = new THREE.Group();
-    this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color }) => {
+    this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor = [color[0] * 255, color[1] * 255, color[2] * 255];
       const bbCube = new Cube({
@@ -459,9 +459,13 @@ class SceneController {
         showCrossSections: true,
       });
       bbCube.setVisibility(isVisible);
-      bbCube.getMeshes().forEach(mesh => newUserBoundingBoxGroup.add(mesh));
+      bbCube.getMeshes().forEach(mesh => {
+        newUserBoundingBoxGroup.add(mesh);
+        mesh.userData.id = id;
+      });
       return bbCube;
     });
+    console.log("resetting bboxes");
     this.rootNode.remove(this.userBoundingBoxGroup);
     this.userBoundingBoxGroup = newUserBoundingBoxGroup;
     this.rootNode.add(this.userBoundingBoxGroup);

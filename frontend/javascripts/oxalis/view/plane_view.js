@@ -12,8 +12,9 @@ import Constants, {
   type OrthoViewMap,
   OrthoViewValues,
   OrthoViews,
+  type OrthoView,
 } from "oxalis/constants";
-import Store from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
@@ -30,7 +31,7 @@ const createDirLight = (position, target, intensity, parent) => {
 };
 
 const raycaster = new THREE.Raycaster();
-let oldRaycasterHit = null;
+raycaster.params.Line.threshold = 100;
 
 const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
 
@@ -41,8 +42,11 @@ class PlaneView {
 
   cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
   throttledPerformIsosurfaceHitTest: ([number, number]) => ?typeof THREE.Vector3;
+  throttledPerformBoundingBoxHitTest: ([number, number]) => ?typeof THREE.Vector3;
 
   running: boolean;
+  lastIsosurfaceHit: ?typeof THREE.Object3D;
+  lastBoundingBoxHit: ?typeof THREE.Object3D;
   needsRerender: boolean;
 
   constructor() {
@@ -51,7 +55,9 @@ class PlaneView {
       this.performIsosurfaceHitTest,
       ISOSURFACE_HOVER_THROTTLING_DELAY,
     );
-
+    this.throttledPerformBoundingBoxHitTest = _.throttle(this.performBoundingBoxHitTest, 75);
+    this.lastIsosurfaceHit = null;
+    this.lastBoundingBoxHit = null;
     this.running = false;
     const { scene } = getSceneController();
 
@@ -146,15 +152,37 @@ class PlaneView {
     }
   }
 
+  performHitTestForSceneGroup(
+    storeState: OxalisState,
+    groupToTest: typeof THREE.Group,
+    mousePosition: [number, number],
+    orthoView: OrthoView,
+  ): ?typeof THREE.Intersection {
+    const viewport = getInputCatcherRect(storeState, orthoView);
+    // Perform ray casting
+    const mouse = new THREE.Vector2(
+      (mousePosition[0] / viewport.width) * 2 - 1,
+      ((mousePosition[1] / viewport.height) * 2 - 1) * -1, // y is inverted
+    );
+
+    raycaster.setFromCamera(mouse, this.cameras[orthoView]);
+    // The second parameter of intersectObjects is set to true to ensure that
+    // the groups which contain the actual meshes are traversed.
+    const intersections = raycaster.intersectObjects(groupToTest.children, true);
+    const intersection = intersections.length > 0 ? intersections[0] : null;
+    /* intersections.forEach(({ object: hitObject }) => {
+      hitObject.material.color.r = 1;
+      hitObject.material.color.g = 0;
+      hitObject.material.color.b = 0;
+    }); */
+    return intersection;
+  }
+
   performIsosurfaceHitTest(mousePosition: [number, number]): ?typeof THREE.Vector3 {
     const storeState = Store.getState();
-    const SceneController = getSceneController();
-    const { isosurfacesRootGroup } = SceneController;
-    const tdViewport = getInputCatcherRect(storeState, "TDView");
-    const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
-
     // Outside of the 3D viewport, we don't do isosurface hit tests
     if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+      const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
       if (hoveredIsosurfaceId !== 0) {
         // Reset hoveredIsosurfaceId if we are outside of the 3D viewport,
         // since that id takes precedence over the shader-calculated cell id
@@ -164,47 +192,99 @@ class PlaneView {
       return null;
     }
 
-    // Perform ray casting
-    const mouse = new THREE.Vector2(
-      (mousePosition[0] / tdViewport.width) * 2 - 1,
-      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1, // y is inverted
+    const SceneController = getSceneController();
+    const { isosurfacesRootGroup } = SceneController;
+    const intersection = this.performHitTestForSceneGroup(
+      storeState,
+      isosurfacesRootGroup,
+      mousePosition,
+      "TDView",
     );
-
-    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
-    // The second parameter of intersectObjects is set to true to ensure that
-    // the groups which contain the actual meshes are traversed.
-    const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
-    const hitObject = intersections.length > 0 ? intersections[0].object : null;
-
+    const hitObject = intersection != null ? intersection.object : null;
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    if (hitObject === oldRaycasterHit) {
-      return intersections.length > 0 ? intersections[0].point : null;
+    if (hitObject === this.lastIsosurfaceHit) {
+      return intersection != null ? intersection.point : null;
     }
 
     // Undo highlighting of old hit
-    if (oldRaycasterHit != null) {
-      oldRaycasterHit.parent.children.forEach(meshPart => {
+    if (this.lastIsosurfaceHit != null) {
+      this.lastIsosurfaceHit.parent.children.forEach(meshPart => {
         meshPart.material.emissive.setHex("#000000");
       });
-      oldRaycasterHit = null;
     }
 
-    oldRaycasterHit = hitObject;
+    this.lastIsosurfaceHit = hitObject;
 
     // Highlight new hit
-    if (hitObject != null) {
+    if (hitObject != null && intersection != null) {
       const hoveredColor = [0.7, 0.5, 0.1];
       hitObject.parent.children.forEach(meshPart => {
         meshPart.material.emissive.setHSL(...hoveredColor);
       });
 
       Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", hitObject.parent.cellId));
-      return intersections[0].point;
+      return intersection.point;
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", 0));
       return null;
     }
+  }
+
+  performBoundingBoxHitTest(mousePosition: [number, number]): ?typeof THREE.Vector3 {
+    const storeState = Store.getState();
+    const { activeViewport } = storeState.viewModeData.plane;
+    // Currently, the bounding box tool only supports the 2d viewports.
+    if (activeViewport === OrthoViews.TDView) {
+      return null;
+    }
+
+    const SceneController = getSceneController();
+    const { userBoundingBoxGroup } = SceneController;
+    const intersection = this.performHitTestForSceneGroup(
+      storeState,
+      userBoundingBoxGroup,
+      mousePosition,
+      activeViewport,
+    );
+    console.log(intersection);
+    const hitObject = intersection != null ? intersection.object : null;
+    // Check whether we are hitting the same object as before, since we can return early
+    // in this case.
+    if (hitObject === this.lastBoundingBoxHit) {
+      if (hitObject != null) {
+        console.log("Hit the same object");
+      }
+      return intersection != null ? intersection.point : null;
+    }
+
+    // Undo highlighting of old hit
+    if (this.lastBoundingBoxHit != null) {
+      // Get HSL, save in userData, light the hsl up and set the new color.
+      // changing emissive doesnt work for this material.
+      const { originalColor } = this.lastBoundingBoxHit.userData;
+      this.lastBoundingBoxHit.material.color.setHSL(originalColor);
+    }
+
+    this.lastBoundingBoxHit = hitObject;
+
+    // Highlight new hit
+    if (hitObject != null) {
+      // debugger;
+      // TODO: gucken warum sich die Farbe der BBoxen nicht ändert. Scheint das falsche intersection object zu sein!!!!
+      const hslColor = { h: 0, s: 0, l: 0 };
+      // const hoveredColor = [0.7, 0.5, 0.1];
+      hitObject.material.color.getHSL(hslColor);
+      hitObject.userData.originalColor = hslColor;
+      // const lightenedColor = { h: hslColor.h, s: 1, l: 1 };
+      // hitObject.material.color.setHSL(lightenedColor);
+      // hitObject.material.color.setHSL(...hoveredColor);
+      hitObject.material.color.r = 1;
+      hitObject.material.color.g = 0;
+      hitObject.material.color.b = 0;
+      // (...hoveredColor);
+    }
+    return null;
   }
 
   draw(): void {

@@ -164,12 +164,20 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     globalPosition: Vector3,
     viewport: OrthoView,
   ) => {
-    this.setState({
-      contextMenuPosition: [xPos, yPos],
-      clickedNodeId: nodeId,
-      contextMenuGlobalPosition: globalPosition,
-      contextMenuViewport: viewport,
-    });
+    // On Windows the right click to open the context menu is also triggered for the overlay
+    // of the context menu. This causes the context menu to instantly close after opening.
+    // Therefore delay the state update to delay that the context menu is rendered.
+    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    setTimeout(
+      () =>
+        this.setState({
+          contextMenuPosition: [xPos, yPos],
+          clickedNodeId: nodeId,
+          contextMenuGlobalPosition: globalPosition,
+          contextMenuViewport: viewport,
+        }),
+      1,
+    );
   };
 
   hideContextMenu = () => {

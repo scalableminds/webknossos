@@ -68,6 +68,8 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 
+const AsyncButtonWithAuthentication = withAuthentication(AsyncButton);
+
 type OwnProps = {|
   layoutMenu: React.Node,
   hasVolumeFallback: boolean,
@@ -406,8 +408,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     } = this.props;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
 
-    const AsyncButtonWithAuthentication = withAuthentication(AsyncButton);
-
     const saveButton = restrictions.allowUpdate
       ? [
           hasTracing
@@ -445,7 +445,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
               </Tooltip>,
               <AsyncButtonWithAuthentication
                 activeUser={activeUser}
-                message="Please register or login to copy the sandbox tracing to your account."
+                authenticationMessage="Please register or login to copy the sandbox tracing to your account."
                 key="copy-sandbox-button"
                 icon={<FileAddOutlined />}
                 onClick={this.handleCopySandboxToAccount}
@@ -467,7 +467,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           </ButtonComponent>,
           <AsyncButtonWithAuthentication
             activeUser={activeUser}
-            message="Please register or login to copy the tracing to your account."
+            authenticationMessage="Please register or login to copy the tracing to your account."
             key="copy-button"
             icon={<FileAddOutlined />}
             onClick={this.handleCopyToAccount}

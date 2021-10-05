@@ -673,7 +673,7 @@ export function getAnnotationInformation(
   return Request.receiveJSON(infoUrl, options);
 }
 
-export function getSandboxAnnotationInformation(
+export function getEmptySandboxAnnotationInformation(
   datasetId: APIDatasetId,
   tracingType: TracingType,
   options?: RequestOptions = {},

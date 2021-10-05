@@ -40,7 +40,7 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
   }
 
   if (mappingType !== "JSON") {
-    // JSON mappings will be activated once they have been fetched
+    // Activate HDF5 mappings immediately. JSON mappings will be activated once they have been fetched.
     yield* put(setMappingEnabledAction(layerName, true));
     message.destroy(MAPPING_MESSAGE_KEY);
     return;

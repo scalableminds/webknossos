@@ -34,7 +34,7 @@ import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingForAnnotations,
   getAnnotationInformation,
-  getSandboxAnnotationInformation,
+  getEmptySandboxAnnotationInformation,
   getDataset,
   getSharingToken,
   getUserConfiguration,
@@ -118,7 +118,10 @@ export async function initialize(
   } else if (initialCommandType.type === ControlModeEnum.SANDBOX) {
     const { name, owningOrganization } = initialCommandType;
     datasetId = { name, owningOrganization };
-    annotation = await getSandboxAnnotationInformation(datasetId, initialCommandType.tracingType);
+    annotation = await getEmptySandboxAnnotationInformation(
+      datasetId,
+      initialCommandType.tracingType,
+    );
   } else {
     const { name, owningOrganization } = initialCommandType;
     datasetId = { name, owningOrganization };
@@ -563,32 +566,34 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
   if (state.rotation != null) {
     Store.dispatch(setRotationAction(state.rotation));
   }
-  if (state.activeMappingByLayer != null) {
-    for (const layerName of Object.keys(state.activeMappingByLayer)) {
-      const { mappingName, mappingType, agglomerateIdsToImport } = state.activeMappingByLayer[
-        layerName
-      ];
+  if (state.stateByLayer != null) {
+    for (const layerName of Object.keys(state.stateByLayer)) {
+      const layerState = state.stateByLayer[layerName];
 
-      let effectiveLayerName;
-      try {
-        const { dataset } = Store.getState();
-        // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-        effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
-      } catch (e) {
-        console.error(e);
-        // TODO: Proper error message
-        Toast.error(e);
-        continue;
-      }
+      if (layerState.mappingInfo != null) {
+        const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
 
-      message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
-      Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
+        let effectiveLayerName;
+        try {
+          const { dataset } = Store.getState();
+          // The name of the layer could have changed if a volume tracing was created from a viewed annotation
+          effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+        } catch (e) {
+          console.error(e);
+          // TODO: Proper error message
+          Toast.error(e);
+          continue;
+        }
 
-      if (mappingType === "HDF5" && agglomerateIdsToImport != null) {
-        for (const agglomerateId of agglomerateIdsToImport) {
-          Store.dispatch(
-            loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
-          );
+        message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
+        Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
+
+        if (mappingType === "HDF5" && agglomerateIdsToImport != null) {
+          for (const agglomerateId of agglomerateIdsToImport) {
+            Store.dispatch(
+              loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
+            );
+          }
         }
       }
     }

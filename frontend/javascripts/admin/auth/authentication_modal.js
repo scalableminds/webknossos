@@ -68,14 +68,19 @@ export default function AuthenticationModal({
   );
 }
 
-type AuthenticationProps<R> = {| activeUser: any, message: string, onClick: Function, ...R |};
+type AuthenticationProps<R> = {|
+  activeUser: any,
+  authenticationMessage: string,
+  onClick: Function,
+  ...R,
+|};
 
 export function withAuthentication<P, C: ComponentType<P>>(
   WrappedComponent: C,
 ): ComponentType<AuthenticationProps<P>> {
   return (props: AuthenticationProps<P>) => {
     const [isAuthenticationModalVisible, setIsAuthenticationModalVisible] = useState(false);
-    const { activeUser, message, onClick: originalOnClick, ...rest } = props;
+    const { activeUser, authenticationMessage, onClick: originalOnClick, ...rest } = props;
     if (activeUser != null) {
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     } else {
@@ -83,7 +88,7 @@ export function withAuthentication<P, C: ComponentType<P>>(
         <>
           <WrappedComponent {...rest} onClick={() => setIsAuthenticationModalVisible(true)} />
           <AuthenticationModal
-            alertMessage={message}
+            alertMessage={authenticationMessage}
             onLoggedIn={() => {
               setIsAuthenticationModalVisible(false);
               originalOnClick();

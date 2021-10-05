@@ -22,11 +22,13 @@ export type FullUrlManagerState = {|
   zoomStep: number,
   activeNode?: number,
   rotation?: Vector3,
-  activeMappingByLayer?: {
+  stateByLayer?: {
     [layerName: string]: {
-      mappingName: string,
-      mappingType: MappingType,
-      agglomerateIdsToImport?: [number],
+      mappingInfo?: {
+        mappingName: string,
+        mappingType: MappingType,
+        agglomerateIdsToImport?: [number],
+      },
     },
   },
 |};
@@ -160,16 +162,15 @@ class UrlManager {
       .map(node => ({ activeNode: node.id }))
       .getOrElse({});
 
-    const activeMappingByLayer = {};
+    const stateByLayer = {};
     for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {
       const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layerName];
       if (mappingInfo.isMappingEnabled) {
         const { mappingName, mappingType } = mappingInfo;
-        activeMappingByLayer[layerName] = { mappingName, mappingType };
+        stateByLayer[layerName] = { mappingInfo: { mappingName, mappingType } };
       }
     }
-    const activeMappingByLayerOptional =
-      _.size(activeMappingByLayer) > 0 ? { activeMappingByLayer } : {};
+    const stateByLayerOptional = _.size(stateByLayer) > 0 ? { stateByLayer } : {};
 
     // $FlowIssue[incompatible-exact] See https://github.com/facebook/flow/issues/2977
     return {
@@ -179,7 +180,7 @@ class UrlManager {
       ...rotationOptional,
       ...activeNodeOptional,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
-      ...activeMappingByLayerOptional,
+      ...stateByLayerOptional,
     };
   }
 

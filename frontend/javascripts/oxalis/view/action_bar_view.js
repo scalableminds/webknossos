@@ -111,7 +111,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <ButtonWithAuthentication
         activeUser={this.props.activeUser}
-        message="You have to register or login to create an annotation."
+        authenticationMessage="You have to register or login to create an annotation."
         style={{ marginLeft: 12 }}
         type="primary"
         onClick={() => this.createTracing(this.props.dataset)}

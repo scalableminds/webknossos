@@ -89,7 +89,7 @@ const viewOverrides: { [key: string]: string } = {
   dsA_2: "1024,1024,64,0,0.424",
   "Multi-Channel-Test": "1201,1072,7,0,0.683",
   "test-agglomerate-file":
-    '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"activeMappingByLayer":{"segmentation":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}',
+    '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"stateByLayer":{"segmentation":{"mappingInfo":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}}',
 };
 
 const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {

@@ -33,18 +33,19 @@ const Request = {
   always: () => Promise.resolve(),
 };
 
-export function createBucketResponseFunction(fillValue, delay = 0) {
+export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
   return async function getBucketData(url, payload) {
     const bucketCount = payload.data.length;
     await sleep(delay);
     return {
-      buffer: new Uint8Array(2 * bucketCount * 32 ** 3).fill(fillValue).buffer,
+      buffer: new Uint8Array(new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue).buffer)
+        .buffer,
       headers: { "missing-buckets": "[]" },
     };
   };
 }
 
-Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
+Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(Uint8Array, 0);
 
 const ErrorHandling = {
   assertExtendContext: _.noop,

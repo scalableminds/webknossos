@@ -47,7 +47,10 @@ test.beforeEach(async t => {
 });
 
 test.serial("Executing a floodfill in mag 1", async t => {
-  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    0,
+  );
 
   const paintCenter = [0, 0, 43];
   const brushSize = 10;
@@ -119,7 +122,10 @@ test.serial("Executing a floodfill in mag 1", async t => {
 });
 
 test.serial("Executing a floodfill in mag 2", async t => {
-  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    0,
+  );
 
   const paintCenter = [0, 0, 43];
   const brushSize = 10;
@@ -190,7 +196,10 @@ test.serial("Executing a floodfill in mag 2", async t => {
 });
 
 test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
-  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(0);
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    0,
+  );
 
   const paintCenter = [128, 128, 128];
   Store.dispatch(setPositionAction(paintCenter));
@@ -277,6 +286,7 @@ test.serial(
 
 test.serial("Brushing/Tracing with a new segment id should update the bucket data", async t => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
     0,
     0,
   );
@@ -337,6 +347,7 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
   const oldCellId = 11;
 
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
     oldCellId,
     0,
   );
@@ -378,6 +389,7 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
 test.serial("Brushing/Tracing with undo (I)", async t => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
     oldCellId,
     500,
   );
@@ -413,6 +425,7 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
 test.serial("Brushing/Tracing with undo (II)", async t => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
     oldCellId,
     500,
   );
@@ -479,16 +492,17 @@ test.serial(
 );
 
 async function testLabelingManyBuckets(t, saveInbetween) {
-  // We set MAXIMUM_BUCKET_COUNT to 75 and then label 100 buckets in total.
-  // In between, we will save the data which allows the first 50 buckets to be GC'ed.
-  // Therefore, saving the second 50 buckets should not cause any problems.
-  t.context.model.getCubeByLayerName("segmentation").MAXIMUM_BUCKET_COUNT = 75;
+  // We set MAXIMUM_BUCKET_COUNT to 100 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
+  // In between, we will save the data which allows the buckets of the first batch to be GC'ed.
+  // Therefore, saving the buckets of the second batch should not cause any problems.
+  t.context.model.getCubeByLayerName("segmentation").MAXIMUM_BUCKET_COUNT = 150;
 
   const oldCellId = 11;
   const brushSize = 10;
   const newCellId = 2;
 
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
     oldCellId,
     500,
   );

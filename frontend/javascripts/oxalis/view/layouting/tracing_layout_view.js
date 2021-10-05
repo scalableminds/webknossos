@@ -176,7 +176,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           contextMenuGlobalPosition: globalPosition,
           contextMenuViewport: viewport,
         }),
-      1,
+      0,
     );
   };
 

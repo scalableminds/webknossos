@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Fixed
-- 
+- Fixed a bug that windows user could not open the context menu as it instantly closed after opening. [#5756](https://github.com/scalableminds/webknossos/pull/5756).
 
 ### Removed
 -

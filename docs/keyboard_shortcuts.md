@@ -1,6 +1,6 @@
 # Keyboard & Mouse Shortcuts
 
-The most important shortcuts are always shown in the statusbar at the bottom of the screen.
+The most important shortcuts are always shown in the status bar at the bottom of the screen.
 These shortcut hints depend on the active tool and also change when modifiers are pressed to allow easy exploration of available functionality.
 
 A complete listing of all available keyboard & mouse shortcuts for webKnossos can be found below.
@@ -43,7 +43,7 @@ With classic controls, several mouse controls are modifier-driven and may also u
 
 ### Orthogonal Mode
 
-Note that skeleton-specific mouse actions are usually only available, when the skeleton tool is active.
+Note that skeleton-specific mouse actions are usually only available when the skeleton tool is active.
 
 | Key Binding                           | Operation                                   |
 | ------------------------------------- | ------------------------------------------- |
@@ -51,13 +51,13 @@ Note that skeleton-specific mouse actions are usually only available, when the s
 | Alt + Mouse Move                      | Move In-Plane                               |
 | SPACE                                 | Move Forward                                |
 | Scroll Mousewheel (3D View)           | Zoom In And Out                             |
-| Right Click Drag (3D View)            | Rotate 3D View                              |
+| Right-Click Drag (3D View)            | Rotate 3D View                              |
 | Left Click                            | Create New Node                             |
-| Left Click                            | Select Node (Mark as Active Node) if one was hovered  |
-| Left Drag                             | Move node if one was hovered                |
+| Left Click                            | Select Node (Mark as Active Node) under cursor  |
+| Left Drag                             | Move node under cursor                |
 | C                                     | Create New Tree                             |
-| CTRL + .                              | Navigate to subsequent Node (Mark as Active)|
-| CTRL + ,                              | Navigate to preceding Node (Mark as Active) |
+| CTRL + .                              | Navigate to the next Node (Mark as Active)|
+| CTRL + ,                              | Navigate to previous Node (Mark as Active) |
 | CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
 | Del                           | Delete Node / Split Trees                           |
 | B                             | Mark Node as New Branchpoint                        |
@@ -109,7 +109,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | V                                 | Copy Segmentation of Current Cell From Previous Slice       |
 | SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |
 
-Note that you can enable *Classic Controls* which won't open a context-menu on right-click, but instead erases when the brush/trace tool is activated.
+Note that you can enable *Classic Controls* which won't open a context menu on right-click, but instead erases when the brush/trace tool is activated.
 
 | Key Binding                       | Operation                                                   |
 | --------------------------------- | ----------------------------------------------------------- |

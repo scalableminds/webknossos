@@ -27,6 +27,9 @@ export type UrlStateByLayer = {
   },
 };
 
+// If the type of UrlManagerState changes, the following files need to be updated:
+// docs/sharing.md#sharing-link-format
+// frontend/javascripts/types/schemas/url_state.schema.js
 export type UrlManagerState = {|
   position?: Vector3,
   mode?: ViewMode,

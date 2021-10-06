@@ -28,9 +28,9 @@ export type UrlStateByLayer = {
 };
 
 export type UrlManagerState = {|
-  position: Vector3,
-  mode: ViewMode,
-  zoomStep: number,
+  position?: Vector3,
+  mode?: ViewMode,
+  zoomStep?: number,
   activeNode?: number,
   rotation?: Vector3,
   stateByLayer?: UrlStateByLayer,
@@ -188,7 +188,7 @@ class UrlManager {
   }
 
   buildUrlHashCsv(state: OxalisState): string {
-    const { position, mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
+    const { position = [], mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
     const viewModeIndex = ViewModeValues.indexOf(mode);
     const activeNodeArray = activeNode != null ? [activeNode] : [];
     return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeArray].join(",");

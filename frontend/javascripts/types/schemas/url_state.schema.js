@@ -54,7 +54,6 @@ export default {
         },
       },
       additionalProperties: false,
-      required: ["position", "mode", "zoomStep"],
     },
   },
 };

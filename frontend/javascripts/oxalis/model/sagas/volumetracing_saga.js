@@ -551,6 +551,7 @@ export function* floodFill(): Saga<void> {
         indexSet.add(zIndex);
       }
     }
+    console.time("applyLabeledVoxelMapToAllMissingResolutions");
     for (const indexZ of indexSet) {
       const labeledVoxelMapFromFloodFill = new Map();
       for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
@@ -560,7 +561,6 @@ export function* floodFill(): Saga<void> {
         }
       }
 
-      console.time(`applyLabeledVoxelMapToAllMissingResolutions ${indexZ}`);
       applyLabeledVoxelMapToAllMissingResolutions(
         labeledVoxelMapFromFloodFill,
         labeledZoomStep,
@@ -571,9 +571,9 @@ export function* floodFill(): Saga<void> {
         indexZ,
         true,
       );
-      console.timeEnd(`applyLabeledVoxelMapToAllMissingResolutions ${indexZ}`);
     }
     yield* put(finishAnnotationStrokeAction());
+    console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
 
     if (wasBoundingBoxExceeded) {
       yield* call(

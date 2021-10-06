@@ -3,7 +3,7 @@
 
 import mockRequire from "mock-require";
 import test from "ava";
-import { waitForCondition, sleep } from "libs/utils";
+import { waitForCondition } from "libs/utils";
 import _ from "lodash";
 
 import "test/sagas/saga_integration.mock";
@@ -51,6 +51,9 @@ test.serial("Executing a floodfill in mag 1", async t => {
     Uint16Array,
     0,
   );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
 
   const paintCenter = [0, 0, 43];
   const brushSize = 10;
@@ -126,6 +129,9 @@ test.serial("Executing a floodfill in mag 2", async t => {
     Uint16Array,
     0,
   );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
 
   const paintCenter = [0, 0, 43];
   const brushSize = 10;
@@ -200,6 +206,9 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
     Uint16Array,
     0,
   );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
 
   const paintCenter = [128, 128, 128];
   Store.dispatch(setPositionAction(paintCenter));
@@ -291,6 +300,10 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
     0,
   );
 
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+
   const paintCenter = [0, 0, 0];
   const brushSize = 10;
 
@@ -351,6 +364,9 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
     oldCellId,
     0,
   );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
 
   t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), oldCellId);
 
@@ -393,6 +409,9 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
     oldCellId,
     500,
   );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
 
   const paintCenter = [0, 0, 0];
   const brushSize = 10;
@@ -413,8 +432,6 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  await sleep(2000);
-
   await dispatchUndoAsync(Store.dispatch);
 
   t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId);
@@ -429,6 +446,9 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
     oldCellId,
     500,
   );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
 
   const paintCenter = [0, 0, 0];
   const brushSize = 10;
@@ -454,8 +474,6 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  await sleep(2000);
-
   await dispatchUndoAsync(Store.dispatch);
 
   t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId + 1);
@@ -466,6 +484,13 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
 test.serial(
   "Brushing/Tracing should crash when too many buckets are labeled at once without saving inbetween",
   async t => {
+    await t.context.api.tracing.save();
+
+    t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+      Uint16Array,
+      0,
+      0,
+    );
     // webKnossos will start to evict buckets forcefully if too many are dirty at the same time.
     // This is not ideal, but usually handled by the fact that buckets are regularly saved to the
     // backend and then marked as not dirty.
@@ -483,6 +508,13 @@ test.serial(
 test.serial(
   "Brushing/Tracing should send buckets to backend and restore dirty flag afterwards",
   async t => {
+    await t.context.api.tracing.save();
+
+    t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+      Uint16Array,
+      0,
+      0,
+    );
     t.plan(2);
     t.false(hasRootSagaCrashed());
     const failedSagaPromise = waitForCondition(hasRootSagaCrashed, 500);
@@ -506,6 +538,9 @@ async function testLabelingManyBuckets(t, saveInbetween) {
     oldCellId,
     500,
   );
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
 
   // Prepare to paint into the center of 50 buckets.
   const paintPositions1 = _.range(0, 50).map(idx => [32 * idx + 16, 32 * idx + 16, 32 * idx + 16]);

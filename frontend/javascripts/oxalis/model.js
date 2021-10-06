@@ -59,6 +59,9 @@ export class OxalisModel {
           isMappingSupported,
           maximumTextureCountForLayer,
         } = initializationInformation;
+        if (this.dataLayers != null) {
+          Object.values(this.dataLayers).forEach(layer => layer.destroy());
+        }
         this.dataLayers = dataLayers;
         this.connectionInfo = connectionInfo;
         this.isMappingSupported = isMappingSupported;

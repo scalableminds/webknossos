@@ -273,7 +273,7 @@ const manualAnnotationBanner = (
       }}
     >
       <h4 style={{ color: "white", textAlign: "center" }}>
-        Need more workforce for annotating your dataset? Have a look at our annotation services.
+        Need more workforce for annotating your dataset?<br />Have a look at our annotation services.
       </h4>
       <Button
         href="https://webknossos.org/services/annotations"

@@ -218,7 +218,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             className
           >
             <h4 style={{ color: "white", textAlign: "center" }}>
-              Need more workforce for annotating your dataset? Have a look at our annotation
+              Need more workforce for annotating your dataset?<br />Have a look at our annotation
               services.
             </h4>
           </div>

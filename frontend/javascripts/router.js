@@ -414,7 +414,7 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 path="/help/keyboardshortcuts"
                 render={() => (
-                  <Redirect to="https://docs.webknossos.org/reference/keyboard_shortcuts" />
+                  <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
                 )}
               />
               <SecuredRoute

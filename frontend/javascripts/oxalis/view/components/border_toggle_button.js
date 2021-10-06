@@ -18,7 +18,9 @@ function BorderToggleButton(props: Props) {
   const { onClick, side, borderOpenStatus, inFooter } = props;
   const placement = side === "left" ? "right" : "left";
   const iconKind = borderOpenStatus[side] ? "hide" : "show";
-  const tooltipTitle = `${borderOpenStatus[side] === false ? "Open" : "Hide"} ${side} sidebar`;
+  const tooltipTitle = `${borderOpenStatus[side] ? "Hide" : "Open"} ${side} sidebar (${
+    side === "left" ? "K" : "L"
+  })`;
   const className = `${side}-border-button no-hover-highlighting ${
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;

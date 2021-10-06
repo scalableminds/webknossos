@@ -51,7 +51,7 @@ const defaultState: OxalisState = {
     layers: {},
     loadingStrategy: "PROGRESSIVE_QUALITY",
     segmentationPatternOpacity: 40,
-    renderMissingDataBlack: true,
+    renderMissingDataBlack: false,
   },
   userConfiguration: {
     autoSaveLayouts: true,
@@ -89,16 +89,7 @@ const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     hoveredIsosurfaceId: 0,
-    activeMapping: {
-      mappingName: null,
-      mapping: null,
-      mappingKeys: null,
-      mappingColors: null,
-      hideUnmappedIds: false,
-      isMappingEnabled: false,
-      mappingSize: 0,
-      mappingType: "JSON",
-    },
+    activeMappingByLayer: {},
     isMergerModeEnabled: false,
     isAutoBrushEnabled: false,
     gpuSetup: {
@@ -213,16 +204,15 @@ const defaultState: OxalisState = {
     isImportingMesh: false,
     isInAnnotationView: false,
     hasOrganizations: false,
-    isRefreshingIsosurfaces: false,
     borderOpenStatus: { right: false, left: false },
     theme:
       primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
         ? "dark"
         : "light",
   },
-  isosurfaces: {},
-  currentMeshFile: null,
-  availableMeshFiles: null,
+  isosurfacesByLayer: {},
+  currentMeshFileByLayer: {},
+  availableMeshFilesByLayer: {},
 };
 
 export default defaultState;

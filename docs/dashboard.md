@@ -16,14 +16,14 @@ Learn more about managing datasets in the [Datasets guide](./datasets.md).
 ![Dashboard for Team Managers or Admins](./images/dashboard_datasets.png)
 ![Dashboard for Normal Users](./images/dashboard_normal_user.png)
 
-{% embed url="https://www.youtube.com/watch?v=naPL1jfCdOc" %}
+![Video: Community Dataset Gallery & Navigating Through Data](https://www.youtube.com/watch?v=naPL1jfCdOc)
 
 ## My Tasks
 
 With Tasks, you can coordinate large annotation projects with your users.
 Tasks are small assignments that are automatically distributed to users.
 
-On the Task screen, users can request new tasks, continue to work on existing tasks and finish tasks.
+On the Task screen, users can request new tasks, continue to work on existing tasks, and finish tasks.
 These tasks will be assigned based on the user's experience levels, project priority, and task availability.
 Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 
@@ -33,7 +33,7 @@ Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 Explorative Annotations are all skeleton or volume annotations that do not belong to a task.
 They are created by starting new annotations from the datasets screen or by uploading [NML files](./data_formats.md#nml).
 
-In this screen, the annotations can be resumed, archived and downloaded.
+In this screen, the annotations can be resumed, archived, and downloaded.
 You can also add custom tags to annotations in order to organize them.
 
 ![Manage and resume Explorative Annotations](./images/dashboard_annotations.png)

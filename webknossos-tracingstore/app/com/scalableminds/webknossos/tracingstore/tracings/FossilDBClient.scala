@@ -75,7 +75,11 @@ class FossilDBClient(collection: String, config: TracingStoreConfig, slackNotifi
       case statusRuntimeException: StatusRuntimeException =>
         if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
         else Fox.failure("Could not get from FossilDB: " + statusRuntimeException.getMessage)
-      case e: Exception => Fox.failure("Could not get from FossilDB: " + e.getMessage)
+      case e: Exception => {
+        if (e.getMessage == "No such element") { Fox.empty } else {
+          Fox.failure("Could not get from FossilDB: " + e.getMessage)
+        }
+      }
     }
 
   def getVersion(key: String,

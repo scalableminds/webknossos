@@ -6,6 +6,7 @@ import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import messages from "messages";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getSegmentationTracingOrVisibleLayer } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/throttled_store";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import type { NodeWithTreeId } from "oxalis/model/sagas/update_actions";
@@ -321,10 +322,15 @@ export async function enableMergerMode(onProgressUpdate: number => void) {
   // Register for tracing changes
   unsubscribeFunctions.push(
     Store.subscribe(() => {
-      getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
+      const state = Store.getState();
+      getSkeletonTracing(state.tracing).map(skeletonTracing => {
+        const segmentationLayer = getSegmentationTracingOrVisibleLayer(state);
+        if (segmentationLayer == null) {
+          return;
+        }
         if (skeletonTracing.tracingId !== mergerModeState.prevTracing.tracingId) {
           resetState(mergerModeState);
-          api.data.setMappingEnabled(false);
+          api.data.setMappingEnabled(false, segmentationLayer.name);
         } else {
           updateState(mergerModeState, skeletonTracing);
         }
@@ -361,5 +367,8 @@ export function disableMergerMode() {
   unregisterKeyHandlers.forEach(unregisterObject => unregisterObject.unregister());
 
   // Disable the custom merger mode mapping
-  api.data.setMappingEnabled(false);
+  const segmentationLayer = getSegmentationTracingOrVisibleLayer(Store.getState());
+  if (segmentationLayer != null) {
+    api.data.setMappingEnabled(false, segmentationLayer.name);
+  }
 }

@@ -11,7 +11,7 @@ This article outlines commonly used features and operations for viewing, editing
 
 ![An example of a complex webKnossos skeleton annotation](images/tracing_ui_skeletontracing.jpg)
 
-{% embed url="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=115s" %}
+![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=115s)
 
 ### Annotation Modes
 webKnossos supports several modes for displaying your dataset & interacting with skeleton annotations.
@@ -48,14 +48,14 @@ Interactions and movements in Flight mode feel similar to First-Person-View (FPV
 
 Flight mode is best used for annotating structures very quickly.
 Trained tracers can follow "tube"-like structures as though they are "flying" through them.
-Nodes are placed automatically along the flight path, creating skeleton very efficiently.
+Nodes are placed automatically along the flight path, creating skeletons very efficiently.
 
 ### Nodes and Trees
 Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.
 
 Nodes can be placed by clicking (*Left Click* by default or *Right Click* when *Classic Controls* are enabled in the settings sidebar) in orthogonal mode (the skeleton tool should be selected) or automatically when moving in flight or oblique mode.
-All (global) operations are executed on the current active node, e.g. adding a comment or node deletion.
+All (global) operations are executed on the currently active node, e.g. adding a comment or node deletion.
 Most keyboard shortcuts take the active node into context.
 Operations on whole trees, e.g. splitting or merging trees, follow the same pattern.
 
@@ -74,9 +74,9 @@ Press the "J" to jump to the latest branch point to continue working from there 
 | Key Binding       | Operation                           |
 | ----------------- | -------------                       |
 | Left Click        | Create New Node                     |
-| Left Click        | Select Node (Mark as Active Node) if one was hovered  |
+| Left Click        | Select Node (Mark as Active Node) under the cursor  |
 | Left Drag         | Move around                         |
-| Left Drag         | Move node if one was hovered        |
+| Left Drag         | Move node under the cursor        |
 | S                 | Center Camera on Active Node        |
 | DEL               | Delete Active Node                  |
 | B                 | Create Branch Point                 |
@@ -90,7 +90,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | Left Drag         | Move around                         |
 | Right Click       | Create New Node                     |
 | SHIFT + Left Click| Select Node (Mark as Active Node)   |
-| Left Drag         | Move node if one was hovered (unless *Classic Controls* are enabled)        |
+| Left Drag         | Move node under the cursor (unless *Classic Controls* are enabled)        |
 
 All further keyboard shortcuts are [available here](./keyboard_shortcuts.md).
 
@@ -119,8 +119,8 @@ Common tree operations include splitting and merging trees.
 A random color is assigned to each tree upon creation.
 Colors can be shuffled for a single tree or for all trees in a skeleton.
 Use the overflow menu under `More` in the tree tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors.
-All node have the same color as their parent tree and can not be changed individually.
-The active node, branch points, and node that have comments assigned to them are highlighted with a slight variation of the tree's color.
+All nodes have the same color as their parent tree and can not be changed individually.
+The active node, branch points, and nodes that have comments assigned to them are highlighted with a slight variation of the tree's color.
 
 ![Trees are randomly assigned colors upon creation.
 Users can assign new random colors to a single tree or all trees at once.](images/tracing_ui_tree_color.png)
@@ -136,15 +136,15 @@ There are also keyboard shortcuts to quickly toggle the visibility:
 | 1                           | Toggle Visibility of all Trees        |
 | 2                           | Toggle Visibility of Inactive Trees   |
 
-![Trees can be hidden for a better overview over the data. Toggle the visibility of individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](images/tracing_ui_tree_visibility.png)
+![Trees can be hidden for a better overview of the data. Toggle the visibility of an individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](images/tracing_ui_tree_visibility.png)
 
 #### The Context Menu for Easy Access to Functionalities
-webKnossos also has a context menu which can be opened via *Right Click* (or *Shift + Right Click* if *Classic Controls* are enabled). This context menu takes the selected node into context and offers functionalities plus information to the user.
+webKnossos also has a context menu that can be opened via *Right Click* (or *Shift + Right Click* if *Classic Controls* are enabled). This context menu takes the selected node into context and offers functionalities plus information to the user.
 ![Example of the context menu](./images/context_menu.png)
 The context menu has two modes. 
 
-- The first mode is active if the mouse was over a node when the user opened the context menu (like in the image above). In this case, the context menu offers additional information about the selected node and offers interactions with the active node. An example of possible interactions is to measure the path length of active node to the selected node. (This option is only available if both nodes are in the same tree).
-- The other mode is active if the user did not select a node with the context menu. In this mode there are no options available that require a selected node. Instead it offers the user to create a new tree or a new node at the selected position.
+- The first mode is active if the mouse was over a node when the user opened the context menu (like in the image above). In this case, the context menu offers additional information about the selected node and offers interactions with the active node. An example of possible interactions is to measure the path length of the active node to the selected node. (This option is only available if both nodes are in the same tree).
+- The other mode is activated if the user did not select a node with the context menu. In this mode, there are no options available that require a selected node. Instead, it offers the user to create a new tree or a new node at the selected position.
 
 
 ### Importing & Exporting NML Files

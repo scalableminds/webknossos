@@ -13,7 +13,6 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import Clipboard from "clipboard-js";
 import React from "react";
 import _ from "lodash";
 
@@ -159,7 +158,9 @@ class TaskListView extends React.PureComponent<Props, State> {
         title={`Anonymous Task Links for Task ${anonymousTaskId}`}
         visible={this.state.isAnonymousTaskLinkModalVisible}
         onOk={() => {
-          Clipboard.copy(tasksString).then(() => Toast.success("Links copied to clipboard"));
+          navigator.clipboard
+            .writeText(tasksString)
+            .then(() => Toast.success("Links copied to clipboard"));
           this.setState({ isAnonymousTaskLinkModalVisible: false });
         }}
         onCancel={() => this.setState({ isAnonymousTaskLinkModalVisible: false })}

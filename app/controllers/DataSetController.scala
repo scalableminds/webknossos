@@ -7,6 +7,7 @@ import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import com.scalableminds.webknossos.datastore.controllers.RemoteOriginHelpers
+import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
@@ -24,6 +25,7 @@ import play.api.mvc.{Action, AnyContent}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
+@Api
 class DataSetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   dataSetService: DataSetService,
@@ -53,6 +55,7 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
+  @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
     sil.SecuredAction {
       dataSetService.thumbnailCache.removeAllConditional(_.startsWith(s"thumbnail-$organizationName*$dataSetName"))
@@ -66,6 +69,7 @@ class DataSetController @Inject()(userService: UserService,
                                 height: Int) =
     s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height"
 
+  @ApiOperation(hidden = true, value = "")
   def thumbnail(organizationName: String,
                 dataSetName: String,
                 dataLayerName: String,
@@ -119,6 +123,7 @@ class DataSetController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def addForeignDataStoreAndDataSet(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asJson.toFox
@@ -137,6 +142,7 @@ class DataSetController @Inject()(userService: UserService,
     } yield Ok
   }
 
+  @ApiOperation(hidden = true, value = "")
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     AllowRemoteOrigin {
       UsingFilters(
@@ -189,6 +195,7 @@ class DataSetController @Inject()(userService: UserService,
       }
     } yield js.flatten
 
+  @ApiOperation(hidden = true, value = "")
   def accessList(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -203,7 +210,16 @@ class DataSetController @Inject()(userService: UserService,
       } yield Ok(Json.toJson(usersJs))
   }
 
-  def read(organizationName: String, dataSetName: String, sharingToken: Option[String]): Action[AnyContent] =
+  @ApiOperation(value = "Get information about this dataset", nickname = "datasetInfo")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON object containing dataset information"),
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def read(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+                     example = "sample_organization") organizationName: String,
+           @ApiParam(value = "The name of the dataset") dataSetName: String,
+           @ApiParam(value =
+             "Optional sharing token allowing access to datasets your team does not normally have access to.") sharingToken: Option[
+             String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       log() {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -230,6 +246,7 @@ class DataSetController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def health(organizationName: String, dataSetName: String, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -248,6 +265,7 @@ class DataSetController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def update(organizationName: String, dataSetName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
@@ -274,6 +292,7 @@ class DataSetController @Inject()(userService: UserService,
       }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def updateTeams(organizationName: String, dataSetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyAs[List[String]] { teams =>
@@ -292,6 +311,7 @@ class DataSetController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def getSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -299,6 +319,7 @@ class DataSetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("sharingToken" -> token.trim))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def deleteSharingToken(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -306,10 +327,12 @@ class DataSetController @Inject()(userService: UserService,
       } yield Ok
   }
 
+  @ApiOperation(hidden = true, value = "")
   def create(typ: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def isValidNewName(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -319,6 +342,7 @@ class DataSetController @Inject()(userService: UserService,
       } yield Ok
   }
 
+  @ApiOperation(hidden = true, value = "")
   def getOrganizationForDataSet(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {
     implicit request =>
       for {
@@ -327,6 +351,7 @@ class DataSetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("organizationName" -> organization.name))
   }
 
+  @ApiOperation(hidden = true, value = "")
   private def notFoundMessage(dataSetName: String)(implicit ctx: DBAccessContext, m: MessagesProvider): String =
     ctx.data match {
       case Some(_: User) => Messages("dataSet.notFound", dataSetName)

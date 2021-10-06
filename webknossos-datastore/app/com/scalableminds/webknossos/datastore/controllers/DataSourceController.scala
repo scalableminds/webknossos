@@ -16,10 +16,12 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import java.io.File
 
+import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+@Api(tags = Array("datastore"))
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
@@ -33,6 +35,7 @@ class DataSourceController @Inject()(
     extends Controller
     with FoxImplicits {
 
+  @ApiOperation(hidden = true, value = "")
   def list(): Action[AnyContent] = Action.async { implicit request =>
     {
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.listDataSources) {
@@ -44,6 +47,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       {
@@ -64,6 +68,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def triggerInboxCheck(): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -73,6 +78,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def triggerInboxCheckBlocking(): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -83,6 +89,26 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(
+    value = """Upload a byte chunk for a new dataset
+Expects:
+ - As file attachment: A raw byte chunk of the dataset
+ - As form parameter:
+  - name (string): dataset name
+  - owningOrganization (string): owning organization name
+  - resumableChunkNumber (int): chunk index
+  - resumableChunkSize (int): chunk size in bytes
+  - resumableTotalChunks (string): total chunk count of the upload
+  - totalFileCount (string): total file count of the upload
+  - resumableIdentifier (string): identifier of the resumable upload and file ("{uploadId}/{filepath}")
+""",
+    nickname = "datasetUploadChunk"
+  )
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
   def uploadChunk: Action[MultipartFormData[Files.TemporaryFile]] = Action.async(parse.multipartFormData) {
     implicit request =>
       val uploadForm = Form(
@@ -126,6 +152,24 @@ class DataSourceController @Inject()(
       }
   }
 
+  @ApiOperation(
+    value =
+      """Finish dataset upload, call after all chunks have been uploaded via uploadChunk
+Expects:
+ - As JSON object body with keys:
+  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
+  - organization (string): owning organization name
+  - name (string): dataset name
+  - initialTeams (list of string): names of the webknossos teams dataset should be accessible for
+  - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
+""",
+    nickname = "datasetFinishUpload"
+  )
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
   def finishUpload: Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -140,6 +184,7 @@ class DataSourceController @Inject()(
 
   }
 
+  @ApiOperation(hidden = true, value = "")
   def fetchSampleDataSource(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
@@ -151,6 +196,7 @@ class DataSourceController @Inject()(
       }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def listSampleDataSources(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
     AllowRemoteOrigin {
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
@@ -159,6 +205,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def explore(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
@@ -188,6 +235,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def listMappings(
       organizationName: String,
       dataSetName: String,
@@ -201,6 +249,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def listAgglomerates(
       organizationName: String,
       dataSetName: String,
@@ -216,6 +265,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def generateAgglomerateSkeleton(
       organizationName: String,
       dataSetName: String,
@@ -237,6 +287,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def listMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
@@ -247,6 +298,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String): Action[ListMeshChunksRequest] =
@@ -268,6 +320,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def readMeshChunk(organizationName: String,
                     dataSetName: String,
                     dataLayerName: String): Action[MeshChunkDataRequest] =
@@ -290,6 +343,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def update(organizationName: String, dataSetName: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
@@ -306,6 +360,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def createOrganizationDirectory(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -319,6 +374,7 @@ class DataSourceController @Inject()(
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def reload(organizationName: String, dataSetName: String, layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
@@ -336,6 +392,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def deleteOnDisk(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
     implicit request =>
       accessTokenService

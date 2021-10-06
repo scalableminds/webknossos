@@ -10,46 +10,42 @@ import type { APIMapping } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { doWithToken } from "admin/admin_rest_api";
-import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMappings,
+  getMappingInfo,
+  getLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
-import type DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Store, { type Mapping, type MappingType } from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
 
 type APIMappings = { [string]: APIMapping };
 
-// For now, since we have no UI for this
-export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
+// Remove soon (e.g., October 2021)
+export function setupGlobalMappingsObject() {
   return {
     getAll(): string[] {
-      trackAction("Deprecated mapping usage (getAll)");
-      console.warn(
+      throw new Error(
         "Using mappings.getAll() is deprecated. Please use the official front-end API function getMappingNames() instead.",
       );
-      return segmentationLayer.mappings != null ? segmentationLayer.mappings.getMappingNames() : [];
     },
     getActive(): ?string {
-      trackAction("Deprecated mapping usage (getActive)");
-      console.warn(
+      throw new Error(
         "Using mappings.getActive() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
       );
-      return segmentationLayer.activeMapping;
     },
-    activate(mapping: string) {
-      trackAction("Deprecated mapping usage (activate)");
-      console.warn(
+    activate(_mapping: string) {
+      throw new Error(
         "Using mappings.activate() is deprecated. Please use the official front-end API function activateMapping() instead.",
       );
-      return segmentationLayer.setActiveMapping(mapping, "JSON");
     },
   };
 }
@@ -87,7 +83,7 @@ class Mappings {
     };
 
     listenToStoreProperty(
-      state => state.temporaryConfiguration.activeMapping,
+      state => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName),
       mapping => {
         const shouldReload = isAgglomerate(oldMapping) || isAgglomerate(mapping);
         oldMapping = mapping;
@@ -111,15 +107,17 @@ class Mappings {
     _progressCallback?: ProgressCallback,
   ) {
     this.progressCallback = _progressCallback || noopProgressCallback;
-    const progressCallback = this.progressCallback;
+    const { progressCallback } = this;
     if (mappingName == null) {
-      Store.dispatch(setMappingAction(null));
+      Store.dispatch(setMappingAction(this.layerName, null));
       return;
     }
 
     if (mappingType === "HDF5") {
-      Store.dispatch(setMappingAction(mappingName, null, null, null, false, mappingType));
-      Store.dispatch(setMappingEnabledAction(true));
+      Store.dispatch(
+        setMappingAction(this.layerName, mappingName, null, null, null, false, mappingType),
+      );
+      Store.dispatch(setMappingEnabledAction(this.layerName, true));
       return;
     }
 
@@ -140,6 +138,7 @@ class Mappings {
     await progressCallback(false, "Applying mapping...");
     Store.dispatch(
       setMappingAction(
+        this.layerName,
         mappingName,
         mappingObject,
         mappingKeys,
@@ -250,20 +249,27 @@ class Mappings {
       renderer,
     );
 
-    listenToStoreProperty(
-      state => state.temporaryConfiguration.activeMapping.mapping,
-      mapping => {
-        const { mappingKeys } = Store.getState().temporaryConfiguration.activeMapping;
-        this.updateMappingTextures(mapping, mappingKeys);
-      },
-    );
-
     // updateMappingColorTexture has to be called at least once to guarantee
     // proper initialization of the texture with -1.
     // There is a race condition otherwise leading to hard-to-debug errors.
     listenToStoreProperty(
-      state => state.temporaryConfiguration.activeMapping.mappingColors,
+      state =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName)
+          .mappingColors,
       mappingColors => this.updateMappingColorTexture(mappingColors),
+      true,
+    );
+
+    listenToStoreProperty(
+      state =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
+      mapping => {
+        const { mappingKeys } = getMappingInfo(
+          Store.getState().temporaryConfiguration.activeMappingByLayer,
+          this.layerName,
+        );
+        this.updateMappingTextures(mapping, mappingKeys);
+      },
       true,
     );
   }
@@ -328,7 +334,7 @@ class Mappings {
       uint8Values.length / MAPPING_TEXTURE_WIDTH / 4,
     );
     await progressCallback(true, "Mapping successfully applied.");
-    Store.dispatch(setMappingEnabledAction(true));
+    Store.dispatch(setMappingEnabledAction(this.layerName, true));
 
     // Reset progressCallback, so it doesn't trigger when setting mappings
     // programmatically, later, e.g. in merger mode
@@ -338,6 +344,13 @@ class Mappings {
   getMappingTextures() {
     if (this.mappingTexture == null) {
       this.setupMappingTextures();
+    }
+    if (
+      this.mappingTexture == null ||
+      this.mappingLookupTexture == null ||
+      this.mappingColorTexture == null
+    ) {
+      throw new Error("Mapping textures are null after initialization.");
     }
     return [this.mappingTexture, this.mappingLookupTexture, this.mappingColorTexture];
   }

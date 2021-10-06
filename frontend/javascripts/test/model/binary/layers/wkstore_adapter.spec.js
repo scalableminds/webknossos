@@ -41,7 +41,7 @@ const StoreMock = {
     },
     datasetConfiguration: { fourBit: _fourBit },
     temporaryConfiguration: {
-      activeMapping: {},
+      activeMappingByLayer: {},
     },
   }),
   dispatch: sinon.stub(),

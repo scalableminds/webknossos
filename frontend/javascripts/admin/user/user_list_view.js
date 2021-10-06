@@ -14,7 +14,6 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import Clipboard from "clipboard-js";
 import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
@@ -441,7 +440,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                     <CopyOutlined
                       style={{ margin: "0 0 0 5px" }}
                       onClick={async () => {
-                        await Clipboard.copy(domain);
+                        await navigator.clipboard.writeText(domain);
                         Toast.success(`"${domain}" copied to clipboard`);
                       }}
                     />

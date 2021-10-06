@@ -100,11 +100,15 @@ function DatasetView(props: Props) {
     });
   }, []);
 
-  if (features().jobsEnabled) {
-    useInterval(() => {
-      getJobs().then(newJobs => setJobs(newJobs));
-    }, CONVERSION_JOBS_REFRESH_INTERVAL);
-  }
+  useEffect(() => {
+    let interval = null;
+    if (features().jobsEnabled) {
+      interval = setInterval(() => {
+        getJobs().then(newJobs => setJobs(newJobs));
+      }, CONVERSION_JOBS_REFRESH_INTERVAL);
+    }
+    return () => (interval != null ? clearInterval(interval) : undefined);
+  }, []);
 
   useEffect(() => {
     persistence.persist(history, {

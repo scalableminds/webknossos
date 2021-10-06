@@ -13,6 +13,7 @@ import window, { location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
+import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
@@ -26,7 +27,7 @@ export type UrlStateByLayer = {
   },
 };
 
-export type FullUrlManagerState = {|
+export type UrlManagerState = {|
   position: Vector3,
   mode: ViewMode,
   zoomStep: number,
@@ -35,7 +36,7 @@ export type FullUrlManagerState = {|
   stateByLayer?: UrlStateByLayer,
 |};
 
-export type PartialUrlManagerState = $Shape<FullUrlManagerState>;
+export type PartialUrlManagerState = $Shape<UrlManagerState>;
 
 class UrlManager {
   baseUrl: string;
@@ -99,7 +100,7 @@ class UrlManager {
     // { "position": Vector3, "mode": number, "zoomStep": number, ...}
 
     try {
-      return JSON.parse(urlHash);
+      return validateUrlStateJSON(urlHash);
     } catch (e) {
       Toast.error(messages["tracing.invalid_json_url_hash"]);
       console.error(e);
@@ -151,7 +152,7 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  getUrlState(state: OxalisState): FullUrlManagerState {
+  getUrlState(state: OxalisState): UrlManagerState {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);

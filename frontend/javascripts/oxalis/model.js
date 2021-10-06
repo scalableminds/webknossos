@@ -60,7 +60,7 @@ export class OxalisModel {
           maximumTextureCountForLayer,
         } = initializationInformation;
         if (this.dataLayers != null) {
-          Object.values(this.dataLayers).forEach(layer => layer.destroy());
+          _.values(this.dataLayers).forEach(layer => layer.destroy());
         }
         this.dataLayers = dataLayers;
         this.connectionInfo = connectionInfo;

@@ -83,7 +83,9 @@ function DatasetView(props: Props) {
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-    getJobs().then(newJobs => setJobs(newJobs));
+    if (features().jobsEnabled) {
+      getJobs().then(newJobs => setJobs(newJobs));
+    }
     context.fetchDatasets({
       applyUpdatePredicate: _newDatasets => {
         // Only update the datasets when there are none currently.
@@ -98,9 +100,11 @@ function DatasetView(props: Props) {
     });
   }, []);
 
-  useInterval(() => {
-    getJobs().then(newJobs => setJobs(newJobs));
-  }, CONVERSION_JOBS_REFRESH_INTERVAL);
+  if (features().jobsEnabled) {
+    useInterval(() => {
+      getJobs().then(newJobs => setJobs(newJobs));
+    }, CONVERSION_JOBS_REFRESH_INTERVAL);
+  }
 
   useEffect(() => {
     persistence.persist(history, {

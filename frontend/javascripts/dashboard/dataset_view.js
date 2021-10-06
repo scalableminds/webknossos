@@ -14,7 +14,6 @@ import {
   HourglassOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import useInterval from "@use-it/interval";
 
 import type { APIJob, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";

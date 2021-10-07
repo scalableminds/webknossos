@@ -16,6 +16,7 @@ import {
 import React from "react";
 import _ from "lodash";
 
+import features from "features";
 import { AsyncLink } from "components/async_clickables";
 import type { APITask, APITaskType } from "types/api_flow_types";
 import { deleteTask, getTasks, downloadNml } from "admin/admin_rest_api";
@@ -189,8 +190,46 @@ class TaskListView extends React.PureComponent<Props, State> {
             value={searchQuery}
           />
         </div>
-        <h3>Tasks</h3>
-        <div className="clearfix" style={{ margin: "20px 0px" }} />
+        <h3 style={{ display: "inline-block", verticalAlign: "top" }}>Tasks</h3>
+        {features().isDemoInstance ? (
+          <>
+            <a
+              href="https://webknossos.org/services/annotations"
+              className="crosslink-box"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background:
+                  'url("/assets/images/vx/manual-annotations-horizontal.png") center center / 110%',
+                height: "73px",
+                padding: "0px",
+                width: "800px",
+                overflow: "hidden",
+                display: "inline-block",
+                marginLeft: "100px",
+                marginBottom: 0,
+                opacity: "0.9",
+                marginTop: 0,
+              }}
+            >
+              <div
+                style={{
+                  padding: "10px 170px",
+                  background:
+                    "linear-gradient(181deg, #1414147a, rgb(59 59 59 / 45%), rgba(20, 19, 31, 0.84))",
+                }}
+                className
+              >
+                <h4 style={{ color: "white", textAlign: "center" }}>
+                  Need more workforce for annotating your dataset?
+                  <br />
+                  Have a look at our annotation services.
+                </h4>
+              </div>
+            </a>
+            <div className="clearfix" style={{ margin: "20px 0px" }} />
+          </>
+        ) : null}
 
         <Card title="Search for Tasks">
           <TaskSearchForm

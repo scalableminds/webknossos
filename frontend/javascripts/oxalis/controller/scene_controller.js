@@ -53,6 +53,7 @@ class SceneController {
   planeShift: Vector3;
   datasetBoundingBox: Cube;
   userBoundingBoxGroup: typeof THREE.Group;
+  userBoundingBoxHitPlanesGroup: typeof THREE.Group;
   userBoundingBoxes: Array<Cube>;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
@@ -275,6 +276,7 @@ class SceneController {
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
+    this.userBoundingBoxHitPlanesGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
     this.userBoundingBoxes = [];
 
@@ -449,6 +451,7 @@ class SceneController {
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     const newUserBoundingBoxGroup = new THREE.Group();
+    const newUserBoundingBoxHitPlanesGroup = new THREE.Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor = [color[0] * 255, color[1] * 255, color[2] * 255];
@@ -457,18 +460,25 @@ class SceneController {
         max,
         color: Utils.rgbToInt(bbColor),
         showCrossSections: true,
+        id,
+        isEditable: true,
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach(mesh => {
         newUserBoundingBoxGroup.add(mesh);
         mesh.userData.id = id;
       });
+      bbCube
+        .getCrossSectionHitPlanes()
+        .forEach(hitPlane => newUserBoundingBoxHitPlanesGroup.add(hitPlane));
       return bbCube;
     });
-    console.log("resetting bboxes");
     this.rootNode.remove(this.userBoundingBoxGroup);
+    this.rootNode.remove(this.userBoundingBoxHitPlanesGroup);
     this.userBoundingBoxGroup = newUserBoundingBoxGroup;
+    this.userBoundingBoxHitPlanesGroup = newUserBoundingBoxHitPlanesGroup;
     this.rootNode.add(this.userBoundingBoxGroup);
+    this.rootNode.add(this.userBoundingBoxHitPlanesGroup);
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {

@@ -157,6 +157,7 @@ class PlaneView {
     groupToTest: typeof THREE.Group,
     mousePosition: [number, number],
     orthoView: OrthoView,
+    clipAtDistanceZero: boolean,
   ): ?typeof THREE.Intersection {
     const viewport = getInputCatcherRect(storeState, orthoView);
     // Perform ray casting
@@ -164,8 +165,14 @@ class PlaneView {
       (mousePosition[0] / viewport.width) * 2 - 1,
       ((mousePosition[1] / viewport.height) * 2 - 1) * -1, // y is inverted
     );
-
-    raycaster.setFromCamera(mouse, this.cameras[orthoView]);
+    let camera = this.cameras[orthoView];
+    if (clipAtDistanceZero) {
+      camera = camera.clone(false);
+      // Only pick what is being rendered in the ortho viewports.
+      camera.far = 0.1;
+      camera.updateProjectionMatrix();
+    }
+    raycaster.setFromCamera(mouse, camera);
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(groupToTest.children, true);
@@ -199,6 +206,7 @@ class PlaneView {
       isosurfacesRootGroup,
       mousePosition,
       "TDView",
+      false,
     );
     const hitObject = intersection != null ? intersection.object : null;
     // Check whether we are hitting the same object as before, since we can return early
@@ -240,12 +248,13 @@ class PlaneView {
     }
 
     const SceneController = getSceneController();
-    const { userBoundingBoxGroup } = SceneController;
+    const { userBoundingBoxHitPlanesGroup } = SceneController;
     const intersection = this.performHitTestForSceneGroup(
       storeState,
-      userBoundingBoxGroup,
+      userBoundingBoxHitPlanesGroup,
       mousePosition,
       activeViewport,
+      true,
     );
     console.log(intersection);
     const hitObject = intersection != null ? intersection.object : null;
@@ -257,13 +266,14 @@ class PlaneView {
       }
       return intersection != null ? intersection.point : null;
     }
-
+    console.log(hitObject);
     // Undo highlighting of old hit
     if (this.lastBoundingBoxHit != null) {
       // Get HSL, save in userData, light the hsl up and set the new color.
       // changing emissive doesnt work for this material.
-      const { originalColor } = this.lastBoundingBoxHit.userData;
-      this.lastBoundingBoxHit.material.color.setHSL(originalColor);
+      this.lastBoundingBoxHit.material.color.r = 0;
+      this.lastBoundingBoxHit.material.color.g = 1;
+      this.lastBoundingBoxHit.material.color.b = 0;
     }
 
     this.lastBoundingBoxHit = hitObject;

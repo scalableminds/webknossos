@@ -560,7 +560,7 @@ export class BoundingBoxTool {
       },
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
+        /* const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
         const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
         const boundingBoxId = highestBoundingBoxId + 1;
         const newUserBoundingBox = {
@@ -571,7 +571,7 @@ export class BoundingBoxTool {
           isVisible: true,
         };
         const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
-        Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
+        Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes)); */
       },
 
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

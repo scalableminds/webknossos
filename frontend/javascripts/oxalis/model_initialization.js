@@ -65,7 +65,7 @@ import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import Toast from "libs/toast";
-import UrlManager, { type UrlManagerState } from "oxalis/controller/url_manager";
+import UrlManager, { type PartialUrlManagerState } from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
@@ -491,9 +491,9 @@ function setupLayerForVolumeTracing(
 }
 
 function determineDefaultState(
-  urlState: UrlManagerState,
+  urlState: PartialUrlManagerState,
   tracing: ?HybridServerTracing,
-): $Shape<UrlManagerState> {
+): PartialUrlManagerState {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
@@ -530,7 +530,7 @@ function determineDefaultState(
   return { position, zoomStep, rotation, activeNode };
 }
 
-export function applyState(state: $Shape<UrlManagerState>, ignoreZoom: boolean = false) {
+export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = false) {
   if (state.activeNode != null) {
     // Set the active node (without animating to its position) before setting the
     // position, since the position should take precedence.

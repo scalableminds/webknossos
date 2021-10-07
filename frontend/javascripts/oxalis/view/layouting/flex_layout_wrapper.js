@@ -330,7 +330,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         .getNodeById(data.node)
         .getChildren()[0]
         .getId();
-      this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+      if (OrthoViews[toggledViewportId] != null) {
+        this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+      }
     }
     return action;
   };

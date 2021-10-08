@@ -109,7 +109,7 @@ git clone git@github.com:scalableminds/webknossos.git
 
 ```bash
 sudo apt install -y wget curl ca-certificates
-# adding nodejs, sbt and yarn
+# Adding repositories for nodejs, sbt and yarn
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
 echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
@@ -155,13 +155,13 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ### Run locally
 
-First install all frontend dependencies via
+First, install all frontend dependencies via
 ```bash
 yarn install
 ```
-Note: During this installation step it might happen that the module gl cannot be installed correctly. As this module is only used for testing webknossos you can run ignore this error. So no need to worry and just start webknossos.
+Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing webKnossos, you can safely ignore this error.
 
-Now start the webknossos with
+To start webKnossos, use
 ```bash
 yarn start
 ```

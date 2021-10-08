@@ -1,5 +1,6 @@
 // @flow
 import { type ModifierKeys } from "libs/input";
+import _ from "lodash";
 import {
   type OrthoView,
   OrthoViews,
@@ -17,11 +18,14 @@ import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
+import { edgeIdToEdge } from "oxalis/geometries/cube";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
+import getClosestHoveredBoundingBox from "oxalis/controller/combinations/bounding_box_handlers";
 import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import Store from "oxalis/store";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import api from "oxalis/api/internal_api";
@@ -525,22 +529,60 @@ export class FillCellTool {
 
 export class BoundingBoxTool {
   static getPlaneMouseControls(
-    _planeId: OrthoView,
+    planeId: OrthoView,
     planeView: PlaneView,
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): * {
+    let selectedEdge = null;
     return {
       leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
-        planeView.throttledPerformBoundingBoxHitTest([_pos.x, _pos.y]);
-        MoveHandlers.handleMovePlane(delta);
+        if (selectedEdge != null) {
+          const state = Store.getState();
+          const currentlySelectedEdge = selectedEdge; // avoiding flow complains.
+          const { userBoundingBoxes } = getSomeTracing(state.tracing);
+          const zoomFactor = state.flycam.zoomStep;
+          // TODO:  Discussion aufschreiben:
+          // Raycaster nutzt gpu nicht -> nicht all zu fix wie gedacht.
+          // Raycaster benötigt zusätzlich noch weitere objekte, die immer mitgeupdatet werden müssen (spätestens wenn das bbox tool an ist)
+          // Manuelles Testen wäre nicht schlauer gemacht / schneller
+
+          // Generelle Frage: Was wenn man mehrere BBox kandidaten hat, beim hoveren? eine eigene berechnung wäre da fixer:
+          // Pro Bounding Box checken nur ein check nötig, da die plane explizit bekannt ist,
+          const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
+          const updatedUserBoundingBoxes = userBoundingBoxes.map(bbox => {
+            if (bbox.id !== currentlySelectedEdge.boxId) {
+              return bbox;
+            }
+            bbox = _.cloneDeep(bbox);
+            // For a horizontal edge only consider delta.y, for vertical only delta.x
+            const movement = currentlySelectedEdge.direction === "horizontal" ? delta.y : delta.x;
+            const minOrMax = currentlySelectedEdge.isMaxEdge ? "max" : "min";
+            const scaledMovement =
+              movement * zoomFactor * scaleFactor[currentlySelectedEdge.dimensionIndex];
+            bbox.boundingBox[minOrMax][currentlySelectedEdge.dimensionIndex] = Math.round(
+              bbox.boundingBox[minOrMax][currentlySelectedEdge.dimensionIndex] + scaledMovement,
+            );
+            return bbox;
+          });
+
+          Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
+        } else {
+          MoveHandlers.handleMovePlane(delta);
+        }
       },
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        planeView.performBoundingBoxHitTest([pos.x, pos.y]);
-        console.log("BoundingBox tool left down");
+        const hitObject = planeView.performBoundingBoxHitTest([pos.x, pos.y]);
+        if (hitObject != null) {
+          const { userData } = hitObject;
+          selectedEdge = {
+            boxId: userData.boxId,
+            ...edgeIdToEdge(userData.edgeId, userData.plane),
+          };
+        }
       },
 
       leftMouseUp: () => {
-        console.log("BoundingBox tool left up");
+        selectedEdge = null;
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
@@ -555,8 +597,25 @@ export class BoundingBoxTool {
         console.log("BoundingBox tool right up");
       },
       mouseMove: (delta: Point2, position: Point2, id, event) => {
+        const { body } = document;
+        if (body == null || selectedEdge != null) {
+          return;
+        }
+        const info = getClosestHoveredBoundingBox(position, planeId);
+        console.log("info", info);
         // planeView.performIsosurfaceHitTest([position.x, position.y]);
-        planeView.throttledPerformBoundingBoxHitTest([position.x, position.y]);
+        /* const hitObject = planeView.throttledPerformBoundingBoxHitTest([position.x, position.y]);
+        if (hitObject != null) {
+          const { userData } = hitObject;
+          const { direction } = edgeIdToEdge(userData.edgeId, userData.plane);
+          if (direction === "horizontal") {
+            body.style.cursor = "row-resize";
+          } else {
+            body.style.cursor = "col-resize";
+          }
+        } else {
+          body.style.cursor = "default";
+        } */
       },
 
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {

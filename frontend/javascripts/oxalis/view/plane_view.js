@@ -165,23 +165,18 @@ class PlaneView {
       (mousePosition[0] / viewport.width) * 2 - 1,
       ((mousePosition[1] / viewport.height) * 2 - 1) * -1, // y is inverted
     );
-    let camera = this.cameras[orthoView];
-    if (clipAtDistanceZero) {
+    const camera = this.cameras[orthoView];
+    /* if (clipAtDistanceZero) {
       camera = camera.clone(false);
       // Only pick what is being rendered in the ortho viewports.
       camera.far = 0.1;
       camera.updateProjectionMatrix();
-    }
+    } */
     raycaster.setFromCamera(mouse, camera);
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
-    const intersections = raycaster.intersectObjects(groupToTest.children, true);
+    const intersections = raycaster.intersectObjects(groupToTest.children, false);
     const intersection = intersections.length > 0 ? intersections[0] : null;
-    /* intersections.forEach(({ object: hitObject }) => {
-      hitObject.material.color.r = 1;
-      hitObject.material.color.g = 0;
-      hitObject.material.color.b = 0;
-    }); */
     return intersection;
   }
 
@@ -239,7 +234,7 @@ class PlaneView {
     }
   }
 
-  performBoundingBoxHitTest(mousePosition: [number, number]): ?typeof THREE.Vector3 {
+  performBoundingBoxHitTest(mousePosition: [number, number]): ?typeof THREE.Mesh {
     const storeState = Store.getState();
     const { activeViewport } = storeState.viewModeData.plane;
     // Currently, the bounding box tool only supports the 2d viewports.
@@ -256,45 +251,47 @@ class PlaneView {
       activeViewport,
       true,
     );
-    console.log(intersection);
     const hitObject = intersection != null ? intersection.object : null;
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
-    if (hitObject === this.lastBoundingBoxHit) {
+    const didHitSamePlane =
+      hitObject != null &&
+      this.lastBoundingBoxHit != null &&
+      this.lastBoundingBoxHit.userData.plane === hitObject.userData.plane;
+
+    if (hitObject === this.lastBoundingBoxHit || didHitSamePlane) {
       if (hitObject != null) {
         console.log("Hit the same object");
       }
-      return intersection != null ? intersection.point : null;
+      this.lastBoundingBoxHit = hitObject;
+      return hitObject;
     }
-    console.log(hitObject);
+
     // Undo highlighting of old hit
     if (this.lastBoundingBoxHit != null) {
       // Get HSL, save in userData, light the hsl up and set the new color.
       // changing emissive doesnt work for this material.
-      this.lastBoundingBoxHit.material.color.r = 0;
-      this.lastBoundingBoxHit.material.color.g = 1;
-      this.lastBoundingBoxHit.material.color.b = 0;
+      const { userData } = this.lastBoundingBoxHit;
+      const previousHighlightedCrossection = userData.cube.crossSections[userData.plane];
+      previousHighlightedCrossection.material.color.r = 0;
+      previousHighlightedCrossection.material.color.g = 1;
+      previousHighlightedCrossection.material.color.b = 0;
     }
 
     this.lastBoundingBoxHit = hitObject;
 
     // Highlight new hit
     if (hitObject != null) {
-      // debugger;
       // TODO: gucken warum sich die Farbe der BBoxen nicht ändert. Scheint das falsche intersection object zu sein!!!!
-      const hslColor = { h: 0, s: 0, l: 0 };
-      // const hoveredColor = [0.7, 0.5, 0.1];
-      hitObject.material.color.getHSL(hslColor);
-      hitObject.userData.originalColor = hslColor;
       // const lightenedColor = { h: hslColor.h, s: 1, l: 1 };
-      // hitObject.material.color.setHSL(lightenedColor);
-      // hitObject.material.color.setHSL(...hoveredColor);
-      hitObject.material.color.r = 1;
-      hitObject.material.color.g = 0;
-      hitObject.material.color.b = 0;
-      // (...hoveredColor);
+      const { userData } = hitObject;
+      const newHighlightedCrosssection = userData.cube.crossSections[userData.plane];
+      newHighlightedCrosssection.material.color.r = 1;
+      newHighlightedCrosssection.material.color.g = 0;
+      newHighlightedCrosssection.material.color.b = 0;
     }
-    return null;
+    this.draw();
+    return hitObject;
   }
 
   draw(): void {

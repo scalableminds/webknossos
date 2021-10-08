@@ -213,7 +213,6 @@ const defaultState: OxalisState = {
         : "light",
     busyBlockingInfo: {
       isBusy: false,
-      reason: null,
     },
   },
   isosurfacesByLayer: {},

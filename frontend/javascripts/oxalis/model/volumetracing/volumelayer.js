@@ -69,25 +69,25 @@ export class VoxelBuffer2D {
 }
 
 export class VoxelNeighborQueue3D {
-  stack: Array<Vector3>;
+  queue: Array<Vector3>;
 
   constructor(initialPosition: Vector3) {
-    this.stack = [initialPosition];
+    this.queue = [initialPosition];
   }
 
   pushVoxel(newVoxel: Vector3) {
-    return this.stack.push(newVoxel);
+    return this.queue.push(newVoxel);
   }
 
   isEmpty(): boolean {
-    return this.stack.length === 0;
+    return this.queue.length === 0;
   }
 
   getVoxelAndGetNeighbors(): Array<Vector3> {
     if (this.isEmpty()) {
       return [];
     }
-    const currentVoxel = this.stack.shift();
+    const currentVoxel = this.queue.shift();
     // 6-neighborhood in 3D
     return [
       [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
@@ -105,7 +105,7 @@ export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
     if (this.isEmpty()) {
       return [];
     }
-    const currentVoxel = this.stack.shift();
+    const currentVoxel = this.queue.shift();
     // 4-neighborhood in 2D
     return [
       [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],

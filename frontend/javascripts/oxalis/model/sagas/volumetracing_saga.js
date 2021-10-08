@@ -481,7 +481,7 @@ export function* floodFill(): Saga<void> {
 
     const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
     if (busyBlockingInfo.isBusy) {
-      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "null"})`);
+      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
       return;
     }
 
@@ -606,7 +606,7 @@ export function* floodFill(): Saga<void> {
     }
 
     cube.triggerPushQueue();
-    yield* put(setBusyBlockingInfoAction(false, "Floodfill is being computed."));
+    yield* put(setBusyBlockingInfoAction(false));
     if (floodFillAction.callback != null) {
       floodFillAction.callback();
     }

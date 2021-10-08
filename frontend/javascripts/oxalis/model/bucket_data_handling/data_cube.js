@@ -757,12 +757,6 @@ class DataCube {
   positionToBaseAddress(position: Vector3): Vector4 {
     return this.positionToZoomedAddress(position, 0);
   }
-
-  async getLoadedBucket(bucketAddress: Vector4) {
-    const bucket = this.getOrCreateBucket(bucketAddress);
-
-    return bucket.ensureLoaded();
-  }
 }
 
 export default DataCube;

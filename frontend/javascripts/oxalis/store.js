@@ -459,7 +459,7 @@ export type Theme = "light" | "dark";
 
 export type BusyBlockingInfo = {
   isBusy: boolean,
-  reason: ?string,
+  reason?: string,
 };
 
 type UiInformation = {

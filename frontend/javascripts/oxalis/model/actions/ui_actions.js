@@ -46,7 +46,7 @@ type SetBusyBlockingInfoAction = {
   type: "SET_BUSY_BLOCKING_INFO_ACTION",
   value: {
     isBusy: boolean,
-    reason: ?string,
+    reason?: string,
   },
 };
 
@@ -125,7 +125,7 @@ export const setThemeAction = (value: Theme): SetThemeAction => ({
 
 export const setBusyBlockingInfoAction = (
   isBusy: boolean,
-  reason: ?string,
+  reason?: string,
 ): SetBusyBlockingInfoAction => ({
   type: "SET_BUSY_BLOCKING_INFO_ACTION",
   value: {

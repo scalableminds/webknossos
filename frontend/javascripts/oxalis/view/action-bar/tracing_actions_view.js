@@ -257,17 +257,13 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     Model.forceSave();
   };
 
-  handleUndo = async () => {
-    await dispatchUndoAsync(Store.dispatch);
-  };
+  handleUndo = () => dispatchUndoAsync(Store.dispatch);
+
+  handleRedo = () => dispatchRedoAsync(Store.dispatch);
 
   handleRestore = async () => {
     await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(true));
-  };
-
-  handleRedo = async () => {
-    await dispatchRedoAsync(Store.dispatch);
   };
 
   handleCopyToAccount = async () => {

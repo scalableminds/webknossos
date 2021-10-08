@@ -73,8 +73,8 @@ export class NullBucket {
     throw new Error("NullBucket has no data.");
   }
 
-  ensureLoaded(): NullBucket {
-    return this;
+  ensureLoaded(): Promise<void> {
+    return Promise.resolve();
   }
 }
 

@@ -190,7 +190,7 @@ export const OverwriteModeEnum = {
 export type OverwriteMode = $Keys<typeof OverwriteModeEnum>;
 
 export const FillModeEnum = {
-  // The leading underscore is a workaround, since leading letters are not valid identifiers
+  // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
   _2D: "_2D",
   _3D: "_3D",

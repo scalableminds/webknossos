@@ -252,7 +252,7 @@ export function* collectUndoStates(): Saga<void> {
       }
       const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
       if (busyBlockingInfo.isBusy) {
-        console.warn(`Ignoring undo request (reason: ${busyBlockingInfo.reason || "null"})`);
+        console.warn(`Ignoring redo request (reason: ${busyBlockingInfo.reason || "null"})`);
         continue;
       }
       yield* put(setBusyBlockingInfoAction(true, "Redo is being performed."));
@@ -260,7 +260,7 @@ export function* collectUndoStates(): Saga<void> {
         pauseDelay: 100,
         successMessageDelay: 2000,
       });
-      yield* call(progressCallback, false, "Performing redo...");
+      yield* call(progressCallback, false);
       yield* call(
         applyStateOfStack,
         redoStack,

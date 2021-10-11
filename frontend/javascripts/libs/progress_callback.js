@@ -9,6 +9,11 @@ export type ProgressCallback = (
   progressState: string,
 ) => Promise<{ hideFn: HideFn }>;
 
+type Options = {
+  pauseDelay: number,
+  successMessageDelay: number,
+};
+
 // This function returns another function which can be called within a longer running
 // process to update the UI with progress information. Example usage:
 // const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 5000 });
@@ -20,13 +25,13 @@ export type ProgressCallback = (
 //
 // The `progressCallback` should be awaited so that the UI can catch up
 // with rendering the actual feedback.
-export default function createProgressCallback(options: {
-  pauseDelay: number,
-  successMessageDelay: number,
-}): ProgressCallback {
-  const { pauseDelay, successMessageDelay } = options;
+export default function createProgressCallback(options: Options): ProgressCallback {
   let hideFn = null;
-  return async (isDone: boolean, status: string): Promise<{ hideFn: HideFn }> => {
+  return async (
+    isDone: boolean,
+    status: string,
+    overridingOptions: $Shape<Options> = {},
+  ): Promise<{ hideFn: HideFn }> => {
     if (hideFn != null) {
       // Clear old progress message
       hideFn();
@@ -37,11 +42,12 @@ export default function createProgressCallback(options: {
       hideFn = message.loading(status, 0);
       // Allow the browser to catch up with rendering the progress
       // indicator.
+      const pauseDelay = overridingOptions.pauseDelay || options.pauseDelay;
       await sleep(pauseDelay);
     } else {
       // Show success message and clear that after
       // ${successDelay} ms
-      const successDelay = successMessageDelay;
+      const successDelay = overridingOptions.successMessageDelay || options.successMessageDelay;
       hideFn = message.success(status, 0);
       setTimeout(() => {
         if (hideFn == null) {

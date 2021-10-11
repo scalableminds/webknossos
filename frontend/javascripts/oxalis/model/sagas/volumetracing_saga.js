@@ -515,7 +515,10 @@ export function* floodFill(): Saga<void> {
 
     const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
 
-    const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
+    const progressCallback = createProgressCallback({
+      pauseDelay: 200,
+      successMessageDelay: 2000,
+    });
     yield* call(progressCallback, false, "Performing floodfill...");
 
     console.time("cube.floodFill");
@@ -579,7 +582,10 @@ export function* floodFill(): Saga<void> {
       yield* call(
         progressCallback,
         true,
-        "Floodfill is done, but terminated since the labeled volume got too large.",
+        "Floodfill is done, but terminated since the labeled volume got too large. A bounding box that represents the labeled volume was added.",
+        {
+          successMessageDelay: 10000,
+        },
       );
 
       const userBoundingBoxes = yield* select(

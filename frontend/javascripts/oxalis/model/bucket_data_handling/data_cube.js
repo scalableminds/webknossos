@@ -706,14 +706,9 @@ class DataCube {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
-    // console.log("getDataValue", {
-    //   voxelIndex,
-    // });
-
     if (bucket.hasData()) {
       const data = bucket.getData();
       const dataValue = data[voxelIndex];
-      // console.log("read data in ", bucket.zoomedAddress, "at", voxelIndex, ". result: ", dataValue);
 
       if (mapping) {
         const mappedValue = mapping[dataValue];

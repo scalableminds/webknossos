@@ -12,6 +12,7 @@ export type ProgressCallback = (
 type Options = {
   pauseDelay: number,
   successMessageDelay: number,
+  key?: string,
 };
 
 // This function returns another function which can be called within a longer running
@@ -39,7 +40,11 @@ export default function createProgressCallback(options: Options): ProgressCallba
     }
     if (!isDone) {
       // Show new progress message
-      hideFn = message.loading(status, 0);
+      hideFn = message.loading({
+        content: status,
+        duration: 0,
+        key: options.key || overridingOptions.key,
+      });
       // Allow the browser to catch up with rendering the progress
       // indicator.
       const pauseDelay = overridingOptions.pauseDelay || options.pauseDelay;
@@ -48,7 +53,11 @@ export default function createProgressCallback(options: Options): ProgressCallba
       // Show success message and clear that after
       // ${successDelay} ms
       const successDelay = overridingOptions.successMessageDelay || options.successMessageDelay;
-      hideFn = message.success(status, 0);
+      hideFn = message.success({
+        content: status,
+        duration: 0,
+        key: options.key || overridingOptions.key,
+      });
       setTimeout(() => {
         if (hideFn == null) {
           return;

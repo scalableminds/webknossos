@@ -72,13 +72,42 @@ declare module "antd" {
     static ItemGroup: typeof MenuItemGroup;
     static SubMenu: typeof MenuSubMenu;
   }
+  declare type MessageOptions = {
+    content: string,
+    duration?: number,
+    key?: string,
+  };
   declare export var message: {
-    success(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    error(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    info(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    warning(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    warn(content: string | React$Node, duration?: number, onClose?: Function): Function,
-    loading(content: string | React$Node, duration?: number, onClose?: Function): Function,
+    success(
+      content: string | React$Node | MessageOptions,
+      duration?: number,
+      onClose?: Function,
+    ): Function,
+    error(
+      content: string | React$Node | MessageOptions,
+      duration?: number,
+      onClose?: Function,
+    ): Function,
+    info(
+      content: string | React$Node | MessageOptions,
+      duration?: number,
+      onClose?: Function,
+    ): Function,
+    warning(
+      content: string | React$Node | MessageOptions,
+      duration?: number,
+      onClose?: Function,
+    ): Function,
+    warn(
+      content: string | React$Node | MessageOptions,
+      duration?: number,
+      onClose?: Function,
+    ): Function,
+    loading(
+      content: string | React$Node | MessageOptions,
+      duration?: number,
+      onClose?: Function,
+    ): Function,
   };
   declare export class Modal<P> extends React$Component<P> {
     static confirm: Function;

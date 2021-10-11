@@ -30,7 +30,7 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import type { DimensionMap } from "oxalis/model/dimensions";
+import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import constants, {
   type Vector3,
   type Vector4,
@@ -398,8 +398,6 @@ class DataCube {
   async floodFill(
     globalSeedVoxel: Vector3,
     cellId: number,
-    uvwToXyz: Vector3 => Vector3,
-    xyzToUvw: Vector3 => Vector3,
     dimensionIndices: DimensionMap,
     floodfillBoundingBox: BoundingBoxType,
     zoomStep: number,
@@ -420,6 +418,11 @@ class DataCube {
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
+
+    // Helper function to convert between xyz and uvw (both directions)
+    const transpose = (voxel: Vector3): Vector3 =>
+      Dimensions.transDimWithIndices(voxel, dimensionIndices);
+
     const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
     const seedBucketAddress = this.positionToZoomedAddress(globalSeedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
@@ -542,7 +545,7 @@ class DataCube {
       };
 
       // Use a VoxelNeighborQueue2D/3D to iterate over the bucket and using bucket-local addresses and not global addresses.
-      const initialVoxelInSliceUvw = xyzToUvw(initialXyzVoxelInBucket);
+      const initialVoxelInSliceUvw = transpose(initialXyzVoxelInBucket);
       markUvwInSliceAsLabeled(initialVoxelInSliceUvw);
       const VoxelNeighborQueueClass = use3D ? VoxelNeighborQueue3D : VoxelNeighborQueue2D;
       const neighbourVoxelStackUvw = new VoxelNeighborQueueClass(initialVoxelInSliceUvw);
@@ -552,7 +555,7 @@ class DataCube {
         const neighbours = neighbourVoxelStackUvw.getVoxelAndGetNeighbors();
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxelUvw = neighbours[neighbourIndex];
-          const neighbourVoxelXyz = uvwToXyz(neighbourVoxelUvw);
+          const neighbourVoxelXyz = transpose(neighbourVoxelUvw);
 
           // If the current neighbour is not in the current bucket, calculate its
           // bucket's zoomed address and add the bucket to bucketsWithXyzSeedsToFill.

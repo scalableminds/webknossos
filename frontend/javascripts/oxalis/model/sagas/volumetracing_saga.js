@@ -479,14 +479,6 @@ export function* floodFill(): Saga<void> {
       throw new Error("Unexpected action. Satisfy flow.");
     }
 
-    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
-    if (busyBlockingInfo.isBusy) {
-      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
-      return;
-    }
-
-    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
-
     const { position: positionFloat, planeId } = floodFillAction;
     const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { cube } = segmentationLayer;
@@ -498,26 +490,29 @@ export function* floodFill(): Saga<void> {
       getResolutionInfoOfSegmentationTracingLayer(state.dataset),
     );
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+    const oldSegmentIdAtSeed = cube.getDataValue(seedPosition, null, labeledZoomStep);
 
-    const uvwToXyz = (voxel: Vector3) => {
-      const orderedVoxelWithThirdDimension = [
-        voxel[dimensionIndices[0]],
-        voxel[dimensionIndices[1]],
-        voxel[dimensionIndices[2]],
-      ];
-      return orderedVoxelWithThirdDimension;
-    };
-    const xyzToUvw = (voxel: Vector3): Vector3 => [
-      voxel[dimensionIndices[0]],
-      voxel[dimensionIndices[1]],
-      voxel[dimensionIndices[2]],
-    ];
+    if (activeCellId === oldSegmentIdAtSeed) {
+      Toast.warning("The clicked voxel's id is already equal to the active segment id.");
+      continue;
+    }
+
+    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+    if (busyBlockingInfo.isBusy) {
+      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
+      continue;
+    }
+
+    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
 
     const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
 
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
       successMessageDelay: 2000,
+      // Since only one floodfill operation can be active at any time,
+      // a hardcoded key is sufficient.
+      key: "floodfill-progress",
     });
     yield* call(progressCallback, false, "Performing floodfill...");
 
@@ -532,8 +527,6 @@ export function* floodFill(): Saga<void> {
       [cube, cube.floodFill],
       seedPosition,
       activeCellId,
-      uvwToXyz,
-      xyzToUvw,
       dimensionIndices,
       currentViewportBounding,
       labeledZoomStep,
@@ -543,10 +536,6 @@ export function* floodFill(): Saga<void> {
     console.timeEnd("cube.floodFill");
 
     yield* call(progressCallback, false, "Finalizing floodfill...");
-
-    if (labelMasksByBucketAndW == null) {
-      continue;
-    }
 
     const indexSet = new Set();
     for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
@@ -599,7 +588,7 @@ export function* floodFill(): Saga<void> {
           {
             id: boundingBoxId,
             boundingBox: coveredBoundingBox,
-            name: `Limits of flood-fill (target_id=${activeCellId}, seed=${seedPosition.join(
+            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
               ",",
             )}, timestamp=${new Date().getTime()})`,
             color: Utils.getRandomColor(),

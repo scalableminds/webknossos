@@ -247,7 +247,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def runJob(command: String, commandArgs: JsObject, owner: User): Fox[Job] =
     for {
-      _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "jobs.disabled"
+      _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
       argsWrapped = Json.obj("kwargs" -> commandArgs)
       result <- flowerRpc(s"/api/task/async-apply/tasks.$command")
         .postWithJsonResponse[JsValue, Map[String, JsValue]](argsWrapped)

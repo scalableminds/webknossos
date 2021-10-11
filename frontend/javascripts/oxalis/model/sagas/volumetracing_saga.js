@@ -224,13 +224,13 @@ function* getBoundingBoxForFloodFill(
   position: Vector3,
   currentViewport: OrthoView,
 ): Saga<BoundingBoxType> {
-  const halfViewportExtentsUVW = process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96];
+  const fillMode = yield* select(state => state.userConfiguration.fillMode);
+  const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
   const currentViewportBounding = {
-    min: V3.sub(position, halfViewportExtentsUVW),
-    max: V3.add(position, halfViewportExtentsUVW),
+    min: V3.sub(position, halfBoundingBoxSizeUVW),
+    max: V3.add(position, halfBoundingBoxSizeUVW),
   };
 
-  const fillMode = yield* select(state => state.userConfiguration.fillMode);
   if (fillMode === FillModeEnum._2D) {
     // Only use current plane
     const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
@@ -238,7 +238,7 @@ function* getBoundingBoxForFloodFill(
     currentViewportBounding.min[thirdDimension] = position[thirdDimension];
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
-  console.log({ currentViewportBounding });
+
   return currentViewportBounding;
 }
 

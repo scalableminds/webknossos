@@ -258,12 +258,12 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
   await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();
 
-  // // Reload all buckets, "redo" and assert flood-filled state
+  // Reload all buckets, "redo" and assert flood-filled state
   t.context.api.data.reloadAllBuckets();
   await dispatchRedoAsync(Store.dispatch);
   await assertFloodFilledState();
 
-  // Reload all buckets, "redo" and assert flood-filled state
+  // Reload all buckets, "undo" and assert flood-filled state
   t.context.api.data.reloadAllBuckets();
   await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();
@@ -524,7 +524,7 @@ test.serial(
 );
 
 async function testLabelingManyBuckets(t, saveInbetween) {
-  // We set MAXIMUM_BUCKET_COUNT to 100 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
+  // We set MAXIMUM_BUCKET_COUNT to 150 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
   // In between, we will save the data which allows the buckets of the first batch to be GC'ed.
   // Therefore, saving the buckets of the second batch should not cause any problems.
   t.context.model.getCubeByLayerName("segmentation").MAXIMUM_BUCKET_COUNT = 150;

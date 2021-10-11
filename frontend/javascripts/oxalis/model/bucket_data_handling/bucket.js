@@ -7,6 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import { createNanoEvents } from "nanoevents";
 
+import ErrorHandling from "libs/error_handling";
 import { mod } from "libs/utils";
 import {
   bucketPositionToGlobalAddress,
@@ -387,6 +388,16 @@ export class DataBucket {
         expected: channelCount * Constants.BUCKET_SIZE,
         channelCount,
       });
+      ErrorHandling.notify(
+        new Error(
+          `bucket.data has unexpected length. Details: ${JSON.stringify({
+            arrayBuffer,
+            actual: data.length,
+            expected: channelCount * Constants.BUCKET_SIZE,
+            channelCount,
+          })}`,
+        ),
+      );
     }
     switch (this.state) {
       case BucketStateEnum.REQUESTED:

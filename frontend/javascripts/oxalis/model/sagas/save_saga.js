@@ -299,6 +299,10 @@ function* compressBucketAndAppendTo(
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
   undoBatch: VolumeAnnotationBatch,
 ): Saga<void> {
+  // The given bucket data is compressed, wrapped into a UndoBucket instance
+  // and appended to the passed VolumeAnnotationBatch.
+  // If backend data is being downloaded (MaybeBucketLoadedPromise exists),
+  // the backend data will also be compressed and attached to the UndoBucket.
   const bucketDataAsByteArray = new Uint8Array(
     bucketData.buffer,
     bucketData.byteOffset,

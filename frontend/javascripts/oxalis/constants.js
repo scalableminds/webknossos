@@ -273,6 +273,11 @@ const Constants = {
 
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
+
+  FLOOD_FILL_EXTENTS: {
+    _2D: process.env.BABEL_ENV === "test" ? [512, 512, 1] : [768, 768, 1],
+    _3D: process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96],
+  },
 };
 
 export default Constants;

@@ -676,11 +676,13 @@ export function getAnnotationInformation(
 export function getEmptySandboxAnnotationInformation(
   datasetId: APIDatasetId,
   tracingType: TracingType,
+  sharingToken?: ?string,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${
     datasetId.name
-  }/sandbox/${tracingType}`;
+  }/sandbox/${tracingType}${sharingTokenSuffix}`;
   return Request.receiveJSON(infoUrl, options);
 }
 

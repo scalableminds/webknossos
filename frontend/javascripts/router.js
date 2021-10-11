@@ -103,10 +103,6 @@ class ReactRouter extends React.Component<Props> {
     if (annotationType != null) {
       return (
         <TracingLayoutView
-          // Use the url as the key to make sure the TracingLayoutView is remounted if the URL changes.
-          // This is not the case for window.history.replaceState which is used for task hot-switching and
-          // copying a sandbox tracing.
-          key={match.url}
           initialAnnotationType={annotationType}
           initialCommandType={{
             type: ControlModeEnum.TRACE,
@@ -125,7 +121,6 @@ class ReactRouter extends React.Component<Props> {
     if (tracingType != null) {
       return (
         <TracingLayoutView
-          key={match.url}
           initialAnnotationType={APIAnnotationTypeEnum.Explorational}
           initialCommandType={{
             type: ControlModeEnum.SANDBOX,
@@ -142,7 +137,6 @@ class ReactRouter extends React.Component<Props> {
 
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
-      key={match.url}
       initialAnnotationType={APIAnnotationTypeEnum.View}
       initialCommandType={{
         type: ControlModeEnum.VIEW,

@@ -120,6 +120,7 @@ export async function initialize(
     annotation = await getEmptySandboxAnnotationInformation(
       datasetId,
       initialCommandType.tracingType,
+      getSharingToken(),
     );
   } else {
     const { name, owningOrganization } = initialCommandType;

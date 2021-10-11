@@ -316,6 +316,13 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       createdTimestamp: skeletonTracing.createdTimestamp,
     };
     Store.dispatch(setTracingAction(newSkeletonTracing));
+
+    await Model.ensureSavedState();
+
+    // Do a complete page refresh, because the URL changed and the router
+    // would cause a reload the next time the URL hash changes (because the
+    // TracingLayoutView would be remounted).
+    location.reload();
   };
 
   handleFinish = async () => {

@@ -84,19 +84,21 @@ export function ShareButton(props: { dataset: APIDataset, style?: Object }) {
   const annotationVisibility = useSelector(state => state.tracing.visibility);
   const controlMode = useSelector(state => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
+  const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
+  const isTraceMode = controlMode === ControlModeEnum.TRACE;
   const annotationIsPublic = annotationVisibility === "Public";
   // For annotations, a token is included if the annotation is configured to be public, but the
-  // dataset is not public. For datasets, a token is included if the dataset is not public.
-  const includeToken = !dataset.isPublic && (isViewMode || annotationIsPublic);
+  // dataset is not public. For datasets or sandboxes, a token is included if the dataset is not public.
+  const includeToken = !dataset.isPublic && (isViewMode || isSandboxMode || annotationIsPublic);
 
   const copySharingUrl = () => {
     // Copy the url on-demand as it constantly changes
     const url = getUrl(sharingToken, includeToken);
     copyUrlToClipboard(url);
-    if (!(annotationIsPublic || isViewMode)) {
+    if (isTraceMode && !annotationIsPublic) {
       // For public annotations and in dataset view mode, the link will work for all users.
       // Otherwise, show a warning that the link may not work for all users.
-      Toast.info(
+      Toast.warning(
         <>
           The sharing link can only be opened by users who have the correct permissions to see this
           dataset/annotation. Please open the{" "}
@@ -105,6 +107,12 @@ export function ShareButton(props: { dataset: APIDataset, style?: Object }) {
           </a>{" "}
           if you want to configure this.
         </>,
+      );
+    }
+    if (isSandboxMode) {
+      Toast.warning(
+        "For sandboxes, changes are neither saved nor shared. If you want to share the changes in this sandbox" +
+          " use the 'Copy To My Account' functionality and share the resulting annotation.",
       );
     }
   };

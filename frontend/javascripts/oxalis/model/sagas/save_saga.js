@@ -221,27 +221,7 @@ export function* collectUndoStates(): Saga<void> {
       if (undoStack.length > 0 && undoStack[undoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
-      const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
-      if (busyBlockingInfo.isBusy) {
-        console.warn(`Ignoring undo request (reason: ${busyBlockingInfo.reason || "null"})`);
-        continue;
-      }
-      yield* put(setBusyBlockingInfoAction(true, "Undo is being performed."));
-
-      const progressCallback = createProgressCallback({
-        pauseDelay: 100,
-        successMessageDelay: 2000,
-      });
-      yield* call(progressCallback, false, "Performing undo...");
-
-      yield* call(
-        applyStateOfStack,
-        undoStack,
-        redoStack,
-        prevSkeletonTracingOrNull,
-        messages["undo.no_undo"],
-      );
-      yield* call(progressCallback, true, "Finished undo...");
+      yield* call(applyStateOfStack, undoStack, redoStack, prevSkeletonTracingOrNull, "undo");
       if (undo.callback != null) {
         undo.callback();
       }
@@ -250,25 +230,7 @@ export function* collectUndoStates(): Saga<void> {
       if (redoStack.length > 0 && redoStack[redoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
-      const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
-      if (busyBlockingInfo.isBusy) {
-        console.warn(`Ignoring redo request (reason: ${busyBlockingInfo.reason || "null"})`);
-        continue;
-      }
-      yield* put(setBusyBlockingInfoAction(true, "Redo is being performed."));
-      const progressCallback = createProgressCallback({
-        pauseDelay: 100,
-        successMessageDelay: 2000,
-      });
-      yield* call(progressCallback, false);
-      yield* call(
-        applyStateOfStack,
-        redoStack,
-        undoStack,
-        prevSkeletonTracingOrNull,
-        messages["undo.no_redo"],
-      );
-      yield* call(progressCallback, true, "Finished redo...");
+      yield* call(applyStateOfStack, redoStack, undoStack, prevSkeletonTracingOrNull, "redo");
       if (redo.callback != null) {
         redo.callback();
       }
@@ -356,34 +318,56 @@ function* applyStateOfStack(
   sourceStack: Array<UndoState>,
   stackToPushTo: Array<UndoState>,
   prevSkeletonTracingOrNull: ?SkeletonTracing,
-  warningMessage: string,
+  direction: "undo" | "redo",
 ): Saga<void> {
   if (sourceStack.length <= 0) {
+    const warningMessage =
+      direction === "undo" ? messages["undo.no_undo"] : messages["undo.no_redo"];
+
     Toast.info(warningMessage);
     return;
   }
-  const stateToRestore = sourceStack.pop();
-  if (stateToRestore.type === "skeleton") {
-    if (prevSkeletonTracingOrNull != null) {
-      stackToPushTo.push({ type: "skeleton", data: prevSkeletonTracingOrNull });
+
+  const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+  if (busyBlockingInfo.isBusy) {
+    console.warn(`Ignoring ${direction} request (reason: ${busyBlockingInfo.reason || "null"})`);
+    return;
+  }
+
+  yield* put(setBusyBlockingInfoAction(true, `${direction} is being performed.`));
+
+  const progressCallback = createProgressCallback({
+    pauseDelay: 100,
+    successMessageDelay: 2000,
+  });
+  yield* call(progressCallback, false, `Performing ${direction}...`);
+
+  try {
+    const stateToRestore = sourceStack.pop();
+    if (stateToRestore.type === "skeleton") {
+      if (prevSkeletonTracingOrNull != null) {
+        stackToPushTo.push({ type: "skeleton", data: prevSkeletonTracingOrNull });
+      }
+      const newTracing = stateToRestore.data;
+      yield* put(setTracingAction(newTracing));
+      yield* put(centerActiveNodeAction());
+    } else if (stateToRestore.type === "volume") {
+      const isMergerModeEnabled = yield* select(
+        state => state.temporaryConfiguration.isMergerModeEnabled,
+      );
+      if (isMergerModeEnabled) {
+        Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
+        sourceStack.push(stateToRestore);
+        return;
+      }
+      const volumeBatchToApply = stateToRestore.data;
+      const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
+      stackToPushTo.push(currentVolumeState);
+    } else if (stateToRestore.type === "warning") {
+      Toast.info(stateToRestore.reason);
     }
-    const newTracing = stateToRestore.data;
-    yield* put(setTracingAction(newTracing));
-    yield* put(centerActiveNodeAction());
-  } else if (stateToRestore.type === "volume") {
-    const isMergerModeEnabled = yield* select(
-      state => state.temporaryConfiguration.isMergerModeEnabled,
-    );
-    if (isMergerModeEnabled) {
-      Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
-      sourceStack.push(stateToRestore);
-      return;
-    }
-    const volumeBatchToApply = stateToRestore.data;
-    const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
-    stackToPushTo.push(currentVolumeState);
-  } else if (stateToRestore.type === "warning") {
-    Toast.info(stateToRestore.reason);
+  } finally {
+    yield* call(progressCallback, true, `Finished ${direction}...`);
   }
 }
 

@@ -336,38 +336,39 @@ function* applyStateOfStack(
 
   yield* put(setBusyBlockingInfoAction(true, `${direction} is being performed.`));
 
-  const progressCallback = createProgressCallback({
-    pauseDelay: 100,
-    successMessageDelay: 2000,
-  });
-  yield* call(progressCallback, false, `Performing ${direction}...`);
-
-  try {
-    const stateToRestore = sourceStack.pop();
-    if (stateToRestore.type === "skeleton") {
-      if (prevSkeletonTracingOrNull != null) {
-        stackToPushTo.push({ type: "skeleton", data: prevSkeletonTracingOrNull });
-      }
-      const newTracing = stateToRestore.data;
-      yield* put(setTracingAction(newTracing));
-      yield* put(centerActiveNodeAction());
-    } else if (stateToRestore.type === "volume") {
-      const isMergerModeEnabled = yield* select(
-        state => state.temporaryConfiguration.isMergerModeEnabled,
-      );
-      if (isMergerModeEnabled) {
-        Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
-        sourceStack.push(stateToRestore);
-        return;
-      }
-      const volumeBatchToApply = stateToRestore.data;
-      const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
-      stackToPushTo.push(currentVolumeState);
-    } else if (stateToRestore.type === "warning") {
-      Toast.info(stateToRestore.reason);
+  const stateToRestore = sourceStack.pop();
+  if (stateToRestore.type === "skeleton") {
+    if (prevSkeletonTracingOrNull != null) {
+      stackToPushTo.push({ type: "skeleton", data: prevSkeletonTracingOrNull });
     }
-  } finally {
+    const newTracing = stateToRestore.data;
+    yield* put(setTracingAction(newTracing));
+    yield* put(centerActiveNodeAction());
+  } else if (stateToRestore.type === "volume") {
+    const isMergerModeEnabled = yield* select(
+      state => state.temporaryConfiguration.isMergerModeEnabled,
+    );
+    if (isMergerModeEnabled) {
+      Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
+      sourceStack.push(stateToRestore);
+      return;
+    }
+
+    // Show progress information when undoing/redoing volume operations
+    // since this can take some time (as data has to be downloaded
+    // potentially).
+    const progressCallback = createProgressCallback({
+      pauseDelay: 100,
+      successMessageDelay: 2000,
+    });
+    yield* call(progressCallback, false, `Performing ${direction}...`);
+
+    const volumeBatchToApply = stateToRestore.data;
+    const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
+    stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
+  } else if (stateToRestore.type === "warning") {
+    Toast.info(stateToRestore.reason);
   }
 }
 

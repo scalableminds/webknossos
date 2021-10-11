@@ -15,9 +15,9 @@ object InstallScript {
        |retry() {
        |	read -r variable
        |
-       |	if eval "eval $$1"; then
-       |		echo "$$2" ">$$(tty)"
-       |		echo "Please try again!" ">$$(tty)"
+       |	if eval "$$1"; then
+       |		echo "$$2" >"$$(tty)"
+       |		echo "Please try again!" >"$$(tty)"
        |		retry "$$1" "$$2"
        |	else
        |		echo "$$variable"
@@ -62,7 +62,7 @@ object InstallScript {
        |
        |echo "Please enter the installation path and press [ENTER] or simply press [ENTER] if the datastore should be installed in the current directory: "
        |
-       |install_path=$$(retry "[[ !(-z \\$$variable) && !(-d \\$$variable) ]]" "The provided installation path does not exist or is not a directory.")
+       |install_path=$$(retry "[[ ! -z \\$$variable && ! -d \\$$variable ]]" "The provided installation path does not exist or is not a directory.")
        |
        |if [[ -z $$install_path ]]; then
        |	install_path="$$(pwd)"
@@ -79,7 +79,7 @@ object InstallScript {
        |
        |echo "Creating initial config. We will ask for some of the most important config fields, but there are more configuration options. Please consult the documentation at TODO to learn more."
        |echo "Please enter the path where the datasets are located and press [ENTER]:"
-       |base_dir=$$(retry "[[ !(-d \\$$variable) ]]" "The provided dataset path does not exist or is not a directory.")
+       |base_dir=$$(retry "[[ ! -d \\$$variable ]]" "The provided dataset path does not exist or is not a directory.")
        |
        |config_values[base_dir]=$$base_dir
        |
@@ -109,7 +109,7 @@ object InstallScript {
        |elif [[ $$https_option == "2" ]]; then
        |	echo "To enable the datastore to use your HTTPS configuration, it needs access to your key store and the corresponding password. You can enter these values now, but also change them later in the my-datastore.conf file."
        |	echo "Please enter the path to the key store and press [ENTER]."
-       |	key_store_path=$$(retry "[[ !(-f \\$$variable) ]]" "The provided key store path does not exist or is not a file.")
+       |	key_store_path=$$(retry "[[ ! -f \\$$variable ]]" "The provided key store path does not exist or is not a file.")
        |  key_store_path=$$(make_file_path_absolute "$$key_store_path")
        |	config_values[key_store_path]=$$key_store_path
        |

@@ -64,7 +64,7 @@ GET           /teams/:id/progressOverview                                      c
 
 # DataSets
 POST          /datasets/:organizationName/:dataSetName/createExplorational     controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
-GET           /datasets/:organizationName/:dataSetName/sandbox/:typ            controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String)
+GET           /datasets/:organizationName/:dataSetName/sandbox/:typ            controllers.AnnotationController.getSandbox(organizationName: String, dataSetName: String, typ: String, sharingToken: Option[String])
 GET           /datasets                                                        controllers.DataSetController.list
 POST          /datasets                                                        controllers.DataSetController.create(typ: String)
 POST          /datasets/addForeign                                             controllers.DataSetController.addForeignDataStoreAndDataSet

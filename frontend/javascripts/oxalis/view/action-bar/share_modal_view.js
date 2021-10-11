@@ -20,6 +20,8 @@ import messages from "messages";
 import Store from "oxalis/store";
 import UrlManager from "oxalis/controller/url_manager";
 import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
+import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { ControlModeEnum } from "oxalis/constants";
 
 const RadioGroup = Radio.Group;
 
@@ -79,12 +81,32 @@ export async function copyUrlToClipboard(url: string) {
 export function ShareButton(props: { dataset: APIDataset, style?: Object }) {
   const { dataset, style } = props;
   const sharingToken = useDatasetSharingToken(props.dataset);
-  const tracingVisibility = useSelector(state => state.tracing.visibility);
-  const includeToken = !dataset.isPublic && tracingVisibility === "Public";
+  const annotationVisibility = useSelector(state => state.tracing.visibility);
+  const controlMode = useSelector(state => state.temporaryConfiguration.controlMode);
+  const isViewMode = controlMode === ControlModeEnum.VIEW;
+  const annotationIsPublic = annotationVisibility === "Public";
+  // For annotations, a token is included if the annotation is configured to be public, but the
+  // dataset is not public. For datasets, a token is included if the dataset is not public.
+  const includeToken = !dataset.isPublic && (isViewMode || annotationIsPublic);
+
   const copySharingUrl = () => {
     // Copy the url on-demand as it constantly changes
     const url = getUrl(sharingToken, includeToken);
     copyUrlToClipboard(url);
+    if (!(annotationIsPublic || isViewMode)) {
+      // For public annotations and in dataset view mode, the link will work for all users.
+      // Otherwise, show a warning that the link may not work for all users.
+      Toast.info(
+        <>
+          The sharing link can only be opened by users who have the correct permissions to see this
+          dataset/annotation. Please open the{" "}
+          <a href="#" onClick={() => Store.dispatch(setShareModalVisibilityAction(true))}>
+            share dialog
+          </a>{" "}
+          if you want to configure this.
+        </>,
+      );
+    }
   };
 
   return (
@@ -100,13 +122,13 @@ export function ShareButton(props: { dataset: APIDataset, style?: Object }) {
 export default function ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
   const dataset = useSelector(state => state.dataset);
-  const tracingVisibility = useSelector(state => state.tracing.visibility);
+  const annotationVisibility = useSelector(state => state.tracing.visibility);
   const restrictions = useSelector(state => state.tracing.restrictions);
-  const [visibility, setVisibility] = useState(tracingVisibility);
+  const [visibility, setVisibility] = useState(annotationVisibility);
   const [sharedTeams, setSharedTeams] = useState([]);
   const sharingToken = useDatasetSharingToken(dataset);
   const hasUpdatePermissions = restrictions.allowUpdate && restrictions.allowSave;
-  useEffect(() => setVisibility(tracingVisibility), [tracingVisibility]);
+  useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
     const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId, {

@@ -463,8 +463,9 @@ export type Theme = "light" | "dark";
 
 type UiInformation = {
   +showDropzoneModal: boolean,
-  +activeTool: AnnotationTool,
   +showVersionRestore: boolean,
+  +showShareModal: boolean,
+  +activeTool: AnnotationTool,
   +storedLayouts: Object,
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,

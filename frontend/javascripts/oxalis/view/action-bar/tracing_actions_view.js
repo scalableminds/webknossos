@@ -46,7 +46,10 @@ import {
   createExplorational,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import {
+  setVersionRestoreVisibilityAction,
+  setShareModalVisibilityAction,
+} from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { undoAction, redoAction, disableSavingAction } from "oxalis/model/actions/save_actions";
@@ -81,11 +84,11 @@ type StateProps = {|
   task: ?Task,
   activeUser: ?APIUser,
   hasTracing: boolean,
+  isShareModalOpen: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
-  isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
   isReopenAllowed: boolean,
@@ -215,7 +218,6 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
 
 class TracingActionsView extends React.PureComponent<Props, State> {
   state = {
-    isShareModalOpen: false,
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,
@@ -340,11 +342,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleShareOpen = () => {
-    this.setState({ isShareModalOpen: true });
+    Store.dispatch(setShareModalVisibilityAction(true));
   };
 
   handleShareClose = () => {
-    this.setState({ isShareModalOpen: false });
+    Store.dispatch(setShareModalVisibilityAction(false));
   };
 
   handleDownload = async () => {
@@ -527,7 +529,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <ShareModalView
         key="share-modal"
-        isVisible={this.state.isShareModalOpen}
+        isVisible={this.props.isShareModalOpen}
         onOk={this.handleShareClose}
         annotationType={annotationType}
         annotationId={annotationId}
@@ -611,6 +613,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     task: state.task,
     activeUser: state.activeUser,
     hasTracing: (state.tracing.skeleton || state.tracing.volume) != null,
+    isShareModalOpen: state.uiInformation.showShareModal,
   };
 }
 

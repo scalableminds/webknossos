@@ -52,6 +52,14 @@ class CubeEntry {
   }
 }
 
+// Instead of using blank, constant thresholds for the bounding box which
+// limits a floodfill operation, the bounding box can also be increased dynamically
+// so that long, thin processes get a larger bounding box limit.
+// If USE_FLOODFILL_VOXEL_THRESHOLD is true, the amount of labeled voxels is taken into account
+// to increase the bounding box. However, the corresponding code can still run into
+// scenarios where the labeled voxel count is significantly larger than the specified threshold,
+// since the labeled volume has to be a cuboid.
+// Also see: https://github.com/scalableminds/webknossos/issues/5769
 const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
 const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 

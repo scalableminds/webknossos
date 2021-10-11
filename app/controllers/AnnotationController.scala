@@ -15,7 +15,7 @@ import models.task.TaskDAO
 import models.team.TeamService
 import models.user.time._
 import models.user.{User, UserService}
-import oxalis.security.WkEnv
+import oxalis.security.{URLSharing, WkEnv}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -188,13 +188,17 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getSandbox(organizationName: String, dataSetName: String, typ: String): Action[AnyContent] =
+  def getSandbox(organizationName: String,
+                 dataSetName: String,
+                 typ: String,
+                 sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
+      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
           "dataSet.notFound",
           dataSetName) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox

@@ -14,7 +14,6 @@ import {
   HourglassOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
-import useInterval from "@use-it/interval";
 
 import type { APIJob, APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
@@ -83,7 +82,9 @@ function DatasetView(props: Props) {
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-    getJobs().then(newJobs => setJobs(newJobs));
+    if (features().jobsEnabled) {
+      getJobs().then(newJobs => setJobs(newJobs));
+    }
     context.fetchDatasets({
       applyUpdatePredicate: _newDatasets => {
         // Only update the datasets when there are none currently.
@@ -98,9 +99,15 @@ function DatasetView(props: Props) {
     });
   }, []);
 
-  useInterval(() => {
-    getJobs().then(newJobs => setJobs(newJobs));
-  }, CONVERSION_JOBS_REFRESH_INTERVAL);
+  useEffect(() => {
+    let interval = null;
+    if (features().jobsEnabled) {
+      interval = setInterval(() => {
+        getJobs().then(newJobs => setJobs(newJobs));
+      }, CONVERSION_JOBS_REFRESH_INTERVAL);
+    }
+    return () => (interval != null ? clearInterval(interval) : undefined);
+  }, []);
 
   useEffect(() => {
     persistence.persist(history, {

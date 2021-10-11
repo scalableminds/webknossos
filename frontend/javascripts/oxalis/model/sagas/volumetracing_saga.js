@@ -43,6 +43,7 @@ import {
   getResolutionInfoOfSegmentationTracingLayer,
   ResolutionInfo,
   getRenderableResolutionForSegmentationTracing,
+  getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   isVolumeDrawingTool,
@@ -239,7 +240,12 @@ function* getBoundingBoxForFloodFill(
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
 
-  return currentViewportBounding;
+  const { lowerBoundary, upperBoundary } = yield* select(state => getBoundaries(state.dataset));
+  const { min: clippedMin, max: clippedMax } = new BoundingBox(
+    currentViewportBounding,
+  ).intersectedWith(new BoundingBox({ min: lowerBoundary, max: upperBoundary }));
+
+  return { min: clippedMin, max: clippedMax };
 }
 
 function* createVolumeLayer(planeId: OrthoView, labeledResolution: Vector3): Saga<VolumeLayer> {

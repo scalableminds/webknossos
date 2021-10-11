@@ -121,6 +121,14 @@ test.serial("Executing a floodfill in mag 1", async t => {
       await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep),
       floodingCellId,
     );
+
+    t.snapshot(
+      await t.context.api.data.getDataFor2DBoundingBox("segmentation", {
+        min: [0, 0, 0],
+        max: [64, 64, 64],
+      }),
+      { id: `floodfill_mag1_${zoomStep}` },
+    );
   }
 });
 

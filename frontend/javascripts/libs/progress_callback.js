@@ -43,7 +43,7 @@ export default function createProgressCallback(options: Options): ProgressCallba
       hideFn = message.loading({
         content: status,
         duration: 0,
-        key: options.key || overridingOptions.key,
+        key: overridingOptions.key || options.key,
       });
       // Allow the browser to catch up with rendering the progress
       // indicator.
@@ -56,7 +56,7 @@ export default function createProgressCallback(options: Options): ProgressCallba
       hideFn = message.success({
         content: status,
         duration: 0,
-        key: options.key || overridingOptions.key,
+        key: overridingOptions.key || options.key,
       });
       setTimeout(() => {
         if (hideFn == null) {

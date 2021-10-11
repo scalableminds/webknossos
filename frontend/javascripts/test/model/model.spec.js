@@ -26,6 +26,7 @@ const DatasetConfiguration = makeModelMock();
 const Request = { receiveJSON: sinon.stub(), sendJSONReceiveJSON: sinon.stub() };
 const ErrorHandling = {
   assertExtendContext: _.noop,
+  notify: _.noop,
 };
 
 class DataLayer {

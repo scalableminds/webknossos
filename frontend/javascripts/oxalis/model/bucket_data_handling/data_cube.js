@@ -600,11 +600,11 @@ class DataCube {
               ];
 
               if (labeledVoxelCount % 1000000 === 0) {
-                console.log(`Labeled ${labeledVoxelCount} Vx. Continuing`);
+                console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
                 // eslint-disable-next-line no-await-in-loop
                 await progressCallback(
                   false,
-                  `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing`,
+                  `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
                 );
               }
             }

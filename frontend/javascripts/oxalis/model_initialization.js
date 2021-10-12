@@ -396,7 +396,9 @@ function initializeDataLayerInstances(
     maximumTextureCountForLayer,
   } = validateSpecsForLayers(dataset, requiredBucketCapacity);
 
-  console.log("Supporting", smallestCommonBucketCapacity, "buckets");
+  if (process.env.BABEL_ENV !== "test") {
+    console.log("Supporting", smallestCommonBucketCapacity, "buckets");
+  }
 
   const connectionInfo = new ConnectionInfo();
   const layers = dataset.dataSource.dataLayers;

@@ -133,11 +133,12 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
+  saga.next("action_channel");
+  saga.next(addToLayerActionFn([1, 2, 3]));
   saga.next(OrthoViews.PLANE_XY);
-  saga.next({ addToLayerAction: addToLayerActionFn([2, 3, 4]) });
+  saga.next(addToLayerActionFn([2, 3, 4]));
   saga.next(OrthoViews.PLANE_XY);
-  saga.next({ addToLayerAction: addToLayerActionFn([3, 4, 5]) });
+  saga.next(addToLayerActionFn([3, 4, 5]));
   saga.next(OrthoViews.PLANE_XY);
   t.deepEqual(volumeLayer.minCoord, [-1, 0, 1]);
   t.deepEqual(volumeLayer.maxCoord, [5, 6, 7]);
@@ -157,12 +158,13 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
+  saga.next("action_channel");
+  saga.next(addToLayerActionFn([1, 2, 3]));
   saga.next(OrthoViews.PLANE_XY);
   // Validate that finishLayer was called
   expectValueDeepEqual(
     t,
-    saga.next({ finishEditingAction }),
+    saga.next(finishEditingAction),
     call(
       finishLayer,
       volumeLayer,
@@ -188,12 +190,13 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
+  saga.next("action_channel");
+  saga.next(addToLayerActionFn([1, 2, 3]));
   saga.next(OrthoViews.PLANE_XY);
   // Validate that finishLayer was called
   expectValueDeepEqual(
     t,
-    saga.next({ finishEditingAction }),
+    saga.next(finishEditingAction),
     call(
       finishLayer,
       volumeLayer,

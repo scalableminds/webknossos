@@ -1009,7 +1009,10 @@ class DataApi {
   /**
    * Invalidates all downloaded buckets so that they are reloaded.
    */
-  reloadAllBuckets(): void {
+  async reloadAllBuckets(): Promise<void> {
+    if (this.model.getSegmentationTracingLayer() != null) {
+      await Model.ensureSavedState();
+    }
     _.forEach(this.model.dataLayers, dataLayer => {
       dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();
@@ -1182,7 +1185,8 @@ class DataApi {
     const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
     await this.getLoadedBucket(layerName, bucketAddress);
     // Bucket has been loaded by now or was loaded already
-    return cube.getDataValue(position, null, zoomStep);
+    const dataValue = cube.getDataValue(position, null, zoomStep);
+    return dataValue;
   }
 
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
@@ -1347,7 +1351,6 @@ class DataApi {
     }
 
     segmentationLayer.cube.pushQueue.push();
-    segmentationLayer.cube.trigger("volumeLabeled");
   }
 
   /**

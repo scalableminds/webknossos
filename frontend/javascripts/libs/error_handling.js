@@ -159,6 +159,9 @@ class ErrorHandling {
   }
 
   notify(maybeError: Object | Error, optParams: Object = {}) {
+    if (process.env.BABEL_ENV === "test") {
+      return;
+    }
     const actionLog = getActionLog();
     const error = maybeError instanceof Error ? maybeError : new Error(JSON.stringify(maybeError));
 

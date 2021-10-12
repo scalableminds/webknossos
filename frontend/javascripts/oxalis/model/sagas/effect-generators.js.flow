@@ -9,8 +9,10 @@ import {
   delay as typedDelay,
   takeEvery as typedTakeEvery,
   takeLeading as typedTakeLeading,
+  takeLatest as typedTakeLatest,
   throttle as typedThrottle,
   cancel as typedCancel,
+  actionChannel as typedActionChannel,
 } from "redux-saga/effects";
 
 import type { Action } from "oxalis/model/actions/actions";
@@ -31,6 +33,7 @@ declare type Fn5<T1, T2, T3, T4, T5, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T
 declare type Fn6<T1, T2, T3, T4, T5, T6, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Promise<R> | Generator<*, R, *> | R;
 declare type Fn7<T1, T2, T3, T4, T5, T6, T7, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7) => Promise<R> | Generator<*, R, *> | R;
 declare type Fn8<T1, T2, T3, T4, T5, T6, T7, T8, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7, t8: T8) => Promise<R> | Generator<*, R, *> | R;
+declare type Fn9<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7, t8: T8, t9: T9) => Promise<R> | Generator<*, R, *> | R;
 
 /* ------------------ SELECT Stuff ------------------ */
 
@@ -62,7 +65,9 @@ declare type ContextCallFn = (<R, C: Context, Fn: Fn0<R>>(cfn: [C, Fn], ...rest:
   (<T1, T2, T3, T4, R, C: Context, Fn: Fn4<T1, T2, T3, T4, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, R, *>) &
   (<T1, T2, T3, T4, T5, R, C: Context, Fn: Fn5<T1, T2, T3, T4, T5, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, R, *>) &
   (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, T6, T7, R, C: Context, Fn: Fn7<T1, T2, T3, T4, T5, T6, T7, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7, ...rest: Array<void>) => Generator<*, R, *>);
+  (<T1, T2, T3, T4, T5, T6, T7, R, C: Context, Fn: Fn7<T1, T2, T3, T4, T5, T6, T7, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, T6, T7, T8, R, C: Context, Fn: Fn8<T1, T2, T3, T4, T5, T6, T7, T8, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7, t8: T8, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, T6, T7, T8, T9, R, C: Context, Fn: Fn9<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7, t8: T8, t9: T9, ...rest: Array<void>) => Generator<*, R, *>);
 // & (<T, R, C: Context, Fn: FnSpread<T, R>>(cfn: [C, Fn], t1: T, t2: T, t3: T, t4: T, t5: T, t6: T, ...args: Array<T>) => Generator<*, R, *>);
 
 declare type CallFn = ContextCallFn &
@@ -163,8 +168,10 @@ declare export var _all: typeof typedAll;
 declare export var _take: typeof typedTake;
 declare export var _call: typeof typedCall;
 declare export var _takeEvery: typeof typedTakeEvery;
+declare export var _takeLatest: typeof typedTakeLatest;
 declare export var _takeLeading: typeof typedTakeLeading;
 declare export var _throttle: typeof typedThrottle;
 declare export var _cancel: typeof typedCancel;
+declare export var _actionChannel: typeof typedActionChannel;
 declare export var _delay: typeof typedDelay;
 export type Saga<T> = _Saga<T>;

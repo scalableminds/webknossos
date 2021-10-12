@@ -70,6 +70,10 @@ export class ResolutionInfo {
     }
   }
 
+  getDenseResolutions(): Array<Vector3> {
+    return convertToDenseResolution(this.getResolutionList());
+  }
+
   getResolutionList(): Array<Vector3> {
     return Array.from(this.resolutionMap.values());
   }

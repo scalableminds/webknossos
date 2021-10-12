@@ -51,6 +51,7 @@ const ErrorHandling = {
   assertExtendContext: _.noop,
   assertExists: _.noop,
   assert: _.noop,
+  notify: _.noop,
 };
 
 const app = {

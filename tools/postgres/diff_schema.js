@@ -59,7 +59,7 @@ function initTmpDB() {
     .toString()
     .trim(); // "trim" to remove the line break
   if (dbName !== tempDbName) {
-    console.log("Wrong dbName");
+    console.log("Wrong temporary dbName, got", dbName, "expected", tempDbName);
     process.exit(1);
   }
   const dbHost = execSync(scriptdir + "/db_host.sh", { env: { POSTGRES_URL: postgresUrl } })

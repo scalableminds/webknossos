@@ -12,7 +12,10 @@ import { type OrthoView, type Vector3 } from "oxalis/constants";
 import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSegmentationLayerByName,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -23,12 +26,14 @@ import Model from "oxalis/model";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-import DataLayer from "oxalis/model/data_layer";
 import { AsyncButton } from "components/async_clickables";
 import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
 
 const { Option, OptGroup } = Select;
 
+type OwnProps = {|
+  layerName: string,
+|};
 type StateProps = {|
   dataset: APIDataset,
   segmentationLayer: ?APISegmentationLayer,
@@ -39,15 +44,15 @@ type StateProps = {|
   hideUnmappedIds: ?boolean,
   mappingType: MappingType,
   mappingColors: ?Array<number>,
-  setMappingEnabled: boolean => void,
-  setHideUnmappedIds: boolean => void,
+  setMappingEnabled: (string, boolean) => void,
+  setHideUnmappedIds: (string, boolean) => void,
   setAvailableMappingsForLayer: (string, Array<string>, Array<string>) => void,
   activeViewport: OrthoView,
   activeCellId: number,
   isMergerModeEnabled: boolean,
   allowUpdate: boolean,
 |};
-type Props = {| ...StateProps |};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   // shouldMappingBeEnabled is the UI state which is directly connected to the
@@ -64,7 +69,7 @@ const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, 
 export const convertCellIdToCSS = (id: number, customColors: ?Array<number>, alpha?: number) =>
   id === 0 ? "transparent" : convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
-const hasSegmentation = () => Model.getSegmentationLayer() != null;
+const hasSegmentation = () => Model.getVisibleSegmentationLayer() != null;
 
 const needle = "##";
 const packMappingNameAndCategory = (mappingName, category) => `${category}${needle}${mappingName}`;
@@ -82,16 +87,8 @@ class MappingSettingsView extends React.Component<Props, State> {
     didRefreshMappingList: false,
   };
 
-  getSegmentationLayer(): DataLayer {
-    const layer = Model.getSegmentationLayer();
-    if (!layer) {
-      throw new Error("No segmentation layer found");
-    }
-    return layer;
-  }
-
   handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
-    this.props.setHideUnmappedIds(hideUnmappedIds);
+    this.props.setHideUnmappedIds(this.props.layerName, hideUnmappedIds);
   };
 
   handleChangeMapping = (packedMappingNameWithCategory: string): void => {
@@ -105,7 +102,11 @@ class MappingSettingsView extends React.Component<Props, State> {
       pauseDelay: 500,
       successMessageDelay: 2000,
     });
-    Model.getSegmentationLayer().setActiveMapping(mappingName, mappingType, progressCallback);
+    Model.getLayerByName(this.props.layerName).setActiveMapping(
+      mappingName,
+      mappingType,
+      progressCallback,
+    );
 
     if (document.activeElement) document.activeElement.blur();
   };
@@ -143,7 +144,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     }
     this.setState({ shouldMappingBeEnabled });
     if (this.props.mappingName != null) {
-      this.props.setMappingEnabled(shouldMappingBeEnabled);
+      this.props.setMappingEnabled(this.props.layerName, shouldMappingBeEnabled);
     }
   };
 
@@ -275,18 +276,22 @@ const mapDispatchToProps = {
   setHideUnmappedIds: setHideUnmappedIdsAction,
 };
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
+  const activeMappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    ownProps.layerName,
+  );
   return {
     dataset: state.dataset,
     position: getPosition(state.flycam),
-    hideUnmappedIds: state.temporaryConfiguration.activeMapping.hideUnmappedIds,
-    isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
-    mapping: state.temporaryConfiguration.activeMapping.mapping,
-    mappingName: state.temporaryConfiguration.activeMapping.mappingName,
-    mappingType: state.temporaryConfiguration.activeMapping.mappingType,
-    mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
+    hideUnmappedIds: activeMappingInfo.hideUnmappedIds,
+    isMappingEnabled: activeMappingInfo.isMappingEnabled,
+    mapping: activeMappingInfo.mapping,
+    mappingName: activeMappingInfo.mappingName,
+    mappingType: activeMappingInfo.mappingType,
+    mappingColors: activeMappingInfo.mappingColors,
     activeViewport: state.viewModeData.plane.activeViewport,
-    segmentationLayer: getSegmentationLayer(state.dataset),
+    segmentationLayer: getSegmentationLayerByName(state.dataset, ownProps.layerName),
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
@@ -297,7 +302,7 @@ function mapStateToProps(state: OxalisState) {
 
 const debounceTime = 100;
 const maxWait = 500;
-export default connect<Props, {||}, _, _, _, _>(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(debounceRender(MappingSettingsView, debounceTime, { maxWait }));

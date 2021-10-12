@@ -139,7 +139,7 @@ test.serial("finishAllAnnotations()", async t => {
 });
 
 test.serial("createExplorational() and finishAnnotation()", async t => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
 
   t.snapshot(replaceVolatileValues(createdExplorational), {
     id: "annotations-createExplorational",
@@ -155,7 +155,7 @@ test.serial("createExplorational() and finishAnnotation()", async t => {
 });
 
 test.serial("getTracingForAnnotations()", async t => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
 
   const tracing = await api.getTracingForAnnotations(createdExplorational);
   writeFlowCheckingFile(tracing, "tracing", "HybridServerTracing");
@@ -165,7 +165,7 @@ test.serial("getTracingForAnnotations()", async t => {
 });
 
 test.serial("getTracingForAnnotations() for volume", async t => {
-  const createdExplorational = await api.createExplorational(dataSetId, "volume", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "volume", null);
 
   const tracing = await api.getTracingForAnnotations(createdExplorational);
   writeFlowCheckingFile(tracing, "tracing-volume", "HybridServerTracing");
@@ -175,7 +175,7 @@ test.serial("getTracingForAnnotations() for volume", async t => {
 });
 
 test.serial("getTracingForAnnotations() for hybrid", async t => {
-  const createdExplorational = await api.createExplorational(dataSetId, "hybrid", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "hybrid", null);
 
   const tracing = await api.getTracingForAnnotations(createdExplorational);
   writeFlowCheckingFile(tracing, "tracing-hybrid", "HybridServerTracing");
@@ -205,7 +205,7 @@ async function sendUpdateActions(explorational, queue) {
 }
 
 test.serial("Send update actions and compare resulting tracing", async t => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
 
   const initialSkeleton = { activeNodeId: undefined, userBoundingBoxes: [] };
   const saveQueue = addVersionNumbers(
@@ -226,7 +226,7 @@ test.serial("Send update actions and compare resulting tracing", async t => {
 });
 
 test("Send complex update actions and compare resulting tracing", async t => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
 
   const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
   const treeGroups = [

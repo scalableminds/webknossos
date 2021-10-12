@@ -45,13 +45,13 @@ export const convertCellIdToRGB: ShaderModule = {
         // If the first element of the mapping colors texture is still the initialized
         // colorValue of -1, no mapping colors have been specified
         bool hasCustomMappingColors = getRgbaAtIndex(
-          <%= segmentationName %>_mapping_color_texture,
+          segmentation_mapping_color_texture,
           <%= mappingColorTextureWidth %>,
           0.0
         ).r != -1.0;
         if (isMappingEnabled && hasCustomMappingColors) {
           colorValue = getRgbaAtIndex(
-            <%= segmentationName %>_mapping_color_texture,
+            segmentation_mapping_color_texture,
             <%= mappingColorTextureWidth %>,
             lastEightBits
           ).r;
@@ -180,25 +180,27 @@ export const getBrushOverlay: ShaderModule = {
 export const getSegmentationId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `
-    vec4 getSegmentationId(vec3 worldPositionUVW) {
+
+  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+    vec4 getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
       vec4 volume_color =
         getMaybeFilteredColorOrFallback(
           <%= segmentationName %>_lookup_texture,
-          <%= formatNumberAsGLSLFloat(segmentationLayerIndex) %>,
+          <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
-          <%= segmentationPackingDegree %>,
+          <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,
           worldPositionUVW,
           true, // Don't use bilinear filtering for volume data
           vec4(0.0, 0.0, 0.0, 0.0)
         );
 
       // Depending on the packing degree, the returned volume color contains extra values
-      // which would should be ignored (in the binary search as well as when comparing
+      // which should be ignored (in the binary search as well as when comparing
       // a cell id with the hovered cell passed via uniforms, for example).
 
-      <% if (segmentationPackingDegree === "4.0") { %>
+      <% if (packingDegreeLookup[segmentationName] === 4) { %>
         volume_color = vec4(volume_color.r, 0.0, 0.0, 0.0);
-      <% } else if (segmentationPackingDegree === "2.0") { %>
+      <% } else if (packingDegreeLookup[segmentationName] === 2) { %>
         volume_color = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
       <% } %>
 
@@ -206,13 +208,13 @@ export const getSegmentationId: ShaderModule = {
         if (isMappingEnabled) {
 
           float index = binarySearchIndex(
-            <%= segmentationName %>_mapping_lookup_texture,
+            segmentation_mapping_lookup_texture,
             mappingSize,
             volume_color
           );
           if (index != -1.0) {
             volume_color = getRgbaAtIndex(
-              <%= segmentationName %>_mapping_texture,
+              segmentation_mapping_texture,
               <%= mappingTextureWidth %>,
               index
             );
@@ -224,5 +226,6 @@ export const getSegmentationId: ShaderModule = {
 
       return volume_color * 255.0;
     }
+<% }) %>
   `,
 };

@@ -15,9 +15,8 @@ import compileShader from "./shader_module_system";
 
 type Params = {|
   colorLayerNames: string[],
+  segmentationLayerNames: string[],
   packingDegreeLookup: { [string]: number },
-  hasSegmentation: boolean,
-  segmentationName: string,
   isMappingSupported: boolean,
   dataTextureCountPerLayer: number,
   resolutions: Array<Vector3>,
@@ -37,7 +36,7 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 }
 
 export default function getMainFragmentShader(params: Params) {
-  const { hasSegmentation } = params;
+  const hasSegmentation = params.segmentationLayerNames.length > 0;
 
   return _.template(
     `
@@ -70,9 +69,9 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
     uniform bool isMappingEnabled;
     uniform float mappingSize;
     uniform bool hideUnmappedIds;
-    uniform sampler2D <%= segmentationName %>_mapping_texture;
-    uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
-    uniform sampler2D <%= segmentationName %>_mapping_color_texture;
+    uniform sampler2D segmentation_mapping_texture;
+    uniform sampler2D segmentation_mapping_lookup_texture;
+    uniform sampler2D segmentation_mapping_color_texture;
   <% } %>
 <% } %>
 
@@ -139,14 +138,15 @@ void main() {
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
     return;
   }
+  vec3 data_color = vec3(0.0);
 
-  <% if (hasSegmentation) { %>
-    vec4 id = vec4(0.);
-    vec4 cellIdUnderMouse = vec4(0.);
+  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
+    vec4 <%= segmentationName%>_id = vec4(0.);
+    vec4 <%= segmentationName%>_cellIdUnderMouse = vec4(0.);
     float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
     if (<%= segmentationName%>_effective_alpha > 0.) {
-      id = getSegmentationId(worldCoordUVW);
+      <%= segmentationName%>_id = getSegmentationId_<%= segmentationName%>(worldCoordUVW);
 
       vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
 
@@ -154,15 +154,14 @@ void main() {
       // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
       // Passing the mouse position from the 3D viewport is not an option here, since that position
       // isn't on the orthogonal planes necessarily.
-      cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(flooredMousePosUVW);
+      <%= segmentationName%>_cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId_<%= segmentationName%>(flooredMousePosUVW);
     }
 
-  <% } %>
+  <% }) %>
 
   // Get Color Value(s)
-  vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
-  <% _.each(colorLayerNames, function(name, layerIndex){ %>
+  <% _.each(colorLayerNames, function(name, layerIndex) { %>
     float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
@@ -201,35 +200,30 @@ void main() {
   gl_FragColor = vec4(data_color, 1.0);
 
   <% if (hasSegmentation) { %>
-    // Color map (<= to fight rounding mistakes)
-    if ( length(id) > 0.1 ) {
-      // Increase cell opacity when cell is hovered
-      float hoverAlphaIncrement =
-        // Hover cell only if it's the active one, if the feature is enabled
-        // and if segmentation opacity is not zero
-        cellIdUnderMouse == id && <%= segmentationName%>_alpha > 0.0
-          ? 0.2 : 0.0;
-      gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(id), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
-    }
+  <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
-    vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
-    gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
+     // Color map (<= to fight rounding mistakes)
+     if ( length(<%= segmentationName%>_id) > 0.1 ) {
+       // Increase cell opacity when cell is hovered
+       float hoverAlphaIncrement =
+         // Hover cell only if it's the active one, if the feature is enabled
+         // and if segmentation opacity is not zero
+         <%= segmentationName%>_cellIdUnderMouse == <%= segmentationName%>_id && <%= segmentationName%>_alpha > 0.0
+           ? 0.2 : 0.0;
+       gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(<%= segmentationName%>_id), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
+     }
+
+     vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
+     <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
+     gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+  <% }) %>
   <% } %>
 }
 
   `,
   )({
     ...params,
-    layerNamesWithSegmentation: params.colorLayerNames.concat(
-      params.hasSegmentation ? [params.segmentationName] : [],
-    ),
-    // Since we concat the segmentation to the color layers, its index is equal
-    // to the length of the colorLayer array
-    segmentationLayerIndex: params.colorLayerNames.length,
-    segmentationPackingDegree: params.hasSegmentation
-      ? formatNumberAsGLSLFloat(params.packingDegreeLookup[params.segmentationName])
-      : 0.0,
+    layerNamesWithSegmentation: params.colorLayerNames.concat(params.segmentationLayerNames),
     ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
@@ -239,5 +233,6 @@ void main() {
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
+    hasSegmentation,
   });
 }

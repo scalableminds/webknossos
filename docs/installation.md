@@ -43,10 +43,9 @@ docker-compose up -d webknossos nginx nginx-letsencrypt
 docker-compose down
 ```
 
-{% hint style='info' %}
-This setup does not support regular backups or monitoring.
-Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.
-{% endhint %}
+!!! info
+    This setup does not support regular backups or monitoring.
+    Please check out [our paid service plans](https://webknossos.org/pricing) if you require any assistance with your production setup.
 
 For installations on localhost, please refer to the [Code Readme](../README.md#docker).
 
@@ -69,7 +68,7 @@ Without any data, webKnossos is not fun.
 Luckily, there are some sample datasets that you can download directly from the onboarding screens.
 Once you've completed the onboarding, you can also import your own datasets.
 
-For small datasets (max. 1GB), you can use the upload functionality provide in the web interface.
+For small datasets (max. 1GB), you can use the upload functionality provided in the web interface.
 For larger datasets, we recommend the file system upload.
 Read more about the import functionality in the [Datasets guide](./datasets.md).
 

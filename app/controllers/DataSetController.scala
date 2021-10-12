@@ -210,7 +210,7 @@ class DataSetController @Inject()(userService: UserService,
       } yield Ok(Json.toJson(usersJs))
   }
 
-  @ApiOperation(value = "Get information about this dataset")
+  @ApiOperation(value = "Get information about this dataset", nickname = "datasetInfo")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing dataset information"),
           new ApiResponse(code = 400, message = badRequestLabel)))
@@ -257,7 +257,7 @@ class DataSetController @Inject()(userService: UserService,
         usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
         _ <- dataSetService
-          .clientFor(dataSet)
+          .clientFor(dataSet)(GlobalAccessContext)
           .flatMap(_.findPositionWithData(organizationName, datalayer.name).flatMap(posWithData =>
             bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
       } yield {

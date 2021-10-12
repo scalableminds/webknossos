@@ -20,19 +20,19 @@ export function listenToStoreProperty<T>(
   callHandlerOnSubscribe: ?boolean = false,
 ): () => void {
   let currentValue;
-  function handleChange() {
+  function handleChange(isOnSubscribeCall: boolean = false) {
     const nextValue = select(Store.getState());
-    // When callHandlerOnSubscribe is used, the initial value can be 0. In that case,
-    // we do not want to invoke the caller-provided isEqual function, since this usually
-    // doesn't handle null values.
-    if (nextValue !== currentValue) {
+    // Always trigger the first onChange call if callHandlerOnSubscribe
+    // is true. Without the isOnSubscribeCall condition, the first
+    // call would not happen if `select` returns null.
+    if (nextValue !== currentValue || isOnSubscribeCall) {
       currentValue = nextValue;
       onChange(currentValue);
     }
   }
 
   if (callHandlerOnSubscribe) {
-    handleChange();
+    handleChange(true);
   }
 
   // return the unsubscribe function

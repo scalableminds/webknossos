@@ -70,7 +70,9 @@ Expects:
  - As file attachment: any number of NML files or ZIP files containing NMLs, optionally with at most one volume data ZIP referenced from an NML in a ZIP
  - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
    - If "true": in merged annotation, create tree group wrapping the trees of each file
-   - If "false": in merged annotation, rename trees with the respective file name as prefix""")
+   - If "false": in merged annotation, rename trees with the respective file name as prefix""",
+    nickname = "annotationUpload"
+  )
   @ApiResponses(
     Array(
       new ApiResponse(
@@ -219,7 +221,7 @@ Expects:
       )
     }
 
-  @ApiOperation(value = "Download an annotation as NML/ZIP")
+  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownload")
   @ApiResponses(
     Array(
       new ApiResponse(code = 200,

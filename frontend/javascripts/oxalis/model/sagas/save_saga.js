@@ -339,7 +339,7 @@ function mergeDataWithBackendDataInPlace(
 function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
 ): Saga<VolumeUndoState> {
-  const segmentationLayer = Model.getSegmentationLayer();
+  const segmentationLayer = Model.getSegmentationTracingLayer();
   if (!segmentationLayer) {
     throw new Error("Undoing a volume annotation but no volume layer exists.");
   }

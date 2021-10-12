@@ -147,7 +147,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationMakeHybrid(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      result <- annotationController.makeHybrid(typ, id)(request)
+      result <- annotationController.makeHybrid(typ, id, None)(request)
     } yield replaceVisibilityInResultJson(result)
   }
 

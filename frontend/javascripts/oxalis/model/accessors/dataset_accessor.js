@@ -18,6 +18,7 @@ import type {
   DatasetConfiguration,
   BoundingBoxObject,
   OxalisState,
+  ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, {
@@ -306,16 +307,28 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getResolutionInfoOfSegmentationLayer(dataset: APIDataset): ResolutionInfo {
-  const segmentationLayer = getSegmentationLayer(dataset);
+function _getResolutionInfoOfSegmentationTracingLayer(dataset: APIDataset): ResolutionInfo {
+  const segmentationLayer = getSegmentationTracingLayer(dataset);
   if (!segmentationLayer) {
     return new ResolutionInfo([]);
   }
   return getResolutionInfo(segmentationLayer.resolutions);
 }
 
-export const getResolutionInfoOfSegmentationLayer = memoizeOne(
-  _getResolutionInfoOfSegmentationLayer,
+export const getResolutionInfoOfSegmentationTracingLayer = memoizeOne(
+  _getResolutionInfoOfSegmentationTracingLayer,
+);
+
+function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): ResolutionInfo {
+  const segmentationLayer = getVisibleSegmentationLayer(state);
+  if (!segmentationLayer) {
+    return new ResolutionInfo([]);
+  }
+  return getResolutionInfo(segmentationLayer.resolutions);
+}
+
+export const getResolutionInfoOfVisibleSegmentationLayer = memoizeOne(
+  _getResolutionInfoOfVisibleSegmentationLayer,
 );
 
 export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
@@ -326,6 +339,17 @@ export function getLayerByName(dataset: APIDataset, layerName: string): DataLaye
   const layer = dataLayers.find(l => l.name === layerName);
   if (!layer) {
     throw new Error(`Layer "${layerName}" not found`);
+  }
+  return layer;
+}
+
+export function getSegmentationLayerByName(
+  dataset: APIDataset,
+  layerName: string,
+): APISegmentationLayer {
+  const layer = getLayerByName(dataset, layerName);
+  if (layer.category !== "segmentation") {
+    throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
   }
   return layer;
 }
@@ -546,9 +570,105 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 
-export function getSegmentationLayer(dataset: APIMaybeUnimportedDataset): ?APISegmentationLayer {
+export function getVisibleSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+  if (visibleSegmentationLayers.length > 0) {
+    return visibleSegmentationLayers[0];
+  }
+
+  return null;
+}
+
+export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegmentationLayer> {
+  const { datasetConfiguration } = state;
+  const { viewMode } = state.temporaryConfiguration;
+  const segmentationLayers = getSegmentationLayers(state.dataset);
+  const visibleSegmentationLayers = segmentationLayers.filter(layer =>
+    isLayerVisible(state.dataset, layer.name, datasetConfiguration, viewMode),
+  );
+  return visibleSegmentationLayers;
+}
+
+export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?APISegmentationLayer {
+  // If there are zero or one segmentation layers, the selection is trivial.
+  const segmentationLayers = getSegmentationLayers(state.dataset);
+  if (segmentationLayers.length === 0) {
+    return null;
+  } else if (segmentationLayers.length === 1) {
+    return segmentationLayers[0];
+  }
+
+  // If there is more than one segmentation layer and merger mode is enabled,
+  // prefer the volume tracing or visible layer.
+  if (state.temporaryConfiguration.isMergerModeEnabled) {
+    return getSegmentationTracingOrVisibleLayer(state);
+  }
+
+  // There are multiple segmentation layers and merger mode is not enabled.
+  // From the visible segmentation layers, return the first layer which has enabled mappings.
+  // If no layer has enabled mappings, pick a layer which has some mappings (this is important
+  // for the initialization of the mapping textures, since isMappingEnabled will be set to true
+  // after all mapping data was copied to the GPU, but getSegmentationLayerWithMappingSupport is
+  // already used before that to prepare the mapping for the correct layer).
+  // This handling should be refactored. See https://github.com/scalableminds/webknossos/issues/5695.
+  // Currently, webKnossos only supports one active mapping at a given time. The UI should ensure
+  // that not more than one mapping is enabled (currently, this is achieved by only allowing one
+  // visible segmentation layer, anyway).
+
+  const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
+
+  const layersWithEnabledMapping = visibleSegmentationLayers.filter(layer => {
+    const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layer.name];
+    return mappingInfo && mappingInfo.isMappingEnabled;
+  });
+
+  if (layersWithEnabledMapping.length > 0) {
+    return layersWithEnabledMapping[0];
+  }
+  const layersWithMappings = visibleSegmentationLayers.filter(
+    layer => layer.mappings && layer.mappings.length > 0,
+  );
+  if (layersWithMappings.length > 0) {
+    return layersWithMappings[0];
+  }
+  return null;
+}
+
+export function getFirstSegmentationLayer(
+  dataset: APIMaybeUnimportedDataset,
+): ?APISegmentationLayer {
   if (!dataset.isActive) {
     return null;
+  }
+  const segmentationLayers = getSegmentationLayers(dataset);
+  if (segmentationLayers.length > 0) {
+    return segmentationLayers[0];
+  }
+
+  return null;
+}
+
+export function getSegmentationTracingLayer(
+  dataset: APIMaybeUnimportedDataset,
+): ?APISegmentationLayer {
+  const tracingLayers = getSegmentationLayers(dataset).filter(layer => layer.isTracingLayer);
+  if (tracingLayers.length > 0) {
+    return tracingLayers[0];
+  } else if (tracingLayers.length > 1) {
+    throw new Error("webKnossos only supports one volume tracing layer per annotation currently.");
+  }
+  return null;
+}
+
+export function getSegmentationTracingOrVisibleLayer(state: OxalisState): ?APISegmentationLayer {
+  return getSegmentationTracingLayer(state.dataset) || getVisibleSegmentationLayer(state);
+}
+
+export function getSegmentationLayers(
+  dataset: APIMaybeUnimportedDataset,
+): Array<APISegmentationLayer> {
+  if (!dataset.isActive) {
+    return [];
   }
 
   // $FlowIssue[incompatible-type]
@@ -556,21 +676,21 @@ export function getSegmentationLayer(dataset: APIMaybeUnimportedDataset): ?APISe
   const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
     dataLayer => isSegmentationLayer(dataset, dataLayer.name),
   );
-  if (segmentationLayers.length === 0) {
-    return null;
-  }
-  return segmentationLayers[0];
+
+  return segmentationLayers;
 }
 
 export function hasSegmentation(dataset: APIDataset): boolean {
-  return getSegmentationLayer(dataset) != null;
+  return getSegmentationLayers(dataset).length > 0;
 }
 
-export function doesSupportVolumeWithFallback(dataset: APIMaybeUnimportedDataset): boolean {
+export function doesSupportVolumeWithFallback(
+  dataset: APIMaybeUnimportedDataset,
+  segmentationLayer: ?APISegmentationLayer,
+): boolean {
   if (!dataset.isActive) {
     return false;
   }
-  const segmentationLayer = getSegmentationLayer(dataset);
   if (!segmentationLayer) {
     return false;
   }
@@ -605,8 +725,8 @@ export function getEnabledLayers(
 }
 
 /*
-  This function returns layers that cannot be rendered (since the current resolution is missing), 
-  even though they should be rendered (since they are enabled). For each layer, this method 
+  This function returns layers that cannot be rendered (since the current resolution is missing),
+  even though they should be rendered (since they are enabled). For each layer, this method
   additionally returns whether data of this layer can be rendered by zooming in or out.
   The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
  */
@@ -662,15 +782,15 @@ export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
   layer is currently rendered (if it is rendered). These properties should be used
   when labeling volume data.
  */
-function _getRenderableResolutionForSegmentation(
+function _getRenderableResolutionForSegmentationTracing(
   state: OxalisState,
 ): ?{ resolution: Vector3, zoomStep: number } {
   const { dataset } = state;
   const requestedZoomStep = getRequestLogZoomStep(state);
   const { renderMissingDataBlack } = state.datasetConfiguration;
   const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
-  const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const resolutionInfo = getResolutionInfoOfSegmentationTracingLayer(dataset);
+  const segmentationLayer = getVisibleSegmentationLayer(state);
 
   if (!segmentationLayer) {
     return null;
@@ -716,8 +836,8 @@ function _getRenderableResolutionForSegmentation(
   return null;
 }
 
-export const getRenderableResolutionForSegmentation = reuseInstanceOnEquality(
-  _getRenderableResolutionForSegmentation,
+export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableResolutionForSegmentationTracing,
 );
 
 export function getThumbnailURL(dataset: APIDataset): string {
@@ -734,7 +854,7 @@ export function getThumbnailURL(dataset: APIDataset): string {
 export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const organizationName = dataset.owningOrganization;
-  const segmentationLayer = getSegmentationLayer(dataset);
+  const segmentationLayer = getFirstSegmentationLayer(dataset);
   if (segmentationLayer) {
     return `/api/datasets/${organizationName}/${datasetName}/layers/${
       segmentationLayer.name
@@ -773,6 +893,44 @@ export function is2dDataset(dataset: APIDataset): boolean {
   // which is usually switched to the 3D layout after the proper dataset has
   // been loaded.
   return getDatasetExtentInVoxel(dataset).depth === 1;
+}
+
+export function getMappingInfo(
+  activeMappingInfos: { [layerName: string]: ActiveMappingInfo },
+  layerName: ?string,
+): ActiveMappingInfo {
+  if (layerName != null && activeMappingInfos[layerName]) {
+    return activeMappingInfos[layerName];
+  }
+
+  // Return a dummy object (this mirrors webKnossos' behavior before the support of
+  // multiple segmentation layers)
+  return {
+    mappingName: null,
+    mapping: null,
+    mappingKeys: null,
+    mappingColors: null,
+    hideUnmappedIds: false,
+    isMappingEnabled: false,
+    mappingSize: 0,
+    mappingType: "JSON",
+  };
+}
+
+export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
+  const layer = getSegmentationLayerWithMappingSupport(state);
+  return getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layer ? layer.name : null,
+  );
+}
+
+export function getMappingInfoForTracingLayer(state: OxalisState): ActiveMappingInfo {
+  const layer = getSegmentationTracingLayer(state.dataset);
+  return getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layer ? layer.name : null,
+  );
 }
 
 export default {};

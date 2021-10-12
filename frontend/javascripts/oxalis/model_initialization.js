@@ -21,11 +21,12 @@ import {
   determineAllowedModes,
   getBitDepth,
   getBoundaries,
-  getColorLayers,
+  getDataLayers,
   getDatasetCenter,
   getResolutionUnion,
-  getSegmentationLayer,
+  hasSegmentation,
   isElementClassSupported,
+  getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -64,7 +65,7 @@ import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import Toast from "libs/toast";
-import UrlManager, { type UrlManagerState } from "oxalis/controller/url_manager";
+import UrlManager, { type PartialUrlManagerState } from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
@@ -185,16 +186,16 @@ async function fetchParallel(
   ]);
 }
 
-function validateSpecsForLayers(layers: Array<APIDataLayer>, requiredBucketCapacity: number): * {
+function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: number): * {
+  const layers = dataset.dataSource.dataLayers;
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
 
-  const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
   const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
     layer => getBitDepth(layer) >> 3,
-    hasSegmentation,
+    hasSegmentation(dataset),
     requiredBucketCapacity,
   );
 
@@ -255,7 +256,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
 
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
       ErrorHandling.assert(
-        getSegmentationLayer(dataset) != null,
+        getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
       );
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
@@ -382,7 +383,6 @@ function initializeDataLayerInstances(
   maximumLayerCountToRender: number,
 } {
   const { dataset } = Store.getState();
-  const layers = dataset.dataSource.dataLayers;
 
   const requiredBucketCapacity =
     constants.GPU_FACTOR_MULTIPLIER *
@@ -394,11 +394,12 @@ function initializeDataLayerInstances(
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
     maximumTextureCountForLayer,
-  } = validateSpecsForLayers(layers, requiredBucketCapacity);
+  } = validateSpecsForLayers(dataset, requiredBucketCapacity);
 
   console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
   const connectionInfo = new ConnectionInfo();
+  const layers = dataset.dataSource.dataLayers;
   const dataLayers = {};
   for (const layer of layers) {
     const textureInformation = textureInformationPerLayer.get(layer);
@@ -413,12 +414,11 @@ function initializeDataLayerInstances(
     );
   }
 
-  const segmentationLayer = getSegmentationLayer(dataset);
-  if (segmentationLayer != null && isMappingSupported) {
-    window.mappings = setupGlobalMappingsObject(dataLayers[segmentationLayer.name]);
+  if (hasSegmentation(dataset) != null && isMappingSupported) {
+    window.mappings = setupGlobalMappingsObject();
   }
 
-  if (getColorLayers(dataset).length === 0 && segmentationLayer == null) {
+  if (getDataLayers(dataset).length === 0) {
     Toast.error(messages["dataset.no_data"]);
     throw HANDLED_ERROR;
   }
@@ -442,10 +442,10 @@ function setupLayerForVolumeTracing(
 
   // The tracing always contains the layer information for the user segmentation.
   // Two possible cases:
-  // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer - it needs
-  //    to be created and inserted.
-  // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
-  //    property specifies its name, to be able to merge the two layers
+  // 1) The volume layer should not be based on an existing layer. In that case, fallbackLayer is undefined
+  //    and a new layer is created and added.
+  // 2) The volume layer should be based on a fallback layer. In that case, merge the original fallbackLayer
+  //    with the new volume layer.
   const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
@@ -472,6 +472,7 @@ function setupLayerForVolumeTracing(
     // remember the name of the original layer, used to request mappings
     fallbackLayer: tracing.fallbackLayer,
     fallbackLayerInfo: fallbackLayer,
+    isTracingLayer: true,
   };
 
   if (fallbackLayer != null) {
@@ -479,8 +480,10 @@ function setupLayerForVolumeTracing(
     layers[fallbackLayerIndex] = tracingLayer;
   } else {
     // Remove other segmentation layers, since we are adding a new one.
-    // This is a temporary workaround. In the long term we want to support
-    // multiple segmentation layers.
+    // This is a temporary workaround. Even though we support multiple segmentation
+    // layers, we cannot render both at the same time. Hiding the existing segmentation
+    // layer would be good, but this information is stored per dataset and not per annotation
+    // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
     layers = layers.filter(layer => layer.category !== "segmentation");
     layers.push(tracingLayer);
   }
@@ -488,9 +491,9 @@ function setupLayerForVolumeTracing(
 }
 
 function determineDefaultState(
-  urlState: UrlManagerState,
+  urlState: PartialUrlManagerState,
   tracing: ?HybridServerTracing,
-): $Shape<UrlManagerState> {
+): PartialUrlManagerState {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
@@ -527,7 +530,7 @@ function determineDefaultState(
   return { position, zoomStep, rotation, activeNode };
 }
 
-export function applyState(state: $Shape<UrlManagerState>, ignoreZoom: boolean = false) {
+export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = false) {
   if (state.activeNode != null) {
     // Set the active node (without animating to its position) before setting the
     // position, since the position should take precedence.

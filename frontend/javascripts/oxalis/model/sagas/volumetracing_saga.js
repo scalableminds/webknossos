@@ -38,9 +38,9 @@ import {
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getResolutionInfoOfSegmentationLayer,
+  getResolutionInfoOfSegmentationTracingLayer,
   ResolutionInfo,
-  getRenderableResolutionForSegmentation,
+  getRenderableResolutionForSegmentationTracing,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   isVolumeDrawingTool,
@@ -88,12 +88,12 @@ function* warnOfTooLowOpacity(): Saga<void> {
   if (yield* select(state => state.tracing.volume == null)) {
     return;
   }
-  const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
-  if (!segmentationLayerName) {
+  const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
+  if (!segmentationLayer) {
     return;
   }
   const isOpacityTooLow = yield* select(
-    state => state.datasetConfiguration.layers[segmentationLayerName].alpha < 10,
+    state => state.datasetConfiguration.layers[segmentationLayer.name].alpha < 10,
   );
   if (isOpacityTooLow) {
     Toast.warning(
@@ -127,7 +127,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
 
     const maybeLabeledResolutionWithZoomStep = yield* select(
-      getRenderableResolutionForSegmentation,
+      getRenderableResolutionForSegmentationTracing,
     );
     if (!maybeLabeledResolutionWithZoomStep) {
       // Volume data is currently not rendered. Don't annotate anything.
@@ -252,7 +252,7 @@ function* labelWithVoxelBuffer2D(
   if (!allowUpdate) return;
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+  const segmentationLayer = yield* call([Model, Model.getEnforcedSegmentationTracingLayer]);
   const { cube } = segmentationLayer;
 
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
@@ -261,7 +261,7 @@ function* labelWithVoxelBuffer2D(
   const dimensionIndices = Dimensions.getIndices(activeViewport);
 
   const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationLayer(state.dataset),
+    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
   );
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
@@ -378,11 +378,14 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
-  const segmentationLayer: DataLayer = yield* call([Model, Model.getSegmentationLayer]);
+  const segmentationLayer: DataLayer = yield* call([
+    Model,
+    Model.getEnforcedSegmentationTracingLayer,
+  ]);
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationLayer(state.dataset),
+    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
   );
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
@@ -469,14 +472,14 @@ export function* floodFill(): Saga<void> {
       throw new Error("Unexpected action. Satisfy flow.");
     }
     const { position, planeId } = floodFillAction;
-    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { cube } = segmentationLayer;
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const resolutionInfo = yield* select(state =>
-      getResolutionInfoOfSegmentationLayer(state.dataset),
+      getResolutionInfoOfSegmentationTracingLayer(state.dataset),
     );
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 

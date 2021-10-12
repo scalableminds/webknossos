@@ -15,10 +15,10 @@ import _ from "lodash";
 
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
-import type { RemoteMeshMetaData } from "types/api_flow_types";
-import type { OxalisState, IsosurfaceInformation } from "oxalis/store";
+
+import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
+import type { OxalisState, Flycam, IsosurfaceInformation, SegmentsMap } from "oxalis/store";
 import Store from "oxalis/store";
-import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
 import {
   createMeshFromBufferAction,
@@ -27,29 +27,25 @@ import {
   triggerActiveIsosurfaceDownloadAction,
   triggerIsosurfaceDownloadAction,
   updateIsosurfaceVisibilityAction,
-  updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
-  addIsosurfaceAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import features from "features";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
+  getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getPosition,
-  getRequestLogZoomStep,
-  getCurrentResolution,
-} from "oxalis/model/accessors/flycam_accessor";
-import {
-  getSegmentationLayer,
-  getResolutionInfoOfSegmentationLayer,
+  getVisibleSegmentationLayer,
+  getResolutionInfoOfVisibleSegmentationLayer,
+  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
@@ -75,48 +71,72 @@ export const stlIsosurfaceConstants = {
 
 // This file defines the component MeshesView.
 
-const mapStateToProps = (state: OxalisState): * => ({
-  meshes: state.tracing != null ? state.tracing.meshes : [],
-  isImporting: state.uiInformation.isImportingMesh,
-  isosurfaces: state.isosurfaces,
-  datasetConfiguration: state.datasetConfiguration,
-  dataset: state.dataset,
-  mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
-  flycam: state.flycam,
-  activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
-  segments: state.tracing.volume ? state.tracing.volume.segments : null,
-  hasVolume: state.tracing.volume != null,
-  segmentationLayer: getSegmentationLayer(state.dataset),
-  zoomStep: getRequestLogZoomStep(state),
-  allowUpdate: state.tracing.restrictions.allowUpdate,
-  activeResolution: getCurrentResolution(state),
-  organization: state.dataset.owningOrganization,
-  datasetName: state.dataset.name,
-  availableMeshFiles: state.availableMeshFiles,
-  currentMeshFile: state.currentMeshFile,
-  activeUser: state.activeUser,
-});
+type StateProps = {|
+  isImporting: boolean,
+  isosurfaces: { [segmentId: number]: IsosurfaceInformation },
+  dataset: APIDataset,
+  mappingColors: ?Array<number>,
+  flycam: Flycam,
+  hasVolume: boolean,
+  segments: ?SegmentsMap,
+  visibleSegmentationLayer: ?APISegmentationLayer,
+  allowUpdate: boolean,
+  organization: string,
+  datasetName: string,
+  availableMeshFiles: ?Array<string>,
+  currentMeshFile: ?string,
+  activeUser: ?APIUser,
+|};
+
+const mapStateToProps = (state: OxalisState): StateProps => {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  return {
+    isImporting: state.uiInformation.isImportingMesh,
+    isosurfaces:
+      visibleSegmentationLayer != null
+        ? state.isosurfacesByLayer[visibleSegmentationLayer.name]
+        : {},
+    dataset: state.dataset,
+    mappingColors: getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+    ).mappingColors,
+    flycam: state.flycam,
+    hasVolume: state.tracing.volume != null,
+    segments: state.tracing.volume ? state.tracing.volume.segments : null,
+    visibleSegmentationLayer,
+    allowUpdate: state.tracing.restrictions.allowUpdate,
+    organization: state.dataset.owningOrganization,
+    datasetName: state.dataset.name,
+    availableMeshFiles:
+      visibleSegmentationLayer != null
+        ? state.availableMeshFilesByLayer[visibleSegmentationLayer.name]
+        : null,
+    currentMeshFile:
+      visibleSegmentationLayer != null
+        ? state.currentMeshFileByLayer[visibleSegmentationLayer.name]
+        : null,
+    activeUser: state.activeUser,
+  };
+};
 
 const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
-  updateRemoteMeshMetadata(id: string, meshMetaData: $Shape<RemoteMeshMetaData>) {
-    dispatch(updateRemoteMeshMetaDataAction(id, meshMetaData));
-  },
   onChangeDatasetSettings(propertyName, value) {
     dispatch(updateDatasetSettingAction(propertyName, value));
   },
   deleteMesh(id: string) {
     dispatch(deleteMeshAction(id));
   },
-  onChangeVisibility(id, isVisible: boolean) {
-    dispatch(updateIsosurfaceVisibilityAction(id, isVisible));
+  onChangeVisibility(layerName: string, id: number, isVisible: boolean) {
+    dispatch(updateIsosurfaceVisibilityAction(layerName, id, isVisible));
   },
-  async onStlUpload(info) {
+  async onStlUpload(layerName: string, info) {
     dispatch(setImportingMeshStateAction(true));
     const buffer = await readFileAsArrayBuffer(info.file);
 
     if (isIsosurfaceStl(buffer)) {
       trackAction("Import Isosurface Mesh from STL");
-      dispatch(importIsosurfaceFromStlAction(buffer));
+      dispatch(importIsosurfaceFromStlAction(layerName, buffer));
     } else {
       trackAction("Import STL");
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
@@ -131,14 +151,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
     }
     dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
   },
-  addPrecomputedMesh(cellId, seedPosition) {
-    if (cellId == null) {
-      return;
-    }
-    dispatch(addIsosurfaceAction(cellId, seedPosition, true));
-  },
-  setCurrentMeshFile(fileName) {
-    dispatch(updateCurrentMeshFileAction(fileName));
+  setCurrentMeshFile(layerName: string, fileName: string) {
+    dispatch(updateCurrentMeshFileAction(layerName, fileName));
   },
   setPosition(position: Vector3, dimensionToSkip: ?number, shouldRefreshIsosurface?: boolean) {
     dispatch(setPositionAction(position, dimensionToSkip, shouldRefreshIsosurface));
@@ -146,7 +160,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
 });
 
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
-type StateProps = ExtractReturn<typeof mapStateToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
 
@@ -161,7 +174,7 @@ class MeshesView extends React.Component<Props, State> {
   };
 
   componentDidMount() {
-    maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, false);
+    maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
     if (features().jobsEnabled) {
       this.pollJobData();
     }
@@ -194,7 +207,7 @@ class MeshesView extends React.Component<Props, State> {
           this.setState({ activeMeshJobId: null });
           // maybeFetchMeshFiles will fetch the new mesh file and also activate it if no other mesh file
           // currently exists.
-          maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, true);
+          maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
           break;
         }
         case "STARTED":
@@ -247,10 +260,11 @@ class MeshesView extends React.Component<Props, State> {
         "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
     } else if (this.props.hasVolume) {
       title =
-        this.props.segmentationLayer != null && this.props.segmentationLayer.fallbackLayer
+        this.props.visibleSegmentationLayer != null &&
+        this.props.visibleSegmentationLayer.fallbackLayer
           ? "Meshes cannot be precomputed for volume annotations. However, you can open this dataset in view mode to precompute meshes for the dataset's segmentation layer."
           : "Meshes cannot be precomputed for volume annotations.";
-    } else if (this.props.segmentationLayer == null) {
+    } else if (this.props.visibleSegmentationLayer == null) {
       title = "There is no segmentation layer for which meshes could be precomputed.";
     } else {
       title =
@@ -272,7 +286,7 @@ class MeshesView extends React.Component<Props, State> {
   getComputeMeshAdHocTooltipInfo = () => {
     let title = "";
     let disabled = true;
-    if (this.props.segmentationLayer == null) {
+    if (this.props.visibleSegmentationLayer == null) {
       title = "There is no segmentation layer for which a mesh could be computed.";
     } else {
       title = "Compute mesh for the centered segment.";
@@ -286,8 +300,6 @@ class MeshesView extends React.Component<Props, State> {
   };
 
   getIsosurfaceList = () => {
-    const hasSegmentation = Model.getSegmentationLayer() != null;
-
     const moveTo = (seedPosition: Vector3) => {
       this.props.setPosition(seedPosition, null, false);
     };
@@ -306,7 +318,12 @@ class MeshesView extends React.Component<Props, State> {
           <LoadingOutlined
             key="refresh-button"
             onClick={() => {
-              Store.dispatch(refreshIsosurfaceAction(segmentId));
+              if (!this.props.visibleSegmentationLayer) {
+                return;
+              }
+              Store.dispatch(
+                refreshIsosurfaceAction(this.props.visibleSegmentationLayer.name, segmentId),
+              );
             }}
           />
         );
@@ -316,7 +333,12 @@ class MeshesView extends React.Component<Props, State> {
             <ReloadOutlined
               key="refresh-button"
               onClick={() => {
-                Store.dispatch(refreshIsosurfaceAction(segmentId));
+                if (!this.props.visibleSegmentationLayer) {
+                  return;
+                }
+                Store.dispatch(
+                  refreshIsosurfaceAction(this.props.visibleSegmentationLayer.name, segmentId),
+                );
               }}
             />
           </Tooltip>
@@ -328,7 +350,12 @@ class MeshesView extends React.Component<Props, State> {
         <DeleteOutlined
           key="delete-button"
           onClick={() => {
-            Store.dispatch(removeIsosurfaceAction(segmentId));
+            if (!this.props.visibleSegmentationLayer) {
+              return;
+            }
+            Store.dispatch(
+              removeIsosurfaceAction(this.props.visibleSegmentationLayer.name, segmentId),
+            );
             // reset the active mesh id so the deleted one is not reloaded immediately
             this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
           }}
@@ -341,7 +368,14 @@ class MeshesView extends React.Component<Props, State> {
         <Checkbox
           checked={isVisible}
           onChange={(event: SyntheticInputEvent<>) => {
-            this.props.onChangeVisibility(segmentId, event.target.checked);
+            if (!this.props.visibleSegmentationLayer) {
+              return;
+            }
+            this.props.onChangeVisibility(
+              this.props.visibleSegmentationLayer.name,
+              segmentId,
+              event.target.checked,
+            );
           }}
         />
       </Tooltip>
@@ -349,9 +383,8 @@ class MeshesView extends React.Component<Props, State> {
 
     const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-      const isCenteredCell = hasSegmentation
-        ? getSegmentIdForPosition(getPosition(this.props.flycam))
-        : false;
+      const centeredCell = getSegmentIdForPosition(getPosition(this.props.flycam));
+
       const isHoveredItem = segmentId === this.state.hoveredListItem;
       const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
 
@@ -373,7 +406,7 @@ class MeshesView extends React.Component<Props, State> {
           <div style={{ display: "flex" }}>
             <div
               className={classnames("mesh-list-item", {
-                "is-centered-cell": segmentId === isCenteredCell,
+                "is-centered-cell": segmentId === centeredCell,
               })}
             >
               {isHoveredItem
@@ -418,7 +451,7 @@ class MeshesView extends React.Component<Props, State> {
 
   render() {
     const startComputingMeshfile = async () => {
-      const datasetResolutionInfo = getResolutionInfoOfSegmentationLayer(this.props.dataset);
+      const datasetResolutionInfo = getResolutionInfoOfVisibleSegmentationLayer(Store.getState());
       const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
         defaultMeshfileGenerationResolutionIndex,
       );
@@ -432,11 +465,11 @@ class MeshesView extends React.Component<Props, State> {
         meshfileResolutionIndex,
       );
 
-      if (this.props.segmentationLayer != null) {
+      if (this.props.visibleSegmentationLayer != null) {
         const job = await startComputeMeshFileJob(
           this.props.organization,
           this.props.datasetName,
-          this.props.segmentationLayer.fallbackLayer || this.props.segmentationLayer.name,
+          getBaseSegmentationName(this.props.visibleSegmentationLayer),
           meshfileResolution,
         );
         this.setState({ activeMeshJobId: job.id });
@@ -480,7 +513,10 @@ class MeshesView extends React.Component<Props, State> {
         accept=".stl"
         beforeUpload={() => false}
         onChange={file => {
-          this.props.onStlUpload(file);
+          if (!this.props.visibleSegmentationLayer) {
+            return;
+          }
+          this.props.onStlUpload(this.props.visibleSegmentationLayer.name, file);
         }}
         showUploadList={false}
         style={{ fontSize: 16, cursor: "pointer" }}
@@ -519,23 +555,23 @@ class MeshesView extends React.Component<Props, State> {
         Toast.info("No segment found at centered position");
         return;
       }
-      if (!this.props.currentMeshFile || !this.props.segmentationLayer) {
+      if (!this.props.currentMeshFile || !this.props.visibleSegmentationLayer) {
         return;
       }
       await loadMeshFromFile(
         id,
         pos,
         this.props.currentMeshFile,
-        this.props.segmentationLayer,
+        this.props.visibleSegmentationLayer,
         this.props.dataset,
       );
     };
 
     const handleMeshFileSelected = async mesh => {
       if (mesh.key === "refresh") {
-        maybeFetchMeshFiles(this.props.segmentationLayer, this.props.dataset, true);
-      } else {
-        this.props.setCurrentMeshFile(mesh.key);
+        maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
+      } else if (this.props.visibleSegmentationLayer != null) {
+        this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
         loadPrecomputedMesh();
       }
     };

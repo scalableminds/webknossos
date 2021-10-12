@@ -203,7 +203,7 @@ class SceneController {
 
   addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
     let geometry = new THREE.BufferGeometry();
-    geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
+    geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
     // convert to normal (unbuffered) geometry to merge vertices
     geometry = new THREE.Geometry().fromBufferGeometry(geometry);

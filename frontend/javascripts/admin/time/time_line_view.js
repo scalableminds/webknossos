@@ -327,8 +327,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   </ul>
                 </Col>
               </Row>
-              The time tracking information display here only includes data acquired when working on
-              &quot;tasks&quot; and not explorative annotations.
+              The time tracking information displayed here only includes data acquired when working
+              on &quot;tasks&quot; and not explorative annotations.
             </Col>
           </Row>
         </Card>

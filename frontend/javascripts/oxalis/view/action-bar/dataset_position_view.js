@@ -2,7 +2,6 @@
 import { Input, Tooltip } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
 import type { APIDataset } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
@@ -39,13 +38,13 @@ const positionInputErrorStyle = {
 class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(this.props.flycam)).join(", ");
-    await Clipboard.copy(position);
+    await navigator.clipboard.writeText(position);
     Toast.success("Position copied to clipboard");
   };
 
   copyRotationToClipboard = async () => {
     const rotation = V3.round(getRotation(this.props.flycam)).join(", ");
-    await Clipboard.copy(rotation);
+    await navigator.clipboard.writeText(rotation);
     Toast.success("Rotation copied to clipboard");
   };
 

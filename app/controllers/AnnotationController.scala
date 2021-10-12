@@ -29,7 +29,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class CreateExplorationalParameters(typ: String,
-                                         withFallback: Option[Boolean],
+                                         fallbackLayerName: Option[String],
                                          resolutionRestrictions: Option[ResolutionRestrictions])
 object CreateExplorationalParameters {
   implicit val jsonFormat: OFormat[CreateExplorationalParameters] = Json.format[CreateExplorationalParameters]
@@ -61,7 +61,7 @@ class AnnotationController @Inject()(
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
 
-  @ApiOperation(value = "Information about an annotation")
+  @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
           new ApiResponse(code = 400, message = badRequestLabel)))
@@ -73,7 +73,7 @@ class AnnotationController @Inject()(
         value =
           "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
       id: String,
-      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)") timestamp: Long)
+      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)", required = true) timestamp: Long)
     : Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       val notFoundMessage =
@@ -178,7 +178,7 @@ class AnnotationController @Inject()(
           request.identity,
           dataSet._id,
           tracingType,
-          request.body.withFallback.getOrElse(true),
+          request.body.fallbackLayerName,
           request.body.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
         ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
@@ -188,16 +188,17 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def makeHybrid(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
-      annotation <- provider.provideAnnotation(typ, id, request.identity)
-      organization <- organizationDAO.findOne(request.identity._organization)
-      _ <- annotationService.makeAnnotationHybrid(annotation, organization.name) ?~> "annotation.makeHybrid.failed"
-      updated <- provider.provideAnnotation(typ, id, request.identity)
-      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
-    } yield JsonOk(json)
-  }
+  def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        organization <- organizationDAO.findOne(request.identity._organization)
+        _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
+        updated <- provider.provideAnnotation(typ, id, request.identity)
+        json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+      } yield JsonOk(json)
+    }
 
   @ApiOperation(hidden = true, value = "")
   def downsample(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

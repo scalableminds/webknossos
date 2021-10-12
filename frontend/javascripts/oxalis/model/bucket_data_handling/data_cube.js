@@ -16,7 +16,11 @@ import {
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
-import { getResolutions, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getResolutions,
+  ResolutionInfo,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { V3 } from "libs/mjs";
 import {
@@ -69,6 +73,7 @@ class DataCube {
   on: Function;
   off: Function;
   resolutionInfo: ResolutionInfo;
+  layerName: string;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -89,11 +94,13 @@ class DataCube {
     resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
+    layerName: string,
   ) {
     this.upperBoundary = upperBoundary;
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
     this.resolutionInfo = resolutionInfo;
+    this.layerName = layerName;
 
     _.extend(this, BackboneEvents);
 
@@ -158,21 +165,27 @@ class DataCube {
   }
 
   isMappingEnabled(): boolean {
-    return this.isSegmentation
-      ? Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled
-      : false;
+    const activeMapping = getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      this.layerName,
+    );
+    return this.isSegmentation ? activeMapping.isMappingEnabled : false;
   }
 
   getMapping(): ?Mapping {
-    return this.isSegmentation
-      ? Store.getState().temporaryConfiguration.activeMapping.mapping
-      : null;
+    const activeMapping = getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      this.layerName,
+    );
+    return this.isSegmentation ? activeMapping.mapping : null;
   }
 
   shouldHideUnmappedIds(): boolean {
-    return this.isSegmentation
-      ? Store.getState().temporaryConfiguration.activeMapping.hideUnmappedIds
-      : false;
+    const activeMapping = getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      this.layerName,
+    );
+    return this.isSegmentation ? activeMapping.hideUnmappedIds : false;
   }
 
   mapId(idToMap: number): number {

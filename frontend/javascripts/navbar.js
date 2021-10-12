@@ -278,7 +278,7 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
       <Menu.Item key="keyboard-shortcuts">
         <a
           target="_blank"
-          href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+          href="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html"
           rel="noopener noreferrer"
         >
           Keyboard Shortcuts

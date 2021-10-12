@@ -6,7 +6,7 @@ import { sleep } from "libs/utils";
 type HideFn = () => void;
 export type ProgressCallback = (
   isDone: boolean,
-  progressState: string,
+  progressState: string | React$Node,
 ) => Promise<{ hideFn: HideFn }>;
 
 type Options = {
@@ -30,7 +30,7 @@ export default function createProgressCallback(options: Options): ProgressCallba
   let hideFn = null;
   return async (
     isDone: boolean,
-    status: string,
+    status: string | React$Node,
     overridingOptions: $Shape<Options> = {},
   ): Promise<{ hideFn: HideFn }> => {
     if (hideFn != null) {

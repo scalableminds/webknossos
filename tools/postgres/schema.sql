@@ -34,8 +34,6 @@ CREATE TABLE webknossos.annotations(
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
-  skeletonTracingId CHAR(36) UNIQUE,
-  volumeTracingId CHAR(36) UNIQUE, -- has to be unique even over both skeletonTracingId and volumeTracingId. Enforced by datastore.
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name VARCHAR(256) NOT NULL DEFAULT '',
@@ -48,8 +46,17 @@ CREATE TABLE webknossos.annotations(
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
-  CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL),
   CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
+);
+
+
+CREATE TYPE webknossos.TRACING_TYPE AS ENUM ('skeleton', 'volume');
+CREATE TABLE webknossos.annotation_tracings(
+  _annotation CHAR(24) NOT NULL,
+  tracingId CHAR(36) NOT NULL UNIQUE,
+  typ webknossos.TRACING_TYPE NOT NULL,
+  name VARCHAR(256) NOT NULL DEFAULT '',
+  PRIMARY KEY (_annotation, tracingId)
 );
 
 CREATE TABLE webknossos.annotation_sharedTeams(
@@ -420,8 +427,6 @@ CREATE INDEX ON webknossos.annotations(_user, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
-CREATE INDEX ON webknossos.annotations(skeletonTracingId);
-CREATE INDEX ON webknossos.annotations(volumeTracingId);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
 CREATE INDEX ON webknossos.dataSets(name);

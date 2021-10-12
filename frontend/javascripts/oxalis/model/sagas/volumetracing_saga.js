@@ -1,6 +1,8 @@
 // @flow
 import _ from "lodash";
 
+import React from "react";
+import { message } from "antd";
 import * as Utils from "libs/utils";
 import {
   type CopySegmentationLayerAction,
@@ -54,6 +56,7 @@ import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/u
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
+  Unicode,
   type BoundingBoxType,
   type ContourMode,
   type OverwriteMode,
@@ -475,6 +478,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   yield* put(finishAnnotationStrokeAction());
 }
 
+const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
 export function* floodFill(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
@@ -518,7 +522,7 @@ export function* floodFill(): Saga<void> {
       successMessageDelay: 2000,
       // Since only one floodfill operation can be active at any time,
       // a hardcoded key is sufficient.
-      key: "floodfill-progress",
+      key: "FLOODFILL_PROGRESS_KEY",
     });
     yield* call(progressCallback, false, "Performing floodfill...");
 
@@ -577,7 +581,14 @@ export function* floodFill(): Saga<void> {
       yield* call(
         progressCallback,
         true,
-        "Floodfill is done, but terminated since the labeled volume got too large. A bounding box that represents the labeled volume was added.",
+        <>
+          Floodfill is done, but terminated since the labeled volume got too large. A bounding box
+          <br />
+          that represents the labeled volume was added.{Unicode.NonBreakingSpace}
+          <a href="#" onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}>
+            Close
+          </a>
+        </>,
         {
           successMessageDelay: 10000,
         },

@@ -382,21 +382,15 @@ export class DataBucket {
           )
         : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
-      console.warn("bucket.data has unexpected length", {
+      const debugInfo = {
         arrayBuffer,
         actual: data.length,
         expected: channelCount * Constants.BUCKET_SIZE,
         channelCount,
-      });
+      };
+      console.warn("bucket.data has unexpected length", debugInfo);
       ErrorHandling.notify(
-        new Error(
-          `bucket.data has unexpected length. Details: ${JSON.stringify({
-            arrayBuffer,
-            actual: data.length,
-            expected: channelCount * Constants.BUCKET_SIZE,
-            channelCount,
-          })}`,
-        ),
+        new Error(`bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`),
       );
     }
     switch (this.state) {

@@ -11,7 +11,7 @@ We provide a number of free, open-source libraries and tools alongside webKnosso
 
 
 ## webKnossos Cuber
-- [https://github.com/scalableminds/webknossos-libs/wkcuber](https://github.com/scalableminds/webknossos-libs/wkcuber)
+- [webknossos-libs/wkcuber](https://github.com/scalableminds/webknossos-libs/wkcuber)
 - [Read The Docs](https://docs.webknossos.org/wkcuber/index.html)
 - CLI tool for converting (volume) image data into [webKnossos-wrap datasets]() (*.wkw) and vice-versa
 - Supports TIFF stacks, jpeg, dm3, Knossos Cubes, tiled images stacks (e.g. Catmaid) and many more

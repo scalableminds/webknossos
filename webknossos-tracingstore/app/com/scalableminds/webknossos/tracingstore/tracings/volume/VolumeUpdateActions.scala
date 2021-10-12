@@ -272,9 +272,9 @@ object VolumeUpdateAction {
         case "removeFallbackLayer"             => (json \ "value").validate[RemoveFallbackLayer]
         case "importVolumeTracing"             => (json \ "value").validate[ImportVolumeData]
         case "updateTdCamera"                  => (json \ "value").validate[UpdateTdCamera]
-        case "createSegment "                  => (json \ "value").validate[CreateSegmentVolumeAction]
-        case "updateSegment "                  => (json \ "value").validate[UpdateSegmentVolumeAction]
-        case "deleteSegment "                  => (json \ "value").validate[DeleteSegmentVolumeAction]
+        case "createSegment"                   => (json \ "value").validate[CreateSegmentVolumeAction]
+        case "updateSegment"                   => (json \ "value").validate[UpdateSegmentVolumeAction]
+        case "deleteSegment"                   => (json \ "value").validate[DeleteSegmentVolumeAction]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 

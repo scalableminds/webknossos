@@ -400,8 +400,6 @@ function mergeDataWithBackendDataInPlace(
   originalData: BucketDataArray,
   backendData: BucketDataArray,
 ) {
-  // TODO: Also handle this case where segmentation data might be overwritten invalidating the segment lists data.
-  // For further details how to tackle this, see the merge method in bucket.js
   for (let i = 0; i < originalData.length; ++i) {
     originalData[i] = originalData[i] || backendData[i];
   }
@@ -588,7 +586,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         {
           method: "POST",
           data: compactedSaveQueue,
-          compress: true,
+          compress: false, // todo: undo
         },
       );
       const endTime = Date.now();

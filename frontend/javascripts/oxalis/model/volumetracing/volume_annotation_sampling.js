@@ -306,7 +306,7 @@ export function applyVoxelMap(
   }
   const lowestResolutionIndex = dataCube.resolutionInfo.getLowestResolutionIndex();
   const zoomedAddressesOfAnnotatedBuckets = [];
-  const overwrittenBucketAddressesOfSegments = new Map();
+
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     const isBucketInLowestResolution = labeledBucketZoomedAddress[3] === lowestResolutionIndex;
@@ -337,15 +337,8 @@ export function applyVoxelMap(
         continue;
       }
       const { data } = bucket.getOrCreateData();
-      // TODO: In case a segment part that already exists in the backend and the bucket is overdrawn,
-      // but the bucket data isn't fetched until this step, we do not know that this segment part is overdrawn.
-      // This breaks the housekeeping of the covered buckets by a segment.
-      //
-      // A possible solution would be that when the incoming backend data is merged with the frontend data,
-      // the merging automatically updates the covered buckets. The merge operation could use the
-      // manageRemovingBucketAddressesOfOverdrawnSegments-method to do that. Then it only needs to track which segments were overwritten.
-      //
-      // ^ This is already done in bucket.js - merge. Look there for more details
+
+      // This is already done in bucket.js - merge. Look there for more details
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
@@ -357,23 +350,7 @@ export function applyVoxelMap(
             // The voxelToLabel is already within the bucket and in the correct resolution.
             const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
             const currentSegmentId = data[voxelAddress];
-            if (shouldOverwrite || currentSegmentId === overwritableValue) {
-              if (
-                isBucketInLowestResolution &&
-                currentSegmentId > 0 &&
-                currentSegmentId !== cellId
-              ) {
-                // Track all overwritten segments-bucket address combinations to later check whether the bucket
-                // no longer contains the segment id and thus must the bucket's address must be removed
-                // from the segment in the segment list.
-                if (!overwrittenBucketAddressesOfSegments.has(currentSegmentId)) {
-                  overwrittenBucketAddressesOfSegments.set(currentSegmentId, new Set());
-                }
-                overwrittenBucketAddressesOfSegments
-                  .get(currentSegmentId)
-                  //  $FlowFixMe[incompatible-use] Flow does not know that at this point the entry must exist.
-                  .add(bucket.zoomedAddress);
-              }
+            if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
               data[voxelAddress] = cellId;
             }
           }

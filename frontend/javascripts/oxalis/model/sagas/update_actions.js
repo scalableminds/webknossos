@@ -112,6 +112,23 @@ type UpdateVolumeTracingUpdateAction = {|
     zoomLevel: number,
   |},
 |};
+
+type CreateSegmentVolumeAction = {|
+  id: number,
+  anchorPosition: ?Vector3,
+  name: ?string,
+  creationTime: ?number,
+|};
+type UpdateSegmentVolumeAction = {|
+  id: number,
+  anchorPosition: ?Vector3,
+  name: ?string,
+  creationTime: ?number,
+|};
+type DeleteSegmentVolumeAction = {|
+  id: number,
+|};
+
 type UpdateUserBoundingBoxesAction = {|
   name: "updateUserBoundingBoxes",
   value: {|
@@ -161,6 +178,9 @@ export type UpdateAction =
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
   | UpdateUserBoundingBoxesAction
+  | CreateSegmentVolumeAction
+  | UpdateSegmentVolumeAction
+  | DeleteSegmentVolumeAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
@@ -198,6 +218,9 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateSkeletonTracingUpdateAction>
   | AsServerAction<UpdateVolumeTracingUpdateAction>
   | AsServerAction<UpdateUserBoundingBoxesAction>
+  | AsServerAction<CreateSegmentVolumeAction>
+  | AsServerAction<UpdateSegmentVolumeAction>
+  | AsServerAction<DeleteSegmentVolumeAction>
   | AsServerAction<UpdateBucketUpdateAction>
   | AsServerAction<UpdateTreeVisibilityUpdateAction>
   | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
@@ -381,6 +404,48 @@ export function updateUserBoundingBoxes(
     },
   };
 }
+
+export function createSegmentVolumeAction(
+  id: number,
+  anchorPosition: ?Vector3,
+  name: ?string,
+  creationTime: ?number,
+) {
+  return {
+    name: "createSegmentVolumeAction",
+    value: {
+      id,
+      anchorPosition,
+      name,
+      creationTime: null, // todo
+    },
+  };
+}
+export function updateSegmentVolumeAction(
+  id: number,
+  anchorPosition: ?Vector3,
+  name: ?string,
+  creationTime: ?number,
+) {
+  return {
+    name: "updateSegmentVolumeAction",
+    value: {
+      id,
+      anchorPosition,
+      name,
+      creationTime: null, // todo
+    },
+  };
+}
+export function deleteSegmentVolumeAction(id: number) {
+  return {
+    name: "deleteSegmentVolumeAction",
+    value: {
+      id,
+    },
+  };
+}
+
 export function updateBucket(
   bucketInfo: SendBucketInfo,
   base64Data: string,

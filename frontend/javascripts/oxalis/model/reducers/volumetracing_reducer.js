@@ -108,7 +108,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           if (!segments.has(`${segmentId}`)) {
             const newSegment = {
               id: segmentId,
-              somePosition,
+              somePosition: somePosition.map(el => Math.floor(el)), // necessary?
               name: `Segment ${segmentId}`,
             };
             return update(state, {

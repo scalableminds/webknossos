@@ -72,7 +72,7 @@
     "no-use-before-define": ["error", { "functions": false, "classes": false }],
     "one-var": ["error", "never"],
     "operator-assignment": "warn",
-    "prefer-destructuring": "warn",
+    "prefer-destructuring": "off",
     "quote-props": ["error", "as-needed", { "numbers": true }],
     "quotes": ["error", "double", { "avoidEscape": true }],
     "radix": "off",

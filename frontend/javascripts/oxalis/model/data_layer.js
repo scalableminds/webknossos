@@ -86,6 +86,11 @@ class DataLayer {
     this.activeMappingType = mappingType;
     this.mappings.activateMapping(mappingName, mappingType, progressCallback);
   }
+
+  destroy() {
+    this.pullQueue.clear();
+    this.pushQueue.clear();
+  }
 }
 
 export default DataLayer;

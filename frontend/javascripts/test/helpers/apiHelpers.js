@@ -1,7 +1,10 @@
 // @noflow
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
+import Maybe from "data.maybe";
 
+import { sleep } from "libs/utils";
+import type { Tracing, VolumeTracing } from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -30,9 +33,19 @@ const Request = {
   always: () => Promise.resolve(),
 };
 
-Request.sendJSONReceiveArraybufferWithHeaders.returns(
-  Promise.resolve({ buffer: new Uint8Array(1), headers: { "missing-buckets": "[]" } }),
-);
+export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
+  return async function getBucketData(url, payload) {
+    const bucketCount = payload.data.length;
+    await sleep(delay);
+    return {
+      buffer: new Uint8Array(new TypedArrayClass(bucketCount * 32 ** 3).fill(fillValue).buffer)
+        .buffer,
+      headers: { "missing-buckets": "[]" },
+    };
+  };
+}
+
+Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(Uint8Array, 0);
 
 const ErrorHandling = {
   assertExtendContext: _.noop,
@@ -104,6 +117,13 @@ const modelData = {
   },
 };
 
+export function getVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
+  if (tracing.volume != null) {
+    return Maybe.Just(tracing.volume);
+  }
+  throw new Error("Tracing is not of type volume!");
+}
+
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 
@@ -117,6 +137,7 @@ export function __setupOxalis(t, mode, apiVersion) {
     position: [1, 2, 3],
   };
   t.context.model = Model;
+  t.context.mocks = { Request };
 
   const webknossos = new OxalisApi(Model);
   const organizationName = "Connectomics Department";

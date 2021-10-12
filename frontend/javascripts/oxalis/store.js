@@ -34,6 +34,7 @@ import {
   type BoundingBoxType,
   type ContourMode,
   type OverwriteMode,
+  type FillMode,
   type ControlMode,
   ControlModeEnum,
   type TDViewDisplayMode,
@@ -314,6 +315,7 @@ export type UserConfiguration = {|
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
   +overwriteMode: OverwriteMode,
+  +fillMode: FillMode,
   +useLegacyBindings: boolean,
 |};
 
@@ -455,6 +457,11 @@ export type BorderOpenStatus = {
 
 export type Theme = "light" | "dark";
 
+export type BusyBlockingInfo = {
+  isBusy: boolean,
+  reason?: string,
+};
+
 type UiInformation = {
   +showDropzoneModal: boolean,
   +activeTool: AnnotationTool,
@@ -465,6 +472,7 @@ type UiInformation = {
   +hasOrganizations: boolean,
   +borderOpenStatus: BorderOpenStatus,
   +theme: Theme,
+  +busyBlockingInfo: BusyBlockingInfo,
 };
 
 export type IsosurfaceInformation = {|

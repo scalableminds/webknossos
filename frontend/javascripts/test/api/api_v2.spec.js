@@ -87,7 +87,7 @@ test("getBoundingBox should throw an error if the layer name is not valid", t =>
 
 test("getBoundingBox should get the bounding box of a layer", t => {
   const api = t.context.api;
-  const correctBoundingBox = [[0, 0, 0], [1024, 1024, 1024]];
+  const correctBoundingBox = [[0, 0, 0], [10240, 10240, 10240]];
   const boundingBox = api.data.getBoundingBox("color");
   t.deepEqual(boundingBox, correctBoundingBox);
 });

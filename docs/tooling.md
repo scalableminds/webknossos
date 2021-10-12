@@ -25,7 +25,7 @@ We provide a number of free, open-source libraries and tools alongside webKnosso
 
 
 ## webKnossos Wrap Data Format (wkw)
-- [https://github.com/scalableminds/webknossos-wrap](https://github.com/scalableminds/webknossos-wrap)
+- [webknossos-wrap](https://github.com/scalableminds/webknossos-wrap)
 - Library for low-level read and write operations to wkw datasets
 - Use the [webKnossos Python API](https://github.com/scalableminds/webknossos-libs) above for easy-to-use, high-level access to wkw datasets
 - Available for Python, MATLAB, C/C++, and others 

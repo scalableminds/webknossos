@@ -22,8 +22,6 @@ case class Annotation(
     _task: Option[ObjectId] = None,
     _team: ObjectId,
     _user: ObjectId,
-    skeletonTracingId: Option[String],
-    volumeTracingId: Option[String],
     description: String = "",
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
     name: String = "",
@@ -39,6 +37,7 @@ case class Annotation(
 
   lazy val id: String = _id.toString
 
+  // TODO replace by lookup in table
   def tracingType: TracingType.Value =
     if (skeletonTracingId.isDefined && volumeTracingId.isDefined) TracingType.hybrid
     else if (skeletonTracingId.isDefined) TracingType.skeleton
@@ -71,8 +70,6 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         r._Task.map(ObjectId(_)),
         ObjectId(r._Team),
         ObjectId(r._User),
-        r.skeletontracingid,
-        r.volumetracingid,
         r.description,
         visibility,
         r.name,
@@ -191,6 +188,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       parsed <- parseAll(r)
     } yield parsed
 
+  // TODO use new table
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       accessQuery <- readAccessQuery
@@ -237,13 +235,13 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   // update operations
 
+  // todo: when to insert tracing ids?
   def insertOne(a: Annotation): Fox[Unit] =
     for {
       _ <- run(sqlu"""
-               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
                values(${a._id.id}, ${a._dataSet.id}, ${a._task
-        .map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.skeletonTracingId},
-                   ${a.volumeTracingId}, ${a.description}, '#${a.visibility.toString}', ${a.name}, '#${a.state.toString}', '#${sanitize(
+        .map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.description}, '#${a.visibility.toString}', ${a.name}, '#${a.state.toString}', '#${sanitize(
         a.statistics.toString)}',
                    '#${writeArrayTuple(a.tags.toList.map(sanitize))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(
         a.created)},
@@ -251,6 +249,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                """)
     } yield ()
 
+  // todo: when to insert tracing ids?
   def updateInitialized(a: Annotation): Fox[Unit] =
     for {
       _ <- run(sqlu"""
@@ -259,8 +258,6 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                _dataSet = ${a._dataSet.id},
                _team = ${a._team.id},
                _user = ${a._user.id},
-               skeletonTracingId = ${a.skeletonTracingId},
-               volumeTracingId = ${a.volumeTracingId},
                description = ${a.description},
                visibility = '#${a.visibility.toString}',
                name = ${a.name},
@@ -277,6 +274,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       _ = logger.info(s"Initialized task annotation ${a._id}, state is now ${a.state.toString}")
     } yield ()
 
+  // todo: also delete tracing ids
   def abortInitializingAnnotation(id: ObjectId): Fox[Unit] =
     for {
       _ <- run(
@@ -288,6 +286,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       _ = logger.info(s"Aborted initializing task annotation ${id.toString}")
     } yield ()
 
+  // todo: also delete tracing ids
   def deleteOldInitializingAnnotations(): Fox[Unit] =
     for {
       _ <- run(
@@ -347,12 +346,14 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
     } yield ()
 
+  // todo: use new table
   def updateSkeletonTracingId(id: ObjectId, newSkeletonTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set skeletonTracingId = $newSkeletonTracingId where _id = ${id.id}")
     } yield ()
 
+  // todo: use new table
   def updateVolumeTracingId(id: ObjectId, newVolumeTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)

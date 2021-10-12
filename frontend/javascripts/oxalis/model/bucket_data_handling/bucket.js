@@ -18,7 +18,6 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import { manageRemovingBucketAddressesOfOverdrawnSegments } from "oxalis/model/volumetracing/volume_annotation_sampling";
 import Constants, { type Vector3, type Vector4, type BoundingBoxType } from "oxalis/constants";
 import window from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
@@ -489,14 +488,6 @@ export class DataBucket {
         }
         currentData[i] = currentData[i] || newData[i];
       }
-      // Reuse this method to detect completely overwritten segment ids and also handle the case where segment positions were overwritten.
-      // The major problem here is, that this operation/ the store updates are asynchronous and thus the displayed data is not necessarily
-      // in sync with the segment list.
-      manageRemovingBucketAddressesOfOverdrawnSegments(
-        this.cube,
-        overwrittenBucketAddressesOfSegments,
-        lowestResolutionIndex,
-      );
     }
     this.data = currentData;
   }

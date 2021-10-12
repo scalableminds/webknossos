@@ -5,7 +5,7 @@
 import update from "immutability-helper";
 
 import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { ContourModeEnum, type Vector4 } from "oxalis/constants";
+import { ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
@@ -102,23 +102,16 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           return update(state, { tracing: { volume: { segments: { $set: segments } } } });
         }
 
-        case "ADD_BUCKET_ADDRESSES_TO_SEGMENT": {
-          const { segmentId, bucketAddresses } = action;
+        case "SET_SOME_POSITION_OF_SEGMENT": {
+          const { segmentId, somePosition } = action;
           const { segments } = volumeTracing;
-          const coveredBucketAddresses = new Set();
-          // TODO: Check whether a set is really needed here or whether a array is enough if there is already a entry
-          let newState = state;
-          for (const address of bucketAddresses) {
-            coveredBucketAddresses.add(address);
-          }
           if (!segments.has(`${segmentId}`)) {
             const newSegment = {
               id: segmentId,
-              somePosition: [0, 0, 0],
+              somePosition,
               name: `Segment ${segmentId}`,
-              coveredBucketAddresses,
             };
-            newState = update(state, {
+            return update(state, {
               tracing: {
                 volume: {
                   // Immutability helper seems to automatically transform number keys to strings. Thus we also need a string here
@@ -128,64 +121,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
                 },
               },
             });
-          } else {
-            newState = update(state, {
-              tracing: {
-                volume: {
-                  segments: {
-                    [segmentId]: {
-                      coveredBucketAddresses: {
-                        $add: Array.from(coveredBucketAddresses.values()),
-                      },
-                    },
-                  },
-                },
-              },
-            });
-          }
-          return newState;
-        }
-
-        case "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS": {
-          const { segmentIdToBucketAddressList } = action;
-          let { segments } = volumeTracing;
-          let updatedSegments = false;
-          // $FlowFixMe[incompatible-type]
-          for (const [segmentId, bucketAddressList]: [string, Array<Vector4>] of Object.entries(
-            segmentIdToBucketAddressList,
-          )) {
-            // TODO: consider updating this more efficiently
-            if (segments.has(`${segmentId}`)) {
-              updatedSegments = true;
-              segments = update(segments, {
-                [segmentId]: {
-                  coveredBucketAddresses: {
-                    $remove: bucketAddressList,
-                  },
-                },
-              });
-            }
-          }
-          if (!updatedSegments) {
-            return state;
-          }
-          const newState = update(state, {
-            tracing: {
-              volume: {
-                segments: {
-                  $set: segments,
-                },
-              },
-            },
-          });
-          return newState;
-        }
-
-        case "SET_SOME_POSITION_OF_SEGMENT": {
-          const { segmentId, somePosition } = action;
-          const { segments } = volumeTracing;
-          if (!segments.has(`${segmentId}`)) {
-            return state;
           }
           return update(state, {
             tracing: {

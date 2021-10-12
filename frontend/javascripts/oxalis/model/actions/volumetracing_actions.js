@@ -52,18 +52,6 @@ export type SetSegmentsAction = {
   type: "SET_SEGMENTS",
   segments: SegmentsMap,
 };
-export type AddBucketAddressesToSegmentAction = {
-  type: "ADD_BUCKET_ADDRESSES_TO_SEGMENT",
-  segmentId: number,
-  bucketAddresses: Array<Vector4>,
-};
-
-export type RemoveBucketAddressesFromSegmentsAction = {
-  type: "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS",
-  segmentIdToBucketAddressList: {
-    [number]: Array<Vector4>,
-  },
-};
 
 export type SetSomePositionOfSegmentAction = {
   type: "SET_SOME_POSITION_OF_SEGMENT",
@@ -88,8 +76,6 @@ export type VolumeTracingAction =
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
   | SetSegmentsAction
-  | AddBucketAddressesToSegmentAction
-  | RemoveBucketAddressesFromSegmentsAction
   | SetSomePositionOfSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
@@ -150,22 +136,6 @@ export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
 export const setSegmentsActions = (segments: SegmentsMap): SetSegmentsAction => ({
   type: "SET_SEGMENTS",
   segments,
-});
-
-export const addBucketAddressesToSegmentAction = (
-  segmentId: number,
-  bucketAddresses: Array<Vector4>,
-): AddBucketAddressesToSegmentAction => ({
-  type: "ADD_BUCKET_ADDRESSES_TO_SEGMENT",
-  segmentId,
-  bucketAddresses,
-});
-
-export const removeBucketAddressesFromSegmentsAction = (segmentIdToBucketAddressList: {
-  [number]: Array<Vector4>,
-}): RemoveBucketAddressesFromSegmentsAction => ({
-  type: "REMOVE_BUCKET_ADDRESSES_FROM_SEGMENTS",
-  segmentIdToBucketAddressList,
 });
 
 export const setSomePositionOfSegmentAction = (

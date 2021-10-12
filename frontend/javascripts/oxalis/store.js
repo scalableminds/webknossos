@@ -43,7 +43,6 @@ import {
   type Rect,
   type Vector2,
   type Vector3,
-  type Vector4,
   type AnnotationTool,
 } from "oxalis/constants";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
@@ -225,7 +224,6 @@ export type Segment = {
   id: number,
   name: string,
   somePosition: Vector3,
-  coveredBucketAddresses: Set<Vector4>,
 };
 
 export type SegmentsMap = Map<string, Segment>;

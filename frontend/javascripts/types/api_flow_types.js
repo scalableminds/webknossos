@@ -663,6 +663,7 @@ export type ServerVolumeTracing = {|
   boundingBox: ServerBoundingBox,
   elementClass: ElementClass,
   fallbackLayer?: string,
+  segments: any, // todo
   largestSegmentId: number,
   // `resolutions` will be undefined for legacy annotations
   // which were created before the multi-resolution capabilities

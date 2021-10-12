@@ -734,27 +734,6 @@ class DataCube {
     return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
   }
 
-  getPositionOfVoxelIndex(index: number): Vector3 {
-    const { BUCKET_WIDTH, BUCKET_SIZE } = constants;
-    index = mod(index, BUCKET_SIZE);
-    const z = Math.floor(index / BUCKET_WIDTH ** 2);
-    const rest = index - z * BUCKET_WIDTH ** 2;
-    const y = Math.floor(rest / BUCKET_WIDTH);
-    const x = rest - y * BUCKET_WIDTH;
-    return [x, y, z];
-  }
-
-  getGlobalPositionOfBucketIndex(
-    index: number,
-    bucketAddress: Vector4,
-    resolutions: Array<Vector3>,
-  ): Vector3 {
-    const topLeftOfBucket = bucketPositionToGlobalAddress(bucketAddress, resolutions);
-    const positionWithinBucket = this.getPositionOfVoxelIndex(index);
-    const globalPosition = V3.add(topLeftOfBucket, positionWithinBucket);
-    return globalPosition;
-  }
-
   /*
     Given a global coordinate `voxel`, this method returns the coordinate
     within the bucket to which `voxel` belongs.

@@ -246,11 +246,3 @@ test("getVoxelIndexByVoxelOffset should return the correct index of a position w
   index = cube.getVoxelIndexByVoxelOffset([10, 10, 10]);
   t.is(index, 10570);
 });
-
-test("getPositionOfVoxelIndex should return the correct index of a position within a bucket", t => {
-  const { cube } = t.context;
-  let position = cube.getPositionOfVoxelIndex(0);
-  t.deepEqual(position, [0, 0, 0]);
-  position = cube.getPositionOfVoxelIndex(10570);
-  t.deepEqual(position, [10, 10, 10]);
-});

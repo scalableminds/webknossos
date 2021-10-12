@@ -2,6 +2,8 @@
 import _ from "lodash";
 import {
   type Saga,
+  _all,
+  _call,
   _takeLatest,
   call,
   select,
@@ -16,7 +18,11 @@ import {
   setMappingEnabledAction,
   type SetMappingAction,
 } from "oxalis/model/actions/settings_actions";
-import { fetchMapping } from "admin/admin_rest_api";
+import {
+  fetchMapping,
+  getMappingsForDatasetLayer,
+  getAgglomeratesForDatasetLayer,
+} from "admin/admin_rest_api";
 import type { APIMapping } from "types/api_flow_types";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { type Mapping } from "oxalis/store";
@@ -47,6 +53,35 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
 
   if (showLoadingIndicator) {
     message.loading({ content: "Activating Mapping", key: MAPPING_MESSAGE_KEY });
+  }
+
+  const dataset = yield* select(state => state.dataset);
+  const layerInfo = getLayerByName(dataset, layerName);
+
+  const params = [
+    dataset.dataStore.url,
+    dataset,
+    // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+    layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerInfo.name,
+  ];
+  const [jsonMappings, hdf5Mappings] = yield _all([
+    _call(getMappingsForDatasetLayer, ...params),
+    _call(getAgglomeratesForDatasetLayer, ...params),
+  ]);
+
+  const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
+  if (!mappingsWithCorrectType.includes(mappingName)) {
+    // Mapping does not exist, set mappingName back to null
+    const errorMessage = `Mapping with name ${mappingName} and type ${mappingType} does not exist. Available mappings are ${mappingsWithCorrectType.join(
+      ",",
+    )}.`;
+    message.error({
+      content: errorMessage,
+      key: MAPPING_MESSAGE_KEY,
+    });
+    console.error(errorMessage);
+    yield* put(setMappingAction(layerName, null, mappingType));
+    return;
   }
 
   if (mappingType !== "JSON") {

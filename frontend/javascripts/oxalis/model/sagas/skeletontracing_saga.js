@@ -241,9 +241,11 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
       ),
     );
   } catch (e) {
-    // Hide the progress notification and rethrow the error to allow for error handling/reporting
+    // Hide the progress notification and handle the error
     hideFn();
-    throw e;
+    console.error(e);
+    ErrorHandling.notify(e);
+    return;
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");

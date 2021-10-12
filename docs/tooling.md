@@ -3,7 +3,7 @@
 We provide a number of free, open-source libraries and tools alongside webKnossos to aid with data analysis. 
  
 ## webKnossos Python API
-- [https://github.com/scalableminds/webknossos-libs](https://github.com/scalableminds/webknossos-libs)
+- [webknossos-libs](https://github.com/scalableminds/webknossos-libs)
 - [Read The Docs](https://docs.webknossos.org/webknossos-py/index.html)
 - Our official Python library for working with webKnossos datasets, skeleton and volume annotations and for downloading/uploading data from your webKnossos instance through the REST API.
 - Read & write *.wkw files (raw image data and volume segmentations)

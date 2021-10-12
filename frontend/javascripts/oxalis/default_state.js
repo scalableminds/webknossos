@@ -5,6 +5,7 @@ import Constants, {
   ControlModeEnum,
   OrthoViews,
   OverwriteModeEnum,
+  FillModeEnum,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { document } from "libs/window";
@@ -80,6 +81,7 @@ const defaultState: OxalisState = {
     tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
+    fillMode: FillModeEnum._2D,
     useLegacyBindings: false,
   },
   temporaryConfiguration: {
@@ -210,6 +212,9 @@ const defaultState: OxalisState = {
       primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
         ? "dark"
         : "light",
+    busyBlockingInfo: {
+      isBusy: false,
+    },
   },
   isosurfacesByLayer: {},
   currentMeshFileByLayer: {},

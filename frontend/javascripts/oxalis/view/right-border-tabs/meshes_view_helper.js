@@ -39,7 +39,7 @@ export async function maybeFetchMeshFiles(
   const layerName = segmentationLayer.name;
   const files = Store.getState().availableMeshFilesByLayer[layerName];
 
-  // only send new get request, if it hasn't happened before (files in store are null)
+  // Only send new get request, if it hasn't happened before (files in store are null)
   // else return the stored files (might be empty array). Or if we force a reload.
   if (!files || mustRequest) {
     const availableMeshFiles = await getMeshfilesForDatasetLayer(
@@ -98,7 +98,7 @@ export async function loadMeshFromFile(
     const stlData = await getMeshfileChunkData(
       dataset.dataStore.url,
       dataset,
-      layerName,
+      getBaseSegmentationName(segmentationLayer),
       fileName,
       id,
       chunkPos,

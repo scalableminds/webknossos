@@ -46,7 +46,7 @@ test("Add / Remove should be added when bucket has not been requested", t => {
 test("Add / Remove should be added when bucket has not been received", t => {
   const { manager } = t.context;
   const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, mockedCube);
-  bucket.pull();
+  bucket.markAsPulled();
   t.is(bucket.needsRequest(), false);
 
   bucket.label(_.noop);
@@ -56,7 +56,7 @@ test("Add / Remove should be added when bucket has not been received", t => {
 test("Add / Remove should not be added when bucket has been received", t => {
   const { manager } = t.context;
   const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, mockedCube);
-  bucket.pull();
+  bucket.markAsPulled();
   bucket.receiveData(new Uint8Array(1 << 15));
   t.is(bucket.isLoaded(), true);
 
@@ -68,7 +68,7 @@ test("Add / Remove should be removed once it is loaded", t => {
   const { manager } = t.context;
   const bucket = new DataBucket("uint8", [0, 0, 0, 0], manager, mockedCube);
   bucket.label(_.noop);
-  bucket.pull();
+  bucket.markAsPulled();
   bucket.receiveData(new Uint8Array(1 << 15));
 
   t.is(manager.getCount(), 0);
@@ -80,7 +80,7 @@ function prepareBuckets(manager) {
   const bucket2 = new DataBucket("uint8", [1, 0, 0, 0], manager, mockedCube);
   for (const bucket of [bucket1, bucket2]) {
     bucket.label(_.noop);
-    bucket.pull();
+    bucket.markAsPulled();
   }
   return { bucket1, bucket2 };
 }

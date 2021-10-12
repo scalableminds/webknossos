@@ -68,31 +68,50 @@ export class VoxelBuffer2D {
   }
 }
 
-export class VoxelNeighborStack2D {
-  stack: Array<Vector2>;
+export class VoxelNeighborQueue3D {
+  queue: Array<Vector3>;
 
-  constructor(initialPosition: Vector2) {
-    this.stack = [initialPosition];
+  constructor(initialPosition: Vector3) {
+    this.queue = [initialPosition];
   }
 
-  pushVoxel(newVoxel: Vector2) {
-    return this.stack.push(newVoxel);
+  pushVoxel(newVoxel: Vector3) {
+    return this.queue.push(newVoxel);
   }
 
   isEmpty(): boolean {
-    return this.stack.length === 0;
+    return this.queue.length === 0;
   }
 
-  popVoxelAndGetNeighbors(): Array<Vector2> {
+  getVoxelAndGetNeighbors(): Array<Vector3> {
     if (this.isEmpty()) {
       return [];
     }
-    const currentVoxel = this.stack.pop();
+    const currentVoxel = this.queue.shift();
+    // 6-neighborhood in 3D
     return [
-      [currentVoxel[0] + 1, currentVoxel[1]],
-      [currentVoxel[0] - 1, currentVoxel[1]],
-      [currentVoxel[0], currentVoxel[1] + 1],
-      [currentVoxel[0], currentVoxel[1] - 1],
+      [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
+      [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
+      [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
+      [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
+      [currentVoxel[0], currentVoxel[1], currentVoxel[2] + 1],
+      [currentVoxel[0], currentVoxel[1], currentVoxel[2] - 1],
+    ];
+  }
+}
+
+export class VoxelNeighborQueue2D extends VoxelNeighborQueue3D {
+  getVoxelAndGetNeighbors(): Array<Vector3> {
+    if (this.isEmpty()) {
+      return [];
+    }
+    const currentVoxel = this.queue.shift();
+    // 4-neighborhood in 2D
+    return [
+      [currentVoxel[0] + 1, currentVoxel[1], currentVoxel[2]],
+      [currentVoxel[0] - 1, currentVoxel[1], currentVoxel[2]],
+      [currentVoxel[0], currentVoxel[1] + 1, currentVoxel[2]],
+      [currentVoxel[0], currentVoxel[1] - 1, currentVoxel[2]],
     ];
   }
 }

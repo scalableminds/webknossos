@@ -42,6 +42,14 @@ type SetHasOrganizationsAction = {
   value: boolean,
 };
 
+type SetBusyBlockingInfoAction = {
+  type: "SET_BUSY_BLOCKING_INFO_ACTION",
+  value: {
+    isBusy: boolean,
+    reason?: string,
+  },
+};
+
 type SetThemeAction = {
   type: "SET_THEME",
   value: Theme,
@@ -63,7 +71,8 @@ export type UiAction =
   | SetToolAction
   | CycleToolAction
   | SetThemeAction
-  | SetShareModalVisibilityAction;
+  | SetShareModalVisibilityAction
+  | SetBusyBlockingInfoAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -123,4 +132,15 @@ export const setThemeAction = (value: Theme): SetThemeAction => ({
 export const setShareModalVisibilityAction = (visible: boolean): SetShareModalVisibilityAction => ({
   type: "SET_SHARE_MODAL_VISIBILITY",
   visible,
+});
+
+export const setBusyBlockingInfoAction = (
+  isBusy: boolean,
+  reason?: string,
+): SetBusyBlockingInfoAction => ({
+  type: "SET_BUSY_BLOCKING_INFO_ACTION",
+  value: {
+    isBusy,
+    reason,
+  },
 });

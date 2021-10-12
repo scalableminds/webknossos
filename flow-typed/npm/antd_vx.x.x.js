@@ -82,6 +82,7 @@ declare module "antd" {
     static ItemGroup: typeof MenuItemGroup;
     static SubMenu: typeof MenuSubMenu;
   }
+
   declare export var message: {
     success(content: MessageContent, duration?: number, onClose?: Function): Function,
     error(content: MessageContent, duration?: number, onClose?: Function): Function,

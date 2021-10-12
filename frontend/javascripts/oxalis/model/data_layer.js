@@ -69,6 +69,11 @@ class DataLayer {
       dataTextureCount,
     );
   }
+
+  destroy() {
+    this.pullQueue.clear();
+    this.pushQueue.clear();
+  }
 }
 
 export default DataLayer;

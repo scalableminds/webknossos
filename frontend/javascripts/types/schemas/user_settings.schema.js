@@ -1,5 +1,5 @@
 // @flow
-import { OverwriteModeEnum, TDViewDisplayModeEnum } from "oxalis/constants";
+import { OverwriteModeEnum, FillModeEnum, TDViewDisplayModeEnum } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 
 export const userSettings = {
@@ -39,6 +39,10 @@ export const userSettings = {
   overwriteMode: {
     type: "string",
     enum: Object.values(OverwriteModeEnum),
+  },
+  fillMode: {
+    type: "string",
+    enum: Object.values(FillModeEnum),
   },
   useLegacyBindings: { type: "boolean" },
   ...baseDatasetViewConfiguration,

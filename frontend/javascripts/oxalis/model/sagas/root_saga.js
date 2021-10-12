@@ -32,12 +32,18 @@ import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/tas
 import loadHistogramData from "oxalis/model/sagas/load_histogram_data_saga";
 import watchActivatedMappings from "oxalis/model/sagas/mapping_saga";
 
+let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
   while (true) {
+    rootSagaCrashed = false;
     const task = yield* fork(restartableSaga);
     yield* take("RESTART_SAGA");
     yield _cancel(task);
   }
+}
+
+export function hasRootSagaCrashed() {
+  return rootSagaCrashed;
 }
 
 function* restartableSaga(): Saga<void> {
@@ -65,13 +71,16 @@ function* restartableSaga(): Saga<void> {
       _call(watchAgglomerateLoading),
     ]);
   } catch (err) {
+    rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
-    ErrorHandling.notify(err, {});
-    toggleErrorHighlighting(true);
-    alert(`\
+    if (process.env.BABEL_ENV !== "test") {
+      ErrorHandling.notify(err, {});
+      toggleErrorHighlighting(true);
+      alert(`\
 Internal error.
 Please reload the page to avoid losing data.
 
 ${JSON.stringify(err)} ${err.stack || ""}`);
+    }
   }
 }

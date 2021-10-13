@@ -71,7 +71,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
       </p>
       <p>
         <a
-          href="https://docs.webknossos.org/guides/sharing"
+          href="https://docs.webknossos.org/webknossos/sharing.html"
           target="_blank"
           rel="noreferrer noopener"
         >

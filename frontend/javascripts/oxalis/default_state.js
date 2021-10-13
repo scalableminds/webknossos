@@ -202,6 +202,7 @@ const defaultState: OxalisState = {
     activeTool: "MOVE",
     showDropzoneModal: false,
     showVersionRestore: false,
+    showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,
     isInAnnotationView: false,

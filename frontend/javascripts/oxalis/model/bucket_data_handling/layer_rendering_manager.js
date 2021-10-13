@@ -37,6 +37,7 @@ import constants, {
   type Vector4,
 } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import window from "libs/window";
 
 const asyncBucketPick = memoizeOne(createWorker(AsyncBucketPickerWorker), (oldArgs, newArgs) =>
   _.isEqual(oldArgs, newArgs),
@@ -134,6 +135,7 @@ export default class LayerRenderingManager {
 
   refresh() {
     this.needsRefresh = true;
+    window.needsRerender = true;
   }
 
   setupDataTextures(): void {

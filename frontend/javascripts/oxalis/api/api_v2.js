@@ -579,14 +579,11 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(
-      setMappingAction(
-        layerName,
-        "<custom mapping>",
-        _.clone(mapping),
-        Object.keys(mapping).map(x => parseInt(x, 10)),
-      ),
-    );
+    const mappingProperties = {
+      mapping: _.clone(mapping),
+      mappingKeys: Object.keys(mapping).map(x => parseInt(x, 10)),
+    };
+    Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }
 
   /**

@@ -1,6 +1,5 @@
 // @flow
 
-import type { ProgressCallback } from "libs/progress_callback";
 import type { Vector3 } from "oxalis/constants";
 import { getLayerBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import ConnectionInfo from "oxalis/model/data_connection_info";
@@ -10,7 +9,7 @@ import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rende
 import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import Store, { type DataLayerType, type MappingType } from "oxalis/store";
+import Store, { type DataLayerType } from "oxalis/store";
 
 // TODO: Non-reactive
 class DataLayer {
@@ -20,8 +19,6 @@ class DataLayer {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   mappings: ?Mappings;
-  activeMapping: ?string;
-  activeMappingType: MappingType = "JSON";
   layerRenderingManager: LayerRenderingManager;
   resolutions: Array<Vector3>;
   fallbackLayer: ?string;
@@ -63,8 +60,7 @@ class DataLayer {
     );
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    const fallbackLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
-    if (this.isSegmentation) this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
+    if (this.isSegmentation) this.mappings = new Mappings(layerInfo.name);
     this.layerRenderingManager = new LayerRenderingManager(
       this.name,
       this.pullQueue,
@@ -72,19 +68,6 @@ class DataLayer {
       textureWidth,
       dataTextureCount,
     );
-  }
-
-  setActiveMapping(
-    mappingName: ?string,
-    mappingType: MappingType,
-    progressCallback?: ProgressCallback,
-  ): void {
-    if (this.mappings == null) {
-      throw new Error("Mappings can only be activated for segmentation layers.");
-    }
-    this.activeMapping = mappingName;
-    this.activeMappingType = mappingType;
-    this.mappings.activateMapping(mappingName, mappingType, progressCallback);
   }
 
   destroy() {

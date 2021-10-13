@@ -75,6 +75,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", { theme: action.value });
     }
 
+    case "SET_SHARE_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", { showShareModal: action.visible });
+    }
+
     case "SET_BUSY_BLOCKING_INFO_ACTION": {
       return updateKey(state, "uiInformation", { busyBlockingInfo: action.value });
     }

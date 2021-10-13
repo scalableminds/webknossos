@@ -339,11 +339,39 @@ export function getLayerByName(dataset: APIDataset, layerName: string): DataLaye
   return layer;
 }
 
+export function getLayerByNameOrFallbackName(
+  dataset: APIDataset,
+  layerName: string,
+): DataLayerType {
+  const dataLayers = getDataLayers(dataset);
+  const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
+  ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
+
+  const layer = dataLayers.find(
+    l => l.name === layerName || (l.fallbackLayer && l.fallbackLayer === layerName),
+  );
+  if (!layer) {
+    throw new Error(`Layer "${layerName}" not found`);
+  }
+  return layer;
+}
+
 export function getSegmentationLayerByName(
   dataset: APIDataset,
   layerName: string,
 ): APISegmentationLayer {
   const layer = getLayerByName(dataset, layerName);
+  if (layer.category !== "segmentation") {
+    throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
+  }
+  return layer;
+}
+
+export function getSegmentationLayerByNameOrFallbackName(
+  dataset: APIDataset,
+  layerName: string,
+): APISegmentationLayer {
+  const layer = getLayerByNameOrFallbackName(dataset, layerName);
   if (layer.category !== "segmentation") {
     throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
   }

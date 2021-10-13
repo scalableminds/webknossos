@@ -1,6 +1,7 @@
 // @flow
 import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
 import { CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
+import ButtonComponent from "oxalis/view/components/button_component";
 import { useSelector } from "react-redux";
 import React, { useState, useEffect } from "react";
 import type { APIDataset, APIAnnotationVisibility, APIAnnotationType } from "types/api_flow_types";
@@ -16,6 +17,11 @@ import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
+import Store from "oxalis/store";
+import UrlManager from "oxalis/controller/url_manager";
+import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
+import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { ControlModeEnum } from "oxalis/constants";
 
 const RadioGroup = Radio.Group;
 
@@ -60,9 +66,10 @@ export function useDatasetSharingToken(dataset: APIDataset) {
 }
 
 export function getUrl(sharingToken: string, includeToken: boolean) {
-  const { pathname, origin, hash } = location;
+  const { pathname, origin } = location;
+  const hash = UrlManager.buildUrlHashJson(Store.getState());
   const query = includeToken ? `?token=${sharingToken}` : "";
-  const url = `${origin}${pathname}${query}${hash}`;
+  const url = `${origin}${pathname}${query}#${hash}`;
   return url;
 }
 
@@ -71,15 +78,65 @@ export async function copyUrlToClipboard(url: string) {
   Toast.success("URL copied to clipboard.");
 }
 
+export function ShareButton(props: { dataset: APIDataset, style?: Object }) {
+  const { dataset, style } = props;
+  const sharingToken = useDatasetSharingToken(props.dataset);
+  const annotationVisibility = useSelector(state => state.tracing.visibility);
+  const controlMode = useSelector(state => state.temporaryConfiguration.controlMode);
+  const isViewMode = controlMode === ControlModeEnum.VIEW;
+  const isSandboxMode = controlMode === ControlModeEnum.SANDBOX;
+  const isTraceMode = controlMode === ControlModeEnum.TRACE;
+  const annotationIsPublic = annotationVisibility === "Public";
+  // For annotations, a token is included if the annotation is configured to be public, but the
+  // dataset is not public. For datasets or sandboxes, a token is included if the dataset is not public.
+  const includeToken = !dataset.isPublic && (isViewMode || isSandboxMode || annotationIsPublic);
+
+  const copySharingUrl = () => {
+    // Copy the url on-demand as it constantly changes
+    const url = getUrl(sharingToken, includeToken);
+    copyUrlToClipboard(url);
+    if (isTraceMode && !annotationIsPublic) {
+      // For public annotations and in dataset view mode, the link will work for all users.
+      // Otherwise, show a warning that the link may not work for all users.
+      Toast.warning(
+        <>
+          The sharing link can only be opened by users who have the correct permissions to see this
+          dataset/annotation. Please open the{" "}
+          <a href="#" onClick={() => Store.dispatch(setShareModalVisibilityAction(true))}>
+            share dialog
+          </a>{" "}
+          if you want to configure this.
+        </>,
+      );
+    }
+    if (isSandboxMode) {
+      Toast.warning(
+        "For sandboxes, changes are neither saved nor shared. If you want to share the changes in this sandbox" +
+          " use the 'Copy To My Account' functionality and share the resulting annotation.",
+      );
+    }
+  };
+
+  return (
+    <ButtonComponent
+      icon={<ShareAltOutlined />}
+      title={messages["tracing.copy_sharing_link"]}
+      onClick={copySharingUrl}
+      style={style}
+    />
+  );
+}
+
 export default function ShareModalView(props: Props) {
   const { isVisible, onOk, annotationType, annotationId } = props;
   const dataset = useSelector(state => state.dataset);
-  const tracingVisibility = useSelector(state => state.tracing.visibility);
+  const annotationVisibility = useSelector(state => state.tracing.visibility);
   const restrictions = useSelector(state => state.tracing.restrictions);
-  const [visibility, setVisibility] = useState(tracingVisibility);
+  const [visibility, setVisibility] = useState(annotationVisibility);
   const [sharedTeams, setSharedTeams] = useState([]);
   const sharingToken = useDatasetSharingToken(dataset);
-  useEffect(() => setVisibility(tracingVisibility), [tracingVisibility]);
+  const hasUpdatePermissions = restrictions.allowUpdate && restrictions.allowSave;
+  useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
     const fetchedSharedTeams = await getTeamsForSharedAnnotation(annotationType, annotationId, {
@@ -100,6 +157,8 @@ export default function ShareModalView(props: Props) {
       visibility,
     });
 
+    Store.dispatch(setAnnotationVisibilityAction(visibility));
+
     if (visibility !== "Private") {
       await updateTeamsForSharedAnnotation(
         annotationType,
@@ -114,7 +173,7 @@ export default function ShareModalView(props: Props) {
 
   const maybeShowWarning = () => {
     let message;
-    if (!restrictions.allowUpdate) {
+    if (!hasUpdatePermissions) {
       message = "You don't have the permission to edit the visibility of this annotation.";
     } else if (!dataset.isPublic && visibility === "Public") {
       message =
@@ -149,8 +208,8 @@ export default function ShareModalView(props: Props) {
       title="Share this Annotation"
       visible={isVisible}
       width={800}
-      okText={restrictions.allowUpdate ? "Save" : "Ok"}
-      onOk={handleOk}
+      okText={hasUpdatePermissions ? "Save" : "Ok"}
+      onOk={hasUpdatePermissions ? handleOk : onOk}
       onCancel={onOk}
     >
       <Row>
@@ -184,14 +243,14 @@ export default function ShareModalView(props: Props) {
         </Col>
         <Col span={18}>
           <RadioGroup onChange={handleCheckboxChange} value={visibility}>
-            <Radio style={radioStyle} value="Private" disabled={!restrictions.allowUpdate}>
+            <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
               Private
             </Radio>
             <Hint style={{ marginLeft: 24 }}>
               Only you and your team manager can view this annotation.
             </Hint>
 
-            <Radio style={radioStyle} value="Internal" disabled={!restrictions.allowUpdate}>
+            <Radio style={radioStyle} value="Internal" disabled={!hasUpdatePermissions}>
               Internal
             </Radio>
             <Hint style={{ marginLeft: 24 }}>
@@ -200,7 +259,7 @@ export default function ShareModalView(props: Props) {
               and copy it to their accounts to edit it.
             </Hint>
 
-            <Radio style={radioStyle} value="Public" disabled={!restrictions.allowUpdate}>
+            <Radio style={radioStyle} value="Public" disabled={!hasUpdatePermissions}>
               Public
             </Radio>
             <Hint style={{ marginLeft: 24 }}>
@@ -223,7 +282,7 @@ export default function ShareModalView(props: Props) {
             allowNonEditableTeams
             value={sharedTeams}
             onChange={value => setSharedTeams(_.flatten([value]))}
-            disabled={!restrictions.allowUpdate || visibility === "Private"}
+            disabled={!hasUpdatePermissions || visibility === "Private"}
           />
           <Hint style={{ margin: "6px 12px" }}>
             Choose the teams to share your annotation with. Members of these teams can see this

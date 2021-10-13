@@ -186,6 +186,7 @@ services:
     image: scalableminds/puppeteer:master
     environment:
       - URL
+      - WK_AUTH_TOKEN
     working_dir: /home/pptruser/webknossos
     command: bash -c 'for i in {1..3}; do yarn test-screenshot && break; done'
     volumes:

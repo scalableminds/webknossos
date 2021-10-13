@@ -9,19 +9,19 @@ import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_moda
 const sharingActiveNode = false;
 
 type Props = {|
-  isVisible: boolean,
-  onOk: () => void,
+  onOk: () => any,
 |};
 
 export default function ShareViewDatasetModalView(props: Props) {
-  const { isVisible, onOk } = props;
+  const { onOk } = props;
   const dataset = useSelector(state => state.dataset);
+  const isShareModalOpen = useSelector(state => state.uiInformation.showShareModal);
   const sharingToken = useDatasetSharingToken(dataset);
   const url = getUrl(sharingToken, !dataset.isPublic);
   return (
     <Modal
       title="Share this Dataset"
-      visible={isVisible}
+      visible={isShareModalOpen}
       width={800}
       okText="Ok"
       onOk={onOk}

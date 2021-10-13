@@ -5,7 +5,6 @@ import _ from "lodash";
 import moment from "moment";
 
 import type { APIUpdateActionBatch } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { chunkIntoTimeWindows } from "libs/utils";
 import { getUpdateActionLog, downloadNml } from "admin/admin_rest_api";
@@ -49,8 +48,10 @@ const MOMENT_CALENDAR_FORMAT = {
 const VERSION_LIST_PLACEHOLDER = { emptyText: "No versions created yet." };
 
 export async function previewVersion(versions?: Versions) {
-  const { annotationType, annotationId } = Store.getState().tracing;
-  await api.tracing.restart(annotationType, annotationId, ControlModeEnum.TRACE, versions);
+  const state = Store.getState();
+  const { controlMode } = state.temporaryConfiguration;
+  const { annotationType, annotationId } = state.tracing;
+  await api.tracing.restart(annotationType, annotationId, controlMode, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
 
   const segmentationLayer = Model.getSegmentationTracingLayer();

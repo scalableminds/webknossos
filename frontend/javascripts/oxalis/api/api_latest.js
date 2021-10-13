@@ -584,12 +584,13 @@ class TracingApi {
     newAnnotationId: string,
     newControlMode: ControlMode,
     versions?: Versions,
+    keepUrlState?: boolean = false,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
       throw new Error("Restarting with view option is not supported");
 
     Store.dispatch(restartSagaAction());
-    UrlManager.reset();
+    UrlManager.reset(keepUrlState);
     await Model.fetch(
       newAnnotationType,
       { annotationId: newAnnotationId, type: newControlMode },
@@ -1035,7 +1036,11 @@ class DataApi {
   setMapping(
     layerName: string,
     mapping: Mapping,
-    options?: { colors?: Array<number>, hideUnmappedIds?: boolean } = {},
+    options?: {
+      colors?: Array<number>,
+      hideUnmappedIds?: boolean,
+      showLoadingIndicator?: boolean,
+    } = {},
   ) {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
@@ -1044,18 +1049,17 @@ class DataApi {
     if (!layer.isSegmentation) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(
-      setMappingAction(
-        layerName,
-        "<custom mapping>",
-        _.clone(mapping),
-        // Object.keys is sorted for numerical keys according to the spec:
-        // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
-        Object.keys(mapping).map(x => parseInt(x, 10)),
-        options.colors,
-        options.hideUnmappedIds,
-      ),
-    );
+    const { colors: mappingColors, hideUnmappedIds, showLoadingIndicator } = options;
+    const mappingProperties = {
+      mapping: _.clone(mapping),
+      // Object.keys is sorted for numerical keys according to the spec:
+      // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
+      mappingKeys: Object.keys(mapping).map(x => parseInt(x, 10)),
+      mappingColors,
+      hideUnmappedIds,
+      showLoadingIndicator,
+    };
+    Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }
 
   /**
@@ -1090,15 +1094,21 @@ class DataApi {
    *
    */
   getActiveMapping(layerName?: string): ?string {
-    const segmentationLayer = getRequestedOrVisibleSegmentationLayer(Store.getState(), layerName);
-    if (!segmentationLayer) {
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
+      Store.getState(),
+      layerName,
+    );
+    if (!effectiveLayerName) {
       return null;
     }
-    return this.model.getLayerByName(segmentationLayer.name).activeMapping;
+    return getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      effectiveLayerName,
+    ).mappingName;
   }
 
   /**
-   * Sets the active mapping for a given layer.  If layerName is not passed,
+   * Sets the active mapping for a given layer. If layerName is not passed,
    * the currently visible segmentation layer will be used.
    *
    */
@@ -1107,14 +1117,14 @@ class DataApi {
     mappingType: MappingType = "JSON",
     layerName?: string,
   ): void {
-    const segmentationLayer =
-      layerName != null
-        ? this.model.getLayerByName(layerName)
-        : this.model.getVisibleSegmentationLayer();
-    if (!segmentationLayer) {
-      return;
+    const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
+      Store.getState(),
+      layerName,
+    );
+    if (!effectiveLayerName) {
+      throw new Error(messages["mapping.unsupported_layer"]);
     }
-    segmentationLayer.setActiveMapping(mappingName, mappingType);
+    Store.dispatch(setMappingAction(effectiveLayerName, mappingName, mappingType));
   }
 
   /**

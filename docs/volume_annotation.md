@@ -16,9 +16,9 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 - `Fill Tool`: Flood-fill the clicked region. All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active cell id.
 - `Cell Picker`: Click a segment to use its id as the active cell id.
 
-When using the trace or brush tool, label can be added with *Left Mouse Drag*.
+When using the trace or brush tool, a label can be added with *Left Mouse Drag*.
 Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left Mouse Drag*.
-If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, rightclick is mapped to open a context menu).
+If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
 
 In the `Segmentation` tab on the right-hand side, you can see the cell IDs which are active, below your cursor, or in the middle of the viewport.
 
@@ -28,16 +28,16 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 
 ### Proof-Reading and Merging Segments
 
-webKnossos support proof-reading of segments from automatic segmentations. With "Merger Mode" individual segments (e.g. from over-segmentation) can be combined to refine the segmentation. 
+webKnossos support proof-reading of segments from automatic segmentation. With "Merger Mode" individual segments (e.g. from over-segmentation) can be combined ("merged") to refine the segmentation and fix split errors. 
 
-The "merger mode" is available in skeleton and hybrid annotation mode. Mark connected segments by right clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
+The "merger mode" is available in skeleton and hybrid annotation mode. Mark connected segments by right-clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
 
 "Merger mode" can be enabled in the settings under "Nodes & Trees" with the option "Enable Merger Mode". As soon as you enable it, all already existing trees will be used to form merged segments.
 
 ![Video: Proof-Reading Volume Annotations](https://www.youtube.com/watch?v=Sq4AuWanK14)
 
 ### Mappings / On-Demand Agglomeration
-With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmented volume annotations on demand. This alleviates the demand to materialize agglomeration results prematurely and allows researchers to apply different agglomerations to the data for experimentation. We typically produce several agglomeration results based on different thresholds and methods and use webKnossos to quickly review these results on subsets of a dataset in an interactive session.
+With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmented volume annotations on-demand. This alleviates the demand to materialize agglomeration results prematurely and allows researchers to apply different agglomerations to the data for experimentation. We typically produce several agglomeration results based on different thresholds and methods and use webKnossos to quickly review these results on subsets of a dataset in an interactive session.
 
 ![Video: Segmentation Mappings](https://www.youtube.com/watch?v=ZmUqyIoA9Gw)
 
@@ -69,7 +69,7 @@ Mapping files are in JSON and need to follow this schema. All segment IDs belong
 }
 ```
 
-<!-- ![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
+<!-- ![An example of applying a mapping file to agglomerate individual segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
 
 ### Download File Format
 Volume annotations can be downloaded and imported using ZIP files that contain [WKW](./data_formats.md#wkw-datasets) datasets.
@@ -93,7 +93,7 @@ volumetracing.zip # A ZIP file containing the volume annotation
 └─ volumetracing.nml # Annotation metadata NML file
 ```
 
-After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python, MATLAB and other languages](https://github.com/scalableminds/webknossos-wrap/). 
+After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python, MATLAB, and other languages](https://github.com/scalableminds/webknossos-wrap/). 
 
 ## Hybrid Annotations
 

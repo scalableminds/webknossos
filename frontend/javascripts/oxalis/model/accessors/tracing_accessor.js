@@ -4,7 +4,9 @@ import type {
   HybridServerTracing,
   ServerSkeletonTracing,
   ServerVolumeTracing,
+  TracingType,
 } from "types/api_flow_types";
+import { TracingTypeEnum } from "types/api_flow_types";
 import type { Tracing, VolumeTracing, SkeletonTracing, ReadOnlyTracing } from "oxalis/store";
 
 export function getSomeTracing(
@@ -27,6 +29,17 @@ export function getSomeServerTracing(
     return tracing.skeleton;
   } else if (tracing.volume != null) {
     return tracing.volume;
+  }
+  throw new Error("The active annotation does not contain skeletons nor volume data");
+}
+
+export function getTracingType(tracing: Tracing): TracingType {
+  if (tracing.skeleton != null && tracing.volume != null) {
+    return TracingTypeEnum.hybrid;
+  } else if (tracing.skeleton != null) {
+    return TracingTypeEnum.skeleton;
+  } else if (tracing.volume != null) {
+    return TracingTypeEnum.volume;
   }
   throw new Error("The active annotation does not contain skeletons nor volume data");
 }

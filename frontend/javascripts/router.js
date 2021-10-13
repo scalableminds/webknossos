@@ -115,6 +115,26 @@ class ReactRouter extends React.Component<Props> {
     return <h3>Invalid annotation URL.</h3>;
   };
 
+  tracingSandbox = ({ match }: ContextRouter) => {
+    const tracingType = Enum.coalesce(TracingTypeEnum, match.params.type);
+
+    if (tracingType != null) {
+      return (
+        <TracingLayoutView
+          initialAnnotationType={APIAnnotationTypeEnum.Explorational}
+          initialCommandType={{
+            type: ControlModeEnum.SANDBOX,
+            tracingType,
+            name: match.params.datasetName || "",
+            owningOrganization: match.params.organizationName || "",
+          }}
+        />
+      );
+    }
+
+    return <h3>Invalid annotation URL.</h3>;
+  };
+
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
       initialAnnotationType={APIAnnotationTypeEnum.View}
@@ -463,6 +483,10 @@ class ReactRouter extends React.Component<Props> {
                     }}
                   />
                 )}
+              />
+              <Route
+                path="/datasets/:organizationName/:datasetName/sandbox/:type"
+                render={this.tracingSandbox}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}

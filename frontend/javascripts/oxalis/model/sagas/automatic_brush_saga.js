@@ -41,7 +41,9 @@ const workerPredict = createWorker(TensorFlowWorker);
 const configureTensorFlow = (useWebworker, useGPU) => {
   window.useWebworker = useWebworker;
   window.useGPU = useGPU;
-  console.log("useWebworker set to", useWebworker, "and useGPU set to", useGPU);
+  if (process.env.BABEL_ENV !== "test") {
+    console.log("useWebworker set to", useWebworker, "and useGPU set to", useGPU);
+  }
 };
 
 // $FlowIssue[cannot-resolve-name]

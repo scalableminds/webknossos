@@ -257,7 +257,7 @@ class DataSetController @Inject()(userService: UserService,
         usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
         _ <- dataSetService
-          .clientFor(dataSet)
+          .clientFor(dataSet)(GlobalAccessContext)
           .flatMap(_.findPositionWithData(organizationName, datalayer.name).flatMap(posWithData =>
             bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
       } yield {

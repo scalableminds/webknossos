@@ -24,6 +24,7 @@ import type {
   APIUser,
   APIUserBase,
   MeshMetaData,
+  TracingType,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
@@ -34,6 +35,7 @@ import {
   type BoundingBoxType,
   type ContourMode,
   type OverwriteMode,
+  type FillMode,
   type ControlMode,
   ControlModeEnum,
   type TDViewDisplayMode,
@@ -247,14 +249,19 @@ export type HybridTracing = {|
 export type Tracing = HybridTracing;
 
 export type TraceOrViewCommand =
-  | {
+  | {|
       +type: typeof ControlModeEnum.VIEW,
       ...$Exact<APIDatasetId>,
-    }
-  | {
+    |}
+  | {|
       +type: typeof ControlModeEnum.TRACE,
       +annotationId: string,
-    };
+    |}
+  | {|
+      +type: typeof ControlModeEnum.SANDBOX,
+      +tracingType: TracingType,
+      ...$Exact<APIDatasetId>,
+    |};
 
 export type DatasetLayerConfiguration = {|
   +color: Vector3,
@@ -314,6 +321,7 @@ export type UserConfiguration = {|
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
   +overwriteMode: OverwriteMode,
+  +fillMode: FillMode,
   +useLegacyBindings: boolean,
 |};
 
@@ -455,16 +463,23 @@ export type BorderOpenStatus = {
 
 export type Theme = "light" | "dark";
 
+export type BusyBlockingInfo = {
+  isBusy: boolean,
+  reason?: string,
+};
+
 type UiInformation = {
   +showDropzoneModal: boolean,
-  +activeTool: AnnotationTool,
   +showVersionRestore: boolean,
+  +showShareModal: boolean,
+  +activeTool: AnnotationTool,
   +storedLayouts: Object,
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
   +borderOpenStatus: BorderOpenStatus,
   +theme: Theme,
+  +busyBlockingInfo: BusyBlockingInfo,
 };
 
 export type IsosurfaceInformation = {|

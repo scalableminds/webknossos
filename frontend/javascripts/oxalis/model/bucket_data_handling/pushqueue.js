@@ -1,11 +1,7 @@
-/**
- * pushqueue.js
- * @flow
- */
+// @flow
 import _ from "lodash";
 
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Vector4 } from "oxalis/constants";
 import { alert, document } from "libs/window";
 import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import AsyncTaskQueue from "libs/async_task_queue";
@@ -30,11 +26,16 @@ class PushQueue {
 
     const autoSaveFailureMessage = "Auto-Save failed!";
     this.taskQueue.on("failure", () => {
-      document.body.classList.add("save-error");
+      console.error("PushQueue failure");
+      if (document.body != null) {
+        document.body.classList.add("save-error");
+      }
       Toast.error(autoSaveFailureMessage, { sticky: true });
     });
     this.taskQueue.on("success", () => {
-      document.body.classList.remove("save-error");
+      if (document.body != null) {
+        document.body.classList.remove("save-error");
+      }
       Toast.close(autoSaveFailureMessage);
     });
   }
@@ -48,16 +49,16 @@ class PushQueue {
   }
 
   insert(bucket: DataBucket): void {
-    this.queue.add(bucket);
+    if (!this.queue.has(bucket)) {
+      this.queue.add(bucket);
+      bucket.dirtyCount++;
+    }
+
     this.push();
   }
 
   clear(): void {
     this.queue.clear();
-  }
-
-  comparePositions([x1, y1, z1]: Vector4, [x2, y2, z2]: Vector4): number {
-    return x1 - x2 || y1 - y2 || z1 - z2;
   }
 
   print(): void {

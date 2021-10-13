@@ -35,7 +35,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       const volumeTracing: VolumeTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
-        segments: new Map(),
+        segments: new Map(action.tracing.segments.map(segment => [segment.id, segment])),
         activeCellId: 0,
         lastCentroid: null,
         contourTracingMode: ContourModeEnum.DRAW,

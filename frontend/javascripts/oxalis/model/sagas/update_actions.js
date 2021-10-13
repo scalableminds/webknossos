@@ -412,7 +412,7 @@ export function createSegmentVolumeAction(
   creationTime: ?number,
 ) {
   return {
-    name: "createSegmentVolumeAction",
+    name: "createSegment",
     value: {
       id,
       anchorPosition,
@@ -428,7 +428,7 @@ export function updateSegmentVolumeAction(
   creationTime: ?number,
 ) {
   return {
-    name: "updateSegmentVolumeAction",
+    name: "updateSegment",
     value: {
       id,
       anchorPosition,
@@ -439,7 +439,7 @@ export function updateSegmentVolumeAction(
 }
 export function deleteSegmentVolumeAction(id: number) {
   return {
-    name: "deleteSegmentVolumeAction",
+    name: "deleteSegment",
     value: {
       id,
     },

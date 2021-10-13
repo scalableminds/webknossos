@@ -5,6 +5,7 @@
 
 import { type Saga, type Task } from "redux-saga";
 import Maybe from "data.maybe";
+import { v4 as uuidv4 } from "uuid";
 
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
@@ -444,6 +445,12 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
+// Generate a UUID when the module is loaded so that opening the same annotation in two
+// tabs, will result in different UUIDs when trying to update the annotation.
+// If an update gets lost for some reason and the front-end retries, the back-end can
+// use the UUID to see whether the update was already accepted.
+const clientUUID = uuidv4();
+
 export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<void> {
   const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
@@ -460,7 +467,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       const startTime = Date.now();
       yield* call(
         sendRequestWithToken,
-        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
+        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?client_uuid=${clientUUID}&token=`,
         {
           method: "POST",
           data: compactedSaveQueue,

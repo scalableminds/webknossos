@@ -16,7 +16,6 @@ import models.annotation.AnnotationType.AnnotationType
 
 import scala.concurrent.ExecutionContext
 
-
 case class Annotation(
     _id: ObjectId,
     _dataSet: ObjectId,
@@ -39,7 +38,6 @@ case class Annotation(
 
   lazy val id: String = _id.toString
 
-  // TODO replace by lookup in table
   def tracingType: TracingType.Value = {
     val skeletonPresent = annotationLayers.exists(_.typ == AnnotationLayerType.Skeleton)
     val volumePresent = annotationLayers.exists(_.typ == AnnotationLayerType.Volume)
@@ -57,45 +55,48 @@ case class Annotation(
 }
 
 class AnnotationLayersDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionContext)
-  extends SimpleSQLDAO(SQLClient) {
+    extends SimpleSQLDAO(SQLClient) {
 
-  private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] = for {
-    typ <- AnnotationLayerType.fromString(r.typ)
-  } yield {
-    AnnotationLayer(
-      r.tracingid,
-      typ,
-      r.name
-    )
-  }
+  private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] =
+    for {
+      typ <- AnnotationLayerType.fromString(r.typ)
+    } yield {
+      AnnotationLayer(
+        r.tracingid,
+        typ,
+        r.name
+      )
+    }
 
-  def findAnnotationLayersFor(annotationId: ObjectId): Fox[List[AnnotationLayer]] = for {
-    rows <- run(
-      sql"select _annotation, tracingId, typ, name from webknossos.annotation_layers where _annotation = $annotationId"
-        .as[AnnotationLayersRow])
-    parsed <- Fox.serialCombined(rows.toList)(parse)
-  } yield parsed
+  def findAnnotationLayersFor(annotationId: ObjectId): Fox[List[AnnotationLayer]] =
+    for {
+      rows <- run(
+        sql"select _annotation, tracingId, typ, name from webknossos.annotation_layers where _annotation = $annotationId"
+          .as[AnnotationLayersRow])
+      parsed <- Fox.serialCombined(rows.toList)(parse)
+    } yield parsed
 
-  def insertForAnnotation(annotationId: ObjectId, annotationLayers: List[AnnotationLayer]): Fox[Unit] = for {
-    _ <- Fox.serialCombined(annotationLayers)(insertOne(annotationId, _))
-  } yield ()
+  def insertForAnnotation(annotationId: ObjectId, annotationLayers: List[AnnotationLayer]): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(annotationLayers)(insertOne(annotationId, _))
+    } yield ()
 
-  def insertOne(annotationId: ObjectId, a: AnnotationLayer): Fox[Unit] = for {
-    _ <- run(
-      sqlu"""insert into webknossos.annotation_layers _annotation, tracingId, typ, name
+  def insertOne(annotationId: ObjectId, a: AnnotationLayer): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""insert into webknossos.annotation_layers _annotation, tracingId, typ, name
             values($annotationId, ${a.tracingId}, ${a.typ.toString}, ${a.name.map(sanitize)}""")
-  } yield ()
+    } yield ()
 
-  def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] = for {
-    rList <- run(
-      sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
-    parsed <- rList.headOption.flatMap(ObjectId.parse)
+  def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
+    for {
+      rList <- run(sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
+      parsed <- rList.headOption.flatMap(ObjectId.parse)
     } yield parsed
 
 }
 
-
-class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayersDAO)(implicit ec: ExecutionContext)
+class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayersDAO)(
+    implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   val collection = Annotations
 

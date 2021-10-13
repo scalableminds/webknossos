@@ -6,4 +6,3 @@ object AnnotationLayerType extends ExtendedEnumeration {
   type AnnotationLayerType = Value
   val Skeleton, Volume = Value
 }
-

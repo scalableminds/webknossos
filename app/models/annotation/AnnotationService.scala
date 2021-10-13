@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingDownsampling
 }
 import com.typesafe.scalalogging.LazyLogging
+import controllers.CreateExplorationalParameters
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
@@ -138,11 +139,9 @@ class AnnotationService @Inject()(
   def createTracingsForExplorational(
       dataSet: DataSet,
       dataSource: DataSource,
-      tracingType: TracingType.Value,
-      fallbackLayerNameOpt: Option[String],
-      resolutionRestrictions: ResolutionRestrictions,
+      annotationLayerParameters: List[CreateExplorationalParameters],
       organizationName: String,
-      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = {
+      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
 
     def getFallbackLayer(fallbackLayerName: String): Fox[SegmentationLayer] =
       for {
@@ -202,31 +201,20 @@ class AnnotationService @Inject()(
 
   def createExplorationalFor(user: User,
                              _dataSet: ObjectId,
-                             tracingType: TracingType.Value,
-                             fallbackLayerName: Option[String],
-                             resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext,
-                                                                             m: MessagesProvider): Fox[Annotation] =
+                             annotationLayerParameters: List[CreateExplorationalParameters])(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[Annotation] =
     for {
       dataSet <- dataSetDAO.findOne(_dataSet) ?~> "dataSet.noAccessById"
       dataSource <- dataSetService.dataSourceFor(dataSet)
       organization <- organizationDAO.findOne(user._organization)
       usableDataSource <- dataSource.toUsable ?~> Messages("dataSet.notImported", dataSource.id.name)
-      tracingIds <- createTracingsForExplorational(dataSet,
-                                                   usableDataSource,
-                                                   tracingType,
-                                                   fallbackLayerName,
-                                                   resolutionRestrictions,
-                                                   organization.name)
+      annotationLayers <- createTracingsForExplorational(dataSet,
+                                                         usableDataSource,
+                                                         annotationLayerParameters,
+                                                         organization.name)
       teamId <- selectSuitableTeam(user, dataSet) ?~> "annotation.create.forbidden"
-      annotation = Annotation(
-        ObjectId.generate,
-        _dataSet,
-        None,
-        teamId,
-        user._id,
-        tracingIds._1,
-        tracingIds._2
-      )
+      annotation = Annotation(ObjectId.generate, _dataSet, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield {
       annotation

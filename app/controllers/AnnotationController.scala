@@ -22,15 +22,17 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
+import models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.organization.OrganizationDAO
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class CreateExplorationalParameters(typ: String,
+case class CreateExplorationalParameters(typ: AnnotationLayerType,
                                          fallbackLayerName: Option[String],
-                                         resolutionRestrictions: Option[ResolutionRestrictions])
+                                         resolutionRestrictions: Option[ResolutionRestrictions],
+                                         name: Option[String])
 object CreateExplorationalParameters {
   implicit val jsonFormat: OFormat[CreateExplorationalParameters] = Json.format[CreateExplorationalParameters]
 }
@@ -164,8 +166,8 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def createExplorational(organizationName: String, dataSetName: String): Action[CreateExplorationalParameters] =
-    sil.SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
+  def createExplorational(organizationName: String, dataSetName: String): Action[List[CreateExplorationalParameters]] =
+    sil.SecuredAction.async(validateJson[List[CreateExplorationalParameters]]) { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
@@ -173,13 +175,10 @@ class AnnotationController @Inject()(
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataSet.notFound",
           dataSetName) ~> NOT_FOUND
-        tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataSet._id,
-          tracingType,
-          request.body.fallbackLayerName,
-          request.body.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
+          request.body
         ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
         _ = mailchimpClient.tagUser(request.identity, MailchimpTag.HasAnnotated)

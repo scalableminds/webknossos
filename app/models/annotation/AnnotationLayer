@@ -1,0 +1,9 @@
+package models.annotation
+
+import models.annotation.AnnotationLayerType.AnnotationLayerType
+
+case class AnnotationLayer(
+                            tracingId: String,
+                            typ: AnnotationLayerType,
+                            name: Option[String]
+                          )

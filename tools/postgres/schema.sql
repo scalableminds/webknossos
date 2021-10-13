@@ -50,12 +50,12 @@ CREATE TABLE webknossos.annotations(
 );
 
 
-CREATE TYPE webknossos.TRACING_TYPE AS ENUM ('skeleton', 'volume');
-CREATE TABLE webknossos.annotation_tracings(
+CREATE TYPE webknossos.ANNOTATION_LAYER_TYPE AS ENUM ('Skeleton', 'Volume');
+CREATE TABLE webknossos.annotation_layers(
   _annotation CHAR(24) NOT NULL,
   tracingId CHAR(36) NOT NULL UNIQUE,
-  typ webknossos.TRACING_TYPE NOT NULL,
-  name VARCHAR(256) NOT NULL DEFAULT '',
+  typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
+  name VARCHAR(256),
   PRIMARY KEY (_annotation, tracingId)
 );
 

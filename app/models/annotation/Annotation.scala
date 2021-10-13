@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState._
-import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
@@ -13,8 +12,10 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 import javax.inject.Inject
+import models.annotation.AnnotationType.AnnotationType
 
 import scala.concurrent.ExecutionContext
+
 
 case class Annotation(
     _id: ObjectId,
@@ -22,6 +23,7 @@ case class Annotation(
     _task: Option[ObjectId] = None,
     _team: ObjectId,
     _user: ObjectId,
+    annotationLayers: List[AnnotationLayer],
     description: String = "",
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
     name: String = "",
@@ -38,10 +40,13 @@ case class Annotation(
   lazy val id: String = _id.toString
 
   // TODO replace by lookup in table
-  def tracingType: TracingType.Value =
-    if (skeletonTracingId.isDefined && volumeTracingId.isDefined) TracingType.hybrid
-    else if (skeletonTracingId.isDefined) TracingType.skeleton
+  def tracingType: TracingType.Value = {
+    val skeletonPresent = annotationLayers.exists(_.typ == AnnotationLayerType.Skeleton)
+    val volumePresent = annotationLayers.exists(_.typ == AnnotationLayerType.Volume)
+    if (skeletonPresent && volumePresent) TracingType.hybrid
+    else if (skeletonPresent) TracingType.skeleton
     else TracingType.volume
+  }
 
   def isRevertPossible: Boolean =
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
@@ -51,7 +56,46 @@ case class Annotation(
 
 }
 
-class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class AnnotationLayersDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionContext)
+  extends SimpleSQLDAO(SQLClient) {
+
+  private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] = for {
+    typ <- AnnotationLayerType.fromString(r.typ)
+  } yield {
+    AnnotationLayer(
+      r.tracingid,
+      typ,
+      r.name
+    )
+  }
+
+  def findAnnotationLayersFor(annotationId: ObjectId): Fox[List[AnnotationLayer]] = for {
+    rows <- run(
+      sql"select _annotation, tracingId, typ, name from webknossos.annotation_layers where _annotation = $annotationId"
+        .as[AnnotationLayersRow])
+    parsed <- Fox.serialCombined(rows.toList)(parse)
+  } yield parsed
+
+  def insertForAnnotation(annotationId: ObjectId, annotationLayers: List[AnnotationLayer]): Fox[Unit] = for {
+    _ <- Fox.serialCombined(annotationLayers)(insertOne(annotationId, _))
+  } yield ()
+
+  def insertOne(annotationId: ObjectId, a: AnnotationLayer): Fox[Unit] = for {
+    _ <- run(
+      sqlu"""insert into webknossos.annotation_layers _annotation, tracingId, typ, name
+            values($annotationId, ${a.tracingId}, ${a.typ.toString}, ${a.name.map(sanitize)}""")
+  } yield ()
+
+  def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] = for {
+    rList <- run(
+      sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
+    parsed <- rList.headOption.flatMap(ObjectId.parse)
+    } yield parsed
+
+}
+
+
+class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayersDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   val collection = Annotations
 
@@ -63,6 +107,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
+      annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
     } yield {
       Annotation(
         ObjectId(r._Id),
@@ -70,6 +115,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         r._Task.map(ObjectId(_)),
         ObjectId(r._Team),
         ObjectId(r._User),
+        annotationLayers,
         r.description,
         visibility,
         r.name,
@@ -188,15 +234,11 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       parsed <- parseAll(r)
     } yield parsed
 
-  // TODO use new table
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #$columns from #$existingCollectionName where (skeletonTracingId = $tracingId or volumeTracingId = $tracingId) and #$accessQuery"
-          .as[AnnotationsRow])
-      parsed <- parseFirst(r, s"tracingId=$tracingId")
-    } yield parsed
+      annotationId <- annotationLayerDAO.findAnnotationIdByTracingId(tracingId)
+      annotation <- findOne(annotationId)
+    } yield annotation
 
   // count operations
 

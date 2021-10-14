@@ -19,7 +19,7 @@ const neighbourEdgeIndexByEdgeIndex = {
   "2": [0, 1],
   "3": [0, 1],
 };
-const MAX_DISTANCE_TO_SELECTION = 40;
+const MAX_DISTANCE_TO_SELECTION = 15;
 
 function getDistanceToBoundingBoxEdge(
   pos: Vector3,
@@ -47,34 +47,34 @@ function getDistanceToBoundingBoxEdge(
   //
   // This example is for the xy viewport for x as the main direction / edgeDim.
   const cornerToCompareWith = compareToMin ? min : max;
-  if (pos[otherDim] < min[otherDim]) {
-    // Case 1: Distance to the min corner is needed in otherDim.
+  if (pos[edgeDim] < min[edgeDim]) {
+    // Case 1: Distance to the min corner is needed in edgeDim.
     return Math.sqrt(
-      Math.abs(pos[edgeDim] - cornerToCompareWith[edgeDim]) ** 2 +
-        Math.abs(pos[otherDim] - min[otherDim]) ** 2,
+      Math.abs(pos[edgeDim] - min[edgeDim]) ** 2 +
+        Math.abs(pos[otherDim] - cornerToCompareWith[otherDim]) ** 2,
     );
   }
-  if (pos[otherDim] > max[otherDim]) {
-    // Case 2: Distance to max Corner is needed in otherDim.
+  if (pos[edgeDim] > max[edgeDim]) {
+    // Case 2: Distance to max Corner is needed in edgeDim.
     return Math.sqrt(
-      Math.abs(pos[edgeDim] - cornerToCompareWith[edgeDim]) ** 2 +
-        Math.abs(pos[otherDim] - max[otherDim]) ** 2,
+      Math.abs(pos[edgeDim] - max[edgeDim]) ** 2 +
+        Math.abs(pos[otherDim] - cornerToCompareWith[otherDim]) ** 2,
     );
   }
   // Case 3:
-  // If the position is within the bounds of the other dimension, the shortest distance
-  // to the edge is simply the difference between the edgeDim values.
-  return Math.abs(pos[edgeDim] - cornerToCompareWith[edgeDim]);
+  // If the position is within the bounds of the edgeDim, the shortest distance
+  // to the edge is simply the difference between the otherDim values.
+  return Math.abs(pos[otherDim] - cornerToCompareWith[otherDim]);
 }
 
 export default function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
-  const globalPosition = calculateGlobalPos(state, pos);
+  const globalPosition = calculateGlobalPos(state, pos, plane);
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
   const reorderedIndices = Dimension.getIndices(plane);
   const thirdDim = reorderedIndices[2];
 
-  let currentNearestDistance = MAX_DISTANCE_TO_SELECTION;
+  let currentNearestDistance = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
   let currentNearestBoundingBox = null;
   let currentNearestDistanceArray = null;
 
@@ -83,7 +83,7 @@ export default function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoVi
     const isCrossSectionOfViewportVisible =
       globalPosition[thirdDim] >= min[thirdDim] && globalPosition[thirdDim] < max[thirdDim];
     if (!isCrossSectionOfViewportVisible) {
-      break;
+      continue;
     }
     const distanceArray = [
       getDistanceToBoundingBoxEdge(
@@ -129,18 +129,18 @@ export default function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoVi
   if (currentNearestBoundingBox == null || currentNearestDistanceArray == null) {
     return null;
   }
-  // TODO: nearestEdgeIndex seems wrong. should be 0 or 1 instead of 2 or 3 and other way round.
-  // maybe a little logic error in getDistanceToBoundingBoxEdge or when calling this method.
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
   const dimensionOfNearestEdge = nearestEdgeIndex < 2 ? reorderedIndices[0] : reorderedIndices[1];
-  const edgeDirection = nearestEdgeIndex < 2 ? "vertical" : "horizontal";
+  const direction = nearestEdgeIndex < 2 ? "horizontal" : "vertical";
   const isMaxEdge = nearestEdgeIndex % 2 === 1;
+  const resizableDimension = nearestEdgeIndex < 2 ? reorderedIndices[1] : reorderedIndices[0];
   // TODO: Add feature to select corners.
   return {
     boxId: currentNearestBoundingBox.id,
     dimensionIndex: dimensionOfNearestEdge,
-    edgeDirection,
+    direction,
     isMaxEdge,
     nearestEdgeIndex,
+    resizableDimension,
   };
 }

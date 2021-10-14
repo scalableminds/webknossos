@@ -28,6 +28,7 @@ type Properties = {
   showCrossSections?: boolean,
   id?: number,
   isEditable?: boolean,
+  isHighlighted: boolean,
 };
 
 type PlaneGeometry = typeof THREE.PlaneGeometry;
@@ -68,6 +69,9 @@ class Cube {
   visible: boolean;
   id: ?number;
   isEditable: boolean;
+  lineWidth: number;
+  color: number;
+  isHighlighted: boolean;
 
   constructor(properties: Properties) {
     // min/max should denote a half-open interval.
@@ -75,16 +79,15 @@ class Cube {
     this.max = properties.max;
     this.id = properties.id;
     this.isEditable = properties.isEditable || false;
-    const lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
-    const color = properties.color || 0x000000;
+    this.lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
+    this.color = properties.color || 0x000000;
     this.showCrossSections = properties.showCrossSections || false;
 
     this.initialized = false;
     this.visible = true;
+    this.isHighlighted = properties.isHighlighted;
 
-    const lineProperties = { color, linewidth: lineWidth };
-
-    this.cube = new THREE.Line(new THREE.Geometry(), new THREE.LineBasicMaterial(lineProperties));
+    this.cube = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
 
     this.crossSections = {};
     this.crossSectionHitPlanes = {
@@ -93,10 +96,7 @@ class Cube {
       [OrthoViews.PLANE_XZ]: [],
     };
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.crossSections[planeId] = new THREE.Line(
-        new THREE.Geometry(),
-        new THREE.LineBasicMaterial(lineProperties),
-      );
+      this.crossSections[planeId] = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
     }
 
     if (this.min != null && this.max != null) {
@@ -107,6 +107,18 @@ class Cube {
       state => getPosition(state.flycam),
       position => this.updatePosition(position),
     );
+  }
+
+  getLineMaterial() {
+    return this.isHighlighted
+      ? new THREE.LineDashedMaterial({
+          color: 0xffffff,
+          linewidth: this.lineWidth,
+          scale: 1,
+          dashSize: 5,
+          gapSize: 5,
+        })
+      : new THREE.LineBasicMaterial({ color: this.color, linewidth: this.lineWidth });
   }
 
   getEdgeHitBox(
@@ -312,6 +324,7 @@ class Cube {
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
       mesh.geometry.computeBoundingSphere();
+      mesh.computeLineDistances();
       mesh.geometry.verticesNeedUpdate = true;
     }
 
@@ -365,6 +378,17 @@ class Cube {
 
   getCrossSectionHitPlanes(): Array<typeof THREE.PlaneGeometry> {
     return _.flattenDeep(_.values(this.crossSectionHitPlanes));
+  }
+
+  setIsHighlighted(highlighted: boolean) {
+    if (highlighted === this.isHighlighted) {
+      return;
+    }
+    this.isHighlighted = highlighted;
+    this.getMeshes().forEach(mesh => {
+      mesh.material = this.getLineMaterial();
+    });
+    app.vent.trigger("rerender");
   }
 
   updateForCam(id: OrthoView) {

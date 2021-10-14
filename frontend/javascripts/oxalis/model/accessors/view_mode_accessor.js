@@ -10,6 +10,7 @@ import constants, {
   type Rect,
   type Viewport,
   OrthoViews,
+  type OrthoView,
   type Point2,
   type Vector3,
   type ViewMode,
@@ -77,7 +78,7 @@ export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewpor
 
 //   // example I:
 //   // 16 : 9 --> 1.78
-//   // useWdth: false
+//   // useWidth: false
 
 //   const useWidth = false;
 //   const scaledWidth = width * (useWidth ? 1 : aspectRatio);
@@ -97,19 +98,19 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
   return [xScale, yScale];
 }
 
-function _calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector3 {
+function _calculateGlobalPos(state: OxalisState, clickPos: Point2, planeId: ?OrthoView): Vector3 {
   let position;
-  const { activeViewport } = state.viewModeData.plane;
+  planeId = planeId || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
-  const zoomFactors = getPlaneScalingFactor(state, state.flycam, activeViewport);
-  const viewportScale = getViewportScale(state, activeViewport);
+  const zoomFactors = getPlaneScalingFactor(state, state.flycam, planeId);
+  const viewportScale = getViewportScale(state, planeId);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const center = [0, 1].map(dim => (constants.VIEWPORT_WIDTH * viewportScale[dim]) / 2);
   const diffX = ((center[0] - clickPos.x) / viewportScale[0]) * zoomFactors[0];
   const diffY = ((center[1] - clickPos.y) / viewportScale[1]) * zoomFactors[1];
 
-  switch (activeViewport) {
+  switch (planeId) {
     case OrthoViews.PLANE_XY:
       position = [
         curGlobalPos[0] - diffX * planeRatio[0],
@@ -133,7 +134,7 @@ function _calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector3 {
       break;
     default:
       console.error(
-        `Trying to calculate the global position, but no viewport is active: ${activeViewport}`,
+        `Trying to calculate the global position, but no viewport is active: ${planeId}`,
       );
       return [0, 0, 0];
   }

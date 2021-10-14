@@ -17,8 +17,8 @@ import {
 import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_handlers";
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import { edgeIdToEdge } from "oxalis/geometries/cube";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
@@ -533,7 +533,29 @@ export class BoundingBoxTool {
     planeView: PlaneView,
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): * {
+    const bboxHoveringThrottleTime = 75;
     let selectedEdge = null;
+    const getClosestHoveredBoundingBoxThrottled =
+      planeId !== OrthoViews.TDView
+        ? _.throttle((delta: Point2, position: Point2, id, event) => {
+            const { body } = document;
+            if (body == null || selectedEdge != null) {
+              return;
+            }
+            const newSelectedEdge = getClosestHoveredBoundingBox(position, planeId);
+            if (newSelectedEdge != null) {
+              getSceneController().highlightUserBoundingBox(newSelectedEdge.boxId);
+              if (newSelectedEdge.direction === "horizontal") {
+                body.style.cursor = "row-resize";
+              } else {
+                body.style.cursor = "col-resize";
+              }
+            } else {
+              getSceneController().highlightUserBoundingBox(null);
+              body.style.cursor = "default";
+            }
+          }, bboxHoveringThrottleTime)
+        : () => {};
     return {
       leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
         if (selectedEdge != null) {
@@ -541,26 +563,19 @@ export class BoundingBoxTool {
           const currentlySelectedEdge = selectedEdge; // avoiding flow complains.
           const { userBoundingBoxes } = getSomeTracing(state.tracing);
           const zoomFactor = state.flycam.zoomStep;
-          // TODO:  Discussion aufschreiben:
-          // Raycaster nutzt gpu nicht -> nicht all zu fix wie gedacht.
-          // Raycaster benötigt zusätzlich noch weitere objekte, die immer mitgeupdatet werden müssen (spätestens wenn das bbox tool an ist)
-          // Manuelles Testen wäre nicht schlauer gemacht / schneller
-
-          // Generelle Frage: Was wenn man mehrere BBox kandidaten hat, beim hoveren? eine eigene berechnung wäre da fixer:
-          // Pro Bounding Box checken nur ein check nötig, da die plane explizit bekannt ist,
           const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
           const updatedUserBoundingBoxes = userBoundingBoxes.map(bbox => {
             if (bbox.id !== currentlySelectedEdge.boxId) {
               return bbox;
             }
             bbox = _.cloneDeep(bbox);
+            const { resizableDimension } = currentlySelectedEdge;
             // For a horizontal edge only consider delta.y, for vertical only delta.x
             const movement = currentlySelectedEdge.direction === "horizontal" ? delta.y : delta.x;
             const minOrMax = currentlySelectedEdge.isMaxEdge ? "max" : "min";
-            const scaledMovement =
-              movement * zoomFactor * scaleFactor[currentlySelectedEdge.dimensionIndex];
-            bbox.boundingBox[minOrMax][currentlySelectedEdge.dimensionIndex] = Math.round(
-              bbox.boundingBox[minOrMax][currentlySelectedEdge.dimensionIndex] + scaledMovement,
+            const scaledMovement = movement * zoomFactor * scaleFactor[resizableDimension];
+            bbox.boundingBox[minOrMax][resizableDimension] = Math.round(
+              bbox.boundingBox[minOrMax][resizableDimension] + scaledMovement,
             );
             return bbox;
           });
@@ -571,18 +586,15 @@ export class BoundingBoxTool {
         }
       },
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const hitObject = planeView.performBoundingBoxHitTest([pos.x, pos.y]);
-        if (hitObject != null) {
-          const { userData } = hitObject;
-          selectedEdge = {
-            boxId: userData.boxId,
-            ...edgeIdToEdge(userData.edgeId, userData.plane),
-          };
+        selectedEdge = getClosestHoveredBoundingBox(pos, planeId);
+        if (selectedEdge) {
+          getSceneController().highlightUserBoundingBox(selectedEdge.boxId);
         }
       },
 
       leftMouseUp: () => {
         selectedEdge = null;
+        getSceneController().highlightUserBoundingBox(null);
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
@@ -596,28 +608,7 @@ export class BoundingBoxTool {
       rightMouseUp: () => {
         console.log("BoundingBox tool right up");
       },
-      mouseMove: (delta: Point2, position: Point2, id, event) => {
-        const { body } = document;
-        if (body == null || selectedEdge != null) {
-          return;
-        }
-        const info = getClosestHoveredBoundingBox(position, planeId);
-        console.log("info", info);
-        // planeView.performIsosurfaceHitTest([position.x, position.y]);
-        /* const hitObject = planeView.throttledPerformBoundingBoxHitTest([position.x, position.y]);
-        if (hitObject != null) {
-          const { userData } = hitObject;
-          const { direction } = edgeIdToEdge(userData.edgeId, userData.plane);
-          if (direction === "horizontal") {
-            body.style.cursor = "row-resize";
-          } else {
-            body.style.cursor = "col-resize";
-          }
-        } else {
-          body.style.cursor = "default";
-        } */
-      },
-
+      mouseMove: getClosestHoveredBoundingBoxThrottled,
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         /* const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
         const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));

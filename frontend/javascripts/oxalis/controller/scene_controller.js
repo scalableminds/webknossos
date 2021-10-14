@@ -53,8 +53,8 @@ class SceneController {
   planeShift: Vector3;
   datasetBoundingBox: Cube;
   userBoundingBoxGroup: typeof THREE.Group;
-  userBoundingBoxHitPlanesGroup: typeof THREE.Group;
   userBoundingBoxes: Array<Cube>;
+  highlightedBBoxId: ?number;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
   planes: OrthoViewMap<Plane>;
@@ -100,6 +100,7 @@ class SceneController {
     this.rootGroup.add(this.getRootNode());
     this.isosurfacesRootGroup = new THREE.Group();
     this.meshesRootGroup = new THREE.Group();
+    this.highlightedBBoxId = null;
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
@@ -276,7 +277,6 @@ class SceneController {
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
     this.userBoundingBoxGroup = new THREE.Group();
-    this.userBoundingBoxHitPlanesGroup = new THREE.Group();
     this.rootNode.add(this.userBoundingBoxGroup);
     this.userBoundingBoxes = [];
 
@@ -287,6 +287,7 @@ class SceneController {
       max: upperBoundary,
       color: CUBE_COLOR,
       showCrossSections: true,
+      isHighlighted: false,
     });
     this.datasetBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
@@ -333,6 +334,7 @@ class SceneController {
         max: taskBoundingBox.max,
         color: 0x00ff00,
         showCrossSections: true,
+        isHighlighted: false,
       });
       this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
@@ -451,7 +453,6 @@ class SceneController {
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     const newUserBoundingBoxGroup = new THREE.Group();
-    const newUserBoundingBoxHitPlanesGroup = new THREE.Group();
     this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor = [color[0] * 255, color[1] * 255, color[2] * 255];
@@ -462,23 +463,37 @@ class SceneController {
         showCrossSections: true,
         id,
         isEditable: true,
+        isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach(mesh => {
         newUserBoundingBoxGroup.add(mesh);
         mesh.userData.id = id;
       });
-      bbCube
-        .getCrossSectionHitPlanes()
-        .forEach(hitPlane => newUserBoundingBoxHitPlanesGroup.add(hitPlane));
       return bbCube;
     });
     this.rootNode.remove(this.userBoundingBoxGroup);
-    this.rootNode.remove(this.userBoundingBoxHitPlanesGroup);
     this.userBoundingBoxGroup = newUserBoundingBoxGroup;
-    this.userBoundingBoxHitPlanesGroup = newUserBoundingBoxHitPlanesGroup;
     this.rootNode.add(this.userBoundingBoxGroup);
-    this.rootNode.add(this.userBoundingBoxHitPlanesGroup);
+  }
+
+  highlightUserBoundingBox(bboxId: ?number): void {
+    if (this.highlightedBBoxId === bboxId) {
+      return;
+    }
+    const highlightOrUnhighlightUserBBox = (id: number, highlight: boolean) => {
+      const bboxToChangeHighlighting = this.userBoundingBoxes.find(bbCube => bbCube.id === id);
+      if (bboxToChangeHighlighting != null) {
+        bboxToChangeHighlighting.setIsHighlighted(highlight);
+      }
+    };
+    if (this.highlightedBBoxId != null) {
+      highlightOrUnhighlightUserBBox(this.highlightedBBoxId, false);
+    }
+    if (bboxId != null) {
+      highlightOrUnhighlightUserBBox(bboxId, true);
+    }
+    this.highlightedBBoxId = bboxId;
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {

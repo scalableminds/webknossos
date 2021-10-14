@@ -5,7 +5,8 @@ import Store from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import Dimension from "oxalis/model/dimensions";
 
-const neighbourEdgeIndexByEdgeIndex = {
+/* const neighbourEdgeIndexByEdgeIndex = {
+  // TODO: Use this to detect corners properly.
   // The edges are indexed within the plane like this:
   // See the distanceArray calculation as a reference.
   //  +---0---+
@@ -18,7 +19,7 @@ const neighbourEdgeIndexByEdgeIndex = {
   "1": [2, 3],
   "2": [0, 1],
   "3": [0, 1],
-};
+}; */
 const MAX_DISTANCE_TO_SELECTION = 15;
 
 function getDistanceToBoundingBoxEdge(

@@ -530,14 +530,14 @@ export class FillCellTool {
 export class BoundingBoxTool {
   static getPlaneMouseControls(
     planeId: OrthoView,
-    planeView: PlaneView,
-    showNodeContextMenuAt: ShowContextMenuFunction,
+    _planeView: PlaneView,
+    _showNodeContextMenuAt: ShowContextMenuFunction,
   ): * {
     const bboxHoveringThrottleTime = 75;
     let selectedEdge = null;
     const getClosestHoveredBoundingBoxThrottled =
       planeId !== OrthoViews.TDView
-        ? _.throttle((delta: Point2, position: Point2, id, event) => {
+        ? _.throttle((delta: Point2, position: Point2, _id, _event) => {
             const { body } = document;
             if (body == null || selectedEdge != null) {
               return;
@@ -585,7 +585,7 @@ export class BoundingBoxTool {
           MoveHandlers.handleMovePlane(delta);
         }
       },
-      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         selectedEdge = getClosestHoveredBoundingBox(pos, planeId);
         if (selectedEdge) {
           getSceneController().highlightUserBoundingBox(selectedEdge.boxId);
@@ -597,11 +597,11 @@ export class BoundingBoxTool {
         getSceneController().highlightUserBoundingBox(null);
       },
 
-      rightDownMove: (delta: Point2, pos: Point2) => {
+      rightDownMove: (_delta: Point2, _pos: Point2) => {
         console.log("BoundingBox tool right down move");
       },
 
-      rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      rightMouseDown: (_pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         console.log("BoundingBox tool right down");
       },
 
@@ -609,7 +609,7 @@ export class BoundingBoxTool {
         console.log("BoundingBox tool right up");
       },
       mouseMove: getClosestHoveredBoundingBoxThrottled,
-      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      leftClick: (_pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
         /* const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
         const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
         const boundingBoxId = highestBoundingBoxId + 1;
@@ -624,7 +624,7 @@ export class BoundingBoxTool {
         Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes)); */
       },
 
-      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+      rightClick: (_pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
         console.log("BoundingBox right click");
       },
     };

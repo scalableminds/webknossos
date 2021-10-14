@@ -466,10 +466,7 @@ class SceneController {
         isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
-      bbCube.getMeshes().forEach(mesh => {
-        newUserBoundingBoxGroup.add(mesh);
-        mesh.userData.id = id;
-      });
+      bbCube.getMeshes().forEach(mesh => newUserBoundingBoxGroup.add(mesh));
       return bbCube;
     });
     this.rootNode.remove(this.userBoundingBoxGroup);

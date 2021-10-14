@@ -6,6 +6,8 @@ const { useState, useEffect, useRef } = React;
 
 type Props = {
   onClick: (SyntheticInputEvent<>) => Promise<any>,
+  hideContentWhenLoading?: boolean,
+  children?: React.Node,
 };
 
 function useLoadingClickHandler(originalOnClick: (SyntheticInputEvent<>) => Promise<any>) {
@@ -38,7 +40,10 @@ function useLoadingClickHandler(originalOnClick: (SyntheticInputEvent<>) => Prom
 
 export function AsyncButton(props: Props) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  return <Button {...props} loading={isLoading} onClick={onClick} />;
+  const { children, hideContentWhenLoading, ...rest } = props;
+  const effectiveChildren = hideContentWhenLoading && isLoading ? null : children;
+  // eslint-disable-next-line react/no-children-prop
+  return <Button {...rest} children={effectiveChildren} loading={isLoading} onClick={onClick} />;
 }
 
 export function AsyncIconButton(props: Props & { icon: React.Element<*> }) {
@@ -49,7 +54,7 @@ export function AsyncIconButton(props: Props & { icon: React.Element<*> }) {
   });
 }
 
-export function AsyncLink(props: Props & { children: React.Node, icon: React.Node }) {
+export function AsyncLink(props: Props & { icon: React.Node }) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   const icon = isLoading ? <LoadingOutlined key="loading-icon" /> : props.icon;
   const content = [icon, props.children];

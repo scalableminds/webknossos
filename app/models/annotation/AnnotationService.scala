@@ -681,11 +681,7 @@ class AnnotationService @Inject()(
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
-      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
-      isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
-        userService.isTeamManagerOrAdminOf(requester, user))
-      userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))
-      else Fox.successful(None)
+      userJson <- userJsonForAnnotation(annotation._user, requestingUser)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),
@@ -722,6 +718,19 @@ class AnnotationService @Inject()(
       )
     }
   }
+
+  private def userJsonForAnnotation(userId: ObjectId, requestingUser: Option[User]): Fox[Option[JsObject]] =
+    if (userId == ObjectId.dummyId) {
+      Fox.successful(None)
+    } else {
+      for {
+        user <- userService.findOneById(userId, useCache = true)(GlobalAccessContext)
+        isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
+          userService.isTeamManagerOrAdminOf(requester, user))
+        userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))
+        else Fox.successful(None)
+      } yield userJson
+    }
 
   //for Explorative Annotations list
   def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] =

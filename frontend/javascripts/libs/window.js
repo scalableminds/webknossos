@@ -34,6 +34,9 @@ const _window =
         location: dummyLocation,
         requestAnimationFrame: resolve => resolve(),
         document,
+        navigator: {
+          onLine: true,
+        },
       }
     : window;
 

@@ -14,6 +14,7 @@ import Store, { type OxalisState, type Flycam, type Task } from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
 import message from "messages";
+import { ShareButton } from "oxalis/view/action-bar/share_modal_view";
 
 type Props = {|
   flycam: Flycam,
@@ -118,6 +119,7 @@ class DatasetPositionView extends PureComponent<Props> {
             style={positionInputStyle}
             allowDecimals
           />
+          <ShareButton dataset={this.props.dataset} style={copyPositionStyle} />
         </Input.Group>
         {isArbitraryMode ? (
           <Input.Group compact style={{ whiteSpace: "nowrap", marginLeft: 10 }}>

@@ -114,6 +114,7 @@ class AsyncTaskQueue {
         this.retryCount++;
         this.tasks.unshift(currentTask);
         if (this.retryCount > this.failureEventThreshold) {
+          console.error("AsyncTaskQueue failed with error", error);
           this.trigger("failure", this.retryCount);
         }
         if (this.retryCount >= this.maxRetry) {

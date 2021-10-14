@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessAnswer,
   UserAccessRequest
 }
+import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
 import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
@@ -172,6 +173,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case _                => Fox.successful(false)
       }
 
+    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(UserAccessAnswer(granted = true))
     for {
       annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
       restrictions <- annotationInformationProvider.restrictionsFor(

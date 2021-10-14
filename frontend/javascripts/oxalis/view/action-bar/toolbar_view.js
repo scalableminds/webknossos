@@ -9,6 +9,7 @@ import Constants, {
   AnnotationToolEnum,
   type OverwriteMode,
   OverwriteModeEnum,
+  FillModeEnum,
 } from "oxalis/constants";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import { document } from "libs/window";
@@ -392,14 +393,6 @@ export default function ToolbarView() {
     adaptedActiveTool === AnnotationToolEnum.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
 
-  const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
-  const showCreateCellButton =
-    isVolumeSupported && !showCreateTreeButton && adaptedActiveTool !== AnnotationToolEnum.MOVE;
-  const showChangeBrushSizeButton =
-    showCreateCellButton &&
-    (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
-      adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
-
   return (
     <div
       onClick={() => {
@@ -565,6 +558,34 @@ export default function ToolbarView() {
         ) : null}
       </Radio.Group>
 
+      <ToolSpecificSettings
+        hasSkeleton={hasSkeleton}
+        adaptedActiveTool={adaptedActiveTool}
+        isVolumeSupported={isVolumeSupported}
+        isControlPressed={isControlPressed}
+        isShiftPressed={isShiftPressed}
+      />
+    </div>
+  );
+}
+
+function ToolSpecificSettings({
+  hasSkeleton,
+  adaptedActiveTool,
+  isVolumeSupported,
+  isControlPressed,
+  isShiftPressed,
+}) {
+  const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
+  const showCreateCellButton =
+    isVolumeSupported && !showCreateTreeButton && adaptedActiveTool !== AnnotationToolEnum.MOVE;
+  const showChangeBrushSizeButton =
+    showCreateCellButton &&
+    (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
+      adaptedActiveTool === AnnotationToolEnum.ERASE_BRUSH);
+
+  return (
+    <>
       {showCreateTreeButton ? (
         <Space size={0} className="antd-legacy-group" style={{ marginLeft: 10 }}>
           <CreateTreeButton />
@@ -584,6 +605,35 @@ export default function ToolbarView() {
         isShiftPressed={isShiftPressed}
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />
-    </div>
+
+      {adaptedActiveTool === AnnotationToolEnum.FILL_CELL ? <FillModeSwitch /> : null}
+    </>
+  );
+}
+
+const handleSetFillMode = (event: { target: { value: OverwriteMode } }) => {
+  Store.dispatch(updateUserSettingAction("fillMode", event.target.value));
+};
+
+function FillModeSwitch() {
+  const fillMode = useSelector(state => state.userConfiguration.fillMode);
+
+  return (
+    <Radio.Group value={fillMode} onChange={handleSetFillMode} style={{ marginLeft: 10 }}>
+      <RadioButtonWithTooltip
+        title="Only perform the Fill operation in the current plane."
+        style={narrowButtonStyle}
+        value={FillModeEnum._2D}
+      >
+        2D
+      </RadioButtonWithTooltip>
+      <RadioButtonWithTooltip
+        title="Perform the Fill operation in 3D."
+        style={narrowButtonStyle}
+        value={FillModeEnum._3D}
+      >
+        3D
+      </RadioButtonWithTooltip>
+    </Radio.Group>
   );
 }

@@ -23,7 +23,7 @@ webKnossos shares datasets publicly (everyone can view them without any login) o
 ![Video: Connect webKnossos with Your Publications](https://www.youtube.com/watch?v=Ut4m6L3nYdY)
 
 ### Private Sharing for Review
-A privately shared dataset can only be accessed from outside users your using the correct URL.
+A privately shared dataset can only be accessed from outside users using the correct URL.
 A unique authentification token is part of the URL so anyone with this URL has access rights for viewing the dataset.
 The dataset is NOT featured publicly anywhere else on your webKnossos instance.
 
@@ -121,6 +121,38 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 3. Copy the sharing URL.
 
 ![Get the Annotation Sharing Link](images/sharing_modal_link.png)
+
+#### Sharing Link Format
+
+As already indicated, the sharing link encodes certain properties, like the current position, rotation, zoom, and active mapping to ensure that users you share the link with see the same things you saw when you copied the link. Alternatively, the link can be crafted manually or programmatically to direct users to specific locations in a dataset. The information is json encoded in the URL fragment and has the following format (flow type definition):
+
+```javascript
+type MappingType = "JSON" | "HDF5";
+type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
+type Vector3 = [number, number, number];
+
+type UrlStateByLayer = {
+  [layerName: string]: {
+    mappingInfo?: {
+      mappingName: string,
+      mappingType: MappingType,
+      agglomerateIdsToImport?: [number],
+    },
+  },
+};
+
+type UrlManagerState = {|
+  position?: Vector3,
+  mode?: ViewMode,
+  zoomStep?: number,
+  activeNode?: number,
+  rotation?: Vector3,
+  stateByLayer?: UrlStateByLayer,
+|};
+
+```
+
+To avoid having to create annotations in advance when programmatically crafting links, a sandbox tracing can be used. A sandbox tracing is always accessible through the same URL and offers all available tracing features, however, changes are not saved. At any point, users can decide to copy the current state to their account. The sandbox can be accessed at `<webknossos_host>/datasets/<organization>/<dataset>/sandbox/skeleton`.
 
 ### Team Sharing
 In addition to sharing your annotation via a link, you can also share your annotations with colleagues in the shared annotations tab.

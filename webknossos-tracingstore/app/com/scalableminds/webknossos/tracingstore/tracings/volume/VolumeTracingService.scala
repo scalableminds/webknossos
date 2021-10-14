@@ -7,25 +7,19 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
-import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
-  DataFinder,
-  IsosurfaceRequest,
-  IsosurfaceService,
-  IsosurfaceServiceHolder
-}
-import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TSRemoteWebKnossosClient}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
+import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TSRemoteWebKnossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
@@ -511,5 +505,7 @@ class VolumeTracingService @Inject()(
       _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
     } yield mergedVolume.largestSegmentId.toSignedLong
   }
+
+  def dummyTracing: VolumeTracing = ???
 
 }

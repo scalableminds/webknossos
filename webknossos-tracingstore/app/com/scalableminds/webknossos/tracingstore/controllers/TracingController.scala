@@ -217,7 +217,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     updateGroup.transactionId match {
       case Some(transactionId) =>
         for {
-          _ <- Fox.assertTrue(tracingService.handledGroupIdStoreContains(transactionId, tracingId, updateGroup.version)) ?~> errorMessage ~> CONFLICT
+          _ <- Fox.assertTrue(tracingService.handledGroupIdStoreContains(tracingId, transactionId, updateGroup.version)) ?~> errorMessage ~> CONFLICT
         } yield updateGroup.version
       case None => Fox.failure(errorMessage) ~> CONFLICT
     }

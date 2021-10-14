@@ -449,7 +449,7 @@ function getRetryWaitTime(retryCount: number) {
 // tabs, will result in different UUIDs when trying to update the annotation.
 // If an update gets lost for some reason and the front-end retries, the back-end can
 // use the UUID to see whether the update was already accepted.
-const clientUUID = uuidv4();
+const clientUuid = uuidv4();
 
 export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<void> {
   const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
@@ -467,13 +467,18 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       const startTime = Date.now();
       yield* call(
         sendRequestWithToken,
-        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?client_uuid=${clientUUID}&token=`,
+        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?clientUuid=${clientUuid}&token=`,
         {
           method: "POST",
           data: compactedSaveQueue,
           compress: true,
         },
       );
+
+      if (retryCount === 0) {
+        throw new Error("Provoke 409 for retry");
+      }
+
       const endTime = Date.now();
       if (endTime - startTime > PUSH_THROTTLE_TIME) {
         yield* call(

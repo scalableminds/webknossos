@@ -47,4 +47,4 @@ Try webKnossos on a large selection of published datasets: [https://webknossos.o
 webKnossos was developed by [scalable minds](https://scalableminds.com) in collaboration with the [Max Planck Institute for Brain Research](https://brain.mpg.de/connectomics).
 
 If you need help with webKnossos, feel free to contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the forum](https://forum.image.sc/tag/webknossos). 
-scalable minds also offers [commercial support, managed hosting and feature development services](https://webknossos.org/pricing).
+scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).

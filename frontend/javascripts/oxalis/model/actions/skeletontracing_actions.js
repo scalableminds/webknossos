@@ -124,6 +124,12 @@ type UpdateNavigationListAction = {
   list: Array<number>,
   activeIndex: number,
 };
+export type LoadAgglomerateSkeletonAction = {
+  type: "LOAD_AGGLOMERATE_SKELETON",
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+};
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -167,7 +173,8 @@ export type SkeletonTracingAction =
   | SetTreeGroupAction
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
-  | UpdateNavigationListAction;
+  | UpdateNavigationListAction
+  | LoadAgglomerateSkeletonAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -543,4 +550,15 @@ export const updateNavigationListAction = (
   type: "UPDATE_NAVIGATION_LIST",
   list,
   activeIndex,
+});
+
+export const loadAgglomerateSkeletonAction = (
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+): LoadAgglomerateSkeletonAction => ({
+  type: "LOAD_AGGLOMERATE_SKELETON",
+  layerName,
+  mappingName,
+  agglomerateId,
 });

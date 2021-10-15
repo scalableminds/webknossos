@@ -17,7 +17,7 @@ import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 
 import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
-import type { OxalisState, Flycam, IsosurfaceInformation, SegmentsMap } from "oxalis/store";
+import type { OxalisState, Flycam, IsosurfaceInformation, SegmentMap } from "oxalis/store";
 import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import {
@@ -78,7 +78,7 @@ type StateProps = {|
   mappingColors: ?Array<number>,
   flycam: Flycam,
   hasVolume: boolean,
-  segments: ?SegmentsMap,
+  segments: ?SegmentMap,
   visibleSegmentationLayer: ?APISegmentationLayer,
   allowUpdate: boolean,
   organization: string,

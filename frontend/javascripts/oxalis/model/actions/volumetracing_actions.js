@@ -5,7 +5,7 @@
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { SegmentsMap } from "oxalis/store";
+import type { SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import { type Dispatch } from "redux";
 
@@ -50,7 +50,7 @@ export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
 export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 export type SetSegmentsAction = {
   type: "SET_SEGMENTS",
-  segments: SegmentsMap,
+  segments: SegmentMap,
 };
 
 export type SetSomePositionOfSegmentAction = {
@@ -133,7 +133,7 @@ export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
   cellId,
 });
 
-export const setSegmentsActions = (segments: SegmentsMap): SetSegmentsAction => ({
+export const setSegmentsActions = (segments: SegmentMap): SetSegmentsAction => ({
   type: "SET_SEGMENTS",
   segments,
 });

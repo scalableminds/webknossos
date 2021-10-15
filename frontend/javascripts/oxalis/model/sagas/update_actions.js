@@ -114,19 +114,18 @@ type UpdateVolumeTracingUpdateAction = {|
 |};
 
 type CreateSegmentVolumeAction = {|
-  id: number,
-  anchorPosition: ?Vector3,
-  name: ?string,
-  creationTime: ?number,
+  name: "createSegment",
+  value: {| id: number, anchorPosition: ?Vector3, name: ?string, creationTime: ?number |},
 |};
 type UpdateSegmentVolumeAction = {|
-  id: number,
-  anchorPosition: ?Vector3,
-  name: ?string,
-  creationTime: ?number,
+  name: "updateSegment",
+  value: {| id: number, anchorPosition: ?Vector3, name: ?string, creationTime: ?number |},
 |};
 type DeleteSegmentVolumeAction = {|
-  id: number,
+  name: "deleteSegment",
+  value: {|
+    id: number,
+  |},
 |};
 
 type UpdateUserBoundingBoxesAction = {|
@@ -410,14 +409,14 @@ export function createSegmentVolumeAction(
   anchorPosition: ?Vector3,
   name: ?string,
   creationTime: ?number,
-) {
+): CreateSegmentVolumeAction {
   return {
     name: "createSegment",
     value: {
       id,
       anchorPosition,
       name,
-      creationTime: null, // todo
+      creationTime,
     },
   };
 }
@@ -426,14 +425,14 @@ export function updateSegmentVolumeAction(
   anchorPosition: ?Vector3,
   name: ?string,
   creationTime: ?number,
-) {
+): UpdateSegmentVolumeAction {
   return {
     name: "updateSegment",
     value: {
       id,
       anchorPosition,
       name,
-      creationTime: null, // todo
+      creationTime,
     },
   };
 }

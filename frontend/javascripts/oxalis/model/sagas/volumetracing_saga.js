@@ -4,6 +4,7 @@ import _ from "lodash";
 import React from "react";
 import { message } from "antd";
 import * as Utils from "libs/utils";
+import { diffDiffableMaps } from "libs/diffable_map";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
@@ -33,7 +34,7 @@ import {
   removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
-import type { VolumeTracing, Flycam, SegmentsMap } from "oxalis/store";
+import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
   enforceVolumeTracing,
   isVolumeAnnotationDisallowedForZoom,
@@ -780,29 +781,25 @@ function updateTracingPredicate(
 }
 
 export function* diffSegmentLists(
-  prevSegments: SegmentsMap,
-  newSegments: SegmentsMap,
+  prevSegments: SegmentMap,
+  newSegments: SegmentMap,
 ): Generator<UpdateAction, void, void> {
-  if (prevSegments === newSegments) return;
   const {
     onlyA: deletedSegmentIds,
     onlyB: addedSegmentIds,
-    both: bothSegmentIds,
-  } = Utils.diffArrays(
-    Array.from(prevSegments.values()).map(segment => segment.id),
-    Array.from(newSegments.values()).map(segment => segment.id),
-  );
+    changed: bothSegmentIds,
+  } = diffDiffableMaps(prevSegments, newSegments);
 
   for (const segmentId of deletedSegmentIds) {
     yield deleteSegmentVolumeAction(segmentId);
   }
   for (const segmentId of addedSegmentIds) {
-    const segment = newSegments.get(String(segmentId));
+    const segment = newSegments.get(segmentId);
     yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
   }
   for (const segmentId of bothSegmentIds) {
-    const segment = newSegments.get(String(segmentId));
-    const prevSegment = prevSegments.get(String(segmentId));
+    const segment = newSegments.get(segmentId);
+    const prevSegment = prevSegments.get(segmentId);
     if (segment !== prevSegment) {
       yield updateSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
     }
@@ -827,7 +824,9 @@ export function* diffVolumeTracing(
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
 
-  yield* diffSegmentLists(prevVolumeTracing.segments, volumeTracing.segments);
+  if (prevVolumeTracing.segments !== volumeTracing.segments) {
+    yield* diffSegmentLists(prevVolumeTracing.segments, volumeTracing.segments);
+  }
 
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
     yield removeFallbackLayer();

@@ -227,19 +227,19 @@ export type Segment = {
   somePosition: Vector3,
 };
 
-export type SegmentsMap = Map<string, Segment>;
+export type SegmentMap = DiffableMap<number, Segment>;
 
 export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
-  +segments: SegmentsMap,
+  +segments: SegmentMap,
   +maxCellId: number,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
   // Stores points of the currently drawn region in global coordinates
   +contourList: Array<Vector3>,
-  +cells: VolumeCellMap,
+  +cells: VolumeCellMap, // todo: unused?
   +fallbackLayer?: string,
 |};
 

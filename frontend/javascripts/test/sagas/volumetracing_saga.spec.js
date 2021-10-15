@@ -4,6 +4,7 @@ import "test/sagas/volumetracing_saga.mock.js";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
 
+import DiffableMap from "libs/diffable_map";
 import {
   OrthoViews,
   AnnotationToolEnum,
@@ -38,7 +39,7 @@ const volumeTracing: VolumeTracing = {
   createdTimestamp: 0,
   tracingId: "tracingId",
   version: 0,
-  segments: new Map(),
+  segments: new DiffableMap(),
   activeCellId: 0,
   cells: {},
   maxCellId: 0,

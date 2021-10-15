@@ -22,6 +22,8 @@ import {
   setContourTracingModeReducer,
   setMaxCellReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import DiffableMap from "libs/diffable_map";
+import * as Utils from "libs/utils";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
   switch (action.type) {
@@ -35,7 +37,16 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       const volumeTracing: VolumeTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
-        segments: new Map(action.tracing.segments.map(segment => [segment.id, segment])),
+        segments: new DiffableMap(
+          action.tracing.segments.map(segment => [
+            segment.segmentId,
+            {
+              ...segment,
+              id: segment.segmentId,
+              somePosition: Utils.point3ToVector3(segment.anchorPosition),
+            },
+          ]),
+        ),
         activeCellId: 0,
         lastCentroid: null,
         contourTracingMode: ContourModeEnum.DRAW,
@@ -103,28 +114,29 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         }
 
         case "SET_SOME_POSITION_OF_SEGMENT": {
-          const { segmentId, somePosition } = action;
+          const { segmentId } = action;
+          const somePosition = Utils.floor3(action.somePosition);
           const { segments } = volumeTracing;
-          if (!segments.has(`${segmentId}`)) {
-            const newSegment = {
-              id: segmentId,
-              somePosition: somePosition.map(el => Math.floor(el)), // necessary?
-              name: `Segment ${segmentId}`,
-            };
-            return update(state, {
-              tracing: {
-                volume: {
-                  // Immutability helper seems to automatically transform number keys to strings. Thus we also need a string here
-                  // TODO: Maybe find a way to save this data more efficient.
-                  // Always transforming the id to a string does not sound very fast and the conversion needs to be done at multiple points in the code.
-                  segments: { $add: [[`${segmentId}`, newSegment]] },
-                },
-              },
-            });
-          }
+
+          const oldSegment = segments.getNullable(segmentId);
+          const newSegment = !oldSegment
+            ? {
+                id: segmentId,
+                somePosition,
+                name: `Segment ${segmentId}`,
+              }
+            : {
+                ...oldSegment,
+                somePosition,
+              };
+
+          const newSegmentMap = segments.set(segmentId, newSegment);
+
           return update(state, {
             tracing: {
-              volume: { segments: { [`${segmentId}`]: { somePosition: { $set: somePosition } } } },
+              volume: {
+                segments: { $set: newSegmentMap },
+              },
             },
           });
         }

@@ -29,7 +29,7 @@ import type {
   Flycam,
   SaveQueueEntry,
   CameraData,
-  SegmentsMap,
+  SegmentMap,
 } from "oxalis/store";
 import createProgressCallback from "libs/progress_callback";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
@@ -72,6 +72,7 @@ import {
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
+import DiffableMap from "libs/diffable_map";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { doWithToken } from "admin/admin_rest_api";
@@ -99,7 +100,7 @@ type UndoBucket = {
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
 };
 type VolumeUndoBuckets = Array<UndoBucket>;
-type VolumeAnnotationBatch = { buckets: VolumeUndoBuckets, segments: SegmentsMap };
+type VolumeAnnotationBatch = { buckets: VolumeUndoBuckets, segments: SegmentMap };
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
 type WarnUndoState = { type: "warning", reason: string };
@@ -159,14 +160,15 @@ export function* collectUndoStates(): Saga<void> {
   let pendingCompressions: Array<Task<void>> = [];
   let currentVolumeUndoBuckets: VolumeUndoBuckets = [];
   // The copy of the segment list that needs to be added to the next volume undo stack entry.
-  let prevSegmentsList = new Map();
+  let prevSegmentsList = new DiffableMap();
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
   const volumeTracingOrNull = yield* select(state => state.tracing.volume);
   if (volumeTracingOrNull != null) {
     const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
-    prevSegmentsList = _.cloneDeep(segments);
+    // The SegmentMap is immutable. So, no need to copy.
+    prevSegmentsList = segments;
   }
 
   const actionChannel = yield _actionChannel([
@@ -223,8 +225,8 @@ export function* collectUndoStates(): Saga<void> {
           data: { buckets: currentVolumeUndoBuckets, segments: prevSegmentsList },
         });
         const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
-        // Get a copy of the current segment list to be able to add it to the next upcoming volume undo stack entry.
-        prevSegmentsList = _.cloneDeep(segments);
+        // The SegmentMap is immutable. So, no need to copy.
+        prevSegmentsList = segments;
         currentVolumeUndoBuckets = [];
         pendingCompressions = [];
       }

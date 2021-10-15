@@ -14,21 +14,20 @@ import {
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_handlers";
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
+  type SelectedEdge,
   getClosestHoveredBoundingBox,
-  createNewBoundingBoxAtCenter,
+  handleMovingBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
-import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import Store from "oxalis/store";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import api from "oxalis/api/internal_api";
@@ -121,7 +120,7 @@ export class MoveTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ) {
     return (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      SkeletonHandlers.openContextMenu(
+      SkeletonHandlers.handleOpenContextMenu(
         planeView,
         pos,
         plane,
@@ -388,7 +387,7 @@ export class DrawTool {
           return;
         }
 
-        SkeletonHandlers.openContextMenu(
+        SkeletonHandlers.handleOpenContextMenu(
           planeView,
           pos,
           plane,
@@ -445,7 +444,7 @@ export class EraseTool {
       },
 
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        SkeletonHandlers.openContextMenu(
+        SkeletonHandlers.handleOpenContextMenu(
           planeView,
           pos,
           plane,
@@ -533,11 +532,11 @@ export class FillCellTool {
 export class BoundingBoxTool {
   static getPlaneMouseControls(
     planeId: OrthoView,
-    _planeView: PlaneView,
-    _showNodeContextMenuAt: ShowContextMenuFunction,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
   ): * {
     const bboxHoveringThrottleTime = 75;
-    let selectedEdge = null;
+    let selectedEdge: ?SelectedEdge = null;
     const getClosestHoveredBoundingBoxThrottled =
       planeId !== OrthoViews.TDView
         ? _.throttle((delta: Point2, position: Point2, _id, _event) => {
@@ -560,30 +559,12 @@ export class BoundingBoxTool {
           }, bboxHoveringThrottleTime)
         : () => {};
     return {
-      leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
+      leftDownMove: (delta: Point2, pos: Point2, _id: ?string, _event: MouseEvent) => {
         if (selectedEdge != null) {
-          const state = Store.getState();
-          const currentlySelectedEdge = selectedEdge; // avoiding flow complains.
-          const { userBoundingBoxes } = getSomeTracing(state.tracing);
-          const zoomFactor = state.flycam.zoomStep;
-          const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
-          const updatedUserBoundingBoxes = userBoundingBoxes.map(bbox => {
-            if (bbox.id !== currentlySelectedEdge.boxId) {
-              return bbox;
-            }
-            bbox = _.cloneDeep(bbox);
-            const { resizableDimension } = currentlySelectedEdge;
-            // For a horizontal edge only consider delta.y, for vertical only delta.x
-            const movement = currentlySelectedEdge.direction === "horizontal" ? delta.y : delta.x;
-            const minOrMax = currentlySelectedEdge.isMaxEdge ? "max" : "min";
-            const scaledMovement = movement * zoomFactor * scaleFactor[resizableDimension];
-            bbox.boundingBox[minOrMax][resizableDimension] = Math.round(
-              bbox.boundingBox[minOrMax][resizableDimension] + scaledMovement,
-            );
-            return bbox;
-          });
-
-          Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
+          const { didMinAndMaxSwitch } = handleMovingBoundingBox(pos, planeId, selectedEdge);
+          if (didMinAndMaxSwitch) {
+            selectedEdge.isMaxEdge = !selectedEdge.isMaxEdge;
+          }
         } else {
           MoveHandlers.handleMovePlane(delta);
         }
@@ -612,10 +593,17 @@ export class BoundingBoxTool {
         console.log("BoundingBox tool right up");
       },
       mouseMove: getClosestHoveredBoundingBoxThrottled,
-      leftClick: createNewBoundingBoxAtCenter,
+      leftClick: () => Store.dispatch(addUserBoundingBoxAction()),
 
-      rightClick: (_pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
-        console.log("BoundingBox right click");
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
       },
     };
   }

@@ -16,8 +16,10 @@ import {
 } from "oxalis/view/components/setting_input_views";
 import type { OxalisState, Tracing, UserBoundingBox } from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
-import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import {
+  setUserBoundingBoxesAction,
+  addUserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
 import * as Utils from "libs/utils";
 
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
@@ -25,12 +27,13 @@ import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_boundin
 type BoundingBoxTabProps = {
   tracing: Tracing,
   onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
+  addNewBoundingBox: () => void,
   dataset: APIDataset,
 };
 
 function BoundingBoxTab(props: BoundingBoxTabProps) {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
-  const { tracing, dataset, onChangeBoundingBoxes } = props;
+  const { tracing, dataset, onChangeBoundingBoxes, addNewBoundingBox } = props;
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
   function handleChangeUserBoundingBox(
@@ -56,19 +59,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
   }
 
   function handleAddNewUserBoundingBox() {
-    const datasetBoundingBox = getDatasetExtentInVoxel(dataset);
-    // We use the default of -1 to get the id 0 for the first user bounding box.
-    const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
-    const boundingBoxId = highestBoundingBoxId + 1;
-    const newUserBoundingBox = {
-      boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(datasetBoundingBox),
-      id: boundingBoxId,
-      name: `user bounding box ${boundingBoxId}`,
-      color: Utils.getRandomColor(),
-      isVisible: true,
-    };
-    const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
-    onChangeBoundingBoxes(updatedUserBoundingBoxes);
+    addNewBoundingBox();
   }
 
   function handleDeleteUserBoundingBox(id: number) {
@@ -129,6 +120,9 @@ const mapStateToProps = (state: OxalisState) => ({
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeBoundingBoxes(userBoundingBoxes: Array<UserBoundingBox>) {
     dispatch(setUserBoundingBoxesAction(userBoundingBoxes));
+  },
+  addNewBoundingBox() {
+    dispatch(addUserBoundingBoxAction());
   },
 });
 

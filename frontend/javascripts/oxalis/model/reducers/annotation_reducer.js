@@ -10,6 +10,8 @@ import {
   updateKey2,
   updateKey3,
 } from "oxalis/model/helpers/deep_update";
+import * as Utils from "libs/utils";
+import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
@@ -69,6 +71,30 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_USER_BOUNDING_BOXES": {
       return updateUserBoundingBoxes(state, action.userBoundingBoxes);
+    }
+
+    case "ADD_NEW_USER_BOUNDING_BOX": {
+      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      if (tracing == null) {
+        return state;
+      }
+      const { userBoundingBoxes } = tracing;
+      const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
+      const boundingBoxId = highestBoundingBoxId + 1;
+      if (action.newBoundingBox != null) {
+        action.newBoundingBox.id = boundingBoxId;
+      } else {
+        const { min, max } = getDisplayedDataExtentInPlaneMode(state);
+        action.newBoundingBox = {
+          boundingBox: { min, max },
+          id: boundingBoxId,
+          name: `user bounding box ${boundingBoxId}`,
+          color: Utils.getRandomColor(),
+          isVisible: true,
+        };
+      }
+      const updatedUserBoundingBoxes = [...userBoundingBoxes, action.newBoundingBox];
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 
     case "ADD_USER_BOUNDING_BOXES": {

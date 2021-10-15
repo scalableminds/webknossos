@@ -46,6 +46,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
+import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -138,6 +139,7 @@ export function handleOpenContextMenu(
   }
   const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
   const state = Store.getState();
+  const hoveredEdge = getClosestHoveredBoundingBox(position, plane);
   const globalPosition = calculateGlobalPos(state, position);
   showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
 }
@@ -166,25 +168,6 @@ export function moveNode(dx: number, dy: number, nodeId: ?number) {
       );
     }),
   );
-}
-
-export function openContextMenu(
-  planeView: PlaneView,
-  position: Point2,
-  plane: OrthoView,
-  isTouch: boolean,
-  event: MouseEvent,
-  showNodeContextMenuAt: ShowContextMenuFunction,
-) {
-  const state = Store.getState();
-  const { activeViewport } = state.viewModeData.plane;
-  if (activeViewport === OrthoViews.TDView) {
-    return;
-  }
-
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
-  const globalPosition = calculateGlobalPos(state, position);
-  showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
 }
 
 export function setWaypoint(

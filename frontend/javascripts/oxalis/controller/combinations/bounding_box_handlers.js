@@ -1,14 +1,11 @@
 // @flow
-import {
-  calculateGlobalPos,
-  getDisplayedDataExtentInPlaneMode,
-} from "oxalis/model/accessors/view_mode_accessor";
+import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import _ from "lodash";
 import { type OrthoView, type Point2, type Vector3 } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import Dimension from "oxalis/model/dimensions";
 import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
-import * as Utils from "libs/utils";
 
 /* const neighbourEdgeIndexByEdgeIndex = {
   // TODO: Use this to detect corners properly.
@@ -73,7 +70,16 @@ function getDistanceToBoundingBoxEdge(
   return Math.abs(pos[otherDim] - cornerToCompareWith[otherDim]);
 }
 
-export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView) {
+export type SelectedEdge = {
+  boxId: number,
+  dimensionIndex: 0 | 1 | 2,
+  direction: "horizontal" | "vertical",
+  isMaxEdge: boolean,
+  nearestEdgeIndex: number,
+  resizableDimension: 0 | 1 | 2,
+};
+
+export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView): ?SelectedEdge {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, pos, plane);
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
@@ -151,20 +157,44 @@ export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView) {
   };
 }
 
-export function createNewBoundingBoxAtCenter() {
-  // TODO: This behaviour is used multiple times in the code. Deduplicate this!
+export function handleMovingBoundingBox(
+  mousePosition: Point2,
+  planeId: OrthoView,
+  selectedEdge: SelectedEdge,
+) {
   const state = Store.getState();
-  const { min, max } = getDisplayedDataExtentInPlaneMode(state);
-  const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
-  const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
-  const boundingBoxId = highestBoundingBoxId + 1;
-  const newUserBoundingBox = {
-    boundingBox: { min, max },
-    id: boundingBoxId,
-    name: `user bounding box ${boundingBoxId}`,
-    color: Utils.getRandomColor(),
-    isVisible: true,
-  };
-  const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+  const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
+  const { userBoundingBoxes } = getSomeTracing(state.tracing);
+  let didMinAndMaxSwitch = false;
+  const updatedUserBoundingBoxes = userBoundingBoxes.map(bbox => {
+    if (bbox.id !== selectedEdge.boxId) {
+      return bbox;
+    }
+    bbox = _.cloneDeep(bbox);
+    const { resizableDimension } = selectedEdge;
+    // For a horizontal edge only consider delta.y, for vertical only delta.x
+    const newPositionValue = Math.round(globalMousePosition[resizableDimension]);
+    const minOrMax = selectedEdge.isMaxEdge ? "max" : "min";
+    const oppositeOfMinOrMax = selectedEdge.isMaxEdge ? "min" : "max";
+    const otherEdgeValue = bbox.boundingBox[oppositeOfMinOrMax][resizableDimension];
+    if (otherEdgeValue === newPositionValue) {
+      // Do not allow the same value for min and max for one dimension.
+      return bbox;
+    }
+    const areMinAndMaxEdgeCrossing =
+      // If the min / max edge is moved over the other one.
+      (selectedEdge.isMaxEdge && newPositionValue < otherEdgeValue) ||
+      (!selectedEdge.isMaxEdge && newPositionValue > otherEdgeValue);
+    if (areMinAndMaxEdgeCrossing) {
+      // As the edge moved over the other one, the values for min and max must be switched.
+      bbox.boundingBox[minOrMax][resizableDimension] = otherEdgeValue;
+      bbox.boundingBox[oppositeOfMinOrMax][resizableDimension] = newPositionValue;
+      didMinAndMaxSwitch = true;
+    } else {
+      bbox.boundingBox[minOrMax][resizableDimension] = newPositionValue;
+    }
+    return bbox;
+  });
   Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
+  return { didMinAndMaxSwitch };
 }

@@ -23,10 +23,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { V3 } from "libs/mjs";
-import {
-  globalPositionToBucketPosition,
-  bucketPositionToGlobalAddress,
-} from "oxalis/model/helpers/position_converter";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -42,7 +39,7 @@ import constants, {
   type LabelMasksByBucketAndW,
 } from "oxalis/constants";
 import { type ElementClass } from "types/api_flow_types";
-import { areBoundingBoxesOverlappingOrTouching, mod } from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
 import { type ProgressCallback } from "libs/progress_callback";
 
 class CubeEntry {

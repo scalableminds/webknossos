@@ -27,11 +27,13 @@ import {
   hasSegmentation,
   isElementClassSupported,
   getSegmentationLayers,
+  getSegmentationLayerByNameOrFallbackName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingForAnnotations,
   getAnnotationInformation,
+  getEmptySandboxAnnotationInformation,
   getDataset,
   getSharingToken,
   getUserConfiguration,
@@ -44,6 +46,7 @@ import {
   initializeGpuSetupAction,
   setControlModeAction,
   setViewModeAction,
+  setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { serverTracingAsSkeletonTracingMaybe } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -51,6 +54,7 @@ import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volume
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
+  loadAgglomerateSkeletonAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -65,7 +69,10 @@ import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import Toast from "libs/toast";
-import UrlManager, { type PartialUrlManagerState } from "oxalis/controller/url_manager";
+import UrlManager, {
+  type PartialUrlManagerState,
+  type UrlStateByLayer,
+} from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
@@ -107,6 +114,14 @@ export async function initialize(
     });
 
     Store.dispatch(setTaskAction(annotation.task));
+  } else if (initialCommandType.type === ControlModeEnum.SANDBOX) {
+    const { name, owningOrganization } = initialCommandType;
+    datasetId = { name, owningOrganization };
+    annotation = await getEmptySandboxAnnotationInformation(
+      datasetId,
+      initialCommandType.tracingType,
+      getSharingToken(),
+    );
   } else {
     const { name, owningOrganization } = initialCommandType;
     datasetId = { name, owningOrganization };
@@ -200,8 +215,7 @@ function validateSpecsForLayers(dataset: APIDataset, requiredBucketCapacity: num
   );
 
   if (!setupDetails.isMappingSupported) {
-    const message = messages["mapping.too_few_textures"];
-    console.warn(message);
+    console.warn(messages["mapping.too_few_textures"]);
   }
 
   maybeWarnAboutUnsupportedLayers(layers);
@@ -231,8 +245,8 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
   _.extend(annotation.settings, { allowedModes, preferredMode });
 
   const { controlMode } = Store.getState().temporaryConfiguration;
-  if (controlMode === ControlModeEnum.TRACE) {
-    if (Utils.getUrlParamValue("sandbox")) {
+  if (controlMode !== ControlModeEnum.VIEW) {
+    if (controlMode === ControlModeEnum.SANDBOX) {
       annotation = {
         ...annotation,
         restrictions: {
@@ -241,7 +255,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
           allowSave: false,
         },
       };
-    } else {
+    } else if (controlMode === ControlModeEnum.TRACE) {
       annotation = {
         ...annotation,
         restrictions: {
@@ -496,6 +510,13 @@ function determineDefaultState(
   urlState: PartialUrlManagerState,
   tracing: ?HybridServerTracing,
 ): PartialUrlManagerState {
+  const {
+    position: urlStatePosition,
+    zoomStep: urlStateZoomStep,
+    rotation: urlStateRotation,
+    activeNode: urlStateActiveNode,
+    ...rest
+  } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
@@ -507,29 +528,29 @@ function determineDefaultState(
   if (tracing != null) {
     position = Utils.point3ToVector3(getSomeServerTracing(tracing).editPosition);
   }
-  if (urlState.position != null) {
-    ({ position } = urlState);
+  if (urlStatePosition != null) {
+    position = urlStatePosition;
   }
 
   let zoomStep = datasetConfiguration.zoom;
   if (tracing != null) {
     zoomStep = getSomeServerTracing(tracing).zoomLevel;
   }
-  if (urlState.zoomStep != null) {
-    ({ zoomStep } = urlState);
+  if (urlStateZoomStep != null) {
+    zoomStep = urlStateZoomStep;
   }
 
   let { rotation } = datasetConfiguration;
   if (tracing) {
     rotation = Utils.point3ToVector3(getSomeServerTracing(tracing).editRotation);
   }
-  if (urlState.rotation != null) {
-    ({ rotation } = urlState);
+  if (urlStateRotation != null) {
+    rotation = urlStateRotation;
   }
 
-  const { activeNode } = urlState;
+  const activeNode = urlStateActiveNode;
 
-  return { position, zoomStep, rotation, activeNode };
+  return { position, zoomStep, rotation, activeNode, ...rest };
 }
 
 export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = false) {
@@ -546,5 +567,60 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
   }
   if (state.rotation != null) {
     Store.dispatch(setRotationAction(state.rotation));
+  }
+  if (state.stateByLayer != null) {
+    applyLayerState(state.stateByLayer);
+  }
+}
+
+function applyLayerState(stateByLayer: UrlStateByLayer) {
+  for (const layerName of Object.keys(stateByLayer)) {
+    const layerState = stateByLayer[layerName];
+
+    if (layerState.mappingInfo != null) {
+      const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
+
+      let effectiveLayerName;
+      try {
+        const { dataset } = Store.getState();
+        // The name of the layer could have changed if a volume tracing was created from a viewed annotation
+        effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+      } catch (e) {
+        console.error(e);
+        Toast.error(
+          `URL configuration values for the layer "${layerName}" are ignored, because: ${
+            e.message
+          }`,
+        );
+        ErrorHandling.notify(e, { urlLayerState: stateByLayer });
+        continue;
+      }
+
+      Store.dispatch(
+        setMappingAction(effectiveLayerName, mappingName, mappingType, {
+          showLoadingIndicator: true,
+        }),
+      );
+
+      if (agglomerateIdsToImport != null) {
+        const { tracing } = Store.getState();
+
+        if (tracing.skeleton == null) {
+          Toast.error(messages["tracing.agglomerate_skeleton.no_skeleton_tracing"]);
+          continue;
+        }
+
+        if (mappingType !== "HDF5") {
+          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+          continue;
+        }
+
+        for (const agglomerateId of agglomerateIdsToImport) {
+          Store.dispatch(
+            loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
+          );
+        }
+      }
+    }
   }
 }

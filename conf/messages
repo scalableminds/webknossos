@@ -255,6 +255,7 @@ annotation.reopen.tooLate=The annotation cannot be reopened anymore, since it's 
 annotation.reopen.notAllowed=You are not allowed to reopen this annotation.
 annotation.reopen.notFinished=The requested annotation is not finished.
 annotation.reopen.failed=Failed to reopen the annotation.
+annotation.sandbox.skeletonOnly=Sandbox annotations are currently available as skeleton only.
 
 mesh.notFound=Mesh couldn’t be found
 mesh.write.failed=Failed to convert mesh info to json

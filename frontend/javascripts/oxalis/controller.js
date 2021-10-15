@@ -222,7 +222,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     const { controlMode } = Store.getState().temporaryConfiguration;
     const keyboardControls = {};
-    if (controlMode === ControlModeEnum.TRACE) {
+    if (controlMode !== ControlModeEnum.VIEW) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),

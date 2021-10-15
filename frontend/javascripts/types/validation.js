@@ -5,29 +5,37 @@ import jsonschema from "jsonschema";
 import DatasourceSchema from "types/schemas/datasource.schema";
 import UserSettingsSchema from "types/schemas/user_settings.schema";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
+import UrlStateSchema from "types/schemas/url_state.schema";
 
 const validator = new jsonschema.Validator();
 validator.addSchema(DatasourceSchema, "/");
 validator.addSchema(UserSettingsSchema, "/");
 validator.addSchema(ViewConfigurationSchema, "/");
+validator.addSchema(UrlStateSchema, "/");
 
-const validateWithSchema = (type: string) => (rule: Object, value: string) => {
+const validateWithSchemaSync = (type: string, value: string) => {
   try {
     const json = JSON.parse(value);
     const result = validator.validate(json, {
       $ref: `#/definitions/${type}`,
     });
     if (result.valid) {
-      return Promise.resolve();
+      return json;
     } else {
-      return Promise.reject(
-        new Error(
-          `Invalid schema: ${result.errors.map(e => `${e.property} ${e.message}`).join("; ")}`,
-        ),
+      throw new Error(
+        `Invalid schema: ${result.errors.map(e => `${e.property} ${e.message}`).join("; ")}`,
       );
     }
   } catch (e) {
-    return Promise.reject(new Error(`Invalid JSON: ${e.message}`));
+    throw new Error(`Invalid JSON: ${e.message}`);
+  }
+};
+
+const validateWithSchema = (type: string) => (rule: Object, value: string) => {
+  try {
+    return Promise.resolve(validateWithSchemaSync(type, value));
+  } catch (e) {
+    return Promise.reject(e);
   }
 };
 
@@ -51,6 +59,8 @@ export const validateUserSettingsJSON = validateWithSchema("types::UserSettings"
 export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
   "types::LayerViewConfigurationObject",
 );
+export const validateUrlStateJSON = (value: string) =>
+  validateWithSchemaSync("types::UrlManagerState", value);
 
 export const isValidJSON = (json: string) => {
   try {

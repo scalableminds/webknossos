@@ -1,7 +1,7 @@
 // @flow
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
-import React from "react";
+import React, { type Node as ReactNode } from "react";
 
 const { Panel } = Collapse;
 
@@ -94,23 +94,19 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string | React$Element<any>, config: ToastConfig = {}, details?: ?string): void {
+  info(message: ReactNode, config: ToastConfig = {}, details?: ?string): void {
     return this.message("info", message, config, details);
   },
 
-  warning(message: string, config: ToastConfig = {}, details?: ?string): void {
+  warning(message: ReactNode, config: ToastConfig = {}, details?: ?string): void {
     return this.message("warning", message, config, details);
   },
 
-  success(message: string = "Success :-)", config: ToastConfig = {}, details?: ?string): void {
+  success(message: ReactNode = "Success :-)", config: ToastConfig = {}, details?: ?string): void {
     return this.message("success", message, config, details);
   },
 
-  error(
-    message: string | React$Element<any> = "Error :-/",
-    config: ToastConfig = {},
-    details?: ?string,
-  ): void {
+  error(message: ReactNode = "Error :-/", config: ToastConfig = {}, details?: ?string): void {
     return this.message("error", message, config, details);
   },
 

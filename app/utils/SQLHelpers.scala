@@ -36,6 +36,7 @@ object ObjectId extends FoxImplicits {
     parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
+  def dummyId: ObjectId = ObjectId("dummyObjectId")
 
   def stringObjectIdReads(key: String): Reads[String] =
     Reads.filter[String](JsonValidationError("bsonid.invalid", key))(parseSync(_).isDefined)

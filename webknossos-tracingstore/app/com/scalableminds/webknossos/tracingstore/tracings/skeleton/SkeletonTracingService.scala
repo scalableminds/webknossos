@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
@@ -223,4 +223,6 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
         }
       )
     }
+
+  def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 }

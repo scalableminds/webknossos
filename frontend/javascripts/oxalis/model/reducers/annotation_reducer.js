@@ -76,7 +76,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       if (tracing == null) {
         return state;
       }
-      let highestBoundingBoxId = Math.max(-1, ...tracing.userBoundingBoxes.map(bb => bb.id));
+      let highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map(bb => bb.id));
       const additionalUserBoundingBoxes = action.userBoundingBoxes.map(bb => {
         highestBoundingBoxId++;
         return { ...bb, id: highestBoundingBoxId };

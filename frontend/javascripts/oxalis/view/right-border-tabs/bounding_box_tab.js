@@ -58,7 +58,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
   function handleAddNewUserBoundingBox() {
     const datasetBoundingBox = getDatasetExtentInVoxel(dataset);
     // We use the default of -1 to get the id 0 for the first user bounding box.
-    const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
+    const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
     const boundingBoxId = highestBoundingBoxId + 1;
     const newUserBoundingBox = {
       boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(datasetBoundingBox),

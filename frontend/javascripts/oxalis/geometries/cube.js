@@ -78,13 +78,7 @@ class Cube {
 
   getLineMaterial() {
     return this.isHighlighted
-      ? new THREE.LineDashedMaterial({
-          color: 0xffffff,
-          linewidth: this.lineWidth,
-          scale: 1,
-          dashSize: 5,
-          gapSize: 5,
-        })
+      ? new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: this.lineWidth })
       : new THREE.LineBasicMaterial({ color: this.color, linewidth: this.lineWidth });
   }
 
@@ -143,7 +137,6 @@ class Cube {
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
       mesh.geometry.computeBoundingSphere();
-      mesh.computeLineDistances();
       mesh.geometry.verticesNeedUpdate = true;
     }
 

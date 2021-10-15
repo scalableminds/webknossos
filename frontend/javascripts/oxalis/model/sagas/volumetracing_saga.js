@@ -597,7 +597,7 @@ export function* floodFill(): Saga<void> {
       const userBoundingBoxes = yield* select(
         state => getSomeTracing(state.tracing).userBoundingBoxes,
       );
-      const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
+      const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
       const boundingBoxId = highestBoundingBoxId + 1;
 
       yield* put(

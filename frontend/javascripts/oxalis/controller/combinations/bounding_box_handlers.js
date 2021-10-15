@@ -1,9 +1,14 @@
 // @flow
-import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  calculateGlobalPos,
+  getDisplayedDataExtentInPlaneMode,
+} from "oxalis/model/accessors/view_mode_accessor";
 import { type OrthoView, type Point2, type Vector3 } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import Dimension from "oxalis/model/dimensions";
+import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import * as Utils from "libs/utils";
 
 /* const neighbourEdgeIndexByEdgeIndex = {
   // TODO: Use this to detect corners properly.
@@ -68,7 +73,7 @@ function getDistanceToBoundingBoxEdge(
   return Math.abs(pos[otherDim] - cornerToCompareWith[otherDim]);
 }
 
-export default function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView) {
+export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, pos, plane);
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
@@ -144,4 +149,22 @@ export default function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoVi
     nearestEdgeIndex,
     resizableDimension,
   };
+}
+
+export function createNewBoundingBoxAtCenter() {
+  // TODO: This behaviour is used multiple times in the code. Deduplicate this!
+  const state = Store.getState();
+  const { min, max } = getDisplayedDataExtentInPlaneMode(state);
+  const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
+  const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
+  const boundingBoxId = highestBoundingBoxId + 1;
+  const newUserBoundingBox = {
+    boundingBox: { min, max },
+    id: boundingBoxId,
+    name: `user bounding box ${boundingBoxId}`,
+    color: Utils.getRandomColor(),
+    isVisible: true,
+  };
+  const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+  Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
 }

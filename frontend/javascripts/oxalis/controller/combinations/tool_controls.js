@@ -22,7 +22,10 @@ import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import getClosestHoveredBoundingBox from "oxalis/controller/combinations/bounding_box_handlers";
+import {
+  getClosestHoveredBoundingBox,
+  createNewBoundingBoxAtCenter,
+} from "oxalis/controller/combinations/bounding_box_handlers";
 import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
@@ -609,20 +612,7 @@ export class BoundingBoxTool {
         console.log("BoundingBox tool right up");
       },
       mouseMove: getClosestHoveredBoundingBoxThrottled,
-      leftClick: (_pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        /* const { userBoundingBoxes } = getSomeTracing(Store.getState().tracing);
-        const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
-        const boundingBoxId = highestBoundingBoxId + 1;
-        const newUserBoundingBox = {
-          boundingBox: { min: [100, 100, 100], max: [200, 200, 200] },
-          id: boundingBoxId,
-          name: `user bounding box ${boundingBoxId}`,
-          color: Utils.getRandomColor(),
-          isVisible: true,
-        };
-        const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
-        Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes)); */
-      },
+      leftClick: createNewBoundingBoxAtCenter,
 
       rightClick: (_pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
         console.log("BoundingBox right click");

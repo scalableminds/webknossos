@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(75);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(76);
 COMMIT TRANSACTION;
 
 
@@ -153,6 +153,7 @@ CREATE TABLE webknossos.dataStores(
   isForeign BOOLEAN NOT NULL DEFAULT false,
   isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
+  jobsEnabled BOOLEAN NOT NULL DEFAULT false,
   onlyAllowedOrganization CHAR(24)
 );
 

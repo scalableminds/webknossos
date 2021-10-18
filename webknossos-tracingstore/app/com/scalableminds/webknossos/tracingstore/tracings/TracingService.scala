@@ -12,6 +12,10 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
+object TracingIds {
+  val dummyTracingId: String = "dummyTracingId"
+}
+
 trait TracingService[T <: GeneratedMessage]
     extends KeyValueStoreImplicits
     with FoxImplicits
@@ -30,6 +34,8 @@ trait TracingService[T <: GeneratedMessage]
   def temporaryTracingIdStore: RedisTemporaryStore
 
   def tracingMigrationService: TracingMigrationService[T]
+
+  def dummyTracing: T
 
   val handledGroupIdStore: RedisTemporaryStore
 
@@ -116,6 +122,7 @@ trait TracingService[T <: GeneratedMessage]
            version: Option[Long] = None,
            useCache: Boolean = true,
            applyUpdates: Boolean = false): Fox[T] = {
+    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(dummyTracing)
     val tracingFox = tracingStore.get(tracingId, version)(fromProto[T]).map(_.value)
     tracingFox.flatMap { tracing =>
       val updatedTracing = if (applyUpdates) {

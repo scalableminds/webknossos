@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIDataset, APIUser, TracingType } from "types/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
 import {
   layoutEmitter,
@@ -14,8 +14,7 @@ import {
 } from "oxalis/view/layouting/layout_persistence";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
-import AuthenticationModal from "admin/auth/authentication_modal";
-import ButtonComponent from "oxalis/view/components/button_component";
+import { withAuthentication } from "admin/auth/authentication_modal";
 import constants, { type ViewMode, type ControlMode, ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import Store, { type OxalisState } from "oxalis/store";
@@ -31,6 +30,7 @@ import {
   doesSupportVolumeWithFallback,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { AsyncButton } from "components/async_clickables";
 
 const VersionRestoreWarning = (
   <Alert
@@ -58,13 +58,11 @@ type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isNewLayoutModalVisible: boolean,
-  isAuthenticationModalVisible: boolean,
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
-    isAuthenticationModalVisible: false,
   };
 
   handleResetLayout = () => {
@@ -107,41 +105,35 @@ class ActionBarView extends React.PureComponent<Props, State> {
   };
 
   renderStartTracingButton(): React.Node {
-    const { activeUser, dataset } = this.props;
-    const needsAuthentication = activeUser == null;
-
-    const handleCreateTracing = async (_dataset: APIDataset, _type: TracingType) => {
-      if (needsAuthentication) {
-        this.setState({ isAuthenticationModalVisible: true });
-      } else {
-        this.createTracing(dataset);
-      }
-    };
+    const ButtonWithAuthentication = withAuthentication(AsyncButton);
 
     return (
-      <ButtonComponent
+      <ButtonWithAuthentication
+        activeUser={this.props.activeUser}
+        authenticationMessage="You have to register or login to create an annotation."
         style={{ marginLeft: 12 }}
         type="primary"
-        onClick={() => handleCreateTracing(dataset, "hybrid")}
+        onClick={() => this.createTracing(this.props.dataset)}
       >
         Create Annotation
-      </ButtonComponent>
+      </ButtonWithAuthentication>
     );
   }
 
   render() {
     const {
       hasVolumeFallback,
+      is2d,
       isReadOnly,
-      dataset,
       showVersionRestore,
       controlMode,
-
       hasSkeleton,
       layoutProps,
+      viewMode,
     } = this.props;
-    const isTraceMode = controlMode === ControlModeEnum.TRACE;
-    const isArbitrarySupported = hasSkeleton || controlMode === ControlModeEnum.VIEW;
+    const isViewMode = controlMode === ControlModeEnum.VIEW;
+    const isArbitrarySupported = hasSkeleton || isViewMode;
+
     const layoutMenu = (
       <LayoutMenu
         {...layoutProps}
@@ -158,32 +150,21 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         <div className="action-bar">
-          {isTraceMode && !showVersionRestore ? (
-            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
-          ) : (
+          {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
+          ) : (
+            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && constants.MODES_PLANE.indexOf(this.props.viewMode) > -1 ? (
-            <ToolbarView />
-          ) : null}
-          {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}
-          {isTraceMode ? null : this.renderStartTracingButton()}
+          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
+          {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          {isViewMode ? this.renderStartTracingButton() : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
           visible={this.state.isNewLayoutModalVisible}
           onCancel={() => this.setState({ isNewLayoutModalVisible: false })}
-        />
-        <AuthenticationModal
-          alertMessage="You have to register or login to create an annotation."
-          onLoggedIn={() => {
-            this.setState({ isAuthenticationModalVisible: false });
-            this.createTracing(dataset);
-          }}
-          onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
-          visible={this.state.isAuthenticationModalVisible}
         />
       </React.Fragment>
     );

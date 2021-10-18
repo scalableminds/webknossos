@@ -67,7 +67,9 @@ function AuthTokenView() {
           <br />
           You should revoke it if somebody else has acquired your token or you have the suspicion
           this has happened.{" "}
-          <a href="https://docs.webknossos.org/reference/rest_api#authentication">Read more</a>
+          <a href="https://docs.webknossos.org/webknossos/rest_api.html#authentication">
+            Read more
+          </a>
         </Col>
       </Row>
     </div>

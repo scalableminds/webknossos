@@ -129,14 +129,15 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.out_of_dataset_bounds":
     "The current position is outside of the dataset's bounding box. No data will be shown here.",
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
-  "tracing.copy_position": "Copy position to clipboard.",
-  "tracing.copy_rotation": "Copy rotation to clipboard.",
+  "tracing.copy_position": "Copy position to clipboard",
+  "tracing.copy_rotation": "Copy rotation to clipboard",
+  "tracing.copy_sharing_link": "Copy sharing link to clipboard",
   "tracing.tree_length_notification": (treeName: string, lengthInNm: string, lengthInVx: string) =>
     `The tree ${treeName} has a total path length of ${lengthInNm} (${lengthInVx}).`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
-    } current position and zoom value. Consider fine-tuning your current view before copying the URL.`,
+    } current position, zoom value and ID mapping. Consider fine-tuning your current view before copying the URL.`,
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -199,6 +200,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Please activate an agglomerate file mapping to load a skeleton for a segment.",
   "tracing.agglomerate_skeleton.no_agglomerate_file":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_skeleton.no_skeleton_tracing":
+    "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
     'All skeletons are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":

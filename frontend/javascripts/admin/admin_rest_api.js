@@ -19,6 +19,7 @@ import {
   type APIJobCeleryState,
   type APIJobManualState,
   type APIJobState,
+  type APIMapping,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -59,6 +60,7 @@ import type {
   Tracing,
   TraceOrViewCommand,
   AnnotationType,
+  ActiveMappingInfo,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -66,7 +68,6 @@ import { V3 } from "libs/mjs";
 import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import DataLayer from "oxalis/model/data_layer";
 import Request, { type RequestOptions } from "libs/request";
 import Toast, { type Message } from "libs/toast";
 import * as Utils from "libs/utils";
@@ -669,6 +670,19 @@ export function getAnnotationInformation(
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
+  return Request.receiveJSON(infoUrl, options);
+}
+
+export function getEmptySandboxAnnotationInformation(
+  datasetId: APIDatasetId,
+  tracingType: TracingType,
+  sharingToken?: ?string,
+  options?: RequestOptions = {},
+): Promise<APIAnnotation> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
+  const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${
+    datasetId.name
+  }/sandbox/${tracingType}${sharingTokenSuffix}`;
   return Request.receiveJSON(infoUrl, options);
 }
 
@@ -1295,6 +1309,21 @@ export async function getMappingsForDatasetLayer(
   );
 }
 
+export function fetchMapping(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingName: string,
+): Promise<APIMapping> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/mappings/${mappingName}?token=${token}`,
+    ),
+  );
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1493,17 +1522,17 @@ export async function isDatasetAccessibleBySwitching(
   annotationType: AnnotationType,
   commandType: TraceOrViewCommand,
 ): Promise<?APIOrganization> {
-  if (commandType.type === ControlModeEnum.VIEW) {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${
-        commandType.owningOrganization
-      }&dataSetName=${commandType.name}`,
-    );
-  } else {
+  if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
       `/api/auth/accessibleBySwitching?annotationTyp=${annotationType}&annotationId=${
         commandType.annotationId
       }`,
+    );
+  } else {
+    return Request.receiveJSON(
+      `/api/auth/accessibleBySwitching?organizationName=${
+        commandType.owningOrganization
+      }&dataSetName=${commandType.name}`,
     );
   }
 }
@@ -1595,7 +1624,7 @@ type IsosurfaceRequest = {
 
 export function computeIsosurface(
   requestUrl: string,
-  layer: DataLayer,
+  mappingInfo: ActiveMappingInfo,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
   const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
@@ -1613,8 +1642,8 @@ export function computeIsosurface(
           // Segment to build mesh for
           segmentId,
           // Name of mapping to apply before building mesh (optional)
-          mapping: layer.activeMapping,
-          mappingType: layer.activeMappingType,
+          mapping: mappingInfo.mappingName,
+          mappingType: mappingInfo.mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
           scale,

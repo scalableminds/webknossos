@@ -5,6 +5,8 @@
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import Deferred from "libs/deferred";
+import { type Dispatch } from "redux";
 
 type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
@@ -13,7 +15,12 @@ type InitializeVolumeTracingAction = {
 type CreateCellAction = { type: "CREATE_CELL" };
 type StartEditingAction = { type: "START_EDITING", position: Vector3, planeId: OrthoView };
 type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
-type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
+type FloodFillAction = {
+  type: "FLOOD_FILL",
+  position: Vector3,
+  planeId: OrthoView,
+  callback?: () => void,
+};
 type FinishEditingAction = { type: "FINISH_EDITING" };
 type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
 
@@ -93,10 +100,15 @@ export const addToLayerAction = (position: Vector3): AddToLayerAction => ({
   position,
 });
 
-export const floodFillAction = (position: Vector3, planeId: OrthoView): FloodFillAction => ({
+export const floodFillAction = (
+  position: Vector3,
+  planeId: OrthoView,
+  callback?: () => void,
+): FloodFillAction => ({
   type: "FLOOD_FILL",
   position,
   planeId,
+  callback,
 });
 
 export const finishEditingAction = (): FinishEditingAction => ({
@@ -166,3 +178,14 @@ export const setMaxCellAction = (cellId: number): SetMaxCellAction => ({
   type: "SET_MAX_CELL",
   cellId,
 });
+
+export const dispatchFloodfillAsync = async (
+  dispatch: Dispatch<*>,
+  position: Vector3,
+  planeId: OrthoView,
+): Promise<void> => {
+  const readyDeferred = new Deferred();
+  const action = floodFillAction(position, planeId, () => readyDeferred.resolve());
+  dispatch(action);
+  await readyDeferred.promise();
+};

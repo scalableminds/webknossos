@@ -108,7 +108,7 @@ git clone git@github.com:scalableminds/webknossos.git
 ### Ubuntu 20.04 LTS
 
 ```bash
-sudo apt install -y wget curl ca-certificates
+sudo apt install -y curl ca-certificates
 # Adding repositories for nodejs, sbt and yarn
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list

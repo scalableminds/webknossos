@@ -299,12 +299,23 @@ class MeshesView extends React.Component<Props, State> {
     };
   };
 
-  getIsosurfaceList = () => {
+  getMeshChild = (segmentId: number, isCentered: boolean) => {
+    if (!this.props.isosurfaces[segmentId]) {
+      if (isCentered) {
+        return (
+          <div>
+            <div>{this.getComputeMeshAdHocLinkButton()}</div>
+            <div>{this.getLoadPrecomputedMeshLinkButton()}</div>
+          </div>
+        );
+      }
+      return null;
+    }
     const moveTo = (seedPosition: Vector3) => {
       this.props.setPosition(seedPosition, null, false);
     };
 
-    const getDownloadButton = (segmentId: number) => (
+    const downloadButton = (
       <Tooltip title="Download Mesh">
         <VerticalAlignBottomOutlined
           key="download-button"
@@ -312,7 +323,7 @@ class MeshesView extends React.Component<Props, State> {
         />
       </Tooltip>
     );
-    const getRefreshButton = (segmentId: number, isPrecomputed: boolean, isLoading: boolean) => {
+    const getRefreshButton = (isPrecomputed: boolean, isLoading: boolean) => {
       if (isLoading) {
         return (
           <LoadingOutlined
@@ -345,7 +356,7 @@ class MeshesView extends React.Component<Props, State> {
         );
       }
     };
-    const getDeleteButton = (segmentId: number) => (
+    const deleteButton = (
       <Tooltip title="Delete Mesh">
         <DeleteOutlined
           key="delete-button"
@@ -363,7 +374,10 @@ class MeshesView extends React.Component<Props, State> {
       </Tooltip>
     );
 
-    const getToggleVisibilityCheckbox = (segmentId: number, isVisible: boolean) => (
+    const isosurface = this.props.isosurfaces[segmentId];
+    const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
+
+    const toggleVisibilityCheckbox = (
       <Tooltip title="Change visibility">
         <Checkbox
           checked={isVisible}
@@ -381,61 +395,48 @@ class MeshesView extends React.Component<Props, State> {
       </Tooltip>
     );
 
-    const getIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
-      const { segmentId, seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-      const centeredCell = getSegmentIdForPosition(getPosition(this.props.flycam));
+    const isHoveredItem = segmentId === this.state.hoveredListItem;
+    const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
 
-      const isHoveredItem = segmentId === this.state.hoveredListItem;
-      const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
-
-      const textStyle = isVisible ? {} : { fontStyle: "italic", color: "#989898" };
-      return (
-        <List.Item
-          style={{
-            padding: 0,
-            cursor: "pointer",
-          }}
-          onMouseEnter={() => {
-            this.setState({ hoveredListItem: segmentId });
-          }}
-          onMouseLeave={() => {
-            this.setState({ hoveredListItem: null });
-          }}
-          key={segmentId}
-        >
-          <div style={{ display: "flex" }}>
-            <div
-              className={classnames("mesh-list-item", {
-                "is-centered-cell": segmentId === centeredCell,
-              })}
+    const textStyle = isVisible ? {} : { fontStyle: "italic", color: "#989898" };
+    return (
+      <List.Item
+        style={{
+          padding: 0,
+          cursor: "pointer",
+        }}
+        onMouseEnter={() => {
+          this.setState({ hoveredListItem: segmentId });
+        }}
+        onMouseLeave={() => {
+          this.setState({ hoveredListItem: null });
+        }}
+        key={segmentId}
+      >
+        <div style={{ display: "flex" }}>
+          <div
+            className={classnames("mesh-list-item", {
+              "is-centered-cell": isCentered,
+            })}
+          >
+            {toggleVisibilityCheckbox}{" "}
+            <span
+              onClick={() => {
+                this.props.changeActiveIsosurfaceId(segmentId, seedPosition, !isPrecomputed);
+                moveTo(seedPosition);
+              }}
+              style={textStyle}
             >
-              {isHoveredItem
-                ? getToggleVisibilityCheckbox(segmentId, isVisible)
-                : this.getColoredDotIconForSegment(segmentId)}{" "}
-              <span
-                onClick={() => {
-                  this.props.changeActiveIsosurfaceId(segmentId, seedPosition, !isPrecomputed);
-                  moveTo(seedPosition);
-                }}
-                style={textStyle}
-              >
-                Segment {segmentId}
-              </span>
-            </div>
-            <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
-              {getRefreshButton(segmentId, isPrecomputed, isLoading)}
-              {getDownloadButton(segmentId)}
-              {getDeleteButton(segmentId)}
-            </div>
+              {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
+            </span>
           </div>
-        </List.Item>
-      );
-    };
-
-    // $FlowIgnore[incompatible-call]
-    // $FlowIgnore[missing-annot] flow does not know that the values passed as isosurfaces are indeed from the type IsosurfaceInformation
-    return Object.values(this.props.isosurfaces).map((isosurface: IsosurfaceInformation) =>
-      getIsosurfaceListItem(isosurface),
+          <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
+            {getRefreshButton(isPrecomputed, isLoading)}
+            {downloadButton}
+            {deleteButton}
+          </div>
+        </div>
+      </List.Item>
     );
   };
 
@@ -449,7 +450,93 @@ class MeshesView extends React.Component<Props, State> {
     />
   );
 
+  getComputeMeshAdHocButton = () => {
+    const { disabled, title } = this.getComputeMeshAdHocTooltipInfo();
+    return (
+      <Tooltip title={title}>
+        <Button
+          onClick={() => {
+            const pos = getPosition(this.props.flycam);
+            const id = getSegmentIdForPosition(pos);
+            if (id === 0) {
+              Toast.info("No segment found at centered position");
+            }
+            this.props.changeActiveIsosurfaceId(id, pos, true);
+          }}
+          disabled={disabled}
+          size="small"
+        >
+          Compute Mesh (ad hoc)
+        </Button>
+      </Tooltip>
+    );
+  };
+
+  getComputeMeshAdHocLinkButton = () => {
+    const { disabled, title } = this.getComputeMeshAdHocTooltipInfo();
+    return (
+      <Tooltip title={title}>
+        <Button
+          type="link"
+          onClick={() => {
+            const pos = getPosition(this.props.flycam);
+            const id = getSegmentIdForPosition(pos);
+            if (id === 0) {
+              Toast.info("No segment found at centered position");
+            }
+            this.props.changeActiveIsosurfaceId(id, pos, true);
+          }}
+          disabled={disabled}
+          size="small"
+        >
+          Compute Mesh (ad hoc)
+        </Button>
+      </Tooltip>
+    );
+  };
+
+  getLoadPrecomputedMeshLinkButton = () => {
+    const hasCurrentMeshFile = this.props.currentMeshFile;
+    if (!hasCurrentMeshFile) {
+      return null;
+    }
+    return (
+      <Tooltip
+        key="tooltip"
+        title={
+          this.props.currentMeshFile != null
+            ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
+            : "There is no mesh file."
+        }
+      >
+        <Button size="small" onClick={this.loadPrecomputedMesh} type="link">
+          Load Precomputed Mesh
+        </Button>
+      </Tooltip>
+    );
+  };
+
+  loadPrecomputedMesh = async () => {
+    const pos = getPosition(this.props.flycam);
+    const id = getSegmentIdForPosition(pos);
+    if (id === 0) {
+      Toast.info("No segment found at centered position");
+      return;
+    }
+    if (!this.props.currentMeshFile || !this.props.visibleSegmentationLayer) {
+      return;
+    }
+    await loadMeshFromFile(
+      id,
+      pos,
+      this.props.currentMeshFile,
+      this.props.visibleSegmentationLayer,
+      this.props.dataset,
+    );
+  };
+
   render() {
+    const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
     const startComputingMeshfile = async () => {
       const datasetResolutionInfo = getResolutionInfoOfVisibleSegmentationLayer(Store.getState());
       const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
@@ -526,53 +613,12 @@ class MeshesView extends React.Component<Props, State> {
       </Upload>
     );
 
-    const getComputeMeshAdHocButton = () => {
-      const { disabled, title } = this.getComputeMeshAdHocTooltipInfo();
-      return (
-        <Tooltip title={title}>
-          <Button
-            onClick={() => {
-              const pos = getPosition(this.props.flycam);
-              const id = getSegmentIdForPosition(pos);
-              if (id === 0) {
-                Toast.info("No segment found at centered position");
-              }
-              this.props.changeActiveIsosurfaceId(id, pos, true);
-            }}
-            disabled={disabled}
-            size="small"
-          >
-            Compute Mesh (ad hoc)
-          </Button>
-        </Tooltip>
-      );
-    };
-
-    const loadPrecomputedMesh = async () => {
-      const pos = getPosition(this.props.flycam);
-      const id = getSegmentIdForPosition(pos);
-      if (id === 0) {
-        Toast.info("No segment found at centered position");
-        return;
-      }
-      if (!this.props.currentMeshFile || !this.props.visibleSegmentationLayer) {
-        return;
-      }
-      await loadMeshFromFile(
-        id,
-        pos,
-        this.props.currentMeshFile,
-        this.props.visibleSegmentationLayer,
-        this.props.dataset,
-      );
-    };
-
     const handleMeshFileSelected = async mesh => {
       if (mesh.key === "refresh") {
         maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
       } else if (this.props.visibleSegmentationLayer != null) {
         this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
-        loadPrecomputedMesh();
+        this.loadPrecomputedMesh();
       }
     };
 
@@ -609,7 +655,7 @@ class MeshesView extends React.Component<Props, State> {
           <DropdownButton
             size="small"
             trigger="click"
-            onClick={loadPrecomputedMesh}
+            onClick={this.loadPrecomputedMesh}
             overlay={getMeshFilesDropdown()}
             buttonsRender={([leftButton, rightButton]) => [
               React.cloneElement(leftButton, {
@@ -645,14 +691,14 @@ class MeshesView extends React.Component<Props, State> {
 
     const getMeshesHeader = () => (
       <React.Fragment>
-        Meshes{" "}
+        Segments & Meshes{" "}
         <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They can be computed ad-hoc or pre-computed.">
           <InfoCircleOutlined />
         </Tooltip>
         {getHeaderDropdownButton()}
         <div className="antd-legacy-group">
           {/* Only show option for ad-hoc computation if no mesh file is available */
-          this.props.currentMeshFile ? null : getComputeMeshAdHocButton()}
+          this.props.currentMeshFile ? null : this.getComputeMeshAdHocButton()}
           {this.props.currentMeshFile
             ? getLoadPrecomputedMeshButton()
             : getPrecomputeMeshesButton()}
@@ -662,21 +708,8 @@ class MeshesView extends React.Component<Props, State> {
     const allSegments = this.props.segments ? Array.from(this.props.segments.values()) : [];
     return (
       <div className="padded-tab-content">
-        {allSegments.length > 0 ? (
-          <List size="small" split={false}>
-            {allSegments.map(segment => (
-              <List.Item
-                key={segment.id}
-                style={{ padding: "2px 10px" }}
-                onClick={() => this.props.setPosition(segment.somePosition)}
-              >
-                {this.getColoredDotIconForSegment(segment.id)}
-                {segment.name}
-              </List.Item>
-            ))}
-          </List>
-        ) : null}
         {getMeshesHeader()}
+
         <List
           size="small"
           split={false}
@@ -689,7 +722,22 @@ class MeshesView extends React.Component<Props, State> {
             }`,
           }}
         >
-          {this.getIsosurfaceList()}
+          {allSegments.map(segment => (
+            <List.Item
+              key={segment.id}
+              style={{ padding: "2px 10px" }}
+              className={classnames("mesh-list-item", {
+                "is-centered-cell": segment.id === centeredSegmentId,
+              })}
+              onClick={() => this.props.setPosition(segment.somePosition)}
+            >
+              {this.getColoredDotIconForSegment(segment.id)}
+              {segment.name}
+              <div style={{ marginLeft: 10 }}>
+                {this.getMeshChild(segment.id, segment.id === centeredSegmentId)}
+              </div>
+            </List.Item>
+          ))}
         </List>
       </div>
     );

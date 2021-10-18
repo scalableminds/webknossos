@@ -24,11 +24,18 @@
   padding-left: 5px;
   padding-right: 5px;
   border-radius: 2px;
+  .anticon-edit {
+    // Hide edit icon (unless hovered)
+    display: none;
+  }
   &.is-centered-cell {
     background-color: @blue-2;
   }
   &:hover {
     background-color: @blue-1;
+    .anticon-edit {
+      display: inline-block;
+    }
   }
 }
 

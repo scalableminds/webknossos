@@ -389,7 +389,6 @@ class MeshesView extends React.Component<Props, State> {
       <Tooltip title="Change visibility">
         <Checkbox
           checked={isVisible}
-          style={{ marginRight: "0 4px" }}
           onChange={(event: SyntheticInputEvent<>) => {
             if (!this.props.visibleSegmentationLayer) {
               return;
@@ -428,13 +427,13 @@ class MeshesView extends React.Component<Props, State> {
               "is-centered-cell": isCentered,
             })}
           >
-            {toggleVisibilityCheckbox}{" "}
+            {toggleVisibilityCheckbox}
             <span
               onClick={() => {
                 this.props.changeActiveIsosurfaceId(segmentId, seedPosition, !isPrecomputed);
                 moveTo(seedPosition);
               }}
-              style={textStyle}
+              style={{ ...textStyle, marginLeft: 8 }}
             >
               {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
             </span>
@@ -740,7 +739,7 @@ class MeshesView extends React.Component<Props, State> {
           {allSegments.map(segment => (
             <List.Item
               key={segment.id}
-              style={{ padding: "2px 10px" }}
+              style={{ padding: "2px 5px" }}
               className={classnames("segment-list-item", {
                 "is-centered-cell": segment.id === this.state.selectedSegmentId,
               })}
@@ -752,6 +751,7 @@ class MeshesView extends React.Component<Props, State> {
                 value={segment.name || `Segment ${segment.id}`}
                 label="Segment Name"
                 onChange={newName => this.props.updateSegment(segment.id, { name: newName })}
+                horizontalMargin={5}
               />
               {/* Show Default Segment Name if another one is already defined*/}
               {segment.name != null ? (

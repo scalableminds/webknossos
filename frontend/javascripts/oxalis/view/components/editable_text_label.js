@@ -20,6 +20,7 @@ export type EditableTextLabelProp = {|
   rows?: number,
   markdown?: boolean,
   label: string,
+  horizontalMargin?: number,
 |};
 
 type State = {
@@ -70,12 +71,13 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
 
   render() {
     const iconStyle = { cursor: "pointer" };
+    const horizontalMargin = this.props.horizontalMargin != null ? this.props.horizontalMargin : 10;
 
     const inputComponentProps = {
       value: this.state.value,
       onChange: this.handleInputChange,
       onPressEnter: this.handleOnChange,
-      style: { width: "60%", margin: "0 10px" },
+      style: { width: "60%", margin: `0 ${horizontalMargin}px` },
       size: "small",
       autoFocus: true,
       rows: this.props.rows,
@@ -111,7 +113,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     } else {
       return (
         <span style={{ display: "inline-block" }}>
-          <span style={{ margin: "0 10px", display: "inline-block" }}>
+          <span style={{ margin: `0 ${horizontalMargin}px`, display: "inline-block" }}>
             {this.props.markdown ? (
               <Markdown
                 source={this.props.value}

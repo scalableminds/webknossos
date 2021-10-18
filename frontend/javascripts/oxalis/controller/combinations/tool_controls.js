@@ -535,7 +535,7 @@ export class BoundingBoxTool {
     planeView: PlaneView,
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): * {
-    const bboxHoveringThrottleTime = 75;
+    const bboxHoveringThrottleTime = 100;
     let selectedEdge: ?SelectedEdge = null;
     const getClosestHoveredBoundingBoxThrottled =
       planeId !== OrthoViews.TDView
@@ -554,7 +554,7 @@ export class BoundingBoxTool {
               }
             } else {
               getSceneController().highlightUserBoundingBox(null);
-              body.style.cursor = "default";
+              body.style.cursor = "auto";
             }
           }, bboxHoveringThrottleTime)
         : () => {};

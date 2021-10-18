@@ -109,7 +109,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           className={`inputcatcher ${viewportID}`}
           style={{
             position: "relative",
-            cursor: this.props.busyBlockingInfo.isBusy ? "wait" : "auto",
+            cursor: this.props.busyBlockingInfo.isBusy ? "wait" : "inherit",
           }}
         >
           <ViewportStatusIndicator />

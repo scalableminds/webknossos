@@ -33,6 +33,7 @@ import {
   createTreeAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -44,8 +45,8 @@ const narrowButtonStyle = {
 };
 
 const imgStyleForSpaceyIcons = {
-  width: 14,
-  height: 14,
+  width: 19,
+  height: 19,
   lineHeight: 10,
   marginTop: -2,
 };
@@ -96,6 +97,10 @@ const handleSetTool = (event: { target: { value: AnnotationTool } }) => {
 
 const handleCreateCell = () => {
   Store.dispatch(createCellAction());
+};
+
+const handleAddNewUserBoundingBox = () => {
+  Store.dispatch(addUserBoundingBoxAction());
 };
 
 const handleSetOverwriteMode = (event: { target: { value: OverwriteMode } }) => {
@@ -247,6 +252,23 @@ function CreateCellButton() {
         </ButtonComponent>
       </Tooltip>
     </Badge>
+  );
+}
+
+function CreateNewBoundingBoxButton() {
+  return (
+    <Tooltip title="Create a new bounding box at the center.">
+      <ButtonComponent
+        onClick={handleAddNewUserBoundingBox}
+        style={{ paddingLeft: 9, paddingRight: 9 }}
+      >
+        <img
+          src="/assets/images/new-bounding-box.svg"
+          alt="New Bounding Box Icon"
+          style={imgStyleForSpaceyIcons}
+        />
+      </ButtonComponent>
+    </Tooltip>
   );
 }
 
@@ -561,7 +583,16 @@ export default function ToolbarView() {
               style={narrowButtonStyle}
               value={AnnotationToolEnum.BOUNDING_BOX}
             >
-              BBox
+              <img
+                src="/assets/images/bounding-box.svg"
+                alt="Trace Tool Icon"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
+                    ? 0.5
+                    : 1,
+                  ...imgStyleForSpaceyIcons,
+                }}
+              />
             </RadioButtonWithTooltip>
           </React.Fragment>
         ) : null}
@@ -586,8 +617,12 @@ function ToolSpecificSettings({
   isShiftPressed,
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
+  const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
   const showCreateCellButton =
-    isVolumeSupported && !showCreateTreeButton && adaptedActiveTool !== AnnotationToolEnum.MOVE;
+    isVolumeSupported &&
+    !showCreateTreeButton &&
+    !showNewBoundingBoxButton &&
+    adaptedActiveTool !== AnnotationToolEnum.MOVE;
   const showChangeBrushSizeButton =
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
@@ -599,6 +634,12 @@ function ToolSpecificSettings({
         <Space size={0} className="antd-legacy-group" style={{ marginLeft: 10 }}>
           <CreateTreeButton />
           <AdditionalSkeletonModesButtons />
+        </Space>
+      ) : null}
+
+      {showNewBoundingBoxButton ? (
+        <Space size={0} className="antd-legacy-group" style={{ marginLeft: 10 }}>
+          <CreateNewBoundingBoxButton />
         </Space>
       ) : null}
 

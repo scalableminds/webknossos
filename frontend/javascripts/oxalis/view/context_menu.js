@@ -15,6 +15,7 @@ import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { V3 } from "libs/mjs";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -63,6 +64,7 @@ type DispatchProps = {|
   hideTree: number => void,
   createTree: () => void,
   setActiveCell: number => void,
+  addNewBoundingBox: () => void,
 |};
 
 type StateProps = {|
@@ -299,6 +301,7 @@ function NoNodeContextMenuOptions({
   dataset,
   currentMeshFile,
   setActiveCell,
+  addNewBoundingBox,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
     (async () => {
@@ -387,14 +390,32 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
+
+  const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
+  const boundingBoxActions = [
+    <Menu.Item
+      className="node-context-menu-item"
+      key="add-new-bounding-box"
+      onClick={() => {
+        addNewBoundingBox();
+      }}
+    >
+      Create new Bounding Box
+      {isBoundingBoxToolActive ? shortcutBuilder(["leftMouse"]) : null}
+    </Menu.Item>,
+  ];
   if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadMeshItem);
   }
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
-
-  const allActions = isSkeletonToolActive
-    ? skeletonActions.concat(nonSkeletonActions)
-    : nonSkeletonActions.concat(skeletonActions);
+  let allActions = [];
+  if (isSkeletonToolActive) {
+    allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
+  } else if (isBoundingBoxToolActive) {
+    allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
+  } else {
+    allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
+  }
 
   if (allActions.length === 0) {
     return null;
@@ -560,6 +581,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   setActiveCell(segmentId: number) {
     dispatch(setActiveCellAction(segmentId));
+  },
+  addNewBoundingBox() {
+    dispatch(addUserBoundingBoxAction());
   },
 });
 

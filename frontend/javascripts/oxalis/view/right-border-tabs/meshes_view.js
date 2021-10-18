@@ -88,12 +88,14 @@ type StateProps = {|
   availableMeshFiles: ?Array<string>,
   currentMeshFile: ?string,
   activeUser: ?APIUser,
+  activeCellId: ?number,
 |};
 
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   return {
     isImporting: state.uiInformation.isImportingMesh,
+    activeCellId: state.tracing.volume != null ? state.tracing.volume.activeCellId : null,
     isosurfaces:
       visibleSegmentationLayer != null
         ? state.isosurfacesByLayer[visibleSegmentationLayer.name]
@@ -168,13 +170,14 @@ type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
 
-type State = { hoveredListItem: ?number, activeMeshJobId: ?string };
+type State = { hoveredListItem: ?number, selectedSegmentId: ?number, activeMeshJobId: ?string };
 
 class MeshesView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
 
   state = {
     hoveredListItem: null,
+    selectedSegmentId: null,
     activeMeshJobId: null,
   };
 
@@ -304,7 +307,7 @@ class MeshesView extends React.Component<Props, State> {
     };
   };
 
-  getMeshChild = (segmentId: number, isCentered: boolean) => {
+  getMeshInfo = (segmentId: number, isCentered: boolean) => {
     if (!this.props.isosurfaces[segmentId]) {
       if (isCentered) {
         return (
@@ -386,6 +389,7 @@ class MeshesView extends React.Component<Props, State> {
       <Tooltip title="Change visibility">
         <Checkbox
           checked={isVisible}
+          style={{ marginRight: "0 4px" }}
           onChange={(event: SyntheticInputEvent<>) => {
             if (!this.props.visibleSegmentationLayer) {
               return;
@@ -538,6 +542,12 @@ class MeshesView extends React.Component<Props, State> {
       this.props.visibleSegmentationLayer,
       this.props.dataset,
     );
+  };
+
+  onSelectSegment = (segment: Segment) => {
+    this.setState({ selectedSegmentId: segment.id });
+
+    this.props.setPosition(segment.somePosition);
   };
 
   render() {
@@ -732,9 +742,9 @@ class MeshesView extends React.Component<Props, State> {
               key={segment.id}
               style={{ padding: "2px 10px" }}
               className={classnames("segment-list-item", {
-                "is-centered-cell": segment.id === centeredSegmentId,
+                "is-centered-cell": segment.id === this.state.selectedSegmentId,
               })}
-              onClick={() => this.props.setPosition(segment.somePosition)}
+              onClick={() => this.onSelectSegment(segment)}
             >
               {this.getColoredDotIconForSegment(segment.id)}
 
@@ -747,8 +757,25 @@ class MeshesView extends React.Component<Props, State> {
               {segment.name != null ? (
                 <span className="deemphasized-segment-name">{segment.id}</span>
               ) : null}
-              <div style={{ marginLeft: 10 }}>
-                {this.getMeshChild(segment.id, segment.id === centeredSegmentId)}
+              {segment.id === centeredSegmentId ? (
+                <Tooltip title="This segment is currently centered in the data viewports.">
+                  <i
+                    className="fas fa-crosshairs deemphasized-segment-name"
+                    style={{ marginLeft: 4 }}
+                  />
+                </Tooltip>
+              ) : null}
+              {segment.id === this.props.activeCellId ? (
+                <Tooltip title="The currently active segment id belongs to this segment.">
+                  <i
+                    className="fas fa-paint-brush deemphasized-segment-name"
+                    style={{ marginLeft: 4 }}
+                  />
+                </Tooltip>
+              ) : null}
+
+              <div style={{ marginLeft: 16 }}>
+                {this.getMeshInfo(segment.id, segment.id === this.state.selectedSegmentId)}
               </div>
             </List.Item>
           ))}

@@ -223,7 +223,7 @@ export type SkeletonTracing = {|
 
 export type Segment = {
   id: number,
-  name: string,
+  name: ?string,
   somePosition: Vector3,
 };
 

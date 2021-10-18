@@ -113,22 +113,32 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           return update(state, { tracing: { volume: { segments: { $set: segments } } } });
         }
 
-        case "SET_SOME_POSITION_OF_SEGMENT": {
-          const { segmentId } = action;
-          const somePosition = Utils.floor3(action.somePosition);
+        case "UPDATE_SEGMENT": {
+          const { segmentId, segment } = action;
+          // const {} = Utils.floor3(action.somePosition);
           const { segments } = volumeTracing;
 
           const oldSegment = segments.getNullable(segmentId);
-          const newSegment = !oldSegment
-            ? {
-                id: segmentId,
-                somePosition,
-                name: `Segment ${segmentId}`,
-              }
-            : {
-                ...oldSegment,
-                somePosition,
-              };
+
+          let somePosition;
+          if (segment.somePosition) {
+            somePosition = Utils.floor3(segment.somePosition);
+          } else {
+            if (oldSegment == null) {
+              // UPDATE_SEGMENT was called for a non-existing segment without providing
+              // a position. Ignore this action, as the a segment cannot be created without
+              // a position.
+              return state;
+            }
+            somePosition = oldSegment.somePosition;
+          }
+
+          const newSegment = {
+            ...oldSegment,
+            ...segment,
+            somePosition,
+            id: segmentId,
+          };
 
           const newSegmentMap = segments.set(segmentId, newSegment);
 

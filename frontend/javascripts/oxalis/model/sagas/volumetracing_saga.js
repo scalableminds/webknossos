@@ -8,7 +8,7 @@ import { diffDiffableMaps } from "libs/diffable_map";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
-  setSomePositionOfSegmentAction,
+  updateSegmentAction,
   finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
@@ -227,7 +227,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-    yield* put(setSomePositionOfSegmentAction(activeCellId, lastPosition));
+    yield* put(updateSegmentAction(activeCellId, { somePosition: lastPosition }));
     yield* put(finishAnnotationStrokeAction());
   }
 }

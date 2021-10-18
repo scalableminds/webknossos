@@ -15,9 +15,10 @@ import _ from "lodash";
 
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 
 import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
-import type { OxalisState, Flycam, IsosurfaceInformation, SegmentMap } from "oxalis/store";
+import type { OxalisState, Flycam, IsosurfaceInformation, Segment, SegmentMap } from "oxalis/store";
 import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import {
@@ -40,6 +41,7 @@ import {
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -156,6 +158,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   },
   setPosition(position: Vector3, dimensionToSkip: ?number, shouldRefreshIsosurface?: boolean) {
     dispatch(setPositionAction(position, dimensionToSkip, shouldRefreshIsosurface));
+  },
+  updateSegment(segmentId: number, segmentShape: $Shape<Segment>) {
+    dispatch(updateSegmentAction(segmentId, segmentShape));
   },
 });
 
@@ -415,7 +420,7 @@ class MeshesView extends React.Component<Props, State> {
       >
         <div style={{ display: "flex" }}>
           <div
-            className={classnames("mesh-list-item", {
+            className={classnames("segment-list-item", {
               "is-centered-cell": isCentered,
             })}
           >
@@ -726,13 +731,22 @@ class MeshesView extends React.Component<Props, State> {
             <List.Item
               key={segment.id}
               style={{ padding: "2px 10px" }}
-              className={classnames("mesh-list-item", {
+              className={classnames("segment-list-item", {
                 "is-centered-cell": segment.id === centeredSegmentId,
               })}
               onClick={() => this.props.setPosition(segment.somePosition)}
             >
               {this.getColoredDotIconForSegment(segment.id)}
-              {segment.name}
+
+              <EditableTextLabel
+                value={segment.name || `Segment ${segment.id}`}
+                label="Segment Name"
+                onChange={newName => this.props.updateSegment(segment.id, { name: newName })}
+              />
+              {/* Show Default Segment Name if another one is already defined*/}
+              {segment.name != null ? (
+                <span className="deemphasized-segment-name">{segment.id}</span>
+              ) : null}
               <div style={{ marginLeft: 10 }}>
                 {this.getMeshChild(segment.id, segment.id === centeredSegmentId)}
               </div>

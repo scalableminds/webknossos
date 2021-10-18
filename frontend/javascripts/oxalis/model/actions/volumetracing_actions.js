@@ -5,7 +5,7 @@
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { SegmentMap } from "oxalis/store";
+import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import { type Dispatch } from "redux";
 
@@ -53,10 +53,10 @@ export type SetSegmentsAction = {
   segments: SegmentMap,
 };
 
-export type SetSomePositionOfSegmentAction = {
-  type: "SET_SOME_POSITION_OF_SEGMENT",
+export type UpdateSegmentAction = {
+  type: "UPDATE_SEGMENT",
   segmentId: number,
-  somePosition: Vector3,
+  segment: $Shape<Segment>,
 };
 
 export type VolumeTracingAction =
@@ -76,7 +76,7 @@ export type VolumeTracingAction =
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
   | SetSegmentsAction
-  | SetSomePositionOfSegmentAction
+  | UpdateSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
@@ -138,13 +138,13 @@ export const setSegmentsActions = (segments: SegmentMap): SetSegmentsAction => (
   segments,
 });
 
-export const setSomePositionOfSegmentAction = (
+export const updateSegmentAction = (
   segmentId: number,
-  somePosition: Vector3,
-): SetSomePositionOfSegmentAction => ({
-  type: "SET_SOME_POSITION_OF_SEGMENT",
+  segment: $Shape<Segment>,
+): UpdateSegmentAction => ({
+  type: "UPDATE_SEGMENT",
   segmentId,
-  somePosition,
+  segment,
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({

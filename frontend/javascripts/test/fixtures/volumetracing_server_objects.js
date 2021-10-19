@@ -5,7 +5,7 @@ export const tracing: ServerVolumeTracing = {
   activeSegmentId: 10000,
   boundingBox: { topLeft: { x: 0, y: 0, z: 0 }, width: 10240, height: 10240, depth: 10240 },
   userBoundingBoxes: [],
-  segments: new Map(),
+  segments: [],
   createdTimestamp: 1529066010230,
   dataSetName: "ROI2017_wkw",
   editPosition: { x: 3904, y: 4282, z: 2496 },

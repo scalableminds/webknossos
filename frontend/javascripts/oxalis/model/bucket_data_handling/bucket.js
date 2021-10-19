@@ -456,40 +456,10 @@ export class DataBucket {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
-    const currentData = this.data;
-    const lowestResolutionIndex = this.cube.resolutionInfo.getLowestResolutionIndex();
-    const isBucketInLowestResolution = lowestResolutionIndex === this.zoomedAddress[3];
-    if (!isBucketInLowestResolution) {
-      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-        // Only overwrite with the new value if the old value was 0
-        currentData[i] = currentData[i] || newData[i];
-      }
-    } else {
-      // In case there is already annotated frontend data for this bucket, this data is merged with loaded backend data here.
-      // The merge might overwrite all parts of a segment id that exists in the backend data of the bucket. Therefore to detect this case,
-      // we need to track the segments that are overwritten by the merge and afterwards check whether the overwritten ids
-      // are no longer existing within the merged bucket data. If an id no longer exists in the bucket, this bucket's address must be removed from the
-      // covered bucket address list of the segment in the segment list.
-      //
-      // TODO: Better add tests for this, as this is likely hard to test manually
-      const overwrittenBucketAddressesOfSegments = new Map();
-      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-        // Only overwrite with the new value if the old value was 0
-        const mergedInSegment = newData[i];
-        const currentSegment = currentData[i];
-        if (currentSegment !== 0 && mergedInSegment !== 0 && currentSegment !== mergedInSegment) {
-          // Gather all overwritten segment ids together with the bucket in which they were overwritten
-          if (!overwrittenBucketAddressesOfSegments.has(mergedInSegment)) {
-            overwrittenBucketAddressesOfSegments.set(
-              mergedInSegment,
-              new Set([this.zoomedAddress]),
-            );
-          }
-        }
-        currentData[i] = currentData[i] || newData[i];
-      }
+    for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
+      // Only overwrite with the new value if the old value was 0
+      this.data[i] = this.data[i] || newData[i];
     }
-    this.data = currentData;
   }
 
   // The following three methods can be used for debugging purposes.

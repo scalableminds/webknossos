@@ -657,13 +657,19 @@ export type ServerSkeletonTracing = {|
   organizationName?: string,
 |};
 
+type ServerSegment = {|
+  segmentId: number,
+  name: ?string,
+  anchorPosition: Point3,
+|};
+
 export type ServerVolumeTracing = {|
   ...ServerTracingBase,
   activeSegmentId?: number,
   boundingBox: ServerBoundingBox,
   elementClass: ElementClass,
   fallbackLayer?: string,
-  segments: any, // todo
+  segments: Array<ServerSegment>,
   largestSegmentId: number,
   // `resolutions` will be undefined for legacy annotations
   // which were created before the multi-resolution capabilities

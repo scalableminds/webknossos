@@ -588,7 +588,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         {
           method: "POST",
           data: compactedSaveQueue,
-          compress: false, // todo: undo
+          compress: true,
         },
       );
       const endTime = Date.now();

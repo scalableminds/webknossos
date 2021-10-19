@@ -41,7 +41,6 @@ const volumeTracing: VolumeTracing = {
   version: 0,
   segments: new DiffableMap(),
   activeCellId: 0,
-  cells: {},
   maxCellId: 0,
   contourList: [[1, 2, 3], [7, 8, 9]],
   boundingBox: null,

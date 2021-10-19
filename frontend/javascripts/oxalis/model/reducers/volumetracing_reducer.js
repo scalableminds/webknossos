@@ -52,7 +52,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         contourTracingMode: ContourModeEnum.DRAW,
         contourList: [],
         maxCellId,
-        cells: {},
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),

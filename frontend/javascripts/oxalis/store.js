@@ -156,12 +156,6 @@ export type TreeGroup = {|
   +children: Array<TreeGroup>,
 |};
 
-export type VolumeCell = {
-  +id: number,
-};
-
-export type VolumeCellMap = { [number]: VolumeCell };
-
 export type DataLayerType = APIDataLayer;
 
 export type Restrictions = APIRestrictions;
@@ -239,7 +233,6 @@ export type VolumeTracing = {|
   +contourTracingMode: ContourMode,
   // Stores points of the currently drawn region in global coordinates
   +contourList: Array<Vector3>,
-  +cells: VolumeCellMap, // todo: unused?
   +fallbackLayer?: string,
 |};
 

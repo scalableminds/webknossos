@@ -839,7 +839,13 @@ export function* diffVolumeTracing(
 }
 
 function* ensureSegmentExists(action: AddIsosurfaceAction | SetActiveCellAction): Saga<void> {
-  const segments = yield* select(store => getSegmentsForLayer(store, action.layerName));
+  const segments = yield* select(store =>
+    getSegmentsForLayer(
+      store,
+      // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
+      action.layerName,
+    ),
+  );
   const { cellId } = action;
   if (segments == null || segments.getNullable(cellId) != null) {
     return;

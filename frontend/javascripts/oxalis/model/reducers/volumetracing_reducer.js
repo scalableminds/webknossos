@@ -11,7 +11,7 @@ import type {
   UpdateSegmentAction,
   SetSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { updateKey, updateKey2, updateKey3, updateKey4 } from "oxalis/model/helpers/deep_update";
+import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -33,7 +33,7 @@ import {
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 
-type UpdateInfo =
+type SegmentUpdateInfo =
   | {
       +type: "UPDATE_VOLUME_TRACING",
     }
@@ -45,7 +45,7 @@ type UpdateInfo =
       +type: "NOOP",
     };
 
-function getHandleUpdateInfo(state: OxalisState, layerName: ?string): UpdateInfo {
+function getSegmentUpdateInfo(state: OxalisState, layerName: ?string): SegmentUpdateInfo {
   // If the the action is referring to a volume tracing, only update
   // the given state if handleVolumeTracing is true.
   // Returns [shouldHandleUpdate, layerName]
@@ -66,12 +66,13 @@ function getHandleUpdateInfo(state: OxalisState, layerName: ?string): UpdateInfo
 function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
   const { segments, layerName: _layerName } = action;
 
-  const updateInfo = getHandleUpdateInfo(state, _layerName);
+  const updateInfo = getSegmentUpdateInfo(state, _layerName);
   if (updateInfo.type === "NOOP") {
     return state;
   }
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
+    // $FlowIgnore[prop-missing] "tracing.volume" must exist.
     return updateKey2(state, "tracing", "volume", { segments });
   }
 
@@ -82,15 +83,15 @@ function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
 function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   const { segmentId, segment, layerName: _layerName } = action;
 
-  const updateInfo = getHandleUpdateInfo(state, _layerName);
+  const updateInfo = getSegmentUpdateInfo(state, _layerName);
   if (updateInfo.type === "NOOP") {
     return state;
   }
-  if (updateInfo.type === "UPDATE_VOLUME_TRACING" && state.tracing.volume == null) {
-    // This should never happen. Satisfy flow
+  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
     return state;
   }
 
+  // $FlowIgnore[incompatible-use] "tracing.volume" is defined exist if updateInfo.type === "UPDATE_VOLUME_TRACING"
   const { segments } =
     updateInfo.type === "UPDATE_VOLUME_TRACING"
       ? state.tracing.volume
@@ -121,6 +122,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   const newSegmentMap = segments.set(segmentId, newSegment);
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
+    // $FlowIgnore[prop-missing] "tracing.volume" must exist.
     return updateKey2(state, "tracing", "volume", { segments: newSegmentMap });
   }
 

@@ -114,7 +114,6 @@ import Store, {
   type TreeMap,
   type UserConfiguration,
   type VolumeTracing,
-  type OxalisState,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
 import PriorityQueue from "js-priority-queue";
@@ -124,7 +123,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass, type APISegmentationLayer } from "types/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
 import {
   loadMeshFromFile,

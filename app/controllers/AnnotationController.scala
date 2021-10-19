@@ -208,8 +208,7 @@ class AnnotationController @Inject()(
           None,
           ObjectId.dummyId,
           ObjectId.dummyId,
-          Some(TracingIds.dummyTracingId),
-          None
+          List(AnnotationLayer(TracingIds.dummyTracingId, AnnotationLayerType.Skeleton))
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)
@@ -240,22 +239,23 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def unlinkFallback(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.unlinkFallback.explorationalsOnly"
-      restrictions <- provider.restrictionsFor(typ, id)
-      _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      annotation <- provider.provideAnnotation(typ, id, request.identity)
-      volumeTracingId <- annotation.volumeTracingId.toFox ?~> "annotation.unlinkFallback.noVolume"
-      dataSet <- dataSetDAO
-        .findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
-      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSet.notImported"
-      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      newTracingId <- tracingStoreClient.unlinkFallback(volumeTracingId, dataSource)
-      _ <- annotationDAO.updateVolumeTracingId(annotation._id, newTracingId)
-      updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity)
-      js <- annotationService.publicWrites(updatedAnnotation, Some(request.identity))
-    } yield JsonOk(js)
+  def unlinkFallback(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.unlinkFallback.explorationalsOnly"
+        restrictions <- provider.restrictionsFor(typ, id)
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        volumeTracingId <- annotation.volumeTracingId.toFox ?~> "annotation.unlinkFallback.noVolume"
+        dataSet <- dataSetDAO
+          .findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
+        dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSet.notImported"
+        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        newTracingId <- tracingStoreClient.unlinkFallback(volumeTracingId, dataSource)
+        _ <- annotationDAO.updateVolumeTracingId(annotation._id, newTracingId)
+        updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity)
+        js <- annotationService.publicWrites(updatedAnnotation, Some(request.identity))
+      } yield JsonOk(js)
   }
 
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(

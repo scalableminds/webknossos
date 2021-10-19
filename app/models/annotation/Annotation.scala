@@ -12,6 +12,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 import javax.inject.Inject
+import models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationType.AnnotationType
 
 import scala.concurrent.ExecutionContext
@@ -45,6 +46,16 @@ case class Annotation(
     else if (skeletonPresent) TracingType.skeleton
     else TracingType.volume
   }
+
+  def skeletonTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
+    for {
+      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
+    } yield annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
+
+  def volumeTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
+    for {
+      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
+    } yield annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
 
   def isRevertPossible: Boolean =
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
@@ -81,17 +92,29 @@ class AnnotationLayersDAO @Inject()(SQLClient: SQLClient)(implicit ec: Execution
       _ <- Fox.serialCombined(annotationLayers)(insertOne(annotationId, _))
     } yield ()
 
-  def insertOne(annotationId: ObjectId, a: AnnotationLayer): Fox[Unit] =
+  def insertOne(annotationId: ObjectId, annotationLayer: AnnotationLayer): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.annotation_layers _annotation, tracingId, typ, name
-            values($annotationId, ${a.tracingId}, ${a.typ.toString}, ${a.name.map(sanitize)}""")
+      _ <- run(insertOneQuery(annotationId, annotationLayer))
     } yield ()
+
+  private def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer) =
+    sqlu"""insert into webknossos.annotation_layers _annotation, tracingId, typ, name
+            values($annotationId, ${a.tracingId}, ${a.typ.toString}, ${a.name.map(sanitize)}"""
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {
       rList <- run(sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
       parsed <- rList.headOption.flatMap(ObjectId.parse)
     } yield parsed
+
+  def replaceTracingId(annotationId: ObjectId, newTracingId: String, typ: AnnotationLayerType)(
+      implicit ctx: DBAccessContext): Fox[Unit] = {
+    val deleteQuery = sqlu"delete from webknossos.annotation_layers where annotationId = $annotationId and typ = $typ"
+    val insertQuery = insertOneQuery(annotationId, AnnotationLayer(newTracingId, typ, None))
+    for {
+      _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).transactionally)
+    } yield ()
+  }
 
 }
 
@@ -387,20 +410,6 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
       _ <- assertUpdateAccess(id)
       _ <- run(
         sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
-    } yield ()
-
-  // todo: use new table
-  def updateSkeletonTracingId(id: ObjectId, newSkeletonTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set skeletonTracingId = $newSkeletonTracingId where _id = ${id.id}")
-    } yield ()
-
-  // todo: use new table
-  def updateVolumeTracingId(id: ObjectId, newVolumeTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set volumeTracingId = $newVolumeTracingId where _id = ${id.id}")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

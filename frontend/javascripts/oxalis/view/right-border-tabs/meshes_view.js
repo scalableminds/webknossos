@@ -1,9 +1,7 @@
 // @flow
-import { Button, List, Tooltip, Upload, Dropdown, Menu } from "antd";
+import { Button, List, Tooltip, Dropdown, Menu } from "antd";
 import {
   DeleteOutlined,
-  EllipsisOutlined,
-  InfoCircleOutlined,
   LoadingOutlined,
   ReloadOutlined,
   VerticalAlignBottomOutlined,
@@ -75,7 +73,6 @@ export const stlIsosurfaceConstants = {
 // This file defines the component MeshesView.
 
 type StateProps = {|
-  isImporting: boolean,
   isosurfaces: { [segmentId: number]: IsosurfaceInformation },
   dataset: APIDataset,
   mappingColors: ?Array<number>,
@@ -95,7 +92,6 @@ type StateProps = {|
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   return {
-    isImporting: state.uiInformation.isImportingMesh,
     activeCellId: state.tracing.volume != null ? state.tracing.volume.activeCellId : null,
     isosurfaces:
       visibleSegmentationLayer != null
@@ -609,24 +605,6 @@ class MeshesView extends React.Component<Props, State> {
         </Tooltip>
       );
     };
-
-    const getStlImportItem = () => (
-      <Upload
-        accept=".stl"
-        beforeUpload={() => false}
-        onChange={file => {
-          if (!this.props.visibleSegmentationLayer) {
-            return;
-          }
-          this.props.onStlUpload(this.props.visibleSegmentationLayer.name, file);
-        }}
-        showUploadList={false}
-        style={{ fontSize: 16, cursor: "pointer" }}
-        disabled={!this.props.allowUpdate || this.props.isImporting}
-      >
-        Import STL
-      </Upload>
-    );
 
     const handleMeshFileSelected = async mesh => {
       if (mesh.key === "refresh") {

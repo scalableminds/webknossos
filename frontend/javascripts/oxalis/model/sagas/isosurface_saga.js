@@ -237,8 +237,8 @@ function* loadIsosurfaceWithNeighbors(
 
   const hasIsosurface = yield* select(
     state =>
-      state.isosurfacesByLayer[layer.name] != null &&
-      state.isosurfacesByLayer[layer.name][segmentId] != null,
+      state.localSegmentationData[layer.name].isosurfaces != null &&
+      state.localSegmentationData[layer.name].isosurfaces[segmentId] != null,
   );
   if (!hasIsosurface) {
     yield* put(addIsosurfaceAction(layer.name, segmentId, position, false));

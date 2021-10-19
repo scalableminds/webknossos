@@ -576,7 +576,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     zoomStep: getRequestLogZoomStep(state),
     currentMeshFile:
       visibleSegmentationLayer != null
-        ? state.currentMeshFileByLayer[visibleSegmentationLayer.name]
+        ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
   };

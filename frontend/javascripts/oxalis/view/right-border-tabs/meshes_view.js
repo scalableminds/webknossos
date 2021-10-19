@@ -98,7 +98,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     activeCellId: state.tracing.volume != null ? state.tracing.volume.activeCellId : null,
     isosurfaces:
       visibleSegmentationLayer != null
-        ? state.isosurfacesByLayer[visibleSegmentationLayer.name]
+        ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
         : {},
     dataset: state.dataset,
     mappingColors: getMappingInfo(
@@ -114,11 +114,11 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     datasetName: state.dataset.name,
     availableMeshFiles:
       visibleSegmentationLayer != null
-        ? state.availableMeshFilesByLayer[visibleSegmentationLayer.name]
+        ? state.localSegmentationData[visibleSegmentationLayer.name].availableMeshFiles
         : null,
     currentMeshFile:
       visibleSegmentationLayer != null
-        ? state.currentMeshFileByLayer[visibleSegmentationLayer.name]
+        ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
         : null,
     activeUser: state.activeUser,
   };

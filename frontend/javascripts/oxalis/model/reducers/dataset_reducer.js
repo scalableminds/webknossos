@@ -4,7 +4,7 @@ import type { OxalisState } from "oxalis/store";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 
-function createDictsForKeys<T>(
+function createDictWithKeysAndValue<T>(
   keys: Array<string>,
   makeDefaultValue: () => T,
 ): { [key: string]: T } {
@@ -21,12 +21,14 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
       return {
         ...state,
         dataset,
-        isosurfacesByLayer: createDictsForKeys(segmentationLayerNames, () => ({})),
-        availableMeshFilesByLayer: createDictsForKeys(segmentationLayerNames, () => null),
-        currentMeshFileByLayer: createDictsForKeys(segmentationLayerNames, () => null),
+        localSegmentationData: createDictWithKeysAndValue(segmentationLayerNames, () => ({
+          isosurfaces: {},
+          availableMeshFiles: null,
+          currentMeshFile: null,
+        })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,
-          activeMappingByLayer: createDictsForKeys(segmentationLayerNames, () => ({
+          activeMappingByLayer: createDictWithKeysAndValue(segmentationLayerNames, () => ({
             mappingName: null,
             mapping: null,
             mappingKeys: null,

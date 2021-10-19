@@ -1484,7 +1484,7 @@ class DataApi {
     if (!effectiveLayer) {
       return null;
     }
-    return Store.getState().currentMeshFileByLayer[effectiveLayer.name];
+    return Store.getState().localSegmentationData[effectiveLayer.name].currentMeshFile;
   }
 
   /**
@@ -1512,12 +1512,12 @@ class DataApi {
     }
     const state = Store.getState();
     if (
-      state.availableMeshFilesByLayer[effectiveLayerName] == null ||
-      !state.availableMeshFilesByLayer[effectiveLayerName].includes(meshFile)
+      state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
+      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.includes(meshFile)
     ) {
       throw new Error(
         `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
-          state.availableMeshFilesByLayer[effectiveLayerName] || []
+          state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
         ).join(", ")}`,
       );
     }
@@ -1545,7 +1545,7 @@ class DataApi {
       return;
     }
     const { dataset } = state;
-    const currentMeshFile = state.currentMeshFileByLayer[effectiveLayerName];
+    const currentMeshFile = state.localSegmentationData[effectiveLayerName].currentMeshFile;
     if (currentMeshFile == null) {
       throw new Error(
         "No mesh file was activated. Please call `api.data.setActiveMeshFile` first (use `api.data.getAvailableMeshFiles` to retrieve candidates).",
@@ -1583,7 +1583,7 @@ class DataApi {
       Store.getState(),
       layerName,
     ).name;
-    if (Store.getState().isosurfacesByLayer[effectiveLayerName][segmentId] != null) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].isosurfaces[segmentId] != null) {
       Store.dispatch(updateIsosurfaceVisibilityAction(effectiveLayerName, segmentId, isVisible));
     }
   }
@@ -1601,7 +1601,7 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().isosurfacesByLayer[effectiveLayerName][segmentId] != null) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].isosurfaces[segmentId] != null) {
       Store.dispatch(removeIsosurfaceAction(effectiveLayerName, segmentId));
     }
   }
@@ -1618,7 +1618,9 @@ class DataApi {
       Store.getState(),
       layerName,
     ).name;
-    const segmentIds = Object.keys(Store.getState().isosurfacesByLayer[effectiveLayerName]);
+    const segmentIds = Object.keys(
+      Store.getState().localSegmentationData[effectiveLayerName].isosurfaces,
+    );
     for (const segmentId of segmentIds) {
       Store.dispatch(removeIsosurfaceAction(effectiveLayerName, Number(segmentId)));
     }

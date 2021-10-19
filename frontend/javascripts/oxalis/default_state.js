@@ -216,9 +216,7 @@ const defaultState: OxalisState = {
       isBusy: false,
     },
   },
-  isosurfacesByLayer: {},
-  currentMeshFileByLayer: {},
-  availableMeshFilesByLayer: {},
+  localSegmentationData: {},
 };
 
 export default defaultState;

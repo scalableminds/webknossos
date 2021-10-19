@@ -55,12 +55,14 @@ export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 export type SetSegmentsAction = {
   type: "SET_SEGMENTS",
   segments: SegmentMap,
+  layerName?: string,
 };
 
 export type UpdateSegmentAction = {
   type: "UPDATE_SEGMENT",
   segmentId: number,
   segment: $Shape<Segment>,
+  layerName?: string,
 };
 
 export type VolumeTracingAction =
@@ -91,6 +93,8 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
   "FINISH_ANNOTATION_STROKE",
+  "UPDATE_SEGMENT",
+  "SET_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -141,18 +145,24 @@ export const setActiveCellAction = (
   somePosition,
 });
 
-export const setSegmentsActions = (segments: SegmentMap): SetSegmentsAction => ({
+export const setSegmentsActions = (
+  segments: SegmentMap,
+  layerName?: string,
+): SetSegmentsAction => ({
   type: "SET_SEGMENTS",
   segments,
+  layerName,
 });
 
 export const updateSegmentAction = (
   segmentId: number,
   segment: $Shape<Segment>,
+  layerName?: string,
 ): UpdateSegmentAction => ({
   type: "UPDATE_SEGMENT",
   segmentId,
   segment,
+  layerName,
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({

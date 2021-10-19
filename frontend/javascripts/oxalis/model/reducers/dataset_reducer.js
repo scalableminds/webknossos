@@ -3,6 +3,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import DiffableMap from "libs/diffable_map";
 
 function createDictWithKeysAndValue<T>(
   keys: Array<string>,
@@ -25,6 +26,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           isosurfaces: {},
           availableMeshFiles: null,
           currentMeshFile: null,
+          segments: new DiffableMap(),
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

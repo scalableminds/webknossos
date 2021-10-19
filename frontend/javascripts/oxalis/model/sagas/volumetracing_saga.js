@@ -42,6 +42,7 @@ import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
   enforceVolumeTracing,
   isVolumeAnnotationDisallowedForZoom,
+  getSegmentsForLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
@@ -838,17 +839,15 @@ export function* diffVolumeTracing(
 }
 
 function* ensureSegmentExists(action: AddIsosurfaceAction | SetActiveCellAction): Saga<void> {
-  const segments = yield* select(store =>
-    store.tracing.volume != null ? store.tracing.volume.segments : null,
-  );
+  const segments = yield* select(store => getSegmentsForLayer(store, action.layerName));
   const { cellId } = action;
   if (segments == null || segments.getNullable(cellId) != null) {
     return;
   }
 
   if (action.type === "ADD_ISOSURFACE") {
-    const { seedPosition } = action;
-    yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }));
+    const { seedPosition, layerName } = action;
+    yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
   } else if (action.type === "SET_ACTIVE_CELL") {
     const { somePosition } = action;
     if (somePosition == null) {

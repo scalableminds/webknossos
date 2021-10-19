@@ -226,6 +226,8 @@ export type SegmentMap = DiffableMap<number, Segment>;
 export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
+  // Note that there are also SegmentMaps in `state.localSegmentationData`
+  // for non-annotation volume layers.
   +segments: SegmentMap,
   +maxCellId: number,
   +activeCellId: number,
@@ -510,6 +512,12 @@ export type OxalisState = {|
       +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
       +availableMeshFiles: ?Array<string>,
       +currentMeshFile: ?string,
+      // Note that for a volume tracing, this information should be stored
+      // in state.tracing.volume.segments, as this is also persisted on the
+      // server (i.e., not "local").
+      // The `segments` here should only be used for non-annotation volume
+      // layers.
+      +segments: SegmentMap,
     },
   },
 |};

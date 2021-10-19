@@ -45,10 +45,14 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveCellId,
+  getRequestedOrVisibleSegmentationLayer,
+  getRequestedOrVisibleSegmentationLayerEnforced,
+  getNameOfRequestedOrVisibleSegmentationLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
-  getSegmentationLayerByName,
   getLayerByName,
   getResolutionInfo,
   getVisibleSegmentationLayer,
@@ -148,37 +152,6 @@ function assertVolume(tracing: Tracing): VolumeTracing {
     throw new Error("This api function should only be called in a volume annotation.");
   }
   return tracing.volume;
-}
-
-function getRequestedOrVisibleSegmentationLayer(
-  state: OxalisState,
-  layerName: ?string,
-): ?APISegmentationLayer {
-  const requestedLayer =
-    layerName != null ? getSegmentationLayerByName(state.dataset, layerName) : null;
-  return requestedLayer || getVisibleSegmentationLayer(state);
-}
-
-function getRequestedOrVisibleSegmentationLayerEnforced(
-  state: OxalisState,
-  layerName: ?string,
-): APISegmentationLayer {
-  const effectiveLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
-  if (effectiveLayer != null) {
-    return effectiveLayer;
-  }
-  // If a layerName is passed and invalid, an exception will be raised by getRequestedOrVisibleSegmentationLayer.
-  throw new Error(
-    "No segmentation layer is currently visible. Pass a valid layerName (you may want to use `getSegmentationLayerName`)",
-  );
-}
-
-function getNameOfRequestedOrVisibleSegmentationLayer(
-  state: OxalisState,
-  layerName: ?string,
-): ?string {
-  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
-  return layer != null ? layer.name : null;
 }
 
 /**

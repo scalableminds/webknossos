@@ -42,6 +42,7 @@ import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_h
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
+import { getVisibleSegments } from "oxalis/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -107,7 +108,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     ).mappingColors,
     flycam: state.flycam,
     hasVolume: state.tracing.volume != null,
-    segments: state.tracing.volume ? state.tracing.volume.segments : null,
+    segments: getVisibleSegments(state),
     visibleSegmentationLayer,
     allowUpdate: state.tracing.restrictions.allowUpdate,
     organization: state.dataset.owningOrganization,
@@ -705,7 +706,6 @@ class MeshesView extends React.Component<Props, State> {
 
     const getMeshesHeader = () => (
       <React.Fragment>
-        Segments & Meshes{" "}
         <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They can be computed ad-hoc or pre-computed.">
           <InfoCircleOutlined />
         </Tooltip>
@@ -719,7 +719,10 @@ class MeshesView extends React.Component<Props, State> {
         </div>
       </React.Fragment>
     );
-    const allSegments = this.props.segments ? Array.from(this.props.segments.values()) : [];
+    const allSegments = _.sortBy(
+      this.props.segments ? Array.from(this.props.segments.values()) : [],
+      "id",
+    );
     return (
       <div className="padded-tab-content">
         {getMeshesHeader()}

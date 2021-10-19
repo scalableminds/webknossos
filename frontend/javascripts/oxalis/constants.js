@@ -109,8 +109,8 @@ export const BorderTabs = {
   },
   MeshesView: {
     id: "MeshesView",
-    name: "Meshes",
-    description: "Load, compute and organize Meshes of segments",
+    name: "Segments & Meshes",
+    description: "Organize Segments and Meshes",
   },
   SkeletonTabView: {
     id: "SkeletonTabView",

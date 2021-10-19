@@ -45,7 +45,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
   val unreportedStatus = "No longer available on datastore."
-  val initialTeamsTimeout: FiniteDuration = 1 hour
+  val initialTeamsTimeout: FiniteDuration = 1 day
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")

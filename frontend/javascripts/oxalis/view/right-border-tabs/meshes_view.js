@@ -313,8 +313,8 @@ class MeshesView extends React.Component<Props, State> {
       if (isCentered) {
         return (
           <div>
-            <div>{this.getComputeMeshAdHocLinkButton()}</div>
             <div>{this.getLoadPrecomputedMeshLinkButton()}</div>
+            <div>{this.getComputeMeshAdHocLinkButton()}</div>
           </div>
         );
       }
@@ -686,30 +686,8 @@ class MeshesView extends React.Component<Props, State> {
       );
     };
 
-    const getHeaderDropdownMenu = () => {
-      const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
-      return (
-        <Menu>
-          <Menu.Item onClick={startComputingMeshfile} disabled={disabled}>
-            <Tooltip title={title}>Precompute Meshes</Tooltip>
-          </Menu.Item>
-          <Menu.Item>{getStlImportItem()}</Menu.Item>
-        </Menu>
-      );
-    };
-
-    const getHeaderDropdownButton = () => (
-      <Dropdown overlay={getHeaderDropdownMenu()}>
-        <EllipsisOutlined />
-      </Dropdown>
-    );
-
     const getMeshesHeader = () => (
       <React.Fragment>
-        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They can be computed ad-hoc or pre-computed.">
-          <InfoCircleOutlined />
-        </Tooltip>
-        {getHeaderDropdownButton()}
         <div className="antd-legacy-group">
           {/* Only show option for ad-hoc computation if no mesh file is available */
           this.props.currentMeshFile ? null : this.getComputeMeshAdHocButton()}

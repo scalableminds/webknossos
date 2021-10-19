@@ -231,7 +231,8 @@ Samplecountry
             DataStore(conf.Datastore.name,
                       conf.Http.uri,
                       conf.Datastore.publicUri.getOrElse(conf.Http.uri),
-                      conf.Datastore.key))
+                      conf.Datastore.key,
+                      jobsEnabled = conf.Features.jobsEnabled))
         } else Fox.successful(())
       }
     } else Fox.successful(())

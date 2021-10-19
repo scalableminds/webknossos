@@ -10,8 +10,12 @@ import {
   updateDirectionAction,
   updateSegmentAction,
   finishAnnotationStrokeAction,
+  type SetActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import {
+  addUserBoundingBoxesAction,
+  type AddIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   type Saga,
@@ -831,4 +835,32 @@ export function* diffVolumeTracing(
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
     yield removeFallbackLayer();
   }
+}
+
+function* ensureSegmentExists(action: AddIsosurfaceAction | SetActiveCellAction): Saga<void> {
+  const segments = yield* select(store =>
+    store.tracing.volume != null ? store.tracing.volume.segments : null,
+  );
+  const { cellId } = action;
+  if (segments == null || segments.getNullable(cellId) != null) {
+    return;
+  }
+
+  if (action.type === "ADD_ISOSURFACE") {
+    const { seedPosition } = action;
+    yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }));
+  } else if (action.type === "SET_ACTIVE_CELL") {
+    const { somePosition } = action;
+    if (somePosition == null) {
+      // Not all SetActiveCell provide a position (e.g., when simply setting the ID)
+      // via the UI.
+      return;
+    }
+
+    yield* put(updateSegmentAction(cellId, { somePosition }));
+  }
+}
+
+export function* maintainSegmentsMap(): Saga<void> {
+  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL"], ensureSegmentExists);
 }

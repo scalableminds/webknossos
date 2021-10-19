@@ -23,7 +23,11 @@ type FloodFillAction = {
   callback?: () => void,
 };
 type FinishEditingAction = { type: "FINISH_EDITING" };
-type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
+export type SetActiveCellAction = {
+  type: "SET_ACTIVE_CELL",
+  cellId: number,
+  somePosition?: Vector3,
+};
 
 export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
@@ -128,9 +132,13 @@ export const finishEditingAction = (): FinishEditingAction => ({
   type: "FINISH_EDITING",
 });
 
-export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
+export const setActiveCellAction = (
+  cellId: number,
+  somePosition?: Vector3,
+): SetActiveCellAction => ({
   type: "SET_ACTIVE_CELL",
   cellId,
+  somePosition,
 });
 
 export const setSegmentsActions = (segments: SegmentMap): SetSegmentsAction => ({

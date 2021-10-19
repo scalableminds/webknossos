@@ -62,7 +62,7 @@ type DispatchProps = {|
   setActiveNode: number => void,
   hideTree: number => void,
   createTree: () => void,
-  setActiveCell: number => void,
+  setActiveCell: (number, somePosition?: Vector3) => void,
 |};
 
 type StateProps = {|
@@ -370,7 +370,7 @@ function NoNodeContextMenuOptions({
               className="node-context-menu-item"
               key="select-cell"
               onClick={() => {
-                setActiveCell(segmentIdAtPosition);
+                setActiveCell(segmentIdAtPosition, globalPosition);
               }}
             >
               Select Segment ({segmentIdAtPosition}){" "}
@@ -558,8 +558,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   createTree() {
     dispatch(createTreeAction());
   },
-  setActiveCell(segmentId: number) {
-    dispatch(setActiveCellAction(segmentId));
+  setActiveCell(segmentId: number, somePosition?: Vector3) {
+    dispatch(setActiveCellAction(segmentId, somePosition));
   },
 });
 

@@ -7,6 +7,7 @@ import {
   ensureToolIsAllowedInResolution,
   floodFill,
   watchVolumeTracingAsync,
+  maintainSegmentsMap,
 } from "oxalis/model/sagas/volumetracing_saga";
 import {
   pushAnnotationAsync,
@@ -69,6 +70,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchMaximumRenderableLayers),
       _call(watchActivatedMappings),
       _call(watchAgglomerateLoading),
+      _call(maintainSegmentsMap),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

@@ -87,9 +87,6 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   if (updateInfo.type === "NOOP") {
     return state;
   }
-  if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    return state;
-  }
 
   // $FlowIgnore[incompatible-use] "tracing.volume" is defined exist if updateInfo.type === "UPDATE_VOLUME_TRACING"
   const { segments } =

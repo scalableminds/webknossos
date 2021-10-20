@@ -202,7 +202,7 @@ class PlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(...addressSpaceDimensions),
       },
-      hoveredIsosurfaceId: {
+      hoveredSegmentId: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
       },
@@ -515,10 +515,10 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.hoveredIsosurfaceId,
-          hoveredIsosurfaceId => {
-            const [a, b, g, r] = Utils.convertDecToBase256(hoveredIsosurfaceId);
-            this.uniforms.hoveredIsosurfaceId.value.set(r, g, b, a);
+          storeState => storeState.temporaryConfiguration.hoveredSegmentId,
+          hoveredSegmentId => {
+            const [a, b, g, r] = Utils.convertDecToBase256(hoveredSegmentId);
+            this.uniforms.hoveredSegmentId.value.set(r, g, b, a);
           },
         ),
       );

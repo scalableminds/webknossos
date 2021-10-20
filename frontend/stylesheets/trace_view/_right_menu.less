@@ -28,14 +28,20 @@
     // Hide edit icon (unless hovered)
     display: none;
   }
-  &.is-centered-cell {
+  &.is-selected-cell {
     background-color: @blue-2;
   }
+
   &:hover {
     background-color: @blue-1;
     .anticon-edit {
       display: inline-block;
     }
+  }
+  // If a cell is hovered in the data viewports,
+  // it should also be highlighted in the list.
+  &.is-hovered-cell {
+    background-color: @blue-1;
   }
 }
 

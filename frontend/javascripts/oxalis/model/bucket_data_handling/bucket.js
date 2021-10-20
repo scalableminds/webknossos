@@ -382,12 +382,16 @@ export class DataBucket {
           )
         : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
-      const debugInfo = {
-        arrayBuffer,
-        actual: data.length,
-        expected: channelCount * Constants.BUCKET_SIZE,
-        channelCount,
-      };
+      const debugInfo =
+        // Disable this conditional if you need verbose output here.
+        process.env.BABEL_ENV === "test"
+          ? " (<omitted>)"
+          : {
+              arrayBuffer,
+              actual: data.length,
+              expected: channelCount * Constants.BUCKET_SIZE,
+              channelCount,
+            };
       console.warn("bucket.data has unexpected length", debugInfo);
       ErrorHandling.notify(
         new Error(`bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`),

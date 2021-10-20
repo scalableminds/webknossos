@@ -2,13 +2,7 @@
 
 import { type Saga, _all, _call, _cancel, fork, take } from "oxalis/model/sagas/effect-generators";
 import { alert } from "libs/window";
-import {
-  editVolumeLayerAsync,
-  ensureToolIsAllowedInResolution,
-  floodFill,
-  watchVolumeTracingAsync,
-  maintainSegmentsMap,
-} from "oxalis/model/sagas/volumetracing_saga";
+import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import {
   pushAnnotationAsync,
   saveTracingAsync,
@@ -57,10 +51,6 @@ function* restartableSaga(): Saga<void> {
       _call(collectUndoStates),
       _call(saveTracingAsync),
       _call(pushAnnotationAsync),
-      _call(editVolumeLayerAsync),
-      _call(ensureToolIsAllowedInResolution),
-      _call(floodFill),
-      _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
       _call(loadHistogramData),
       _call(watchDataRelevantChanges),
@@ -70,7 +60,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchMaximumRenderableLayers),
       _call(watchActivatedMappings),
       _call(watchAgglomerateLoading),
-      _call(maintainSegmentsMap),
+      ...VolumetracingSagas.map(saga => _call(saga)),
     ]);
   } catch (err) {
     rootSagaCrashed = true;

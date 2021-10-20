@@ -21,6 +21,7 @@ export type EditableTextLabelProp = {|
   markdown?: boolean,
   label: string,
   horizontalMargin?: number,
+  onClick?: () => void,
 |};
 
 type State = {
@@ -113,7 +114,11 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     } else {
       return (
         <span style={{ display: "inline-block" }}>
-          <span style={{ margin: `0 ${horizontalMargin}px`, display: "inline-block" }}>
+          <span
+            style={{ margin: `0 ${horizontalMargin}px`, display: "inline-block" }}
+            className={this.props.onClick != null ? "clickable-text" : null}
+            onClick={this.props.onClick}
+          >
             {this.props.markdown ? (
               <Markdown
                 source={this.props.value}

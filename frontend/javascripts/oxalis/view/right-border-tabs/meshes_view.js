@@ -703,7 +703,6 @@ class MeshesView extends React.Component<Props, State> {
                 "is-selected-cell": segment.id === this.state.selectedSegmentId,
                 "is-hovered-cell": segment.id === this.props.hoveredSegmentId,
               })}
-              onClick={() => this.onSelectSegment(segment)}
               onMouseEnter={() => {
                 this.props.setHoveredSegmentId(segment.id);
               }}
@@ -716,12 +715,15 @@ class MeshesView extends React.Component<Props, State> {
               <EditableTextLabel
                 value={segment.name || `Segment ${segment.id}`}
                 label="Segment Name"
+                onClick={() => this.onSelectSegment(segment)}
                 onChange={newName => this.props.updateSegment(segment.id, { name: newName })}
                 horizontalMargin={5}
               />
               {/* Show Default Segment Name if another one is already defined*/}
               {segment.name != null ? (
-                <span className="deemphasized-segment-name">{segment.id}</span>
+                <Tooltip title="Segment ID">
+                  <span className="deemphasized-segment-name">{segment.id}</span>
+                </Tooltip>
               ) : null}
               {segment.id === centeredSegmentId ? (
                 <Tooltip title="This segment is currently centered in the data viewports.">

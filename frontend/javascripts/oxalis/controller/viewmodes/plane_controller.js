@@ -16,6 +16,7 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import { document } from "libs/window";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -136,6 +137,14 @@ class VolumeKeybindings {
       "shift + v": () => {
         Store.dispatch(copySegmentationLayerAction(true));
       },
+    };
+  }
+}
+
+class BoundingBoxKeybindings {
+  static getKeyboardControls() {
+    return {
+      c: () => Store.dispatch(addUserBoundingBoxAction()),
     };
   }
 }
@@ -382,6 +391,8 @@ class PlaneController extends React.PureComponent<Props> {
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
 
+    const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
+
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
     return {
@@ -389,7 +400,11 @@ class PlaneController extends React.PureComponent<Props> {
       ...skeletonControls,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
-      c: this.createToolDependentKeyboardHandler(skeletonCHandler, volumeCHandler),
+      c: this.createToolDependentKeyboardHandler(
+        skeletonCHandler,
+        volumeCHandler,
+        boundingBoxCHandler,
+      ),
       "1": this.createToolDependentKeyboardHandler(skeletonOneHandler, volumeOneHandler),
     };
   }
@@ -463,28 +478,42 @@ class PlaneController extends React.PureComponent<Props> {
   createToolDependentKeyboardHandler(
     skeletonHandler: ?Function,
     volumeHandler: ?Function,
+    boundingBoxHandler: ?Function,
     viewHandler?: ?Function,
   ): Function {
     return (...args) => {
       const tool = this.props.activeTool;
-      if (tool === AnnotationToolEnum.MOVE) {
-        if (viewHandler != null) {
-          viewHandler(...args);
-        } else if (skeletonHandler != null) {
-          skeletonHandler(...args);
+      switch (tool) {
+        case AnnotationToolEnum.MOVE: {
+          if (viewHandler != null) {
+            viewHandler(...args);
+          } else if (skeletonHandler != null) {
+            skeletonHandler(...args);
+          }
+          return;
         }
-      } else if (tool === AnnotationToolEnum.SKELETON) {
-        if (skeletonHandler != null) {
-          skeletonHandler(...args);
-        } else if (viewHandler != null) {
-          viewHandler(...args);
+        case AnnotationToolEnum.SKELETON: {
+          if (skeletonHandler != null) {
+            skeletonHandler(...args);
+          } else if (viewHandler != null) {
+            viewHandler(...args);
+          }
+          return;
         }
-      } else {
-        // eslint-disable-next-line no-lonely-if
-        if (volumeHandler != null) {
-          volumeHandler(...args);
-        } else if (viewHandler != null) {
-          viewHandler(...args);
+        case AnnotationToolEnum.BOUNDING_BOX: {
+          if (boundingBoxHandler != null) {
+            boundingBoxHandler(...args);
+          } else if (viewHandler != null) {
+            viewHandler(...args);
+          }
+          return;
+        }
+        default: {
+          if (volumeHandler != null) {
+            volumeHandler(...args);
+          } else if (viewHandler != null) {
+            viewHandler(...args);
+          }
         }
       }
     };

@@ -53,7 +53,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
       boundingBox: convertedBoundingBox,
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
-      name: name || `user bounding box ${id}`,
+      name: name || `bounding box ${id}`,
       isVisible: isVisible != null ? isVisible : true,
     };
   });

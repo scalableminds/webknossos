@@ -14,7 +14,6 @@ import {
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_handlers";
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
@@ -99,14 +98,7 @@ export class MoveTool {
         }
       },
       pinch: delta => MoveHandlers.zoom(delta, true),
-      mouseMove: (delta: Point2, position: Point2, id, event) => {
-        // Always set the correct mouse position. Otherwise, using alt + mouse move and
-        // alt + scroll won't result in the correct zoomToMouse behavior.
-        MoveHandlers.setMousePosition(position);
-        if (event.altKey && !event.shiftKey && !event.ctrlKey) {
-          MoveHandlers.handleMovePlane(delta);
-        }
-      },
+      mouseMove: MoveHandlers.moveWhenAltIsPressed,
       leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
         MoveHandlers.handleMovePlane(delta);
       },
@@ -539,7 +531,7 @@ export class BoundingBoxTool {
     let selectedEdge: ?SelectedEdge = null;
     const getClosestHoveredBoundingBoxThrottled =
       planeId !== OrthoViews.TDView
-        ? _.throttle((delta: Point2, position: Point2, _id, _event) => {
+        ? _.throttle((delta: Point2, position: Point2) => {
             const { body } = document;
             if (body == null || selectedEdge != null) {
               return;
@@ -557,7 +549,7 @@ export class BoundingBoxTool {
               body.style.cursor = "auto";
             }
           }, bboxHoveringThrottleTime)
-        : () => {};
+        : (_delta: Point2, _position: Point2) => {};
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, _event: MouseEvent) => {
         if (selectedEdge != null) {
@@ -581,19 +573,10 @@ export class BoundingBoxTool {
         getSceneController().highlightUserBoundingBox(null);
       },
 
-      rightDownMove: (_delta: Point2, _pos: Point2) => {
-        console.log("BoundingBox tool right down move");
+      mouseMove: (delta: Point2, position: Point2, _id, event: MouseEvent) => {
+        MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
+        getClosestHoveredBoundingBoxThrottled(delta, position);
       },
-
-      rightMouseDown: (_pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        console.log("BoundingBox tool right down");
-      },
-
-      rightMouseUp: () => {
-        console.log("BoundingBox tool right up");
-      },
-      mouseMove: getClosestHoveredBoundingBoxThrottled,
-      leftClick: () => Store.dispatch(addUserBoundingBoxAction()),
 
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(

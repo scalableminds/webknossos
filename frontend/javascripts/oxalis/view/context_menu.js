@@ -64,7 +64,7 @@ type DispatchProps = {|
   hideTree: number => void,
   createTree: () => void,
   setActiveCell: number => void,
-  addNewBoundingBox: () => void,
+  addNewBoundingBox: Vector3 => void,
 |};
 
 type StateProps = {|
@@ -397,7 +397,7 @@ function NoNodeContextMenuOptions({
       className="node-context-menu-item"
       key="add-new-bounding-box"
       onClick={() => {
-        addNewBoundingBox();
+        addNewBoundingBox(globalPosition);
       }}
     >
       Create new Bounding Box
@@ -582,8 +582,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setActiveCell(segmentId: number) {
     dispatch(setActiveCellAction(segmentId));
   },
-  addNewBoundingBox() {
-    dispatch(addUserBoundingBoxAction());
+  addNewBoundingBox(center: Vector3) {
+    dispatch(addUserBoundingBoxAction(null, center));
   },
 });
 

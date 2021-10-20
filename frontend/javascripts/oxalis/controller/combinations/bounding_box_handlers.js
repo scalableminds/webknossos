@@ -160,7 +160,6 @@ export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView): ?Se
   }
   const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
   const dimensionOfNearestEdge = nearestEdgeIndex < 2 ? reorderedIndices[0] : reorderedIndices[1];
-  console.log(currentNearestDistanceArray, planeRatio[dimensionOfNearestEdge]);
   const direction = nearestEdgeIndex < 2 ? "horizontal" : "vertical";
   const isMaxEdge = nearestEdgeIndex % 2 === 1;
   const resizableDimension = nearestEdgeIndex < 2 ? reorderedIndices[1] : reorderedIndices[0];

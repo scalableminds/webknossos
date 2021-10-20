@@ -46,7 +46,8 @@ type AddUserBoundingBoxesAction = {
 
 type AddNewUserBoundingBox = {
   type: "ADD_NEW_USER_BOUNDING_BOX",
-  newBoundingBox?: UserBoundingBox,
+  newBoundingBox?: ?UserBoundingBox,
+  center?: Vector3,
 };
 
 export type UpdateRemoteMeshMetaDataAction = {
@@ -217,10 +218,12 @@ export const setUserBoundingBoxesAction = (
 });
 
 export const addUserBoundingBoxAction = (
-  newBoundingBox?: UserBoundingBox,
+  newBoundingBox?: ?UserBoundingBox,
+  center?: Vector3,
 ): AddNewUserBoundingBox => ({
   type: "ADD_NEW_USER_BOUNDING_BOX",
   newBoundingBox,
+  center,
 });
 
 export const addUserBoundingBoxesAction = (

@@ -12,6 +12,7 @@ import {
 } from "oxalis/model/helpers/deep_update";
 import * as Utils from "libs/utils";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
+import { map3 } from "libs/utils";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
@@ -81,19 +82,36 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const { userBoundingBoxes } = tracing;
       const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
       const boundingBoxId = highestBoundingBoxId + 1;
-      if (action.newBoundingBox != null) {
-        action.newBoundingBox.id = boundingBoxId;
+      let { newBoundingBox } = action;
+      if (newBoundingBox != null) {
+        newBoundingBox.id = boundingBoxId;
       } else {
-        const { min, max } = getDisplayedDataExtentInPlaneMode(state);
-        action.newBoundingBox = {
+        const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
+        newBoundingBox = {
           boundingBox: { min, max },
           id: boundingBoxId,
-          name: `user bounding box ${boundingBoxId}`,
+          name: `bounding box ${boundingBoxId}`,
           color: Utils.getRandomColor(),
           isVisible: true,
         };
+        if (action.center != null) {
+          const roundedCenter = map3<number, number>(val => Math.round(val), action.center);
+          const roundedHalfBoxExtent = map3<number, number>(val => Math.round(val), halfBoxExtent);
+          newBoundingBox.boundingBox = {
+            min: [
+              roundedCenter[0] - roundedHalfBoxExtent[0],
+              roundedCenter[1] - roundedHalfBoxExtent[1],
+              roundedCenter[2] - roundedHalfBoxExtent[2],
+            ],
+            max: [
+              roundedCenter[0] + roundedHalfBoxExtent[0],
+              roundedCenter[1] + roundedHalfBoxExtent[1],
+              roundedCenter[2] + roundedHalfBoxExtent[2],
+            ],
+          };
+        }
       }
-      const updatedUserBoundingBoxes = [...userBoundingBoxes, action.newBoundingBox];
+      const updatedUserBoundingBoxes = [...userBoundingBoxes, newBoundingBox];
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 

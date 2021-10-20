@@ -176,14 +176,15 @@ export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
   const yMinExtent = getMinExtent(xyExtent[1], yzExtent[1]) * planeRatio[1];
   const zMinExtent = getMinExtent(xzExtent[1], yzExtent[0]) * planeRatio[2];
   const extentFactor = 0.25;
-  const boxExtent = [
+  const halfBoxExtent = [
     Math.max(xMinExtent * extentFactor, 1),
     Math.max(yMinExtent * extentFactor, 1),
     Math.max(zMinExtent * extentFactor, 1),
   ];
   return {
-    min: V3.toArray(V3.round(V3.sub(curGlobalCenterPos, boxExtent))),
-    max: V3.toArray(V3.round(V3.add(curGlobalCenterPos, boxExtent))),
+    min: V3.toArray(V3.round(V3.sub(curGlobalCenterPos, halfBoxExtent))),
+    max: V3.toArray(V3.round(V3.add(curGlobalCenterPos, halfBoxExtent))),
+    halfBoxExtent,
   };
 }
 

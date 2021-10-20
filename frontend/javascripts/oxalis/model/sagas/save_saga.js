@@ -787,3 +787,5 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     prevTdCamera = tdCamera;
   }
 }
+
+export default [pushAnnotationAsync, saveTracingAsync, collectUndoStates];

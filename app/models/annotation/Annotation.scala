@@ -4,16 +4,16 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import javax.inject.Inject
+import models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState._
+import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
-import javax.inject.Inject
-import models.annotation.AnnotationLayerType.AnnotationLayerType
-import models.annotation.AnnotationType.AnnotationType
 
 import scala.concurrent.ExecutionContext
 

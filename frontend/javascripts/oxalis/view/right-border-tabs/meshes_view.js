@@ -718,6 +718,7 @@ class MeshesView extends React.Component<Props, State> {
                 onClick={() => this.onSelectSegment(segment)}
                 onChange={newName => this.props.updateSegment(segment.id, { name: newName })}
                 horizontalMargin={5}
+                disableEditing={!this.props.allowUpdate}
               />
               {/* Show Default Segment Name if another one is already defined*/}
               {segment.name != null ? (

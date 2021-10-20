@@ -22,6 +22,7 @@ export type EditableTextLabelProp = {|
   label: string,
   horizontalMargin?: number,
   onClick?: () => void,
+  disableEditing?: boolean,
 |};
 
 type State = {
@@ -129,15 +130,17 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
               this.props.value
             )}
           </span>
-          <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
-            <EditOutlined
-              style={iconStyle}
-              onClick={evt => {
-                evt.stopPropagation();
-                this.setState({ isEditing: true });
-              }}
-            />
-          </Tooltip>
+          {this.props.disableEditing ? null : (
+            <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
+              <EditOutlined
+                style={iconStyle}
+                onClick={evt => {
+                  evt.stopPropagation();
+                  this.setState({ isEditing: true });
+                }}
+              />
+            </Tooltip>
+          )}
         </span>
       );
     }

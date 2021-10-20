@@ -305,6 +305,7 @@ type UserBoundingBoxInputProps = {
   onDelete: () => void,
   onExport: () => void,
   onGoToBoundingBox: () => void,
+  onVisibilityChange: boolean => void,
 };
 
 type State = {
@@ -375,10 +376,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     this.props.onChange({ color });
   };
 
-  handleVisibilityChange = (isVisible: boolean) => {
-    this.props.onChange({ isVisible });
-  };
-
   handleNameChanged = (evt: SyntheticInputEvent<>) => {
     const currentEnteredName = evt.target.value;
     if (currentEnteredName !== this.props.name) {
@@ -422,7 +419,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           <Col span={5}>
             <Switch
               size="small"
-              onChange={this.handleVisibilityChange}
+              onChange={this.props.onVisibilityChange}
               checked={isVisible}
               style={{ margin: "auto 0px" }}
             />

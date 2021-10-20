@@ -22,6 +22,7 @@ import {
   setUserBoundingBoxesAction,
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
+  setUserBoundingBoxVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import * as Utils from "libs/utils";
 
@@ -32,6 +33,7 @@ type BoundingBoxTabProps = {
   onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
   addNewBoundingBox: () => void,
   deleteBoundingBox: number => void,
+  setBoundingBoxVisibility: (number, boolean) => void,
   setPosition: Vector3 => void,
   dataset: APIDataset,
 };
@@ -43,6 +45,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     dataset,
     onChangeBoundingBoxes,
     addNewBoundingBox,
+    setBoundingBoxVisibility,
     deleteBoundingBox,
     setPosition,
   } = props;
@@ -68,6 +71,10 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
         : bb,
     );
     onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  }
+
+  function handleBoundingBoxVisibilityChange(id: number, isVisible: boolean) {
+    setBoundingBoxVisibility(id, isVisible);
   }
 
   function handleGoToBoundingBox(id: number) {
@@ -110,6 +117,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
               dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
             }
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
+            onVisibilityChange={_.partial(handleBoundingBoxVisibilityChange, bb.id)}
           />
         ))
       ) : (
@@ -155,6 +163,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   deleteBoundingBox(id: number) {
     dispatch(deleteUserBoundingBoxAction(id));
+  },
+  setBoundingBoxVisibility(id: number, isVisible: boolean) {
+    dispatch(setUserBoundingBoxVisibilityAction(id, isVisible));
   },
 });
 

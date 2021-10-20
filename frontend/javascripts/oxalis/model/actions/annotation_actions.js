@@ -50,6 +50,12 @@ type AddNewUserBoundingBox = {
   center?: Vector3,
 };
 
+type SetUserBoundingBoxVisibilityAction = {
+  type: "SET_USER_BOUNDING_BOX_VISIBILITY",
+  id: number,
+  isVisible: boolean,
+};
+
 type DeleteUserBoundingBox = {
   type: "DELETE_USER_BOUNDING_BOX",
   id: number,
@@ -161,6 +167,7 @@ export type AnnotationActionTypes =
   | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
   | AddNewUserBoundingBox
+  | SetUserBoundingBoxVisibilityAction
   | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction
   | AddMeshMetadataAction
@@ -230,6 +237,15 @@ export const addUserBoundingBoxAction = (
   type: "ADD_NEW_USER_BOUNDING_BOX",
   newBoundingBox,
   center,
+});
+
+export const setUserBoundingBoxVisibilityAction = (
+  id: number,
+  isVisible: boolean,
+): SetUserBoundingBoxVisibilityAction => ({
+  type: "SET_USER_BOUNDING_BOX_VISIBILITY",
+  id,
+  isVisible,
 });
 
 export const deleteUserBoundingBoxAction = (id: number): DeleteUserBoundingBox => ({

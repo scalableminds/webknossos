@@ -18,6 +18,7 @@ import { V3 } from "libs/mjs";
 import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
+  setUserBoundingBoxVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
@@ -67,6 +68,7 @@ type DispatchProps = {|
   setActiveNode: number => void,
   hideTree: number => void,
   createTree: () => void,
+  hideBoundingBox: number => void,
   setActiveCell: number => void,
   addNewBoundingBox: Vector3 => void,
   deleteBoundingBox: number => void,
@@ -308,6 +310,7 @@ function NoNodeContextMenuOptions({
   currentMeshFile,
   setActiveCell,
   addNewBoundingBox,
+  hideBoundingBox,
   deleteBoundingBox,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
@@ -414,6 +417,15 @@ function NoNodeContextMenuOptions({
   if (isBoundingBoxToolActive && clickedBoundingBoxId != null) {
     boundingBoxActions = [
       ...boundingBoxActions,
+      <Menu.Item
+        className="node-context-menu-item"
+        key="hide-bounding-box"
+        onClick={() => {
+          hideBoundingBox(clickedBoundingBoxId);
+        }}
+      >
+        Hide Bounding Box
+      </Menu.Item>,
       <Menu.Item
         className="node-context-menu-item"
         key="delete-bounding-box"
@@ -608,6 +620,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   deleteBoundingBox(id: number) {
     dispatch(deleteUserBoundingBoxAction(id));
+  },
+  hideBoundingBox(id: number) {
+    dispatch(setUserBoundingBoxVisibilityAction(id, false));
   },
 });
 

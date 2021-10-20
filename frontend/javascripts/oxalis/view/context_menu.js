@@ -401,7 +401,7 @@ function NoNodeContextMenuOptions({
       }}
     >
       Create new Bounding Box
-      {isBoundingBoxToolActive ? shortcutBuilder(["leftMouse"]) : null}
+      {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
     </Menu.Item>,
   ];
   if (volumeTracing == null && visibleSegmentationLayer != null) {

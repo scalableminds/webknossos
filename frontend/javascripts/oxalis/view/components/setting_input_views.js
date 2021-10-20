@@ -400,9 +400,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = {
-      marginTop: "auto",
       marginRight: 0,
-      marginBottom: "auto",
       marginLeft: 6,
     };
     const exportIconStyle = isExportEnabled

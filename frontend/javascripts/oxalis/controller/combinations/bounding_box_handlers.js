@@ -8,7 +8,7 @@ import Dimension from "oxalis/model/dimensions";
 import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 
-/* const neighbourEdgeIndexByEdgeIndex = {
+const getNeighbourEdgeIndexByEdgeIndex = {
   // TODO: Use this to detect corners properly.
   // The edges are indexed within the plane like this:
   // See the distanceArray calculation as a reference.
@@ -22,7 +22,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
   "1": [2, 3],
   "2": [0, 1],
   "3": [0, 1],
-}; */
+};
 const MAX_DISTANCE_TO_SELECTION = 15;
 
 function getDistanceToBoundingBoxEdge(
@@ -83,14 +83,16 @@ function getDistanceToBoundingBoxEdge(
 
 export type SelectedEdge = {
   boxId: number,
-  dimensionIndex: 0 | 1 | 2,
   direction: "horizontal" | "vertical",
   isMaxEdge: boolean,
-  nearestEdgeIndex: number,
+  edgeId: number,
   resizableDimension: 0 | 1 | 2,
 };
 
-export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView): ?SelectedEdge {
+export function getClosestHoveredBoundingBox(
+  pos: Point2,
+  plane: OrthoView,
+): [SelectedEdge, ?SelectedEdge] | null {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, pos, plane);
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
@@ -98,7 +100,8 @@ export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView): ?Se
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
   const thirdDim = reorderedIndices[2];
 
-  let currentNearestDistance = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
+  const zoomedMaxDistanceToSelection = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
+  let currentNearestDistance = zoomedMaxDistanceToSelection;
   let currentNearestBoundingBox = null;
   let currentNearestDistanceArray = null;
 
@@ -109,7 +112,8 @@ export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView): ?Se
     if (!isCrossSectionOfViewportVisible) {
       continue;
     }
-
+    // In getNeighbourEdgeIndexByEdgeIndex is a visualization
+    // of how the indices of the array map to the visible bbox edges.
     const distanceArray = [
       getDistanceToBoundingBoxEdge(
         globalPosition,
@@ -158,60 +162,85 @@ export function getClosestHoveredBoundingBox(pos: Point2, plane: OrthoView): ?Se
   if (currentNearestBoundingBox == null || currentNearestDistanceArray == null) {
     return null;
   }
-  const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
-  const dimensionOfNearestEdge = nearestEdgeIndex < 2 ? reorderedIndices[0] : reorderedIndices[1];
-  const direction = nearestEdgeIndex < 2 ? "horizontal" : "vertical";
-  const isMaxEdge = nearestEdgeIndex % 2 === 1;
-  const resizableDimension = nearestEdgeIndex < 2 ? reorderedIndices[1] : reorderedIndices[0];
-  // TODO: Add feature to select corners.
-  return {
-    boxId: currentNearestBoundingBox.id,
-    dimensionIndex: dimensionOfNearestEdge,
-    direction,
-    isMaxEdge,
-    nearestEdgeIndex,
-    resizableDimension,
+  const nearestBoundingBox = currentNearestBoundingBox;
+  const getEdgeInfoFromId = (edgeId: number) => {
+    const direction = edgeId < 2 ? "horizontal" : "vertical";
+    const isMaxEdge = edgeId % 2 === 1;
+    const resizableDimension = edgeId < 2 ? reorderedIndices[1] : reorderedIndices[0];
+    return {
+      boxId: nearestBoundingBox.id,
+      direction,
+      isMaxEdge,
+      edgeId,
+      resizableDimension,
+    };
   };
+  const nearestEdgeIndex = currentNearestDistanceArray.indexOf(currentNearestDistance);
+  const primaryEdge = getEdgeInfoFromId(nearestEdgeIndex);
+  let secondaryEdge = null;
+  const [firstNeighbourId, secondNeighbourId] = getNeighbourEdgeIndexByEdgeIndex[nearestEdgeIndex];
+  const firstNeighbourEdgeDistance = currentNearestDistanceArray[firstNeighbourId];
+  const secondNeighbourEdgeDistance = currentNearestDistanceArray[secondNeighbourId];
+  if (
+    firstNeighbourEdgeDistance < secondNeighbourEdgeDistance &&
+    firstNeighbourEdgeDistance < zoomedMaxDistanceToSelection
+  ) {
+    secondaryEdge = getEdgeInfoFromId(firstNeighbourId);
+  } else if (
+    secondNeighbourEdgeDistance < firstNeighbourEdgeDistance &&
+    secondNeighbourEdgeDistance < zoomedMaxDistanceToSelection
+  ) {
+    secondaryEdge = getEdgeInfoFromId(secondNeighbourId);
+  }
+  return [primaryEdge, secondaryEdge];
 }
 
 export function handleMovingBoundingBox(
   mousePosition: Point2,
   planeId: OrthoView,
-  selectedEdge: SelectedEdge,
+  primaryEdge: SelectedEdge,
+  secondaryEdge: ?SelectedEdge,
 ) {
   const state = Store.getState();
   const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
-  let didMinAndMaxSwitch = false;
+  const didMinAndMaxSwitch = { primary: false, secondary: false };
   const updatedUserBoundingBoxes = userBoundingBoxes.map(bbox => {
-    if (bbox.id !== selectedEdge.boxId) {
+    if (bbox.id !== primaryEdge.boxId) {
       return bbox;
     }
     bbox = _.cloneDeep(bbox);
-    const { resizableDimension } = selectedEdge;
-    // For a horizontal edge only consider delta.y, for vertical only delta.x
-    const newPositionValue = Math.round(globalMousePosition[resizableDimension]);
-    const minOrMax = selectedEdge.isMaxEdge ? "max" : "min";
-    const oppositeOfMinOrMax = selectedEdge.isMaxEdge ? "min" : "max";
-    const otherEdgeValue = bbox.boundingBox[oppositeOfMinOrMax][resizableDimension];
-    if (otherEdgeValue === newPositionValue) {
-      // Do not allow the same value for min and max for one dimension.
-      return bbox;
+    function applyPositionToEdge(edge: SelectedEdge): boolean {
+      const { resizableDimension } = edge;
+      // For a horizontal edge only consider delta.y, for vertical only delta.x
+      const newPositionValue = Math.round(globalMousePosition[resizableDimension]);
+      const minOrMax = edge.isMaxEdge ? "max" : "min";
+      const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
+      const otherEdgeValue = bbox.boundingBox[oppositeOfMinOrMax][resizableDimension];
+      if (otherEdgeValue === newPositionValue) {
+        // Do not allow the same value for min and max for one dimension.
+        return false;
+      }
+      const areMinAndMaxEdgeCrossing =
+        // If the min / max edge is moved over the other one.
+        (edge.isMaxEdge && newPositionValue < otherEdgeValue) ||
+        (!edge.isMaxEdge && newPositionValue > otherEdgeValue);
+      if (areMinAndMaxEdgeCrossing) {
+        // As the edge moved over the other one, the values for min and max must be switched.
+        bbox.boundingBox[minOrMax][resizableDimension] = otherEdgeValue;
+        bbox.boundingBox[oppositeOfMinOrMax][resizableDimension] = newPositionValue;
+        return true;
+      } else {
+        bbox.boundingBox[minOrMax][resizableDimension] = newPositionValue;
+        return false;
+      }
     }
-    const areMinAndMaxEdgeCrossing =
-      // If the min / max edge is moved over the other one.
-      (selectedEdge.isMaxEdge && newPositionValue < otherEdgeValue) ||
-      (!selectedEdge.isMaxEdge && newPositionValue > otherEdgeValue);
-    if (areMinAndMaxEdgeCrossing) {
-      // As the edge moved over the other one, the values for min and max must be switched.
-      bbox.boundingBox[minOrMax][resizableDimension] = otherEdgeValue;
-      bbox.boundingBox[oppositeOfMinOrMax][resizableDimension] = newPositionValue;
-      didMinAndMaxSwitch = true;
-    } else {
-      bbox.boundingBox[minOrMax][resizableDimension] = newPositionValue;
+    didMinAndMaxSwitch.primary = applyPositionToEdge(primaryEdge);
+    if (secondaryEdge) {
+      didMinAndMaxSwitch.secondary = applyPositionToEdge(secondaryEdge);
     }
     return bbox;
   });
   Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
-  return { didMinAndMaxSwitch };
+  return didMinAndMaxSwitch;
 }

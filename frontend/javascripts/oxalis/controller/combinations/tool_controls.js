@@ -528,18 +528,27 @@ export class BoundingBoxTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): * {
     const bboxHoveringThrottleTime = 100;
-    let selectedEdge: ?SelectedEdge = null;
+    let primarySelectedEdge: ?SelectedEdge = null;
+    let secondarySelectedEdge: ?SelectedEdge = null;
     const getClosestHoveredBoundingBoxThrottled =
       planeId !== OrthoViews.TDView
         ? _.throttle((delta: Point2, position: Point2) => {
             const { body } = document;
-            if (body == null || selectedEdge != null) {
+            if (body == null || primarySelectedEdge != null) {
               return;
             }
-            const newSelectedEdge = getClosestHoveredBoundingBox(position, planeId);
-            if (newSelectedEdge != null) {
-              getSceneController().highlightUserBoundingBox(newSelectedEdge.boxId);
-              if (newSelectedEdge.direction === "horizontal") {
+            const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
+            if (hoveredEdgesInfo != null) {
+              const [primaryHoveredEdge, secondaryHoveredEdge] = hoveredEdgesInfo;
+              getSceneController().highlightUserBoundingBox(primaryHoveredEdge.boxId);
+              if (secondaryHoveredEdge != null) {
+                // If a corner is selected.
+                body.style.cursor =
+                  (primaryHoveredEdge.isMaxEdge && secondaryHoveredEdge.isMaxEdge) ||
+                  (!primaryHoveredEdge.isMaxEdge && !secondaryHoveredEdge.isMaxEdge)
+                    ? "nwse-resize"
+                    : "nesw-resize";
+              } else if (primaryHoveredEdge.direction === "horizontal") {
                 body.style.cursor = "row-resize";
               } else {
                 body.style.cursor = "col-resize";
@@ -552,24 +561,34 @@ export class BoundingBoxTool {
         : (_delta: Point2, _position: Point2) => {};
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, _event: MouseEvent) => {
-        if (selectedEdge != null) {
-          const { didMinAndMaxSwitch } = handleMovingBoundingBox(pos, planeId, selectedEdge);
-          if (didMinAndMaxSwitch) {
-            selectedEdge.isMaxEdge = !selectedEdge.isMaxEdge;
+        if (primarySelectedEdge != null) {
+          const didMinAndMaxSwitch = handleMovingBoundingBox(
+            pos,
+            planeId,
+            primarySelectedEdge,
+            secondarySelectedEdge,
+          );
+          if (didMinAndMaxSwitch.primary) {
+            primarySelectedEdge.isMaxEdge = !primarySelectedEdge.isMaxEdge;
+          }
+          if (didMinAndMaxSwitch.secondary && secondarySelectedEdge) {
+            secondarySelectedEdge.isMaxEdge = !secondarySelectedEdge.isMaxEdge;
           }
         } else {
           MoveHandlers.handleMovePlane(delta);
         }
       },
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        selectedEdge = getClosestHoveredBoundingBox(pos, planeId);
-        if (selectedEdge) {
-          getSceneController().highlightUserBoundingBox(selectedEdge.boxId);
+        const hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
+        if (hoveredEdgesInfo) {
+          [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+          getSceneController().highlightUserBoundingBox(primarySelectedEdge.boxId);
         }
       },
 
       leftMouseUp: () => {
-        selectedEdge = null;
+        primarySelectedEdge = null;
+        secondarySelectedEdge = null;
         getSceneController().highlightUserBoundingBox(null);
       },
 

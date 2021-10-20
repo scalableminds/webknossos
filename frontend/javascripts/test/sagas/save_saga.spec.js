@@ -157,6 +157,8 @@ test("SaveSaga should retry update actions", t => {
   expectValueDeepEqual(t, saga.next(TRACINGSTORE_URL), requestWithTokenCall);
   saga.throw("Timeout");
   expectValueDeepEqual(t, saga.next("Explorational"), call(toggleErrorHighlighting, true));
+  // wait for airbrake
+  saga.next();
   // wait for retry
   saga.next();
   // should retry
@@ -187,6 +189,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   saga.throw({ status: 409 });
   saga.next("Explorational");
   saga.next(); // error reporting
+  saga.next(); // airbrake
   const alertEffect = saga.next().value;
   t.is(alertEffect.payload.fn, alert);
   t.true(saga.next().done);

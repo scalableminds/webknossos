@@ -152,7 +152,7 @@ function downsampleVoxelMap(
   // are downsampled to the lower resolution bucket. The downsampling uses a kernel to skip
   // checking whether to label a downsampled voxel if already one labeled voxel matching the downsampled voxel is found.
   if (targetZoomStep <= sourceZoomStep) {
-    throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
+    throw new Error("Trying to upsample a LabeledVoxelMap with the downsample function.");
   }
   const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
   const scaleToSource = map3((val, index) => val / sourceResolution[index], targetResolution);

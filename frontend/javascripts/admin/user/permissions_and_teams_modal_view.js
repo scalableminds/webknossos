@@ -234,7 +234,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         <h4>
           Organization Permissions{" "}
           <a
-            href="https://docs.webknossos.org/guides/users"
+            href="https://docs.webknossos.org/webknossos/users.html"
             target="_blank"
             rel="noopener noreferrer"
           >

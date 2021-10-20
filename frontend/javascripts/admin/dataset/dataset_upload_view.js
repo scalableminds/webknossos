@@ -753,7 +753,7 @@ function FileUploadArea({ fileList, onChange }) {
                   <li>KNOSSOS file hierarchy</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/reference/data_formats#conversion-with-webknossos-org">
+                <a href="https://docs.webknossos.org/webknossos/data_formats.html#conversion-with-webknossos-org">
                   our documentation
                 </a>{" "}
                 to learn more.

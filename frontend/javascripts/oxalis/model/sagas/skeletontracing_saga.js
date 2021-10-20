@@ -1,13 +1,11 @@
-/*
- * skeletontracing_sagas.js
- * @flow
- */
+// @flow
 import { Modal } from "antd";
 import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
 import {
   type Saga,
+  _actionChannel,
   _take,
   _takeEvery,
   _throttle,
@@ -37,8 +35,13 @@ import { V3 } from "libs/mjs";
 import {
   deleteBranchPointAction,
   setTreeNameAction,
+  addTreesAndGroupsAction,
+  type LoadAgglomerateSkeletonAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  generateTreeName,
+  createMutableTreeMapFromTreeArray,
+} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   getActiveNode,
   getBranchPoints,
@@ -63,6 +66,10 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { getAgglomerateSkeleton } from "admin/admin_rest_api";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import createProgressCallback from "libs/progress_callback";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
@@ -177,6 +184,71 @@ export function* watchVersionRestoreParam(): Saga<void> {
   if (showVersionRestore) {
     yield* put(setVersionRestoreVisibilityAction(true));
   }
+}
+
+export function* watchAgglomerateLoading(): Saga<void> {
+  // Buffer actions since they might be dispatched before WK_READY
+  const actionChannel = yield _actionChannel("LOAD_AGGLOMERATE_SKELETON");
+  yield* take("INITIALIZE_SKELETONTRACING");
+  yield* take("WK_READY");
+  yield _takeEvery(actionChannel, loadAgglomerateSkeletonWithId);
+}
+
+function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
+  const { layerName, mappingName, agglomerateId } = action;
+  if (agglomerateId === 0) {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
+    return;
+  }
+
+  const dataset = yield* select(state => state.dataset);
+
+  const layerInfo = getLayerByName(dataset, layerName);
+  // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
+  const effectiveLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
+
+  const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
+  const { hideFn } = yield* call(
+    progressCallback,
+    false,
+    `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
+  );
+
+  try {
+    const nmlProtoBuffer = yield* call(
+      getAgglomerateSkeleton,
+      dataset.dataStore.url,
+      dataset,
+      effectiveLayerName,
+      mappingName,
+      agglomerateId,
+    );
+    const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
+
+    if (!parsedTracing.trees) {
+      // This check is only for flow to realize that we have a skeleton tracing
+      // on our hands.
+      throw new Error("Skeleton tracing doesn't contain trees");
+    }
+
+    yield* put(
+      addTreesAndGroupsAction(
+        createMutableTreeMapFromTreeArray(parsedTracing.trees),
+        parsedTracing.treeGroups,
+      ),
+    );
+  } catch (e) {
+    // Hide the progress notification and handle the error
+    hideFn();
+    console.error(e);
+    ErrorHandling.notify(e);
+    return;
+  }
+
+  yield* call(progressCallback, true, "Skeleton generation done.");
 }
 
 export function* watchSkeletonTracingAsync(): Saga<void> {

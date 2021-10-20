@@ -31,13 +31,11 @@ import {
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import ArbitraryView from "oxalis/view/arbitrary_view";
 import Crosshair from "oxalis/geometries/crosshair";
-import Model from "oxalis/model";
 import Store from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import app from "app";
 import constants, { ArbitraryViewport, type ViewMode, type Point2 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
@@ -274,8 +272,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   bindToEvents(): void {
-    this.startListeningToBuckets();
-
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         state => state.userConfiguration,
@@ -307,23 +303,6 @@ class ArbitraryController extends React.PureComponent<Props> {
         },
       ),
     );
-  }
-
-  onBucketLoaded = () => {
-    this.arbitraryView.draw();
-    app.vent.trigger("rerender");
-  };
-
-  startListeningToBuckets() {
-    for (const dataLayer of Model.getAllLayers()) {
-      dataLayer.cube.on("bucketLoaded", this.onBucketLoaded);
-    }
-  }
-
-  stopListeningToBuckets() {
-    for (const dataLayer of Model.getAllLayers()) {
-      dataLayer.cube.off("bucketLoaded", this.onBucketLoaded);
-    }
   }
 
   start(): void {
@@ -359,7 +338,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   stop(): void {
-    this.stopListeningToBuckets();
     this.unsubscribeStoreListeners();
 
     if (this.isStarted) {

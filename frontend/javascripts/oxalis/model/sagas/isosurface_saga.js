@@ -4,7 +4,11 @@ import { saveAs } from "file-saver";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset } from "types/api_flow_types";
-import { ResolutionInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  ResolutionInfo,
+  getResolutionInfo,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   changeActiveIsosurfaceCellAction,
   type ChangeActiveIsosurfaceCellAction,
@@ -293,6 +297,9 @@ function* maybeLoadIsosurface(
   const scale = yield* select(state => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
   const tracingStoreHost = yield* select(state => state.tracing.tracingStore.url);
+  const activeMappingByLayer = yield* select(
+    state => state.temporaryConfiguration.activeMappingByLayer,
+  );
 
   const dataStoreUrl = `${dataStoreHost}/data/datasets/${dataset.owningOrganization}/${
     dataset.name
@@ -302,6 +309,7 @@ function* maybeLoadIsosurface(
   const volumeTracing = yield* select(state => state.tracing.volume);
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
+  const mappingInfo = getMappingInfo(activeMappingByLayer, layer.name);
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", { mode: useDataStore ? "view" : "annotation" });
@@ -313,7 +321,7 @@ function* maybeLoadIsosurface(
       const { buffer: responseBuffer, neighbors } = yield* call(
         computeIsosurface,
         useDataStore ? dataStoreUrl : tracingStoreUrl,
-        layer,
+        mappingInfo,
         {
           position: clippedPosition,
           zoomStep,

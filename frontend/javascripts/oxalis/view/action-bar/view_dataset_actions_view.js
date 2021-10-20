@@ -1,10 +1,12 @@
 // @flow
-import React, { useState, type Node } from "react";
+import React, { type Node } from "react";
 import { Dropdown, Menu } from "antd";
 import { ShareAltOutlined, DownOutlined, CameraOutlined } from "@ant-design/icons";
 import ButtonComponent from "oxalis/view/components/button_component";
 import ShareViewDatasetModalView from "oxalis/view/action-bar/share_view_dataset_modal_view";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { setShareModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import Store from "oxalis/store";
 
 type Props = {
   layoutMenu: Node,
@@ -18,16 +20,15 @@ export const screenshotMenuItem = (
 );
 
 export default function ViewDatasetActionsView(props: Props) {
-  const [shareDatasetModalVisibility, setShareDatasetModalVisibility] = useState(false);
   const modal = (
-    <ShareViewDatasetModalView
-      isVisible={shareDatasetModalVisibility}
-      onOk={() => setShareDatasetModalVisibility(false)}
-    />
+    <ShareViewDatasetModalView onOk={() => Store.dispatch(setShareModalVisibilityAction(false))} />
   );
   const overlayMenu = (
     <Menu>
-      <Menu.Item key="share-button" onClick={() => setShareDatasetModalVisibility(true)}>
+      <Menu.Item
+        key="share-button"
+        onClick={() => Store.dispatch(setShareModalVisibilityAction(true))}
+      >
         <ShareAltOutlined />
         Share
       </Menu.Item>

@@ -397,7 +397,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
             <p>
               To learn more about the task system in webKnossos,{" "}
               <a
-                href="https://docs.webknossos.org/guides/tasks"
+                href="https://docs.webknossos.org/webknossos/tasks.html"
                 rel="noopener noreferrer"
                 target="_blank"
               >

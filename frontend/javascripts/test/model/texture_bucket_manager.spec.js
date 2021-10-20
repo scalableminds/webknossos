@@ -60,7 +60,7 @@ const { DataBucket } = mock.reRequire("oxalis/model/bucket_data_handling/bucket"
 
 const buildBucket = (zoomedAddress, firstByte) => {
   const bucket = new DataBucket("uint8", zoomedAddress, temporalBucketManagerMock, mockedCube);
-  bucket.pull();
+  bucket.markAsPulled();
   const data = new Uint8Array(32 ** 3);
   data[0] = firstByte;
   bucket.receiveData(data);

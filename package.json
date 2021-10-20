@@ -97,8 +97,8 @@
     "test": "tools/test.sh test --timeout=30s",
     "test-verbose": "xvfb-run -s '-ac -screen 0 1280x1024x24' tools/test.sh test --timeout=60s --verbose",
     "test-only": "tools/test.sh test --timeout=30s",
+    "test-debug": "tools/test.sh test-debug",
     "test-watch": "tools/test.sh test --watch",
-    "test-debug": "tools/test.sh test --debug",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w --verbose",
     "test-e2e": "tools/postgres/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
@@ -119,8 +119,8 @@
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./frontend/javascripts/**/*.js\" -x \"./frontend/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.js frontend/javascripts/oxalis/api/api_latest.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
-    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf",
-    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf",
+    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/toggle_jobs.sh true",
+    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; ./tools/postgres/toggle_jobs.sh false",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f frontend/javascripts/test/snapshots/flow-check/*.js",
     "apply-evolutions": "tools/postgres/apply_evolutions.sh",
@@ -204,6 +204,9 @@
   "ava": {
     "files": [
       "./public/test-bundle/**/*.{js,jsx}"
+    ],
+    "ignoredByWatcher": [
+      "./binaryData/**/*.*"
     ],
     "require": [
       "./frontend/javascripts/test/_ava_polyfill_provider.js"

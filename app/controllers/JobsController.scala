@@ -13,13 +13,14 @@ import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
 class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
                                jobService: JobService,
+                               wkconf: WkConf,
                                slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
@@ -38,6 +39,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- jobService.updateCeleryInfos()
       jobs <- jobDAO.findAll
       jobsJsonList <- Fox.serialCombined(jobs.sortBy(-_.created))(jobService.publicWrites)
@@ -46,6 +48,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
 
   def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- jobService.updateCeleryInfos()
       job <- jobDAO.findOne(ObjectId(id))
       js <- jobService.publicWrites(job)
@@ -102,7 +105,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
           command = "infer_nuclei"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,

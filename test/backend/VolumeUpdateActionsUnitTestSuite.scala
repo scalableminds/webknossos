@@ -30,7 +30,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
   "DeleteSegmentVolumeAction" should {
     "delete the specified segment" in {
-      val deleteSegmentAction = DeleteSegmentVolumeAction(id = 1)
+      val deleteSegmentAction = DeleteSegmentVolumeAction(id = 5)
       val result = applyUpdateAction(deleteSegmentAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length - 1)

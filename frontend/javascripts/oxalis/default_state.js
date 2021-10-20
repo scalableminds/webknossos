@@ -90,7 +90,7 @@ const defaultState: OxalisState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
-    hoveredIsosurfaceId: 0,
+    hoveredSegmentId: 0,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     isAutoBrushEnabled: false,

@@ -99,6 +99,9 @@ export class MoveTool {
           MoveHandlers.handleMovePlane(delta);
         }
       },
+      out: () => {
+        MoveHandlers.setMousePosition(null);
+      },
       leftDownMove: (delta: Point2, _pos: Point2, _id: ?string, _event: MouseEvent) => {
         MoveHandlers.handleMovePlane(delta);
       },

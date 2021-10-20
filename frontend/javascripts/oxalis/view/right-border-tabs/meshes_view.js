@@ -37,7 +37,10 @@ import {
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/meshes_view_helper";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
-import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
+import {
+  updateDatasetSettingAction,
+  updateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
 import { getVisibleSegments } from "oxalis/model/accessors/volumetracing_accessor";
@@ -78,6 +81,7 @@ type StateProps = {|
   mappingColors: ?Array<number>,
   flycam: Flycam,
   hasVolume: boolean,
+  hoveredSegmentId: ?number,
   segments: ?SegmentMap,
   visibleSegmentationLayer: ?APISegmentationLayer,
   allowUpdate: boolean,
@@ -104,6 +108,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     ).mappingColors,
     flycam: state.flycam,
     hasVolume: state.tracing.volume != null,
+    hoveredSegmentId: state.temporaryConfiguration.hoveredSegmentId,
     segments: getVisibleSegments(state),
     visibleSegmentationLayer,
     allowUpdate: state.tracing.restrictions.allowUpdate,
@@ -130,6 +135,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   },
   onChangeVisibility(layerName: string, id: number, isVisible: boolean) {
     dispatch(updateIsosurfaceVisibilityAction(layerName, id, isVisible));
+  },
+  setHoveredSegmentId(segmentId: ?number) {
+    dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
   },
   async onStlUpload(layerName: string, info) {
     dispatch(setImportingMeshStateAction(true));
@@ -167,13 +175,12 @@ type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
 type Props = {| ...DispatchProps, ...StateProps |};
 
-type State = { hoveredListItem: ?number, selectedSegmentId: ?number, activeMeshJobId: ?string };
+type State = { selectedSegmentId: ?number, activeMeshJobId: ?string };
 
 class MeshesView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
 
   state = {
-    hoveredListItem: null,
     selectedSegmentId: null,
     activeMeshJobId: null,
   };
@@ -304,9 +311,9 @@ class MeshesView extends React.Component<Props, State> {
     };
   };
 
-  getMeshInfo = (segmentId: number, isCentered: boolean) => {
+  getMeshInfo = (segmentId: number, isSelectedInList: boolean, isHovered: boolean) => {
     if (!this.props.isosurfaces[segmentId]) {
-      if (isCentered) {
+      if (isSelectedInList) {
         return (
           <div>
             <div>{this.getLoadPrecomputedMeshLinkButton()}</div>
@@ -400,8 +407,7 @@ class MeshesView extends React.Component<Props, State> {
       </Tooltip>
     );
 
-    const isHoveredItem = segmentId === this.state.hoveredListItem;
-    const actionVisibility = isLoading || isHoveredItem ? "visible" : "hidden";
+    const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
 
     const textStyle = isVisible ? {} : { fontStyle: "italic", color: "#989898" };
     return (
@@ -410,18 +416,12 @@ class MeshesView extends React.Component<Props, State> {
           padding: 0,
           cursor: "pointer",
         }}
-        onMouseEnter={() => {
-          this.setState({ hoveredListItem: segmentId });
-        }}
-        onMouseLeave={() => {
-          this.setState({ hoveredListItem: null });
-        }}
         key={segmentId}
       >
         <div style={{ display: "flex" }}>
           <div
             className={classnames("segment-list-item", {
-              "is-centered-cell": isCentered,
+              "is-selected-cell": isSelectedInList,
             })}
           >
             {toggleVisibilityCheckbox}
@@ -700,9 +700,16 @@ class MeshesView extends React.Component<Props, State> {
               key={segment.id}
               style={{ padding: "2px 5px" }}
               className={classnames("segment-list-item", {
-                "is-centered-cell": segment.id === this.state.selectedSegmentId,
+                "is-selected-cell": segment.id === this.state.selectedSegmentId,
+                "is-hovered-cell": segment.id === this.props.hoveredSegmentId,
               })}
               onClick={() => this.onSelectSegment(segment)}
+              onMouseEnter={() => {
+                this.props.setHoveredSegmentId(segment.id);
+              }}
+              onMouseLeave={() => {
+                this.props.setHoveredSegmentId(null);
+              }}
             >
               {this.getColoredDotIconForSegment(segment.id)}
 
@@ -734,7 +741,11 @@ class MeshesView extends React.Component<Props, State> {
               ) : null}
 
               <div style={{ marginLeft: 16 }}>
-                {this.getMeshInfo(segment.id, segment.id === this.state.selectedSegmentId)}
+                {this.getMeshInfo(
+                  segment.id,
+                  segment.id === this.state.selectedSegmentId,
+                  segment.id === this.props.hoveredSegmentId,
+                )}
               </div>
             </List.Item>
           ))}

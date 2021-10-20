@@ -44,6 +44,7 @@ export const _takeEvery = IOEffects.takeEvery;
 export const _takeLeading = IOEffects.takeLeading;
 export const _takeLatest = IOEffects.takeLatest;
 export const _throttle = IOEffects.throttle;
+export const _debounce = IOEffects.debounce;
 export const _cancel = IOEffects.cancel;
 export const _all = IOEffects.all;
 export const _delay = IOEffects.delay;

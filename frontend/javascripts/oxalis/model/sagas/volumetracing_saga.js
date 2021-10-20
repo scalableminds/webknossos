@@ -18,9 +18,16 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
+  updateTemporarySettingAction,
+  type UpdateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
   type Saga,
   _takeEvery,
+  _takeLatest,
   _takeLeading,
+  _debounce,
   call,
   fork,
   put,
@@ -66,6 +73,7 @@ import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/u
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
+  OrthoViews,
   Unicode,
   type BoundingBoxType,
   type ContourMode,
@@ -838,7 +846,9 @@ export function* diffVolumeTracing(
   }
 }
 
-function* ensureSegmentExists(action: AddIsosurfaceAction | SetActiveCellAction): Saga<void> {
+function* ensureSegmentExists(
+  action: AddIsosurfaceAction | SetActiveCellAction | UpdateTemporarySettingAction,
+): Saga<void> {
   const segments = yield* select(store =>
     getSegmentsForLayer(
       store,
@@ -846,8 +856,8 @@ function* ensureSegmentExists(action: AddIsosurfaceAction | SetActiveCellAction)
       action.layerName,
     ),
   );
-  const { cellId } = action;
-  if (segments == null || segments.getNullable(cellId) != null) {
+  const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
+  if (cellId === 0 || cellId == null || segments == null || segments.getNullable(cellId) != null) {
     return;
   }
 
@@ -863,9 +873,66 @@ function* ensureSegmentExists(action: AddIsosurfaceAction | SetActiveCellAction)
     }
 
     yield* put(updateSegmentAction(cellId, { somePosition }));
+  } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
+    const globalMousePosition = yield* call(getGlobalMousePosition);
+    if (globalMousePosition == null) {
+      return;
+    }
+    yield* put(updateSegmentAction(cellId, { somePosition: globalMousePosition }));
   }
 }
 
-export function* maintainSegmentsMap(): Saga<void> {
+function* maintainSegmentsMap(): Saga<void> {
   yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL"], ensureSegmentExists);
 }
+
+function* maintainSegmentsMapDebounced(): Saga<void> {
+  yield _debounce(
+    500,
+    action =>
+      action.type === "UPDATE_TEMPORARY_SETTING" && action.propertyName === "hoveredSegmentId",
+    ensureSegmentExists,
+  );
+}
+
+function* getGlobalMousePosition(): Saga<?Vector3> {
+  return yield* select(state => {
+    const mousePosition = state.temporaryConfiguration.mousePosition;
+    if (mousePosition) {
+      const [x, y] = mousePosition;
+      return calculateMaybeGlobalPos(state, { x, y });
+    }
+    return undefined;
+  });
+}
+
+function* updateHoveredSegmentId(): Saga<void> {
+  const activeViewport = yield* select(store => store.viewModeData.plane.activeViewport);
+  if (activeViewport === OrthoViews.TDView) {
+    return;
+  }
+
+  const globalMousePosition = yield* call(getGlobalMousePosition);
+  const hoveredCellInfo = yield* call([Model, Model.getHoveredCellId], globalMousePosition);
+  const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
+
+  const oldHoveredSegmentId = yield* select(store => store.temporaryConfiguration.hoveredSegmentId);
+
+  if (oldHoveredSegmentId !== id) {
+    yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+}
+
+export function* maintainHoveredSegmentId(): Saga<void> {
+  yield _takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
+}
+
+export default [
+  editVolumeLayerAsync,
+  ensureToolIsAllowedInResolution,
+  floodFill,
+  watchVolumeTracingAsync,
+  maintainSegmentsMap,
+  maintainHoveredSegmentId,
+  maintainSegmentsMapDebounced,
+];

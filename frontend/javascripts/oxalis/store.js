@@ -359,7 +359,7 @@ export type TemporaryConfiguration = {
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
-  +hoveredIsosurfaceId: number,
+  +hoveredSegmentId: number,
   +activeMappingByLayer: { [layerName: string]: ActiveMappingInfo },
   +isMergerModeEnabled: boolean,
   +isAutoBrushEnabled: boolean,

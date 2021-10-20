@@ -73,6 +73,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
+  "ADD_NEW_USER_BOUNDING_BOX",
   "FINISH_ANNOTATION_STROKE",
 ];
 

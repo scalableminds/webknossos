@@ -10,6 +10,8 @@ import React, { useState } from "react";
 import _ from "lodash";
 
 import type { APIDataset } from "types/api_flow_types";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { type Vector3 } from "oxalis/constants";
 import {
   UserBoundingBoxInput,
   type UserBoundingBoxInputUpdate,
@@ -28,12 +30,13 @@ type BoundingBoxTabProps = {
   tracing: Tracing,
   onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
   addNewBoundingBox: () => void,
+  setPosition: Vector3 => void,
   dataset: APIDataset,
 };
 
 function BoundingBoxTab(props: BoundingBoxTabProps) {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
-  const { tracing, dataset, onChangeBoundingBoxes, addNewBoundingBox } = props;
+  const { tracing, dataset, onChangeBoundingBoxes, addNewBoundingBox, setPosition } = props;
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
   function handleChangeUserBoundingBox(
@@ -56,6 +59,20 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
         : bb,
     );
     onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  }
+
+  function handleGoToBoundingBox(id: number) {
+    const boundingBoxEntry = userBoundingBoxes.find(bbox => bbox.id === id);
+    if (!boundingBoxEntry) {
+      return;
+    }
+    const { min, max } = boundingBoxEntry.boundingBox;
+    const center = [
+      min[0] + (max[0] - min[0]) / 2,
+      min[1] + (max[1] - min[1]) / 2,
+      min[2] + (max[2] - min[2]) / 2,
+    ];
+    setPosition(center);
   }
 
   function handleAddNewUserBoundingBox() {
@@ -84,6 +101,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             onExport={
               dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
             }
+            onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           />
         ))
       ) : (
@@ -123,6 +141,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   addNewBoundingBox() {
     dispatch(addUserBoundingBoxAction());
+  },
+  setPosition(position: Vector3) {
+    dispatch(setPositionAction(position));
   },
 });
 

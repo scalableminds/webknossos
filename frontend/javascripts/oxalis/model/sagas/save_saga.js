@@ -52,6 +52,7 @@ import {
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
   type MaybeBucketLoadedPromise,
+  type UpdateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   _all,
@@ -113,6 +114,7 @@ type RelevantActionsForUndoRedo = {
   importVolumeTracingAction?: ImportVolumeTracingAction,
   undo?: UndoAction,
   redo?: RedoAction,
+  updateSegment?: UpdateSegmentAction,
 };
 
 function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
@@ -120,30 +122,27 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
     return {
       addBucketToUndoAction: action,
     };
-  }
-
-  if (action.type === "FINISH_ANNOTATION_STROKE") {
+  } else if (action.type === "FINISH_ANNOTATION_STROKE") {
     return {
       finishAnnotationStrokeAction: action,
     };
-  }
-  if (action.type === "IMPORT_VOLUMETRACING") {
+  } else if (action.type === "IMPORT_VOLUMETRACING") {
     return {
       importTracingAction: action,
     };
-  }
-  if (action.type === "UNDO") {
+  } else if (action.type === "UNDO") {
     return {
       undo: action,
     };
-  }
-  if (action.type === "REDO") {
+  } else if (action.type === "REDO") {
     return {
       redo: action,
     };
-  }
-
-  if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
+  } else if (action.type === "UPDATE_SEGMENT") {
+    return {
+      updateSegment: action,
+    };
+  } else if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
     return {
       skeletonUserAction: ((action: any): SkeletonTracingAction),
     };
@@ -160,7 +159,7 @@ export function* collectUndoStates(): Saga<void> {
   let pendingCompressions: Array<Task<void>> = [];
   let currentVolumeUndoBuckets: VolumeUndoBuckets = [];
   // The copy of the segment list that needs to be added to the next volume undo stack entry.
-  let prevSegmentsList = new DiffableMap();
+  let prevSegments = new DiffableMap();
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
@@ -168,7 +167,7 @@ export function* collectUndoStates(): Saga<void> {
   if (volumeTracingOrNull != null) {
     const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
     // The SegmentMap is immutable. So, no need to copy.
-    prevSegmentsList = segments;
+    prevSegments = segments;
   }
 
   const actionChannel = yield _actionChannel([
@@ -176,6 +175,7 @@ export function* collectUndoStates(): Saga<void> {
     "ADD_BUCKET_TO_UNDO",
     "FINISH_ANNOTATION_STROKE",
     "IMPORT_VOLUMETRACING",
+    "UPDATE_SEGMENT",
     "UNDO",
     "REDO",
   ]);
@@ -189,6 +189,7 @@ export function* collectUndoStates(): Saga<void> {
       importVolumeTracingAction,
       undo,
       redo,
+      updateSegment,
     } = unpackRelevantActionForUndo(currentAction);
 
     if (skeletonUserAction || addBucketToUndoAction || finishAnnotationStrokeAction) {
@@ -222,11 +223,11 @@ export function* collectUndoStates(): Saga<void> {
         bucketsAlreadyInUndoState.clear();
         undoStack.push({
           type: "volume",
-          data: { buckets: currentVolumeUndoBuckets, segments: prevSegmentsList },
+          data: { buckets: currentVolumeUndoBuckets, segments: prevSegments },
         });
         const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
         // The SegmentMap is immutable. So, no need to copy.
-        prevSegmentsList = segments;
+        prevSegments = segments;
         currentVolumeUndoBuckets = [];
         pendingCompressions = [];
       }
@@ -261,6 +262,12 @@ export function* collectUndoStates(): Saga<void> {
         redo.callback();
       }
       yield* put(setBusyBlockingInfoAction(false));
+    } else if (updateSegment) {
+      // Updates to the segment list should not create new undo states. Either, the segment list
+      // was updated by annotating (then, that action will have caused a new undo state) or
+      // the segment list was updated by selecting/hovering a cell (in that case, no new undo state
+      // should be created, either).
+      prevSegments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
     }
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);

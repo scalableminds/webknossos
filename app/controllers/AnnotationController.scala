@@ -40,6 +40,7 @@ object CreateExplorationalParameters {
 @Api
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
+    annotationLayerDAO: AnnotationLayerDAO,
     taskDAO: TaskDAO,
     organizationDAO: OrganizationDAO,
     dataSetDAO: DataSetDAO,
@@ -246,13 +247,13 @@ class AnnotationController @Inject()(
         restrictions <- provider.restrictionsFor(typ, id)
         _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        volumeTracingId <- annotation.volumeTracingId.toFox ?~> "annotation.unlinkFallback.noVolume"
+        // TODO : assert passed tracing id is of volume layer
         dataSet <- dataSetDAO
           .findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
         dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSet.notImported"
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        newTracingId <- tracingStoreClient.unlinkFallback(volumeTracingId, dataSource)
-        _ <- annotationDAO.updateVolumeTracingId(annotation._id, newTracingId)
+        newTracingId <- tracingStoreClient.unlinkFallback(tracingId, dataSource)
+        _ <- annotationLayerDAO.replaceTracingId(annotation._id, tracingId, newTracingId)
         updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity)
         js <- annotationService.publicWrites(updatedAnnotation, Some(request.identity))
       } yield JsonOk(js)

@@ -57,6 +57,10 @@ case class Annotation(
       _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
 
+  def volumeAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
+
+  def skeletonAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
+
   def isRevertPossible: Boolean =
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
     // hence we need a way to decide if a tracing can safely be reverted. We will use the created date of the
@@ -65,7 +69,7 @@ case class Annotation(
 
 }
 
-class AnnotationLayersDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionContext)
+class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(SQLClient) {
 
   private def parse(r: AnnotationLayersRow): Fox[AnnotationLayer] =
@@ -107,18 +111,16 @@ class AnnotationLayersDAO @Inject()(SQLClient: SQLClient)(implicit ec: Execution
       parsed <- rList.headOption.flatMap(ObjectId.parse)
     } yield parsed
 
-  def replaceTracingId(annotationId: ObjectId, newTracingId: String, typ: AnnotationLayerType)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-    val deleteQuery = sqlu"delete from webknossos.annotation_layers where annotationId = $annotationId and typ = $typ"
-    val insertQuery = insertOneQuery(annotationId, AnnotationLayer(newTracingId, typ, None))
+  def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).transactionally)
+      _ <- run(
+        sqlu"update webknossos.annotation_layers set tracingId = $newTracingId where annotationId = $annotationId and tracingId = $oldTracingId")
     } yield ()
-  }
 
 }
 
-class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayersDAO)(
+class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: AnnotationLayerDAO)(
     implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   val collection = Annotations

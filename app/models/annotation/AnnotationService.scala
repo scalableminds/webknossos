@@ -62,7 +62,7 @@ class AnnotationService @Inject()(
     annotationInformationProvider: AnnotationInformationProvider,
     savedTracingInformationHandler: SavedTracingInformationHandler,
     annotationDAO: AnnotationDAO,
-    annotationLayersDAO: AnnotationLayersDAO,
+    annotationLayersDAO: AnnotationLayerDAO,
     userDAO: UserDAO,
     taskTypeDAO: TaskTypeDAO,
     taskService: TaskService,
@@ -144,6 +144,10 @@ class AnnotationService @Inject()(
                                      organizationName: String,
                                      existingAnnotationLayers: List[AnnotationLayer] = List())(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
+
+    // TODO: ensure that user bboxes + bbox is preserved. Either by copying
+    //   from the right existingAnnotationLayers into the new right one, or
+    //   by changing that precedence altogether
 
     def getFallbackLayer(fallbackLayerName: String): Fox[SegmentationLayer] =
       for {
@@ -244,16 +248,23 @@ class AnnotationService @Inject()(
 
   }
 
-  def downsampleAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def downsampleAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    def downsampleVolumeTracing(rpcClient: WKRemoteTracingStoreClient,
+                                volumeAnnotationLayer: AnnotationLayer): Fox[Unit] =
+      for {
+        newVolumeTracingId <- rpcClient.duplicateVolumeTracing(volumeAnnotationLayer.tracingId, downsample = true)
+        _ = logger.info(
+          s"Replacing volume tracing ${volumeAnnotationLayer.tracingId} by downsampled copy $newVolumeTracingId for annotation ${annotation._id}.")
+        _ <- annotationLayersDAO.replaceTracingId(annotation._id, volumeAnnotationLayer.tracingId, newVolumeTracingId)
+      } yield ()
+
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
-      originalVolumeTracingId <- annotation.volumeTracingId ?~> "annotation.downsample.volumeOnly"
+      _ <- bool2Fox(annotation.volumeAnnotationLayers.nonEmpty) ?~> "annotation.downsample.volumeOnly"
       rpcClient <- tracingStoreService.clientFor(dataSet)
-      newVolumeTracingId <- rpcClient.duplicateVolumeTracing(originalVolumeTracingId, downsample = true)
-      _ = logger.info(
-        s"Replacing volume tracing $originalVolumeTracingId by downsampled copy $newVolumeTracingId for annotation ${annotation._id}.")
-      _ <- annotationDAO.updateVolumeTracingId(annotation._id, newVolumeTracingId)
+      _ <- Fox.serialCombined(annotation.volumeAnnotationLayers)(l => downsampleVolumeTracing(rpcClient, l))
     } yield ()
+  }
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(
@@ -335,16 +346,12 @@ class AnnotationService @Inject()(
           modified = System.currentTimeMillis
         )
         _ <- annotationDAO.updateInitialized(newAnnotation)
-      } yield {
-        newAnnotation
-      }
+      } yield newAnnotation
 
     for {
       annotationBase <- baseForTask(task._id) ?~> "Failed to retrieve annotation base."
       result <- useAsTemplateAndInsert(annotationBase).toFox
-    } yield {
-      result
-    }
+    } yield result
   }
 
   def createSkeletonTracingBase(dataSetName: String,

@@ -21,6 +21,7 @@ import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   setUserBoundingBoxesAction,
   addUserBoundingBoxAction,
+  deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
 import * as Utils from "libs/utils";
 
@@ -30,13 +31,21 @@ type BoundingBoxTabProps = {
   tracing: Tracing,
   onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
   addNewBoundingBox: () => void,
+  deleteBoundingBox: number => void,
   setPosition: Vector3 => void,
   dataset: APIDataset,
 };
 
 function BoundingBoxTab(props: BoundingBoxTabProps) {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
-  const { tracing, dataset, onChangeBoundingBoxes, addNewBoundingBox, setPosition } = props;
+  const {
+    tracing,
+    dataset,
+    onChangeBoundingBoxes,
+    addNewBoundingBox,
+    deleteBoundingBox,
+    setPosition,
+  } = props;
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
   function handleChangeUserBoundingBox(
@@ -80,8 +89,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
   }
 
   function handleDeleteUserBoundingBox(id: number) {
-    const updatedUserBoundingBoxes = userBoundingBoxes.filter(boundingBox => boundingBox.id !== id);
-    onChangeBoundingBoxes(updatedUserBoundingBoxes);
+    deleteBoundingBox(id);
   }
 
   return (
@@ -144,6 +152,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   setPosition(position: Vector3) {
     dispatch(setPositionAction(position));
+  },
+  deleteBoundingBox(id: number) {
+    dispatch(deleteUserBoundingBoxAction(id));
   },
 });
 

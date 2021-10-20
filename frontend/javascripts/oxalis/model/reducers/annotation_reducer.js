@@ -132,6 +132,17 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
     }
 
+    case "DELETE_USER_BOUNDING_BOX": {
+      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      if (tracing == null) {
+        return state;
+      }
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
+        bbox => bbox.id !== action.id,
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
     case "UPDATE_LOCAL_MESH_METADATA":
     case "UPDATE_REMOTE_MESH_METADATA": {
       const { id, meshShape } = action;

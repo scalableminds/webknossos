@@ -233,7 +233,14 @@ export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
 // e.g., z in XY viewport).
 export type LabelMasksByBucketAndW = Map<Vector4, Map<number, Uint8Array>>;
 
-export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoView) => void;
+export type ShowContextMenuFunction = (
+  number,
+  number,
+  ?number,
+  ?number,
+  Vector3,
+  OrthoView,
+) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

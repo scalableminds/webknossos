@@ -15,7 +15,10 @@ import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { V3 } from "libs/mjs";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import {
+  addUserBoundingBoxAction,
+  deleteUserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -51,6 +54,7 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 type OwnProps = {|
   contextMenuPosition: [number, number],
   clickedNodeId: ?number,
+  clickedBoundingBoxId: ?number,
   globalPosition: Vector3,
   viewport: OrthoView,
   hideContextMenu: () => void,
@@ -65,6 +69,7 @@ type DispatchProps = {|
   createTree: () => void,
   setActiveCell: number => void,
   addNewBoundingBox: Vector3 => void,
+  deleteBoundingBox: number => void,
 |};
 
 type StateProps = {|
@@ -298,10 +303,12 @@ function NoNodeContextMenuOptions({
   createTree,
   segmentIdAtPosition,
   visibleSegmentationLayer,
+  clickedBoundingBoxId,
   dataset,
   currentMeshFile,
   setActiveCell,
   addNewBoundingBox,
+  deleteBoundingBox,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
     (async () => {
@@ -392,7 +399,7 @@ function NoNodeContextMenuOptions({
       : [];
 
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
-  const boundingBoxActions = [
+  let boundingBoxActions = [
     <Menu.Item
       className="node-context-menu-item"
       key="add-new-bounding-box"
@@ -404,6 +411,20 @@ function NoNodeContextMenuOptions({
       {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
     </Menu.Item>,
   ];
+  if (isBoundingBoxToolActive && clickedBoundingBoxId != null) {
+    boundingBoxActions = [
+      ...boundingBoxActions,
+      <Menu.Item
+        className="node-context-menu-item"
+        key="delete-bounding-box"
+        onClick={() => {
+          deleteBoundingBox(clickedBoundingBoxId);
+        }}
+      >
+        Delete Bounding Box
+      </Menu.Item>,
+    ];
+  }
   if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadMeshItem);
   }
@@ -584,6 +605,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   addNewBoundingBox(center: Vector3) {
     dispatch(addUserBoundingBoxAction(null, center));
+  },
+  deleteBoundingBox(id: number) {
+    dispatch(deleteUserBoundingBoxAction(id));
   },
 });
 

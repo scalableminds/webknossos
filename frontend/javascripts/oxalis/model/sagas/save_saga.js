@@ -8,6 +8,7 @@ import Maybe from "data.maybe";
 
 import type { Action } from "oxalis/model/actions/actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
@@ -21,7 +22,14 @@ import {
   setTracingAction,
   centerActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry, CameraData } from "oxalis/store";
+import type {
+  Tracing,
+  SkeletonTracing,
+  Flycam,
+  SaveQueueEntry,
+  CameraData,
+  UserBoundingBox,
+} from "oxalis/store";
 import createProgressCallback from "libs/progress_callback";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
@@ -76,6 +84,10 @@ import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import messages from "messages";
+import {
+  AllUserBoundingBoxActions,
+  type UserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
 import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
@@ -91,13 +103,15 @@ type UndoBucket = {
 type VolumeAnnotationBatch = Array<UndoBucket>;
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
+type BoundingBoxUndoState = { type: "bounding box", data: Array<UserBoundingBox> };
 type WarnUndoState = { type: "warning", reason: string };
-type UndoState = SkeletonUndoState | VolumeUndoState | WarnUndoState;
+type UndoState = SkeletonUndoState | VolumeUndoState | BoundingBoxUndoState | WarnUndoState;
 
 type RelevantActionsForUndoRedo = {
   skeletonUserAction?: SkeletonTracingAction,
   addBucketToUndoAction?: AddBucketToUndoAction,
   finishAnnotationStrokeAction?: FinishAnnotationStrokeAction,
+  userBoundingBoxAction?: UserBoundingBoxAction,
   importVolumeTracingAction?: ImportVolumeTracingAction,
   undo?: UndoAction,
   redo?: RedoAction,
@@ -132,33 +146,42 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
   }
 
   if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
-    return {
-      skeletonUserAction: ((action: any): SkeletonTracingAction),
-    };
+    return { skeletonUserAction: ((action: any): SkeletonTracingAction) };
   }
 
+  if (AllUserBoundingBoxActions.includes(action.type)) {
+    return { userBoundingBoxAction: ((action: any): UserBoundingBoxAction) };
+  }
   throw new Error("Could not unpack redux action from channel");
 }
+
+const getUserBoundingBoxesFromState = state => {
+  const maybeSomeTracing = maybeGetSomeTracing(state.tracing);
+  return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
+};
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
   let previousAction: ?any = null;
   let prevSkeletonTracingOrNull: ?SkeletonTracing = null;
+  let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   let pendingCompressions: Array<Task<void>> = [];
   let currentVolumeAnnotationBatch: VolumeAnnotationBatch = [];
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
-
+  prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   const actionChannel = yield _actionChannel([
     ...SkeletonTracingSaveRelevantActions,
+    ...AllUserBoundingBoxActions,
     "ADD_BUCKET_TO_UNDO",
     "FINISH_ANNOTATION_STROKE",
     "IMPORT_VOLUMETRACING",
     "UNDO",
     "REDO",
   ]);
+  // TODO: Just trigger an action when dragging and when stopped dragging to be able to batch the actions
   while (true) {
     const currentAction = yield* take(actionChannel);
 
@@ -166,12 +189,18 @@ export function* collectUndoStates(): Saga<void> {
       skeletonUserAction,
       addBucketToUndoAction,
       finishAnnotationStrokeAction,
+      userBoundingBoxAction,
       importVolumeTracingAction,
       undo,
       redo,
     } = unpackRelevantActionForUndo(currentAction);
 
-    if (skeletonUserAction || addBucketToUndoAction || finishAnnotationStrokeAction) {
+    if (
+      skeletonUserAction ||
+      addBucketToUndoAction ||
+      finishAnnotationStrokeAction ||
+      userBoundingBoxAction
+    ) {
       let shouldClearRedoState =
         addBucketToUndoAction != null || finishAnnotationStrokeAction != null;
       if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
@@ -203,6 +232,18 @@ export function* collectUndoStates(): Saga<void> {
         undoStack.push({ type: "volume", data: currentVolumeAnnotationBatch });
         currentVolumeAnnotationBatch = [];
         pendingCompressions = [];
+      } else if (userBoundingBoxAction) {
+        const boundingBoxUndoState = yield* call(
+          getBoundingBoxToUndoState,
+          userBoundingBoxAction,
+          prevSkeletonTracingOrNull,
+          previousAction,
+        );
+        if (skeletonUndoState) {
+          shouldClearRedoState = true;
+          undoStack.push(skeletonUndoState);
+        }
+        previousAction = skeletonUserAction;
       }
       if (shouldClearRedoState) {
         // Clear the redo stack when a new action is executed.
@@ -251,6 +292,18 @@ function* getSkeletonTracingToUndoState(
     if (shouldAddToUndoStack(skeletonUserAction, previousAction)) {
       return { type: "skeleton", data: prevTracing };
     }
+  }
+  return null;
+}
+
+function* getBoundingBoxToUndoState(
+  userBoundingBoxAction: UserBoundingBoxAction,
+  prevUserBoundingBoxes: Array<UserBoundingBox>,
+  previousAction: ?SkeletonTracingAction,
+): Saga<?BoundingBoxUndoState> {
+  const currentUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
+  if (shouldAddToUndoStack(userBoundingBoxAction, previousAction)) {
+    return { type: "bounding box", data: prevUserBoundingBoxes };
   }
   return null;
 }

@@ -7,6 +7,7 @@ import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/c
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import Deferred from "libs/deferred";
 import { type Dispatch } from "redux";
+import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 
 type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
@@ -71,12 +72,8 @@ export type VolumeTracingAction =
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
-  "SET_USER_BOUNDING_BOXES",
-  "ADD_USER_BOUNDING_BOXES",
-  "ADD_NEW_USER_BOUNDING_BOX",
-  "DELETE_USER_BOUNDING_BOX",
-  "SET_USER_BOUNDING_BOX_VISIBILITY",
   "FINISH_ANNOTATION_STROKE",
+  ...AllUserBoundingBoxActions,
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];

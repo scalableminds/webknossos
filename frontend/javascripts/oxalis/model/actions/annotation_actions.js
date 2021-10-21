@@ -202,6 +202,25 @@ export type AnnotationActionTypes =
   | RemoveIsosurfaceAction
   | AddIsosurfaceAction;
 
+export type UserBoundingBoxAction =
+  | SetUserBoundingBoxesAction
+  | AddNewUserBoundingBox
+  | SetUserBoundingBoxVisibilityAction
+  | SetUserBoundingBoxNameAction
+  | SetUserBoundingBoxColorAction
+  | DeleteUserBoundingBox
+  | AddUserBoundingBoxesAction;
+
+export const AllUserBoundingBoxActions = [
+  "SET_USER_BOUNDING_BOXES",
+  "ADD_NEW_USER_BOUNDING_BOX",
+  "SET_USER_BOUNDING_BOX_VISIBILITY",
+  "SET_USER_BOUNDING_BOX_NAME",
+  "SET_USER_BOUNDING_BOX_COLOR",
+  "DELETE_USER_BOUNDING_BOX",
+  "ADD_USER_BOUNDING_BOXES",
+];
+
 export const initializeAnnotationAction = (
   annotation: APIAnnotation,
 ): InitializeAnnotationAction => ({

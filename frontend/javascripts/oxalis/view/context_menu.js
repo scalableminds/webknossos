@@ -1,6 +1,6 @@
 // @flow
 import React, { useEffect, type Node } from "react";
-import { Menu, notification, Divider, Tooltip } from "antd";
+import { Menu, notification, Divider, Tooltip, Popover, Input } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import {
   type AnnotationTool,
@@ -10,6 +10,7 @@ import {
   VolumeTools,
 } from "oxalis/constants";
 
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
@@ -18,8 +19,11 @@ import { V3 } from "libs/mjs";
 import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
+  setUserBoundingBoxNameAction,
+  setUserBoundingBoxColorAction,
   setUserBoundingBoxVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
+import { type UserBoundingBox } from "oxalis/store";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -45,7 +49,7 @@ import messages from "messages";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import { roundTo } from "libs/utils";
+import { roundTo, hexToRgb, rgbToHex } from "libs/utils";
 
 import Shortcut from "libs/shortcut_component";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -71,6 +75,9 @@ type DispatchProps = {|
   hideBoundingBox: number => void,
   setActiveCell: number => void,
   addNewBoundingBox: Vector3 => void,
+  setBoundingBoxColor: (number, Vector3) => void,
+  setBoundingBoxName: (number, string) => void,
+  addNewBoundingBox: Vector3 => void,
   deleteBoundingBox: number => void,
 |};
 
@@ -84,6 +91,7 @@ type StateProps = {|
   volumeTracing: ?VolumeTracing,
   activeTool: AnnotationTool,
   useLegacyBindings: boolean,
+  userBoundingBoxes: Array<UserBoundingBox> | null,
 |};
 
 /* eslint-enable react/no-unused-prop-types */
@@ -309,8 +317,11 @@ function NoNodeContextMenuOptions({
   dataset,
   currentMeshFile,
   setActiveCell,
+  userBoundingBoxes,
   addNewBoundingBox,
   hideBoundingBox,
+  setBoundingBoxName,
+  setBoundingBoxColor,
   deleteBoundingBox,
 }: NoNodeContextMenuProps) {
   useEffect(() => {
@@ -414,28 +425,96 @@ function NoNodeContextMenuOptions({
       {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
     </Menu.Item>,
   ];
-  if (isBoundingBoxToolActive && clickedBoundingBoxId != null) {
-    boundingBoxActions = [
-      ...boundingBoxActions,
-      <Menu.Item
-        className="node-context-menu-item"
-        key="hide-bounding-box"
-        onClick={() => {
-          hideBoundingBox(clickedBoundingBoxId);
-        }}
-      >
-        Hide Bounding Box
-      </Menu.Item>,
-      <Menu.Item
-        className="node-context-menu-item"
-        key="delete-bounding-box"
-        onClick={() => {
-          deleteBoundingBox(clickedBoundingBoxId);
-        }}
-      >
-        Delete Bounding Box
-      </Menu.Item>,
-    ];
+  if (isBoundingBoxToolActive && clickedBoundingBoxId != null && userBoundingBoxes != null) {
+    const hoveredBBox = userBoundingBoxes.find(bbox => bbox.id === clickedBoundingBoxId);
+    if (hoveredBBox) {
+      const setBBoxName = (evt: SyntheticInputEvent<>) => {
+        setBoundingBoxName(clickedBoundingBoxId, evt.target.value);
+      };
+      const preventContextMenuFromClosing = evt => {
+        evt.stopPropagation();
+      };
+      const upscaledBBoxColor = ((hoveredBBox.color.map(
+        colorPart => colorPart * 255,
+      ): any): Vector3);
+      boundingBoxActions = [
+        ...boundingBoxActions,
+        <Menu.Item className="node-context-menu-item" key="change-bounding-box-name">
+          <Popover
+            title="Set Bounding Box Name"
+            content={
+              <Input
+                defaultValue={hoveredBBox.name}
+                placeholder="Bounding Box Name"
+                size="small"
+                onChange={setBBoxName}
+                onPressEnter={evt => {
+                  setBBoxName(evt);
+                  hideContextMenu();
+                }}
+                onBlur={setBBoxName}
+                onClick={preventContextMenuFromClosing}
+              />
+            }
+            trigger="click"
+          >
+            <span
+              onClick={preventContextMenuFromClosing}
+              style={{ width: "100%", display: "inline-block" }}
+            >
+              Change Bounding Box Name
+            </span>
+          </Popover>
+        </Menu.Item>,
+        <Menu.Item className="node-context-menu-item" key="change-bounding-box-color">
+          <span
+            onClick={preventContextMenuFromClosing}
+            style={{ width: "100%", display: "inline-block" }}
+          >
+            Change Bounding Box Color
+            <input
+              type="color"
+              style={{
+                display: "inline-block",
+                border: "none",
+                cursor: "pointer",
+                width: "100%",
+                height: "100%",
+                position: "absolute",
+                left: 0,
+                top: 0,
+                opacity: 0,
+              }}
+              onChange={(evt: SyntheticInputEvent<>) => {
+                let color = hexToRgb(evt.target.value);
+                color = ((color.map(colorPart => colorPart / 255): any): Vector3);
+                setBoundingBoxColor(clickedBoundingBoxId, color);
+              }}
+              onBlur={() => hideContextMenu}
+              value={rgbToHex(upscaledBBoxColor)}
+            />
+          </span>
+        </Menu.Item>,
+        <Menu.Item
+          className="node-context-menu-item"
+          key="hide-bounding-box"
+          onClick={() => {
+            hideBoundingBox(clickedBoundingBoxId);
+          }}
+        >
+          Hide Bounding Box
+        </Menu.Item>,
+        <Menu.Item
+          className="node-context-menu-item"
+          key="delete-bounding-box"
+          onClick={() => {
+            deleteBoundingBox(clickedBoundingBoxId);
+          }}
+        >
+          Delete Bounding Box
+        </Menu.Item>,
+      ];
+    }
   }
   if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadMeshItem);
@@ -454,8 +533,17 @@ function NoNodeContextMenuOptions({
     return null;
   }
 
+  // const me
+
   return (
-    <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
+    <Menu
+      onClick={(...args) => {
+        console.log("hiding context menu", args);
+        hideContextMenu();
+      }}
+      style={{ borderRadius: 6 }}
+      mode="vertical"
+    >
       {allActions}
     </Menu>
   );
@@ -618,6 +706,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   addNewBoundingBox(center: Vector3) {
     dispatch(addUserBoundingBoxAction(null, center));
   },
+  setBoundingBoxName(id: number, name: string) {
+    dispatch(setUserBoundingBoxNameAction(id, name));
+  },
+  setBoundingBoxColor(id: number, color: Vector3) {
+    dispatch(setUserBoundingBoxColorAction(id, color));
+  },
   deleteBoundingBox(id: number) {
     dispatch(deleteUserBoundingBoxAction(id));
   },
@@ -628,7 +722,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 
 function mapStateToProps(state: OxalisState): StateProps {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-
+  const someTracing = maybeGetSomeTracing(state.tracing);
   return {
     skeletonTracing: state.tracing.skeleton,
     volumeTracing: state.tracing.volume,
@@ -642,6 +736,7 @@ function mapStateToProps(state: OxalisState): StateProps {
         ? state.currentMeshFileByLayer[visibleSegmentationLayer.name]
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
+    userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : null,
   };
 }
 

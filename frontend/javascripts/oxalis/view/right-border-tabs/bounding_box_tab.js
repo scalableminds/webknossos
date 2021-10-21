@@ -23,6 +23,8 @@ import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
   setUserBoundingBoxVisibilityAction,
+  setUserBoundingBoxNameAction,
+  setUserBoundingBoxColorAction,
 } from "oxalis/model/actions/annotation_actions";
 import * as Utils from "libs/utils";
 
@@ -34,6 +36,8 @@ type BoundingBoxTabProps = {
   addNewBoundingBox: () => void,
   deleteBoundingBox: number => void,
   setBoundingBoxVisibility: (number, boolean) => void,
+  setBoundingBoxName: (number, string) => void,
+  setBoundingBoxColor: (number, Vector3) => void,
   setPosition: Vector3 => void,
   dataset: APIDataset,
 };
@@ -46,6 +50,8 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     onChangeBoundingBoxes,
     addNewBoundingBox,
     setBoundingBoxVisibility,
+    setBoundingBoxName,
+    setBoundingBoxColor,
     deleteBoundingBox,
     setPosition,
   } = props;
@@ -75,6 +81,14 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
 
   function handleBoundingBoxVisibilityChange(id: number, isVisible: boolean) {
     setBoundingBoxVisibility(id, isVisible);
+  }
+
+  function handleBoundingBoxNameChange(id: number, name: string) {
+    setBoundingBoxName(id, name);
+  }
+
+  function handleBoundingBoxColorChange(id: number, color: Vector3) {
+    setBoundingBoxColor(id, color);
   }
 
   function handleGoToBoundingBox(id: number) {
@@ -118,6 +132,8 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             }
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
             onVisibilityChange={_.partial(handleBoundingBoxVisibilityChange, bb.id)}
+            onNameChange={_.partial(handleBoundingBoxNameChange, bb.id)}
+            onColorChange={_.partial(handleBoundingBoxColorChange, bb.id)}
           />
         ))
       ) : (
@@ -166,6 +182,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   setBoundingBoxVisibility(id: number, isVisible: boolean) {
     dispatch(setUserBoundingBoxVisibilityAction(id, isVisible));
+  },
+  setBoundingBoxName(id: number, name: string) {
+    dispatch(setUserBoundingBoxNameAction(id, name));
+  },
+  setBoundingBoxColor(id: number, color: Vector3) {
+    dispatch(setUserBoundingBoxColorAction(id, color));
   },
 });
 

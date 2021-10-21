@@ -10,6 +10,7 @@ import {
   updateKey2,
   updateKey3,
 } from "oxalis/model/helpers/deep_update";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import { map3 } from "libs/utils";
@@ -75,7 +76,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_NEW_USER_BOUNDING_BOX": {
-      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {
         return state;
       }
@@ -116,7 +117,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
-      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {
         return state;
       }
@@ -133,7 +134,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "DELETE_USER_BOUNDING_BOX": {
-      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {
         return state;
       }
@@ -144,7 +145,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_USER_BOUNDING_BOX_VISIBILITY": {
-      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {
         return state;
       }
@@ -154,7 +155,28 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 
-    case "UPDATE_LOCAL_MESH_METADATA":
+    case "SET_USER_BOUNDING_BOX_NAME": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
+        bbox.id !== action.id ? bbox : { ...bbox, name: action.name },
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
+    case "SET_USER_BOUNDING_BOX_COLOR": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
+        bbox.id !== action.id ? bbox : { ...bbox, color: action.color },
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
     case "UPDATE_REMOTE_MESH_METADATA": {
       const { id, meshShape } = action;
       const newMeshes = state.tracing.meshes.map(mesh => {

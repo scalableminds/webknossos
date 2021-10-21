@@ -306,6 +306,8 @@ type UserBoundingBoxInputProps = {
   onExport: () => void,
   onGoToBoundingBox: () => void,
   onVisibilityChange: boolean => void,
+  onNameChange: string => void,
+  onColorChange: Vector3 => void,
 };
 
 type State = {
@@ -373,13 +375,13 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
 
   handleColorChange = (color: Vector3) => {
     color = ((color.map(colorPart => colorPart / 255): any): Vector3);
-    this.props.onChange({ color });
+    this.props.onColorChange(color);
   };
 
   handleNameChanged = (evt: SyntheticInputEvent<>) => {
     const currentEnteredName = evt.target.value;
     if (currentEnteredName !== this.props.name) {
-      this.props.onChange({ name: evt.target.value });
+      this.props.onNameChange(currentEnteredName);
     }
   };
 

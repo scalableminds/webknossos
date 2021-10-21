@@ -56,6 +56,18 @@ type SetUserBoundingBoxVisibilityAction = {
   isVisible: boolean,
 };
 
+type SetUserBoundingBoxNameAction = {
+  type: "SET_USER_BOUNDING_BOX_NAME",
+  id: number,
+  name: string,
+};
+
+type SetUserBoundingBoxColorAction = {
+  type: "SET_USER_BOUNDING_BOX_COLOR",
+  id: number,
+  color: Vector3,
+};
+
 type DeleteUserBoundingBox = {
   type: "DELETE_USER_BOUNDING_BOX",
   id: number,
@@ -168,6 +180,8 @@ export type AnnotationActionTypes =
   | SetUserBoundingBoxesAction
   | AddNewUserBoundingBox
   | SetUserBoundingBoxVisibilityAction
+  | SetUserBoundingBoxNameAction
+  | SetUserBoundingBoxColorAction
   | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction
   | AddMeshMetadataAction
@@ -246,6 +260,24 @@ export const setUserBoundingBoxVisibilityAction = (
   type: "SET_USER_BOUNDING_BOX_VISIBILITY",
   id,
   isVisible,
+});
+
+export const setUserBoundingBoxNameAction = (
+  id: number,
+  name: string,
+): SetUserBoundingBoxNameAction => ({
+  type: "SET_USER_BOUNDING_BOX_NAME",
+  id,
+  name,
+});
+
+export const setUserBoundingBoxColorAction = (
+  id: number,
+  color: Vector3,
+): SetUserBoundingBoxColorAction => ({
+  type: "SET_USER_BOUNDING_BOX_COLOR",
+  id,
+  color,
 });
 
 export const deleteUserBoundingBoxAction = (id: number): DeleteUserBoundingBox => ({

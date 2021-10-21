@@ -23,6 +23,7 @@ export type EditableTextLabelProp = {|
   horizontalMargin?: number,
   onClick?: () => void,
   disableEditing?: boolean,
+  onContextMenu?: () => void,
 |};
 
 type State = {
@@ -90,7 +91,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
         <span>
           {this.props.rows === 1 ? (
             <React.Fragment>
-              <Input {...inputComponentProps} />
+              <Input {...inputComponentProps} onBlur={this.handleOnChange} />
               <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
                 <CheckOutlined
                   style={iconStyle}
@@ -119,6 +120,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             style={{ margin: `0 ${horizontalMargin}px`, display: "inline-block" }}
             className={this.props.onClick != null ? "clickable-text" : null}
             onClick={this.props.onClick}
+            onContextMenu={this.props.onContextMenu}
           >
             {this.props.markdown ? (
               <Markdown

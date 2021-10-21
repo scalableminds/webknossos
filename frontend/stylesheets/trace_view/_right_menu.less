@@ -24,8 +24,9 @@
   padding-left: 5px;
   padding-right: 5px;
   border-radius: 2px;
-  .anticon-edit {
-    // Hide edit icon (unless hovered)
+  .anticon-edit,
+  .anticon-ellipsis {
+    // Hide edit and ellipsis icon (unless hovered)
     display: none;
   }
   &.is-selected-cell {
@@ -34,7 +35,8 @@
 
   &:hover {
     background-color: @blue-1;
-    .anticon-edit {
+    .anticon-edit,
+    .anticon-ellipsis {
       display: inline-block;
     }
   }

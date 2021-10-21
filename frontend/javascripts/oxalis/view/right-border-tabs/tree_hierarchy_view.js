@@ -392,7 +392,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
-      const menu = (
+      const createMenu = () => (
         <Menu>
           <Menu.Item key="changeTreeColor">
             <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
@@ -442,7 +442,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       nodeProps.title = (
         <div className={styleClass}>
           <Dropdown
-            overlay={menu}
+            overlay={createMenu}
+            // Destroy the menu after it was closed so that createMenu is only called
+            // when it's really needed.
+            // destroyPopupOnHide does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+            autoDestroy
             placement="bottomCenter"
             visible={this.state.activeTreeDropdownId === tree.treeId}
             onVisibleChange={isVisible =>

@@ -271,7 +271,8 @@ Expects:
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        skeletonTracingId <- annotation.skeletonTracingId.toFox
+        skeletonTracingIdOpt <- annotation.skeletonTracingId
+        skeletonTracingId <- skeletonTracingIdOpt.toFox
         tracing <- tracingStoreClient.getSkeletonTracing(skeletonTracingId, skeletonVersion)
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
@@ -293,29 +294,37 @@ Expects:
                                        organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        volumeTracingId <- annotation.volumeTracingId.toFox
-        (volumeTracing, data: Option[Source[ByteString, _]]) <- tracingStoreClient.getVolumeTracing(volumeTracingId,
-                                                                                                    volumeVersion,
-                                                                                                    skipVolumeData)
-        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(skeletonId =>
+        volumeTracingIds = annotation.volumeAnnotationLayers.map(_.tracingId)
+        volumeTracingsWithData: List[(VolumeTracing, Option[Source[ByteString, _]])] <- Fox.serialCombined(
+          volumeTracingIds) { volumeTracingId =>
+          tracingStoreClient.getVolumeTracing(volumeTracingId, volumeVersion, skipVolumeData)
+        }
+        skeletonTracingIdOpt <- annotation.skeletonTracingId
+        skeletonTracingOpt <- Fox.runOptional(skeletonTracingIdOpt)(skeletonId =>
           tracingStoreClient.getSkeletonTracing(skeletonId, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        val dataEnumerator = data.map(d => Enumerator.fromStream(d.runWith(StreamConverters.asInputStream())))
-        val nmlStream = NamedEnumeratorStream(name + ".nml",
-                                              nmlWriter.toNmlStream(skeletonTracingOpt,
-                                                                    Some(volumeTracing),
-                                                                    Some(annotation),
-                                                                    dataSet.scale,
-                                                                    None,
-                                                                    organizationName,
-                                                                    Some(user),
-                                                                    taskOpt))
-        val dataStream: Option[NamedEnumeratorStream] = dataEnumerator.map(d => NamedEnumeratorStream("data.zip", d))
+        val nmlStream = NamedEnumeratorStream(
+          name + ".nml",
+          nmlWriter.toNmlStream(skeletonTracingOpt,
+                                volumeTracingsWithData.map(_._1), // volume tracing objects
+                                Some(annotation),
+                                dataSet.scale,
+                                None,
+                                organizationName,
+                                Some(user),
+                                taskOpt)
+        )
+        val dataEnumerators = volumeTracingsWithData
+          .flatMap(_._2)
+          .map(d => Enumerator.fromStream(d.runWith(StreamConverters.asInputStream())))
+        val dataStreams: List[NamedEnumeratorStream] = dataEnumerators.zipWithIndex.map {
+          case (data, index) => NamedEnumeratorStream(s"data_${index}.zip", data)
+        } // todo: use layer names?
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
-            dataStream.map(d => List(nmlStream, d)).getOrElse(List(nmlStream)),
+            nmlStream :: dataStreams,
             outputStream
           )
         }, name + ".zip")

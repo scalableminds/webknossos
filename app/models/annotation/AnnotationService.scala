@@ -313,7 +313,7 @@ class AnnotationService @Inject()(
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
-  private def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(
+  private def tracingsFromBase(annotationBase: Annotation, dataSet: DataSet)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(Option[String], Option[String])] =
     for {
@@ -334,12 +334,12 @@ class AnnotationService @Inject()(
       for {
         dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
         dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> Messages("dataSet.noAccess", dataSetName)
-        (newSkeletonId, newVolumeId) <- tracingFromBase(annotation, dataSet) ?~> s"Failed to use annotation base as template for task ${task._id} with annotation base ${annotation._id}"
+        (newSkeletonId, newVolumeId) <- tracingsFromBase(annotation, dataSet) ?~> s"Failed to use annotation base as template for task ${task._id} with annotation base ${annotation._id}"
+        annotationLayers <- AnnotationLayer.layersFromIds(newSkeletonId, newVolumeId)
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
           _user = user._id,
-          skeletonTracingId = newSkeletonId,
-          volumeTracingId = newVolumeId,
+          annotationLayers = annotationLayers,
           state = Active,
           typ = AnnotationType.Task,
           created = System.currentTimeMillis,
@@ -437,13 +437,13 @@ class AnnotationService @Inject()(
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "annotation.needsAtleastOne"
       project <- projectDAO.findOne(task._project)
+      annotationLayers <- AnnotationLayer.layersFromIds(skeletonIdOpt, volumeIdOpt)
       annotationBase = Annotation(ObjectId.generate,
                                   dataSetId,
                                   Some(task._id),
                                   project._team,
                                   userId,
-                                  skeletonIdOpt,
-                                  volumeIdOpt,
+                                  annotationLayers,
                                   description.getOrElse(""),
                                   typ = AnnotationType.TracingBase)
       _ <- annotationDAO.insertOne(annotationBase)
@@ -458,13 +458,13 @@ class AnnotationService @Inject()(
                  description: String): Fox[Annotation] =
     for {
       teamId <- selectSuitableTeam(user, dataSet)
+      annotationLayers <- AnnotationLayer.layersFromIds(skeletonTracingId, volumeTracingId)
       annotation = Annotation(ObjectId.generate,
                               dataSet._id,
                               None,
                               teamId,
                               user._id,
-                              skeletonTracingId,
-                              volumeTracingId,
+                              annotationLayers,
                               description,
                               name = name.getOrElse(""),
                               typ = annotationType)
@@ -566,9 +566,11 @@ class AnnotationService @Inject()(
       case (dataSetId, annotations) =>
         for {
           scale <- getDatasetScale(dataSetId)
-          skeletonTracings <- getSkeletonTracings(dataSetId, annotations.map(_.skeletonTracingId))
-          volumeTracings <- getVolumeTracings(dataSetId, annotations.map(_.volumeTracingId))
-          volumeDataObjects <- getVolumeDataObjects(dataSetId, annotations.map(_.volumeTracingId))
+          skeletonTracingIdOpts <- Fox.serialCombined(annotations)(a => a.skeletonTracingId)
+          volumeTracingIdOpts <- Fox.serialCombined(annotations)(a => a.volumeTracingId)
+          skeletonTracings <- getSkeletonTracings(dataSetId, skeletonTracingIdOpts)
+          volumeTracings <- getVolumeTracings(dataSetId, volumeTracingIdOpts)
+          volumeDataObjects <- getVolumeDataObjects(dataSetId, volumeTracingIdOpts)
           incompleteDownloadAnnotations <- Fox.serialCombined(annotations)(getSingleDownloadAnnotation(_, scale))
         } yield
           incompleteDownloadAnnotations
@@ -641,19 +643,22 @@ class AnnotationService @Inject()(
       case AnnotationType.Task =>
         for {
           task <- taskFor(annotation)
-          oldSkeletonTracingId <- annotation.skeletonTracingId // This also asserts that the annotation does not have multiple volume/skeleton layers
-          oldVolumeTracingId <- annotation.volumeTracingId
+          oldSkeletonTracingIdOpt <- annotation.skeletonTracingId // This also asserts that the annotation does not have multiple volume/skeleton layers
+          oldVolumeTracingIdOpt <- annotation.volumeTracingId
           _ = logger.warn(
-            s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing ${oldSkeletonTracingId} and/or volume tracing ${oldVolumeTracingId}")
+            s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing $oldSkeletonTracingIdOpt and/or volume tracing $oldVolumeTracingIdOpt")
           annotationBase <- baseForTask(task._id)
           dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
-          (newSkeletonIdOpt, newVolumeIdOpt) <- tracingFromBase(annotationBase, dataSet)
+          (newSkeletonIdOpt, newVolumeIdOpt) <- tracingsFromBase(annotationBase, dataSet)
           _ <- Fox.bool2Fox(newSkeletonIdOpt.isDefined || newVolumeIdOpt.isDefined) ?~> "annotation.needsEitherSkeletonOrVolume"
-
           _ <- Fox.runOptional(newSkeletonIdOpt)(newSkeletonId =>
-            annotationLayersDAO.replaceTracingId(annotation._id, newSkeletonId, AnnotationLayerType.Skeleton))
+            oldSkeletonTracingIdOpt.toFox.map { oldSkeletonId =>
+              annotationLayersDAO.replaceTracingId(annotation._id, oldSkeletonId, newSkeletonId)
+          })
           _ <- Fox.runOptional(newVolumeIdOpt)(newVolumeId =>
-            annotationLayersDAO.replaceTracingId(annotation._id, newVolumeId, AnnotationLayerType.Volume))
+            oldVolumeTracingIdOpt.toFox.map { oldVolumeId =>
+              annotationLayersDAO.replaceTracingId(annotation._id, oldVolumeId, newVolumeId)
+          })
         } yield ()
     }
 
@@ -747,7 +752,7 @@ class AnnotationService @Inject()(
         "typ" -> annotation.typ,
         "stats" -> annotation.statistics,
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
-        "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
+        "annotationLayers" -> Json.toJson(annotation.annotationLayers),
         "dataSetName" -> dataSet.name,
         "organization" -> organization.name,
         "visibility" -> annotation.visibility,

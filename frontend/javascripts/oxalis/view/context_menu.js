@@ -13,8 +13,9 @@ import {
 import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { V3 } from "libs/mjs";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -300,13 +301,14 @@ function NoNodeContextMenuOptions({
   currentMeshFile,
   setActiveCell,
 }: NoNodeContextMenuProps) {
+  const dispatch = useDispatch();
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
     })();
   }, [visibleSegmentationLayer, dataset]);
 
-  const loadMesh = async () => {
+  const loadPrecomputedMesh = async () => {
     if (!currentMeshFile) return;
 
     if (visibleSegmentationLayer) {
@@ -323,6 +325,18 @@ function NoNodeContextMenuOptions({
         dataset,
       );
     }
+  };
+
+  const computeMeshAdHoc = () => {
+    if (!visibleSegmentationLayer) {
+      return;
+    }
+    const id = getSegmentIdForPosition(globalPosition);
+    if (id === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+    dispatch(changeActiveIsosurfaceCellAction(id, globalPosition, true));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
@@ -350,16 +364,27 @@ function NoNodeContextMenuOptions({
         ]
       : [];
 
-  const loadMeshItem = (
+  const loadPrecomputedMeshItem = (
     <Menu.Item
       className="node-context-menu-item"
-      key="load-mesh-file"
-      onClick={loadMesh}
+      key="load-precomputed-mesh"
+      onClick={loadPrecomputedMesh}
       disabled={!currentMeshFile}
     >
-      Load Precomputed Mesh
+      Load Mesh (precomputed)
     </Menu.Item>
   );
+
+  const computeMeshAdHocItem = (
+    <Menu.Item
+      className="node-context-menu-item"
+      key="compute-mesh-adhc"
+      onClick={computeMeshAdHoc}
+    >
+      Compute Mesh (ad-hoc)
+    </Menu.Item>
+  );
+
   const nonSkeletonActions =
     volumeTracing != null
       ? [
@@ -377,7 +402,8 @@ function NoNodeContextMenuOptions({
               {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
             </Menu.Item>
           ) : null,
-          loadMeshItem,
+          loadPrecomputedMeshItem,
+          computeMeshAdHocItem,
           <Menu.Item
             className="node-context-menu-item"
             key="fill-cell"
@@ -388,7 +414,7 @@ function NoNodeContextMenuOptions({
         ]
       : [];
   if (volumeTracing == null && visibleSegmentationLayer != null) {
-    nonSkeletonActions.push(loadMeshItem);
+    nonSkeletonActions.push(loadPrecomputedMeshItem);
   }
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
 

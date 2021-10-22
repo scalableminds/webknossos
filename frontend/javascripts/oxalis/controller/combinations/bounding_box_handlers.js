@@ -5,7 +5,7 @@ import { type OrthoView, type Point2, type Vector3 } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import Dimension from "oxalis/model/dimensions";
-import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import { setUserBoundingBoxBoundsAction } from "oxalis/model/actions/annotation_actions";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 
 const getNeighbourEdgeIndexByEdgeIndex = {
@@ -195,52 +195,53 @@ export function getClosestHoveredBoundingBox(
   return [primaryEdge, secondaryEdge];
 }
 
-export function handleMovingBoundingBox(
+export function handleResizingBoundingBox(
   mousePosition: Point2,
   planeId: OrthoView,
   primaryEdge: SelectedEdge,
   secondaryEdge: ?SelectedEdge,
-) {
+): { primary: boolean, secondary: boolean } {
   const state = Store.getState();
   const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
   const didMinAndMaxSwitch = { primary: false, secondary: false };
-  const updatedUserBoundingBoxes = userBoundingBoxes.map(bbox => {
-    if (bbox.id !== primaryEdge.boxId) {
-      return bbox;
+  const bboxToResize = userBoundingBoxes.find(bbox => bbox.id === primaryEdge.boxId);
+  if (!bboxToResize) {
+    return didMinAndMaxSwitch;
+  }
+  const updatedBounds = {
+    min: [...bboxToResize.boundingBox.min],
+    max: [...bboxToResize.boundingBox.max],
+  };
+  function updateBoundsAccordingToEdge(edge: SelectedEdge): boolean {
+    const { resizableDimension } = edge;
+    // For a horizontal edge only consider delta.y, for vertical only delta.x
+    const newPositionValue = Math.round(globalMousePosition[resizableDimension]);
+    const minOrMax = edge.isMaxEdge ? "max" : "min";
+    const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
+    const otherEdgeValue = bboxToResize.boundingBox[oppositeOfMinOrMax][resizableDimension];
+    if (otherEdgeValue === newPositionValue) {
+      // Do not allow the same value for min and max for one dimension.
+      return false;
     }
-    bbox = _.cloneDeep(bbox);
-    function applyPositionToEdge(edge: SelectedEdge): boolean {
-      const { resizableDimension } = edge;
-      // For a horizontal edge only consider delta.y, for vertical only delta.x
-      const newPositionValue = Math.round(globalMousePosition[resizableDimension]);
-      const minOrMax = edge.isMaxEdge ? "max" : "min";
-      const oppositeOfMinOrMax = edge.isMaxEdge ? "min" : "max";
-      const otherEdgeValue = bbox.boundingBox[oppositeOfMinOrMax][resizableDimension];
-      if (otherEdgeValue === newPositionValue) {
-        // Do not allow the same value for min and max for one dimension.
-        return false;
-      }
-      const areMinAndMaxEdgeCrossing =
-        // If the min / max edge is moved over the other one.
-        (edge.isMaxEdge && newPositionValue < otherEdgeValue) ||
-        (!edge.isMaxEdge && newPositionValue > otherEdgeValue);
-      if (areMinAndMaxEdgeCrossing) {
-        // As the edge moved over the other one, the values for min and max must be switched.
-        bbox.boundingBox[minOrMax][resizableDimension] = otherEdgeValue;
-        bbox.boundingBox[oppositeOfMinOrMax][resizableDimension] = newPositionValue;
-        return true;
-      } else {
-        bbox.boundingBox[minOrMax][resizableDimension] = newPositionValue;
-        return false;
-      }
+    const areMinAndMaxEdgeCrossing =
+      // If the min / max edge is moved over the other one.
+      (edge.isMaxEdge && newPositionValue < otherEdgeValue) ||
+      (!edge.isMaxEdge && newPositionValue > otherEdgeValue);
+    if (areMinAndMaxEdgeCrossing) {
+      // As the edge moved over the other one, the values for min and max must be switched.
+      updatedBounds[minOrMax][resizableDimension] = otherEdgeValue;
+      updatedBounds[oppositeOfMinOrMax][resizableDimension] = newPositionValue;
+      return true;
+    } else {
+      updatedBounds[minOrMax][resizableDimension] = newPositionValue;
+      return false;
     }
-    didMinAndMaxSwitch.primary = applyPositionToEdge(primaryEdge);
-    if (secondaryEdge) {
-      didMinAndMaxSwitch.secondary = applyPositionToEdge(secondaryEdge);
-    }
-    return bbox;
-  });
-  Store.dispatch(setUserBoundingBoxesAction(updatedUserBoundingBoxes));
+  }
+  didMinAndMaxSwitch.primary = updateBoundsAccordingToEdge(primaryEdge);
+  if (secondaryEdge) {
+    didMinAndMaxSwitch.secondary = updateBoundsAccordingToEdge(secondaryEdge);
+  }
+  Store.dispatch(setUserBoundingBoxBoundsAction(primaryEdge.boxId, updatedBounds));
   return didMinAndMaxSwitch;
 }

@@ -287,13 +287,6 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
   );
 }
 
-export type UserBoundingBoxInputUpdate = {
-  boundingBox?: Vector6,
-  name?: string,
-  color?: Vector3,
-  isVisible?: boolean,
-};
-
 type UserBoundingBoxInputProps = {
   value: Vector6,
   name: string,
@@ -301,7 +294,7 @@ type UserBoundingBoxInputProps = {
   isVisible: boolean,
   isExportEnabled: boolean,
   tooltipTitle: string,
-  onChange: UserBoundingBoxInputUpdate => void,
+  onBoundingChange: Vector6 => void,
   onDelete: () => void,
   onExport: () => void,
   onGoToBoundingBox: () => void,
@@ -368,7 +361,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      this.props.onChange({ boundingBox: Utils.numberArrayToVector6(value) });
+      this.props.onBoundingChange(Utils.numberArrayToVector6(value));
     }
     this.setState({ text, isValid });
   };

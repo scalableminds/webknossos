@@ -11,15 +11,12 @@ import _ from "lodash";
 
 import type { APIDataset } from "types/api_flow_types";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { type Vector3 } from "oxalis/constants";
-import {
-  UserBoundingBoxInput,
-  type UserBoundingBoxInputUpdate,
-} from "oxalis/view/components/setting_input_views";
-import type { OxalisState, Tracing, UserBoundingBox } from "oxalis/store";
+import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
+import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
+import type { OxalisState, Tracing } from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
-  setUserBoundingBoxesAction,
+  setUserBoundingBoxBoundsAction,
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
   setUserBoundingBoxVisibilityAction,
@@ -32,7 +29,7 @@ import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_boundin
 
 type BoundingBoxTabProps = {
   tracing: Tracing,
-  onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
+  setChangeBoundingBoxBounds: (number, BoundingBoxType) => void,
   addNewBoundingBox: () => void,
   deleteBoundingBox: number => void,
   setBoundingBoxVisibility: (number, boolean) => void,
@@ -47,7 +44,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
   const {
     tracing,
     dataset,
-    onChangeBoundingBoxes,
+    setChangeBoundingBoxBounds,
     addNewBoundingBox,
     setBoundingBoxVisibility,
     setBoundingBoxName,
@@ -57,26 +54,8 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
   } = props;
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
-  function handleChangeUserBoundingBox(
-    id: number,
-    { boundingBox, name, color, isVisible }: UserBoundingBoxInputUpdate,
-  ) {
-    const maybeUpdatedBoundingBox = boundingBox
-      ? Utils.computeBoundingBoxFromArray(boundingBox)
-      : undefined;
-
-    const updatedUserBoundingBoxes = userBoundingBoxes.map(bb =>
-      bb.id === id
-        ? {
-            ...bb,
-            boundingBox: maybeUpdatedBoundingBox || bb.boundingBox,
-            name: name != null ? name : bb.name,
-            color: color || bb.color,
-            isVisible: isVisible != null ? isVisible : bb.isVisible,
-          }
-        : bb,
-    );
-    onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  function handleBoundingBoxBoundingChange(id: number, boundingBox: Vector6) {
+    setChangeBoundingBoxBounds(id, Utils.computeBoundingBoxFromArray(boundingBox));
   }
 
   function handleBoundingBoxVisibilityChange(id: number, isVisible: boolean) {
@@ -125,7 +104,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             name={bb.name}
             isExportEnabled={dataset.jobsEnabled}
             isVisible={bb.isVisible}
-            onChange={_.partial(handleChangeUserBoundingBox, bb.id)}
+            onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
             onDelete={_.partial(handleDeleteUserBoundingBox, bb.id)}
             onExport={
               dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
@@ -168,8 +147,8 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  onChangeBoundingBoxes(userBoundingBoxes: Array<UserBoundingBox>) {
-    dispatch(setUserBoundingBoxesAction(userBoundingBoxes));
+  setChangeBoundingBoxBounds(id: number, bounds: BoundingBoxType) {
+    dispatch(setUserBoundingBoxBoundsAction(id, bounds));
   },
   addNewBoundingBox() {
     dispatch(addUserBoundingBoxAction());

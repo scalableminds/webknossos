@@ -75,6 +75,22 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, action.userBoundingBoxes);
     }
 
+    case "SET_USER_BOUNDING_BOX_BOUNDS": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
+        bbox.id === action.id
+          ? {
+              ...bbox,
+              boundingBox: action.bounds,
+            }
+          : bbox,
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
     case "ADD_NEW_USER_BOUNDING_BOX": {
       const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {

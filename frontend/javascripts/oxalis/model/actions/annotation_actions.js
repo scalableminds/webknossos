@@ -6,7 +6,7 @@ import type {
   RemoteMeshMetaData,
   APIAnnotationVisibility,
 } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, BoundingBoxType } from "oxalis/constants";
 import type { UserBoundingBox } from "oxalis/store";
 
 type InitializeAnnotationAction = {
@@ -37,6 +37,17 @@ type SetAnnotationAllowUpdateAction = {
 type SetUserBoundingBoxesAction = {
   type: "SET_USER_BOUNDING_BOXES",
   userBoundingBoxes: Array<UserBoundingBox>,
+};
+
+type SetUserBoundingBoxBoundsAction = {
+  type: "SET_USER_BOUNDING_BOX_BOUNDS",
+  bounds: BoundingBoxType,
+  id: number,
+};
+
+type FinishedResizingUserBoundingBoxAction = {
+  type: "FINISHED_RESIZING_USER_BOUNDING_BOX",
+  id: number,
 };
 
 type AddUserBoundingBoxesAction = {
@@ -178,6 +189,8 @@ export type AnnotationActionTypes =
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
+  | SetUserBoundingBoxBoundsAction
+  | FinishedResizingUserBoundingBoxAction
   | AddNewUserBoundingBox
   | SetUserBoundingBoxVisibilityAction
   | SetUserBoundingBoxNameAction
@@ -204,6 +217,7 @@ export type AnnotationActionTypes =
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
+  | SetUserBoundingBoxBoundsAction
   | AddNewUserBoundingBox
   | SetUserBoundingBoxVisibilityAction
   | SetUserBoundingBoxNameAction
@@ -215,10 +229,12 @@ export const AllUserBoundingBoxActions = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_NEW_USER_BOUNDING_BOX",
   "SET_USER_BOUNDING_BOX_VISIBILITY",
+  "FINISHED_RESIZING_USER_BOUNDING_BOX",
   "SET_USER_BOUNDING_BOX_NAME",
   "SET_USER_BOUNDING_BOX_COLOR",
   "DELETE_USER_BOUNDING_BOX",
   "ADD_USER_BOUNDING_BOXES",
+  "SET_USER_BOUNDING_BOX_BOUNDS",
 ];
 
 export const initializeAnnotationAction = (
@@ -261,6 +277,22 @@ export const setUserBoundingBoxesAction = (
 ): SetUserBoundingBoxesAction => ({
   type: "SET_USER_BOUNDING_BOXES",
   userBoundingBoxes,
+});
+
+export const setUserBoundingBoxBoundsAction = (
+  id: number,
+  bounds: BoundingBoxType,
+): SetUserBoundingBoxBoundsAction => ({
+  type: "SET_USER_BOUNDING_BOX_BOUNDS",
+  id,
+  bounds,
+});
+
+export const finishedResizingUserBoundingBoxAction = (
+  id: number,
+): FinishedResizingUserBoundingBoxAction => ({
+  type: "FINISHED_RESIZING_USER_BOUNDING_BOX",
+  id,
 });
 
 export const addUserBoundingBoxAction = (

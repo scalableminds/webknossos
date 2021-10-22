@@ -18,13 +18,14 @@ import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
   type SelectedEdge,
   getClosestHoveredBoundingBox,
-  handleMovingBoundingBox,
+  handleResizingBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
@@ -562,7 +563,7 @@ export class BoundingBoxTool {
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, _event: MouseEvent) => {
         if (primarySelectedEdge != null) {
-          const didMinAndMaxSwitch = handleMovingBoundingBox(
+          const didMinAndMaxSwitch = handleResizingBoundingBox(
             pos,
             planeId,
             primarySelectedEdge,
@@ -587,6 +588,9 @@ export class BoundingBoxTool {
       },
 
       leftMouseUp: () => {
+        if (primarySelectedEdge) {
+          Store.dispatch(finishedResizingUserBoundingBoxAction(primarySelectedEdge.boxId));
+        }
         primarySelectedEdge = null;
         secondarySelectedEdge = null;
         getSceneController().highlightUserBoundingBox(null);

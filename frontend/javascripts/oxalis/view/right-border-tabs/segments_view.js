@@ -79,8 +79,6 @@ const convertCellIdToCSS = (id: number, mappingColors) => {
   return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 };
 
-// This file defines the component SegmentsView.
-
 type StateProps = {|
   isosurfaces: { [segmentId: number]: IsosurfaceInformation },
   dataset: APIDataset,
@@ -360,135 +358,136 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState({ activeDropdownSegmentId: null });
   };
 
+  startComputingMeshfile = async () => {
+    const datasetResolutionInfo = getResolutionInfoOfVisibleSegmentationLayer(Store.getState());
+    const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
+      defaultMeshfileGenerationResolutionIndex,
+    );
+
+    const meshfileResolutionIndex =
+      defaultOrHigherIndex != null
+        ? defaultOrHigherIndex
+        : datasetResolutionInfo.getClosestExistingIndex(defaultMeshfileGenerationResolutionIndex);
+
+    const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
+      meshfileResolutionIndex,
+    );
+
+    if (this.props.visibleSegmentationLayer != null) {
+      const job = await startComputeMeshFileJob(
+        this.props.organization,
+        this.props.datasetName,
+        getBaseSegmentationName(this.props.visibleSegmentationLayer),
+        meshfileResolution,
+      );
+      this.setState({ activeMeshJobId: job.id });
+      Toast.info(
+        <React.Fragment>
+          The computation of a mesh file was started. For large datasets, this may take a while.
+          Closing this tab will not stop the computation.
+          <br />
+          See{" "}
+          <a target="_blank" href="/jobs" rel="noopener noreferrer">
+            Processing Jobs
+          </a>{" "}
+          for an overview of running jobs.
+        </React.Fragment>,
+      );
+    } else {
+      Toast.error(
+        "The computation of a mesh file could not be started because no segmentation layer was found.",
+      );
+    }
+  };
+
+  getPrecomputeMeshesButton = () => {
+    const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
+    return (
+      <Tooltip key="tooltip" title={title}>
+        <Button
+          size="small"
+          loading={this.state.activeMeshJobId != null}
+          onClick={this.startComputingMeshfile}
+          disabled={disabled}
+        >
+          Precompute Meshes
+        </Button>
+      </Tooltip>
+    );
+  };
+
+  handleMeshFileSelected = async (mesh: { key: string }) => {
+    if (mesh.key === "refresh") {
+      maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
+    } else if (this.props.visibleSegmentationLayer != null) {
+      this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
+      this.loadPrecomputedMeshForCentered(this.props.flycam);
+    }
+  };
+
+  getMeshFilesDropdown = () => (
+    <Menu onClick={this.handleMeshFileSelected}>
+      <MenuItem key="refresh" icon={<ReloadOutlined />}>
+        Reload from Server.
+      </MenuItem>
+      {this.props.availableMeshFiles ? (
+        this.props.availableMeshFiles.map(meshFile => (
+          <Menu.Item key={meshFile} value={meshFile}>
+            {meshFile}
+          </Menu.Item>
+        ))
+      ) : (
+        <MenuItem key="no files" disabled>
+          No files available.
+        </MenuItem>
+      )}
+    </Menu>
+  );
+
+  getLoadPrecomputedMeshButton = () => {
+    const hasCurrentMeshFile = this.props.currentMeshFile;
+    return (
+      <Tooltip
+        key="tooltip"
+        title={
+          this.props.currentMeshFile != null
+            ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
+            : "There is no mesh file."
+        }
+      >
+        <DropdownButton
+          size="small"
+          trigger="click"
+          onClick={this.loadPrecomputedMeshForCentered}
+          overlay={this.getMeshFilesDropdown()}
+          buttonsRender={([leftButton, rightButton]) => [
+            React.cloneElement(leftButton, {
+              disabled: !hasCurrentMeshFile,
+              style: { borderRightStyle: "dashed" },
+            }),
+            React.cloneElement(rightButton, { style: { borderLeftStyle: "dashed" } }),
+          ]}
+        >
+          Load Precomputed Mesh
+        </DropdownButton>
+      </Tooltip>
+    );
+  };
+
+  getMeshesHeader = () => (
+    <React.Fragment>
+      <div className="antd-legacy-group">
+        {/* Only show option for ad-hoc computation if no mesh file is available */
+        this.props.currentMeshFile ? null : this.getComputeMeshAdHocHeaderButton()}
+        {this.props.currentMeshFile
+          ? this.getLoadPrecomputedMeshButton()
+          : this.getPrecomputeMeshesButton()}
+      </div>
+    </React.Fragment>
+  );
+
   render() {
     const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
-    const startComputingMeshfile = async () => {
-      const datasetResolutionInfo = getResolutionInfoOfVisibleSegmentationLayer(Store.getState());
-      const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
-        defaultMeshfileGenerationResolutionIndex,
-      );
-
-      const meshfileResolutionIndex =
-        defaultOrHigherIndex != null
-          ? defaultOrHigherIndex
-          : datasetResolutionInfo.getClosestExistingIndex(defaultMeshfileGenerationResolutionIndex);
-
-      const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
-        meshfileResolutionIndex,
-      );
-
-      if (this.props.visibleSegmentationLayer != null) {
-        const job = await startComputeMeshFileJob(
-          this.props.organization,
-          this.props.datasetName,
-          getBaseSegmentationName(this.props.visibleSegmentationLayer),
-          meshfileResolution,
-        );
-        this.setState({ activeMeshJobId: job.id });
-        Toast.info(
-          <React.Fragment>
-            The computation of a mesh file was started. For large datasets, this may take a while.
-            Closing this tab will not stop the computation.
-            <br />
-            See{" "}
-            <a target="_blank" href="/jobs" rel="noopener noreferrer">
-              Processing Jobs
-            </a>{" "}
-            for an overview of running jobs.
-          </React.Fragment>,
-        );
-      } else {
-        Toast.error(
-          "The computation of a mesh file could not be started because no segmentation layer was found.",
-        );
-      }
-    };
-
-    const getPrecomputeMeshesButton = () => {
-      const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
-      return (
-        <Tooltip key="tooltip" title={title}>
-          <Button
-            size="small"
-            loading={this.state.activeMeshJobId != null}
-            onClick={startComputingMeshfile}
-            disabled={disabled}
-          >
-            Precompute Meshes
-          </Button>
-        </Tooltip>
-      );
-    };
-
-    const handleMeshFileSelected = async mesh => {
-      if (mesh.key === "refresh") {
-        maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
-      } else if (this.props.visibleSegmentationLayer != null) {
-        this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
-        this.loadPrecomputedMeshForCentered(this.props.flycam);
-      }
-    };
-
-    const getMeshFilesDropdown = () => (
-      <Menu onClick={handleMeshFileSelected}>
-        <MenuItem key="refresh" icon={<ReloadOutlined />}>
-          Reload from Server.
-        </MenuItem>
-        {this.props.availableMeshFiles ? (
-          this.props.availableMeshFiles.map(meshFile => (
-            <Menu.Item key={meshFile} value={meshFile}>
-              {meshFile}
-            </Menu.Item>
-          ))
-        ) : (
-          <MenuItem key="no files" disabled>
-            No files available.
-          </MenuItem>
-        )}
-      </Menu>
-    );
-
-    const getLoadPrecomputedMeshButton = () => {
-      const hasCurrentMeshFile = this.props.currentMeshFile;
-      return (
-        <Tooltip
-          key="tooltip"
-          title={
-            this.props.currentMeshFile != null
-              ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
-              : "There is no mesh file."
-          }
-        >
-          <DropdownButton
-            size="small"
-            trigger="click"
-            onClick={this.loadPrecomputedMeshForCentered}
-            overlay={getMeshFilesDropdown()}
-            buttonsRender={([leftButton, rightButton]) => [
-              React.cloneElement(leftButton, {
-                disabled: !hasCurrentMeshFile,
-                style: { borderRightStyle: "dashed" },
-              }),
-              React.cloneElement(rightButton, { style: { borderLeftStyle: "dashed" } }),
-            ]}
-          >
-            Load Precomputed Mesh
-          </DropdownButton>
-        </Tooltip>
-      );
-    };
-
-    const getMeshesHeader = () => (
-      <React.Fragment>
-        <div className="antd-legacy-group">
-          {/* Only show option for ad-hoc computation if no mesh file is available */
-          this.props.currentMeshFile ? null : this.getComputeMeshAdHocHeaderButton()}
-          {this.props.currentMeshFile
-            ? getLoadPrecomputedMeshButton()
-            : getPrecomputeMeshesButton()}
-        </div>
-      </React.Fragment>
-    );
     const allSegments = _.sortBy(
       this.props.segments ? Array.from(this.props.segments.values()) : [],
       "id",
@@ -496,7 +495,7 @@ class SegmentsView extends React.Component<Props, State> {
 
     return (
       <div className="padded-tab-content">
-        {getMeshesHeader()}
+        {this.getMeshesHeader()}
 
         <List
           size="small"

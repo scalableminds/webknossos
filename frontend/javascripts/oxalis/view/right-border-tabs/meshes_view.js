@@ -517,7 +517,7 @@ class MeshesView extends React.Component<Props, State> {
               : "There is no mesh file."
           }
         >
-          Load Mesh (Precomputed)
+          Load Mesh (precomputed)
         </Tooltip>
       </Menu.Item>
     );

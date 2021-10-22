@@ -533,8 +533,6 @@ function NoNodeContextMenuOptions({
     return null;
   }
 
-  // const me
-
   return (
     <Menu
       onClick={(...args) => {

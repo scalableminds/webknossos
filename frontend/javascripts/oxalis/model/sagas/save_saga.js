@@ -169,7 +169,8 @@ const getUserBoundingBoxesFromState = state => {
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
-  let previousAction: ?Action = null;
+  // This variable must be any (no Action) as otherwise cyclic dependencies are created which flow cannot handle.
+  let previousAction: ?any = null;
   let prevSkeletonTracingOrNull: ?SkeletonTracing = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   let pendingCompressions: Array<Task<void>> = [];

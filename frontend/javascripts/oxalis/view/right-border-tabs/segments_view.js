@@ -534,12 +534,13 @@ const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile,
   loadPrecomputedMeshForSegment,
+  andCloseContextMenu,
 ) => {
   const hasCurrentMeshFile = currentMeshFile != null;
 
   return (
     <Menu.Item
-      onClick={() => loadPrecomputedMeshForSegment(segment)}
+      onClick={() => andCloseContextMenu(loadPrecomputedMeshForSegment(segment))}
       disabled={!hasCurrentMeshFile}
     >
       <Tooltip
@@ -557,16 +558,17 @@ const getLoadPrecomputedMeshMenuItem = (
 };
 
 const getComputeMeshAdHocMenuItem = (
-  segment: Segment,
+  segment,
   changeActiveIsosurfaceId,
-  isSegmentationLayerVisible: boolean,
+  isSegmentationLayerVisible,
+  andCloseContextMenu,
 ) => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return (
     <Menu.Item
-      onClick={() => {
-        changeActiveIsosurfaceId(segment.id, segment.somePosition, true);
-      }}
+      onClick={() =>
+        andCloseContextMenu(changeActiveIsosurfaceId(segment.id, segment.somePosition, true))
+      }
       disabled={disabled}
     >
       <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
@@ -613,13 +615,20 @@ function SegmentListItem({
   loadPrecomputedMeshForSegment: Segment => Promise<void>,
   currentMeshFile: ?string,
 }) {
+  const andCloseContextMenu = (_ignore: any) => handleSegmentDropdownMenuVisibility(0, false);
   const createSegmentContextMenu = () => (
     <Menu>
-      {getLoadPrecomputedMeshMenuItem(segment, currentMeshFile, loadPrecomputedMeshForSegment)}
+      {getLoadPrecomputedMeshMenuItem(
+        segment,
+        currentMeshFile,
+        loadPrecomputedMeshForSegment,
+        andCloseContextMenu,
+      )}
       {getComputeMeshAdHocMenuItem(
         segment,
         changeActiveIsosurfaceId,
         visibleSegmentationLayer != null,
+        andCloseContextMenu,
       )}
     </Menu>
   );
@@ -778,7 +787,7 @@ function MeshInfoItem(props: {
   const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
 
   return (
-    <List.Item
+    <div
       style={{
         padding: 0,
         cursor: "pointer",
@@ -808,7 +817,7 @@ function MeshInfoItem(props: {
           {deleteButton}
         </div>
       </div>
-    </List.Item>
+    </div>
   );
 }
 

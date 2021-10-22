@@ -8,7 +8,7 @@ import {
   EllipsisOutlined,
 } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
@@ -74,6 +74,11 @@ export const stlIsosurfaceConstants = {
   cellIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
 
+const convertCellIdToCSS = (id: number, mappingColors) => {
+  const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
+  return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+};
+
 // This file defines the component SegmentsView.
 
 type StateProps = {|
@@ -134,9 +139,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   deleteMesh(id: string) {
     dispatch(deleteMeshAction(id));
   },
-  onChangeVisibility(layerName: string, id: number, isVisible: boolean) {
-    dispatch(updateIsosurfaceVisibilityAction(layerName, id, isVisible));
-  },
   setHoveredSegmentId(segmentId: ?number) {
     dispatch(updateTemporarySettingAction("hoveredSegmentId", segmentId));
   },
@@ -164,8 +166,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   setCurrentMeshFile(layerName: string, fileName: string) {
     dispatch(updateCurrentMeshFileAction(layerName, fileName));
   },
-  setPosition(position: Vector3, dimensionToSkip: ?number, shouldRefreshIsosurface?: boolean) {
-    dispatch(setPositionAction(position, dimensionToSkip, shouldRefreshIsosurface));
+  setPosition(position: Vector3, shouldRefreshIsosurface?: boolean) {
+    dispatch(setPositionAction(position, null, shouldRefreshIsosurface));
   },
   updateSegment(segmentId: number, segmentShape: $Shape<Segment>) {
     dispatch(updateSegmentAction(segmentId, segmentShape));
@@ -296,177 +298,35 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  convertCellIdToCSS = (id: number) => {
-    const [h, s, l, a] = jsConvertCellIdToHSLA(id, this.props.mappingColors);
-    return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-  };
-
-  getComputeMeshAdHocTooltipInfo = (isForCenteredSegment: boolean) => {
-    let title = "";
-    let disabled = true;
-    if (this.props.visibleSegmentationLayer == null) {
-      title = "There is no segmentation layer for which a mesh could be computed.";
-    } else {
-      title = `Compute mesh for ${isForCenteredSegment ? "the centered" : "this"} segment.`;
-      disabled = false;
+  loadPrecomputedMeshForIdAndPosition = async (id: number, pos: Vector3) => {
+    if (id === 0) {
+      Toast.info("No segment found at centered position");
+      return;
     }
-
-    return {
-      disabled,
-      title,
-    };
-  };
-
-  getRefreshButton = (segment: Segment, isPrecomputed: boolean, isLoading: boolean) => {
-    if (isLoading) {
-      return (
-        <LoadingOutlined
-          key="refresh-button"
-          onClick={() => {
-            if (!this.props.visibleSegmentationLayer) {
-              return;
-            }
-            Store.dispatch(
-              refreshIsosurfaceAction(this.props.visibleSegmentationLayer.name, segment.id),
-            );
-          }}
-        />
-      );
-    } else {
-      return isPrecomputed ? null : (
-        <Tooltip title="Refresh Mesh">
-          <ReloadOutlined
-            key="refresh-button"
-            onClick={() => {
-              if (!this.props.visibleSegmentationLayer) {
-                return;
-              }
-              Store.dispatch(
-                refreshIsosurfaceAction(this.props.visibleSegmentationLayer.name, segment.id),
-              );
-            }}
-          />
-        </Tooltip>
-      );
+    const { dataset, currentMeshFile, visibleSegmentationLayer } = this.props;
+    if (!currentMeshFile || !visibleSegmentationLayer) {
+      return;
     }
+    await loadMeshFromFile(id, pos, currentMeshFile, visibleSegmentationLayer, dataset);
   };
 
-  getMeshInfo = (segment: Segment, isSelectedInList: boolean, isHovered: boolean) => {
-    const deemphasizedStyle = { fontStyle: "italic", color: "#989898" };
-    if (!this.props.isosurfaces[segment.id]) {
-      if (isSelectedInList) {
-        return (
-          <div
-            style={{ ...deemphasizedStyle, marginLeft: 8 }}
-            onContextMenu={evt => {
-              evt.preventDefault();
-              this.handleSegmentDropdownMenuVisibility(segment.id, true);
-            }}
-          >
-            No mesh loaded. Use the context menu to do generate one.
-          </div>
-        );
-      }
-      return null;
-    }
-    const isosurface = this.props.isosurfaces[segment.id];
-    const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
-    const textStyle = isVisible ? {} : deemphasizedStyle;
-
-    const downloadButton = (
-      <Tooltip title="Download Mesh">
-        <VerticalAlignBottomOutlined
-          key="download-button"
-          onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segment.id))}
-        />
-      </Tooltip>
-    );
-
-    const deleteButton = (
-      <Tooltip title="Delete Mesh">
-        <DeleteOutlined
-          key="delete-button"
-          onClick={() => {
-            if (!this.props.visibleSegmentationLayer) {
-              return;
-            }
-            Store.dispatch(
-              removeIsosurfaceAction(this.props.visibleSegmentationLayer.name, segment.id),
-            );
-            // reset the active mesh id so the deleted one is not reloaded immediately
-            this.props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
-          }}
-        />
-      </Tooltip>
-    );
-
-    const toggleVisibilityCheckbox = (
-      <Tooltip title="Change visibility">
-        <Checkbox
-          checked={isVisible}
-          onChange={(event: SyntheticInputEvent<>) => {
-            if (!this.props.visibleSegmentationLayer) {
-              return;
-            }
-            this.props.onChangeVisibility(
-              this.props.visibleSegmentationLayer.name,
-              segment.id,
-              event.target.checked,
-            );
-          }}
-        />
-      </Tooltip>
-    );
-
-    const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
-
-    return (
-      <List.Item
-        style={{
-          padding: 0,
-          cursor: "pointer",
-        }}
-        key={segment.id}
-      >
-        <div style={{ display: "flex" }}>
-          <div
-            className={classnames("segment-list-item", {
-              "is-selected-cell": isSelectedInList,
-            })}
-          >
-            {toggleVisibilityCheckbox}
-            <span
-              onClick={() => {
-                this.props.changeActiveIsosurfaceId(segment.id, seedPosition, !isPrecomputed);
-                this.props.setPosition(seedPosition, null, false);
-              }}
-              style={{ ...textStyle, marginLeft: 8 }}
-            >
-              {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
-            </span>
-          </div>
-          <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
-            {this.getRefreshButton(segment, isPrecomputed, isLoading)}
-            {downloadButton}
-            {deleteButton}
-          </div>
-        </div>
-      </List.Item>
-    );
+  loadPrecomputedMeshForCentered = (flycam: Flycam) => {
+    const pos = getPosition(flycam);
+    const id = getSegmentIdForPosition(pos);
+    return this.loadPrecomputedMeshForIdAndPosition(id, pos);
   };
 
-  getColoredDotIconForSegment = (segmentId: number) => (
-    <span
-      className="circle"
-      style={{
-        paddingLeft: "10px",
-        backgroundColor: this.convertCellIdToCSS(segmentId),
-      }}
-    />
-  );
+  loadPrecomputedMeshForSegment = (segment: Segment) => {
+    const pos = segment.somePosition;
+    const id = segment.id;
+    return this.loadPrecomputedMeshForIdAndPosition(id, pos);
+  };
 
   getComputeMeshAdHocHeaderButton = () => {
-    const { disabled, title } = this.getComputeMeshAdHocTooltipInfo(true);
+    const { disabled, title } = getComputeMeshAdHocTooltipInfo(
+      true,
+      this.props.visibleSegmentationLayer != null,
+    );
     return (
       <Tooltip title={title}>
         <Button
@@ -487,71 +347,6 @@ class SegmentsView extends React.Component<Props, State> {
     );
   };
 
-  getComputeMeshAdHocMenuItem = (segment: Segment) => {
-    const { disabled, title } = this.getComputeMeshAdHocTooltipInfo(false);
-    return (
-      <Menu.Item
-        onClick={() => {
-          this.props.changeActiveIsosurfaceId(segment.id, segment.somePosition, true);
-        }}
-        disabled={disabled}
-      >
-        <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
-      </Menu.Item>
-    );
-  };
-
-  getLoadPrecomputedMeshMenuItem = (segment: Segment) => {
-    const hasCurrentMeshFile = this.props.currentMeshFile;
-
-    return (
-      <Menu.Item
-        onClick={() => this.loadPrecomputedMeshForSegment(segment)}
-        disabled={!hasCurrentMeshFile}
-      >
-        <Tooltip
-          key="tooltip"
-          title={
-            this.props.currentMeshFile != null
-              ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
-              : "There is no mesh file."
-          }
-        >
-          Load Mesh (precomputed)
-        </Tooltip>
-      </Menu.Item>
-    );
-  };
-
-  loadPrecomputedMeshForIdAndPosition = async (id: number, pos: Vector3) => {
-    if (id === 0) {
-      Toast.info("No segment found at centered position");
-      return;
-    }
-    if (!this.props.currentMeshFile || !this.props.visibleSegmentationLayer) {
-      return;
-    }
-    await loadMeshFromFile(
-      id,
-      pos,
-      this.props.currentMeshFile,
-      this.props.visibleSegmentationLayer,
-      this.props.dataset,
-    );
-  };
-
-  loadPrecomputedMeshForCentered = () => {
-    const pos = getPosition(this.props.flycam);
-    const id = getSegmentIdForPosition(pos);
-    return this.loadPrecomputedMeshForIdAndPosition(id, pos);
-  };
-
-  loadPrecomputedMeshForSegment = (segment: Segment) => {
-    const pos = segment.somePosition;
-    const id = segment.id;
-    return this.loadPrecomputedMeshForIdAndPosition(id, pos);
-  };
-
   onSelectSegment = (segment: Segment) => {
     this.setState({ selectedSegmentId: segment.id });
     this.props.setPosition(segment.somePosition);
@@ -564,13 +359,6 @@ class SegmentsView extends React.Component<Props, State> {
     }
     this.setState({ activeDropdownSegmentId: null });
   };
-
-  createSegmentContextMenu = (segment: Segment) => (
-    <Menu>
-      {this.getLoadPrecomputedMeshMenuItem(segment)}
-      {this.getComputeMeshAdHocMenuItem(segment)}
-    </Menu>
-  );
 
   render() {
     const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
@@ -637,7 +425,7 @@ class SegmentsView extends React.Component<Props, State> {
         maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
       } else if (this.props.visibleSegmentationLayer != null) {
         this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
-        this.loadPrecomputedMeshForCentered();
+        this.loadPrecomputedMeshForCentered(this.props.flycam);
       }
     };
 
@@ -723,83 +511,369 @@ class SegmentsView extends React.Component<Props, State> {
           }}
         >
           {allSegments.map(segment => (
-            <List.Item
+            <SegmentListItem
               key={segment.id}
-              style={{ padding: "2px 5px" }}
-              className={classnames("segment-list-item", {
-                "is-selected-cell": segment.id === this.state.selectedSegmentId,
-                "is-hovered-cell": segment.id === this.props.hoveredSegmentId,
-              })}
-              onMouseEnter={() => {
-                this.props.setHoveredSegmentId(segment.id);
-              }}
-              onMouseLeave={() => {
-                this.props.setHoveredSegmentId(null);
-              }}
-            >
-              {this.getColoredDotIconForSegment(segment.id)}
-
-              <Dropdown
-                overlay={() => this.createSegmentContextMenu(segment)}
-                // Destroy the menu after it was closed so that createSegmentContextMenu is only called
-                // when it's really needed.
-                // destroyPopupOnHide does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-                autoDestroy
-                placement="bottomCenter"
-                visible={this.state.activeDropdownSegmentId === segment.id}
-                onVisibleChange={isVisible =>
-                  this.handleSegmentDropdownMenuVisibility(segment.id, isVisible)
-                }
-                trigger={["contextMenu"]}
-              >
-                <EditableTextLabel
-                  value={segment.name || `Segment ${segment.id}`}
-                  label="Segment Name"
-                  onClick={() => this.onSelectSegment(segment)}
-                  onChange={name => this.props.updateSegment(segment.id, { name })}
-                  horizontalMargin={5}
-                  disableEditing={!this.props.allowUpdate}
-                />
-              </Dropdown>
-              <Tooltip title="Open context menu (also available via right-click)">
-                <EllipsisOutlined
-                  onClick={() => this.handleSegmentDropdownMenuVisibility(segment.id, true)}
-                />
-              </Tooltip>
-              {/* Show Default Segment Name if another one is already defined*/}
-              {segment.name != null ? (
-                <Tooltip title="Segment ID">
-                  <span className="deemphasized-segment-name">{segment.id}</span>
-                </Tooltip>
-              ) : null}
-              {segment.id === centeredSegmentId ? (
-                <Tooltip title="This segment is currently centered in the data viewports.">
-                  <i
-                    className="fas fa-crosshairs deemphasized-segment-name"
-                    style={{ marginLeft: 4 }}
-                  />
-                </Tooltip>
-              ) : null}
-              {segment.id === this.props.activeCellId ? (
-                <Tooltip title="The currently active segment id belongs to this segment.">
-                  <i
-                    className="fas fa-paint-brush deemphasized-segment-name"
-                    style={{ marginLeft: 4 }}
-                  />
-                </Tooltip>
-              ) : null}
-
-              <div style={{ marginLeft: 16 }}>
-                {this.getMeshInfo(
-                  segment,
-                  segment.id === this.state.selectedSegmentId,
-                  segment.id === this.props.hoveredSegmentId,
-                )}
-              </div>
-            </List.Item>
+              segment={segment}
+              centeredSegmentId={centeredSegmentId}
+              loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
+              selectedSegmentId={this.state.selectedSegmentId}
+              activeDropdownSegmentId={this.state.activeDropdownSegmentId}
+              onSelectSegment={this.onSelectSegment}
+              handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
+              isosurface={this.props.isosurfaces[segment.id]}
+              {...this.props}
+            />
           ))}
         </List>
       </div>
+    );
+  }
+}
+
+const getLoadPrecomputedMeshMenuItem = (
+  segment: Segment,
+  currentMeshFile,
+  loadPrecomputedMeshForSegment,
+) => {
+  const hasCurrentMeshFile = currentMeshFile != null;
+
+  return (
+    <Menu.Item
+      onClick={() => loadPrecomputedMeshForSegment(segment)}
+      disabled={!hasCurrentMeshFile}
+    >
+      <Tooltip
+        key="tooltip"
+        title={
+          currentMeshFile != null
+            ? `Load mesh for centered segment from file ${currentMeshFile}`
+            : "There is no mesh file."
+        }
+      >
+        Load Mesh (precomputed)
+      </Tooltip>
+    </Menu.Item>
+  );
+};
+
+const getComputeMeshAdHocMenuItem = (
+  segment: Segment,
+  changeActiveIsosurfaceId,
+  isSegmentationLayerVisible: boolean,
+) => {
+  const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
+  return (
+    <Menu.Item
+      onClick={() => {
+        changeActiveIsosurfaceId(segment.id, segment.somePosition, true);
+      }}
+      disabled={disabled}
+    >
+      <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
+    </Menu.Item>
+  );
+};
+
+function SegmentListItem({
+  segment,
+  mappingColors,
+  hoveredSegmentId,
+  centeredSegmentId,
+  selectedSegmentId,
+  activeCellId,
+  setHoveredSegmentId,
+  handleSegmentDropdownMenuVisibility,
+  activeDropdownSegmentId,
+  allowUpdate,
+  updateSegment,
+  onSelectSegment,
+  visibleSegmentationLayer,
+  changeActiveIsosurfaceId,
+  isosurface,
+  setPosition,
+  loadPrecomputedMeshForSegment,
+  currentMeshFile,
+}: {
+  segment: Segment,
+  mappingColors: ?Array<number>,
+  hoveredSegmentId: ?number,
+  centeredSegmentId: ?number,
+  selectedSegmentId: ?number,
+  activeCellId: ?number,
+  setHoveredSegmentId: (?number) => void,
+  handleSegmentDropdownMenuVisibility: (number, boolean) => void,
+  activeDropdownSegmentId: ?number,
+  allowUpdate: boolean,
+  updateSegment: (number, $Shape<Segment>) => void,
+  onSelectSegment: Segment => void,
+  visibleSegmentationLayer: ?APISegmentationLayer,
+  changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
+  isosurface: ?IsosurfaceInformation,
+  setPosition: (Vector3, boolean) => void,
+  loadPrecomputedMeshForSegment: Segment => Promise<void>,
+  currentMeshFile: ?string,
+}) {
+  const createSegmentContextMenu = () => (
+    <Menu>
+      {getLoadPrecomputedMeshMenuItem(segment, currentMeshFile, loadPrecomputedMeshForSegment)}
+      {getComputeMeshAdHocMenuItem(
+        segment,
+        changeActiveIsosurfaceId,
+        visibleSegmentationLayer != null,
+      )}
+    </Menu>
+  );
+
+  return (
+    <List.Item
+      style={{ padding: "2px 5px" }}
+      className={classnames("segment-list-item", {
+        "is-selected-cell": segment.id === selectedSegmentId,
+        "is-hovered-cell": segment.id === hoveredSegmentId,
+      })}
+      onMouseEnter={() => {
+        setHoveredSegmentId(segment.id);
+      }}
+      onMouseLeave={() => {
+        setHoveredSegmentId(null);
+      }}
+    >
+      {getColoredDotIconForSegment(segment.id, mappingColors)}
+
+      <Dropdown
+        overlay={createSegmentContextMenu}
+        // Destroy the menu after it was closed so that createSegmentContextMenu is only called
+        // when it's really needed.
+        // destroyPopupOnHide does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        autoDestroy
+        placement="bottomCenter"
+        visible={activeDropdownSegmentId === segment.id}
+        onVisibleChange={isVisible => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
+        trigger={["contextMenu"]}
+      >
+        <EditableTextLabel
+          value={segment.name || `Segment ${segment.id}`}
+          label="Segment Name"
+          onClick={() => onSelectSegment(segment)}
+          onChange={name => updateSegment(segment.id, { name })}
+          horizontalMargin={5}
+          disableEditing={!allowUpdate}
+        />
+      </Dropdown>
+      <Tooltip title="Open context menu (also available via right-click)">
+        <EllipsisOutlined onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)} />
+      </Tooltip>
+      {/* Show Default Segment Name if another one is already defined*/}
+      {segment.name != null ? (
+        <Tooltip title="Segment ID">
+          <span className="deemphasized-segment-name">{segment.id}</span>
+        </Tooltip>
+      ) : null}
+      {segment.id === centeredSegmentId ? (
+        <Tooltip title="This segment is currently centered in the data viewports.">
+          <i className="fas fa-crosshairs deemphasized-segment-name" style={{ marginLeft: 4 }} />
+        </Tooltip>
+      ) : null}
+      {segment.id === activeCellId ? (
+        <Tooltip title="The currently active segment id belongs to this segment.">
+          <i className="fas fa-paint-brush deemphasized-segment-name" style={{ marginLeft: 4 }} />
+        </Tooltip>
+      ) : null}
+
+      <div style={{ marginLeft: 16 }}>
+        <MeshInfoItem
+          segment={segment}
+          isSelectedInList={segment.id === selectedSegmentId}
+          isHovered={segment.id === hoveredSegmentId}
+          isosurface={isosurface}
+          handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
+          changeActiveIsosurfaceId={changeActiveIsosurfaceId}
+          visibleSegmentationLayer={visibleSegmentationLayer}
+          setPosition={setPosition}
+        />
+      </div>
+    </List.Item>
+  );
+}
+
+function MeshInfoItem(props: {
+  segment: Segment,
+  isSelectedInList: boolean,
+  isHovered: boolean,
+  isosurface: ?IsosurfaceInformation,
+  handleSegmentDropdownMenuVisibility: (number, boolean) => void,
+  visibleSegmentationLayer: ?APISegmentationLayer,
+  changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
+  setPosition: (Vector3, boolean) => void,
+}) {
+  const dispatch = useDispatch();
+  const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
+    dispatch(updateIsosurfaceVisibilityAction(layerName, id, isVisible));
+  };
+
+  const { segment, isSelectedInList, isHovered, isosurface } = props;
+  const deemphasizedStyle = { fontStyle: "italic", color: "#989898" };
+  if (!isosurface) {
+    if (isSelectedInList) {
+      return (
+        <div
+          style={{ ...deemphasizedStyle, marginLeft: 8 }}
+          onContextMenu={evt => {
+            evt.preventDefault();
+            props.handleSegmentDropdownMenuVisibility(segment.id, true);
+          }}
+        >
+          No mesh loaded. Use the context menu to do generate one.
+        </div>
+      );
+    }
+    return null;
+  }
+  const { seedPosition, isLoading, isPrecomputed, isVisible } = isosurface;
+  const textStyle = isVisible ? {} : deemphasizedStyle;
+
+  const downloadButton = (
+    <Tooltip title="Download Mesh">
+      <VerticalAlignBottomOutlined
+        key="download-button"
+        onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segment.id))}
+      />
+    </Tooltip>
+  );
+
+  const deleteButton = (
+    <Tooltip title="Delete Mesh">
+      <DeleteOutlined
+        key="delete-button"
+        onClick={() => {
+          if (!props.visibleSegmentationLayer) {
+            return;
+          }
+          Store.dispatch(removeIsosurfaceAction(props.visibleSegmentationLayer.name, segment.id));
+          // reset the active mesh id so the deleted one is not reloaded immediately
+          props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
+        }}
+      />
+    </Tooltip>
+  );
+
+  const toggleVisibilityCheckbox = (
+    <Tooltip title="Change visibility">
+      <Checkbox
+        checked={isVisible}
+        onChange={(event: SyntheticInputEvent<>) => {
+          if (!props.visibleSegmentationLayer) {
+            return;
+          }
+          onChangeMeshVisibility(
+            props.visibleSegmentationLayer.name,
+            segment.id,
+            event.target.checked,
+          );
+        }}
+      />
+    </Tooltip>
+  );
+
+  const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
+
+  return (
+    <List.Item
+      style={{
+        padding: 0,
+        cursor: "pointer",
+      }}
+      key={segment.id}
+    >
+      <div style={{ display: "flex" }}>
+        <div
+          className={classnames("segment-list-item", {
+            "is-selected-cell": isSelectedInList,
+          })}
+        >
+          {toggleVisibilityCheckbox}
+          <span
+            onClick={() => {
+              props.changeActiveIsosurfaceId(segment.id, seedPosition, !isPrecomputed);
+              props.setPosition(seedPosition, false);
+            }}
+            style={{ ...textStyle, marginLeft: 8 }}
+          >
+            {isPrecomputed ? "Mesh (precomputed)" : "Mesh (ad-hoc computed)"}
+          </span>
+        </div>
+        <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
+          {getRefreshButton(segment, isPrecomputed, isLoading, props.visibleSegmentationLayer)}
+          {downloadButton}
+          {deleteButton}
+        </div>
+      </div>
+    </List.Item>
+  );
+}
+
+function getColoredDotIconForSegment(segmentId: number, mappingColors) {
+  return (
+    <span
+      className="circle"
+      style={{
+        paddingLeft: "10px",
+        backgroundColor: convertCellIdToCSS(segmentId, mappingColors),
+      }}
+    />
+  );
+}
+
+function getComputeMeshAdHocTooltipInfo(
+  isForCenteredSegment: boolean,
+  isSegmentationLayerVisible: boolean,
+) {
+  let title = "";
+  let disabled = true;
+  if (!isSegmentationLayerVisible) {
+    title = "There is no visible segmentation layer for which a mesh could be computed.";
+  } else {
+    title = `Compute mesh for ${isForCenteredSegment ? "the centered" : "this"} segment.`;
+    disabled = false;
+  }
+
+  return {
+    disabled,
+    title,
+  };
+}
+
+function getRefreshButton(
+  segment: Segment,
+  isPrecomputed: boolean,
+  isLoading: boolean,
+  visibleSegmentationLayer: ?APISegmentationLayer,
+) {
+  if (isLoading) {
+    return (
+      <LoadingOutlined
+        key="refresh-button"
+        onClick={() => {
+          if (!visibleSegmentationLayer) {
+            return;
+          }
+          Store.dispatch(refreshIsosurfaceAction(visibleSegmentationLayer.name, segment.id));
+        }}
+      />
+    );
+  } else {
+    return isPrecomputed ? null : (
+      <Tooltip title="Refresh Mesh">
+        <ReloadOutlined
+          key="refresh-button"
+          onClick={() => {
+            if (!visibleSegmentationLayer) {
+              return;
+            }
+            Store.dispatch(refreshIsosurfaceAction(visibleSegmentationLayer.name, segment.id));
+          }}
+        />
+      </Tooltip>
     );
   }
 }

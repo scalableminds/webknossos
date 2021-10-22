@@ -18,6 +18,7 @@ import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
+import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
 import {
   isVolumeTool,
   isVolumeAnnotationDisallowedForZoom,
@@ -142,6 +143,7 @@ export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
   if (isVolumeTool(tool) && isVolumeAnnotationDisallowedForZoom(tool, state)) {
     return state;
   }
-
+  // Execute deselection event.
+  getToolClassForAnnotationTool(state.uiInformation.activeTool).onToolDeselected();
   return updateKey(state, "uiInformation", { activeTool: tool });
 }

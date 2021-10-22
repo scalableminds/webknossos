@@ -1,6 +1,5 @@
 // @flow
 import { type ModifierKeys } from "libs/input";
-import _ from "lodash";
 import {
   type OrthoView,
   OrthoViews,
@@ -9,6 +8,7 @@ import {
   type ShowContextMenuFunction,
   type AnnotationTool,
   AnnotationToolEnum,
+  OrthoViewValuesWithoutTDView,
 } from "oxalis/constants";
 import {
   getContourTracingMode,
@@ -26,6 +26,7 @@ import {
   type SelectedEdge,
   getClosestHoveredBoundingBox,
   handleResizingBoundingBox,
+  highlightAndSetCursorOnHoveredBoundingBox,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
@@ -145,6 +146,8 @@ export class MoveTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class SkeletonTool {
@@ -294,6 +297,8 @@ export class SkeletonTool {
       rightClick: useLegacyBindings && !shiftKey ? "Place Node" : "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class DrawTool {
@@ -415,6 +420,8 @@ export class DrawTool {
       rightClick,
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class EraseTool {
@@ -465,6 +472,8 @@ export class EraseTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class PickCellTool {
@@ -488,6 +497,8 @@ export class PickCellTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class FillCellTool {
@@ -520,6 +531,8 @@ export class FillCellTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class BoundingBoxTool {
@@ -528,38 +541,8 @@ export class BoundingBoxTool {
     planeView: PlaneView,
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): * {
-    const bboxHoveringThrottleTime = 100;
     let primarySelectedEdge: ?SelectedEdge = null;
     let secondarySelectedEdge: ?SelectedEdge = null;
-    const getClosestHoveredBoundingBoxThrottled =
-      planeId !== OrthoViews.TDView
-        ? _.throttle((delta: Point2, position: Point2) => {
-            const { body } = document;
-            if (body == null || primarySelectedEdge != null) {
-              return;
-            }
-            const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
-            if (hoveredEdgesInfo != null) {
-              const [primaryHoveredEdge, secondaryHoveredEdge] = hoveredEdgesInfo;
-              getSceneController().highlightUserBoundingBox(primaryHoveredEdge.boxId);
-              if (secondaryHoveredEdge != null) {
-                // If a corner is selected.
-                body.style.cursor =
-                  (primaryHoveredEdge.isMaxEdge && secondaryHoveredEdge.isMaxEdge) ||
-                  (!primaryHoveredEdge.isMaxEdge && !secondaryHoveredEdge.isMaxEdge)
-                    ? "nwse-resize"
-                    : "nesw-resize";
-              } else if (primaryHoveredEdge.direction === "horizontal") {
-                body.style.cursor = "row-resize";
-              } else {
-                body.style.cursor = "col-resize";
-              }
-            } else {
-              getSceneController().highlightUserBoundingBox(null);
-              body.style.cursor = "auto";
-            }
-          }, bboxHoveringThrottleTime)
-        : (_delta: Point2, _position: Point2) => {};
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, _event: MouseEvent) => {
         if (primarySelectedEdge != null) {
@@ -586,6 +569,7 @@ export class BoundingBoxTool {
           getSceneController().highlightUserBoundingBox(primarySelectedEdge.boxId);
         }
       },
+      // TODO: Add unselect tool mechanism
 
       leftMouseUp: () => {
         if (primarySelectedEdge) {
@@ -598,7 +582,9 @@ export class BoundingBoxTool {
 
       mouseMove: (delta: Point2, position: Point2, _id, event: MouseEvent) => {
         MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
-        getClosestHoveredBoundingBoxThrottled(delta, position);
+        if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
+          highlightAndSetCursorOnHoveredBoundingBox(delta, position, planeId);
+        }
       },
 
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -615,23 +601,30 @@ export class BoundingBoxTool {
   }
 
   static getActionDescriptors(
-    activeTool: AnnotationTool,
-    useLegacyBindings: boolean,
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
     _shiftKey: boolean,
     _ctrlKey: boolean,
     _altKey: boolean,
   ): Object {
-    let rightClick;
-    if (!useLegacyBindings) {
-      rightClick = "Context Menu";
-    } else {
-      rightClick = `Erase (${activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace"})`;
-    }
-
     return {
-      leftDrag: activeTool === AnnotationToolEnum.BRUSH ? "Brush" : "Trace",
-      rightClick,
+      leftDrag: "Resize Bounding Boxes",
+      rightClick: "Context Menu",
     };
+  }
+
+  static onToolDeselected() {
+    const { body } = document;
+    if (body == null) {
+      return;
+    }
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const inputCatcher = document.getElementById(`inputcatcher_${planeId}`);
+      if (inputCatcher) {
+        inputCatcher.style.cursor = "auto";
+      }
+    }
+    getSceneController().highlightUserBoundingBox(null);
   }
 }
 

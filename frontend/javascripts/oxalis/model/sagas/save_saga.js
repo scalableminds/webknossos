@@ -188,7 +188,7 @@ export function* collectUndoStates(): Saga<void> {
     "UNDO",
     "REDO",
   ]);
-  // TODO: Just trigger an action when dragging and when stopped dragging to be able to batch the actions
+
   while (true) {
     const currentAction = yield* take(actionChannel);
     const {

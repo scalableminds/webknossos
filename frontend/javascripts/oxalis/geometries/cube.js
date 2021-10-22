@@ -26,7 +26,6 @@ type Properties = {
   color?: number,
   showCrossSections?: boolean,
   id?: number,
-  isEditable?: boolean,
   isHighlighted: boolean,
 };
 
@@ -39,21 +38,19 @@ class Cube {
   showCrossSections: boolean;
   initialized: boolean;
   visible: boolean;
-  id: ?number;
-  isEditable: boolean;
   lineWidth: number;
   color: number;
+  id: ?number;
   isHighlighted: boolean;
 
   constructor(properties: Properties) {
     // min/max should denote a half-open interval.
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;
-    this.id = properties.id;
-    this.isEditable = properties.isEditable || false;
     this.lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
     this.color = properties.color || 0x000000;
     this.showCrossSections = properties.showCrossSections || false;
+    this.id = properties.id;
 
     this.initialized = false;
     this.visible = true;

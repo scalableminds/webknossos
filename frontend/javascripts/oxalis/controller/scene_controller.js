@@ -462,7 +462,6 @@ class SceneController {
         color: Utils.rgbToInt(bbColor),
         showCrossSections: true,
         id,
-        isEditable: true,
         isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);

@@ -7,6 +7,9 @@ import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import Dimension from "oxalis/model/dimensions";
 import { setUserBoundingBoxBoundsAction } from "oxalis/model/actions/annotation_actions";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+
+const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 
 const getNeighbourEdgeIndexByEdgeIndex = {
   // TODO: Use this to detect corners properly.
@@ -34,9 +37,9 @@ function getDistanceToBoundingBoxEdge(
   otherDim: number,
   planeRatio: Vector3,
 ) {
-  // There are four cases how the distance to an edge needs to be calculated.
-  // Here are all cases visualized via a number that are referenced below:
-  // Note that this is the perspective of the rendered bounding box cross section.
+  // There are three cases how the distance to an edge needs to be calculated.
+  // Here are all cases visualized via numbers that are referenced below:
+  // Note that this is the perspective of the rendered bounding box cross section in a viewport.
   // ---> x
   // |  1                  1
   // ↓    '.             .'
@@ -50,7 +53,7 @@ function getDistanceToBoundingBoxEdge(
   //      .'             '.
   //     2                 2
   //
-  // This example is for the xy viewport for x as the main direction / edgeDim.
+  // This example is for the xy viewport for y as the main direction / edgeDim.
 
   // As the planeRatio is multiplied to the global coordinates passed to this method,
   // the distance between the mouse and the bounding box is distorted by the factor of planeRatio.
@@ -194,6 +197,35 @@ export function getClosestHoveredBoundingBox(
   }
   return [primaryEdge, secondaryEdge];
 }
+
+export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
+  (delta: Point2, position: Point2, planeId: OrthoView) => {
+    const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
+    const inputCatcher = document.getElementById(`inputcatcher_${planeId}`);
+    if (hoveredEdgesInfo != null && inputCatcher != null) {
+      const [primaryHoveredEdge, secondaryHoveredEdge] = hoveredEdgesInfo;
+      getSceneController().highlightUserBoundingBox(primaryHoveredEdge.boxId);
+      if (secondaryHoveredEdge != null) {
+        // If a corner is selected.
+        inputCatcher.style.cursor =
+          (primaryHoveredEdge.isMaxEdge && secondaryHoveredEdge.isMaxEdge) ||
+          (!primaryHoveredEdge.isMaxEdge && !secondaryHoveredEdge.isMaxEdge)
+            ? "nwse-resize"
+            : "nesw-resize";
+      } else if (primaryHoveredEdge.direction === "horizontal") {
+        inputCatcher.style.cursor = "row-resize";
+      } else {
+        inputCatcher.style.cursor = "col-resize";
+      }
+    } else {
+      getSceneController().highlightUserBoundingBox(null);
+      if (inputCatcher != null) {
+        inputCatcher.style.cursor = "auto";
+      }
+    }
+  },
+  BOUNDING_BOX_HOVERING_THROTTLE_TIME,
+);
 
 export function handleResizingBoundingBox(
   mousePosition: Point2,

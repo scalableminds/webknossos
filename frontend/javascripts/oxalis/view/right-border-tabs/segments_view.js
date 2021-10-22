@@ -74,7 +74,7 @@ export const stlIsosurfaceConstants = {
   cellIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
 
-// This file defines the component MeshesView.
+// This file defines the component SegmentsView.
 
 type StateProps = {|
   isosurfaces: { [segmentId: number]: IsosurfaceInformation },
@@ -182,7 +182,7 @@ type State = {
   activeDropdownSegmentId: ?number,
 };
 
-class MeshesView extends React.Component<Props, State> {
+class SegmentsView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
 
   state = {
@@ -807,4 +807,4 @@ class MeshesView extends React.Component<Props, State> {
 export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(MeshesView);
+)(SegmentsView);

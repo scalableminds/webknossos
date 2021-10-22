@@ -107,9 +107,9 @@ export const BorderTabs = {
     name: "Comments",
     description: "Add comments to skeleton nodes",
   },
-  MeshesView: {
-    id: "MeshesView",
-    name: "Segments & Meshes",
+  SegmentsView: {
+    id: "SegmentsView",
+    name: "Segments",
     description: "Organize Segments and Meshes",
   },
   SkeletonTabView: {

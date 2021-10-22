@@ -751,7 +751,7 @@ function MeshInfoItem(props: {
   );
 
   const deleteButton = (
-    <Tooltip title="Delete Mesh">
+    <Tooltip title="Remove Mesh">
       <DeleteOutlined
         key="delete-button"
         onClick={() => {

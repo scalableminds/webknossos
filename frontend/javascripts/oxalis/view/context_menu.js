@@ -415,6 +415,7 @@ function NoNodeContextMenuOptions({
       : [];
   if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadPrecomputedMeshItem);
+    nonSkeletonActions.push(computeMeshAdHocItem);
   }
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
 

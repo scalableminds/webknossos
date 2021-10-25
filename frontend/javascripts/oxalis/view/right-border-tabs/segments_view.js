@@ -15,6 +15,7 @@ import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
+import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
@@ -218,6 +219,14 @@ const formatMagWithLabel = (mag: Vector3, index: number) => {
   }
   return `Mag ${mag.join("-")}`;
 };
+
+function _getMapIdFn(visibleSegmentationLayer: ?DataLayer) {
+  const mapId =
+    visibleSegmentationLayer != null ? id => visibleSegmentationLayer.cube.mapId(id) : id => id;
+  return mapId;
+}
+
+const getMapIdFn = memoizeOne(_getMapIdFn);
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
@@ -550,7 +559,7 @@ class SegmentsView extends React.Component<Props, State> {
           Reload from Server
         </ReloadOutlined>
       </Tooltip>
-      <Popover content={this.getPreComputeMeshesPopover} trigger="click">
+      <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
         <Tooltip title="Add a precomputed mesh file">
           <PlusOutlined />
         </Tooltip>
@@ -561,7 +570,7 @@ class SegmentsView extends React.Component<Props, State> {
         </Tooltip>
       ) : null}
       <Tooltip title="Configure ad-hoc mesh computation">
-        <Popover content={this.getAdHocMeshSettings} trigger="click">
+        <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
           <SettingOutlined />
         </Popover>
       </Tooltip>
@@ -573,8 +582,7 @@ class SegmentsView extends React.Component<Props, State> {
     const allSegments = getSortedSegments(this.props.segments);
 
     const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
-    const mapId =
-      visibleSegmentationLayer != null ? id => visibleSegmentationLayer.cube.mapId(id) : id => id;
+    const mapId = getMapIdFn(visibleSegmentationLayer);
 
     return (
       <div id={segmentsTabId} className="padded-tab-content">

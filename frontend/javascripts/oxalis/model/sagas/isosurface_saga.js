@@ -90,9 +90,9 @@ function removeMapForSegment(layerName: string, segmentId: number): void {
 
 function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
   const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
-    [...cubeSize, 0],
+    [...cubeSize, zoomStep],
     resolutionInfo,
-    zoomStep,
+    0,
   );
   // Drop the last element of the Vector4;
   return [x, y, z];

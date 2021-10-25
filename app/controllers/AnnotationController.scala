@@ -3,6 +3,7 @@ package controllers
 import akka.util.Timeout
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
@@ -247,7 +248,10 @@ class AnnotationController @Inject()(
         restrictions <- provider.restrictionsFor(typ, id)
         _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        // TODO : assert passed tracing id is of volume layer
+        annotationLayer <- annotation.annotationLayers
+          .find(_.tracingId == tracingId)
+          .toFox ?~> "annotation.unlinkFallback.layerNotFound"
+        _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.unlinkFallback.noVolume"
         dataSet <- dataSetDAO
           .findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
         dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSet.notImported"
@@ -420,18 +424,31 @@ class AnnotationController @Inject()(
         dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(
-        id =>
-          tracingStoreClient
-            .duplicateSkeletonTracing(id, None, annotation._task.isDefined)) ?~> "Failed to duplicate skeleton tracing."
-      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id =>
-        tracingStoreClient.duplicateVolumeTracing(id, annotation._task.isDefined, dataSource.map(_.boundingBox))) ?~> "Failed to duplicate volume tracing."
+      newAnnotationLayers <- Fox.serialCombined(annotation.annotationLayers) { annotationLayer =>
+        duplicateAnnotationLayer(annotationLayer,
+                                 annotation._task.isDefined,
+                                 dataSource.map(_.boundingBox),
+                                 tracingStoreClient)
+      }
       clonedAnnotation <- annotationService.createFrom(user,
                                                        dataSet,
-                                                       newSkeletonTracingReference,
-                                                       newVolumeTracingReference,
+                                                       newAnnotationLayers,
                                                        AnnotationType.Explorational,
                                                        None,
                                                        annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
+
+  private def duplicateAnnotationLayer(annotationLayer: AnnotationLayer,
+                                       isFromTask: Boolean,
+                                       dataSetBoundingBox: Option[BoundingBox],
+                                       tracingStoreClient: WKRemoteTracingStoreClient): Fox[AnnotationLayer] =
+    for {
+
+      newTracingId <- if (annotationLayer.typ == AnnotationLayerType.Skeleton) {
+        tracingStoreClient.duplicateSkeletonTracing(annotationLayer.tracingId, None, isFromTask) ?~> "Failed to duplicate skeleton tracing."
+      } else {
+        tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, dataSetBoundingBox) ?~> "Failed to duplicate volume tracing."
+      }
+    } yield annotationLayer.copy(tracingId = newTracingId)
+
 }

@@ -11,7 +11,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.Color
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
@@ -451,14 +451,12 @@ class AnnotationService @Inject()(
 
   def createFrom(user: User,
                  dataSet: DataSet,
-                 skeletonTracingId: Option[String],
-                 volumeTracingId: Option[String],
+                 annotationLayers: List[AnnotationLayer],
                  annotationType: AnnotationType,
                  name: Option[String],
                  description: String): Fox[Annotation] =
     for {
       teamId <- selectSuitableTeam(user, dataSet)
-      annotationLayers <- AnnotationLayer.layersFromIds(skeletonTracingId, volumeTracingId)
       annotation = Annotation(ObjectId.generate,
                               dataSet._id,
                               None,
@@ -752,7 +750,7 @@ class AnnotationService @Inject()(
         "typ" -> annotation.typ,
         "stats" -> annotation.statistics,
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
-        "annotationLayers" -> Json.toJson(annotation.annotationLayers),
+        "annotationLayers" -> annotation.annotationLayers,
         "dataSetName" -> dataSet.name,
         "organization" -> organization.name,
         "visibility" -> annotation.visibility,

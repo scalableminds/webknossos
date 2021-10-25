@@ -5,7 +5,6 @@ import java.io.File
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl._
-import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -121,10 +120,10 @@ Expects:
                 SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
                 persistTracing = true)
             }
+            annotationLayers <- AnnotationLayer.layersFromIds(mergedSkeletonTracingIdOpt, mergedVolumeTracingIdOpt)
             annotation <- annotationService.createFrom(request.identity,
                                                        dataSet,
-                                                       mergedSkeletonTracingIdOpt,
-                                                       mergedVolumeTracingIdOpt,
+                                                       annotationLayers,
                                                        AnnotationType.Explorational,
                                                        name,
                                                        description)
@@ -261,6 +260,7 @@ Expects:
       } yield result
     }
 
+  // TODO: select versions per layer
   private def downloadExplorational(annotationId: String,
                                     typ: String,
                                     issuingUser: User,
@@ -271,14 +271,12 @@ Expects:
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        skeletonTracingIdOpt <- annotation.skeletonTracingId
-        skeletonTracingId <- skeletonTracingIdOpt.toFox
-        tracing <- tracingStoreClient.getSkeletonTracing(skeletonTracingId, skeletonVersion)
+        fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
+          tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        (nmlWriter.toNmlStream(Some(tracing),
-                               None,
+        (nmlWriter.toNmlStream(fetchedAnnotationLayers,
                                Some(annotation),
                                dataSet.scale,
                                None,
@@ -291,24 +289,23 @@ Expects:
     def volumeOrHybridToDownloadStream(dataSet: DataSet,
                                        annotation: Annotation,
                                        name: String,
-                                       organizationName: String) =
+                                       organizationName: String): Fox[(Enumerator[Array[Byte]], String)] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        volumeTracingIds = annotation.volumeAnnotationLayers.map(_.tracingId)
-        volumeTracingsWithData: List[(VolumeTracing, Option[Source[ByteString, _]])] <- Fox.serialCombined(
-          volumeTracingIds) { volumeTracingId =>
-          tracingStoreClient.getVolumeTracing(volumeTracingId, volumeVersion, skipVolumeData)
+        fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
+          volumeAnnotationLayer =>
+            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData)
         }
-        skeletonTracingIdOpt <- annotation.skeletonTracingId
-        skeletonTracingOpt <- Fox.runOptional(skeletonTracingIdOpt)(skeletonId =>
-          tracingStoreClient.getSkeletonTracing(skeletonId, skeletonVersion))
+        fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
+          skeletonAnnotationLayer =>
+            tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
+        }
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
         val nmlStream = NamedEnumeratorStream(
           name + ".nml",
-          nmlWriter.toNmlStream(skeletonTracingOpt,
-                                volumeTracingsWithData.map(_._1), // volume tracing objects
+          nmlWriter.toNmlStream(fetchedSkeletonLayers ::: fetchedVolumeLayers,
                                 Some(annotation),
                                 dataSet.scale,
                                 None,
@@ -316,12 +313,10 @@ Expects:
                                 Some(user),
                                 taskOpt)
         )
-        val dataEnumerators = volumeTracingsWithData
-          .flatMap(_._2)
-          .map(d => Enumerator.fromStream(d.runWith(StreamConverters.asInputStream())))
-        val dataStreams: List[NamedEnumeratorStream] = dataEnumerators.zipWithIndex.map {
-          case (data, index) => NamedEnumeratorStream(s"data_${index}.zip", data)
-        } // todo: use layer names?
+        val dataStreams: List[NamedEnumeratorStream] =
+          fetchedVolumeLayers.filter(_.volumeDataOpt.isDefined).zipWithIndex.flatMap {
+            case (volumeLayer, index) => volumeLayer.namedVolumeDataEnumerator(index)
+          }
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             nmlStream :: dataStreams,

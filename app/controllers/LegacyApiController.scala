@@ -2,16 +2,26 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
+import models.annotation.AnnotationLayerType
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import oxalis.security.WkEnv
 import play.api.http.HttpEntity
-import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
+
+case class LegacyCreateExplorationalParameters(typ: String,
+                                               fallbackLayerName: Option[String],
+                                               resolutionRestrictions: Option[ResolutionRestrictions])
+object LegacyCreateExplorationalParameters {
+  implicit val jsonFormat: OFormat[LegacyCreateExplorationalParameters] =
+    Json.format[LegacyCreateExplorationalParameters]
+}
 
 class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     taskController: TaskController,
@@ -159,10 +169,28 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     }
 
   def annotationCreateExplorational(organizationName: String,
-                                    dataSetName: String): Action[CreateExplorationalParameters] =
-    sil.SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
+                                    dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+    sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
+      val skeletonParameters =
+        if (request.body.typ == "volume") None
+        else
+          Some(
+            CreateExplorationalParameters(AnnotationLayerType.Skeleton,
+                                          request.body.fallbackLayerName,
+                                          request.body.resolutionRestrictions,
+                                          name = None))
+      val volumeParameters =
+        if (request.body.typ == "skeleton") None
+        else
+          Some(
+            CreateExplorationalParameters(AnnotationLayerType.Volume,
+                                          request.body.fallbackLayerName,
+                                          request.body.resolutionRestrictions,
+                                          name = None))
+      val adaptedParameters: List[CreateExplorationalParameters] = List(skeletonParameters, volumeParameters).flatten
       for {
-        result <- annotationController.createExplorational(organizationName, dataSetName)(request)
+        result <- annotationController.createExplorational(organizationName, dataSetName)(
+          request.withBody(adaptedParameters))
       } yield replaceVisibilityInResultJson(result)
     }
 

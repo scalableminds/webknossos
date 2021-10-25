@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import javax.inject.Inject
-import models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
@@ -108,7 +107,8 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {
       rList <- run(sql"select _annotation from webknossos.annotation_layers where tracingId = $tracingId".as[String])
-      parsed <- rList.headOption.flatMap(ObjectId.parse)
+      head: String <- rList.headOption.toFox
+      parsed <- ObjectId.parse(head)
     } yield parsed
 
   def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String)(

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBox, Color, NamedBoundingBox, Point3D, Vector3D}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
-import models.annotation.Annotation
+import models.annotation.{Annotation, FetchedAnnotationLayer}
 import models.task.Task
 import models.user.User
 import org.joda.time.DateTime
@@ -34,8 +34,7 @@ case class NmlParameters(
 class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(skeletonTracing: Option[SkeletonTracing],
-                  volumeTracing: Option[VolumeTracing],
+  def toNmlStream(annotationLayers: List[FetchedAnnotationLayer],
                   annotation: Option[Annotation],
                   scale: Option[Scale],
                   volumeFilename: Option[String],

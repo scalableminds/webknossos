@@ -100,6 +100,8 @@ const defaultState: OxalisState = {
       initializedGpuFactor: Constants.GPU_FACTOR_MULTIPLIER,
       maximumLayerCountToRender: 32,
     },
+    preferredQualityForMeshPrecomputation: 2,
+    preferredQualityForMeshAdHocComputation: 2,
   },
   task: null,
   dataset: {

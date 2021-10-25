@@ -372,6 +372,8 @@ export type TemporaryConfiguration = {
     +initializedGpuFactor: number,
     +maximumLayerCountToRender: number,
   },
+  +preferredQualityForMeshPrecomputation: number,
+  +preferredQualityForMeshAdHocComputation: number,
 };
 
 export type Script = APIScript;

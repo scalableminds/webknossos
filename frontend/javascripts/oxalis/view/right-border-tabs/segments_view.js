@@ -1,5 +1,5 @@
 // @flow
-import { Button, List, Tooltip, Dropdown, Menu, Select, Radio, Popover } from "antd";
+import { Button, List, Tooltip, Dropdown, Menu, Select, Popover } from "antd";
 import {
   DeleteOutlined,
   LoadingOutlined,
@@ -55,6 +55,7 @@ import {
   getVisibleSegmentationLayer,
   getResolutionInfoOfVisibleSegmentationLayer,
   getMappingInfo,
+  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
@@ -69,7 +70,6 @@ const { Option } = Select;
 
 // Interval in ms to check for running mesh file computation jobs for this dataset
 const refreshInterval = 5000;
-const defaultMeshfileGenerationResolutionIndex = 2;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -99,6 +99,9 @@ type StateProps = {|
   currentMeshFile: ?string,
   activeUser: ?APIUser,
   activeCellId: ?number,
+  preferredQualityForMeshPrecomputation: number,
+  preferredQualityForMeshAdHocComputation: number,
+  resolutionInfoOfVisibleSegmentationLayer: ResolutionInfo,
 |};
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -131,6 +134,11 @@ const mapStateToProps = (state: OxalisState): StateProps => {
         ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
         : null,
     activeUser: state.activeUser,
+    preferredQualityForMeshPrecomputation:
+      state.temporaryConfiguration.preferredQualityForMeshPrecomputation,
+    preferredQualityForMeshAdHocComputation:
+      state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+    resolutionInfoOfVisibleSegmentationLayer: getResolutionInfoOfVisibleSegmentationLayer(state),
   };
 };
 
@@ -190,6 +198,16 @@ const getSortedSegments = memoizeOne((segments: ?SegmentMap) =>
   _.sortBy(segments ? Array.from(segments.values()) : [], "id"),
 );
 
+const formatMagWithLabel = (mag: Vector3, index: number) => {
+  // index refers to the array of available mags. Thus, we can directly
+  // use that index to pick an adequate label.
+  const labels = ["Highest", "High", "Medium", "Low", "Very Low"];
+  if (index < labels.length) {
+    return `${labels[index]} (Mag ${mag.join("-")})`;
+  }
+  return `Mag ${mag.join("-")}`;
+};
+
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
 
@@ -228,7 +246,7 @@ class SegmentsView extends React.Component<Props, State> {
       switch (activeJob.state) {
         case "SUCCESS": {
           Toast.success(
-            'The computation of a mesh file for this dataset has finished. You can now use the "Load Precomputed Mesh" functionality in the "Meshes" tab.',
+            'The computation of a mesh file for this dataset has finished. You can now use the "Load Mesh (precomputed)" functionality in the context menu.',
           );
           this.setState({ activeMeshJobId: null });
           // maybeFetchMeshFiles will fetch the new mesh file and also activate it if no other mesh file
@@ -342,15 +360,18 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   startComputingMeshfile = async () => {
-    const datasetResolutionInfo = getResolutionInfoOfVisibleSegmentationLayer(Store.getState());
+    const {
+      preferredQualityForMeshPrecomputation,
+      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+    } = this.props;
     const defaultOrHigherIndex = datasetResolutionInfo.getIndexOrClosestHigherIndex(
-      defaultMeshfileGenerationResolutionIndex,
+      preferredQualityForMeshPrecomputation,
     );
 
     const meshfileResolutionIndex =
       defaultOrHigherIndex != null
         ? defaultOrHigherIndex
-        : datasetResolutionInfo.getClosestExistingIndex(defaultMeshfileGenerationResolutionIndex);
+        : datasetResolutionInfo.getClosestExistingIndex(preferredQualityForMeshPrecomputation);
 
     const meshfileResolution = datasetResolutionInfo.getResolutionByIndexWithFallback(
       meshfileResolutionIndex,
@@ -392,37 +413,50 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  handleQualityChange = () => {
-    // todo
-  };
+  handleQualityChangeForPrecomputation = (resolutionIndex: number) =>
+    Store.dispatch(
+      updateTemporarySettingAction("preferredQualityForMeshPrecomputation", resolutionIndex),
+    );
+
+  handleQualityChangeForAdHocGeneration = (resolutionIndex: number) =>
+    Store.dispatch(
+      updateTemporarySettingAction("preferredQualityForMeshAdHocComputation", resolutionIndex),
+    );
 
   getAdHocMeshSettings = () => {
+    const {
+      preferredQualityForMeshAdHocComputation,
+      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+    } = this.props;
     return (
       <div>
-        <div>
+        <Tooltip title="The higher the quality, the more computational resources are required">
           <div>Quality for Ad-Hoc Mesh Computation:</div>
-          <Radio.Group size="small" onChange={this.handleQualityChange} style={{ width: 350 }}>
-            <Radio.Button value="low">Low (Mag 4)</Radio.Button>
-            <Radio.Button value="medium">Medium (Mag 2)</Radio.Button>
-            <Radio.Button value="high">High (Mag 1)</Radio.Button>
-            <Radio.Button value="custom">Custom</Radio.Button>
-          </Radio.Group>
-        </div>
-        <div style={{ marginTop: 8 }}>
-          <div>Custom:</div>
-          <Select size="small" style={{ width: 220 }}>
-            <Option>High</Option>
-            <Option>Small</Option>
-            <Option>Low</Option>
-            <Option>Custom</Option>
-          </Select>
-        </div>
+        </Tooltip>
+        <Select
+          size="small"
+          style={{ width: 220 }}
+          value={preferredQualityForMeshAdHocComputation}
+          onChange={this.handleQualityChangeForAdHocGeneration}
+        >
+          {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index) => (
+            <Option value={log2Index} key={log2Index}>
+              {formatMagWithLabel(mag, index)}
+            </Option>
+          ))}
+        </Select>
       </div>
     );
   };
 
   getPreComputeMeshesPopover = () => {
     const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
+
+    const {
+      preferredQualityForMeshPrecomputation,
+      resolutionInfoOfVisibleSegmentationLayer: datasetResolutionInfo,
+    } = this.props;
+
     return (
       <div style={{ maxWidth: 500 }}>
         <h3>Precompute Meshes</h3>
@@ -434,26 +468,28 @@ class SegmentsView extends React.Component<Props, State> {
         </p>
 
         <div>
-          <div>Quality for Mesh Precomputation:</div>
-          <Radio.Group size="small" onChange={this.handleQualityChange} style={{ width: 450 }}>
-            <Radio.Button value="high">High (Mag 1)</Radio.Button>
-            <Radio.Button value="medium">Medium (Mag 2)</Radio.Button>
-            <Radio.Button value="low">Low (Mag 4)</Radio.Button>
-            <Radio.Button value="custom">Custom</Radio.Button>
-          </Radio.Group>
-        </div>
-        <div style={{ marginTop: 8 }}>
-          <div>Custom</div>
-          <Select size="small" style={{ width: 220 }}>
-            <Option>Mag 1</Option>
-            <Option>Mag 2</Option>
-            <Option>Mag 4</Option>
-            <Option>Mag 8</Option>
+          <div>
+            <Tooltip title="The higher the quality, the more computational resources are required">
+              Quality for Mesh Precomputation:
+            </Tooltip>
+          </div>
+
+          <Select
+            size="small"
+            style={{ width: 220 }}
+            value={preferredQualityForMeshPrecomputation}
+            onChange={this.handleQualityChangeForPrecomputation}
+          >
+            {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index) => (
+              <Option value={log2Index} key={log2Index}>
+                {formatMagWithLabel(mag, index)}
+              </Option>
+            ))}
           </Select>
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
-          <Tooltip key="tooltip" title={title}>
+          <Tooltip title={title}>
             <Button
               size="large"
               loading={this.state.activeMeshJobId != null}

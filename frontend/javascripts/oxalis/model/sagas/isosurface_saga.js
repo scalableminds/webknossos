@@ -191,7 +191,9 @@ function* getInfoForIsosurfaceLoading(
   const dataset = yield* select(state => state.dataset);
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
-  const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
+  const preferredZoomStep = yield* select(
+    state => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
+  );
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
   return { dataset, layer, zoomStep, resolutionInfo };
 }

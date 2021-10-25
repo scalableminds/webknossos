@@ -48,7 +48,9 @@ import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class DownloadAnnotation(skeletonTracingOpt: Option[SkeletonTracing],
+case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
+                              volumeTracingIdOpt: Option[String],
+                              skeletonTracingOpt: Option[SkeletonTracing],
                               volumeTracingOpt: Option[VolumeTracing],
                               volumeDataOpt: Option[Array[Byte]],
                               name: String,
@@ -489,8 +491,10 @@ class AnnotationService @Inject()(
       ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
       downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
-      nmlsAndNames = downloadAnnotations.flatten.map {
-        case DownloadAnnotation(skeletonTracingOpt,
+      nmlsAndNames <- Fox.serialCombined(downloadAnnotations.flatten) {
+        case DownloadAnnotation(skeletonTracingIdOpt,
+                                volumeTracingIdOpt,
+                                skeletonTracingOpt,
                                 volumeTracingOpt,
                                 volumeDataOpt,
                                 name,
@@ -499,18 +503,21 @@ class AnnotationService @Inject()(
                                 user,
                                 taskOpt,
                                 organizationName) =>
-          (nmlWriter.toNmlStream(skeletonTracingOpt,
-                                 volumeTracingOpt,
-                                 Some(annotation),
-                                 scaleOpt,
-                                 Some(name + "_data.zip"),
-                                 organizationName,
-                                 Some(user),
-                                 taskOpt),
-           name,
-           volumeDataOpt)
+          for {
+            fetchedAnnotationLayersForAnnotation <- FetchedAnnotationLayer.layersFromTracings(skeletonTracingIdOpt,
+                                                                                              volumeTracingIdOpt,
+                                                                                              skeletonTracingOpt,
+                                                                                              volumeTracingOpt,
+                                                                                              volumeDataOpt)
+            nml = nmlWriter.toNmlStream(fetchedAnnotationLayersForAnnotation,
+                                        Some(annotation),
+                                        scaleOpt,
+                                        Some(name + "_data.zip"),
+                                        organizationName,
+                                        Some(user),
+                                        taskOpt)
+          } yield (nml, name, volumeDataOpt)
       }
-
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
 
@@ -523,7 +530,20 @@ class AnnotationService @Inject()(
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
         organizationName <- organizationDAO.findOrganizationNameForAnnotation(annotation._id)
-      } yield DownloadAnnotation(None, None, None, name, scaleOpt, annotation, user, taskOpt, organizationName)
+        skeletonTracingIdOpt <- annotation.skeletonTracingId
+        volumeTracingIdOpt <- annotation.volumeTracingId
+      } yield
+        DownloadAnnotation(skeletonTracingIdOpt,
+                           volumeTracingIdOpt,
+                           None,
+                           None,
+                           None,
+                           name,
+                           scaleOpt,
+                           annotation,
+                           user,
+                           taskOpt,
+                           organizationName)
 
     def getSkeletonTracings(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =
       for {

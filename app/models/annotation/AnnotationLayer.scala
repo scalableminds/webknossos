@@ -39,7 +39,7 @@ object AnnotationLayer extends FoxImplicits {
 case class FetchedAnnotationLayer(tracingId: String,
                                   name: Option[String],
                                   tracing: Either[SkeletonTracing, VolumeTracing],
-                                  volumeDataOpt: Option[Source[ByteString, _]]) {
+                                  volumeDataOpt: Option[Source[ByteString, _]] = None) {
   def typ: AnnotationLayerType =
     if (tracing.isLeft) AnnotationLayerType.Skeleton else AnnotationLayerType.Volume
 
@@ -48,10 +48,10 @@ case class FetchedAnnotationLayer(tracingId: String,
 
   def namedVolumeDataEnumerator(index: Int)(implicit ec: ExecutionContext,
                                             materializer: Materializer): Option[NamedEnumeratorStream] =
-    volumeDataEnumerator.map(enumerator => NamedEnumeratorStream(dataZipName(index), enumerator))
+    volumeDataEnumerator.map(enumerator => NamedEnumeratorStream(volumeDataZipName(index), enumerator))
 
-  def dataZipName(index: Int): String =
-    name.map(n => s"data_${index}_${n}.zip").getOrElse(s"data_${index}.zip")
+  def volumeDataZipName(index: Int): String =
+    name.map(n => s"data_${index}_$n.zip").getOrElse(s"data_${index}.zip")
 }
 
 object FetchedAnnotationLayer {
@@ -70,4 +70,21 @@ object FetchedAnnotationLayer {
         volumeDataOpt
       )
     }
+
+  def layersFromTracings(
+      skeletonTracingIdOpt: Option[String],
+      volumeTracingIdOpt: Option[String],
+      skeletonTracingOpt: Option[SkeletonTracing],
+      volumeTracingOpt: Option[VolumeTracing],
+      volumeDataOpt: Option[Array[Byte]],
+      assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[FetchedAnnotationLayer]] =
+    for {
+      _ <- bool2Fox(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> "annotation.mismatchingSkeletonIdsAndTracings"
+      _ <- bool2Fox(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> "annotation.mismatchingVolumeIdsAndTracings"
+      annotationLayers: List[FetchedAnnotationLayer] = List(
+        skeletonTracingIdOpt.map(FetchedAnnotationLayer(_, None, Left(skeletonTracingOpt.get))),
+        volumeTracingIdOpt.map(FetchedAnnotationLayer(_, None, Right(volumeTracingOpt.get), volumeDataOpt))
+      ).flatten
+      _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
+    } yield annotationLayers
 }

@@ -2,8 +2,6 @@ package models.annotation
 
 import java.io.File
 
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
@@ -185,16 +183,6 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
       }
       fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
     } yield fetchedAnnotationLayer
-  }
-
-  def getVolumeDataStream(tracingId: String, version: Option[Long] = None): Fox[Source[ByteString, _]] = {
-    logger.debug("Called to get volume data (stream)." + baseInfo)
-    for {
-      data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allData")
-        .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-        .addQueryStringOptional("version", version.map(_.toString))
-        .getStream
-    } yield data
   }
 
   def getVolumeData(tracingId: String, version: Option[Long] = None): Fox[Array[Byte]] = {

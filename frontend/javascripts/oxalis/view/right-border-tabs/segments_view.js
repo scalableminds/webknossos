@@ -21,7 +21,14 @@ import type { ExtractReturn } from "libs/type_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 
 import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
-import type { OxalisState, Flycam, IsosurfaceInformation, Segment, SegmentMap } from "oxalis/store";
+import type {
+  OxalisState,
+  Flycam,
+  IsosurfaceInformation,
+  Segment,
+  SegmentMap,
+  ActiveMappingInfo,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import {
@@ -65,6 +72,7 @@ import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
 import Checkbox from "antd/lib/checkbox/Checkbox";
+import Model from "oxalis/model";
 
 const { Option } = Select;
 
@@ -86,7 +94,8 @@ const convertCellIdToCSS = (id: number, mappingColors) => {
 type StateProps = {|
   isosurfaces: { [segmentId: number]: IsosurfaceInformation },
   dataset: APIDataset,
-  mappingColors: ?Array<number>,
+  isJSONMappingEnabled: boolean,
+  mappingInfo: ActiveMappingInfo,
   flycam: Flycam,
   hasVolume: boolean,
   hoveredSegmentId: ?number,
@@ -106,6 +115,10 @@ type StateProps = {|
 
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const mappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+  );
   return {
     activeCellId: state.tracing.volume != null ? state.tracing.volume.activeCellId : null,
     isosurfaces:
@@ -113,10 +126,8 @@ const mapStateToProps = (state: OxalisState): StateProps => {
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
         : {},
     dataset: state.dataset,
-    mappingColors: getMappingInfo(
-      state.temporaryConfiguration.activeMappingByLayer,
-      visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
-    ).mappingColors,
+    isJSONMappingEnabled: mappingInfo.isMappingEnabled && mappingInfo.mappingType === "JSON",
+    mappingInfo,
     flycam: state.flycam,
     hasVolume: state.tracing.volume != null,
     hoveredSegmentId: state.temporaryConfiguration.hoveredSegmentId,
@@ -561,6 +572,10 @@ class SegmentsView extends React.Component<Props, State> {
     const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
     const allSegments = getSortedSegments(this.props.segments);
 
+    const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
+    const mapId =
+      visibleSegmentationLayer != null ? id => visibleSegmentationLayer.cube.mapId(id) : id => id;
+
     return (
       <div id={segmentsTabId} className="padded-tab-content">
         <DomVisibilityObserver targetId={segmentsTabId}>
@@ -584,6 +599,7 @@ class SegmentsView extends React.Component<Props, State> {
                   {allSegments.map(segment => (
                     <SegmentListItem
                       key={segment.id}
+                      mapId={mapId}
                       segment={segment}
                       centeredSegmentId={centeredSegmentId}
                       loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
@@ -653,7 +669,9 @@ const getComputeMeshAdHocMenuItem = (
 
 function _SegmentListItem({
   segment,
-  mappingColors,
+  mapId,
+  isJSONMappingEnabled,
+  mappingInfo,
   hoveredSegmentId,
   centeredSegmentId,
   selectedSegmentId,
@@ -672,7 +690,9 @@ function _SegmentListItem({
   currentMeshFile,
 }: {
   segment: Segment,
-  mappingColors: ?Array<number>,
+  mapId: number => number,
+  isJSONMappingEnabled: boolean,
+  mappingInfo: ActiveMappingInfo,
   hoveredSegmentId: ?number,
   centeredSegmentId: ?number,
   selectedSegmentId: ?number,
@@ -690,6 +710,10 @@ function _SegmentListItem({
   loadPrecomputedMeshForSegment: Segment => Promise<void>,
   currentMeshFile: ?string,
 }) {
+  const mappedId = mapId(segment.id);
+  if (mappingInfo.hideUnmappedIds && mappedId === 0) {
+    return null;
+  }
   const andCloseContextMenu = (_ignore: any) => handleSegmentDropdownMenuVisibility(0, false);
   const createSegmentContextMenu = () => (
     <Menu>
@@ -708,6 +732,24 @@ function _SegmentListItem({
     </Menu>
   );
 
+  function getSegmentIdDetails() {
+    if (isJSONMappingEnabled && segment.id !== mappedId)
+      return (
+        <Tooltip title="Segment ID (Unmapped ID → Mapped ID)">
+          <span className="deemphasized-segment-name">
+            {segment.id} → {mappedId}
+          </span>
+        </Tooltip>
+      );
+
+    // Only if segment.name is truthy, render additional info.
+    return segment.name ? (
+      <Tooltip title="Segment ID">
+        <span className="deemphasized-segment-name">{segment.id}</span>
+      </Tooltip>
+    ) : null;
+  }
+
   return (
     <List.Item
       style={{ padding: "2px 5px" }}
@@ -722,7 +764,7 @@ function _SegmentListItem({
         setHoveredSegmentId(null);
       }}
     >
-      {getColoredDotIconForSegment(segment.id, mappingColors)}
+      {getColoredDotIconForSegment(mappedId, mappingInfo.mappingColors)}
 
       <Dropdown
         overlay={createSegmentContextMenu}
@@ -748,11 +790,7 @@ function _SegmentListItem({
         <EllipsisOutlined onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)} />
       </Tooltip>
       {/* Show Default Segment Name if another one is already defined*/}
-      {segment.name ? (
-        <Tooltip title="Segment ID">
-          <span className="deemphasized-segment-name">{segment.id}</span>
-        </Tooltip>
-      ) : null}
+      {getSegmentIdDetails()}
       {segment.id === centeredSegmentId ? (
         <Tooltip title="This segment is currently centered in the data viewports.">
           <i className="fas fa-crosshairs deemphasized-segment-name" style={{ marginLeft: 4 }} />

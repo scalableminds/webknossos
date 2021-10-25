@@ -1,5 +1,15 @@
 // @flow
-import { Button, List, Tooltip, Dropdown, Menu, Select, Popover } from "antd";
+import {
+  Button,
+  ConfigProvider,
+  List,
+  Tooltip,
+  Dropdown,
+  Menu,
+  Select,
+  Popover,
+  Empty,
+} from "antd";
 import {
   DeleteOutlined,
   LoadingOutlined,
@@ -227,6 +237,15 @@ function _getMapIdFn(visibleSegmentationLayer: ?DataLayer) {
 }
 
 const getMapIdFn = memoizeOne(_getMapIdFn);
+
+function renderEmptyMeshFileSelect() {
+  return (
+    <Empty
+      image={Empty.PRESENTED_IMAGE_SIMPLE}
+      description="No mesh file found. Click the + icon to compute a mesh file."
+    />
+  );
+}
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
@@ -456,7 +475,9 @@ class SegmentsView extends React.Component<Props, State> {
         <Select
           size="small"
           style={{ width: 220 }}
-          value={preferredQualityForMeshAdHocComputation}
+          value={datasetResolutionInfo.getClosestExistingIndex(
+            preferredQualityForMeshAdHocComputation,
+          )}
           onChange={this.handleQualityChangeForAdHocGeneration}
         >
           {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index) => (
@@ -497,7 +518,9 @@ class SegmentsView extends React.Component<Props, State> {
           <Select
             size="small"
             style={{ width: 220 }}
-            value={preferredQualityForMeshPrecomputation}
+            value={datasetResolutionInfo.getClosestExistingIndex(
+              preferredQualityForMeshPrecomputation,
+            )}
             onChange={this.handleQualityChangeForPrecomputation}
           >
             {datasetResolutionInfo.getResolutionsWithIndices().map(([log2Index, mag], index) => (
@@ -528,25 +551,28 @@ class SegmentsView extends React.Component<Props, State> {
   getMeshesHeader = () => (
     <div>
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
-        <Select
-          style={{ width: 180, display: "inline-blck" }}
-          value={this.props.currentMeshFile}
-          onChange={this.handleMeshFileSelected}
-          size="small"
-          loading={this.props.availableMeshFiles == null}
-        >
-          {this.props.availableMeshFiles ? (
-            this.props.availableMeshFiles.map(meshFile => (
-              <Option key={meshFile} value={meshFile}>
-                {meshFile}
+        <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
+          <Select
+            style={{ width: 180, display: "inline-blck" }}
+            placeholder="Select a mesh file"
+            value={this.props.currentMeshFile}
+            onChange={this.handleMeshFileSelected}
+            size="small"
+            loading={this.props.availableMeshFiles == null}
+          >
+            {this.props.availableMeshFiles ? (
+              this.props.availableMeshFiles.map(meshFile => (
+                <Option key={meshFile} value={meshFile}>
+                  {meshFile}
+                </Option>
+              ))
+            ) : (
+              <Option value="null" disabled>
+                No files available.
               </Option>
-            ))
-          ) : (
-            <Option value="null" disabled>
-              No files available.
-            </Option>
-          )}
-        </Select>
+            )}
+          </Select>
+        </ConfigProvider>
       </Tooltip>
       <Tooltip title="Refresh list of available Mesh files">
         <ReloadOutlined
@@ -578,51 +604,62 @@ class SegmentsView extends React.Component<Props, State> {
   );
 
   render() {
-    const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
-    const allSegments = getSortedSegments(this.props.segments);
-
-    const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
-    const mapId = getMapIdFn(visibleSegmentationLayer);
-
     return (
       <div id={segmentsTabId} className="padded-tab-content">
         <DomVisibilityObserver targetId={segmentsTabId}>
-          {isVisibleInDom =>
-            !isVisibleInDom ? null : (
+          {isVisibleInDom => {
+            if (!isVisibleInDom) return null;
+
+            const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
+            const allSegments = getSortedSegments(this.props.segments);
+
+            const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
+            const mapId = getMapIdFn(visibleSegmentationLayer);
+
+            return (
               <React.Fragment>
                 {this.getMeshesHeader()}
 
-                <List
-                  size="small"
-                  split={false}
-                  style={{ marginTop: 12, flex: "1 1 auto", overflow: "auto" }}
-                  locale={{
-                    emptyText: `There are no segments yet.${
-                      this.props.allowUpdate
-                        ? " Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or hover existing segments to add them to this list."
-                        : "Select or hover existing segments to add them to this list."
-                    }`,
-                  }}
-                >
-                  {allSegments.map(segment => (
-                    <SegmentListItem
-                      key={segment.id}
-                      mapId={mapId}
-                      segment={segment}
-                      centeredSegmentId={centeredSegmentId}
-                      loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
-                      selectedSegmentId={this.state.selectedSegmentId}
-                      activeDropdownSegmentId={this.state.activeDropdownSegmentId}
-                      onSelectSegment={this.onSelectSegment}
-                      handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
-                      isosurface={this.props.isosurfaces[segment.id]}
-                      {...this.props}
-                    />
-                  ))}
-                </List>
+                {allSegments.length === 0 ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="No segments found. Use the volume annotation tools to add segments or hover over existing segments to add them here."
+                  />
+                ) : (
+                  <List
+                    size="small"
+                    split={false}
+                    style={{ marginTop: 12, flex: "1 1 auto", overflow: "auto" }}
+                    locale={{
+                      emptyText: `There are no segments yet.${
+                        this.props.allowUpdate
+                          ? " Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or hover existing segments to add them to this list."
+                          : "Select or hover existing segments to add them to this list."
+                      }`,
+                    }}
+                  >
+                    {allSegments.map(segment => (
+                      <SegmentListItem
+                        key={segment.id}
+                        mapId={mapId}
+                        segment={segment}
+                        centeredSegmentId={centeredSegmentId}
+                        loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
+                        selectedSegmentId={this.state.selectedSegmentId}
+                        activeDropdownSegmentId={this.state.activeDropdownSegmentId}
+                        onSelectSegment={this.onSelectSegment}
+                        handleSegmentDropdownMenuVisibility={
+                          this.handleSegmentDropdownMenuVisibility
+                        }
+                        isosurface={this.props.isosurfaces[segment.id]}
+                        {...this.props}
+                      />
+                    ))}
+                  </List>
+                )}
               </React.Fragment>
-            )
-          }
+            );
+          }}
         </DomVisibilityObserver>
       </div>
     );

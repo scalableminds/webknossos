@@ -8,6 +8,7 @@ import Dimension from "oxalis/model/dimensions";
 import { setUserBoundingBoxBoundsAction } from "oxalis/model/actions/annotation_actions";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { document } from "libs/window";
 
 const BOUNDING_BOX_HOVERING_THROTTLE_TIME = 100;
 

@@ -1,17 +1,21 @@
 // @flow
-import { Button, List, Tooltip, Dropdown, Menu } from "antd";
+import { Button, List, Tooltip, Dropdown, Menu, Select, Radio, Popover } from "antd";
 import {
   DeleteOutlined,
   LoadingOutlined,
   ReloadOutlined,
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
+  SettingOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { connect, useDispatch } from "react-redux";
 import React from "react";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
@@ -60,10 +64,8 @@ import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
 import Checkbox from "antd/lib/checkbox/Checkbox";
-import MenuItem from "antd/lib/menu/MenuItem";
 
-// $FlowIgnore[prop-missing] flow does not know that Dropdown has a Button
-const DropdownButton = Dropdown.Button;
+const { Option } = Select;
 
 // Interval in ms to check for running mesh file computation jobs for this dataset
 const refreshInterval = 5000;
@@ -73,6 +75,8 @@ export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
   cellIdIndex: 3, // Write cell index after the isosurfaceMarker
 };
+
+const segmentsTabId = "segment-list";
 
 const convertCellIdToCSS = (id: number, mappingColors) => {
   const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
@@ -181,6 +185,10 @@ type State = {
   activeMeshJobId: ?string,
   activeDropdownSegmentId: ?number,
 };
+
+const getSortedSegments = memoizeOne((segments: ?SegmentMap) =>
+  _.sortBy(segments ? Array.from(segments.values()) : [], "id"),
+);
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ?TimeoutID;
@@ -320,31 +328,6 @@ class SegmentsView extends React.Component<Props, State> {
     return this.loadPrecomputedMeshForIdAndPosition(id, pos);
   };
 
-  getComputeMeshAdHocHeaderButton = () => {
-    const { disabled, title } = getComputeMeshAdHocTooltipInfo(
-      true,
-      this.props.visibleSegmentationLayer != null,
-    );
-    return (
-      <Tooltip title={title}>
-        <Button
-          onClick={() => {
-            const pos = getPosition(this.props.flycam);
-            const id = getSegmentIdForPosition(pos);
-            if (id === 0) {
-              Toast.info("No segment found at centered position");
-            }
-            this.props.changeActiveIsosurfaceId(id, pos, true);
-          }}
-          disabled={disabled}
-          size="small"
-        >
-          Compute Mesh (ad hoc)
-        </Button>
-      </Tooltip>
-    );
-  };
-
   onSelectSegment = (segment: Segment) => {
     this.setState({ selectedSegmentId: segment.id });
     this.props.setPosition(segment.somePosition);
@@ -400,22 +383,6 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  getPrecomputeMeshesButton = () => {
-    const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
-    return (
-      <Tooltip key="tooltip" title={title}>
-        <Button
-          size="small"
-          loading={this.state.activeMeshJobId != null}
-          onClick={this.startComputingMeshfile}
-          disabled={disabled}
-        >
-          Precompute Meshes
-        </Button>
-      </Tooltip>
-    );
-  };
-
   handleMeshFileSelected = async (mesh: { key: string }) => {
     if (mesh.key === "refresh") {
       maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
@@ -425,105 +392,178 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  getMeshFilesDropdown = () => (
-    <Menu onClick={this.handleMeshFileSelected}>
-      <MenuItem key="refresh" icon={<ReloadOutlined />}>
-        Reload from Server.
-      </MenuItem>
-      {this.props.availableMeshFiles ? (
-        this.props.availableMeshFiles.map(meshFile => (
-          <Menu.Item key={meshFile} value={meshFile}>
-            {meshFile}
-          </Menu.Item>
-        ))
-      ) : (
-        <MenuItem key="no files" disabled>
-          No files available.
-        </MenuItem>
-      )}
-    </Menu>
-  );
+  handleQualityChange = () => {
+    // todo
+  };
 
-  getLoadPrecomputedMeshButton = () => {
-    const hasCurrentMeshFile = this.props.currentMeshFile;
+  getAdHocMeshSettings = () => {
     return (
-      <Tooltip
-        key="tooltip"
-        title={
-          this.props.currentMeshFile != null
-            ? `Load mesh for centered segment from file ${this.props.currentMeshFile}`
-            : "There is no mesh file."
-        }
-      >
-        <DropdownButton
-          size="small"
-          trigger="click"
-          onClick={this.loadPrecomputedMeshForCentered}
-          overlay={this.getMeshFilesDropdown()}
-          buttonsRender={([leftButton, rightButton]) => [
-            React.cloneElement(leftButton, {
-              disabled: !hasCurrentMeshFile,
-              style: { borderRightStyle: "dashed" },
-            }),
-            React.cloneElement(rightButton, { style: { borderLeftStyle: "dashed" } }),
-          ]}
-        >
-          Load Precomputed Mesh
-        </DropdownButton>
-      </Tooltip>
+      <div>
+        <div>
+          <div>Quality for Ad-Hoc Mesh Computation:</div>
+          <Radio.Group size="small" onChange={this.handleQualityChange} style={{ width: 350 }}>
+            <Radio.Button value="low">Low (Mag 4)</Radio.Button>
+            <Radio.Button value="medium">Medium (Mag 2)</Radio.Button>
+            <Radio.Button value="high">High (Mag 1)</Radio.Button>
+            <Radio.Button value="custom">Custom</Radio.Button>
+          </Radio.Group>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <div>Custom:</div>
+          <Select size="small" style={{ width: 220 }}>
+            <Option>High</Option>
+            <Option>Small</Option>
+            <Option>Low</Option>
+            <Option>Custom</Option>
+          </Select>
+        </div>
+      </div>
+    );
+  };
+
+  getPreComputeMeshesPopover = () => {
+    const { disabled, title } = this.getPrecomputeMeshesTooltipInfo();
+    return (
+      <div style={{ maxWidth: 500 }}>
+        <h3>Precompute Meshes</h3>
+        <p>
+          Mesh visualizations can be very helpful when exploring segmentations. webKnossos can
+          precompute all meshes for a segmentation layer. Once the precomputation has finished,
+          individual meshes can be loaded very quickly. As an alternative, you can use the ad-hoc
+          mesh functionality which is a bit slower but does not require pre-computation.
+        </p>
+
+        <div>
+          <div>Quality for Mesh Precomputation:</div>
+          <Radio.Group size="small" onChange={this.handleQualityChange} style={{ width: 450 }}>
+            <Radio.Button value="high">High (Mag 1)</Radio.Button>
+            <Radio.Button value="medium">Medium (Mag 2)</Radio.Button>
+            <Radio.Button value="low">Low (Mag 4)</Radio.Button>
+            <Radio.Button value="custom">Custom</Radio.Button>
+          </Radio.Group>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <div>Custom</div>
+          <Select size="small" style={{ width: 220 }}>
+            <Option>Mag 1</Option>
+            <Option>Mag 2</Option>
+            <Option>Mag 4</Option>
+            <Option>Mag 8</Option>
+          </Select>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+          <Tooltip key="tooltip" title={title}>
+            <Button
+              size="large"
+              loading={this.state.activeMeshJobId != null}
+              type="primary"
+              disabled={disabled}
+              onClick={this.startComputingMeshfile}
+            >
+              Precompute Meshes
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
     );
   };
 
   getMeshesHeader = () => (
-    <React.Fragment>
-      <div className="antd-legacy-group">
-        {/* Only show option for ad-hoc computation if no mesh file is available */
-        this.props.currentMeshFile ? null : this.getComputeMeshAdHocHeaderButton()}
-        {this.props.currentMeshFile
-          ? this.getLoadPrecomputedMeshButton()
-          : this.getPrecomputeMeshesButton()}
-      </div>
-    </React.Fragment>
+    <div>
+      <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
+        <Select
+          style={{ width: 180, display: "inline-blck" }}
+          value={this.props.currentMeshFile}
+          onChange={this.handleMeshFileSelected}
+          size="small"
+          loading={this.props.availableMeshFiles == null}
+        >
+          {this.props.availableMeshFiles ? (
+            this.props.availableMeshFiles.map(meshFile => (
+              <Option key={meshFile} value={meshFile}>
+                {meshFile}
+              </Option>
+            ))
+          ) : (
+            <Option value="null" disabled>
+              No files available.
+            </Option>
+          )}
+        </Select>
+      </Tooltip>
+      <Tooltip title="Refresh list of available Mesh files">
+        <ReloadOutlined
+          key="refresh"
+          onClick={() =>
+            maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true)
+          }
+          style={{ marginLeft: 8 }}
+        >
+          Reload from Server
+        </ReloadOutlined>
+      </Tooltip>
+      <Popover content={this.getPreComputeMeshesPopover} trigger="click">
+        <Tooltip title="Add a precomputed mesh file">
+          <PlusOutlined />
+        </Tooltip>
+      </Popover>
+      {this.state.activeMeshJobId != null ? (
+        <Tooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
+          <LoadingOutlined />
+        </Tooltip>
+      ) : null}
+      <Tooltip title="Configure ad-hoc mesh computation">
+        <Popover content={this.getAdHocMeshSettings} trigger="click">
+          <SettingOutlined />
+        </Popover>
+      </Tooltip>
+    </div>
   );
 
   render() {
     const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
-    const allSegments = _.sortBy(
-      this.props.segments ? Array.from(this.props.segments.values()) : [],
-      "id",
-    );
+    const allSegments = getSortedSegments(this.props.segments);
 
     return (
-      <div className="padded-tab-content">
-        {this.getMeshesHeader()}
+      <div id={segmentsTabId} className="padded-tab-content">
+        <DomVisibilityObserver targetId={segmentsTabId}>
+          {isVisibleInDom =>
+            !isVisibleInDom ? null : (
+              <React.Fragment>
+                {this.getMeshesHeader()}
 
-        <List
-          size="small"
-          split={false}
-          style={{ marginTop: 12 }}
-          locale={{
-            emptyText: `There are no segments yet.${
-              this.props.allowUpdate
-                ? " Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or hover existing segments to add them to this list."
-                : "Select or hover existing segments to add them to this list."
-            }`,
-          }}
-        >
-          {allSegments.map(segment => (
-            <SegmentListItem
-              key={segment.id}
-              segment={segment}
-              centeredSegmentId={centeredSegmentId}
-              loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
-              selectedSegmentId={this.state.selectedSegmentId}
-              activeDropdownSegmentId={this.state.activeDropdownSegmentId}
-              onSelectSegment={this.onSelectSegment}
-              handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
-              isosurface={this.props.isosurfaces[segment.id]}
-              {...this.props}
-            />
-          ))}
-        </List>
+                <List
+                  size="small"
+                  split={false}
+                  style={{ marginTop: 12, flex: "1 1 auto", overflow: "auto" }}
+                  locale={{
+                    emptyText: `There are no segments yet.${
+                      this.props.allowUpdate
+                        ? " Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or hover existing segments to add them to this list."
+                        : "Select or hover existing segments to add them to this list."
+                    }`,
+                  }}
+                >
+                  {allSegments.map(segment => (
+                    <SegmentListItem
+                      key={segment.id}
+                      segment={segment}
+                      centeredSegmentId={centeredSegmentId}
+                      loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
+                      selectedSegmentId={this.state.selectedSegmentId}
+                      activeDropdownSegmentId={this.state.activeDropdownSegmentId}
+                      onSelectSegment={this.onSelectSegment}
+                      handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
+                      isosurface={this.props.isosurfaces[segment.id]}
+                      {...this.props}
+                    />
+                  ))}
+                </List>
+              </React.Fragment>
+            )
+          }
+        </DomVisibilityObserver>
       </div>
     );
   }
@@ -575,7 +615,7 @@ const getComputeMeshAdHocMenuItem = (
   );
 };
 
-function SegmentListItem({
+function _SegmentListItem({
   segment,
   mappingColors,
   hoveredSegmentId,
@@ -672,7 +712,7 @@ function SegmentListItem({
         <EllipsisOutlined onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)} />
       </Tooltip>
       {/* Show Default Segment Name if another one is already defined*/}
-      {segment.name != null ? (
+      {segment.name ? (
         <Tooltip title="Segment ID">
           <span className="deemphasized-segment-name">{segment.id}</span>
         </Tooltip>
@@ -704,7 +744,9 @@ function SegmentListItem({
   );
 }
 
-function MeshInfoItem(props: {
+const SegmentListItem = React.memo(_SegmentListItem);
+
+function _MeshInfoItem(props: {
   segment: Segment,
   isSelectedInList: boolean,
   isHovered: boolean,
@@ -731,7 +773,7 @@ function MeshInfoItem(props: {
             props.handleSegmentDropdownMenuVisibility(segment.id, true);
           }}
         >
-          No mesh loaded. Use the context menu to do generate one.
+          No mesh loaded. Use the context menu to generate one.
         </div>
       );
     }
@@ -819,6 +861,8 @@ function MeshInfoItem(props: {
     </div>
   );
 }
+
+const MeshInfoItem = React.memo(_MeshInfoItem);
 
 function getColoredDotIconForSegment(segmentId: number, mappingColors) {
   return (

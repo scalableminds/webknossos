@@ -507,8 +507,7 @@ class AnnotationService @Inject()(
             fetchedAnnotationLayersForAnnotation <- FetchedAnnotationLayer.layersFromTracings(skeletonTracingIdOpt,
                                                                                               volumeTracingIdOpt,
                                                                                               skeletonTracingOpt,
-                                                                                              volumeTracingOpt,
-                                                                                              volumeDataOpt)
+                                                                                              volumeTracingOpt)
             nml = nmlWriter.toNmlStream(fetchedAnnotationLayersForAnnotation,
                                         Some(annotation),
                                         scaleOpt,

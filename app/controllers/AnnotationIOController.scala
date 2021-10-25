@@ -314,8 +314,8 @@ Expects:
                                 taskOpt)
         )
         val dataStreams: List[NamedEnumeratorStream] =
-          fetchedVolumeLayers.filter(_.volumeDataOpt.isDefined).zipWithIndex.flatMap {
-            case (volumeLayer, index) => volumeLayer.namedVolumeDataEnumerator(index)
+          fetchedVolumeLayers.zipWithIndex.flatMap {
+            case (volumeLayer, index) => volumeLayer.namedVolumeDataEnumerator(index, fetchedVolumeLayers.length == 1)
           }
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(

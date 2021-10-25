@@ -78,9 +78,10 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           _ = writeParameters(parameters)
           _ = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton).map(_.tracing).foreach {
             case Left(skeletonTracing) => writeSkeletonThings(skeletonTracing)
+            case _                     => ()
           }
           _ = volumeLayers.zipWithIndex.foreach {
-            case (volumeLayer, index) => writeVolumeThings(volumeLayer, index, volumeFilename)
+            case (volumeLayer, index) => writeVolumeThings(volumeLayer, index, volumeLayers.length == 1, volumeFilename)
           }
         } yield ()
       }
@@ -189,13 +190,16 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     }
 
   // Write volume things from FetchedAnnotationLayer. Caller must ensure that it is a volume annotation layer
-  def writeVolumeThings(volumeLayer: FetchedAnnotationLayer, index: Int, volumeFilename: Option[String])(
-      implicit writer: XMLStreamWriter): Unit =
+  def writeVolumeThings(volumeLayer: FetchedAnnotationLayer,
+                        index: Int,
+                        isSingle: Boolean,
+                        volumeFilename: Option[String])(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("volume") {
       writer.writeAttribute("id", index.toString)
-      writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index)))
+      writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
       volumeLayer.tracing match {
         case Right(volumeTracing) => volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
+        case _                    => ()
       }
     }
 

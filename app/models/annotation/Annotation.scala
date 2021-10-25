@@ -111,8 +111,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
       parsed <- ObjectId.parse(head)
     } yield parsed
 
-  def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String): Fox[Unit] =
     for {
       _ <- run(
         sqlu"update webknossos.annotation_layers set tracingId = $newTracingId where annotationId = $annotationId and tracingId = $oldTracingId")
@@ -318,6 +317,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     } yield ()
 
   // todo: when to insert tracing ids?
+  // Task only, thus hard replacing tracing ids
   def updateInitialized(a: Annotation): Fox[Unit] =
     for {
       _ <- run(sqlu"""

@@ -46,12 +46,16 @@ case class FetchedAnnotationLayer(tracingId: String,
   def volumeDataEnumerator(implicit ec: ExecutionContext, materializer: Materializer): Option[Enumerator[Array[Byte]]] =
     volumeDataOpt.map(d => Enumerator.fromStream(d.runWith(StreamConverters.asInputStream())))
 
-  def namedVolumeDataEnumerator(index: Int)(implicit ec: ExecutionContext,
-                                            materializer: Materializer): Option[NamedEnumeratorStream] =
-    volumeDataEnumerator.map(enumerator => NamedEnumeratorStream(volumeDataZipName(index), enumerator))
+  def namedVolumeDataEnumerator(index: Int, isSingle: Boolean)(
+      implicit ec: ExecutionContext,
+      materializer: Materializer): Option[NamedEnumeratorStream] =
+    volumeDataEnumerator.map(enumerator => NamedEnumeratorStream(volumeDataZipName(index, isSingle), enumerator))
 
-  def volumeDataZipName(index: Int): String =
-    name.map(n => s"data_${index}_$n.zip").getOrElse(s"data_${index}.zip")
+  def volumeDataZipName(index: Int, isSingle: Boolean): String = {
+    val indexLabel = if (isSingle) "" else s"_$index"
+    val nameLabel = name.map(n => s"_$n").getOrElse("")
+    s"data$indexLabel$nameLabel.zip"
+  }
 }
 
 object FetchedAnnotationLayer {
@@ -71,19 +75,19 @@ object FetchedAnnotationLayer {
       )
     }
 
+  // To support compound download. There, at most one skeleton tracing and at most one volume tracing exist per annotation. Volume data is handled separately there.
   def layersFromTracings(
       skeletonTracingIdOpt: Option[String],
       volumeTracingIdOpt: Option[String],
       skeletonTracingOpt: Option[SkeletonTracing],
       volumeTracingOpt: Option[VolumeTracing],
-      volumeDataOpt: Option[Array[Byte]],
       assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[FetchedAnnotationLayer]] =
     for {
       _ <- bool2Fox(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> "annotation.mismatchingSkeletonIdsAndTracings"
       _ <- bool2Fox(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> "annotation.mismatchingVolumeIdsAndTracings"
       annotationLayers: List[FetchedAnnotationLayer] = List(
         skeletonTracingIdOpt.map(FetchedAnnotationLayer(_, None, Left(skeletonTracingOpt.get))),
-        volumeTracingIdOpt.map(FetchedAnnotationLayer(_, None, Right(volumeTracingOpt.get), volumeDataOpt))
+        volumeTracingIdOpt.map(FetchedAnnotationLayer(_, None, Right(volumeTracingOpt.get)))
       ).flatten
       _ <- bool2Fox(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
     } yield annotationLayers

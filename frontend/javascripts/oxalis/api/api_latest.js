@@ -128,7 +128,7 @@ import UserLocalStorage from "libs/user_local_storage";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/meshes_view_helper";
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";

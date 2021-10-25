@@ -33,7 +33,7 @@ import {
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/meshes_view_helper";
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";

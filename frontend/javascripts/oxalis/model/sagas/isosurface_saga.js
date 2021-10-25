@@ -109,17 +109,16 @@ function clipPositionToCubeBoundary(
   return clippedPosition;
 }
 
+// front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
+const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
 function getNeighborPosition(
   clippedPosition: Vector3,
   neighborId: number,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
-  const neighborLookup = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
-
   const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
-  const neighborMultiplier = neighborLookup[neighborId];
+  const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
   const neighboringPosition = [
     clippedPosition[0] + neighborMultiplier[0] * zoomedCubeSize[0],
     clippedPosition[1] + neighborMultiplier[1] * zoomedCubeSize[1],

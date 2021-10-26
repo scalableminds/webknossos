@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import io.swagger.annotations._
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
@@ -21,6 +22,7 @@ import models.user.Theme.Theme
 
 import scala.concurrent.ExecutionContext
 
+@Api
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
@@ -35,6 +37,7 @@ class UserController @Inject()(userService: UserService,
 
   private val DefaultAnnotationListLimit = 1000
 
+  @ApiOperation(value = "Returns a json with information about the user", nickname = "currentUserInfo")
   def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
       for {
@@ -43,6 +46,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def user(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
       for {
@@ -54,6 +58,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def annotations(isFinished: Option[Boolean],
                   limit: Option[Int],
                   pageNumber: Option[Int] = None,
@@ -77,6 +82,7 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def tasks(isFinished: Option[Boolean],
             limit: Option[Int],
             pageNumber: Option[Int] = None,
@@ -100,6 +106,7 @@ class UserController @Inject()(userService: UserService,
       }
   }
 
+  @ApiOperation(value = "Get the logged time of the passed user. The requesting user must be allowed to request this, e.g. being an admin or team-manager.")
   def userLoggedTime(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -119,6 +126,7 @@ class UserController @Inject()(userService: UserService,
   private def groupByAnnotationAndDay(timeSpan: TimeSpan) =
     (timeSpan._annotation.map(_.toString).getOrElse("<none>"), TimeSpan.groupByDay(timeSpan))
 
+  @ApiOperation(hidden = true, value = "")
   def usersLoggedTime: Action[TimeSpanRequest] = sil.SecuredAction.async(validateJson[TimeSpanRequest]) {
     implicit request =>
       Fox
@@ -154,6 +162,7 @@ class UserController @Inject()(userService: UserService,
         .map(loggedTime => Ok(Json.toJson(loggedTime)))
   }
 
+  @ApiOperation(hidden = true, value = "")
   def userAnnotations(userId: String,
                       isFinished: Option[Boolean],
                       limit: Option[Int],
@@ -181,6 +190,7 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def userTasks(userId: String,
                 isFinished: Option[Boolean],
                 limit: Option[Int],
@@ -208,6 +218,7 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
+  @ApiOperation(hidden = true, value = "")
   def loggedTime: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
@@ -221,6 +232,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(value = "Show all users one is admin or team-manager of.", nickname = "userList")
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable",
@@ -302,6 +314,7 @@ class UserController @Inject()(userService: UserService,
       Fox.successful(())
     }
 
+  @ApiOperation(hidden = true, value = "")
   def update(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
@@ -361,6 +374,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def updateLastTaskTypeId(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) { lastTaskTypeId =>
@@ -376,6 +390,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  @ApiOperation(hidden = true, value = "")
   def updateNovelUserExperienceInfos(userId: String): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
@@ -387,6 +402,7 @@ class UserController @Inject()(userService: UserService,
       } yield Ok(updatedJs)
     }
 
+  @ApiOperation(hidden = true, value = "")
   def updateSelectedTheme(userId: String): Action[Theme] =
     sil.SecuredAction.async(validateJson[Theme]) { implicit request =>
       for {

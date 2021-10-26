@@ -12,6 +12,7 @@ import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
+import slick.sql.SqlAction
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
@@ -100,9 +101,15 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
       _ <- run(insertOneQuery(annotationId, annotationLayer))
     } yield ()
 
-  private def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer) =
-    sqlu"""insert into webknossos.annotation_layers _annotation, tracingId, typ, name
-            values($annotationId, ${a.tracingId}, ${a.typ.toString}, ${a.name.map(sanitize)}"""
+  def insertLayerQueries(annotationId: ObjectId,
+                         layers: List[AnnotationLayer]): List[SqlAction[Int, NoStream, Effect]] =
+    layers.map { annotationLayer =>
+      insertOneQuery(annotationId, annotationLayer)
+    }
+
+  def insertOneQuery(annotationId: ObjectId, a: AnnotationLayer): SqlAction[Int, NoStream, Effect] =
+    sqlu"""insert into webknossos.annotation_layers(_annotation, tracingId, typ, name)
+            values($annotationId, ${a.tracingId}, '#${a.typ.toString}', ${a.name.map(sanitize)})"""
 
   def findAnnotationIdByTracingId(tracingId: String): Fox[ObjectId] =
     for {
@@ -116,6 +123,9 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
       _ <- run(
         sqlu"update webknossos.annotation_layers set tracingId = $newTracingId where annotationId = $annotationId and tracingId = $oldTracingId")
     } yield ()
+
+  def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
+    sqlu"delete from webknossos.annotation_layers where annotationId = $annotationId"
 
 }
 
@@ -302,25 +312,25 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
 
   // update operations
 
-  // todo: when to insert tracing ids?
-  def insertOne(a: Annotation): Fox[Unit] =
+  def insertOne(a: Annotation): Fox[Unit] = {
+    val insertAnnotationQuery = sqlu"""
+        insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility,
+                                           name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+        values(${a._id.id}, ${a._dataSet.id}, ${a._task.map(_.id)}, ${a._team.id},
+         ${a._user.id}, ${a.description}, '#${a.visibility.toString}', ${a.name},
+         '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
+         '#${writeArrayTuple(a.tags.toList.map(sanitize))}', ${a.tracingTime}, '#${a.typ.toString}',
+         ${new java.sql.Timestamp(a.created)}, ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
+         """
+    val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
     for {
-      _ <- run(sqlu"""
-               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-               values(${a._id.id}, ${a._dataSet.id}, ${a._task
-        .map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.description}, '#${a.visibility.toString}', ${a.name}, '#${a.state.toString}', '#${sanitize(
-        a.statistics.toString)}',
-                   '#${writeArrayTuple(a.tags.toList.map(sanitize))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(
-        a.created)},
-                   ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
-               """)
+      _ <- run(DBIO.sequence(insertAnnotationQuery +: insertLayerQueries).transactionally)
     } yield ()
+  }
 
-  // todo: when to insert tracing ids?
   // Task only, thus hard replacing tracing ids
-  def updateInitialized(a: Annotation): Fox[Unit] =
-    for {
-      _ <- run(sqlu"""
+  def updateInitialized(a: Annotation): Fox[Unit] = {
+    val updateAnnotationQuery = sqlu"""
              update webknossos.annotations
              set
                _dataSet = ${a._dataSet.id},
@@ -338,23 +348,28 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
                modified = ${new java.sql.Timestamp(a.modified)},
                isDeleted = ${a.isDeleted}
              where _id = ${a._id.id}
-          """)
+          """
+    val deleteLayersQuery = annotationLayerDAO.deleteAllForAnnotationQuery(a._id)
+    val insertLayerQueries = annotationLayerDAO.insertLayerQueries(a._id, a.annotationLayers)
+    for {
+      _ <- run(DBIO.sequence(updateAnnotationQuery +: deleteLayersQuery +: insertLayerQueries).transactionally)
       _ = logger.info(s"Initialized task annotation ${a._id}, state is now ${a.state.toString}")
     } yield ()
+  }
 
-  // todo: also delete tracing ids
-  def abortInitializingAnnotation(id: ObjectId): Fox[Unit] =
+  def abortInitializingAnnotation(id: ObjectId): Fox[Unit] = {
+    val deleteLayersQuery = annotationLayerDAO.deleteAllForAnnotationQuery(id)
+    val deleteAnnotationQuery =
+      sqlu"delete from webknossos.annotations where _id = $id and state = '#${AnnotationState.Initializing.toString}'"
+    val composed = DBIO.sequence(List(deleteLayersQuery, deleteAnnotationQuery)).transactionally
     for {
-      _ <- run(
-        sqlu"delete from webknossos.annotations where _id = ${id.id} and state = '#${AnnotationState.Initializing.toString}'"
-          .withTransactionIsolation(Serializable),
-        retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
-      )
+      _ <- run(composed.withTransactionIsolation(Serializable),
+               retryCount = 50,
+               retryIfErrorContains = List(transactionSerializationError))
       _ = logger.info(s"Aborted initializing task annotation ${id.toString}")
     } yield ()
+  }
 
-  // todo: also delete tracing ids
   def deleteOldInitializingAnnotations(): Fox[Unit] =
     for {
       _ <- run(

@@ -52,8 +52,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   @ApiOperation(
-    value = "Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default."
-  )
+    value = "Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default.")
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>

@@ -37,7 +37,7 @@ class UserController @Inject()(userService: UserService,
 
   private val DefaultAnnotationListLimit = 1000
 
-  @ApiOperation(value = "Returns a json with information about the user", nickname = "currentUserInfo")
+  @ApiOperation(value = "Returns a json with information about the requesting user", nickname = "currentUserInfo")
   def current: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
       for {
@@ -106,7 +106,9 @@ class UserController @Inject()(userService: UserService,
       }
   }
 
-  @ApiOperation(value = "Get the logged time of the passed user. The requesting user must be allowed to request this, e.g. being an admin or team-manager.")
+  @ApiOperation(
+    value =
+      "Get the logged time of the passed user. Only available for admins or team managers of the user in question.")
   def userLoggedTime(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -232,7 +234,7 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  @ApiOperation(value = "Show all users one is admin or team-manager of.", nickname = "userList")
+  @ApiOperation(value = "List all users of whom the requesting user is admin or team-manager.", nickname = "userList")
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable",

@@ -587,6 +587,15 @@ class SegmentsView extends React.Component<Props, State> {
             const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
             const mapId = getMapIdFn(visibleSegmentationLayer);
 
+            if (!visibleSegmentationLayer) {
+              return (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="No segmentation layer visible."
+                />
+              );
+            }
+
             return (
               <React.Fragment>
                 {this.getMeshesHeader()}

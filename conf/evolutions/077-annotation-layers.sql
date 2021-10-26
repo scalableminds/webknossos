@@ -19,4 +19,14 @@ select _id, volumeTracingId, 'Volume', NULL
 from webknossos.annotations_
 where volumeTracingId is not null;
 
+DROP VIEW webknossos.annotations_;
+
+ALTER TABLE webknossos.annotations DROP CONSTRAINT annotations_check1;
+ALTER TABLE webknossos.annotations DROP COLUMN skeletonTracingId;
+ALTER TABLE webknossos.annotations DROP COLUMN volumeTracingId;
+
+CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 77;
+
 commit;

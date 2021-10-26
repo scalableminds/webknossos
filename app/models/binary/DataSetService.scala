@@ -45,7 +45,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
   val unreportedStatus = "No longer available on datastore."
-  val initialTeamsTimeout: FiniteDuration = 1 hour
+  val initialTeamsTimeout: FiniteDuration = 1 day
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
@@ -352,7 +352,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
       publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
-      jobsEnabled = conf.Features.jobsEnabled && (dataStore.url == conf.Http.uri) //currently only for local datastore
+      jobsEnabled = conf.Features.jobsEnabled && dataStore.jobsEnabled
     } yield {
       Json.obj(
         "name" -> dataSet.name,

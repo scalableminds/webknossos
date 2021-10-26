@@ -619,13 +619,15 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       const isViewOrSandboxMode =
         controlMode === ControlModeEnum.VIEW || controlMode === ControlModeEnum.SANDBOX;
       if (!isViewOrSandboxMode) {
-        // In view or sandbox mode we do not need to show the error as it is not so important and distracts the user.
+        // Notify user about error unless, view or sandbox mode is active. In that case,
+        // we do not need to show the error as it is not so important and distracts the user.
         yield* call(toggleErrorHighlighting, true);
-      } else {
-        // Still log the error to airbrake. Also compactedSaveQueue needs to be within an object
-        // as otherwise the entries would be spread by the notify function.
-        yield* call([ErrorHandling, ErrorHandling.notify], error, { compactedSaveQueue });
       }
+
+      // Log the error to airbrake. Also compactedSaveQueue needs to be within an object
+      // as otherwise the entries would be spread by the notify function.
+      yield* call([ErrorHandling, ErrorHandling.notify], error, { compactedSaveQueue, retryCount });
+
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
         window.onbeforeunload = null;

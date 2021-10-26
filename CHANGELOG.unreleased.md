@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug that windows user could not open the context menu as it instantly closed after opening. [#5756](https://github.com/scalableminds/webknossos/pull/5756).
 - Fixed a bug where the health check of public datasets failed if no cookie/token was supplied. [#5768](https://github.com/scalableminds/webknossos/pull/5768).
 - Fixed a bug where retried save requests could lead to a 409 CONFLICT error if the first request was already handled by the back-end. [#5779](https://github.com/scalableminds/webknossos/pull/5779).
+- Fixed a bug where volume annotations could not be saved under certain circumstances (if "Render Missing Data Black" was disabled and a data bucket was annotated for the first time). [#5783](https://github.com/scalableminds/webknossos/pull/5783)
 
 ### Removed
 -

@@ -415,6 +415,7 @@ export class DataBucket {
   markAsPushed(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
+      case BucketStateEnum.MISSING:
         this.dirty = false;
         break;
       default:

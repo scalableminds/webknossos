@@ -11,6 +11,7 @@ import {
   updateSegmentAction,
   finishAnnotationStrokeAction,
   type SetActiveCellAction,
+  type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   addUserBoundingBoxesAction,
@@ -849,7 +850,11 @@ export function* diffVolumeTracing(
 }
 
 function* ensureSegmentExists(
-  action: AddIsosurfaceAction | SetActiveCellAction | UpdateTemporarySettingAction,
+  action:
+    | AddIsosurfaceAction
+    | SetActiveCellAction
+    | UpdateTemporarySettingAction
+    | ClickSegmentAction,
 ): Saga<void> {
   const segments = yield* select(store =>
     getSegmentsForLayer(
@@ -866,7 +871,7 @@ function* ensureSegmentExists(
   if (action.type === "ADD_ISOSURFACE") {
     const { seedPosition, layerName } = action;
     yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
-  } else if (action.type === "SET_ACTIVE_CELL") {
+  } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
     const { somePosition } = action;
     if (somePosition == null) {
       // Not all SetActiveCell provide a position (e.g., when simply setting the ID)
@@ -885,16 +890,7 @@ function* ensureSegmentExists(
 }
 
 function* maintainSegmentsMap(): Saga<void> {
-  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL"], ensureSegmentExists);
-}
-
-function* maintainSegmentsMapDebounced(): Saga<void> {
-  yield _debounce(
-    500,
-    action =>
-      action.type === "UPDATE_TEMPORARY_SETTING" && action.propertyName === "hoveredSegmentId",
-    ensureSegmentExists,
-  );
+  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"], ensureSegmentExists);
 }
 
 function* getGlobalMousePosition(): Saga<?Vector3> {
@@ -936,5 +932,4 @@ export default [
   watchVolumeTracingAsync,
   maintainSegmentsMap,
   maintainHoveredSegmentId,
-  maintainSegmentsMapDebounced,
 ];

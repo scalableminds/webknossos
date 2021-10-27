@@ -29,6 +29,16 @@ export type SetActiveCellAction = {
   somePosition?: Vector3,
 };
 
+// A simple "click segment" is dispatched when clicking
+// with the MOVE tool. Currently, this has the side-effect
+// of adding the clicked segment to the segment list (if one
+// exists and if it's not already there)
+export type ClickSegmentAction = {
+  type: "CLICK_SEGMENT",
+  cellId: number,
+  somePosition: Vector3,
+};
+
 export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
   source: "previousLayer" | "nextLayer",
@@ -73,6 +83,7 @@ export type VolumeTracingAction =
   | FloodFillAction
   | FinishEditingAction
   | SetActiveCellAction
+  | ClickSegmentAction
   | UpdateDirectionAction
   | ResetContourAction
   | FinishAnnotationStrokeAction
@@ -141,6 +152,12 @@ export const setActiveCellAction = (
   somePosition?: Vector3,
 ): SetActiveCellAction => ({
   type: "SET_ACTIVE_CELL",
+  cellId,
+  somePosition,
+});
+
+export const clickSegmentAction = (cellId: number, somePosition: Vector3): ClickSegmentAction => ({
+  type: "CLICK_SEGMENT",
   cellId,
   somePosition,
 });

@@ -13,7 +13,10 @@ import {
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { handleAgglomerateSkeletonAtClick } from "oxalis/controller/combinations/segmentation_handlers";
+import {
+  handleAgglomerateSkeletonAtClick,
+  handleClickSegment,
+} from "oxalis/controller/combinations/segmentation_handlers";
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
@@ -87,8 +90,11 @@ export class MoveTool {
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
         if (event.shiftKey || !useLegacyBindings) {
-          SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
+          if (SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch)) {
+            return;
+          }
         }
+        handleClickSegment(pos);
       },
       pinch: delta => MoveHandlers.zoom(delta, true),
       mouseMove: (delta: Point2, position: Point2, id, event) => {

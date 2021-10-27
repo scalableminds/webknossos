@@ -414,10 +414,8 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  handleMeshFileSelected = async (mesh: { key: string }) => {
-    if (mesh.key === "refresh") {
-      maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, true);
-    } else if (this.props.visibleSegmentationLayer != null) {
+  handleMeshFileSelected = async (mesh: { key: ?string }) => {
+    if (this.props.visibleSegmentationLayer != null && mesh.key != null) {
       this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
       this.loadPrecomputedMeshForCentered(this.props.flycam);
     }
@@ -538,7 +536,7 @@ class SegmentsView extends React.Component<Props, State> {
                 </Option>
               ))
             ) : (
-              <Option value="null" disabled>
+              <Option value={null} disabled>
                 No files available.
               </Option>
             )}

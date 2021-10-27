@@ -332,28 +332,18 @@ class SegmentsView extends React.Component<Props, State> {
     };
   };
 
-  loadPrecomputedMeshForIdAndPosition = async (id: number, pos: Vector3) => {
-    if (id === 0) {
-      Toast.info("No segment found at centered position");
-      return;
-    }
+  loadPrecomputedMeshForSegment = async (segment: Segment) => {
     const { dataset, currentMeshFile, visibleSegmentationLayer } = this.props;
     if (!currentMeshFile || !visibleSegmentationLayer) {
       return;
     }
-    await loadMeshFromFile(id, pos, currentMeshFile, visibleSegmentationLayer, dataset);
-  };
-
-  loadPrecomputedMeshForCentered = (flycam: Flycam) => {
-    const pos = getPosition(flycam);
-    const id = getSegmentIdForPosition(pos);
-    return this.loadPrecomputedMeshForIdAndPosition(id, pos);
-  };
-
-  loadPrecomputedMeshForSegment = (segment: Segment) => {
-    const pos = segment.somePosition;
-    const id = segment.id;
-    return this.loadPrecomputedMeshForIdAndPosition(id, pos);
+    await loadMeshFromFile(
+      segment.id,
+      segment.somePosition,
+      currentMeshFile,
+      visibleSegmentationLayer,
+      dataset,
+    );
   };
 
   onSelectSegment = (segment: Segment) => {
@@ -417,7 +407,6 @@ class SegmentsView extends React.Component<Props, State> {
   handleMeshFileSelected = async (mesh: { key: ?string }) => {
     if (this.props.visibleSegmentationLayer != null && mesh.key != null) {
       this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
-      this.loadPrecomputedMeshForCentered(this.props.flycam);
     }
   };
 

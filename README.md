@@ -108,7 +108,7 @@ git clone git@github.com:scalableminds/webknossos.git
 ### Ubuntu 20.04 LTS
 
 ```bash
-sudo apt install -y curl ca-certificates
+sudo apt install -y curl ca-certificates wget
 # Adding repositories for nodejs, sbt and yarn
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
@@ -118,12 +118,12 @@ curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-8-jdk yarn redis-server
+sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-8-jdk yarn redis-server build-essential
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 # Clone the git repo to the current directory
-git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
+git clone -b master --depth=1 https://github.com/scalableminds/webknossos.git
 ```
 
 If you already have a different Java version installed, set the default version to Java 8:

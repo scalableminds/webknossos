@@ -2,8 +2,30 @@
 
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
 
+->       /v5/                                                                 webknossos.latest.Routes
+
+# support changes to v5
+POST     /v4/annotations/:typ/:id/duplicate                                   controllers.LegacyApiController.duplicate(typ: String, id: String)
+PATCH    /v4/annotations/:typ/:id/finish                                      controllers.LegacyApiController.finish(typ: String, id: String, timestamp: Long)
+PATCH    /v4/annotations/:typ/:id/reopen                                      controllers.LegacyApiController.reopen(typ: String, id: String)
+PUT      /v4/annotations/:typ/:id/reset                                       controllers.LegacyApiController.reset(typ: String, id: String)
+PATCH    /v4/annotations/:typ/:id/transfer                                    controllers.LegacyApiController.transfer(typ: String, id: String)
+GET      /v4/annotations/:typ/:id/info                                        controllers.LegacyApiController.info(typ: String, id: String, timestamp: Long)
+PATCH    /v4/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
+PATCH    /v4/annotations/:typ/:id/downsample                                  controllers.LegacyApiController.downsample(typ: String, id: String)
+PATCH    /v4/annotations/:typ/:id/unlinkFallback                              controllers.LegacyApiController.unlinkFallback(typ: String, id: String, tracingId: String)
+POST     /v4/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+GET      /v4/annotations/shared                                               controllers.LegacyApiController.sharedAnnotations()
+POST     /v4/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorational(organizationName: String, dataSetName: String)
+GET      /v4/user/annotations                                                 controllers.LegacyApiController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v4/user/tasks                                                       controllers.LegacyApiController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v4/users/:id/annotations                                            controllers.LegacyApiController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v4/users/:id/tasks                                                  controllers.LegacyApiController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+POST     /v4/user/tasks/request                                               controllers.LegacyApiController.taskRequest
+GET      /v4/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTask(id: String)
 ->       /v4/                                                                 webknossos.latest.Routes
 
+# support changes to v4
 POST     /v3/tasks/list                                                       controllers.LegacyApiController.taskListTasks
 GET      /v3/projects/:name                                                   controllers.LegacyApiController.projectRead(name: String)
 DELETE   /v3/projects/:name                                                   controllers.LegacyApiController.projectDelete(name: String)
@@ -15,15 +37,24 @@ PATCH    /v3/projects/:name/resume                                            co
 
 ->       /v3/                                                                 webknossos.latest.Routes
 
+# Support changes to v3
 PATCH    /v2/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinishV2(typ: String, id: String)
 GET      /v2/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV2(typ: String, id: String)
 
+# Support changes to v4
+POST     /v2/tasks/list                                                       controllers.LegacyApiController.taskListTasks
+GET      /v2/projects/:name                                                   controllers.LegacyApiController.projectRead(name: String)
+DELETE   /v2/projects/:name                                                   controllers.LegacyApiController.projectDelete(name: String)
+PUT      /v2/projects/:name                                                   controllers.LegacyApiController.projectUpdate(name: String)
+GET      /v2/projects/:name/tasks                                             controllers.LegacyApiController.projectTasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+PATCH    /v2/projects/:name/incrementEachTasksInstances                       controllers.LegacyApiController.projectIncrementEachTasksInstances(name: String, delta: Option[Long])
+PATCH    /v2/projects/:name/pause                                             controllers.LegacyApiController.projectPause(name: String)
+PATCH    /v2/projects/:name/resume                                            controllers.LegacyApiController.projectResume(name: String)
+
 ->       /v2/                                                                 webknossos.latest.Routes
 
-#
+# Support changes to v2 and v3
 PATCH    /v1/annotations/:typ/:id/edit                                        controllers.LegacyApiController.editAnnotation(typ: String, id: String)
-# input needs to change
-
 POST     /v1/annotations/:typ/:id/duplicate                                   controllers.LegacyApiController.annotationDuplicate(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinish(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/reopen                                      controllers.LegacyApiController.annotationReopen(typ: String, id: String)

@@ -603,20 +603,17 @@ class SegmentsView extends React.Component<Props, State> {
                 {allSegments.length === 0 ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="No segments found. Use the volume annotation tools to add segments or hover over existing segments to add them here."
+                    description={`There are no segments yet. ${
+                      this.props.allowUpdate
+                        ? " Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
+                        : "Select or click existing segments to add them to this list."
+                    }`}
                   />
                 ) : (
                   <List
                     size="small"
                     split={false}
                     style={{ marginTop: 12, flex: "1 1 auto", overflow: "auto" }}
-                    locale={{
-                      emptyText: `There are no segments yet.${
-                        this.props.allowUpdate
-                          ? " Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or hover existing segments to add them to this list."
-                          : "Select or hover existing segments to add them to this list."
-                      }`,
-                    }}
                   >
                     {allSegments.map(segment => (
                       <SegmentListItem

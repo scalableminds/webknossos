@@ -187,8 +187,6 @@ function _SegmentListItem({
         setHoveredSegmentId(null);
       }}
     >
-      {getColoredDotIconForSegment(mappedId, mappingInfo.mappingColors)}
-
       <Dropdown
         overlay={createSegmentContextMenu}
         // Destroy the menu after it was closed so that createSegmentContextMenu is only called
@@ -200,30 +198,41 @@ function _SegmentListItem({
         onVisibleChange={isVisible => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
         trigger={["contextMenu"]}
       >
-        <EditableTextLabel
-          value={segment.name || `Segment ${segment.id}`}
-          label="Segment Name"
-          onClick={() => onSelectSegment(segment)}
-          onChange={name => updateSegment(segment.id, { name })}
-          horizontalMargin={5}
-          disableEditing={!allowUpdate}
-        />
+        <div>
+          {getColoredDotIconForSegment(mappedId, mappingInfo.mappingColors)}
+          <EditableTextLabel
+            value={segment.name || `Segment ${segment.id}`}
+            label="Segment Name"
+            onClick={() => onSelectSegment(segment)}
+            onChange={name => updateSegment(segment.id, { name })}
+            horizontalMargin={5}
+            disableEditing={!allowUpdate}
+          />
+          <Tooltip title="Open context menu (also available via right-click)">
+            <EllipsisOutlined
+              onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)}
+            />
+          </Tooltip>
+          {/* Show Default Segment Name if another one is already defined*/}
+          {getSegmentIdDetails()}
+          {segment.id === centeredSegmentId ? (
+            <Tooltip title="This segment is currently centered in the data viewports.">
+              <i
+                className="fas fa-crosshairs deemphasized-segment-name"
+                style={{ marginLeft: 4 }}
+              />
+            </Tooltip>
+          ) : null}
+          {segment.id === activeCellId ? (
+            <Tooltip title="The currently active segment id belongs to this segment.">
+              <i
+                className="fas fa-paint-brush deemphasized-segment-name"
+                style={{ marginLeft: 4 }}
+              />
+            </Tooltip>
+          ) : null}
+        </div>
       </Dropdown>
-      <Tooltip title="Open context menu (also available via right-click)">
-        <EllipsisOutlined onClick={() => handleSegmentDropdownMenuVisibility(segment.id, true)} />
-      </Tooltip>
-      {/* Show Default Segment Name if another one is already defined*/}
-      {getSegmentIdDetails()}
-      {segment.id === centeredSegmentId ? (
-        <Tooltip title="This segment is currently centered in the data viewports.">
-          <i className="fas fa-crosshairs deemphasized-segment-name" style={{ marginLeft: 4 }} />
-        </Tooltip>
-      ) : null}
-      {segment.id === activeCellId ? (
-        <Tooltip title="The currently active segment id belongs to this segment.">
-          <i className="fas fa-paint-brush deemphasized-segment-name" style={{ marginLeft: 4 }} />
-        </Tooltip>
-      ) : null}
 
       <div style={{ marginLeft: 16 }}>
         <MeshInfoItem
@@ -269,7 +278,7 @@ function _MeshInfoItem(props: {
             props.handleSegmentDropdownMenuVisibility(segment.id, true);
           }}
         >
-          No mesh loaded. Use the context menu to generate one.
+          No mesh loaded. Use right-click to add one.
         </div>
       );
     }

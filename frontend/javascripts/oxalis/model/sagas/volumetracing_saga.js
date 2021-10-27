@@ -158,6 +158,9 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
+    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+    yield* put(updateSegmentAction(activeCellId, { somePosition: startEditingAction.position }));
+
     const {
       zoomStep: labeledZoomStep,
       resolution: labeledResolution,
@@ -239,7 +242,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
       labeledZoomStep,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
-    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     yield* put(updateSegmentAction(activeCellId, { somePosition: lastPosition }));
     yield* put(finishAnnotationStrokeAction());
   }

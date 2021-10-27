@@ -126,51 +126,67 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationDuplicate(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.duplicate(typ, id)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def annotationFinish(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def annotationReopen(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.reopen(typ, id)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def annotationReset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.reset(typ, id)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def annotationTransfer(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       for {
         result <- annotationController.transfer(typ, id)(request)
-      } yield replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceVisibility)(result)
+      } yield adaptedResult
   }
 
-  def annotationInfo(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def annotationInfoV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- annotationController.info(typ, id, timestamp)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationInfoV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.info(typ, id, System.currentTimeMillis)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
+    } yield adaptedResult
   }
 
   def annotationMakeHybrid(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.makeHybrid(typ, id, None)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def annotationMerge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
-      } yield replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceVisibility)(result)
+      } yield adaptedResult
     }
 
   def annotationCreateExplorational(organizationName: String,
@@ -196,7 +212,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       for {
         result <- annotationController.createExplorational(organizationName, dataSetName)(
           request.withBody(adaptedParameters))
-      } yield replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceVisibility)(result)
+      } yield adaptedResult
     }
 
   def annotations(isFinished: Option[Boolean],
@@ -206,7 +223,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     implicit request =>
       for {
         result <- userController.annotations(isFinished, limit, pageNumber, includeTotalCount)(request)
-      } yield replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceVisibility)(result)
+      } yield adaptedResult
   }
 
   def userAnnotations(id: String,
@@ -217,19 +235,22 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     implicit request =>
       for {
         result <- userController.userAnnotations(id, isFinished, limit, pageNumber, includeTotalCount)(request)
-      } yield replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceVisibility)(result)
+      } yield adaptedResult
   }
 
   def taskRequest: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- taskController.request()(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def annotationsForTask(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.annotationsForTask(id)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def tasks(isFinished: Option[Boolean],
@@ -238,7 +259,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
             includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- userController.tasks(isFinished, limit, pageNumber, includeTotalCount)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def userTasks(id: String,
@@ -248,7 +270,8 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                 includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- userController.userTasks(id, isFinished, limit, pageNumber, includeTotalCount)(request)
-    } yield replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility)(result)
+    } yield adaptedResult
   }
 
   def editAnnotation(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
@@ -272,28 +295,43 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   private def replaceVisibility(jsObject: JsObject) = {
     val visibilityString = (jsObject \ "visibility").as[String]
     val newJson = jsObject + ("isPublic" -> Json.toJson(visibilityString == "Public"))
-    newJson - "visibility"
+    Fox.successful(newJson - "visibility")
   }
 
   private def replaceAnnotationLayers(jsObject: JsObject) = {
     val annotationLayers = (jsObject \ "annotationLayers").as[List[AnnotationLayer]]
-    val newJson = jsObject + ("isModified" -> Json.toJson("yeah"))
-    newJson - "annotationLayers"
+    val skeletonTracingId = annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
+    val volumeTracingId = annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
+    val newJson = jsObject + ("tracing" -> Json.obj("skeleton" -> Json.toJson(skeletonTracingId),
+                                                    "volume" -> Json.toJson(volumeTracingId)))
+    for {
+      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "A requested annotation has more than one skeleton layer and cannot be served using the legacy api, please use api version v5 or newer"
+      _ <- bool2Fox(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "A requested annotation has more than one volume layer and cannot be served using the legacy api, please use api version v5 or newer"
+    } yield newJson - "annotationLayers"
   }
 
-  private def replaceInResult(replaceInJsObject: JsObject => JsObject)(result: Result): Result =
+  private def replaceInResult(replacement1: JsObject => Fox[JsObject], replacement2: JsObject => Fox[JsObject])(
+      result: Result): Fox[Result] =
+    replaceInResult(Fox.chainFunctions(List(replacement1, replacement2)))(result)
+
+  private def replaceInResult(replacement: JsObject => Fox[JsObject])(result: Result): Fox[Result] =
     if (result.header.status == 200) {
       val bodyJsonValue = result.body match {
         case HttpEntity.Strict(data, _) => Json.parse(data.decodeString("utf-8"))
-        case _                          => return BadRequest
+        case _                          => return Fox.successful(BadRequest)
       }
 
-      val newJson = bodyJsonValue match {
-        case JsArray(value)  => Json.toJson(value.map(el => replaceInJsObject(el.as[JsObject])))
-        case jsObj: JsObject => Json.toJson(replaceInJsObject(jsObj))
-        case _               => return BadRequest
+      val newJsonFox = bodyJsonValue match {
+        case JsArray(value) =>
+          for { valueList <- Fox.serialCombined(value.toList)(el => replacement(el.as[JsObject])) } yield
+            Json.toJson(valueList)
+        case jsObj: JsObject => replacement(jsObj)
+        case _               => return Fox.successful(BadRequest)
       }
 
-      Ok(Json.toJson(newJson)).copy(header = result.header)
-    } else result
+      for {
+        newJson <- newJsonFox
+      } yield Ok(Json.toJson(newJson)).copy(header = result.header)
+    } else Fox.successful(result)
+
 }

@@ -5,24 +5,24 @@
 ->       /v5/                                                                 webknossos.latest.Routes
 
 # support changes to v5
-POST     /v4/annotations/:typ/:id/duplicate                                   controllers.LegacyApiController.duplicate(typ: String, id: String)
-PATCH    /v4/annotations/:typ/:id/finish                                      controllers.LegacyApiController.finish(typ: String, id: String, timestamp: Long)
-PATCH    /v4/annotations/:typ/:id/reopen                                      controllers.LegacyApiController.reopen(typ: String, id: String)
-PUT      /v4/annotations/:typ/:id/reset                                       controllers.LegacyApiController.reset(typ: String, id: String)
-PATCH    /v4/annotations/:typ/:id/transfer                                    controllers.LegacyApiController.transfer(typ: String, id: String)
-GET      /v4/annotations/:typ/:id/info                                        controllers.LegacyApiController.info(typ: String, id: String, timestamp: Long)
-PATCH    /v4/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
-PATCH    /v4/annotations/:typ/:id/downsample                                  controllers.LegacyApiController.downsample(typ: String, id: String)
-PATCH    /v4/annotations/:typ/:id/unlinkFallback                              controllers.LegacyApiController.unlinkFallback(typ: String, id: String, tracingId: String)
-POST     /v4/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET      /v4/annotations/shared                                               controllers.LegacyApiController.sharedAnnotations()
-POST     /v4/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorational(organizationName: String, dataSetName: String)
-GET      /v4/user/annotations                                                 controllers.LegacyApiController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v4/user/tasks                                                       controllers.LegacyApiController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v4/users/:id/annotations                                            controllers.LegacyApiController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v4/users/:id/tasks                                                  controllers.LegacyApiController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-POST     /v4/user/tasks/request                                               controllers.LegacyApiController.taskRequest
-GET      /v4/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTask(id: String)
+#POST     /v4/annotations/:typ/:id/duplicate                                   controllers.LegacyApiController.duplicate(typ: String, id: String)
+#PATCH    /v4/annotations/:typ/:id/finish                                      controllers.LegacyApiController.finish(typ: String, id: String, timestamp: Long)
+#PATCH    /v4/annotations/:typ/:id/reopen                                      controllers.LegacyApiController.reopen(typ: String, id: String)
+#PUT      /v4/annotations/:typ/:id/reset                                       controllers.LegacyApiController.reset(typ: String, id: String)
+#PATCH    /v4/annotations/:typ/:id/transfer                                    controllers.LegacyApiController.transfer(typ: String, id: String)
+GET      /v4/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV4(typ: String, id: String, timestamp: Long)
+#PATCH    /v4/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
+#PATCH    /v4/annotations/:typ/:id/downsample                                  controllers.LegacyApiController.downsample(typ: String, id: String)
+#PATCH    /v4/annotations/:typ/:id/unlinkFallback                              controllers.LegacyApiController.unlinkFallback(typ: String, id: String, tracingId: String)
+#POST     /v4/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+#GET      /v4/annotations/shared                                               controllers.LegacyApiController.sharedAnnotations()
+#POST     /v4/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorational(organizationName: String, dataSetName: String)
+#GET      /v4/user/annotations                                                 controllers.LegacyApiController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+#GET      /v4/user/tasks                                                       controllers.LegacyApiController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+#GET      /v4/users/:id/annotations                                            controllers.LegacyApiController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+#GET      /v4/users/:id/tasks                                                  controllers.LegacyApiController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+#POST     /v4/user/tasks/request                                               controllers.LegacyApiController.taskRequest
+#GET      /v4/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTask(id: String)
 ->       /v4/                                                                 webknossos.latest.Routes
 
 # support changes to v4
@@ -60,7 +60,7 @@ PATCH    /v1/annotations/:typ/:id/finish                                      co
 PATCH    /v1/annotations/:typ/:id/reopen                                      controllers.LegacyApiController.annotationReopen(typ: String, id: String)
 PUT      /v1/annotations/:typ/:id/reset                                       controllers.LegacyApiController.annotationReset(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/transfer                                    controllers.LegacyApiController.annotationTransfer(typ: String, id: String)
-GET      /v1/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfo(typ: String, id: String)
+GET      /v1/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV1(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.annotationMakeHybrid(typ: String, id: String)
 POST     /v1/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMerge(typ: String, id: String, mergedTyp: String, mergedId: String)
 POST     /v1/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorational(organizationName: String, dataSetName: String)

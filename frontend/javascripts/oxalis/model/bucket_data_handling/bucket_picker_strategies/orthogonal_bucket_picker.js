@@ -78,6 +78,12 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
 
+  const enqueueAll = () => {
+    for (const { bucketAddress, priority } of uniqueBucketMap.values()) {
+      enqueueFunction(bucketAddress, priority);
+    }
+  };
+
   for (const planeId of OrthoViewValuesWithoutTDView) {
     const [u, v, w] = Dimensions.getIndices(planeId);
 
@@ -156,17 +162,24 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
             (isExtraBucket ? 100 : 0);
 
           const bucketVector3 = ((bucketAddress.slice(0, 3): any): Vector3);
-          if (uniqueBucketMap.get(bucketVector3) == null) {
-            uniqueBucketMap.set(bucketVector3, bucketAddress);
+          const existingEntry = uniqueBucketMap.get(bucketVector3);
+          if (existingEntry == null) {
+            uniqueBucketMap.set(bucketVector3, { bucketAddress, priority });
             currentCount++;
 
             if (abortLimit != null && currentCount > abortLimit) {
+              enqueueAll();
               return;
             }
+          } else {
+            const { priority: existingPriority } = existingEntry;
+            if (priority < existingPriority) {
+              uniqueBucketMap.set(bucketVector3, { bucketAddress, priority });
+            }
           }
-          enqueueFunction(bucketAddress, priority);
         }
       }
     });
   }
+  enqueueAll();
 }

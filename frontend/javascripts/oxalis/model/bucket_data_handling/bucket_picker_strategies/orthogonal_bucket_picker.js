@@ -163,8 +163,8 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
             if (abortLimit != null && currentCount > abortLimit) {
               return;
             }
-            enqueueFunction(bucketAddress, priority);
           }
+          enqueueFunction(bucketAddress, priority);
         }
       }
     });

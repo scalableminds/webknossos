@@ -304,12 +304,9 @@ export function applyVoxelMap(
     dataCube.pushQueue.insert(bucket);
     bucket.trigger("bucketLabeled");
   }
-  const lowestResolutionIndex = dataCube.resolutionInfo.getLowestResolutionIndex();
-  const zoomedAddressesOfAnnotatedBuckets = [];
 
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
-    const isBucketInLowestResolution = labeledBucketZoomedAddress[3] === lowestResolutionIndex;
     if (bucket.type === "null") {
       continue;
     }
@@ -318,7 +315,6 @@ export function applyVoxelMap(
     get3DAddress(0, 0, out);
     const thirdDimensionValueInBucket = out[2];
     for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
-      let annotatedBucket = false;
       const newThirdDimValue = thirdDimensionValueInBucket + sliceCount;
       if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
@@ -338,11 +334,9 @@ export function applyVoxelMap(
       }
       const { data } = bucket.getOrCreateData();
 
-      // This is already done in bucket.js - merge. Look there for more details
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
-            annotatedBucket = isBucketInLowestResolution;
             get3DAddress(firstDim, secondDim, out);
             const voxelToLabel = out;
             voxelToLabel[thirdDimensionIndex] =
@@ -355,9 +349,6 @@ export function applyVoxelMap(
             }
           }
         }
-      }
-      if (annotatedBucket) {
-        zoomedAddressesOfAnnotatedBuckets.push(bucket.zoomedAddress);
       }
     }
     // Post-processing: add to pushQueue and notify about labeling

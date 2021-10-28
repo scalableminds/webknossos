@@ -6,7 +6,6 @@
 import { type Saga, type Task } from "redux-saga";
 import Maybe from "data.maybe";
 
-import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";

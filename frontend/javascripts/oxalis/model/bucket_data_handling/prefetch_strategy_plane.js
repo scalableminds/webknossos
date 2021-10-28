@@ -149,6 +149,8 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     const fallbackPriorityWeight = isFallback ? 50 : 0;
 
     for (const plane of OrthoViewValuesWithoutTDView) {
+      if (!areas[plane].isVisible) continue;
+
       const [u, v, w] = Dimensions.getIndices(plane);
       this.u = u;
       this.v = v;

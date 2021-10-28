@@ -118,7 +118,7 @@ export async function loadMeshFromFile(
   }
 
   if (Store.getState().localSegmentationData[layerName].isosurfaces[id] == null) {
-    // The mesh was removed from the store in the mean time. Don't do anything.
+    // The mesh was removed from the store in the meantime. Don't do anything.
     return;
   }
 

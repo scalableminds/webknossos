@@ -31,6 +31,9 @@ import {
   type Saga,
   _takeEvery,
   call,
+  _call,
+  _take,
+  race,
   put,
   select,
   take,
@@ -68,7 +71,7 @@ export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   return isIsosurface;
 }
 
-function getMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
+function getOrAddMapForSegment(layerName: string, segmentId: number): ThreeDMap<boolean> {
   isosurfacesMapByLayer[layerName] = isosurfacesMapByLayer[layerName] || new Map();
   const isosurfacesMap = isosurfacesMapByLayer[layerName];
 
@@ -209,16 +212,29 @@ function* loadIsosurfaceForSegmentId(
   const { dataset, zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading, layer);
 
   batchCounterPerSegment[segmentId] = 0;
-  yield* call(
-    loadIsosurfaceWithNeighbors,
-    dataset,
-    layer,
-    segmentId,
-    seedPosition,
-    zoomStep,
-    resolutionInfo,
-    removeExistingIsosurface,
-  );
+
+  // If a REMOVE_ISOSURFACE action is dispatched and consumed
+  // here before loadIsosurfaceWithNeighbors is finished, the latter saga
+  // should be canceled automatically to avoid populating mesh data even though
+  // the mesh was removed. This is accomplished by redux-saga's race effect.
+  yield* race({
+    loadIsosurfaceWithNeighbors: _call(
+      loadIsosurfaceWithNeighbors,
+      dataset,
+      layer,
+      segmentId,
+      seedPosition,
+      zoomStep,
+      resolutionInfo,
+      removeExistingIsosurface,
+    ),
+    cancel: _take(
+      action =>
+        action.type === "REMOVE_ISOSURFACE" &&
+        action.cellId === segmentId &&
+        action.layerName === layer.name,
+    ),
+  });
 }
 
 function* loadIsosurfaceWithNeighbors(
@@ -282,7 +298,7 @@ function* maybeLoadIsosurface(
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
 ): Saga<Array<Vector3>> {
-  const threeDMap = getMapForSegment(layer.name, segmentId);
+  const threeDMap = getOrAddMapForSegment(layer.name, segmentId);
 
   if (threeDMap.get(clippedPosition)) {
     return [];
@@ -317,6 +333,7 @@ function* maybeLoadIsosurface(
   }
 
   let retryCount = 0;
+
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(
@@ -333,11 +350,6 @@ function* maybeLoadIsosurface(
         },
       );
 
-      // Check again whether the limit was exceeded, since this variable could have been
-      // set in the mean time by ctrl-clicking the segment to remove it
-      if (hasBatchCounterExceededLimit(segmentId)) {
-        return [];
-      }
       const vertices = new Float32Array(responseBuffer);
       if (removeExistingIsosurface) {
         getSceneController().removeIsosurfaceById(segmentId);
@@ -410,9 +422,6 @@ function* removeIsosurface(
     getSceneController().removeIsosurfaceById(cellId);
   }
   removeMapForSegment(layerName, cellId);
-
-  // Set batch counter to maximum so that potentially running requests are aborted
-  batchCounterPerSegment[cellId] = 1 + (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE);
 
   const currentCellId = yield* call(getCurrentCellId);
   if (cellId === currentCellId) {

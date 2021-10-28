@@ -88,7 +88,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     return state;
   }
 
-  // $FlowIgnore[incompatible-use] "tracing.volume" is defined exist if updateInfo.type === "UPDATE_VOLUME_TRACING"
+  // $FlowIgnore[incompatible-use] "tracing.volume" is defined if updateInfo.type === "UPDATE_VOLUME_TRACING"
   const { segments } =
     updateInfo.type === "UPDATE_VOLUME_TRACING"
       ? state.tracing.volume

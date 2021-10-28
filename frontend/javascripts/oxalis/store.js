@@ -219,7 +219,7 @@ export type Segment = {
   id: number,
   name: ?string,
   somePosition: Vector3,
-  creationTime?: number,
+  creationTime: ?number,
 };
 
 export type SegmentMap = DiffableMap<number, Segment>;

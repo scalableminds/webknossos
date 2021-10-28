@@ -20,6 +20,8 @@ trait VolumeUpdateActionHelper {
 
 }
 
+trait ApplyableVolumeAction extends VolumeUpdateAction
+
 case class UpdateBucketVolumeAction(position: Point3D,
                                     cubeSize: Int,
                                     zoomStep: Int,
@@ -169,8 +171,6 @@ object UpdateTdCamera {
   implicit val jsonFormat: OFormat[UpdateTdCamera] = Json.format[UpdateTdCamera]
 }
 
-trait ApplyableVolumeAction extends VolumeUpdateAction
-
 case class CreateSegmentVolumeAction(id: Long,
                                      anchorPosition: Option[Point3D],
                                      name: Option[String],
@@ -187,7 +187,7 @@ case class CreateSegmentVolumeAction(id: Long,
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment = Segment(id, anchorPosition.map(point3DToProto), name, creationTime)
-    tracing.withSegments(newSegment +: tracing.segments)
+    tracing.addSegments(newSegment)
   }
 }
 

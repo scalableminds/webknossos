@@ -110,6 +110,9 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   }
 
   const newSegment = {
+    // If oldSegment exists, its creationTime will be
+    // used by ...oldSegment
+    creationTime: action.timestamp,
     ...oldSegment,
     ...segment,
     somePosition,

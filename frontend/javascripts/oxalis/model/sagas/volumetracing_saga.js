@@ -816,7 +816,12 @@ export function* diffSegmentLists(
     const segment = newSegments.get(segmentId);
     const prevSegment = prevSegments.get(segmentId);
     if (segment !== prevSegment) {
-      yield updateSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
+      yield updateSegmentVolumeAction(
+        segment.id,
+        segment.somePosition,
+        segment.name,
+        segment.creationTime,
+      );
     }
   }
 }

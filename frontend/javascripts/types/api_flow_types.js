@@ -661,6 +661,7 @@ type ServerSegment = {|
   segmentId: number,
   name: ?string,
   anchorPosition: Point3,
+  creationTime: ?number,
 |};
 
 export type ServerVolumeTracing = {|

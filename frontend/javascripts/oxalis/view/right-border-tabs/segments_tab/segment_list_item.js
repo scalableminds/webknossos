@@ -189,9 +189,12 @@ function _SegmentListItem({
     >
       <Dropdown
         overlay={createSegmentContextMenu}
-        // Destroy the menu after it was closed so that createSegmentContextMenu is only called
-        // when it's really needed.
-        // destroyPopupOnHide does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // The overlay is generated lazily. By default, this would make the overlay
+        // re-render on each parent's render() after it was shown for the first time.
+        // The reason for this is that it's not destroyed after closing.
+        // Therefore, autoDestroy is passed.
+        // destroyPopupOnHide should also be an option according to the docs, but
+        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
         autoDestroy
         placement="bottomCenter"
         visible={activeDropdownSegmentId === segment.id}

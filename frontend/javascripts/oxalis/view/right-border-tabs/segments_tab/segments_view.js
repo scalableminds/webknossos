@@ -195,10 +195,9 @@ const formatMagWithLabel = (mag: Vector3, index: number) => {
   // index refers to the array of available mags. Thus, we can directly
   // use that index to pick an adequate label.
   const labels = ["Highest", "High", "Medium", "Low", "Very Low"];
-  if (index < labels.length) {
-    return `${labels[index]} (Mag ${mag.join("-")})`;
-  }
-  return `Mag ${mag.join("-")}`;
+  // Use "Very Low" for all low Mags which don't have extra labels
+  const clampedIndex = Math.min(labels.length - 1, index);
+  return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
 };
 
 function _getMapIdFn(visibleSegmentationLayer: ?DataLayer) {
@@ -591,8 +590,8 @@ class SegmentsView extends React.Component<Props, State> {
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description={`There are no segments yet. ${
-                      this.props.allowUpdate
-                        ? " Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
+                      this.props.allowUpdate && this.props.hasVolume
+                        ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
                         : "Select or click existing segments to add them to this list."
                     }`}
                   />

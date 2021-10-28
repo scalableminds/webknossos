@@ -495,15 +495,15 @@ function* applyAndGetRevertingVolumeBatch(
       cube.setBucketData(zoomedBucketAddress, decompressedBucketData);
     }
   }
+  // The SegmentMap is immutable. So, no need to copy.
   const currentSegments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
-  const currentSegmentsCopy = _.cloneDeep(currentSegments);
 
   yield* put(setSegmentsActions(volumeAnnotationBatch.segments));
   cube.triggerPushQueue();
 
   return {
     type: "volume",
-    data: { buckets: allCompressedBucketsOfCurrentState, segments: currentSegmentsCopy },
+    data: { buckets: allCompressedBucketsOfCurrentState, segments: currentSegments },
   };
 }
 

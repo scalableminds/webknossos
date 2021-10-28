@@ -23,6 +23,7 @@ import {
   centerActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import type {
+  OxalisState,
   Tracing,
   SkeletonTracing,
   Flycam,
@@ -150,6 +151,13 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
   throw new Error("Could not unpack redux action from channel");
 }
 
+function getNullableSegments(state: OxalisState): ?SegmentMap {
+  if (state.tracing.volume) {
+    return state.tracing.volume.segments;
+  }
+  return null;
+}
+
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
@@ -162,12 +170,10 @@ export function* collectUndoStates(): Saga<void> {
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
-  const volumeTracingOrNull = yield* select(state => state.tracing.volume);
-  if (volumeTracingOrNull != null) {
-    const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
-    // The SegmentMap is immutable. So, no need to copy.
-    prevSegments = segments;
-  }
+
+  // The SegmentMap is immutable. So, no need to copy. If there's no volume
+  // tracing, prevSegments can remain empty as it's not needed.
+  prevSegments = (yield* select(getNullableSegments)) || prevSegments;
 
   const actionChannel = yield _actionChannel([
     ...SkeletonTracingSaveRelevantActions,
@@ -266,7 +272,9 @@ export function* collectUndoStates(): Saga<void> {
       // was updated by annotating (then, that action will have caused a new undo state) or
       // the segment list was updated by selecting/hovering a cell (in that case, no new undo state
       // should be created, either).
-      prevSegments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
+      // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
+      // have been dispatched), prevSegments doesn't need to be updated, as it's not used.
+      prevSegments = (yield* select(getNullableSegments)) || prevSegments;
     }
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);

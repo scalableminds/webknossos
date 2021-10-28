@@ -324,6 +324,18 @@ class AnnotationController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
+  def editAnnotationLayer(typ: String, id: String, tracingId: String): Action[JsValue] =
+    sil.SecuredAction.async(parse.json) { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        newLayerName = (request.body \ "name").asOpt[String]
+        _ <- annotationLayerDAO.updateName(annotation._id, tracingId, newLayerName) ?~> "annotation.edit.failed"
+      } yield JsonOk(Messages("annotation.edit.success"))
+    }
+
+  @ApiOperation(hidden = true, value = "")
   def annotationsForTask(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId)

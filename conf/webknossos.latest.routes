@@ -107,6 +107,7 @@ POST          /userToken/generate                                              c
 POST          /annotations/upload                                              controllers.AnnotationIOController.upload
 POST          /annotations/:typ/:id/duplicate                                  controllers.AnnotationController.duplicate(typ: String, id: String)
 PATCH         /annotations/:typ/:id/edit                                       controllers.AnnotationController.editAnnotation(typ: String, id: String)
+PATCH         /annotations/:typ/:id/editLayer/:tracingId                       controllers.AnnotationController.editAnnotationLayer(typ: String, id: String, tracingId: String)
 
 PATCH         /annotations/:typ/:id/finish                                     controllers.AnnotationController.finish(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/finish                                         controllers.AnnotationController.finishAll(typ: String, timestamp: Long)

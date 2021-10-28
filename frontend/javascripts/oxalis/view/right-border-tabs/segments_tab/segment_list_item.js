@@ -10,6 +10,7 @@ import {
 import { useDispatch } from "react-redux";
 import React from "react";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
 
 import type { APISegmentationLayer } from "types/api_flow_types";
 import type { IsosurfaceInformation, Segment, ActiveMappingInfo } from "oxalis/store";
@@ -111,6 +112,15 @@ type Props = {
   currentMeshFile: ?string,
 };
 
+function getSegmentTooltip(segment: Segment) {
+  if (segment.creationTime == null) {
+    return `Segment ${segment.id}`;
+  }
+  return `Segment ${segment.id} was registered at ${formatDateInLocalTimeZone(
+    segment.creationTime,
+  )}`;
+}
+
 function _SegmentListItem({
   segment,
   mapId,
@@ -189,16 +199,19 @@ function _SegmentListItem({
     >
       <Dropdown
         overlay={createSegmentContextMenu}
-        // Destroy the menu after it was closed so that createSegmentContextMenu is only called
-        // when it's really needed.
-        // destroyPopupOnHide does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // The overlay is generated lazily. By default, this would make the overlay
+        // re-render on each parent's render() after it was shown for the first time.
+        // The reason for this is that it's not destroyed after closing.
+        // Therefore, autoDestroy is passed.
+        // destroyPopupOnHide should also be an option according to the docs, but
+        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
         autoDestroy
         placement="bottomCenter"
         visible={activeDropdownSegmentId === segment.id}
         onVisibleChange={isVisible => handleSegmentDropdownMenuVisibility(segment.id, isVisible)}
         trigger={["contextMenu"]}
       >
-        <div>
+        <Tooltip title={getSegmentTooltip(segment)}>
           {getColoredDotIconForSegment(mappedId, mappingInfo.mappingColors)}
           <EditableTextLabel
             value={segment.name || `Segment ${segment.id}`}
@@ -231,7 +244,7 @@ function _SegmentListItem({
               />
             </Tooltip>
           ) : null}
-        </div>
+        </Tooltip>
       </Dropdown>
 
       <div style={{ marginLeft: 16 }}>

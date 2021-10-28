@@ -73,6 +73,7 @@ export type UpdateSegmentAction = {
   segmentId: number,
   segment: $Shape<Segment>,
   layerName?: string,
+  timestamp: number,
 };
 
 export type VolumeTracingAction =
@@ -175,11 +176,13 @@ export const updateSegmentAction = (
   segmentId: number,
   segment: $Shape<Segment>,
   layerName?: string,
+  timestamp: number = Date.now(),
 ): UpdateSegmentAction => ({
   type: "UPDATE_SEGMENT",
   segmentId,
   segment,
   layerName,
+  timestamp,
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({

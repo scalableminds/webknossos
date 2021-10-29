@@ -117,7 +117,8 @@ function moveReducer(
     matrix[13] += vector[1];
     matrix[14] += vector[2];
   }
-  if (clampToEdge && planeId != null) {
+  // todo
+  if (false && clampToEdge && planeId != null) {
     const dim = Dimensions.getIndices(planeId)[2];
     if (vector[dim] > 0) {
       // If the direction is incrementing, we clamp to .0 so that subsequent movements

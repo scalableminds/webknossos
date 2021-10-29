@@ -11,7 +11,7 @@ export const userSettings = {
   dynamicSpaceDirection: { type: "boolean" },
   keyboardDelay: { type: "number", minimum: 0, maximum: 500 },
   mouseRotateValue: { type: "number", minimum: 0.0001, maximum: 0.02 },
-  moveValue: { type: "number", minimum: 30, maximum: 14000 },
+  moveValue: { type: "number", minimum: 3, maximum: 14000 },
   moveValue3d: { type: "number", minimum: 30, maximum: 14000 },
   newNodeNewTree: { type: "boolean" },
   centerNewNode: { type: "boolean" },

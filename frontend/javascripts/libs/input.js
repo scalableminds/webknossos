@@ -34,6 +34,7 @@ type KeyboardLoopHandler = {
   (number, isOriginalEvent: boolean): void,
   delayed: boolean,
   lastTime: ?number,
+  customAdditionalDelayFn?: () => number,
 };
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
@@ -124,7 +125,7 @@ export class InputKeyboardNoLoop {
 }
 
 // This module is "main" keyboard handler.
-// It is able to handle key-presses and will continously
+// It is able to handle key-presses and will continuously
 // fire the attached callback.
 export class InputKeyboard {
   keyCallbackMap = {};
@@ -185,10 +186,14 @@ export class InputKeyboard {
           this.buttonLoop();
         }
 
-        if (this.delay >= 0) {
+        const totalDelay =
+          this.delay +
+          (callback.customAdditionalDelayFn != null ? callback.customAdditionalDelayFn() : 0);
+        if (totalDelay >= 0) {
           setTimeout(() => {
             callback.delayed = false;
-          }, this.delay);
+            callback.lastTime = new Date().getTime();
+          }, totalDelay);
         }
       },
 

@@ -8,6 +8,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
 import api from "oxalis/api/internal_api";
+import dimensions from "oxalis/model/dimensions";
 import {
   deleteActiveNodeAsUserAction,
   createTreeAction,
@@ -19,7 +20,7 @@ import {
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import { document } from "libs/window";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -137,6 +138,68 @@ class VolumeKeybindings {
       },
     };
   }
+}
+
+const getMoveValue = timeFactor => {
+  const state = Store.getState();
+  return (
+    (state.userConfiguration.moveValue * timeFactor) /
+    getBaseVoxel(state.dataset.dataSource.scale) /
+    constants.FPS
+  );
+};
+
+function createDelayAwareMoveHandler(multiplier: number) {
+  // The multiplier can be used for inverting the direction as well as for
+  // speeding up the movement as it's done for shift+f, for example.
+
+  const fn = (timeFactor, first) =>
+    MoveHandlers.moveZ(getMoveValue(timeFactor) * multiplier, first);
+
+  fn.customAdditionalDelayFn = () => {
+    // Depending on the float fraction of the current position, we want to
+    // delay subsequent movements longer or shorter.
+    // For example, when being at z=10.0 and keeping `f` pressed, the first
+    // move action will simply set z=11.0. Afterwards, a user-defined keyboard
+    // delay is awaited after which the continuous movement can begin (z=11.1,
+    // z=11.2, ... z=11.9, z=12.0...).
+    // However, doing the same logic with a starting z=10.99 would mean, that
+    // the initial movement bumps z to 11.99 and after the delay has passed,
+    // the slice will immediately switch to 12 (which is too fast).
+    // To compensate this effect, this code here takes the current fraction (and
+    // direction) into account to adapt the initial keyboard delay.
+
+    const state = Store.getState();
+    let direction = Math.sign(multiplier);
+
+    const moveDistanceIn1Second =
+      state.userConfiguration.moveValue / getBaseVoxel(state.dataset.dataSource.scale);
+    const { activeViewport } = state.viewModeData.plane;
+
+    if (activeViewport === OrthoViews.TDView) {
+      // Nothing should happen then, anyway.
+      return 0;
+    }
+
+    const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
+
+    if (state.userConfiguration.dynamicSpaceDirection) {
+      // Change direction of the value connected to space, based on the last direction
+      direction *= state.flycam.spaceDirectionOrtho[thirdDim];
+    }
+    const fraction = getPosition(state.flycam)[thirdDim] % 1;
+    const passedFraction = direction === 1 ? fraction : 1 - fraction;
+
+    // todo: remove
+    console.log({ moveDistanceIn1Second, passedFraction });
+
+    // Note that a passed fraction of 0 (e.g., z=11.0 and the direction
+    // goes towards 12), means that no additional delay is needed.
+    // The 1000 factor converts to ms.
+    return (1000 / moveDistanceIn1Second) * passedFraction;
+  };
+
+  return fn;
 }
 
 class PlaneController extends React.PureComponent<Props> {
@@ -266,15 +329,6 @@ class PlaneController extends React.PureComponent<Props> {
       }
     });
 
-    const getMoveValue = timeFactor => {
-      const state = Store.getState();
-      return (
-        (state.userConfiguration.moveValue * timeFactor) /
-        getBaseVoxel(state.dataset.dataSource.scale) /
-        constants.FPS
-      );
-    };
-
     this.input.keyboard = new InputKeyboard({
       // Move
       left: timeFactor => MoveHandlers.moveX(-getMoveValue(timeFactor)),
@@ -290,19 +344,17 @@ class PlaneController extends React.PureComponent<Props> {
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         // KeyboardJS is sensitive to ordering (complex combos first)
-        "shift + f": (timeFactor, first) => MoveHandlers.moveZ(getMoveValue(timeFactor) * 5, first),
-        "shift + d": (timeFactor, first) =>
-          MoveHandlers.moveZ(-getMoveValue(timeFactor) * 5, first),
-
         "shift + i": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(-1),
         "shift + o": () => VolumeHandlers.changeBrushSizeIfBrushIsActiveBy(1),
 
-        "shift + space": (timeFactor, first) =>
-          MoveHandlers.moveZ(-getMoveValue(timeFactor), first),
-        "ctrl + space": (timeFactor, first) => MoveHandlers.moveZ(-getMoveValue(timeFactor), first),
-        space: (timeFactor, first) => MoveHandlers.moveZ(getMoveValue(timeFactor), first),
-        f: (timeFactor, first) => MoveHandlers.moveZ(getMoveValue(timeFactor), first),
-        d: (timeFactor, first) => MoveHandlers.moveZ(-getMoveValue(timeFactor), first),
+        "shift + f": createDelayAwareMoveHandler(5),
+        "shift + d": createDelayAwareMoveHandler(-5),
+
+        "shift + space": createDelayAwareMoveHandler(-1),
+        "ctrl + space": createDelayAwareMoveHandler(-1),
+        space: createDelayAwareMoveHandler(1),
+        f: createDelayAwareMoveHandler(1),
+        d: createDelayAwareMoveHandler(-1),
 
         // Zoom in/out
         i: () => MoveHandlers.zoom(1, false),
@@ -316,7 +368,9 @@ class PlaneController extends React.PureComponent<Props> {
         },
         ...loopedKeyboardControls,
       },
-      { delay: Store.getState().userConfiguration.keyboardDelay },
+      {
+        delay: Store.getState().userConfiguration.keyboardDelay,
+      },
     );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(notLoopedKeyboardControls);

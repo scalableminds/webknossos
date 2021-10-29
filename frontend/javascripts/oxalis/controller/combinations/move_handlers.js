@@ -60,7 +60,6 @@ export const moveZ = (z: number, oneSlide: boolean): void => {
       moveFlycamOrthoAction(
         Dimensions.transDim([0, 0, (z < 0 ? -1 : 1) * Math.max(1, zStep)], activeViewport),
         activeViewport,
-        true,
       ),
     );
   } else {

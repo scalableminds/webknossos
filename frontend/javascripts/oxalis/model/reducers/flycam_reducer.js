@@ -105,32 +105,12 @@ function resetMatrix(matrix: Matrix4x4, dataSetScale: Vector3) {
   return newMatrix;
 }
 
-function moveReducer(
-  state: OxalisState,
-  vector: Vector3,
-  clampToEdge: boolean,
-  planeId: ?OrthoView,
-): OxalisState {
+function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
   const matrix = cloneMatrix(state.flycam.currentMatrix);
   if (!vector.includes(NaN)) {
     matrix[12] += vector[0];
     matrix[13] += vector[1];
     matrix[14] += vector[2];
-  }
-  // todo
-  if (false && clampToEdge && planeId != null) {
-    const dim = Dimensions.getIndices(planeId)[2];
-    if (vector[dim] > 0) {
-      // If the direction is incrementing, we clamp to .0 so that subsequent movements
-      // go from .0 to 0.999 before the next slice is shown.
-      // $FlowIgnore[invalid-tuple-index] Flow does not understand that 12 + dim cannot exceed 14.
-      matrix[12 + dim] = Math.floor(matrix[12 + dim]);
-    } else {
-      // If the direction is decrementing, we clamp to .999 so that subsequent movements
-      // go from .999 to .0 before the next slice is shown.
-      // $FlowIgnore[invalid-tuple-index] Flow does not understand that 12 + dim cannot exceed 14.
-      matrix[12 + dim] = Math.floor(matrix[12 + dim]) + 0.999;
-    }
   }
   return update(state, { flycam: { currentMatrix: { $set: matrix } } });
 }
@@ -252,7 +232,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         const dim = Dimensions.getIndices(planeId)[2];
         vector[dim] *= state.flycam.spaceDirectionOrtho[dim];
       }
-      return moveReducer(state, vector, action.clampToEdge, planeId);
+      return moveReducer(state, vector);
     }
 
     case "MOVE_PLANE_FLYCAM_ORTHO": {
@@ -274,7 +254,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
           delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
         }
 
-        return moveReducer(state, delta, false, null);
+        return moveReducer(state, delta);
       }
       return state;
     }

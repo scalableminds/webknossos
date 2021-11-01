@@ -5,7 +5,7 @@ import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { OxalisState } from "oxalis/store";
-import type { Vector3, OrthoView } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";

@@ -1,5 +1,6 @@
 // @flow
 import "test/sagas/volumetracing_saga.mock.js";
+import sinon from "sinon";
 
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
@@ -61,6 +62,12 @@ const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
+
+const TIMESTAMP = 123456789;
+test.before("Mock Date.now", async () => {
+  // This only mocks Date.now, but leaves the constructor intact
+  sinon.stub(Date, "now").returns(TIMESTAMP);
+});
 
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("volume");

@@ -2,6 +2,12 @@
 
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
 
+# version log:
+ # new in v5: annotation layers (changed annotation json result)
+ # new in v4: project queried by id, not name (changed route parameters)
+ # new in v3: annotation info and finish request now take timestamp
+ # new in v2: annotation json constains visibility enum instead of booleans
+
 ->       /v5/                                                                 webknossos.latest.Routes
 
 # support changes to v5
@@ -11,10 +17,8 @@
 #PUT      /v4/annotations/:typ/:id/reset                                       controllers.LegacyApiController.reset(typ: String, id: String)
 #PATCH    /v4/annotations/:typ/:id/transfer                                    controllers.LegacyApiController.transfer(typ: String, id: String)
 GET      /v4/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV4(typ: String, id: String, timestamp: Long)
-#PATCH    /v4/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
-#PATCH    /v4/annotations/:typ/:id/downsample                                  controllers.LegacyApiController.downsample(typ: String, id: String)
-#PATCH    /v4/annotations/:typ/:id/unlinkFallback                              controllers.LegacyApiController.unlinkFallback(typ: String, id: String, tracingId: String)
-#POST     /v4/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+PATCH    /v4/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.makeHybridV4(typ: String, id: String, fallbackLayerName: Option[String])
+POST     /v4/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String)
 #GET      /v4/annotations/shared                                               controllers.LegacyApiController.sharedAnnotations()
 #POST     /v4/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorational(organizationName: String, dataSetName: String)
 #GET      /v4/user/annotations                                                 controllers.LegacyApiController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
@@ -35,6 +39,9 @@ PATCH    /v3/projects/:name/incrementEachTasksInstances                       co
 PATCH    /v3/projects/:name/pause                                             controllers.LegacyApiController.projectPause(name: String)
 PATCH    /v3/projects/:name/resume                                            controllers.LegacyApiController.projectResume(name: String)
 
+# support changes to v5
+POST     /v3/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String)
+
 ->       /v3/                                                                 webknossos.latest.Routes
 
 # Support changes to v3
@@ -51,9 +58,12 @@ PATCH    /v2/projects/:name/incrementEachTasksInstances                       co
 PATCH    /v2/projects/:name/pause                                             controllers.LegacyApiController.projectPause(name: String)
 PATCH    /v2/projects/:name/resume                                            controllers.LegacyApiController.projectResume(name: String)
 
+# support changes to v5
+POST     /v3/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String)
+
 ->       /v2/                                                                 webknossos.latest.Routes
 
-# Support changes to v2 and v3
+# Support changes to v2 and v3, and v5
 PATCH    /v1/annotations/:typ/:id/edit                                        controllers.LegacyApiController.editAnnotation(typ: String, id: String)
 POST     /v1/annotations/:typ/:id/duplicate                                   controllers.LegacyApiController.annotationDuplicate(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinish(typ: String, id: String)
@@ -61,8 +71,8 @@ PATCH    /v1/annotations/:typ/:id/reopen                                      co
 PUT      /v1/annotations/:typ/:id/reset                                       controllers.LegacyApiController.annotationReset(typ: String, id: String)
 PATCH    /v1/annotations/:typ/:id/transfer                                    controllers.LegacyApiController.annotationTransfer(typ: String, id: String)
 GET      /v1/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV1(typ: String, id: String)
-PATCH    /v1/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.annotationMakeHybrid(typ: String, id: String)
-POST     /v1/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMerge(typ: String, id: String, mergedTyp: String, mergedId: String)
+PATCH    /v1/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.annotationMakeHybridV1(typ: String, id: String)
+POST     /v1/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMergeV1(typ: String, id: String, mergedTyp: String, mergedId: String)
 POST     /v1/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorational(organizationName: String, dataSetName: String)
 GET      /v1/user/annotations                                                 controllers.LegacyApiController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET      /v1/user/tasks                                                       controllers.LegacyApiController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])

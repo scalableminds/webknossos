@@ -174,18 +174,26 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedResult
   }
 
-  def annotationMakeHybrid(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def annotationMakeHybridV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.makeHybrid(typ, id, None)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
   }
 
-  def annotationMerge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+  def annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
-        adaptedResult <- replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+    }
+
+  def annotationMergeV1(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
     }
 

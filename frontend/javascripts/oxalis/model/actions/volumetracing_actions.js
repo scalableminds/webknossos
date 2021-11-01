@@ -5,6 +5,7 @@
 import type { ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, Vector4, OrthoView, ContourMode } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
+import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import { type Dispatch } from "redux";
 
@@ -22,7 +23,21 @@ type FloodFillAction = {
   callback?: () => void,
 };
 type FinishEditingAction = { type: "FINISH_EDITING" };
-type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
+export type SetActiveCellAction = {
+  type: "SET_ACTIVE_CELL",
+  cellId: number,
+  somePosition?: Vector3,
+};
+
+// A simple "click segment" is dispatched when clicking
+// with the MOVE tool. Currently, this has the side-effect
+// of adding the clicked segment to the segment list (if one
+// exists and if it's not already there)
+export type ClickSegmentAction = {
+  type: "CLICK_SEGMENT",
+  cellId: number,
+  somePosition: Vector3,
+};
 
 export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
@@ -38,7 +53,7 @@ export type AddBucketToUndoAction = {
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourAction = { type: "RESET_CONTOUR" };
 export type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE" };
-type SetMousePositionAction = { type: "SET_MOUSE_POSITION", position: Vector2 };
+type SetMousePositionAction = { type: "SET_MOUSE_POSITION", position: ?Vector2 };
 type HideBrushAction = { type: "HIDE_BRUSH" };
 type SetContourTracingModeAction = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourMode };
 export type InferSegmentationInViewportAction = {
@@ -47,6 +62,19 @@ export type InferSegmentationInViewportAction = {
 };
 export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
 export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
+export type SetSegmentsAction = {
+  type: "SET_SEGMENTS",
+  segments: SegmentMap,
+  layerName?: string,
+};
+
+export type UpdateSegmentAction = {
+  type: "UPDATE_SEGMENT",
+  segmentId: number,
+  segment: $Shape<Segment>,
+  layerName?: string,
+  timestamp: number,
+};
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -56,6 +84,7 @@ export type VolumeTracingAction =
   | FloodFillAction
   | FinishEditingAction
   | SetActiveCellAction
+  | ClickSegmentAction
   | UpdateDirectionAction
   | ResetContourAction
   | FinishAnnotationStrokeAction
@@ -64,6 +93,8 @@ export type VolumeTracingAction =
   | CopySegmentationLayerAction
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
+  | SetSegmentsAction
+  | UpdateSegmentAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
@@ -74,6 +105,8 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
   "FINISH_ANNOTATION_STROKE",
+  "UPDATE_SEGMENT",
+  "SET_SEGMENTS",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -115,9 +148,41 @@ export const finishEditingAction = (): FinishEditingAction => ({
   type: "FINISH_EDITING",
 });
 
-export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({
+export const setActiveCellAction = (
+  cellId: number,
+  somePosition?: Vector3,
+): SetActiveCellAction => ({
   type: "SET_ACTIVE_CELL",
   cellId,
+  somePosition,
+});
+
+export const clickSegmentAction = (cellId: number, somePosition: Vector3): ClickSegmentAction => ({
+  type: "CLICK_SEGMENT",
+  cellId,
+  somePosition,
+});
+
+export const setSegmentsActions = (
+  segments: SegmentMap,
+  layerName?: string,
+): SetSegmentsAction => ({
+  type: "SET_SEGMENTS",
+  segments,
+  layerName,
+});
+
+export const updateSegmentAction = (
+  segmentId: number,
+  segment: $Shape<Segment>,
+  layerName?: string,
+  timestamp: number = Date.now(),
+): UpdateSegmentAction => ({
+  type: "UPDATE_SEGMENT",
+  segmentId,
+  segment,
+  layerName,
+  timestamp,
 });
 
 export const copySegmentationLayerAction = (fromNext?: boolean): CopySegmentationLayerAction => ({
@@ -138,7 +203,7 @@ export const finishAnnotationStrokeAction = (): FinishAnnotationStrokeAction => 
   type: "FINISH_ANNOTATION_STROKE",
 });
 
-export const setMousePositionAction = (position: Vector2): SetMousePositionAction => ({
+export const setMousePositionAction = (position: ?Vector2): SetMousePositionAction => ({
   type: "SET_MOUSE_POSITION",
   position,
 });

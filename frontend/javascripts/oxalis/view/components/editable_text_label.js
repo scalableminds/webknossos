@@ -20,6 +20,10 @@ export type EditableTextLabelProp = {|
   rows?: number,
   markdown?: boolean,
   label: string,
+  horizontalMargin?: number,
+  onClick?: () => void,
+  disableEditing?: boolean,
+  onContextMenu?: () => void,
 |};
 
 type State = {
@@ -70,12 +74,13 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
 
   render() {
     const iconStyle = { cursor: "pointer" };
+    const horizontalMargin = this.props.horizontalMargin != null ? this.props.horizontalMargin : 10;
 
     const inputComponentProps = {
       value: this.state.value,
       onChange: this.handleInputChange,
       onPressEnter: this.handleOnChange,
-      style: { width: "60%", margin: "0 10px" },
+      style: { width: "60%", margin: `0 ${horizontalMargin}px` },
       size: "small",
       autoFocus: true,
       rows: this.props.rows,
@@ -86,7 +91,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
         <span>
           {this.props.rows === 1 ? (
             <React.Fragment>
-              <Input {...inputComponentProps} />
+              <Input {...inputComponentProps} onBlur={this.handleOnChange} />
               <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
                 <CheckOutlined
                   style={iconStyle}
@@ -111,7 +116,12 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     } else {
       return (
         <span style={{ display: "inline-block" }}>
-          <span style={{ margin: "0 10px", display: "inline-block" }}>
+          <span
+            style={{ margin: `0 ${horizontalMargin}px`, display: "inline-block" }}
+            className={this.props.onClick != null ? "clickable-text" : null}
+            onClick={this.props.onClick}
+            onContextMenu={this.props.onContextMenu}
+          >
             {this.props.markdown ? (
               <Markdown
                 source={this.props.value}
@@ -122,15 +132,17 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
               this.props.value
             )}
           </span>
-          <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
-            <EditOutlined
-              style={iconStyle}
-              onClick={evt => {
-                evt.stopPropagation();
-                this.setState({ isEditing: true });
-              }}
-            />
-          </Tooltip>
+          {this.props.disableEditing ? null : (
+            <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
+              <EditOutlined
+                style={iconStyle}
+                onClick={evt => {
+                  evt.stopPropagation();
+                  this.setState({ isEditing: true });
+                }}
+              />
+            </Tooltip>
+          )}
         </span>
       );
     }

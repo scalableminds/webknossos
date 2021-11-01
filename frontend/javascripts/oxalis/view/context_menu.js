@@ -13,8 +13,9 @@ import {
 import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
-import { connect } from "react-redux";
+import { connect, useDispatch } from "react-redux";
 import { V3 } from "libs/mjs";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -32,7 +33,7 @@ import {
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/meshes_view_helper";
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
@@ -62,7 +63,7 @@ type DispatchProps = {|
   setActiveNode: number => void,
   hideTree: number => void,
   createTree: () => void,
-  setActiveCell: number => void,
+  setActiveCell: (number, somePosition?: Vector3) => void,
 |};
 
 type StateProps = {|
@@ -300,13 +301,14 @@ function NoNodeContextMenuOptions({
   currentMeshFile,
   setActiveCell,
 }: NoNodeContextMenuProps) {
+  const dispatch = useDispatch();
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
     })();
   }, [visibleSegmentationLayer, dataset]);
 
-  const loadMesh = async () => {
+  const loadPrecomputedMesh = async () => {
     if (!currentMeshFile) return;
 
     if (visibleSegmentationLayer) {
@@ -323,6 +325,18 @@ function NoNodeContextMenuOptions({
         dataset,
       );
     }
+  };
+
+  const computeMeshAdHoc = () => {
+    if (!visibleSegmentationLayer) {
+      return;
+    }
+    const id = getSegmentIdForPosition(globalPosition);
+    if (id === 0) {
+      Toast.info("No segment found at the clicked position");
+      return;
+    }
+    dispatch(changeActiveIsosurfaceCellAction(id, globalPosition, true));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
@@ -350,16 +364,27 @@ function NoNodeContextMenuOptions({
         ]
       : [];
 
-  const loadMeshItem = (
+  const loadPrecomputedMeshItem = (
     <Menu.Item
       className="node-context-menu-item"
-      key="load-mesh-file"
-      onClick={loadMesh}
+      key="load-precomputed-mesh"
+      onClick={loadPrecomputedMesh}
       disabled={!currentMeshFile}
     >
-      Load Precomputed Mesh
+      Load Mesh (precomputed)
     </Menu.Item>
   );
+
+  const computeMeshAdHocItem = (
+    <Menu.Item
+      className="node-context-menu-item"
+      key="compute-mesh-adhc"
+      onClick={computeMeshAdHoc}
+    >
+      Compute Mesh (ad-hoc)
+    </Menu.Item>
+  );
+
   const nonSkeletonActions =
     volumeTracing != null
       ? [
@@ -370,14 +395,15 @@ function NoNodeContextMenuOptions({
               className="node-context-menu-item"
               key="select-cell"
               onClick={() => {
-                setActiveCell(segmentIdAtPosition);
+                setActiveCell(segmentIdAtPosition, globalPosition);
               }}
             >
               Select Segment ({segmentIdAtPosition}){" "}
               {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
             </Menu.Item>
           ) : null,
-          loadMeshItem,
+          loadPrecomputedMeshItem,
+          computeMeshAdHocItem,
           <Menu.Item
             className="node-context-menu-item"
             key="fill-cell"
@@ -388,7 +414,8 @@ function NoNodeContextMenuOptions({
         ]
       : [];
   if (volumeTracing == null && visibleSegmentationLayer != null) {
-    nonSkeletonActions.push(loadMeshItem);
+    nonSkeletonActions.push(loadPrecomputedMeshItem);
+    nonSkeletonActions.push(computeMeshAdHocItem);
   }
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
 
@@ -558,8 +585,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   createTree() {
     dispatch(createTreeAction());
   },
-  setActiveCell(segmentId: number) {
-    dispatch(setActiveCellAction(segmentId));
+  setActiveCell(segmentId: number, somePosition?: Vector3) {
+    dispatch(setActiveCellAction(segmentId, somePosition));
   },
 });
 
@@ -576,7 +603,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     zoomStep: getRequestLogZoomStep(state),
     currentMeshFile:
       visibleSegmentationLayer != null
-        ? state.currentMeshFileByLayer[visibleSegmentationLayer.name]
+        ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
   };

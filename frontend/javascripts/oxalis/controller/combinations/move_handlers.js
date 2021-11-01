@@ -19,8 +19,12 @@ import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_m
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 
-export function setMousePosition(position: Point2): void {
-  Store.dispatch(setMousePositionAction([position.x, position.y]));
+export function setMousePosition(position: ?Point2): void {
+  if (position != null) {
+    Store.dispatch(setMousePositionAction([position.x, position.y]));
+  } else {
+    Store.dispatch(setMousePositionAction(null));
+  }
 }
 
 export function handleOverViewport(planeId: OrthoView): void {

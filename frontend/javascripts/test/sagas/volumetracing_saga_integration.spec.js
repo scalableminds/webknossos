@@ -515,7 +515,7 @@ test.serial(
 );
 
 test.serial(
-  "Brushing/Tracing should send buckets to backend and restore dirty flag afterwards",
+  "Brushing/Tracing should not crash when too many buckets are labeled at once with saving inbetween",
   async t => {
     await t.context.api.tracing.save();
 

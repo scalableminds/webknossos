@@ -76,6 +76,7 @@ object FetchedAnnotationLayer {
     }
 
   // To support compound download. There, at most one skeleton tracing and at most one volume tracing exist per annotation. Volume data is handled separately there.
+  @SuppressWarnings(Array("OptionGet")) // Can be suppressed as the assertions ensure full options
   def layersFromTracings(
       skeletonTracingIdOpt: Option[String],
       volumeTracingIdOpt: Option[String],

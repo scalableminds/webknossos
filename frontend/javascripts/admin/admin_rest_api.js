@@ -696,7 +696,16 @@ export function createExplorational(
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   return Request.sendJSONReceiveJSON(
     url,
-    Object.assign({}, { data: [ { typ: "Volume", name: "volumeA", fallbackLayerName, resolutionRestrictions}, {typ: "Volume", name: "volumeB"}] }, options),
+    Object.assign(
+      {},
+      {
+        data: [
+          { typ: "Volume", name: "volumeA", fallbackLayerName, resolutionRestrictions },
+          { typ: "Volume", name: "volumeB" },
+        ],
+      },
+      options,
+    ),
   );
 }
 

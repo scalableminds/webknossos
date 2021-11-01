@@ -14,7 +14,11 @@ The API is subject to frequent changes. However, older versions will be supporte
 
 New versions will be documented here, detailing the changes. Note, however, that some changes are not considered to be breaking the API and will not lead to new versions. Such changes include new optional parameters as well as new fields in the responses. The same goes for error message wording.
 
-### Current api version is `v4`
+### Current api version is `v5`
+
+* New in v5:
+  - The annotation json no longer contains `skeletonTracingId` and `volumeTracingId`, but instead a list of `annotationLayers`, each containing of `tracingId: String, typ: AnnotationLayerType, name: Option[String]`.
+  - `createExplorational` now expects list of layer parameters (`typ: AnnotationLayerType, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions], name: Option[String]`)
 
 * New in v4: /projects routes no longer expect `name` but now `id`. The same goes for `POST /tasks/list` when filtering by project.
 
@@ -201,11 +205,26 @@ To get the actual resolutions, please use `GET /datasets/:organizationName/:data
 ### `GET /datasets/:organizationName/:dataSetName`
 
 #### Expects
- - In the url: `:organizationName` the url-safe name of your organization, e.g. `sample_organization`
+ - In the url: `:organizationName` the url-safe name of your organization, e.g. `sample_organization` or `edbdcad7d2033380`
  - In the url: `:dataSetName` the name of the dataset
 
 #### Returns
  - JSON object containing dataset information
+
+---
+### `POST /datasets/:organizationName/:dataSetName/createExplorational`
+
+#### Expects
+ - In the url: `:organizationName` the url-safe name of your organization, e.g. `sample_organization` or `edbdcad7d2033380`
+ - In the url: `:dataSetName` the name of the dataset
+ - In the JSON body: A list of layer parameter objects (`typ: AnnotationLayerType, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions], name: Option[String]`) where the type `ResolutionRestrictions` is an object with `min: Option[Int], max: Option[Int]` and AnnotationLayerType is a string with possible values `Skeleton`, `Volume`.
+
+#### Returns
+ - JSON object containing annotation information about the newly created annotation, including the assigned id
+
+#### Changes Introduced in `v5`
+ - Now expects a List of layer parameters, rather than the old format (a single object containing `typ: String, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions]`)
+
 
 ---
 ### `GET /datastores`

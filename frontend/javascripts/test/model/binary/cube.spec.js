@@ -238,3 +238,11 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   const addresses = cube.buckets.map(b => b.zoomedAddress);
   t.deepEqual(addresses, [[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
 });
+
+test("getVoxelIndexByVoxelOffset should return the correct index of a position within a bucket", t => {
+  const { cube } = t.context;
+  let index = cube.getVoxelIndexByVoxelOffset([0, 0, 0]);
+  t.is(index, 0);
+  index = cube.getVoxelIndexByVoxelOffset([10, 10, 10]);
+  t.is(index, 10570);
+});

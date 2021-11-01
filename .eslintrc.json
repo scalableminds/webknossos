@@ -85,6 +85,7 @@
     "react-hooks/rules-of-hooks": "error",
     "import/newline-after-import": "off",
     "flow-header/flow-header": "error",
+    "spaced-comment": "off",
     "react/sort-comp": [
       "error",
       {

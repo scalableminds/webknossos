@@ -1,9 +1,11 @@
 // @flow
 import "test/sagas/volumetracing_saga.mock.js";
+import sinon from "sinon";
 
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
 
+import DiffableMap from "libs/diffable_map";
 import {
   OrthoViews,
   AnnotationToolEnum,
@@ -38,8 +40,8 @@ const volumeTracing: VolumeTracing = {
   createdTimestamp: 0,
   tracingId: "tracingId",
   version: 0,
+  segments: new DiffableMap(),
   activeCellId: 0,
-  cells: {},
   maxCellId: 0,
   contourList: [[1, 2, 3], [7, 8, 9]],
   boundingBox: null,
@@ -60,6 +62,12 @@ const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
+
+const TIMESTAMP = 123456789;
+test.before("Mock Date.now", async () => {
+  // This only mocks Date.now, but leaves the constructor intact
+  sinon.stub(Date, "now").returns(TIMESTAMP);
+});
 
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("volume");
@@ -111,7 +119,18 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next(AnnotationToolEnum.BRUSH);
   saga.next(false);
   // pass labeled resolution
-  const startEditingSaga = execCall(t, saga.next({ resolution: [1, 1, 1], zoomStep: 0 }));
+  saga.next({ resolution: [1, 1, 1], zoomStep: 0 });
+  expectValueDeepEqual(
+    t,
+    saga.next(ACTIVE_CELL_ID), // pass active cell id
+    put(
+      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
+        somePosition: startEditingAction.position,
+      }),
+    ),
+  );
+
+  const startEditingSaga = execCall(t, saga.next());
   startEditingSaga.next();
   // Pass position
   const layer = startEditingSaga.next([1, 1, 1]).value;
@@ -129,6 +148,16 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
+  expectValueDeepEqual(
+    t,
+    saga.next(ACTIVE_CELL_ID), // pass active cell id
+    put(
+      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
+        somePosition: startEditingAction.position,
+      }),
+    ),
+  );
+  saga.next(); // advance from the put action
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
@@ -154,6 +183,16 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
+  expectValueDeepEqual(
+    t,
+    saga.next(ACTIVE_CELL_ID), // pass active cell id
+    put(
+      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
+        somePosition: startEditingAction.position,
+      }),
+    ),
+  );
+  saga.next(); // advance from the put action
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
@@ -186,6 +225,16 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
   saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
+  expectValueDeepEqual(
+    t,
+    saga.next(ACTIVE_CELL_ID), // pass active cell id
+    put(
+      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
+        somePosition: startEditingAction.position,
+      }),
+    ),
+  );
+  saga.next(); // advance from the put action
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);

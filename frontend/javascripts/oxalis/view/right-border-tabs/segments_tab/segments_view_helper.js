@@ -37,7 +37,7 @@ export async function maybeFetchMeshFiles(
     return [];
   }
   const layerName = segmentationLayer.name;
-  const files = Store.getState().availableMeshFilesByLayer[layerName];
+  const files = Store.getState().localSegmentationData[layerName].availableMeshFiles;
 
   // Only send new get request, if it hasn't happened before (files in store are null)
   // else return the stored files (might be empty array). Or if we force a reload.
@@ -49,7 +49,7 @@ export async function maybeFetchMeshFiles(
     );
     Store.dispatch(updateMeshFileListAction(layerName, availableMeshFiles));
     if (
-      !Store.getState().currentMeshFileByLayer[layerName] &&
+      !Store.getState().localSegmentationData[layerName].currentMeshFile &&
       availableMeshFiles.length > 0 &&
       autoActivate
     ) {
@@ -90,7 +90,7 @@ export async function loadMeshFromFile(
   }
 
   const tasks = availableChunks.map(chunkPos => async () => {
-    if (Store.getState().isosurfacesByLayer[layerName][id] == null) {
+    if (Store.getState().localSegmentationData[layerName].isosurfaces[id] == null) {
       // Don't load chunk, since the mesh seems to have been deleted in the meantime (e.g., by the user).
       return;
     }
@@ -103,7 +103,7 @@ export async function loadMeshFromFile(
       id,
       chunkPos,
     );
-    if (Store.getState().isosurfacesByLayer[layerName][id] == null) {
+    if (Store.getState().localSegmentationData[layerName].isosurfaces[id] == null) {
       // Don't add chunks, since the mesh seems to have been deleted in the meantime (e.g., by the user).
       return;
     }
@@ -117,8 +117,8 @@ export async function loadMeshFromFile(
     Toast.warning("Some mesh objects could not be loaded.");
   }
 
-  if (Store.getState().isosurfacesByLayer[layerName][id] == null) {
-    // The mesh was removed from the store in the mean time. Don't do anything.
+  if (Store.getState().localSegmentationData[layerName].isosurfaces[id] == null) {
+    // The mesh was removed from the store in the meantime. Don't do anything.
     return;
   }
 

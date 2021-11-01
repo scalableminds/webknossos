@@ -1,6 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
@@ -32,6 +33,126 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     taskService: TaskService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
+
+  /* to provide v4
+   - replace new annotation layers by old tracing ids (changed in v5)
+   */
+
+  def annotationEditV4(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
+    implicit request =>
+      for {
+        result <- annotationController.editAnnotation(typ, id)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationDuplicateV4(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      result <- annotationController.duplicate(typ, id)(request)
+      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+    } yield adaptedResult
+  }
+
+  def annotationInfoV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- annotationController.info(typ, id, timestamp)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+    }
+
+  def annotationFinishV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- annotationController.finish(typ, id, timestamp)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationReopenV4(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      result <- annotationController.reopen(typ, id)(request)
+      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+    } yield adaptedResult
+  }
+
+  def annotationResetV4(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      result <- annotationController.reset(typ, id)(request)
+      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+    } yield adaptedResult
+  }
+
+  def annotationListForCurrentUserV4(isFinished: Option[Boolean],
+                                     limit: Option[Int],
+                                     pageNumber: Option[Int],
+                                     includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- userController.annotations(isFinished, limit, pageNumber, includeTotalCount)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationTasksV4(isFinished: Option[Boolean],
+                        limit: Option[Int],
+                        pageNumber: Option[Int],
+                        includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- userController.tasks(isFinished, limit, pageNumber, includeTotalCount)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationListByUserV4(id: String,
+                             isFinished: Option[Boolean],
+                             limit: Option[Int],
+                             pageNumber: Option[Int],
+                             includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- userController.userAnnotations(id, isFinished, limit, pageNumber, includeTotalCount)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationTasksByUserV4(id: String,
+                              isFinished: Option[Boolean],
+                              limit: Option[Int],
+                              pageNumber: Option[Int],
+                              includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- userController.userTasks(id, isFinished, limit, pageNumber, includeTotalCount)(request)
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  def annotationsForTaskV4(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      result <- annotationController.annotationsForTask(id)(request)
+      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+    } yield adaptedResult
+  }
+
+  def annotationCreateExplorationalV4(organizationName: String,
+                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+    sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
+      for {
+        result <- annotationController.createExplorational(organizationName, dataSetName)(
+          request.withBody(replaceCreateExplorationalParameters(request)))
+        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+      } yield adaptedResult
+    }
 
   /* to provide v3, find projects by name */
 
@@ -110,61 +231,55 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   /* to provide v2
    - insert automatic timestamp in finish and info request (changed in v3)
+   - replace new annotation layers by old tracing ids (changed in v5)
    */
 
-  def annotationFinishV2(typ: String, id: String): Action[AnyContent] =
-    annotationController.finish(typ, id, System.currentTimeMillis)
+  def annotationFinishV2(typ: String, id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    for {
+      result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
+      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+    } yield adaptedResult
+  }
 
-  def annotationInfoV2(typ: String, id: String): Action[AnyContent] =
-    annotationController.info(typ, id, System.currentTimeMillis)
+  def annotationInfoV2(typ: String, id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    for {
+      result <- annotationController.info(typ, id, System.currentTimeMillis)(request)
+      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+    } yield adaptedResult
+  }
 
   /* to provide v1,
     - replace new field “visibility” in annotation json by old boolean field “isPublic” (changed in v2)
     - insert automatic timestamp in finish and info request (changed in v3)
+    - replace new annotation layers by old tracing ids (changed in v5)
    */
 
-  def annotationDuplicate(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def annotationDuplicateV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.duplicate(typ, id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
   }
 
-  def annotationFinish(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def annotationFinishV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
   }
 
-  def annotationReopen(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def annotationReopenV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.reopen(typ, id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
   }
 
-  def annotationReset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def annotationResetV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.reset(typ, id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
-  }
-
-  def annotationTransfer(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
-      for {
-        result <- annotationController.transfer(typ, id)(request)
-        adaptedResult <- replaceInResult(replaceVisibility)(result)
-      } yield adaptedResult
-  }
-
-  def annotationInfoV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        result <- annotationController.info(typ, id, timestamp)(request)
-        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
-      } yield adaptedResult
   }
 
   def annotationInfoV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -174,20 +289,13 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedResult
   }
 
-  def annotationMakeHybridV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      result <- annotationController.makeHybrid(typ, id, None)(request)
-      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+  def annotationMakeHybridV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
       for {
-        result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
-        adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
+        result <- annotationController.makeHybrid(typ, id, None)(request)
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
-    }
+  }
 
   def annotationMergeV1(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -197,92 +305,70 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield adaptedResult
     }
 
-  def annotationCreateExplorational(organizationName: String,
-                                    dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+  def annotationCreateExplorationalV1(organizationName: String,
+                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
-      val skeletonParameters =
-        if (request.body.typ == "volume") None
-        else
-          Some(
-            CreateExplorationalParameters(AnnotationLayerType.Skeleton,
-                                          request.body.fallbackLayerName,
-                                          request.body.resolutionRestrictions,
-                                          name = None))
-      val volumeParameters =
-        if (request.body.typ == "skeleton") None
-        else
-          Some(
-            CreateExplorationalParameters(AnnotationLayerType.Volume,
-                                          request.body.fallbackLayerName,
-                                          request.body.resolutionRestrictions,
-                                          name = None))
-      val adaptedParameters: List[CreateExplorationalParameters] = List(skeletonParameters, volumeParameters).flatten
       for {
         result <- annotationController.createExplorational(organizationName, dataSetName)(
-          request.withBody(adaptedParameters))
-        adaptedResult <- replaceInResult(replaceVisibility)(result)
+          request.withBody(replaceCreateExplorationalParameters(request)))
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
     }
 
-  def annotations(isFinished: Option[Boolean],
-                  limit: Option[Int],
-                  pageNumber: Option[Int],
-                  includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+  def annotationListForCurrentUserV1(isFinished: Option[Boolean],
+                                     limit: Option[Int],
+                                     pageNumber: Option[Int],
+                                     includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         result <- userController.annotations(isFinished, limit, pageNumber, includeTotalCount)(request)
-        adaptedResult <- replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
   }
 
-  def userAnnotations(id: String,
-                      isFinished: Option[Boolean],
-                      limit: Option[Int],
-                      pageNumber: Option[Int],
-                      includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+  def annotationListByUserV1(id: String,
+                             isFinished: Option[Boolean],
+                             limit: Option[Int],
+                             pageNumber: Option[Int],
+                             includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         result <- userController.userAnnotations(id, isFinished, limit, pageNumber, includeTotalCount)(request)
-        adaptedResult <- replaceInResult(replaceVisibility)(result)
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
   }
 
-  def taskRequest: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      result <- taskController.request()(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
-    } yield adaptedResult
-  }
-
-  def annotationsForTask(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def annotationsForTaskV1(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.annotationsForTask(id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
+      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
     } yield adaptedResult
   }
 
-  def tasks(isFinished: Option[Boolean],
-            limit: Option[Int],
-            pageNumber: Option[Int],
-            includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      result <- userController.tasks(isFinished, limit, pageNumber, includeTotalCount)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
-    } yield adaptedResult
+  def annotationTasksV1(isFinished: Option[Boolean],
+                        limit: Option[Int],
+                        pageNumber: Option[Int],
+                        includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- userController.tasks(isFinished, limit, pageNumber, includeTotalCount)(request)
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
+      } yield adaptedResult
   }
 
-  def userTasks(id: String,
-                isFinished: Option[Boolean],
-                limit: Option[Int],
-                pageNumber: Option[Int],
-                includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      result <- userController.userTasks(id, isFinished, limit, pageNumber, includeTotalCount)(request)
-      adaptedResult <- replaceInResult(replaceVisibility)(result)
-    } yield adaptedResult
+  def annotationTasksByUserV1(id: String,
+                              isFinished: Option[Boolean],
+                              limit: Option[Int],
+                              pageNumber: Option[Int],
+                              includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        result <- userController.userTasks(id, isFinished, limit, pageNumber, includeTotalCount)(request)
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
+      } yield adaptedResult
   }
 
-  def editAnnotation(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
+  def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       val oldRequest = request.request
       val newRequest =
@@ -291,7 +377,31 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
             request = oldRequest.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject]))))
         else request
 
-      annotationController.editAnnotation(typ, id)(newRequest)
+      for {
+        result <- annotationController.editAnnotation(typ, id)(newRequest)
+        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
+      } yield adaptedResult
+  }
+
+  private def replaceCreateExplorationalParameters(
+      request: SecuredRequest[WkEnv, LegacyCreateExplorationalParameters]) = {
+    val skeletonParameters =
+      if (request.body.typ == "volume") None
+      else
+        Some(
+          CreateExplorationalParameters(AnnotationLayerType.Skeleton,
+                                        request.body.fallbackLayerName,
+                                        request.body.resolutionRestrictions,
+                                        name = None))
+    val volumeParameters =
+      if (request.body.typ == "skeleton") None
+      else
+        Some(
+          CreateExplorationalParameters(AnnotationLayerType.Volume,
+                                        request.body.fallbackLayerName,
+                                        request.body.resolutionRestrictions,
+                                        name = None))
+    List(skeletonParameters, volumeParameters).flatten
   }
 
   private def insertVisibilityInJsObject(jsObject: JsObject) = {

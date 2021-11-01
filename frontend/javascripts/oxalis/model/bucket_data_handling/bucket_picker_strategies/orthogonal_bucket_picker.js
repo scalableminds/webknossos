@@ -79,6 +79,9 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   let currentCount = 0;
 
   for (const planeId of OrthoViewValuesWithoutTDView) {
+    // If the viewport is not visible, no buckets need to be added
+    if (!areas[planeId].isVisible) continue;
+
     const [u, v, w] = Dimensions.getIndices(planeId);
 
     const topLeftVector = [0, 0, 0, 0];
@@ -88,11 +91,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     const bottomRightVector = [0, 0, 0, 0];
     bottomRightVector[v] = areas[planeId].bottom;
     bottomRightVector[u] = areas[planeId].right;
-
-    const width = bottomRightVector[u] - topLeftVector[u];
-    const height = bottomRightVector[v] - topLeftVector[v];
-    // If the viewport is not visible, no buckets need to be added
-    if (width === 0 || height === 0) continue;
 
     const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
       topLeftVector,

@@ -477,17 +477,17 @@ class SceneController {
     if (this.highlightedBBoxId === bboxId) {
       return;
     }
-    const highlightOrUnhighlightUserBBox = (id: number, highlight: boolean) => {
+    const setIsHighlighted = (id: number, isHighlighted: boolean) => {
       const bboxToChangeHighlighting = this.userBoundingBoxes.find(bbCube => bbCube.id === id);
       if (bboxToChangeHighlighting != null) {
-        bboxToChangeHighlighting.setIsHighlighted(highlight);
+        bboxToChangeHighlighting.setIsHighlighted(isHighlighted);
       }
     };
     if (this.highlightedBBoxId != null) {
-      highlightOrUnhighlightUserBBox(this.highlightedBBoxId, false);
+      setIsHighlighted(this.highlightedBBoxId, false);
     }
     if (bboxId != null) {
-      highlightOrUnhighlightUserBBox(bboxId, true);
+      setIsHighlighted(bboxId, true);
     }
     this.highlightedBBoxId = bboxId;
   }

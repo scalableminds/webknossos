@@ -15,10 +15,12 @@ import type {
   OxalisState,
 } from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
+import { AnnotationToolEnum } from "oxalis/constants";
 import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/tool_controls";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeTool,
   isVolumeAnnotationDisallowedForZoom,
@@ -54,7 +56,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
       boundingBox: convertedBoundingBox,
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
-      name: name || `bounding box ${id}`,
+      name: name || `Bounding box ${id}`,
       isVisible: isVisible != null ? isVisible : true,
     };
   });
@@ -134,6 +136,26 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     meshes,
     user,
   };
+}
+
+export function getNextTool(state: OxalisState): AnnotationTool | null {
+  const disabledToolInfo = getDisabledInfoForTools(state);
+
+  const tools = Object.keys(AnnotationToolEnum);
+  const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
+
+  // Search for the next tool which is not disabled.
+  for (
+    let newToolIndex = currentToolIndex + 1;
+    newToolIndex < currentToolIndex + tools.length;
+    newToolIndex++
+  ) {
+    const newTool = tools[newToolIndex % tools.length];
+    if (!disabledToolInfo[newTool].isDisabled) {
+      return newTool;
+    }
+  }
+  return null;
 }
 
 export function setToolReducer(state: OxalisState, tool: AnnotationTool) {

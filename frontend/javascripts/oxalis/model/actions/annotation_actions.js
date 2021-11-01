@@ -6,8 +6,12 @@ import type {
   RemoteMeshMetaData,
   APIAnnotationVisibility,
 } from "types/api_flow_types";
-import type { Vector3, BoundingBoxType } from "oxalis/constants";
-import type { UserBoundingBox } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
+import type {
+  UserBoundingBox,
+  UserBoundingBoxWithoutId,
+  UserBoundingBoxWithoutIdMaybe,
+} from "oxalis/store";
 
 type InitializeAnnotationAction = {
   type: "INITIALIZE_ANNOTATION",
@@ -39,12 +43,6 @@ type SetUserBoundingBoxesAction = {
   userBoundingBoxes: Array<UserBoundingBox>,
 };
 
-type SetUserBoundingBoxBoundsAction = {
-  type: "SET_USER_BOUNDING_BOX_BOUNDS",
-  bounds: BoundingBoxType,
-  id: number,
-};
-
 type FinishedResizingUserBoundingBoxAction = {
   type: "FINISHED_RESIZING_USER_BOUNDING_BOX",
   id: number,
@@ -57,26 +55,16 @@ type AddUserBoundingBoxesAction = {
 
 type AddNewUserBoundingBox = {
   type: "ADD_NEW_USER_BOUNDING_BOX",
-  newBoundingBox?: ?UserBoundingBox,
+  newBoundingBox?: ?UserBoundingBoxWithoutId,
+  // Center is the passed position that the new bounding box should have as a center.
+  // If no center is given, the flycam center will be taken.
   center?: Vector3,
 };
 
-type SetUserBoundingBoxVisibilityAction = {
-  type: "SET_USER_BOUNDING_BOX_VISIBILITY",
+type ChangeUserBoundingBoxAction = {
+  type: "CHANGE_USER_BOUNDING_BOX",
   id: number,
-  isVisible: boolean,
-};
-
-type SetUserBoundingBoxNameAction = {
-  type: "SET_USER_BOUNDING_BOX_NAME",
-  id: number,
-  name: string,
-};
-
-type SetUserBoundingBoxColorAction = {
-  type: "SET_USER_BOUNDING_BOX_COLOR",
-  id: number,
-  color: Vector3,
+  newProps: UserBoundingBoxWithoutIdMaybe,
 };
 
 type DeleteUserBoundingBox = {
@@ -189,12 +177,9 @@ export type AnnotationActionTypes =
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
-  | SetUserBoundingBoxBoundsAction
+  | ChangeUserBoundingBoxAction
   | FinishedResizingUserBoundingBoxAction
   | AddNewUserBoundingBox
-  | SetUserBoundingBoxVisibilityAction
-  | SetUserBoundingBoxNameAction
-  | SetUserBoundingBoxColorAction
   | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction
   | AddMeshMetadataAction
@@ -217,24 +202,17 @@ export type AnnotationActionTypes =
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
-  | SetUserBoundingBoxBoundsAction
   | AddNewUserBoundingBox
-  | SetUserBoundingBoxVisibilityAction
-  | SetUserBoundingBoxNameAction
-  | SetUserBoundingBoxColorAction
   | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction;
 
 export const AllUserBoundingBoxActions = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_NEW_USER_BOUNDING_BOX",
-  "SET_USER_BOUNDING_BOX_VISIBILITY",
+  "CHANGE_USER_BOUNDING_BOX",
   "FINISHED_RESIZING_USER_BOUNDING_BOX",
-  "SET_USER_BOUNDING_BOX_NAME",
-  "SET_USER_BOUNDING_BOX_COLOR",
   "DELETE_USER_BOUNDING_BOX",
   "ADD_USER_BOUNDING_BOXES",
-  "SET_USER_BOUNDING_BOX_BOUNDS",
 ];
 
 export const initializeAnnotationAction = (
@@ -279,13 +257,13 @@ export const setUserBoundingBoxesAction = (
   userBoundingBoxes,
 });
 
-export const setUserBoundingBoxBoundsAction = (
+export const changeUserBoundingBoxAction = (
   id: number,
-  bounds: BoundingBoxType,
-): SetUserBoundingBoxBoundsAction => ({
-  type: "SET_USER_BOUNDING_BOX_BOUNDS",
+  newProps: UserBoundingBoxWithoutIdMaybe,
+): ChangeUserBoundingBoxAction => ({
+  type: "CHANGE_USER_BOUNDING_BOX",
   id,
-  bounds,
+  newProps,
 });
 
 export const finishedResizingUserBoundingBoxAction = (
@@ -296,39 +274,12 @@ export const finishedResizingUserBoundingBoxAction = (
 });
 
 export const addUserBoundingBoxAction = (
-  newBoundingBox?: ?UserBoundingBox,
+  newBoundingBox?: ?UserBoundingBoxWithoutId,
   center?: Vector3,
 ): AddNewUserBoundingBox => ({
   type: "ADD_NEW_USER_BOUNDING_BOX",
   newBoundingBox,
   center,
-});
-
-export const setUserBoundingBoxVisibilityAction = (
-  id: number,
-  isVisible: boolean,
-): SetUserBoundingBoxVisibilityAction => ({
-  type: "SET_USER_BOUNDING_BOX_VISIBILITY",
-  id,
-  isVisible,
-});
-
-export const setUserBoundingBoxNameAction = (
-  id: number,
-  name: string,
-): SetUserBoundingBoxNameAction => ({
-  type: "SET_USER_BOUNDING_BOX_NAME",
-  id,
-  name,
-});
-
-export const setUserBoundingBoxColorAction = (
-  id: number,
-  color: Vector3,
-): SetUserBoundingBoxColorAction => ({
-  type: "SET_USER_BOUNDING_BOX_COLOR",
-  id,
-  color,
 });
 
 export const deleteUserBoundingBoxAction = (id: number): DeleteUserBoundingBox => ({

@@ -108,7 +108,7 @@ type UndoBucket = {
 type VolumeAnnotationBatch = Array<UndoBucket>;
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
-type BoundingBoxUndoState = { type: "bounding box", data: Array<UserBoundingBox> };
+type BoundingBoxUndoState = { type: "bounding_box", data: Array<UserBoundingBox> };
 type WarnUndoState = { type: "warning", reason: string };
 type UndoState = SkeletonUndoState | VolumeUndoState | BoundingBoxUndoState | WarnUndoState;
 
@@ -322,10 +322,11 @@ function getBoundingBoxToUndoState(
     previousAction.id != null &&
     userBoundingBoxAction.type === previousAction.type &&
     userBoundingBoxAction.id === previousAction.id;
+  // Used to distinguish between different resizing actions of the same bounding box.
   const isFinishedResizingAction =
     userBoundingBoxAction.type === "FINISHED_RESIZING_USER_BOUNDING_BOX";
   if (!isSameActionOnSameBoundingBox && !isFinishedResizingAction) {
-    return { type: "bounding box", data: prevUserBoundingBoxes };
+    return { type: "bounding_box", data: prevUserBoundingBoxes };
   }
   return null;
 }
@@ -443,9 +444,9 @@ function* applyStateOfStack(
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
-  } else if (stateToRestore.type === "bounding box") {
+  } else if (stateToRestore.type === "bounding_box") {
     if (prevUserBoundingBoxes != null) {
-      stackToPushTo.push({ type: "bounding box", data: prevUserBoundingBoxes });
+      stackToPushTo.push({ type: "bounding_box", data: prevUserBoundingBoxes });
     }
     const newBoundingBoxes = stateToRestore.data;
     yield* put(setUserBoundingBoxesAction(newBoundingBoxes));

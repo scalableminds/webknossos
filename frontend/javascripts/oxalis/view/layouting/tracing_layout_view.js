@@ -248,15 +248,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const {
-      clickedNodeId,
-      clickedBoundingBoxId,
-      contextMenuPosition,
-      contextMenuGlobalPosition,
-      contextMenuViewport,
-      status,
-      activeLayoutName,
-    } = this.state;
+    const { contextMenuPosition, contextMenuViewport, status, activeLayoutName } = this.state;
 
     const layoutType = determineLayout(
       this.props.initialCommandType.type,
@@ -282,10 +274,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         {contextMenuPosition != null && contextMenuViewport != null ? (
           <ContextMenu
             hideContextMenu={this.hideContextMenu}
-            clickedNodeId={clickedNodeId}
-            clickedBoundingBoxId={clickedBoundingBoxId}
+            clickedNodeId={this.state.clickedNodeId}
+            clickedBoundingBoxId={this.state.clickedBoundingBoxId}
+            globalPosition={this.state.contextMenuGlobalPosition}
             contextMenuPosition={contextMenuPosition}
-            globalPosition={contextMenuGlobalPosition}
             viewport={contextMenuViewport}
           />
         ) : null}

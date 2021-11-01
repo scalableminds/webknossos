@@ -146,7 +146,6 @@ class Cube {
     if (!this.initialized) {
       return;
     }
-    // Why not generally avoid updating when the position for the third dim is outside the bbox?
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
       const { geometry } = this.crossSections[planeId];

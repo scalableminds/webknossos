@@ -25,14 +25,11 @@ export function maybeGetSomeTracing(
 export function getSomeTracing(
   tracing: Tracing,
 ): SkeletonTracing | VolumeTracing | ReadOnlyTracing {
-  if (tracing.skeleton != null) {
-    return tracing.skeleton;
-  } else if (tracing.volume != null) {
-    return tracing.volume;
-  } else if (tracing.readOnly != null) {
-    return tracing.readOnly;
+  const maybeSomeTracing = maybeGetSomeTracing(tracing);
+  if (maybeSomeTracing == null) {
+    throw new Error("The active annotation does not contain skeletons nor volume data");
   }
-  throw new Error("The active annotation does not contain skeletons nor volume data");
+  return maybeSomeTracing;
 }
 
 export function getSomeServerTracing(

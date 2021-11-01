@@ -4,6 +4,7 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import { V3 } from "libs/mjs";
 import {
   type StateShape1,
   updateKey,
@@ -13,7 +14,6 @@ import {
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
 import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
-import { map3 } from "libs/utils";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
@@ -75,7 +75,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, action.userBoundingBoxes);
     }
 
-    case "SET_USER_BOUNDING_BOX_BOUNDS": {
+    case "CHANGE_USER_BOUNDING_BOX": {
       const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {
         return state;
@@ -83,8 +83,9 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
         bbox.id === action.id
           ? {
+              id: bbox.id,
               ...bbox,
-              boundingBox: action.bounds,
+              ...action.newProps,
             }
           : bbox,
       );
@@ -99,32 +100,26 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const { userBoundingBoxes } = tracing;
       const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
       const boundingBoxId = highestBoundingBoxId + 1;
-      let { newBoundingBox } = action;
-      if (newBoundingBox != null) {
-        newBoundingBox.id = boundingBoxId;
+      let newBoundingBox: UserBoundingBox;
+      if (action.newBoundingBox != null) {
+        newBoundingBox = ({ id: boundingBoxId, ...action.newBoundingBox }: UserBoundingBox);
       } else {
         const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
         newBoundingBox = {
           boundingBox: { min, max },
           id: boundingBoxId,
-          name: `bounding box ${boundingBoxId}`,
+          name: `Bounding box ${boundingBoxId}`,
           color: Utils.getRandomColor(),
           isVisible: true,
         };
         if (action.center != null) {
-          const roundedCenter = map3<number, number>(val => Math.round(val), action.center);
-          const roundedHalfBoxExtent = map3<number, number>(val => Math.round(val), halfBoxExtent);
           newBoundingBox.boundingBox = {
-            min: [
-              roundedCenter[0] - roundedHalfBoxExtent[0],
-              roundedCenter[1] - roundedHalfBoxExtent[1],
-              roundedCenter[2] - roundedHalfBoxExtent[2],
-            ],
-            max: [
-              roundedCenter[0] + roundedHalfBoxExtent[0],
-              roundedCenter[1] + roundedHalfBoxExtent[1],
-              roundedCenter[2] + roundedHalfBoxExtent[2],
-            ],
+            min: V3.sub(action.center, halfBoxExtent)
+              .round()
+              .toArray(),
+            max: V3.add(action.center, halfBoxExtent)
+              .round()
+              .toArray(),
           };
         }
       }
@@ -137,11 +132,11 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       if (tracing == null) {
         return state;
       }
-      let highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map(bb => bb.id));
-      const additionalUserBoundingBoxes = action.userBoundingBoxes.map(bb => {
-        highestBoundingBoxId++;
-        return { ...bb, id: highestBoundingBoxId };
-      });
+      const highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map(bb => bb.id));
+      const additionalUserBoundingBoxes = action.userBoundingBoxes.map((bb, index) => ({
+        ...bb,
+        id: highestBoundingBoxId + index + 1,
+      }));
       const mergedUserBoundingBoxes = [
         ...tracing.userBoundingBoxes,
         ...additionalUserBoundingBoxes,
@@ -156,39 +151,6 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       }
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
         bbox => bbox.id !== action.id,
-      );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
-    }
-
-    case "SET_USER_BOUNDING_BOX_VISIBILITY": {
-      const tracing = maybeGetSomeTracing(state.tracing);
-      if (tracing == null) {
-        return state;
-      }
-      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
-        bbox.id !== action.id ? bbox : { ...bbox, isVisible: action.isVisible },
-      );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
-    }
-
-    case "SET_USER_BOUNDING_BOX_NAME": {
-      const tracing = maybeGetSomeTracing(state.tracing);
-      if (tracing == null) {
-        return state;
-      }
-      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
-        bbox.id !== action.id ? bbox : { ...bbox, name: action.name },
-      );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
-    }
-
-    case "SET_USER_BOUNDING_BOX_COLOR": {
-      const tracing = maybeGetSomeTracing(state.tracing);
-      if (tracing == null) {
-        return state;
-      }
-      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
-        bbox.id !== action.id ? bbox : { ...bbox, color: action.color },
       );
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }

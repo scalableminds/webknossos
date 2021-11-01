@@ -4,70 +4,46 @@
  */
 import { Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
-import type { Dispatch } from "redux";
-import { connect } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 
-import type { APIDataset } from "types/api_flow_types";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
 import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
-import type { OxalisState, Tracing } from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
-  setUserBoundingBoxBoundsAction,
+  changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
-  setUserBoundingBoxVisibilityAction,
-  setUserBoundingBoxNameAction,
-  setUserBoundingBoxColorAction,
 } from "oxalis/model/actions/annotation_actions";
 import * as Utils from "libs/utils";
 
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
 
-type BoundingBoxTabProps = {
-  tracing: Tracing,
-  setChangeBoundingBoxBounds: (number, BoundingBoxType) => void,
-  addNewBoundingBox: () => void,
-  deleteBoundingBox: number => void,
-  setBoundingBoxVisibility: (number, boolean) => void,
-  setBoundingBoxName: (number, string) => void,
-  setBoundingBoxColor: (number, Vector3) => void,
-  setPosition: Vector3 => void,
-  dataset: APIDataset,
-};
-
-function BoundingBoxTab(props: BoundingBoxTabProps) {
+export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
-  const {
-    tracing,
-    dataset,
-    setChangeBoundingBoxBounds,
-    addNewBoundingBox,
-    setBoundingBoxVisibility,
-    setBoundingBoxName,
-    setBoundingBoxColor,
-    deleteBoundingBox,
-    setPosition,
-  } = props;
+  const tracing = useSelector(state => state.tracing);
+  const dataset = useSelector(state => state.dataset);
   const { userBoundingBoxes } = getSomeTracing(tracing);
+
+  const dispatch = useDispatch();
+  const setChangeBoundingBoxBounds = (id: number, boundingBox: BoundingBoxType) =>
+    dispatch(changeUserBoundingBoxAction(id, { boundingBox }));
+  const addNewBoundingBox = () => dispatch(addUserBoundingBoxAction());
+
+  const setPosition = (position: Vector3) => dispatch(setPositionAction(position));
+
+  const deleteBoundingBox = (id: number) => dispatch(deleteUserBoundingBoxAction(id));
+  const setBoundingBoxVisibility = (id: number, isVisible: boolean) =>
+    dispatch(changeUserBoundingBoxAction(id, { isVisible }));
+  const setBoundingBoxName = (id: number, name: string) =>
+    dispatch(changeUserBoundingBoxAction(id, { name }));
+  const setBoundingBoxColor = (id: number, color: Vector3) =>
+    dispatch(changeUserBoundingBoxAction(id, { color }));
 
   function handleBoundingBoxBoundingChange(id: number, boundingBox: Vector6) {
     setChangeBoundingBoxBounds(id, Utils.computeBoundingBoxFromArray(boundingBox));
-  }
-
-  function handleBoundingBoxVisibilityChange(id: number, isVisible: boolean) {
-    setBoundingBoxVisibility(id, isVisible);
-  }
-
-  function handleBoundingBoxNameChange(id: number, name: string) {
-    setBoundingBoxName(id, name);
-  }
-
-  function handleBoundingBoxColorChange(id: number, color: Vector3) {
-    setBoundingBoxColor(id, color);
   }
 
   function handleGoToBoundingBox(id: number) {
@@ -84,14 +60,6 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     setPosition(center);
   }
 
-  function handleAddNewUserBoundingBox() {
-    addNewBoundingBox();
-  }
-
-  function handleDeleteUserBoundingBox(id: number) {
-    deleteBoundingBox(id);
-  }
-
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {userBoundingBoxes.length > 0 ? (
@@ -105,14 +73,14 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             isExportEnabled={dataset.jobsEnabled}
             isVisible={bb.isVisible}
             onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
-            onDelete={_.partial(handleDeleteUserBoundingBox, bb.id)}
+            onDelete={_.partial(deleteBoundingBox, bb.id)}
             onExport={
               dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
             }
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
-            onVisibilityChange={_.partial(handleBoundingBoxVisibilityChange, bb.id)}
-            onNameChange={_.partial(handleBoundingBoxNameChange, bb.id)}
-            onColorChange={_.partial(handleBoundingBoxColorChange, bb.id)}
+            onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
+            onNameChange={_.partial(setBoundingBoxName, bb.id)}
+            onColorChange={_.partial(setBoundingBoxColor, bb.id)}
           />
         ))
       ) : (
@@ -121,7 +89,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
       <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
         <Tooltip title="Click to add another bounding box.">
           <PlusSquareOutlined
-            onClick={handleAddNewUserBoundingBox}
+            onClick={addNewBoundingBox}
             style={{
               cursor: "pointer",
               marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
@@ -140,37 +108,3 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     </div>
   );
 }
-
-const mapStateToProps = (state: OxalisState) => ({
-  tracing: state.tracing,
-  dataset: state.dataset,
-});
-
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  setChangeBoundingBoxBounds(id: number, bounds: BoundingBoxType) {
-    dispatch(setUserBoundingBoxBoundsAction(id, bounds));
-  },
-  addNewBoundingBox() {
-    dispatch(addUserBoundingBoxAction());
-  },
-  setPosition(position: Vector3) {
-    dispatch(setPositionAction(position));
-  },
-  deleteBoundingBox(id: number) {
-    dispatch(deleteUserBoundingBoxAction(id));
-  },
-  setBoundingBoxVisibility(id: number, isVisible: boolean) {
-    dispatch(setUserBoundingBoxVisibilityAction(id, isVisible));
-  },
-  setBoundingBoxName(id: number, name: string) {
-    dispatch(setUserBoundingBoxNameAction(id, name));
-  },
-  setBoundingBoxColor(id: number, color: Vector3) {
-    dispatch(setUserBoundingBoxColorAction(id, color));
-  },
-});
-
-export default connect<BoundingBoxTabProps, {||}, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(BoundingBoxTab);

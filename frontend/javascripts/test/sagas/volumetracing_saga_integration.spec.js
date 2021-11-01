@@ -262,7 +262,8 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
   // Assert state after flood-fill
   await assertFloodFilledState();
 
-  // Undo and assert initial state
+  // Undo created bounding box by flood fill and flood fill and assert initial state
+  await dispatchUndoAsync(Store.dispatch);
   await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();
 

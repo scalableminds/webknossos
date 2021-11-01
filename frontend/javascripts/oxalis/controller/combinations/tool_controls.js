@@ -547,18 +547,7 @@ export class BoundingBoxTool {
     return {
       leftDownMove: (delta: Point2, pos: Point2, _id: ?string, _event: MouseEvent) => {
         if (primarySelectedEdge != null) {
-          const didMinAndMaxSwitch = handleResizingBoundingBox(
-            pos,
-            planeId,
-            primarySelectedEdge,
-            secondarySelectedEdge,
-          );
-          if (didMinAndMaxSwitch.primary) {
-            primarySelectedEdge.isMaxEdge = !primarySelectedEdge.isMaxEdge;
-          }
-          if (didMinAndMaxSwitch.secondary && secondarySelectedEdge) {
-            secondarySelectedEdge.isMaxEdge = !secondarySelectedEdge.isMaxEdge;
-          }
+          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
         } else {
           MoveHandlers.handleMovePlane(delta);
         }
@@ -570,7 +559,6 @@ export class BoundingBoxTool {
           getSceneController().highlightUserBoundingBox(primarySelectedEdge.boxId);
         }
       },
-      // TODO: Add unselect tool mechanism
 
       leftMouseUp: () => {
         if (primarySelectedEdge) {

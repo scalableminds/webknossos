@@ -1,7 +1,7 @@
 // @flow
 
 import memoizeOne from "memoize-one";
-
+import _ from "lodash";
 import { type OxalisState } from "oxalis/store";
 import constants, {
   ArbitraryViewport,
@@ -13,6 +13,7 @@ import constants, {
   type OrthoView,
   type Point2,
   type Vector3,
+  OrthoViewValuesWithoutTDView,
   type ViewMode,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
@@ -147,34 +148,17 @@ function _calculateGlobalPos(state: OxalisState, clickPos: Point2, planeId: ?Ort
 export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
   const curGlobalCenterPos = getPosition(state.flycam);
-  const xyExtent = getPlaneExtentInVoxelFromStore(
-    state,
-    state.flycam.zoomStep,
-    OrthoViews.PLANE_XY,
+  const extents = OrthoViewValuesWithoutTDView.map(orthoView =>
+    getPlaneExtentInVoxelFromStore(state, state.flycam.zoomStep, orthoView),
   );
-  const yzExtent = getPlaneExtentInVoxelFromStore(
-    state,
-    state.flycam.zoomStep,
-    OrthoViews.PLANE_YZ,
-  );
-  const xzExtent = getPlaneExtentInVoxelFromStore(
-    state,
-    state.flycam.zoomStep,
-    OrthoViews.PLANE_XZ,
-  );
+  const [xyExtent, yzExtent, xzExtent] = extents;
   const minExtent = 1;
-  const getMinExtent = (val1, val2) => {
-    if (val1 <= 0) {
-      return Math.max(val2, minExtent);
-    }
-    if (val2 <= 0) {
-      return Math.max(val1, minExtent);
-    }
-    return val1 < val2 ? val1 : val2;
-  };
+  const getMinExtent = (val1, val2) => _.min([val1, val2].filter(v => v >= minExtent)) || minExtent;
   const xMinExtent = getMinExtent(xyExtent[0], xzExtent[0]) * planeRatio[0];
   const yMinExtent = getMinExtent(xyExtent[1], yzExtent[1]) * planeRatio[1];
   const zMinExtent = getMinExtent(xzExtent[1], yzExtent[0]) * planeRatio[2];
+  // The new bounding box should cover half of what is displayed in the viewports.
+  // As the flycam position is taken as a center, the factor is halved again, resulting in a 0.25.
   const extentFactor = 0.25;
   const halfBoxExtent = [
     Math.max(xMinExtent * extentFactor, 1),

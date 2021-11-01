@@ -3,9 +3,9 @@
 import type { AnnotationTool } from "oxalis/constants";
 import { type BorderOpenStatus, type Theme } from "oxalis/store";
 
-type SetToolAction = { type: "SET_TOOL", tool: AnnotationTool };
+export type SetToolAction = { type: "SET_TOOL", tool: AnnotationTool };
 
-type CycleToolAction = { type: "CYCLE_TOOL" };
+export type CycleToolAction = { type: "CYCLE_TOOL" };
 
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",

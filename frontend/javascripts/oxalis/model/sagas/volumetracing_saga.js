@@ -595,8 +595,6 @@ export function* floodFill(): Saga<void> {
 
       yield* put(
         addUserBoundingBoxAction({
-          // The id will be set by the action.
-          id: 0,
           boundingBox: coveredBoundingBox,
           name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
             ",",

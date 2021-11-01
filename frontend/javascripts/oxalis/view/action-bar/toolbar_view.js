@@ -10,6 +10,7 @@ import Constants, {
   type OverwriteMode,
   OverwriteModeEnum,
   FillModeEnum,
+  VolumeTools,
 } from "oxalis/constants";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import { document } from "libs/window";
@@ -257,7 +258,7 @@ function CreateCellButton() {
 
 function CreateNewBoundingBoxButton() {
   return (
-    <Tooltip title="Create a new bounding box at the center.">
+    <Tooltip title="Create a new bounding box centered around the current position.">
       <ButtonComponent
         onClick={handleAddNewUserBoundingBox}
         style={{ paddingLeft: 9, paddingRight: 9 }}
@@ -578,14 +579,13 @@ export default function ToolbarView() {
             </RadioButtonWithTooltip>
             <RadioButtonWithTooltip
               title="Bounding Box Tool."
-              disabledTitle="I am disabled."
               disabled={false}
               style={narrowButtonStyle}
               value={AnnotationToolEnum.BOUNDING_BOX}
             >
               <img
                 src="/assets/images/bounding-box.svg"
-                alt="Trace Tool Icon"
+                alt="Bounding Box Icon"
                 style={{
                   opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
                     ? 0.5
@@ -618,11 +618,7 @@ function ToolSpecificSettings({
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
   const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
-  const showCreateCellButton =
-    isVolumeSupported &&
-    !showCreateTreeButton &&
-    !showNewBoundingBoxButton &&
-    adaptedActiveTool !== AnnotationToolEnum.MOVE;
+  const showCreateCellButton = isVolumeSupported && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||

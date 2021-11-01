@@ -5,7 +5,6 @@
 
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
-import { V3 } from "libs/mjs";
 
 import ErrorHandling from "libs/error_handling";
 import {
@@ -23,10 +22,12 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { V3 } from "libs/mjs";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -39,7 +40,6 @@ import constants, {
 } from "oxalis/constants";
 import { type ElementClass } from "types/api_flow_types";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { type ProgressCallback } from "libs/progress_callback";
 
 class CubeEntry {
@@ -762,6 +762,33 @@ class DataCube {
 
   positionToBaseAddress(position: Vector3): Vector4 {
     return this.positionToZoomedAddress(position, 0);
+  }
+
+  async getLoadedBucket(bucketAddress: Vector4) {
+    const bucket = this.getOrCreateBucket(bucketAddress);
+
+    if (bucket.type === "null") {
+      return bucket;
+    }
+
+    let needsToAwaitBucket = false;
+    if (bucket.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (bucket.needsRequest()) {
+      this.pullQueue.add({
+        bucket: bucketAddress,
+        priority: PullQueueConstants.PRIORITY_HIGHEST,
+      });
+      this.pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
+      await new Promise(resolve => {
+        bucket.on("bucketLoaded", resolve);
+      });
+    }
+    // Bucket has been loaded by now or was loaded already
+    return bucket;
   }
 }
 

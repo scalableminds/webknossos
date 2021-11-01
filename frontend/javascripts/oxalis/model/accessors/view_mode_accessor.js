@@ -103,7 +103,11 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
   return [xScale, yScale];
 }
 
-function _calculateGlobalPos(state: OxalisState, clickPos: Point2, planeId: ?OrthoView): Vector3 {
+function _calculateMaybeGlobalPos(
+  state: OxalisState,
+  clickPos: Point2,
+  planeId: ?OrthoView,
+): ?Vector3 {
   let position;
   planeId = planeId || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
@@ -136,10 +140,17 @@ function _calculateGlobalPos(state: OxalisState, clickPos: Point2, planeId: ?Ort
       ];
       break;
     default:
-      console.error(
-        `Trying to calculate the global position, but no viewport is active: ${planeId}`,
-      );
-      return [0, 0, 0];
+      return null;
+  }
+
+  return position;
+}
+
+function _calculateGlobalPos(state: OxalisState, clickPos: Point2, planeId: ?OrthoView): Vector3 {
+  const position = _calculateMaybeGlobalPos(state, clickPos, planeId);
+  if (!position) {
+    console.error("Trying to calculate the global position, but no data viewport is active.");
+    return [0, 0, 0];
   }
 
   return position;
@@ -172,6 +183,7 @@ export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
   };
 }
 
+export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGlobalPos);
 export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
 
 export function getViewMode(state: OxalisState): ViewMode {

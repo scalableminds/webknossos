@@ -7,7 +7,9 @@ import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontrac
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
+import { clickSegmentAction } from "oxalis/model/actions/volumetracing_actions";
 import api from "oxalis/api/internal_api";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const state = Store.getState();
@@ -41,4 +43,13 @@ export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
   const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
 
   Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, cellId));
+}
+
+export function handleClickSegment(clickPosition: Point2) {
+  const state = Store.getState();
+  const globalPosition = calculateGlobalPos(state, clickPosition);
+  const cellId = getSegmentIdForPosition(globalPosition);
+  if (cellId > 0) {
+    Store.dispatch(clickSegmentAction(cellId, globalPosition));
+  }
 }

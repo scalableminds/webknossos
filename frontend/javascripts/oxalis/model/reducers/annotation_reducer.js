@@ -9,7 +9,7 @@ import {
   type StateShape1,
   updateKey,
   updateKey2,
-  updateKey3,
+  updateKey4,
 } from "oxalis/model/helpers/deep_update";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import * as Utils from "libs/utils";
@@ -170,7 +170,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, id, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", id, {
         isVisible: visibility,
       });
     }
@@ -188,15 +188,20 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "REMOVE_ISOSURFACE": {
       const { layerName, cellId } = action;
-      return update(state, {
-        isosurfacesByLayer: { [layerName]: { $unset: [cellId] } },
+
+      const { [cellId]: _, ...remainingIsosurfaces } = state.localSegmentationData[
+        layerName
+      ].isosurfaces;
+
+      return updateKey2(state, "localSegmentationData", layerName, {
+        isosurfaces: remainingIsosurfaces,
       });
     }
 
     case "ADD_ISOSURFACE": {
       const { layerName, cellId, seedPosition, isPrecomputed } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
         segmentId: cellId,
         seedPosition,
         isLoading: false,
@@ -208,7 +213,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "STARTED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
         isLoading: true,
       });
     }
@@ -216,19 +221,21 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "FINISHED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
         isLoading: false,
       });
     }
 
     case "UPDATE_MESH_FILE_LIST": {
       const { layerName, meshFiles } = action;
-      return update(state, { availableMeshFilesByLayer: { [layerName]: { $set: meshFiles } } });
+      return updateKey2(state, "localSegmentationData", layerName, {
+        availableMeshFiles: meshFiles,
+      });
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
       const { layerName, meshFile } = action;
-      return update(state, { currentMeshFileByLayer: { [layerName]: { $set: meshFile } } });
+      return updateKey2(state, "localSegmentationData", layerName, { currentMeshFile: meshFile });
     }
 
     default:

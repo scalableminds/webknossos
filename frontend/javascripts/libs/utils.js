@@ -34,6 +34,11 @@ export function map3<A, B>(fn: (A, number) => B, tuple: [A, A, A]): [B, B, B] {
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
 }
 
+export function floor3(tuple: Vector3): Vector3 {
+  const [x, y, z] = tuple;
+  return [Math.floor(x), Math.floor(y), Math.floor(z)];
+}
+
 export function iterateThroughBounds(
   minVoxel: Vector3,
   maxVoxel: Vector3,

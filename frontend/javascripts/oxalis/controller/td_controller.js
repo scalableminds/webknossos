@@ -212,13 +212,13 @@ class TDController extends React.PureComponent<Props> {
           Store.dispatch(setPositionAction(unscaledPosition));
         } else if (event.ctrlKey) {
           const storeState = Store.getState();
-          const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
+          const { hoveredSegmentId } = storeState.temporaryConfiguration;
           const segmentationLayer = getVisibleSegmentationLayer(storeState);
 
           if (!segmentationLayer) {
             return;
           }
-          Store.dispatch(removeIsosurfaceAction(segmentationLayer.name, hoveredIsosurfaceId));
+          Store.dispatch(removeIsosurfaceAction(segmentationLayer.name, hoveredSegmentId));
         }
       },
     };

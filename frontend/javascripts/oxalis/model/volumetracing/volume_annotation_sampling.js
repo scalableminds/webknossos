@@ -333,6 +333,7 @@ export function applyVoxelMap(
         continue;
       }
       const { data } = bucket.getOrCreateData();
+
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
@@ -342,14 +343,14 @@ export function applyVoxelMap(
               (voxelToLabel[thirdDimensionIndex] + sliceCount) % constants.BUCKET_WIDTH;
             // The voxelToLabel is already within the bucket and in the correct resolution.
             const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
-            if (shouldOverwrite || (!shouldOverwrite && data[voxelAddress] === overwritableValue)) {
+            const currentSegmentId = data[voxelAddress];
+            if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
               data[voxelAddress] = cellId;
             }
           }
         }
       }
     }
-
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);
   }

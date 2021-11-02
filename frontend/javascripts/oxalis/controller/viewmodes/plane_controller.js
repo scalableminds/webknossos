@@ -172,16 +172,15 @@ function createDelayAwareMoveHandler(multiplier: number) {
     const state = Store.getState();
     let direction = Math.sign(multiplier);
 
-    const moveDistanceIn1Second =
-      state.userConfiguration.moveValue / getBaseVoxel(state.dataset.dataSource.scale);
     const { activeViewport } = state.viewModeData.plane;
+    const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
+    const voxelPerSecond =
+      state.userConfiguration.moveValue / state.dataset.dataSource.scale[thirdDim];
 
     if (activeViewport === OrthoViews.TDView) {
       // Nothing should happen then, anyway.
       return 0;
     }
-
-    const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
 
     if (state.userConfiguration.dynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction
@@ -190,13 +189,10 @@ function createDelayAwareMoveHandler(multiplier: number) {
     const fraction = getPosition(state.flycam)[thirdDim] % 1;
     const passedFraction = direction === 1 ? fraction : 1 - fraction;
 
-    // todo: remove
-    console.log({ moveDistanceIn1Second, passedFraction });
-
     // Note that a passed fraction of 0 (e.g., z=11.0 and the direction
     // goes towards 12), means that no additional delay is needed.
     // The 1000 factor converts to ms.
-    return (1000 / moveDistanceIn1Second) * passedFraction;
+    return (1000 / voxelPerSecond) * passedFraction;
   };
 
   return fn;

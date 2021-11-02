@@ -53,7 +53,7 @@ export class MoveTool {
       scroll: (delta: number, type: ?ModifierKeys) => {
         switch (type) {
           case null: {
-            MoveHandlers.moveZ(delta, true);
+            MoveHandlers.moveW(delta, true);
             break;
           }
           case "alt":

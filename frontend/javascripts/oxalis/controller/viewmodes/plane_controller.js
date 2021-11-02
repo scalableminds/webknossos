@@ -154,7 +154,7 @@ function createDelayAwareMoveHandler(multiplier: number) {
   // speeding up the movement as it's done for shift+f, for example.
 
   const fn = (timeFactor, first) =>
-    MoveHandlers.moveZ(getMoveValue(timeFactor) * multiplier, first);
+    MoveHandlers.moveW(getMoveValue(timeFactor) * multiplier, first);
 
   fn.customAdditionalDelayFn = () => {
     // Depending on the float fraction of the current position, we want to
@@ -327,10 +327,10 @@ class PlaneController extends React.PureComponent<Props> {
 
     this.input.keyboard = new InputKeyboard({
       // Move
-      left: timeFactor => MoveHandlers.moveX(-getMoveValue(timeFactor)),
-      right: timeFactor => MoveHandlers.moveX(getMoveValue(timeFactor)),
-      up: timeFactor => MoveHandlers.moveY(-getMoveValue(timeFactor)),
-      down: timeFactor => MoveHandlers.moveY(getMoveValue(timeFactor)),
+      left: timeFactor => MoveHandlers.moveU(-getMoveValue(timeFactor)),
+      right: timeFactor => MoveHandlers.moveU(getMoveValue(timeFactor)),
+      up: timeFactor => MoveHandlers.moveV(-getMoveValue(timeFactor)),
+      down: timeFactor => MoveHandlers.moveV(getMoveValue(timeFactor)),
     });
 
     const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();

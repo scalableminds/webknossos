@@ -82,7 +82,6 @@ class DatasetPositionView extends PureComponent<Props> {
   };
 
   render() {
-    const unflooredPosition = getPosition(this.props.flycam);
     const position = V3.floor(getPosition(this.props.flycam));
     const { isOutOfDatasetBounds, isOutOfTaskBounds } = this.isPositionOutOfBounds(position);
     const copyPositionStyle =
@@ -114,7 +113,7 @@ class DatasetPositionView extends PureComponent<Props> {
             </ButtonComponent>
           </Tooltip>
           <Vector3Input
-            value={unflooredPosition}
+            value={position}
             onChange={this.handleChangePosition}
             autoSize
             style={positionInputStyle}

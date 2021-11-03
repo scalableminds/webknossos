@@ -48,8 +48,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
 
   getText(value: T | string): string {
     if (Array.isArray(value)) {
-      // todo: undo
-      return value.map(el => el.toFixed(2)).join(", ");
+      return value.join(", ");
     }
     return value;
   }

@@ -46,7 +46,6 @@ import {
   type APIUserTheme,
   type APIUserLoggedTime,
   type ExperienceDomainList,
-  type HybridServerTracing,
   type MeshMetaData,
   type RemoteMeshMetaData,
   type ServerSkeletonTracing,
@@ -54,6 +53,7 @@ import {
   type ServerVolumeTracing,
   type TracingType,
   type WkConnectDatasetConfig,
+  type AnnotationLayerDescriptor,
 } from "types/api_flow_types";
 import type {
   DatasetConfiguration,
@@ -699,9 +699,12 @@ export function createExplorational(
     Object.assign(
       {},
       {
+        // oldkey: "value",
+        // Object.assign({}, { data: { typ, fallbackLayerName, resolutionRestrictions } }, options),
         data: [
-          { typ: "Volume", name: "volumeA", fallbackLayerName, resolutionRestrictions },
-          { typ: "Volume", name: "volumeB" },
+          { typ: "Skeleton", name: "Skeleton" },
+          { typ: "Volume", name: "Volume", fallbackLayerName, resolutionRestrictions },
+          // { typ: "Volume", name: "Volume 2" },
         ],
       },
       options,
@@ -711,31 +714,31 @@ export function createExplorational(
 
 export async function getTracingForAnnotations(
   annotation: APIAnnotation,
+  // todo: versions by callers? previously versions.skeleton or versions.volume
   versions?: Versions = {},
-): Promise<HybridServerTracing> {
-  const [_skeleton, _volume] = await Promise.all([
-    getTracingForAnnotationType(annotation, "skeleton", versions.skeleton),
-    getTracingForAnnotationType(annotation, "volume", versions.volume),
-  ]);
+): Promise<Array<ServerTracing>> {
+  const fullAnnotationLayers = await Promise.all(
+    annotation.annotationLayers.map(layer => getTracingForAnnotationType(annotation, layer)),
+    // getTracingForAnnotationType(annotation, "skeleton"),
+    // getTracingForAnnotationType(annotation, "volume"),
+  );
 
-  const skeleton = ((_skeleton: any): ?ServerSkeletonTracing);
-  const volume = ((_volume: any): ?ServerVolumeTracing);
+  const skeletonLayers = annotation.annotationLayers.filter(layer => layer.typ === "Skeleton");
 
-  return {
-    skeleton,
-    volume,
-  };
+  if (skeletonLayers.length > 1) {
+    throw new Error("More than one skeleton layer is currently not supported by webKnossos.");
+  }
+
+  return fullAnnotationLayers;
 }
 
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
-  tracingType: "skeleton" | "volume",
+  annotationLayerDescriptor: AnnotationLayerDescriptor,
   version?: ?number,
-): Promise<?ServerTracing> {
-  const tracingId = annotation.tracing[tracingType];
-  if (!tracingId) {
-    return null;
-  }
+): Promise<ServerTracing> {
+  const { tracingId, typ } = annotationLayerDescriptor;
+  const tracingType = typ.toLowerCase();
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(

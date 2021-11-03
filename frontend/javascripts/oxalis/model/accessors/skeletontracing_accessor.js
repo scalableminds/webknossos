@@ -2,7 +2,7 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
 
-import type { HybridServerTracing, ServerSkeletonTracing } from "types/api_flow_types";
+import type { ServerTracing, ServerSkeletonTracing } from "types/api_flow_types";
 import type {
   Tracing,
   SkeletonTracing,
@@ -31,13 +31,14 @@ export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
 }
 
 export function serverTracingAsSkeletonTracingMaybe(
-  tracing: ?HybridServerTracing,
+  tracings: ?Array<ServerTracing>,
 ): Maybe<ServerSkeletonTracing> {
-  if (tracing && tracing.skeleton) {
-    return Maybe.Just(tracing.skeleton);
-  } else {
-    return Maybe.Nothing();
+  const skeletonTracings = (tracings || []).filter(tracing => tracing.trees != null);
+  if (skeletonTracings.length > 0) {
+    // Only one skeleton is supported
+    return Maybe.Just(skeletonTracings[0]);
   }
+  return Maybe.Nothing();
 }
 
 export function enforceSkeletonTracing(tracing: Tracing): SkeletonTracing {

@@ -8,7 +8,7 @@ import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/access
 import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import type { AnnotationTool, ContourMode } from "oxalis/constants";
-import type { HybridServerTracing, ServerVolumeTracing } from "types/api_flow_types";
+import type { ServerTracing, ServerVolumeTracing } from "types/api_flow_types";
 
 export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volume != null) {
@@ -17,14 +17,20 @@ export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
   return Maybe.Nothing();
 }
 
+export function getVolumeTracings(tracings: ?Array<ServerTracing>): Array<ServerVolumeTracing> {
+  return (tracings || []).filter(tracing => tracing.largestSegmentId != null);
+}
+
+// todo: adapt callers to multiple volume annotations
 export function serverTracingAsVolumeTracingMaybe(
-  tracing: ?HybridServerTracing,
+  tracings: ?Array<ServerTracing>,
 ): Maybe<ServerVolumeTracing> {
-  if (tracing && tracing.volume) {
-    return Maybe.Just(tracing.volume);
-  } else {
-    return Maybe.Nothing();
+  const volumeTracings = (tracings || []).filter(tracing => tracing.largestSegmentId != null);
+  if (volumeTracings.length > 0) {
+    // Only one skeleton is supported
+    return Maybe.Just(volumeTracings[0]);
   }
+  return Maybe.Nothing();
 }
 
 export function enforceVolumeTracing(tracing: Tracing): VolumeTracing {

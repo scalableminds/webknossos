@@ -1,11 +1,6 @@
 // @flow
 
-import type {
-  HybridServerTracing,
-  ServerSkeletonTracing,
-  ServerVolumeTracing,
-  TracingType,
-} from "types/api_flow_types";
+import type { ServerTracing, TracingType } from "types/api_flow_types";
 import { TracingTypeEnum } from "types/api_flow_types";
 import type { Tracing, VolumeTracing, SkeletonTracing, ReadOnlyTracing } from "oxalis/store";
 
@@ -22,13 +17,9 @@ export function getSomeTracing(
   throw new Error("The active annotation does not contain skeletons nor volume data");
 }
 
-export function getSomeServerTracing(
-  tracing: HybridServerTracing,
-): ServerSkeletonTracing | ServerVolumeTracing {
-  if (tracing.skeleton != null) {
-    return tracing.skeleton;
-  } else if (tracing.volume != null) {
-    return tracing.volume;
+export function getSomeServerTracing(serverTracings: Array<ServerTracing>): ServerTracing {
+  if (serverTracings.length > 0) {
+    return serverTracings[0];
   }
   throw new Error("The active annotation does not contain skeletons nor volume data");
 }

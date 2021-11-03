@@ -370,11 +370,18 @@ export type APITask = {
   +directLinks?: Array<string>,
 };
 
+export type AnnotationLayerDescriptor = {
+  name: string,
+  tracingId: string,
+  typ: "Volume" | "Skeleton",
+};
+
 export type APIAnnotationCompact = {
   +tracing: {
     +skeleton: ?string,
     +volume: ?string,
   },
+  +annotationLayers: Array<AnnotationLayerDescriptor>,
   +dataSetName: string,
   +organization: string,
   +description: string,

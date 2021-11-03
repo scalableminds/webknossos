@@ -7,8 +7,8 @@ import type {
   APIDataset,
   MutableAPIDataset,
   APIDataLayer,
-  HybridServerTracing,
   ServerVolumeTracing,
+  ServerTracing,
 } from "types/api_flow_types";
 import {
   computeDataTexturesSetup,
@@ -50,7 +50,10 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { serverTracingAsSkeletonTracingMaybe } from "oxalis/model/accessors/skeletontracing_accessor";
-import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  serverTracingAsVolumeTracingMaybe,
+  getVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
@@ -127,17 +130,16 @@ export async function initialize(
     datasetId = { name, owningOrganization };
   }
 
-  const [dataset, initialUserSettings, tracing] = await fetchParallel(
+  const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
     annotation,
     datasetId,
     versions,
   );
-  const displayedVolumeTracings = [];
-  if (tracing != null && tracing.volume != null) {
-    displayedVolumeTracings.push(tracing.volume.id);
-  }
+  const displayedVolumeTracings = (serverTracings || [])
+    .filter(tracing => tracing.largestSegmentId != null)
+    .map(volumeTracing => volumeTracing.id);
 
-  initializeDataset(initialFetch, dataset, tracing);
+  initializeDataset(initialFetch, dataset, serverTracings);
 
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
@@ -151,7 +153,8 @@ export async function initialize(
   if (initialFetch) {
     const { gpuMemoryFactor } = initialUserSettings;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
-    if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
+    if (serverTracings != null)
+      Store.dispatch(setZoomStepAction(getSomeServerTracing(serverTracings).zoomLevel));
     const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
     Store.dispatch(
       initializeGpuSetupAction(
@@ -163,8 +166,8 @@ export async function initialize(
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
-  if (annotation != null && tracing != null) {
-    initializeTracing(annotation, tracing);
+  if (annotation != null && serverTracings != null) {
+    initializeTracing(annotation, serverTracings);
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes(dataset);
@@ -172,7 +175,7 @@ export async function initialize(
     Store.dispatch(setViewModeAction(mode));
   }
 
-  const defaultState = determineDefaultState(UrlManager.initialState, tracing);
+  const defaultState = determineDefaultState(UrlManager.initialState, serverTracings);
 
   // Don't override zoom when swapping the task
   applyState(defaultState, !initialFetch);
@@ -188,7 +191,7 @@ async function fetchParallel(
   annotation: ?APIAnnotation,
   datasetId: APIDatasetId,
   versions?: Versions,
-): Promise<[APIDataset, *, ?HybridServerTracing]> {
+): Promise<[APIDataset, *, ?Array<ServerTracing>]> {
   // (Also see https://github.com/facebook/flow/issues/4936)
   // $FlowIssue[incompatible-return] Type inference with Promise.all seems to be a bit broken in flow
   return Promise.all([
@@ -236,7 +239,7 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
-function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTracing) {
+function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<ServerTracing>) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
@@ -268,7 +271,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
     // $FlowIssue[prop-missing] For some reason flow thinks the task property is missing, but it is not
     Store.dispatch(initializeAnnotationAction(annotation));
 
-    serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
+    serverTracingAsVolumeTracingMaybe(serverTracings).map(volumeTracing => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
@@ -276,7 +279,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
 
-    serverTracingAsSkeletonTracingMaybe(tracing).map(skeletonTracing => {
+    serverTracingAsSkeletonTracingMaybe(serverTracings).map(skeletonTracing => {
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
@@ -288,12 +291,14 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
   if (allowedModes.length === 0) {
     Toast.error(messages["tracing.no_allowed_mode"]);
   } else {
-    const isHybridTracing = tracing.skeleton != null && tracing.volume != null;
-    let maybeUrlViewMode = UrlManager.initialState.mode;
-    if (isHybridTracing && UrlManager.initialState.mode === constants.MODE_VOLUME) {
-      // Here we avoid going into volume mode in hybrid tracings.
-      maybeUrlViewMode = constants.MODE_PLANE_TRACING;
-    }
+    const maybeUrlViewMode = UrlManager.initialState.mode;
+    // todo: refactor MODE_VOLUME away or make this logic compatible
+    // const isHybridTracing = serverTracings.skeleton != null && serverTracings.volume != null;
+    // let maybeUrlViewMode = UrlManager.initialState.mode;
+    // if (isHybridTracing && UrlManager.initialState.mode === constants.MODE_VOLUME) {
+    //   // Here we avoid going into volume mode in hybrid tracings.
+    //   maybeUrlViewMode = constants.MODE_PLANE_TRACING;
+    // }
     const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
@@ -320,7 +325,7 @@ function setInitialTool() {
 function initializeDataset(
   initialFetch: boolean,
   dataset: APIDataset,
-  tracing: ?HybridServerTracing,
+  serverTracings: Array<ServerTracing>,
 ): void {
   let error;
   if (!dataset) {
@@ -364,10 +369,12 @@ function initializeDataset(
   });
   mutableDataset.dataSource.dataLayers = updatedDataLayers;
 
-  serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
-    const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracing);
+  const volumeTracings = getVolumeTracings(serverTracings);
+  if (volumeTracings.length > 0) {
+    // todo: adapt this invocation to multiple volumeTracing
+    const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracings[0]);
     mutableDataset.dataSource.dataLayers = newDataLayers;
-  });
+  }
 
   ensureMatchingLayerResolutions(mutableDataset);
   Store.dispatch(setDatasetAction((mutableDataset: APIDataset)));
@@ -508,7 +515,7 @@ function setupLayerForVolumeTracing(
 
 function determineDefaultState(
   urlState: PartialUrlManagerState,
-  tracing: ?HybridServerTracing,
+  tracings: Array<ServerTracing>,
 ): PartialUrlManagerState {
   const {
     position: urlStatePosition,
@@ -525,24 +532,25 @@ function determineDefaultState(
   if (defaultPosition != null) {
     position = defaultPosition;
   }
-  if (tracing != null) {
-    position = Utils.point3ToVector3(getSomeServerTracing(tracing).editPosition);
+  const someTracing = tracings.length > 0 ? getSomeServerTracing(tracings) : null;
+  if (someTracing != null) {
+    position = Utils.point3ToVector3(someTracing.editPosition);
   }
   if (urlStatePosition != null) {
     position = urlStatePosition;
   }
 
   let zoomStep = datasetConfiguration.zoom;
-  if (tracing != null) {
-    zoomStep = getSomeServerTracing(tracing).zoomLevel;
+  if (someTracing != null) {
+    zoomStep = someTracing.zoomLevel;
   }
   if (urlStateZoomStep != null) {
     zoomStep = urlStateZoomStep;
   }
 
   let { rotation } = datasetConfiguration;
-  if (tracing) {
-    rotation = Utils.point3ToVector3(getSomeServerTracing(tracing).editRotation);
+  if (someTracing != null) {
+    rotation = Utils.point3ToVector3(someTracing.editRotation);
   }
   if (urlStateRotation != null) {
     rotation = urlStateRotation;

@@ -242,7 +242,7 @@ export type ReadOnlyTracing = {|
 export type HybridTracing = {|
   ...Annotation,
   +skeleton: ?SkeletonTracing,
-  +volume: ?VolumeTracing,
+  +volumes: Array<VolumeTracing>,
   +readOnly: ?ReadOnlyTracing,
 |};
 

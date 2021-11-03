@@ -222,7 +222,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
       )
     }
 
-  def publicWritesWithStatus(project: Project, openTaskInstances: Int, tracingTime: Long)(
+  def publicWritesWithStatus(project: Project, openTaskInstances: Long, tracingTime: Long)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       projectJson <- publicWrites(project)

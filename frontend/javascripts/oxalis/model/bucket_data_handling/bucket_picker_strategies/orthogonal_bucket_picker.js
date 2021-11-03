@@ -78,7 +78,16 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
 
+  const enqueueAll = () => {
+    for (const { bucketAddress, priority } of uniqueBucketMap.values()) {
+      enqueueFunction(bucketAddress, priority);
+    }
+  };
+
   for (const planeId of OrthoViewValuesWithoutTDView) {
+    // If the viewport is not visible, no buckets need to be added
+    if (!areas[planeId].isVisible) continue;
+
     const [u, v, w] = Dimensions.getIndices(planeId);
 
     const topLeftVector = [0, 0, 0, 0];
@@ -88,11 +97,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     const bottomRightVector = [0, 0, 0, 0];
     bottomRightVector[v] = areas[planeId].bottom;
     bottomRightVector[u] = areas[planeId].right;
-
-    const width = bottomRightVector[u] - topLeftVector[u];
-    const height = bottomRightVector[v] - topLeftVector[v];
-    // If the viewport is not visible, no buckets need to be added
-    if (width === 0 || height === 0) continue;
 
     const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
       topLeftVector,
@@ -156,17 +160,24 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
             (isExtraBucket ? 100 : 0);
 
           const bucketVector3 = ((bucketAddress.slice(0, 3): any): Vector3);
-          if (uniqueBucketMap.get(bucketVector3) == null) {
-            uniqueBucketMap.set(bucketVector3, bucketAddress);
+          const existingEntry = uniqueBucketMap.get(bucketVector3);
+          if (existingEntry == null) {
+            uniqueBucketMap.set(bucketVector3, { bucketAddress, priority });
             currentCount++;
 
             if (abortLimit != null && currentCount > abortLimit) {
+              enqueueAll();
               return;
             }
-            enqueueFunction(bucketAddress, priority);
+          } else {
+            const { priority: existingPriority } = existingEntry;
+            if (priority < existingPriority) {
+              uniqueBucketMap.set(bucketVector3, { bucketAddress, priority });
+            }
           }
         }
       }
     });
   }
+  enqueueAll();
 }

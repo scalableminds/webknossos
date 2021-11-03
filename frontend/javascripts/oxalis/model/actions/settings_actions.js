@@ -20,7 +20,7 @@ type UpdateDatasetSettingAction = {
   propertyName: $Keys<DatasetConfiguration>,
   value: any,
 };
-type UpdateTemporarySettingAction = {
+export type UpdateTemporarySettingAction = {
   type: "UPDATE_TEMPORARY_SETTING",
   propertyName: $Keys<TemporaryConfiguration>,
   value: any,

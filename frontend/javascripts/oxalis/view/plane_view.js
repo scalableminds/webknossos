@@ -151,15 +151,15 @@ class PlaneView {
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
-    const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
+    const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
     // Outside of the 3D viewport, we don't do isosurface hit tests
     if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
-      if (hoveredIsosurfaceId !== 0) {
-        // Reset hoveredIsosurfaceId if we are outside of the 3D viewport,
+      if (hoveredSegmentId !== 0) {
+        // Reset hoveredSegmentId if we are outside of the 3D viewport,
         // since that id takes precedence over the shader-calculated cell id
         // under the mouse cursor
-        Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", 0));
+        Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
       }
       return null;
     }
@@ -199,10 +199,10 @@ class PlaneView {
         meshPart.material.emissive.setHSL(...hoveredColor);
       });
 
-      Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", hitObject.parent.cellId));
+      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.cellId));
       return intersections[0].point;
     } else {
-      Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", 0));
+      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
       return null;
     }
   }

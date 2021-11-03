@@ -95,16 +95,16 @@ class BinaryDataController @Inject()(
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
   def requestRawCuboid(
-      @ApiParam(value = "Name of the dataset’s organization") organizationName: String,
-      @ApiParam(value = "Dataset name") dataSetName: String,
-      @ApiParam(value = "Layer name of the dataset") dataLayerName: String,
-      @ApiParam(value = "x coordinate of the top-left corner of the bounding box") x: Int,
-      @ApiParam(value = "y coordinate of the top-left corner of the bounding box") y: Int,
-      @ApiParam(value = "z coordinate of the top-left corner of the bounding box") z: Int,
-      @ApiParam(value = "width of the bounding box") width: Int,
-      @ApiParam(value = "height of the bounding box") height: Int,
-      @ApiParam(value = "depth of the bounding box") depth: Int,
-      @ApiParam(value = "Exponent of the dataset mag (e.g. 4 for mag 16-16-8)") resolution: Int,
+      @ApiParam(value = "Name of the dataset’s organization", required = true) organizationName: String,
+      @ApiParam(value = "Dataset name", required = true) dataSetName: String,
+      @ApiParam(value = "Layer name of the dataset", required = true) dataLayerName: String,
+      @ApiParam(value = "x coordinate of the top-left corner of the bounding box", required = true) x: Int,
+      @ApiParam(value = "y coordinate of the top-left corner of the bounding box", required = true) y: Int,
+      @ApiParam(value = "z coordinate of the top-left corner of the bounding box", required = true) z: Int,
+      @ApiParam(value = "width of the bounding box", required = true) width: Int,
+      @ApiParam(value = "height of the bounding box", required = true) height: Int,
+      @ApiParam(value = "depth of the bounding box", required = true) depth: Int,
+      @ApiParam(value = "Exponent of the dataset mag (e.g. 4 for mag 16-16-8)", required = true) resolution: Int,
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {

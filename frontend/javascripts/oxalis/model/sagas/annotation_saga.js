@@ -107,3 +107,5 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield _takeEvery("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield _takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
 }
+
+export default [warnAboutSegmentationZoom, watchAnnotationAsync];

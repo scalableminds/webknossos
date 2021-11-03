@@ -105,7 +105,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
           command = "infer_nuclei"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,

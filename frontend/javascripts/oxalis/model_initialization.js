@@ -49,7 +49,7 @@ import {
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { serverTracingAsSkeletonTracingMaybe } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   serverTracingAsVolumeTracingMaybe,
   getVolumeTracings,
@@ -130,12 +130,13 @@ export async function initialize(
     datasetId = { name, owningOrganization };
   }
 
-  const [dataset, initialUserSettings, serverTracings] = await fetchParallel(
-    annotation,
-    datasetId,
-    versions,
-  );
+  const [dataset, initialUserSettings, serverTracings]: [
+    APIDataset,
+    Object,
+    Array<ServerTracing>,
+  ] = await fetchParallel(annotation, datasetId, versions);
   const displayedVolumeTracings = (serverTracings || [])
+    // $FlowIgnore[prop-missing]
     .filter(tracing => tracing.largestSegmentId != null)
     .map(volumeTracing => volumeTracing.id);
 
@@ -191,16 +192,12 @@ async function fetchParallel(
   annotation: ?APIAnnotation,
   datasetId: APIDatasetId,
   versions?: Versions,
-): Promise<[APIDataset, *, ?Array<ServerTracing>]> {
-  // (Also see https://github.com/facebook/flow/issues/4936)
-  // $FlowIssue[incompatible-return] Type inference with Promise.all seems to be a bit broken in flow
+): Promise<[APIDataset, Object, Array<ServerTracing>]> {
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
-
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    // $FlowIssue[incompatible-call] Type inference with Promise.all seems to be a bit broken in flow
-    annotation ? getTracingForAnnotations(annotation, versions) : null,
+    annotation ? getTracingForAnnotations(annotation, versions) : [],
   ]);
 }
 
@@ -279,12 +276,13 @@ function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<Ser
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
 
-    serverTracingAsSkeletonTracingMaybe(serverTracings).map(skeletonTracing => {
+    const skeletonTracing = getNullableSkeletonTracing(serverTracings);
+    if (skeletonTracing != null) {
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
       Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
-    });
+    }
   }
 
   // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode

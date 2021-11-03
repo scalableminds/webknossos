@@ -2,7 +2,12 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
 
-import type { ServerTracing, ServerSkeletonTracing } from "types/api_flow_types";
+import type {
+  ServerTracing,
+  ServerSkeletonTracing,
+  APIAnnotation,
+  AnnotationLayerDescriptor,
+} from "types/api_flow_types";
 import type {
   Tracing,
   SkeletonTracing,
@@ -30,15 +35,32 @@ export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   return Maybe.Nothing();
 }
 
-export function serverTracingAsSkeletonTracingMaybe(
+export function getSkeletonDescriptor(annotation: APIAnnotation): ?AnnotationLayerDescriptor {
+  // $FlowIgnore[prop-missing]
+  const skeletonLayers = annotation.annotationLayers.filter(layer => layer.trees != null);
+  if (skeletonLayers.length > 0) {
+    // $FlowIgnore[prop-missing]
+    return skeletonLayers.length[0];
+  }
+  return null;
+}
+
+export function getNullableSkeletonTracing(
   tracings: ?Array<ServerTracing>,
-): Maybe<ServerSkeletonTracing> {
-  const skeletonTracings = (tracings || []).filter(tracing => tracing.trees != null);
+): ?ServerSkeletonTracing {
+  // todo: fix
+  // $FlowIgnore[prop-missing]
+  // $FlowIgnore[incompatible-type]
+  const skeletonTracings: Array<ServerSkeletonTracing> = (tracings || []).filter(
+    tracing =>
+      // $FlowIgnore[prop-missing]
+      tracing.trees != null,
+  );
   if (skeletonTracings.length > 0) {
     // Only one skeleton is supported
-    return Maybe.Just(skeletonTracings[0]);
+    return skeletonTracings[0];
   }
-  return Maybe.Nothing();
+  return null;
 }
 
 export function enforceSkeletonTracing(tracing: Tracing): SkeletonTracing {

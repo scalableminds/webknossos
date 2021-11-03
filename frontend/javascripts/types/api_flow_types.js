@@ -377,10 +377,10 @@ export type AnnotationLayerDescriptor = {
 };
 
 export type APIAnnotationCompact = {
-  +tracing: {
-    +skeleton: ?string,
-    +volume: ?string,
-  },
+  // +tracing: {
+  //   +skeleton: ?string,
+  //   +volume: ?string,
+  // },
   +annotationLayers: Array<AnnotationLayerDescriptor>,
   +dataSetName: string,
   +organization: string,

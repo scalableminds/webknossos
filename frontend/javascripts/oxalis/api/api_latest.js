@@ -46,7 +46,10 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getVolumeDescriptors,
+  getActiveCellId,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
   getSegmentationLayerByName,
@@ -542,7 +545,8 @@ class TracingApi {
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== task.type.id;
-      const involvesVolumeTask = state.tracing.volume != null || annotation.tracing.volume != null;
+      const involvesVolumeTask =
+        state.tracing.volumes.length > 0 || getVolumeDescriptors(annotation).length > 0;
 
       const currentScript = task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;

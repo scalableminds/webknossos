@@ -148,6 +148,7 @@ const defaultState: OxalisState = {
       tracingId: "",
     },
     volume: null,
+    volumes: [],
     skeleton: null,
     user: null,
   },

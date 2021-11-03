@@ -1,4 +1,5 @@
-// @flow
+// todo: fix this module
+// @noflow
 import {
   resetDatabase,
   replaceVolatileValues,
@@ -111,7 +112,8 @@ test.serial("editAnnotation()", async t => {
   t.is(editedAnnotation.visibility, newVisibility);
   t.is(editedAnnotation.description, newDescription);
   t.is(editedAnnotation.id, annotationId);
-  t.is(editedAnnotation.tracing.skeleton, "ae417175-f7bb-4a34-8187-d9c3b50143af");
+  t.is(editedAnnotation.annotationLayers[0].typ, "Skeleton");
+  t.is(editedAnnotation.annotationLayers[0].tracingId, "ae417175-f7bb-4a34-8187-d9c3b50143af");
   t.snapshot(replaceVolatileValues(editedAnnotation), { id: "annotations-editAnnotation" });
 
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {

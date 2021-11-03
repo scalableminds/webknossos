@@ -94,7 +94,13 @@ export const annotation: APIAnnotation = {
     allowSave: true,
   },
   formattedHash: "f043e7",
-  tracing: { skeleton: "47e37793-d0be-4240-a371-87ce68561a13", volume: null },
+  annotationLayers: [
+    {
+      name: "Skeleton",
+      tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
+      typ: "Skeleton",
+    },
+  ],
   dataSetName: "ROI2017_wkw",
   organization: "Connectomics Department",
   dataStore: {

@@ -17,6 +17,7 @@ import Markdown from "react-remarkable";
 import * as React from "react";
 import classNames from "classnames";
 
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "types/api_flow_types";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import type { OxalisState } from "oxalis/store";
@@ -233,7 +234,6 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         .map(team => team.name)
         .includes(task.team);
 
-    // TODO use React fragments <> instead of spans / divs
     const label = this.props.isAdminView ? (
       <span>
         <EyeOutlined />
@@ -270,7 +270,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
             <AsyncLink
               href="#"
               onClick={() => {
-                const isVolumeIncluded = annotation.tracing.volume != null;
+                const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadNml(annotation.id, "Task", isVolumeIncluded);
               }}
               icon={<DownloadOutlined />}

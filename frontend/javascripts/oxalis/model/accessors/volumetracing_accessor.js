@@ -8,24 +8,50 @@ import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/access
 import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import type { AnnotationTool, ContourMode } from "oxalis/constants";
-import type { ServerTracing, ServerVolumeTracing } from "types/api_flow_types";
+import type {
+  ServerTracing,
+  ServerVolumeTracing,
+  APIAnnotation,
+  AnnotationLayerDescriptor,
+  APIAnnotationCompact,
+} from "types/api_flow_types";
 
+// todo: this is deprecated
 export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
-  if (tracing.volume != null) {
-    return Maybe.Just(tracing.volume);
+  if (tracing.volumes.length > 0) {
+    return Maybe.Just(tracing.volumes[0]);
   }
   return Maybe.Nothing();
 }
 
+export function getVolumeDescriptors(
+  annotation: APIAnnotation | APIAnnotationCompact,
+): Array<AnnotationLayerDescriptor> {
+  return annotation.annotationLayers.filter(layer => layer.typ === "Volume");
+}
+
 export function getVolumeTracings(tracings: ?Array<ServerTracing>): Array<ServerVolumeTracing> {
-  return (tracings || []).filter(tracing => tracing.largestSegmentId != null);
+  // todo: add a type property to ServerTracing
+  // $FlowIgnore[prop-missing]
+  // $FlowIgnore[incompatible-type]
+  const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
+    // $FlowIgnore[prop-missing]
+    tracing => tracing.largestSegmentId != null,
+  );
+  return volumeTracings;
 }
 
 // todo: adapt callers to multiple volume annotations
 export function serverTracingAsVolumeTracingMaybe(
   tracings: ?Array<ServerTracing>,
 ): Maybe<ServerVolumeTracing> {
-  const volumeTracings = (tracings || []).filter(tracing => tracing.largestSegmentId != null);
+  // todo
+  // $FlowIgnore[prop-missing]
+  // $FlowIgnore[incompatible-type]
+  const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
+    // $FlowIgnore[prop-missing]
+    tracing => tracing.largestSegmentId != null,
+  );
   if (volumeTracings.length > 0) {
     // Only one skeleton is supported
     return Maybe.Just(volumeTracings[0]);
@@ -60,7 +86,7 @@ export function isVolumeTool(tool: AnnotationTool): boolean {
 }
 
 export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: OxalisState) {
-  if (state.tracing.volume == null) {
+  if (getVolumeTracing(state.tracing).isNothing) {
     return true;
   }
 

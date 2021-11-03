@@ -4,16 +4,29 @@ import _ from "lodash";
 import React from "react";
 import { message } from "antd";
 import * as Utils from "libs/utils";
+import { diffDiffableMaps } from "libs/diffable_map";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
+  updateSegmentAction,
   finishAnnotationStrokeAction,
+  type SetActiveCellAction,
+  type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import {
+  addUserBoundingBoxesAction,
+  type AddIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  updateTemporarySettingAction,
+  type UpdateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   type Saga,
   _takeEvery,
+  _takeLatest,
   _takeLeading,
   call,
   fork,
@@ -26,13 +39,17 @@ import {
   type UpdateAction,
   updateVolumeTracing,
   updateUserBoundingBoxes,
+  createSegmentVolumeAction,
+  updateSegmentVolumeAction,
+  deleteSegmentVolumeAction,
   removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
-import type { VolumeTracing, Flycam } from "oxalis/store";
+import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
   enforceVolumeTracing,
   isVolumeAnnotationDisallowedForZoom,
+  getSegmentsForLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
@@ -56,6 +73,7 @@ import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/u
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
+  OrthoViews,
   Unicode,
   type BoundingBoxType,
   type ContourMode,
@@ -140,6 +158,9 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
+    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+    yield* put(updateSegmentAction(activeCellId, { somePosition: startEditingAction.position }));
+
     const {
       zoomStep: labeledZoomStep,
       resolution: labeledResolution,
@@ -220,6 +241,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
       overwriteMode,
       labeledZoomStep,
     );
+    // Update the position of the current segment to the last position of the most recent annotation stroke.
+    yield* put(updateSegmentAction(activeCellId, { somePosition: lastPosition }));
     yield* put(finishAnnotationStrokeAction());
   }
 }
@@ -772,6 +795,37 @@ function updateTracingPredicate(
   );
 }
 
+export function* diffSegmentLists(
+  prevSegments: SegmentMap,
+  newSegments: SegmentMap,
+): Generator<UpdateAction, void, void> {
+  const {
+    onlyA: deletedSegmentIds,
+    onlyB: addedSegmentIds,
+    changed: bothSegmentIds,
+  } = diffDiffableMaps(prevSegments, newSegments);
+
+  for (const segmentId of deletedSegmentIds) {
+    yield deleteSegmentVolumeAction(segmentId);
+  }
+  for (const segmentId of addedSegmentIds) {
+    const segment = newSegments.get(segmentId);
+    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
+  }
+  for (const segmentId of bothSegmentIds) {
+    const segment = newSegments.get(segmentId);
+    const prevSegment = prevSegments.get(segmentId);
+    if (segment !== prevSegment) {
+      yield updateSegmentVolumeAction(
+        segment.id,
+        segment.somePosition,
+        segment.name,
+        segment.creationTime,
+      );
+    }
+  }
+}
+
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
@@ -789,7 +843,97 @@ export function* diffVolumeTracing(
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
+
+  if (prevVolumeTracing.segments !== volumeTracing.segments) {
+    yield* diffSegmentLists(prevVolumeTracing.segments, volumeTracing.segments);
+  }
+
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
     yield removeFallbackLayer();
   }
 }
+
+function* ensureSegmentExists(
+  action:
+    | AddIsosurfaceAction
+    | SetActiveCellAction
+    | UpdateTemporarySettingAction
+    | ClickSegmentAction,
+): Saga<void> {
+  const segments = yield* select(store =>
+    getSegmentsForLayer(
+      store,
+      // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
+      action.layerName,
+    ),
+  );
+  const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
+  if (cellId === 0 || cellId == null || segments == null || segments.getNullable(cellId) != null) {
+    return;
+  }
+
+  if (action.type === "ADD_ISOSURFACE") {
+    const { seedPosition, layerName } = action;
+    yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
+  } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
+    const { somePosition } = action;
+    if (somePosition == null) {
+      // Not all SetActiveCell provide a position (e.g., when simply setting the ID)
+      // via the UI.
+      return;
+    }
+
+    yield* put(updateSegmentAction(cellId, { somePosition }));
+  } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
+    const globalMousePosition = yield* call(getGlobalMousePosition);
+    if (globalMousePosition == null) {
+      return;
+    }
+    yield* put(updateSegmentAction(cellId, { somePosition: globalMousePosition }));
+  }
+}
+
+function* maintainSegmentsMap(): Saga<void> {
+  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"], ensureSegmentExists);
+}
+
+function* getGlobalMousePosition(): Saga<?Vector3> {
+  return yield* select(state => {
+    const mousePosition = state.temporaryConfiguration.mousePosition;
+    if (mousePosition) {
+      const [x, y] = mousePosition;
+      return calculateMaybeGlobalPos(state, { x, y });
+    }
+    return undefined;
+  });
+}
+
+function* updateHoveredSegmentId(): Saga<void> {
+  const activeViewport = yield* select(store => store.viewModeData.plane.activeViewport);
+  if (activeViewport === OrthoViews.TDView) {
+    return;
+  }
+
+  const globalMousePosition = yield* call(getGlobalMousePosition);
+  const hoveredCellInfo = yield* call([Model, Model.getHoveredCellId], globalMousePosition);
+  const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
+
+  const oldHoveredSegmentId = yield* select(store => store.temporaryConfiguration.hoveredSegmentId);
+
+  if (oldHoveredSegmentId !== id) {
+    yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+}
+
+export function* maintainHoveredSegmentId(): Saga<void> {
+  yield _takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
+}
+
+export default [
+  editVolumeLayerAsync,
+  ensureToolIsAllowedInResolution,
+  floodFill,
+  watchVolumeTracingAsync,
+  maintainSegmentsMap,
+  maintainHoveredSegmentId,
+];

@@ -1953,25 +1953,25 @@ declare module "redux-saga/effects" {
   declare export var debounce: {
     // debounce(ms, pattern, saga, ...args)
     // debounce(ms, channel, saga, ...args)
-    <R, MS: number, P: TakeableChannel<*> | Pattern, Fn: () => R>(
+    <MS: number, P: TakeableChannel<*> | Pattern, A, R, Fn: A => R>(
       MS,
       P,
       Fn,
     ): ForkEffect<null, Fn, void, [MS, P, Fn]>,
-    <R, MS: number, P: TakeableChannel<*> | Pattern, T1, Fn: T1 => R>(
+    <MS: number, P: TakeableChannel<*> | Pattern, A, R, T1, Fn: (T1, A) => R>(
       MS,
       P,
       Fn,
       T1,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1]>,
-    <R, MS: number, P: TakeableChannel<*> | Pattern, T1, T2, Fn: (T1, T2) => R>(
+    <MS: number, P: TakeableChannel<*> | Pattern, A, R, T1, T2, Fn: (T1, T2, A) => R>(
       MS,
       P,
       Fn,
       T1,
       T2,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1, T2]>,
-    <R, MS: number, P: TakeableChannel<*> | Pattern, T1, T2, T3, Fn: (T1, T2, T3) => R>(
+    <MS: number, P: TakeableChannel<*> | Pattern, A, R, T1, T2, T3, Fn: (T1, T2, T3, A) => R>(
       MS,
       P,
       Fn,
@@ -1979,7 +1979,17 @@ declare module "redux-saga/effects" {
       T2,
       T3,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1, T2, T3]>,
-    <R, MS: number, P: TakeableChannel<*> | Pattern, T1, T2, T3, T4, Fn: (T1, T2, T3, T4) => R>(
+    <
+      MS: number,
+      P: TakeableChannel<*> | Pattern,
+      A,
+      R,
+      T1,
+      T2,
+      T3,
+      T4,
+      Fn: (T1, T2, T3, T4, A) => R,
+    >(
       MS,
       P,
       Fn,
@@ -1989,15 +1999,16 @@ declare module "redux-saga/effects" {
       T4,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1, T2, T3, T4]>,
     <
-      R,
       MS: number,
       P: TakeableChannel<*> | Pattern,
+      A,
+      R,
       T1,
       T2,
       T3,
       T4,
       T5,
-      Fn: (T1, T2, T3, T4, T5) => R,
+      Fn: (T1, T2, T3, T4, T5, A) => R,
     >(
       MS,
       P,
@@ -2009,16 +2020,17 @@ declare module "redux-saga/effects" {
       T5,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1, T2, T3, T4, T5]>,
     <
-      R,
       MS: number,
       P: TakeableChannel<*> | Pattern,
+      A,
+      R,
       T1,
       T2,
       T3,
       T4,
       T5,
       T6,
-      Fn: (T1, T2, T3, T4, T5, T6) => R,
+      Fn: (T1, T2, T3, T4, T5, T6, A) => R,
     >(
       MS,
       P,
@@ -2031,9 +2043,10 @@ declare module "redux-saga/effects" {
       T6,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1, T2, T3, T4, T5, T6]>,
     <
-      R,
       MS: number,
       P: TakeableChannel<*> | Pattern,
+      A,
+      R,
       T1,
       T2,
       T3,
@@ -2041,7 +2054,7 @@ declare module "redux-saga/effects" {
       T5,
       T6,
       T7,
-      Fn: (T1, T2, T3, T4, T5, T6, T7) => R,
+      Fn: (T1, T2, T3, T4, T5, T6, T7, A) => R,
     >(
       MS,
       P,
@@ -2055,9 +2068,10 @@ declare module "redux-saga/effects" {
       T7,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1, T2, T3, T4, T5, T6, T7]>,
     <
-      R,
       MS: number,
       P: TakeableChannel<*> | Pattern,
+      A,
+      R,
       T1,
       T2,
       T3,
@@ -2066,7 +2080,7 @@ declare module "redux-saga/effects" {
       T6,
       T7,
       T8,
-      Fn: (T1, T2, T3, T4, T5, T6, T7, T8) => R,
+      Fn: (T1, T2, T3, T4, T5, T6, T7, T8, A) => R,
     >(
       MS,
       P,
@@ -2081,7 +2095,6 @@ declare module "redux-saga/effects" {
       T8,
     ): ForkEffect<null, Fn, void, [MS, P, Fn, T1, T2, T3, T4, T5, T6, T7, T8]>,
   };
-
   declare export var retry: {
     // retry(maxTries, delay, fn, ...args)
     <R, MT: number, D: number, Fn: () => R>(MT, D, Fn): CallEffect<null, Function, [MT, D, Fn]>,

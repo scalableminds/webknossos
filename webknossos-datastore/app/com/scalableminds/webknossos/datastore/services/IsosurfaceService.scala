@@ -153,11 +153,11 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
       val y = dataDimensions.y - 1
       val z = dataDimensions.z - 1
       val front_xy = BoundingBox(Point3D(0, 0, 0), x, y, 1)
-      val front_xz = BoundingBox(Point3D(0, 0, 0), 1, y, z)
-      val front_yz = BoundingBox(Point3D(0, 0, 0), x, 1, z)
+      val front_xz = BoundingBox(Point3D(0, 0, 0), x, 1, z)
+      val front_yz = BoundingBox(Point3D(0, 0, 0), 1, y, z)
       val back_xy = BoundingBox(Point3D(0, 0, z), x, y, 1)
-      val back_xz = BoundingBox(Point3D(0, y, 0), 1, y, z)
-      val back_yz = BoundingBox(Point3D(x, 0, 0), x, 1, z)
+      val back_xz = BoundingBox(Point3D(0, y, 0), x, 1, z)
+      val back_yz = BoundingBox(Point3D(x, 0, 0), 1, y, z)
       val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
       surfaceBoundingBoxes.zipWithIndex.filter {
         case (surfaceBoundingBox, index) =>

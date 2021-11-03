@@ -51,7 +51,7 @@ class ContourGeometry {
   createMeshes() {
     const edgeGeometry = new THREE.BufferGeometry();
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
-    positionAttribute.setDynamic(true);
+    positionAttribute.setUsage(THREE.DynamicDrawUsage);
     edgeGeometry.setAttribute("position", positionAttribute);
 
     this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }));
@@ -81,7 +81,7 @@ class ContourGeometry {
     if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
       const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);
-      positionAttribute.setDynamic(true);
+      positionAttribute.setUsage(THREE.DynamicDrawUsage);
 
       mesh.geometry.dispose();
       mesh.geometry.setAttribute("position", positionAttribute);

@@ -8,8 +8,8 @@ import org.scalatestplus.play._
 
 class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
 
-  private def applyUpdateAction(action: UpdateAction.SkeletonUpdateAction) =
-    action.applyOn(Dummies.tracing)
+  private def applyUpdateAction(action: UpdateAction.SkeletonUpdateAction): SkeletonTracing =
+    action.applyOn(Dummies.skeletonTracing)
 
   def listConsistsOfLists[T](joinedList: Seq[T], sublist1: Seq[T], sublist2: Seq[T]): Boolean = {
     // assuming sublist1 & sublist2 are different
@@ -32,7 +32,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       )
       val result = applyUpdateAction(createTreeAction)
 
-      assert(result.trees.length == Dummies.tracing.trees.length + 1)
+      assert(result.trees.length == Dummies.skeletonTracing.trees.length + 1)
       val tree = result.trees.find(_.treeId == createTreeAction.id).get
       assert(tree.branchPoints == List(BranchPoint(0, Dummies.timestamp)))
       assert(tree.createdTimestamp == Dummies.timestamp)
@@ -47,7 +47,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val deleteTreeAction = new DeleteTreeSkeletonAction(id = 1)
       val result = applyUpdateAction(deleteTreeAction)
 
-      assert(result.trees.length == Dummies.tracing.trees.length - 1)
+      assert(result.trees.length == Dummies.skeletonTracing.trees.length - 1)
       result.trees.find(_.treeId == deleteTreeAction.id) match {
         case Some(_) => throw new Exception
         case None    =>
@@ -68,7 +68,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       )
       val result = applyUpdateAction(updateTreeAction)
 
-      assert(result.trees.length == Dummies.tracing.trees.length)
+      assert(result.trees.length == Dummies.skeletonTracing.trees.length)
       val tree = result.trees.find(_.treeId == 1000).get
       assert(tree.branchPoints == List(BranchPoint(0, Dummies.timestamp)))
       assert(tree.createdTimestamp == Dummies.timestamp)
@@ -84,7 +84,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val targetTree = Dummies.tree2
       val result = applyUpdateAction(mergeTreeAction)
 
-      assert(result.trees.length == Dummies.tracing.trees.length - 1)
+      assert(result.trees.length == Dummies.skeletonTracing.trees.length - 1)
       val tree = result.trees.find(_.treeId == 2).get
       assert(tree.name == targetTree.name)
       assert(tree.color == targetTree.color)
@@ -101,9 +101,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
     "move the specified (seperate) nodes" in {
       val moveTreeComponentSkeletonAction =
         new MoveTreeComponentSkeletonAction(Dummies.comp1Nodes.map(_.id).toList, sourceId = 3, targetId = 4)
-      val result = moveTreeComponentSkeletonAction.applyOn(Dummies.componentTracing)
+      val result = moveTreeComponentSkeletonAction.applyOn(Dummies.componentSkeletonTracing)
 
-      assert(result.trees.length == Dummies.componentTracing.trees.length)
+      assert(result.trees.length == Dummies.componentSkeletonTracing.trees.length)
       val resultSourceTree = result.trees.find(_.treeId == 3).get
       val resultTargetTree = result.trees.find(_.treeId == 4).get
       assert(resultTargetTree.name == Dummies.emptyTree.name)
@@ -121,7 +121,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val createEdgeSkeletonAction = new CreateEdgeSkeletonAction(source = 1, target = 7, treeId = 1)
       val result = applyUpdateAction(createEdgeSkeletonAction)
 
-      assert(result.trees.length == Dummies.tracing.trees.length)
+      assert(result.trees.length == Dummies.skeletonTracing.trees.length)
       val tree = result.trees.find(_.treeId == 1).get
       assert(tree.name == Dummies.tree1.name)
       assert(tree.nodes.toSet == Dummies.tree1.nodes.toSet)
@@ -133,8 +133,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
     "undo CreateEdgeSkeletonAction" in {
       val createEdgeSkeletonAction = new CreateEdgeSkeletonAction(source = 0, target = 7, treeId = 1)
       val deleteEdgeSkeletonAction = new DeleteEdgeSkeletonAction(source = 0, target = 7, treeId = 1)
-      val result = deleteEdgeSkeletonAction.applyOn(createEdgeSkeletonAction.applyOn(Dummies.tracing))
-      assert(result == Dummies.tracing)
+      val result = deleteEdgeSkeletonAction.applyOn(createEdgeSkeletonAction.applyOn(Dummies.skeletonTracing))
+      assert(result == Dummies.skeletonTracing)
     }
   }
 
@@ -154,7 +154,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Dummies.timestamp
       )
       val result = applyUpdateAction(createNodeSkeletonAction)
-      assert(result.trees.length == Dummies.tracing.trees.length)
+      assert(result.trees.length == Dummies.skeletonTracing.trees.length)
       val tree = result.trees.find(_.treeId == 1).get
       assert(tree.name == Dummies.tree1.name)
       assert(tree.nodes.length == Dummies.tree1.nodes.length + 1)
@@ -178,7 +178,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Dummies.timestamp
       )
       val result = applyUpdateAction(updateNodeSkeletonAction)
-      assert(result.trees.length == Dummies.tracing.trees.length)
+      assert(result.trees.length == Dummies.skeletonTracing.trees.length)
       val tree = result.trees.find(_.treeId == 1).get
       assert(tree.name == Dummies.tree1.name)
       assert(tree.nodes.length == Dummies.tree1.nodes.length)
@@ -202,8 +202,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Dummies.timestamp
       )
       val deleteNodeSkeletonAction = new DeleteNodeSkeletonAction(newNode.id, treeId = 1)
-      val result = deleteNodeSkeletonAction.applyOn(createNodeSkeletonAction.applyOn(Dummies.tracing))
-      assert(result == Dummies.tracing)
+      val result = deleteNodeSkeletonAction.applyOn(createNodeSkeletonAction.applyOn(Dummies.skeletonTracing))
+      assert(result == Dummies.skeletonTracing)
     }
   }
 
@@ -214,7 +214,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         List(UpdateActionTreeGroup(updatedName, 2, List()))
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
-      assert(result.trees == Dummies.tracing.trees)
+      assert(result.trees == Dummies.skeletonTracing.trees)
       val treeGroup = result.treeGroups.find(_.groupId == 2).get
       assert(treeGroup.name == updatedName)
     }
@@ -225,7 +225,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         List(UpdateActionTreeGroup(updatedNameTop, 1, List(UpdateActionTreeGroup(updatedNameNested, 3, List()))))
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
-      assert(result.trees == Dummies.tracing.trees)
+      assert(result.trees == Dummies.skeletonTracing.trees)
       val treeGroupTop = result.treeGroups.find(_.groupId == 1).get
       assert(treeGroupTop.name == updatedNameTop)
       val treeGroupNested = treeGroupTop.children.find(_.groupId == 3).get
@@ -248,7 +248,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         userBoundingBox
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
-      assert(result.trees == Dummies.tracing.trees)
+      assert(result.trees == Dummies.skeletonTracing.trees)
       assert(result.activeNodeId == activeNode)
       assert(result.editPosition.x == editPosition.x)
       assert(result.editPosition.y == editPosition.y)

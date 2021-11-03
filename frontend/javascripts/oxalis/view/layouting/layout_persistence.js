@@ -45,7 +45,7 @@ function readStoredLayoutConfigs() {
   try {
     const version = JSON.parse(storedLayoutVersion);
     const layouts = JSON.parse(layoutString);
-    if (currentLayoutVersion > version) {
+    if (currentLayoutVersion !== version) {
       return defaultLayoutConfig;
     }
     if (
@@ -170,7 +170,7 @@ export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
     persistLayoutConfigsDebounced();
   } else {
     throw new Error(
-      `Active layout could not be set. The given layout ${layoutKey}  with name ${activeLayout} 
+      `Active layout could not be set. The given layout ${layoutKey}  with name ${activeLayout}
       was not found in layouts for ${mapLayoutKeysToLanguage[layoutKey]}.`,
     );
   }

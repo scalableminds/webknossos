@@ -44,7 +44,7 @@ function BorderToggleButton(props: Props) {
         its presence interferes with the existing mouse drag / touch drag
         behavior to move tabs around.
         For this reason, we have to call stopPropagation and preventDefault.
-        Additionally, we need to detect whether the user has dragged a tap
+        Additionally, we need to detect whether the user has dragged a tab
         across screen (to move a tab). In that case, onTouchEnd does nothing.
         */
         onClick={event => {

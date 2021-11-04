@@ -20,7 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The context menu in the data viewport also allows to compute an ad-hoc mesh for the selected segment. [#5696](https://github.com/scalableminds/webknossos/pull/5696)
 
 ### Changed
--
+- Improved the movement behavior when using shortcuts to navigate along the 3rd dimension. Instead of clamping the sub-voxel position to .0 or .99 on the initial movement, the keyboard delay is adapted dynamically to avoid too fast movements. This change especially improves the move behavior when quickly changing the direction backwards/forwards. [#5801](https://github.com/scalableminds/webknossos/pull/5801)
 
 ### Fixed
 - Fixed two volume tracing related bugs which could occur when using undo with a slow internet connection or when volume-annotating more than 5000 buckets (32**3 vx) in one session. [#5728](https://github.com/scalableminds/webknossos/pull/5728)
@@ -32,6 +32,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug which made the ad-hoc mesh loading abort too early. [#5696](https://github.com/scalableminds/webknossos/pull/5696)
 - Fixed that viewports turned black when zoomed in very much. [#5797](https://github.com/scalableminds/webknossos/pull/5797)
 - Fixed the bucket loading order in the YZ and XZ viewports. Data in these viewports will be rendered faster than before. [#5798](https://github.com/scalableminds/webknossos/pull/5798)
+- Fixed that collapsing/expanding the sidebars did not work for touchscreens. [#5825](https://github.com/scalableminds/webknossos/pull/5825)
 - Fixed a bug where projects could not be listed if the tracing time got too large. [#5823](https://github.com/scalableminds/webknossos/pull/5823)
 
 ### Removed

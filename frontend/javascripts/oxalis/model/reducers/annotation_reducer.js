@@ -114,12 +114,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         };
         if (action.center != null) {
           newBoundingBox.boundingBox = {
-            min: V3.sub(action.center, halfBoxExtent)
-              .round()
-              .toArray(),
-            max: V3.add(action.center, halfBoxExtent)
-              .round()
-              .toArray(),
+            min: V3.toArray(V3.round(V3.sub(action.center, halfBoxExtent))),
+            max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
           };
         }
       }

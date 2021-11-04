@@ -433,6 +433,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     visibleSegmentationLayer,
     dataset,
     currentMeshFile,
+    hideContextMenu,
     setActiveCell,
   } = props;
 
@@ -475,6 +476,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
+  const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
 
   const skeletonActions =
     skeletonTracing != null
@@ -494,7 +496,8 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
               setWaypoint(globalPosition, viewport, false);
             }}
           >
-            Create new Tree here {!isVolumeBasedToolActive ? shortcutBuilder(["C"]) : null}
+            Create new Tree here{" "}
+            {!isVolumeBasedToolActive && !isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
           </Menu.Item>,
         ]
       : [];
@@ -549,7 +552,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
         ]
       : [];
 
-  const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
 
   if (volumeTracing == null && visibleSegmentationLayer != null) {
@@ -571,7 +573,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   }
 
   return (
-    <Menu style={{ borderRadius: 6 }} mode="vertical">
+    <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       {allActions}
     </Menu>
   );
@@ -709,7 +711,6 @@ function ContextMenu(props: Props) {
   );
 }
 
-// TODO: Refactor this !!!!!!!!!!, above useDispatch is already used.
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   deleteEdge(firstNodeId: number, secondNodeId: number) {
     dispatch(deleteEdgeAction(firstNodeId, secondNodeId));

@@ -578,7 +578,7 @@ export default function ToolbarView() {
               />
             </RadioButtonWithTooltip>
             <RadioButtonWithTooltip
-              title="Bounding Box Tool."
+              title="Bounding Box Tool - Create, resize and modify bounding boxes."
               disabled={false}
               style={narrowButtonStyle}
               value={AnnotationToolEnum.BOUNDING_BOX}

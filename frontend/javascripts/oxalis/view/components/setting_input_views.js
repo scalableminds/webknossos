@@ -442,7 +442,9 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
         </Row>
         <Row style={{ marginBottom: 20 }} align="top">
           <Col span={5}>
-            <label className="settings-label"> Bounds: </label>
+            <Tooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
+              <label className="settings-label"> Bounds: </label>
+            </Tooltip>
           </Col>
           <Col span={15}>
             <Tooltip

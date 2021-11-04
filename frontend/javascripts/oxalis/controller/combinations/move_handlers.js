@@ -38,15 +38,15 @@ export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => 
 
 export const handleMovePlane = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
 
-export const moveX = (x: number): void => {
-  movePlane([x, 0, 0]);
+export const moveU = (deltaU: number): void => {
+  movePlane([deltaU, 0, 0]);
 };
 
-export const moveY = (y: number): void => {
-  movePlane([0, y, 0]);
+export const moveV = (deltaV: number): void => {
+  movePlane([0, deltaV, 0]);
 };
 
-export const moveZ = (z: number, oneSlide: boolean): void => {
+export const moveW = (deltaW: number, oneSlide: boolean): void => {
   if (is2dDataset(Store.getState().dataset)) {
     return;
   }
@@ -57,18 +57,17 @@ export const moveZ = (z: number, oneSlide: boolean): void => {
 
   if (oneSlide) {
     const logZoomStep = getRequestLogZoomStep(Store.getState());
-    const w = Dimensions.getIndices(activeViewport)[2];
-    const zStep = getResolutions(Store.getState().dataset)[logZoomStep][w];
+    const wDim = Dimensions.getIndices(activeViewport)[2];
+    const wStep = getResolutions(Store.getState().dataset)[logZoomStep][wDim];
 
     Store.dispatch(
       moveFlycamOrthoAction(
-        Dimensions.transDim([0, 0, (z < 0 ? -1 : 1) * Math.max(1, zStep)], activeViewport),
+        Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),
         activeViewport,
-        true,
       ),
     );
   } else {
-    movePlane([0, 0, z], false);
+    movePlane([0, 0, deltaW], false);
   }
 };
 

@@ -75,7 +75,7 @@ export class ResolutionInfo {
   }
 
   getResolutionList(): Array<Vector3> {
-    return Array.from(this.resolutionMap.entries()).map(entry => entry[1]);
+    return Array.from(this.resolutionMap.values());
   }
 
   getResolutionsWithIndices(): Array<[number, Vector3]> {
@@ -135,12 +135,20 @@ export class ResolutionInfo {
     return this.resolutionMap.get(powerOfTwo);
   }
 
+  getHighestResolutionPowerOf2(): number {
+    return _.max(Array.from(this.resolutionMap.keys()));
+  }
+
+  getLowestResolutionPowerOf2(): number {
+    return _.min(Array.from(this.resolutionMap.keys()));
+  }
+
   getHighestResolutionIndex(): number {
     return Math.log2(this.getHighestResolutionPowerOf2());
   }
 
-  getHighestResolutionPowerOf2(): number {
-    return _.max(Array.from(this.resolutionMap.keys()));
+  getLowestResolutionIndex(): number {
+    return Math.log2(this.getLowestResolutionPowerOf2());
   }
 
   getAllIndices(): Array<number> {

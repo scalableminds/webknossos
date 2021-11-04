@@ -112,6 +112,22 @@ type UpdateVolumeTracingUpdateAction = {|
     zoomLevel: number,
   |},
 |};
+
+type CreateSegmentVolumeAction = {|
+  name: "createSegment",
+  value: {| id: number, anchorPosition: ?Vector3, name: ?string, creationTime: ?number |},
+|};
+type UpdateSegmentVolumeAction = {|
+  name: "updateSegment",
+  value: {| id: number, anchorPosition: ?Vector3, name: ?string, creationTime: ?number |},
+|};
+type DeleteSegmentVolumeAction = {|
+  name: "deleteSegment",
+  value: {|
+    id: number,
+  |},
+|};
+
 type UpdateUserBoundingBoxesAction = {|
   name: "updateUserBoundingBoxes",
   value: {|
@@ -161,6 +177,9 @@ export type UpdateAction =
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
   | UpdateUserBoundingBoxesAction
+  | CreateSegmentVolumeAction
+  | UpdateSegmentVolumeAction
+  | DeleteSegmentVolumeAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
@@ -198,6 +217,9 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateSkeletonTracingUpdateAction>
   | AsServerAction<UpdateVolumeTracingUpdateAction>
   | AsServerAction<UpdateUserBoundingBoxesAction>
+  | AsServerAction<CreateSegmentVolumeAction>
+  | AsServerAction<UpdateSegmentVolumeAction>
+  | AsServerAction<DeleteSegmentVolumeAction>
   | AsServerAction<UpdateBucketUpdateAction>
   | AsServerAction<UpdateTreeVisibilityUpdateAction>
   | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
@@ -381,6 +403,48 @@ export function updateUserBoundingBoxes(
     },
   };
 }
+
+export function createSegmentVolumeAction(
+  id: number,
+  anchorPosition: ?Vector3,
+  name: ?string,
+  creationTime: ?number,
+): CreateSegmentVolumeAction {
+  return {
+    name: "createSegment",
+    value: {
+      id,
+      anchorPosition,
+      name,
+      creationTime,
+    },
+  };
+}
+export function updateSegmentVolumeAction(
+  id: number,
+  anchorPosition: ?Vector3,
+  name: ?string,
+  creationTime: ?number,
+): UpdateSegmentVolumeAction {
+  return {
+    name: "updateSegment",
+    value: {
+      id,
+      anchorPosition,
+      name,
+      creationTime,
+    },
+  };
+}
+export function deleteSegmentVolumeAction(id: number) {
+  return {
+    name: "deleteSegment",
+    value: {
+      id,
+    },
+  };
+}
+
 export function updateBucket(
   bucketInfo: SendBucketInfo,
   base64Data: string,

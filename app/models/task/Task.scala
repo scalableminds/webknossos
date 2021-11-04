@@ -223,35 +223,35 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     } yield parsed
   }
 
-  def countOpenInstancesForTask(taskId: ObjectId): Fox[Int] =
+  def countOpenInstancesForTask(taskId: ObjectId): Fox[Long] =
     for {
-      result <- run(sql"select openInstances from webknossos.tasks_ where _id = ${taskId.toString}".as[Int])
+      result <- run(sql"select openInstances from webknossos.tasks_ where _id = ${taskId.toString}".as[Long])
       firstResult <- result.headOption.toFox
     } yield firstResult
 
-  def countAllOpenInstancesForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAllOpenInstancesForOrganization(organizationId: ObjectId): Fox[Long] =
     for {
       result <- run(
         sql"select sum(t.openInstances) from webknossos.tasks_ t join webknossos.projects_ p on t._project = p._id where $organizationId in (select _organization from webknossos.users_ where _id = p._owner)"
-          .as[Int])
+          .as[Long])
       firstResult <- result.headOption
     } yield firstResult
 
-  def countOpenInstancesAndTimeForProject(projectId: ObjectId): Fox[(Int, Int)] =
+  def countOpenInstancesAndTimeForProject(projectId: ObjectId): Fox[(Long, Long)] =
     for {
       result <- run(sql"""select sum(openInstances), sum(tracingtime)
                           from webknossos.tasks_
                           where _project = ${projectId.id}
-                          group by _project""".as[(Int, Option[Int])])
+                          group by _project""".as[(Long, Option[Long])])
       firstResult <- result.headOption
-    } yield (firstResult._1, firstResult._2.getOrElse(0))
+    } yield (firstResult._1, firstResult._2.getOrElse(0L))
 
-  def countOpenInstancesAndTimeByProject: Fox[Map[ObjectId, (Int, Long)]] =
+  def countOpenInstancesAndTimeByProject: Fox[Map[ObjectId, (Long, Long)]] =
     for {
       rowsRaw <- run(sql"""select _project, sum(openInstances), sum(tracingtime)
               from webknossos.tasks_
               group by _project
-           """.as[(String, Int, Option[Long])])
+           """.as[(String, Long, Option[Long])])
     } yield rowsRaw.toList.map(r => (ObjectId(r._1), (r._2, r._3.getOrElse(0L)))).toMap
 
   def listExperienceDomains(organizationId: ObjectId): Fox[List[String]] =

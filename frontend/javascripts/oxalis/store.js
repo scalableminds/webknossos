@@ -156,12 +156,6 @@ export type TreeGroup = {|
   +children: Array<TreeGroup>,
 |};
 
-export type VolumeCell = {
-  +id: number,
-};
-
-export type VolumeCellMap = { [number]: VolumeCell };
-
 export type DataLayerType = APIDataLayer;
 
 export type Restrictions = APIRestrictions;
@@ -221,16 +215,27 @@ export type SkeletonTracing = {|
   +showSkeletons: boolean,
 |};
 
+export type Segment = {
+  id: number,
+  name: ?string,
+  somePosition: Vector3,
+  creationTime: ?number,
+};
+
+export type SegmentMap = DiffableMap<number, Segment>;
+
 export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
+  // Note that there are also SegmentMaps in `state.localSegmentationData`
+  // for non-annotation volume layers.
+  +segments: SegmentMap,
   +maxCellId: number,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
   // Stores points of the currently drawn region in global coordinates
   +contourList: Array<Vector3>,
-  +cells: VolumeCellMap,
   +fallbackLayer?: string,
 |};
 
@@ -355,7 +360,7 @@ export type TemporaryConfiguration = {
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
-  +hoveredIsosurfaceId: number,
+  +hoveredSegmentId: number,
   +activeMappingByLayer: { [layerName: string]: ActiveMappingInfo },
   +isMergerModeEnabled: boolean,
   +isAutoBrushEnabled: boolean,
@@ -368,6 +373,8 @@ export type TemporaryConfiguration = {
     +initializedGpuFactor: number,
     +maximumLayerCountToRender: number,
   },
+  +preferredQualityForMeshPrecomputation: number,
+  +preferredQualityForMeshAdHocComputation: number,
 };
 
 export type Script = APIScript;
@@ -503,11 +510,19 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
-  +isosurfacesByLayer: {
-    [segmentationLayerName: string]: { [segmentId: number]: IsosurfaceInformation },
+  +localSegmentationData: {
+    [segmentationLayerName: string]: {
+      +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
+      +availableMeshFiles: ?Array<string>,
+      +currentMeshFile: ?string,
+      // Note that for a volume tracing, this information should be stored
+      // in state.tracing.volume.segments, as this is also persisted on the
+      // server (i.e., not "local").
+      // The `segments` here should only be used for non-annotation volume
+      // layers.
+      +segments: SegmentMap,
+    },
   },
-  +availableMeshFilesByLayer: { [segmentationLayerName: string]: ?Array<string> },
-  +currentMeshFileByLayer: { [segmentationLayerName: string]: ?string },
 |};
 
 const sagaMiddleware = createSagaMiddleware();

@@ -9,17 +9,11 @@
 import update from "immutability-helper";
 
 import { type ContourMode, type Vector3 } from "oxalis/constants";
-import type { OxalisState, VolumeTracing, VolumeCell } from "oxalis/store";
+import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
 
 export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
-  const newActiveCell = volumeTracing.cells[id];
-
-  if (newActiveCell == null && id > 0) {
-    return createCellReducer(state, volumeTracing, id);
-  }
-
   return update(state, {
     tracing: {
       volume: {
@@ -42,27 +36,13 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
     id = Math.max(activeCellId, maxCellId) + 1;
   }
 
-  if (volumeTracing.cells[id] == null) {
-    // Create the new VolumeCell
-    const cell: VolumeCell = { id };
-
-    return update(state, {
-      tracing: {
-        volume: {
-          activeCellId: { $set: id },
-          cells: { [id]: { $set: cell } },
-        },
+  return update(state, {
+    tracing: {
+      volume: {
+        activeCellId: { $set: id },
       },
-    });
-  } else {
-    return update(state, {
-      tracing: {
-        volume: {
-          activeCellId: { $set: id },
-        },
-      },
-    });
-  }
+    },
+  });
 }
 
 export function updateDirectionReducer(

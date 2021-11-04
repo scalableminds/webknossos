@@ -176,7 +176,14 @@ export class OxalisModel {
     return renderedZoomStep;
   }
 
-  getHoveredCellId(globalMousePosition: ?Vector3): ?{ id: number, isMapped: boolean } {
+  getHoveredCellId(
+    globalMousePosition: ?Vector3,
+  ): ?{ id: number, isMapped: boolean, unmappedId: number } {
+    // Returns
+    // - id (which might be mapped)
+    // - isMapped (specifies whether id is mapped)
+    // - unmappedId (equal to id if isMapped is false)
+
     const segmentationLayer = this.getVisibleSegmentationLayer();
     if (!segmentationLayer || !globalMousePosition) {
       return null;
@@ -191,10 +198,10 @@ export class OxalisModel {
 
     const getIdForPos = (pos, usableZoomStep) => {
       const id = cube.getDataValue(pos, null, usableZoomStep);
-      return cube.mapId(id);
+      return { id: cube.mapId(id), unmappedId: id };
     };
-    const id = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
-    return { id, isMapped: cube.isMappingEnabled() };
+    const { id, unmappedId } = getIdForPos(globalMousePosition, renderedZoomStepForMousePosition);
+    return { id, isMapped: cube.isMappingEnabled(), unmappedId };
   }
 
   getCubeByLayerName(name: string): DataCube {

@@ -33,6 +33,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that viewports turned black when zoomed in very much. [#5797](https://github.com/scalableminds/webknossos/pull/5797)
 - Fixed the bucket loading order in the YZ and XZ viewports. Data in these viewports will be rendered faster than before. [#5798](https://github.com/scalableminds/webknossos/pull/5798)
 - Fixed that collapsing/expanding the sidebars did not work for touchscreens. [#5825](https://github.com/scalableminds/webknossos/pull/5825)
+- Fixed a bug where projects could not be listed if the tracing time got too large. [#5823](https://github.com/scalableminds/webknossos/pull/5823)
 
 ### Removed
 -

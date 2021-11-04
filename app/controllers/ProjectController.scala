@@ -42,7 +42,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       allCounts <- taskDAO.countOpenInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
-          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0, 0L)))
+          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
           r <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
         } yield r
       }
@@ -121,7 +121,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       allCounts <- taskDAO.countOpenInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>
         for {
-          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0, 0L)))
+          openInstancesAndTime <- Fox.successful(allCounts.getOrElse(project._id, (0L, 0L)))
           r <- projectService.publicWritesWithStatus(project, openInstancesAndTime._1, openInstancesAndTime._2)
         } yield r
       }

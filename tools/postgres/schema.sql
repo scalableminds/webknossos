@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(76);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(77);
 COMMIT TRANSACTION;
 
 
@@ -361,16 +361,32 @@ CREATE TABLE webknossos.maintenance(
 );
 INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
-CREATE TYPE webknossos.JOB_MANUAL_STATE AS ENUM ('SUCCESS', 'FAILURE');
+
+CREATE TABLE webknossos.workers(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _dataStore CHAR(256) NOT NULL,
+  url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
+  key VARCHAR(1024) NOT NULL,
+  maxParallelJobs INT NOT NULL DEFAULT 1
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+
+CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE');
 
 CREATE TABLE webknossos.jobs(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _owner CHAR(24) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
-  celeryJobId CHAR(36) NOT NULL,
-  celeryInfo JSONB NOT NULL,
-  manualState webknossos.JOB_MANUAL_STATE,
+  state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING',
+  manualState webknossos.JOB_STATE,
+  _worker CHAR(24),
+  latestRunId VARCHAR(1024),
+  returnValue Text,
+  started TIMESTAMPTZ,
+  completed TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

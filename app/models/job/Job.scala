@@ -5,34 +5,34 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
-import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.Jobs
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.job.JobManualState.JobManualState
+import models.job.JobState.JobState
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO}
-import net.liftweb.common.{Failure, Full}
 import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsObject, JsSuccess, JsValue, Json}
+import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class Job(
     _id: ObjectId,
     _owner: ObjectId,
     command: String,
     commandArgs: JsObject = Json.obj(),
-    celeryJobId: String,
-    celeryInfo: JsObject = Json.obj(),
-    manualState: Option[JobManualState] = None,
+    state: JobState = JobState.PENDING,
+    manualState: Option[JobState] = None,
+    _worker: Option[ObjectId] = None,
+    latestRunId: Option[String] = None,
+    returnValue: Option[String] = None,
+    started: Option[Long] = None,
+    completed: Option[Long] = None,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -46,16 +46,21 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def parse(r: JobsRow): Fox[Job] =
     for {
-      manualStateOpt <- Fox.runOptional(r.manualstate)(JobManualState.fromString)
+      manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString)
+      state <- JobState.fromString(r.state)
     } yield {
       Job(
         ObjectId(r._Id),
         ObjectId(r._Owner),
         r.command,
         Json.parse(r.commandargs).as[JsObject],
-        r.celeryjobid,
-        Json.parse(r.celeryinfo).as[JsObject],
+        state,
         manualStateOpt,
+        r._Worker.map(ObjectId(_)),
+        r.latestrunid,
+        r.returnvalue,
+        r.started.map(_.getTime),
+        r.completed.map(_.getTime),
         r.created.getTime,
         r.isdeleted
       )
@@ -71,17 +76,6 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def getAllByCeleryIds(celeryJobIds: List[String]): Fox[List[Job]] =
-    if (celeryJobIds.isEmpty) Fox.successful(List())
-    else {
-      for {
-        r <- run(
-          sql"select #$columns from #$existingCollectionName where celeryJobId in #${writeStructTupleWithQuotes(celeryJobIds)}"
-            .as[JobsRow])
-        parsed <- parseAll(r)
-      } yield parsed
-    }
-
   def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
     for {
       results: Seq[String] <- run(
@@ -91,16 +85,27 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(j: Job): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, celeryJobId, celeryInfo, manualState, created, isDeleted)
-                         values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}', ${j.celeryJobId}, '#${sanitize(
-          j.celeryInfo.toString)}', #${optionLiteral(j.manualState.map(s => sanitize(s.toString)))}, ${new java.sql.Timestamp(
-          j.created)}, ${j.isDeleted})""")
+        sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, state, manualState, _worker, latestRunId,
+               returnValue, started, completed, created, isDeleted)
+                         values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}',
+                          '#${j.state.toString}', #${optionLiteralSanitized(j.manualState.map(_.toString))},
+                          #${optionLiteral(j._worker.map(_.toString))},
+                          #${optionLiteralSanitized(j.latestRunId)},
+                          #${optionLiteralSanitized(j.returnValue)},
+                          #${optionLiteral(j.started.map(_.toString))},
+                          #${optionLiteral(j.completed.map(_.toString))},
+                          ${new java.sql.Timestamp(j.created)}, ${j.isDeleted})""")
     } yield ()
 
-  def updateCeleryInfoByCeleryId(celeryJobId: String, celeryInfo: JsObject): Fox[Unit] =
+  def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""update webknossos.jobs set celeryInfo = '#${sanitize(celeryInfo.toString)}' where celeryJobId = $celeryJobId""")
+      _ <- run(sqlu"""update webknossos.jobs set
+              latest_run_id = ${s.latestRunId},
+              state = ${s.state.toString},
+              return_value = #${optionLiteralSanitized(s.returnValue)},
+              started = #${optionLiteralSanitized(s.started.map(_.toString))},
+              completed = #${optionLiteralSanitized(s.completed.map(_.toString))},
+              where _id = $jobId""")
     } yield ()
 
 }
@@ -110,96 +115,14 @@ class JobService @Inject()(wkConf: WkConf,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
                            organizationDAO: OrganizationDAO,
-                           rpc: RPC,
                            analyticsService: AnalyticsService,
                            slackNotificationService: SlackNotificationService,
                            val lifecycle: ApplicationLifecycle,
                            val system: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with LazyLogging
-    with IntervalScheduler {
+    with LazyLogging {
 
-  override protected lazy val enabled: Boolean = wkConf.Features.jobsEnabled
-  protected lazy val tickerInterval
-    : FiniteDuration = 5 minutes // note that user requests can trigger more frequent checking
-
-  def tick(): Unit = {
-    updateCeleryInfos()
-    ()
-  }
-
-  private var celeryInfosLastUpdated: Long = 0
-  private val celeryInfosMinIntervalMillis = 3 * 1000 // do not fetch new status more often than once every 3s
-
-  def updateCeleryInfos(): Future[Unit] =
-    if (areCeleryInfosOutdated()) {
-      Future.successful(())
-    } else {
-      val updateResult = for {
-        _ <- Fox.successful(celeryInfosLastUpdated = System.currentTimeMillis())
-        celeryInfoMap <- fetchCeleryInfos()
-        _ = trackAllNewlyDone(celeryInfoMap)
-        _ <- Fox.serialCombined(celeryInfoMap.keys.toList)(jobId =>
-          jobDAO.updateCeleryInfoByCeleryId(jobId, celeryInfoMap(jobId)))
-      } yield ()
-      updateResult.futureBox.map {
-        case Full(_)    => ()
-        case f: Failure => logger.warn(s"Could not update celery infos: $f")
-        case _          => logger.warn(s"Could not update celery infos (empty)")
-      }
-    }
-
-  private def areCeleryInfosOutdated(): Boolean =
-    celeryInfosLastUpdated > System.currentTimeMillis() - celeryInfosMinIntervalMillis
-
-  def fetchCeleryInfos(): Fox[Map[String, JsObject]] =
-    for {
-      celeryInfoJson <- flowerRpc("/api/tasks?offset=0").getWithJsonResponse[JsObject]
-      celeryInfoMap <- celeryInfoJson
-        .validate[Map[String, JsObject]] ?~> "Could not validate celery response as json map"
-    } yield celeryInfoMap
-
-  def fetchWorkerStatus(): Fox[JsObject] =
-    flowerRpc("/api/workers?refresh=true&status=true").getWithJsonResponse[JsObject]
-
-  private def trackAllNewlyDone(celeryInfoMap: Map[String, JsObject]): Fox[Unit] =
-    for {
-      oldJobs <- jobDAO.getAllByCeleryIds(celeryInfoMap.keys.toList)
-      nowFailedJobInfos = filterByStatus(celeryInfoMap: Map[String, JsObject], "FAILURE")
-      newlyFailedJobs = getNewlyDoneJobs(oldJobs, nowFailedJobInfos)
-      _ = newlyFailedJobs.map(trackNewlyFailed)
-      nowSuccessfulJobInfos = filterByStatus(celeryInfoMap: Map[String, JsObject], "SUCCESS")
-      newlySuccessfulJobs = getNewlyDoneJobs(oldJobs, nowSuccessfulJobInfos)
-      _ = newlySuccessfulJobs.map(trackNewlySuccessful)
-    } yield ()
-
-  private def filterByStatus(celeryInfoMap: Map[String, JsObject], statusToFilter: String): Map[String, JsObject] =
-    celeryInfoMap.filter(tuple => extractStatus(tuple._2) == statusToFilter)
-
-  private def getNewlyDoneJobs(oldJobs: List[Job], nowDoneJobInfos: Map[String, JsObject]): List[Job] = {
-    val previouslyIncompleteJobs = oldJobs.filter(job => isIncomplete(job.celeryInfo))
-    val newlyDoneJobs = previouslyIncompleteJobs.filter(job => nowDoneJobInfos.contains(job.celeryJobId))
-    newlyDoneJobs.map { job =>
-      job.copy(celeryInfo = nowDoneJobInfos(job.celeryJobId))
-    }
-  }
-
-  def isIncomplete(jobCeleryJson: JsObject): Boolean = {
-    val incompleteStates = List("STARTED", "PENDING", "RETRY", "UNKNOWN")
-    val status = extractStatus(jobCeleryJson)
-    incompleteStates.contains(status)
-  }
-
-  private def extractStatus(jobCeleryJson: JsObject, fallback: String = "UNKNOWN"): String = {
-    val statusOpt = (jobCeleryJson \ "state").validate[String]
-    statusOpt match {
-      case JsSuccess(status, _) => status
-      case _                    => fallback
-    }
-  }
-
-  def countByStatus(taskInfos: Map[String, JsObject]): Map[String, Int] =
-    taskInfos.values.groupBy(extractStatus(_)).mapValues(_.size)
+  private val incompleteStates = List("STARTED", "PENDING", "RETRY", "UNKNOWN")
 
   private def trackNewlyFailed(job: Job): Unit = {
     for {
@@ -210,7 +133,7 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(FailedJobEvent(user, job.command))
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
-        s"Job ${job._id} failed. Command ${job.command}, celery job id: ${job.celeryJobId}, organization name: ${organization.name}."
+        s"Job ${job._id} failed. Command ${job.command}, organization name: ${organization.name}."
       )
     } yield ()
     ()
@@ -224,7 +147,7 @@ class JobService @Inject()(wkConf: WkConf,
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = slackNotificationService.info(
         s"Successful job$superUserLabel",
-        s"Job ${job._id} succeeded. Command ${job.command}, celery job id: ${job.celeryJobId}, organization name: ${organization.name}."
+        s"Job ${job._id} succeeded. Command ${job.command}, organization name: ${organization.name}."
       )
     } yield ()
     ()
@@ -233,33 +156,25 @@ class JobService @Inject()(wkConf: WkConf,
   def publicWrites(job: Job): Fox[JsObject] =
     Fox.successful(
       Json.obj(
-        "id" -> job._id.id,
+        "id" -> job._id,
         "command" -> job.command,
-        "commandArgs" -> job.commandArgs,
-        "celeryJobId" -> job.celeryJobId,
-        "created" -> job.created,
-        "celeryInfo" -> job.celeryInfo,
-        "manualState" -> job.manualState
+        "commandArgs" -> (job.commandArgs - "webknossos_token"),
+        "state" -> job.state,
+        "manualState" -> job.manualState,
+        "latestRunId" -> job.latestRunId,
+        "returnValue" -> job.returnValue,
+        "started" -> job.started,
+        "completed" -> job.completed,
       ))
 
-  def getCeleryInfo(job: Job): Fox[JsObject] =
-    flowerRpc(s"/api/task/info/${job.celeryJobId}").getWithJsonResponse[JsObject]
-
-  def runJob(command: String, commandArgs: JsObject, owner: User): Fox[Job] =
+  def submitJob(command: String, commandArgs: JsObject, owner: User): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
       argsWrapped = Json.obj("kwargs" -> commandArgs)
-      result <- flowerRpc(s"/api/task/async-apply/tasks.$command")
-        .postWithJsonResponse[JsValue, Map[String, JsValue]](argsWrapped)
-      celeryJobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
-      argsWithoutToken = Json.obj("kwargs" -> (commandArgs - "webknossos_token"))
-      job = Job(ObjectId.generate, owner._id, command, argsWithoutToken, celeryJobId)
+      job = Job(ObjectId.generate, owner._id, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
-
-  private def flowerRpc(route: String): RPCRequest =
-    rpc(wkConf.Jobs.Flower.uri + route).withBasicAuth(wkConf.Jobs.Flower.user, wkConf.Jobs.Flower.password)
 
   def assertTiffExportBoundingBoxLimits(bbox: String): Fox[Unit] =
     for {

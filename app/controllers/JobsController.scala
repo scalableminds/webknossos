@@ -6,41 +6,52 @@ import java.util.Date
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
-import models.job.{JobDAO, JobService}
+import models.job.{JobDAO, JobService, JobStatus}
 import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class JobsController @Inject()(jobDAO: JobDAO,
-                               sil: Silhouette[WkEnv],
-                               jobService: JobService,
-                               wkconf: WkConf,
-                               slackNotificationService: SlackNotificationService,
-                               organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+class JobsController @Inject()(
+    jobDAO: JobDAO,
+    sil: Silhouette[WkEnv],
+    jobService: JobService,
+    wkconf: WkConf,
+    slackNotificationService: SlackNotificationService,
+    organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskInfos <- jobService.fetchCeleryInfos()
-      taskCountsByStatus = jobService.countByStatus(taskInfos)
-      workerStatus <- jobService.fetchWorkerStatus()
+      _ <- Fox.successful(())
+      /*jobCountsByStatus <- jobService.countByStatus()
+      workerStatus <- jobService.workerStatus()
       jsStatus = Json.obj(
         "workers" -> workerStatus,
-        "queue" -> Json.toJson(taskCountsByStatus)
-      )
-    } yield Ok(jsStatus)
+        "queue" -> Json.toJson(jobCountsByStatus)
+      )*/
+    } yield Ok
+  }
+
+  def request: Action[AnyContent] = Action.async { implicit request =>
+    Fox.successful(Ok)
+  }
+
+  def updateStatus(jobId: String): Action[JobStatus] = Action.async(validateJson[JobStatus]) { implicit request =>
+    for {
+      jobIdParsed <- ObjectId.parse(jobId)
+      _ <- jobDAO.updateStatus(jobIdParsed, request.body)
+    } yield Ok
   }
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- jobService.updateCeleryInfos()
       jobs <- jobDAO.findAll
       jobsJsonList <- Fox.serialCombined(jobs.sortBy(-_.created))(jobService.publicWrites)
     } yield Ok(Json.toJson(jobsJsonList))
@@ -49,7 +60,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- jobService.updateCeleryInfos()
       job <- jobDAO.findOne(ObjectId(id))
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -70,7 +80,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken
           )
 
-          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
+          job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -94,7 +104,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           "mag" -> mag,
           "agglomerate_view" -> agglomerateView
         )
-        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunComputeMeshFile"
+        job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunComputeMeshFile"
         js <- jobService.publicWrites(job)
       } yield Ok(js)
     }
@@ -113,7 +123,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
-          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunNucleiInferral"
+          job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -154,7 +164,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "mapping_type" -> mappingType,
             "hide_unmapped_ids" -> hideUnmappedIds
           )
-          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
+          job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -165,8 +175,9 @@ class JobsController @Inject()(jobDAO: JobDAO,
       for {
         jobIdValidated <- ObjectId.parse(jobId)
         job <- jobDAO.findOne(jobIdValidated)
+        latestRunId <- job.latestRunId.toFox
         organization <- organizationDAO.findOne(request.identity._organization)
-        filePath = Paths.get("binaryData", organization.name, ".export", job.celeryJobId, exportFileName)
+        filePath = Paths.get("binaryData", organization.name, ".export", latestRunId, exportFileName)
         _ <- bool2Fox(Files.exists(filePath)) ?~> "job.export.fileNotFound"
       } yield Ok.sendPath(filePath, inline = false)
     }

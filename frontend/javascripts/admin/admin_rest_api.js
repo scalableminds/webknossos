@@ -1072,7 +1072,6 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
 export function createResumableUpload(
   datasetId: APIDatasetId,
   datastoreUrl: string,
-  totalFileCount: number,
   uploadId: string,
 ): Promise<*> {
   const generateUniqueIdentifier = file => {
@@ -1087,7 +1086,6 @@ export function createResumableUpload(
 
   const additionalParameters = {
     ...datasetId,
-    totalFileCount,
   };
 
   return doWithToken(
@@ -1099,12 +1097,21 @@ export function createResumableUpload(
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         // Only increase this value when https://github.com/scalableminds/webknossos/issues/5056 is fixed
-        simultaneousUploads: 1,
+        simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
         generateUniqueIdentifier,
       }),
   );
+}
+
+export function reserveDatasetUpload(datastoreHost: string, reserveUploadInformation: {}): Promise<void> {
+  return doWithToken(token => 
+    Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
+      data: reserveUploadInformation,
+      host: datastoreHost,
+    }),
+    );
 }
 
 export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}): Promise<void> {

@@ -290,10 +290,12 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
   def deactivateUnreported(existingDataSetIds: List[ObjectId],
                            dataStoreName: String,
-                           unreportedStatus: String): Fox[Unit] = {
+                           unreportedStatus: String,
+                           inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
       if (existingDataSetIds.isEmpty) "true"
       else s"_id not in ${writeStructTupleWithQuotes(existingDataSetIds.map(_.id))}"
+    val notAlreadyInactiveStatus = s"status not in ${writeStructTupleWithQuotes(inactiveStatusList)}"
     val deleteResolutionsQuery =
       sqlu"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and #$inclusionPredicate)"""
     val deleteLayersQuery =
@@ -301,7 +303,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     val setToUnusableQuery =
       sqlu"""update webknossos.datasets
              set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
-             where _dataStore = $dataStoreName and #$inclusionPredicate"""
+             where _dataStore = $dataStoreName and #$inclusionPredicate and #$notAlreadyInactiveStatus"""
     for {
       _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
@@ -312,11 +314,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       sqlu"delete from webknossos.dataSet_resolutions where _dataset = $datasetId"
     val deleteLayersQuery =
       sqlu"delete from webknossos.dataSet_layers where _dataset = $datasetId"
+    val deleteAllowedTeamsQuery = sqlu"delete from webknossos.dataSet_allowedTeams where _dataset = $datasetId"
     val deleteDatasetQuery =
       sqlu"delete from webknossos.datasets where _id = $datasetId"
 
     for {
-      _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, deleteDatasetQuery)).transactionally)
+      _ <- run(
+        DBIO
+          .sequence(List(deleteResolutionsQuery, deleteLayersQuery, deleteAllowedTeamsQuery, deleteDatasetQuery))
+          .transactionally)
     } yield ()
   }
 }

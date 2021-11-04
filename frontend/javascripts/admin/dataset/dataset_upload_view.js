@@ -26,6 +26,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
+  reserveDatasetUpload,
   finishDatasetUpload,
   createResumableUpload,
   startConvertToWkwJob,
@@ -218,10 +219,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         datasetId.name
       }__${getRandomString()}`;
 
+      const reserveUploadInformation = {
+        uploadId,
+        organization: datasetId.owningOrganization,
+        name: datasetId.name,
+        totalFileCount: formValues.zipFile.length,
+        initialTeams: formValues.initialTeams.map(team => team.id),
+      };
+
+      await reserveDatasetUpload(formValues.datastore, reserveUploadInformation);
+
       const resumableUpload = await createResumableUpload(
         datasetId,
         formValues.datastore,
-        formValues.zipFile.length,
         uploadId,
       );
 
@@ -235,7 +245,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           uploadId,
           organization: datasetId.owningOrganization,
           name: datasetId.name,
-          initialTeams: formValues.initialTeams.map(team => team.id),
           needsConversion: this.state.needsConversion,
         };
 

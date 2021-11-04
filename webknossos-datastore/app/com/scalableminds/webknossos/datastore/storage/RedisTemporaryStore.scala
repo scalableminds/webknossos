@@ -1,16 +1,16 @@
-package com.scalableminds.webknossos.tracingstore
+package com.scalableminds.webknossos.datastore.storage
 
 import com.redis._
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec: ExecutionContext) extends LazyLogging {
-  private val address = config.Tracingstore.Redis.address
-  private val port = config.Tracingstore.Redis.port
+trait RedisTemporaryStore extends LazyLogging {
+  implicit def ec: ExecutionContext
+  protected def address: String
+  protected def port: Int
   private lazy val r = new RedisClient(address, port)
 
   def find(id: String): Fox[Option[String]] =
@@ -86,6 +86,21 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
         val msg = "Redis access exception: " + e.getMessage
         logger.error(msg)
         Fox.failure(msg)
+    }
+
+  def insert_into_set(id: String, value: String): Fox[Boolean] =
+    withExceptionHandler {
+      r.sadd(id, value).getOrElse(0L) > 0
+    }
+
+  def remove_from_set(id: String, value: String): Fox[Boolean] =
+    withExceptionHandler {
+      r.srem(id, value).getOrElse(0L) > 0
+    }
+
+  def find_set(id: String): Fox[Set[String]] =
+    withExceptionHandler {
+      r.smembers(id).map(_.flatten).getOrElse(Set.empty)
     }
 
 }

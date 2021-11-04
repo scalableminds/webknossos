@@ -44,10 +44,14 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val timeout: FiniteDuration = get[FiniteDuration]("datastore.isosurface.timeout")
       val actorPoolSize: Int = get[Int]("datastore.isosurface.actorPoolSize")
     }
+    object Redis {
+      val address: String = get[String]("tracingstore.redis.address")
+      val port: Int = get[Int]("tracingstore.redis.port")
+    }
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
     }
-    val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface)
+    val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface, Redis, AgglomerateSkeleton)
   }
 
   val children = List(Http, Datastore)

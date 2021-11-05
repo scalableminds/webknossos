@@ -12,3 +12,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 
 - [076-jobs-enabled-per-datastore.sql](conf/evolutions/076-jobs-enabled-per-datastore.sql)
+- [077-add-dataset-tags.sql](conf/evolutions/077-add-dataset-tags.sql)

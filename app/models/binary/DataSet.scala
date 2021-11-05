@@ -46,6 +46,7 @@ case class DataSet(
     logoUrl: Option[String],
     sortingKey: Long = System.currentTimeMillis(),
     details: Option[JsObject] = None,
+    tags: Set[String] = Set.empty,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 ) extends FoxImplicits {
@@ -104,6 +105,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         r.logourl,
         r.sortingkey.getTime,
         details,
+        parseArrayTuple(r.tags).toSet,
         r.created.getTime,
         r.isdeleted
       )
@@ -230,6 +232,13 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     } yield ()
   }
 
+  def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(
+        sqlu"update webknossos.datasets set tags = '#${writeArrayTuple(tags.map(sanitize))}' where _id = ${id.id}")
+    } yield ()
+
   def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DataSetViewConfiguration)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -254,7 +263,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       _ <- run(
         sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, _uploader, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
-                                                             isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
+                                                             isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, tags, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))},
                #${optionLiteral(d._uploader.map(_.id))},
                 #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(
@@ -262,7 +271,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
           .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(
-          details.map(sanitize))}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+          details.map(sanitize))}, '#${writeArrayTuple(d.tags.toList.map(sanitize))}', ${new java.sql.Timestamp(
+          d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }

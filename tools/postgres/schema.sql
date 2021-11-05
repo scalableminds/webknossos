@@ -98,6 +98,7 @@ CREATE TABLE webknossos.dataSets(
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
   details JSONB,
+  tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),

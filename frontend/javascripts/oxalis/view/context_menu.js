@@ -352,7 +352,6 @@ function getBoundingBoxMenuOptions({
             defaultValue={hoveredBBox.name}
             placeholder="Bounding Box Name"
             size="small"
-            onChange={setBBoxName}
             onPressEnter={evt => {
               setBBoxName(evt);
               hideContextMenu();
@@ -395,7 +394,6 @@ function getBoundingBoxMenuOptions({
             color = ((color.map(colorPart => colorPart / 255): any): Vector3);
             setBoundingBoxColor(clickedBoundingBoxId, color);
           }}
-          onBlur={() => hideContextMenu}
           value={rgbToHex(upscaledBBoxColor)}
         />
       </span>

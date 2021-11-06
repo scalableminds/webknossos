@@ -154,7 +154,7 @@ export function getClosestHoveredBoundingBox(
     const { min, max } = bbox.boundingBox;
     const isCrossSectionOfViewportVisible =
       globalPosition[thirdDim] >= min[thirdDim] && globalPosition[thirdDim] < max[thirdDim];
-    if (!isCrossSectionOfViewportVisible) {
+    if (!isCrossSectionOfViewportVisible || !bbox.isVisible) {
       continue;
     }
     // In getNeighbourEdgeIndexByEdgeIndex is a visualization

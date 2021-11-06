@@ -40,8 +40,8 @@ function getDistanceToBoundingBoxEdge(
   // This method calculates the distance between the given pos and a single edge of a cross section
   // of bounding box given min and max that is displayed in a certain viewport.
   // The edge dimension that the edge extents along is given by the first entry of primaryAndSecondaryDim.
-  // Here goes 0 = x direction, 1 = y direction and 2 = z direction.
-  // The second entry of primaryAndSecondaryDim gives the other extend of the viewport / cross section.
+  // Namely, 0 -> x direction (i.e., horizontal), 1 -> y direction and 2 -> z direction.
+  // The second entry of primaryAndSecondaryDim gives the other extent of the viewport / cross section.
   // The boolean compareToMin tells which of the two edges in the primary direction should be compared with.
   // To calculate the distance there are three cases depending on the primary dimension value of pos.
   // - One when the given pos is on the left of the minimum of the edge (case 1),
@@ -131,7 +131,7 @@ function computeDistanceArray(
 
 // Return the edge or edges of the bounding box closest to the mouse position if their distance is below a certain threshold.
 // If no edge is close to the mouse null is returned instead. Otherwise the first entry is always the closest edge.
-// If the mouse near a corner, there is always an additional edge that is close to the mouse.
+// If the mouse is near a corner, there is always an additional edge that is close to the mouse.
 // If such an edge exists then this edge is the second entry of the array.
 // If the mouse isn't close to a corner of a crossection, the second entry is null.
 export function getClosestHoveredBoundingBox(

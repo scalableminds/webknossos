@@ -12,7 +12,7 @@ import {
   createBucketResponseFunction,
   getVolumeTracingOrFail,
 } from "test/helpers/apiHelpers";
-import { OrthoViews, FillModeEnum } from "oxalis/constants";
+import { OrthoViews, FillModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -62,7 +62,7 @@ test.serial("Executing a floodfill in mag 1", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 43]));
-  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -147,7 +147,7 @@ test.serial("Executing a floodfill in mag 2", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 43]));
-  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -320,7 +320,7 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -381,7 +381,7 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -429,7 +429,7 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
 
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -466,7 +466,7 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
 
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -561,7 +561,7 @@ async function testLabelingManyBuckets(t, saveInbetween) {
   ]);
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
-  Store.dispatch(setToolAction("BRUSH"));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
   Store.dispatch(setActiveCellAction(newCellId));
 
   for (const paintPosition of paintPositions1) {

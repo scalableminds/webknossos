@@ -142,7 +142,6 @@ export function getNextTool(state: OxalisState): AnnotationTool | null {
 
   const tools = Object.keys(AnnotationToolEnum);
   const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
-
   // Search for the next tool which is not disabled.
   for (
     let newToolIndex = currentToolIndex + 1;

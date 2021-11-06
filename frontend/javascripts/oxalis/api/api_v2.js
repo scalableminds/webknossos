@@ -514,7 +514,8 @@ class TracingApi {
         `Volume tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
-    Store.dispatch(setToolAction(tool));
+    const previousTool = Store.getState().uiInformation.activeTool;
+    Store.dispatch(setToolAction(tool, previousTool));
   }
 
   /**

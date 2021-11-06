@@ -77,6 +77,11 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
 
 type OwnProps = {| showContextMenuAt: ShowContextMenuFunction |};
 
+const cycleTools = () => {
+  const { activeTool } = Store.getState().uiInformation;
+  Store.dispatch(cycleToolAction(activeTool));
+};
+
 type StateProps = {|
   tracing: Tracing,
   activeTool: AnnotationTool,
@@ -129,9 +134,7 @@ class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(createCellAction()),
-      "1": () => {
-        Store.dispatch(cycleToolAction());
-      },
+      "1": cycleTools,
       v: () => {
         Store.dispatch(copySegmentationLayerAction());
       },
@@ -376,9 +379,7 @@ class PlaneController extends React.PureComponent<Props> {
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
 
-        w: () => {
-          Store.dispatch(cycleToolAction());
-        },
+        w: cycleTools,
         ...loopedKeyboardControls,
       },
       {

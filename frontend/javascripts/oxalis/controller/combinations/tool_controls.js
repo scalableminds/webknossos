@@ -579,8 +579,8 @@ export class BoundingBoxTool {
       },
 
       mouseMove: (delta: Point2, position: Point2, _id, event: MouseEvent) => {
-        MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
+          MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
           highlightAndSetCursorOnHoveredBoundingBox(delta, position, planeId);
         }
       },

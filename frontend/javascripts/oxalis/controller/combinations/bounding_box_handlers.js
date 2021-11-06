@@ -65,32 +65,33 @@ function getDistanceToBoundingBoxEdge(
   // the distance between the mouse and the bounding box is distorted by the factor of planeRatio.
   // That's why we later divide exactly by this factor to let the hit box / distance
   // between the mouse and bounding box be the same in each dimension.
-  const [primaryEdgeDim, secondaryprimaryEdgeDim] = primaryAndSecondaryDim;
+  const [primaryEdgeDim, secondaryEdgeDim] = primaryAndSecondaryDim;
   const cornerToCompareWith = compareToMin ? min : max;
+  const toScreenSpace = (value: number, dimension: DimensionIndices) =>
+    value / planeRatio[dimension];
   if (pos[primaryEdgeDim] < min[primaryEdgeDim]) {
     // Case 1: Distance to the min corner is needed in primaryEdgeDim.
-    return (
-      Math.hypot(
-        pos[primaryEdgeDim] - min[primaryEdgeDim],
-        pos[secondaryprimaryEdgeDim] - cornerToCompareWith[secondaryprimaryEdgeDim],
-      ) / planeRatio[primaryEdgeDim]
+    return Math.hypot(
+      toScreenSpace(pos[primaryEdgeDim] - min[primaryEdgeDim], primaryEdgeDim),
+      toScreenSpace(
+        pos[secondaryEdgeDim] - cornerToCompareWith[secondaryEdgeDim],
+        secondaryEdgeDim,
+      ),
     );
   }
   if (pos[primaryEdgeDim] > max[primaryEdgeDim]) {
     // Case 2: Distance to max Corner is needed in primaryEdgeDim.
-    return (
-      Math.hypot(
-        pos[primaryEdgeDim] - max[primaryEdgeDim],
-        pos[secondaryprimaryEdgeDim] - cornerToCompareWith[secondaryprimaryEdgeDim],
-      ) / planeRatio[primaryEdgeDim]
+    return Math.hypot(
+      toScreenSpace(pos[primaryEdgeDim] - max[primaryEdgeDim], primaryEdgeDim),
+      toScreenSpace(
+        pos[secondaryEdgeDim] - cornerToCompareWith[secondaryEdgeDim],
+        secondaryEdgeDim,
+      ),
     );
   }
   // Case 3:
-  // If the position is within the bounds of the primaryEdgeDim, the shortest distance
-  // to the edge is simply the difference between the secondaryprimaryEdgeDim values.
-  return (
-    Math.abs(pos[secondaryprimaryEdgeDim] - cornerToCompareWith[secondaryprimaryEdgeDim]) /
-    planeRatio[primaryEdgeDim]
+  return Math.abs(
+    toScreenSpace(pos[secondaryEdgeDim] - cornerToCompareWith[secondaryEdgeDim], secondaryEdgeDim),
   );
 }
 

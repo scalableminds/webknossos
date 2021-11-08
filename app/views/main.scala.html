@@ -134,15 +134,14 @@
         // chunk u32 with segment id
         // output mesh (vertices[faces]), neighbors: array[int] (indices into offset table)
         // const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
-        window.marching_cubes = function(cube, segment_id, width, height, depth) {
+        window.marching_cubes = function(cube, segment_id, topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z) {
           // cube: Uint32Array, segment_id: uin32
           // width, height, depth all usize
-          const marching_cubes = MarchingCubes.new(width, height, depth);
+          const marching_cubes = MarchingCubes.new(topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z);
           const cube_ptr = marching_cubes.get_cube_ptr();
           const memory = get_memory();
           const marching_cubes_cube = new Uint32Array(memory.buffer, cube_ptr, width * height * depth);
           //Copy segmentation cube to webassembly
-          debugger
           marching_cubes_cube.set(cube);
           marching_cubes.marche(segment_id);
           return new Float32Array(memory.buffer, marching_cubes.get_triangle_ptr(), marching_cubes.get_triangle_size());
@@ -152,7 +151,7 @@
         const depth = 2
         const cube = new Uint32Array([5, 5, 5, 5, 1, 1, 1, 1]);
 
-        console.log(window.marching_cubes(cube, 5, width, height, depth));
+        console.log(window.marching_cubes(cube, 5, 0, 0, 0, width, height, depth, 1.0, 1.0, 1.0));
       }
 
       run();

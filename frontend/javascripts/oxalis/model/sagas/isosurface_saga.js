@@ -7,7 +7,7 @@ import type { APIDataset } from "types/api_flow_types";
 import {
   ResolutionInfo,
   getResolutionInfo,
-  getMappingInfo,
+  getMappingInfo, getSegmentationTracingLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   changeActiveIsosurfaceCellAction,
@@ -55,6 +55,9 @@ import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_acces
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
+import api from "../../api/internal_api";
+import BoundingBox from "../bucket_data_handling/bounding_box";
+import {V3} from "../../../libs/mjs";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
@@ -336,21 +339,33 @@ function* maybeLoadIsosurface(
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
-      const { buffer: responseBuffer, neighbors } = yield* call(
-        computeIsosurface,
-        useDataStore ? dataStoreUrl : tracingStoreUrl,
-        mappingInfo,
-        {
-          position: clippedPosition,
-          zoomStep,
-          segmentId,
-          voxelDimensions,
-          cubeSize,
-          scale,
-        },
+      //const { buffer: responseBuffer, neighbors } = yield* call(
+      //  computeIsosurface,
+      //  useDataStore ? dataStoreUrl : tracingStoreUrl,
+      //  mappingInfo,
+      //  {
+      //    position: clippedPosition,
+      //    zoomStep,
+      //    segmentId,
+      //    voxelDimensions,
+      //    cubeSize,
+      //    scale,
+      //  },
+      //);
+      const volumeTracingLayer = yield* select(store => getSegmentationTracingLayer(store.dataset));
+      if (!volumeTracingLayer) {
+        console.log("no volumeTracing");
+        return;
+      }
+      const boundingBox = new BoundingBox({min:clippedPosition, max: V3.add(clippedPosition,cubeSize)})
+      const cube = yield* call(
+          [api.data, api.data.getDataFor2DBoundingBox],
+          volumeTracingLayer.name,
+          boundingBox,
       );
+      const vertices = window.marching_cubes(cube, segmentId, clippedPosition[0], clippedPosition[1], clippedPosition[2], cubeSize[0], cubeSize[1], cubeSize[2], scale[0], scale[1], scale[2]);
+      const neighbors = [];
 
-      const vertices = new Float32Array(responseBuffer);
       if (removeExistingIsosurface) {
         getSceneController().removeIsosurfaceById(segmentId);
       }

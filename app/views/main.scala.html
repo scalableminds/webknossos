@@ -98,7 +98,8 @@
       // will "boot" the module and make it ready to use. Currently browsers
       // don't support natively imported WebAssembly as an ES module, but
       // eventually the manual initialization won't be required!
-      import init, { greet } from '/assets/bundle/marching_cubes_wasm/marching_cubes_wasm.js';
+      //import { memory } from '/assets/bundle/marching_cubes_wasm/marching_cubes_wasm_bg.js';
+      import init, { MarchingCubes, get_memory } from '/assets/bundle/marching_cubes_wasm/marching_cubes_wasm.js';
 
       async function run() {
         // First up we need to actually load the wasm file, so we use the
@@ -130,8 +131,15 @@
         await init();
 
         // And afterwards we can use all the functionality defined in wasm.
-        window.greet = greet;
-        window.greet();
+        const width = 3
+        const height = 3
+        const depth = 3
+        const marching_cubes = MarchingCubes.new(3, 3, 3);
+        const cube_ptr = marching_cubes.get_cube_ptr();
+        const memory = get_memory();
+        const cube = new Uint32Array(memory.buffer, cube_ptr, width * height * depth);
+        cube[0] = 5;
+        console.log(marching_cubes.get_value());
       }
 
       run();

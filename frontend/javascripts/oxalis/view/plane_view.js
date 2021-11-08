@@ -7,7 +7,9 @@ import { VRSession } from "oxalis/view/vr/VRButton";
 
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import * as Utils from "libs/utils";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import Cube from "oxalis/geometries/cube";
 import Constants, {
   OrthoViewColors,
   type OrthoViewMap,
@@ -54,7 +56,7 @@ class PlaneView {
     );
 
     this.running = false;
-    const { scene } = getSceneController();
+    const { scene, planes } = getSceneController();
 
     // Initialize main THREE.js components
     this.cameras = {};
@@ -94,6 +96,25 @@ class PlaneView {
     });
 
     const vRSession = new VRSession();
+    [1, 1.5, 2, 2.5, 3, 3.5, 4].map(val => {
+      const bbCube = new Cube({
+        min: [-2, -2, -2],
+        max: [-2 + val, -2 + val, -2 + val],
+        color: Utils.rgbToInt(Utils.getRandomColor()),
+        showCrossSections: true,
+      });
+      bbCube.setVisibility(true);
+      bbCube.getMeshes().forEach(mesh => vRSession.rootGroup.add(mesh));
+      return bbCube;
+    });
+    /*vRSession.camera = this.cameras[OrthoViews.TDView];
+    vRSession.camera.position.copy(this.cameras[OrthoViews.TDView].position);*/
+    vRSession.camera.rotation.copy(this.cameras[OrthoViews.TDView].rotation);
+
+    for (const plane of _.values(planes)) {
+      plane.getMeshes().forEach(mesh => vRSession.rootGroup.add(mesh));
+    }
+    // getSceneController().scene = vRSession.scene;
   }
 
   animate(): void {

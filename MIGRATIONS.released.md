@@ -5,6 +5,12 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.10.0](https://github.com/scalableminds/webknossos/releases/tag/21.10.0) - 2021-11-08
+
+### Postgres Evolutions:
+- [076-jobs-enabled-per-datastore.sql](conf/evolutions/076-jobs-enabled-per-datastore.sql)
+
+
 ## [21.09.0](https://github.com/scalableminds/webknossos/releases/tag/21.09.0) - 2021-10-01
 - For webknossos.org: Change `publicDemoDatasetUrl` in the `features`-block within `application.conf` to be an actionable URL. For example, append `/createExplorative/hybrid?fallbackLayerName=segmentation` to the URL so that a new annotation is created if a user clicks on `Open a Demo Dataset` in the dashboard.
 

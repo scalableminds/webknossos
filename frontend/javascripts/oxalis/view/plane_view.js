@@ -3,6 +3,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
+import { VRSession } from "oxalis/view/vr/VRButton";
 
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
@@ -91,6 +92,8 @@ class PlaneView {
         this.needsRerender = true;
       });
     });
+
+    const vRSession = new VRSession();
   }
 
   animate(): void {

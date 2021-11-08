@@ -44,10 +44,6 @@ import {
   getPositionStatusOf,
 } from "./flex_layout_helper";
 
-
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { VRButton } from 'oxalis/view/vr/VRButton.js';
-
 const { Footer } = Layout;
 type Model = typeof FlexLayout.Model;
 type Action = typeof FlexLayout.Action;
@@ -88,17 +84,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     props.setBorderOpenStatus(_.cloneDeep(this.borderOpenStatusWhenNotMaximized));
     this.updateToModelStateAndAdjustIt(model);
     this.state = { model };
-  }
-
-  componentDidMount() {
-    // const btn = VRButton.createButton( getSceneController().renderer );
-    // console.log(btn);  // Just to make sure it's being generated
-    let renderer = getSceneController().renderer;
-    renderer.vr.enabled = true;
-    /*renderer.setAnimationLoop( function () {
-      renderer.render( scene, camera )
-    } );*/
-    document.body.appendChild( VRButton.createButton( renderer ) );
   }
 
   componentDidUpdate(prevProps: Props) {

@@ -6,7 +6,6 @@
 import { Provider } from "react-redux";
 import React from "react";
 import ReactDOM from "react-dom";
-
 import { document } from "libs/window";
 import { getActiveUser, checkAnyOrganizationExists } from "admin/admin_rest_api";
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
@@ -18,6 +17,19 @@ import Router from "router";
 import Store from "oxalis/throttled_store";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+
+
+// const loadWasm = async () => {
+//   try {
+//     const wasm = await import("marching_cubes_wasm_bg.wasm");
+//     wasm.greet();
+//   } catch(err) {
+//     console.error(`Unexpected error in loadWasm. [Message: ${err.message}]`);
+//   }
+// };
+
+//loadWasm();
+
 
 async function loadActiveUser() {
   // Try to retreive the currently active user if logged in

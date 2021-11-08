@@ -24,7 +24,7 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-    new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
+    new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }, { from: "./public/marching_cubes_wasm/**", to: "marching_cubes_wasm", flatten: true }], {
       dot: true,
     }),
   ];

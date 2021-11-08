@@ -131,6 +131,12 @@
         await init();
 
         // And afterwards we can use all the functionality defined in wasm.
+        // chunk u32 with segment id
+        // output mesh (vertices[faces]), neighbors: array[int] (indices into offset table)
+        // const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
+        //window.marching_cubes = function(cube, segment_id) {
+        //  // cube: Uint32Array
+        //}
         const width = 3
         const height = 3
         const depth = 3
@@ -139,7 +145,20 @@
         const memory = get_memory();
         const cube = new Uint32Array(memory.buffer, cube_ptr, width * height * depth);
         cube[0] = 5;
-        console.log(marching_cubes.get_value());
+        cube[1] = 5;
+        cube[1] = 5;
+
+        cube[1] = 5;
+        cube[1] = 1;
+        cube[1] = 1;
+
+        cube[1] = 1;
+        cube[1] = 1;
+        cube[1] = 1;
+
+        marching_cubes.marche(5);
+        const triangles = new Float32Array(memory.buffer, marching_cubes.get_triangle_ptr(), marching_cubes.get_triangle_size())
+        console.log(triangles);
       }
 
       run();

@@ -134,31 +134,25 @@
         // chunk u32 with segment id
         // output mesh (vertices[faces]), neighbors: array[int] (indices into offset table)
         // const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
-        //window.marching_cubes = function(cube, segment_id) {
-        //  // cube: Uint32Array
-        //}
-        const width = 3
-        const height = 3
-        const depth = 3
-        const marching_cubes = MarchingCubes.new(3, 3, 3);
-        const cube_ptr = marching_cubes.get_cube_ptr();
-        const memory = get_memory();
-        const cube = new Uint32Array(memory.buffer, cube_ptr, width * height * depth);
-        cube[0] = 5;
-        cube[1] = 5;
-        cube[1] = 5;
+        window.marching_cubes = function(cube, segment_id, width, height, depth) {
+          // cube: Uint32Array, segment_id: uin32
+          // width, height, depth all usize
+          const marching_cubes = MarchingCubes.new(width, height, depth);
+          const cube_ptr = marching_cubes.get_cube_ptr();
+          const memory = get_memory();
+          const marching_cubes_cube = new Uint32Array(memory.buffer, cube_ptr, width * height * depth);
+          //Copy segmentation cube to webassembly
+          debugger
+          marching_cubes_cube.set(cube);
+          marching_cubes.marche(segment_id);
+          return new Float32Array(memory.buffer, marching_cubes.get_triangle_ptr(), marching_cubes.get_triangle_size());
+        }
+        const width = 2
+        const height = 2
+        const depth = 2
+        const cube = new Uint32Array([5, 5, 5, 5, 1, 1, 1, 1]);
 
-        cube[1] = 5;
-        cube[1] = 1;
-        cube[1] = 1;
-
-        cube[1] = 1;
-        cube[1] = 1;
-        cube[1] = 1;
-
-        marching_cubes.marche(5);
-        const triangles = new Float32Array(memory.buffer, marching_cubes.get_triangle_ptr(), marching_cubes.get_triangle_size())
-        console.log(triangles);
+        console.log(window.marching_cubes(cube, 5, width, height, depth));
       }
 
       run();

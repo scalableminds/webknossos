@@ -83,8 +83,18 @@ class BoundingBox {
     return new BoundingBox({ min: newMin, max: newMax });
   }
 
-  chunkIntoBuckets() {
+  getSize(): Vector3 {
     const size = V3.sub(this.max, this.min);
+    return size;
+  }
+
+  getVolume(): number {
+    const size = this.getSize();
+    return size[0] * size[1] * size[2];
+  }
+
+  chunkIntoBuckets() {
+    const size = this.getSize();
     const start = [...this.min];
     const chunkSize = [32, 32, 32];
     const chunkBorderAlignments = [32, 32, 32];

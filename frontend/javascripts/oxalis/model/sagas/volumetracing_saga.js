@@ -17,6 +17,7 @@ import {
   addUserBoundingBoxesAction,
   type AddIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   updateTemporarySettingAction,
@@ -63,7 +64,9 @@ import {
   ResolutionInfo,
   getRenderableResolutionForSegmentationTracing,
   getBoundaries,
+  getSegmentationTracingLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import api from "oxalis/api/internal_api";
 import {
   isVolumeDrawingTool,
   isBrushTool,
@@ -929,6 +932,127 @@ export function* maintainHoveredSegmentId(): Saga<void> {
   yield _takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
 }
 
+function* performMinCut(): Saga<void> {
+  const skeleton = yield* select(store => store.tracing.skeleton);
+  if (!skeleton) {
+    console.log("no skeleton");
+    return;
+  }
+  const activeTree = getActiveTree(skeleton);
+
+  if (!activeTree) {
+    console.log("no active tree");
+    return;
+  }
+
+  // activeTree.
+
+  const segmentId = 1;
+
+  const seedA = [3087, 3084, 1024];
+  const seedB = [3084, 3080, 1024];
+
+  const boundingBoxObj = {
+    min: [3079, 3075, 1024],
+    max: [3079 + 20, 3075 + 19, 1024 + 1],
+  };
+  const boundingBox = new BoundingBox(boundingBoxObj);
+
+  const volumeTracingLayer = yield* select(store => getSegmentationTracingLayer(store.dataset));
+  if (!volumeTracingLayer) {
+    console.log("no volumeTracing");
+    return;
+  }
+  const inputData = yield* call(
+    [api.data, api.data.getDataFor2DBoundingBox],
+    volumeTracingLayer.name,
+    boundingBox,
+  );
+
+  const size = boundingBox.getSize();
+  const l = (x, y, z) => z * size[1] * size[0] + y * size[0] + x;
+  const ll = ([x, y, z]) => z * size[1] * size[0] + y * size[0] + x;
+  const buffer = new Uint16Array(boundingBox.getVolume()); // .fill(2 ** 12 - 1);
+
+  const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
+
+  function getNeighborsFromBitMask(bitMask) {
+    const neighbors = {
+      ingoing: [],
+      outgoing: [],
+    };
+
+    for (let ingoingIdx = 0; ingoingIdx < NEIGHBOR_LOOKUP.length; ingoingIdx++) {
+      if ((bitMask & (2 ** ingoingIdx)) > 0) {
+        neighbors.ingoing.push(NEIGHBOR_LOOKUP[ingoingIdx]);
+      }
+      if ((bitMask & (2 ** (ingoingIdx + NEIGHBOR_LOOKUP.length))) > 0) {
+        neighbors.outgoing.push(NEIGHBOR_LOOKUP[ingoingIdx]);
+      }
+    }
+
+    return neighbors;
+  }
+
+  console.time("populate data");
+  for (let x = 0; x < size[0]; x++) {
+    for (let y = 0; y < size[1]; y++) {
+      for (let z = 0; z < size[2]; z++) {
+        // Traverse over all voxels
+
+        const pos = [x, y, z];
+        const linIndex = l(x, y, z);
+
+        // Ignore voxel if it does not belong to seed segment
+        if (inputData[linIndex] !== segmentId) {
+          continue;
+        }
+
+        // Go over all neighbors
+        for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
+          const neighbor = NEIGHBOR_LOOKUP[neighborIdx];
+          const neighborPos = V3.add(pos, neighbor);
+
+          if (
+            neighborPos[0] < 0 ||
+            neighborPos[1] < 0 ||
+            neighborPos[2] < 0 ||
+            neighborPos[0] >= size[0] ||
+            neighborPos[1] >= size[1] ||
+            neighborPos[2] >= size[2]
+          ) {
+            // neighbor is outside of volume
+            continue;
+          }
+
+          const neighborLinIndex = ll(neighborPos);
+          if (inputData[neighborLinIndex] === segmentId) {
+            // Set ingoing and outgoing edge
+            buffer[linIndex] |= 2 ** neighborIdx;
+            const invertedNeighborIdx =
+              (neighborIdx + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
+            buffer[neighborLinIndex] |= 2 ** (NEIGHBOR_LOOKUP.length + invertedNeighborIdx);
+          }
+        }
+      }
+    }
+  }
+  console.timeEnd("populate data");
+
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      const neighbors = getNeighborsFromBitMask(buffer[l(x, y, 0)]);
+      console.log({ x, y, neighbors });
+    }
+  }
+
+  console.log({ seedA, seedB, boundingBox, inputData, buffer });
+}
+
+export function* listenToMinCut(): Saga<void> {
+  yield _takeEvery("PERFORM_MIN_CUT", performMinCut);
+}
+
 export default [
   editVolumeLayerAsync,
   ensureToolIsAllowedInResolution,
@@ -936,4 +1060,5 @@ export default [
   watchVolumeTracingAsync,
   maintainSegmentsMap,
   maintainHoveredSegmentId,
+  listenToMinCut,
 ];

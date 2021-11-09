@@ -137,14 +137,24 @@
         window.marching_cubes = function(cube, segment_id, topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z) {
           // cube: Uint32Array, segment_id: uin32
           // width, height, depth all usize
+          debugger
           const marching_cubes = MarchingCubes.new(topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z);
+          console.log("after init marching cubes");
           const cube_ptr = marching_cubes.get_cube_ptr();
+          console.log("got cube ptr", cube_ptr);
           const memory = get_memory();
           const marching_cubes_cube = new Uint32Array(memory.buffer, cube_ptr, width * height * depth);
+          console.log("view into wasm memory", marching_cubes_cube);
           //Copy segmentation cube to webassembly
+          console.log("attempting to copy:", cube)
           marching_cubes_cube.set(cube);
+          console.log("copied data");
           marching_cubes.marche(segment_id);
-          return new Float32Array(memory.buffer, marching_cubes.get_triangle_ptr(), marching_cubes.get_triangle_size());
+          console.log("after marching cubes");
+          const triangles = new Float32Array(memory.buffer, marching_cubes.get_triangle_ptr(), marching_cubes.get_triangle_size());
+          console.log("received triangles");
+          console.log(triangles);
+          return triangles;
         }
         const width = 2
         const height = 2

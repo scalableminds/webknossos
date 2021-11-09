@@ -63,7 +63,7 @@ import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
   bucketPositionToGlobalAddress,
-  globalPositionToBaseBucket,
+  globalPositionToBaseBucket, globalPositionToBucketPosition,
 } from "oxalis/model/helpers/position_converter";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
@@ -130,6 +130,7 @@ import {
   maybeFetchMeshFiles,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import BoundingBox from "../model/bucket_data_handling/bounding_box";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -1181,20 +1182,30 @@ class DataApi {
     return bucket;
   }
 
-  async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType) {
-    const bucketAddresses = this.getBucketAddressesInCuboid(bbox);
+  async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType, zoomStep: number) {
+    const bucketAddresses = this.getBucketAddressesInCuboid(bbox, zoomStep);
     const buckets = await Promise.all(
       bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
     );
+    for (const bucket of buckets) {
+      if (bucket.visualize != null) {
+        bucket.visualize();
+      }
+
+    }
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, bbox, elementClass);
+    return this.cutOutCuboid(buckets, bbox, elementClass, zoomStep);
   }
 
-  getBucketAddressesInCuboid(bbox: BoundingBoxType): Array<Vector4> {
+  getBucketAddressesInCuboid(bbox: BoundingBoxType, zoomStep: number): Array<Vector4> {
+    // bbox min mag 1
     const buckets = [];
     const bottomRight = bbox.max;
-    const minBucket = globalPositionToBaseBucket(bbox.min);
-    const topLeft = bucketAddress => bucketPositionToGlobalAddress(bucketAddress, [[1, 1, 1]]);
+    const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+    const resolutionInfo = getResolutionInfo(visibleLayer.resolutions);
+    const denseResolutions = resolutionInfo.getDenseResolutions()
+    const minBucket = globalPositionToBucketPosition(bbox.min, denseResolutions, zoomStep);
+    const topLeft = bucketAddress => bucketPositionToGlobalAddress(bucketAddress, denseResolutions);
     const nextBucketInDim = (bucket, dim) => {
       const copy = bucket.slice();
       copy[dim]++;
@@ -1222,8 +1233,14 @@ class DataApi {
     buckets: Array<Bucket>,
     bbox: BoundingBoxType,
     elementClass: ElementClass,
+    zoomStep: number,
   ): $TypedArray {
-    const extent = V3.sub(bbox.max, bbox.min);
+    const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+    const resolutionInfo = getResolutionInfo(visibleLayer.resolutions);
+    const denseResolutions = resolutionInfo.getDenseResolutions();
+    const resolution = denseResolutions[zoomStep];
+    const boundingBoxInMag = new BoundingBox({min: V3.divide3(bbox.min, resolution), max: V3.divide3(bbox.max, resolution)})
+    const extent = V3.sub(boundingBoxInMag.max, boundingBoxInMag.min);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
     const bucketWidth = Constants.BUCKET_WIDTH;
@@ -1233,25 +1250,27 @@ class DataApi {
       if (bucket.type === "null") {
         continue;
       }
-      const bucketTopLeft = bucketPositionToGlobalAddress(bucket.zoomedAddress, [[1, 1, 1]]);
-      const x = Math.max(bbox.min[0], bucketTopLeft[0]);
-      let y = Math.max(bbox.min[1], bucketTopLeft[1]);
-      let z = Math.max(bbox.min[2], bucketTopLeft[2]);
+      const bucketTopLeft = V3.divide3(bucketPositionToGlobalAddress(bucket.zoomedAddress, denseResolutions), resolution);
 
-      const xMax = Math.min(bucketTopLeft[0] + bucketWidth, bbox.max[0]);
-      const yMax = Math.min(bucketTopLeft[1] + bucketWidth, bbox.max[1]);
-      const zMax = Math.min(bucketTopLeft[2] + bucketWidth, bbox.max[2]);
+
+      const x = Math.max(boundingBoxInMag.min[0], bucketTopLeft[0]);
+      let y = Math.max(boundingBoxInMag.min[1], bucketTopLeft[1]);
+      let z = Math.max(boundingBoxInMag.min[2], bucketTopLeft[2]);
+
+      const xMax = Math.min(bucketTopLeft[0] + bucketWidth, boundingBoxInMag.max[0]);
+      const yMax = Math.min(bucketTopLeft[1] + bucketWidth, boundingBoxInMag.max[1]);
+      const zMax = Math.min(bucketTopLeft[2] + bucketWidth, boundingBoxInMag.max[2]);
 
       while (z < zMax) {
-        y = Math.max(bbox.min[1], bucketTopLeft[1]);
+        y = Math.max(boundingBoxInMag.min[1], bucketTopLeft[1]);
         while (y < yMax) {
           const dataOffset =
             (x % bucketWidth) +
             (y % bucketWidth) * bucketWidth +
             (z % bucketWidth) * bucketWidth * bucketWidth;
-          const rx = x - bbox.min[0];
-          const ry = y - bbox.min[1];
-          const rz = z - bbox.min[2];
+          const rx = x - boundingBoxInMag.min[0];
+          const ry = y - boundingBoxInMag.min[1];
+          const rz = z - boundingBoxInMag.min[2];
 
           const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
           const data =

@@ -357,20 +357,27 @@ function* maybeLoadIsosurface(
         console.log("no volumeTracing");
         return;
       }
-      const boundingBox = new BoundingBox({min:clippedPosition, max: V3.add(clippedPosition,cubeSize)})
+      const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo)
+      const boundingBox = new BoundingBox({min:clippedPosition, max: V3.add(clippedPosition, zoomedCubeSize)})
+      console.time("fetch data")
       const cube = yield* call(
           [api.data, api.data.getDataFor2DBoundingBox],
           volumeTracingLayer.name,
           boundingBox,
+          zoomStep
       );
+      console.timeEnd("fetch data")
+      console.time("marching cubes")
       const vertices = window.marching_cubes(cube, segmentId, clippedPosition[0], clippedPosition[1], clippedPosition[2], cubeSize[0], cubeSize[1], cubeSize[2], scale[0], scale[1], scale[2]);
+      console.timeEnd("marching cubes")
       const neighbors = [];
 
       if (removeExistingIsosurface) {
         getSceneController().removeIsosurfaceById(segmentId);
       }
+      console.time("populate scene")
       getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
-
+      console.timeEnd("populate scene")
       return neighbors.map(neighbor =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
       );

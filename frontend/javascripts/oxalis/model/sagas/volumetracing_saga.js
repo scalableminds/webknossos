@@ -1079,6 +1079,8 @@ function* performMinCut(): Saga<void> {
   }
   console.timeEnd("populate data");
 
+  const originalEdgeBuffer = new Uint16Array(edgeBuffer); // .fill(2 ** 12 - 1);
+
   // for (let y = 0; y < 4; y++) {
   //   for (let x = 0; x < 4; x++) {
   //     const neighbors = getNeighborsFromBitMask(edgeBuffer[l(x, y, 0)]);
@@ -1191,32 +1193,33 @@ function* performMinCut(): Saga<void> {
 
       const currDist = distanceField[ll(neighborPos)];
       const distToSeed = Math.min(currDist, maxDistance - currDist);
-      if (distToSeed > 6) {
-        path.unshift(neighborPos);
-      }
 
       const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
 
-      // Remove ingoing
-      // console.log("Before removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
+      if (distToSeed > 6) {
+        path.unshift(neighborPos);
 
-      removeIngoingEdge(edgeBuffer, ll(currentVoxel), neighborId);
+        // Remove ingoing
+        // console.log("Before removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
 
-      // console.log("After removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
+        removeIngoingEdge(edgeBuffer, ll(currentVoxel), neighborId);
 
-      const ingoingNeighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
-      if (ingoingNeighborsOld.length - ingoingNeighbors.length !== 1) {
-        console.log("didn't remove edge successfully");
-        debugger;
+        // console.log("After removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
+
+        const ingoingNeighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
+        if (ingoingNeighborsOld.length - ingoingNeighbors.length !== 1) {
+          console.log("didn't remove edge successfully");
+          debugger;
+        }
+
+        // Remove outgoing
+        const invertedNeighborId = invertNeighborId(neighborId);
+        // console.log("Before removing edge", edgeBuffer[ll(neighborPos)].toString(2));
+
+        removeOutgoingEdge(edgeBuffer, ll(neighborPos), invertedNeighborId);
+
+        // console.log("After removing edge", edgeBuffer[ll(neighborPos)].toString(2));
       }
-
-      // Remove outgoing
-      const invertedNeighborId = invertNeighborId(neighborId);
-      // console.log("Before removing edge", edgeBuffer[ll(neighborPos)].toString(2));
-
-      removeOutgoingEdge(edgeBuffer, ll(neighborPos), invertedNeighborId);
-
-      // console.log("After removing edge", edgeBuffer[ll(neighborPos)].toString(2));
 
       console.log("");
       voxelStack.push(neighborPos);
@@ -1289,8 +1292,18 @@ function* performMinCut(): Saga<void> {
       for (let y = 0; y < size[1]; y++) {
         for (let z = 0; z < size[2]; z++) {
           const idx = l(x, y, z);
-          if (visitedField[idx] === 0 && inputData[idx] === segmentId) {
-            api.data.labelVoxels([V3.add(boundingBox.min, [x, y, z])], 0);
+          if (visitedField[idx] === 1) {
+            const neighbors = getNeighborsFromBitMask(originalEdgeBuffer[idx]).outgoing;
+            const currentPos = [x, y, z];
+            api.data.labelVoxels([V3.add(boundingBox.min, currentPos)], 2);
+
+            for (const neighbor of neighbors) {
+              const neighborPos = V3.add(currentPos, neighbor);
+
+              if (visitedField[ll(neighborPos)] === 0) {
+                api.data.labelVoxels([V3.add(boundingBox.min, neighborPos)], 0);
+              }
+            }
           }
         }
       }

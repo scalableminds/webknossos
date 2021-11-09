@@ -1007,7 +1007,7 @@ function* performMinCut(): Saga<void> {
 
   // activeTree.
 
-  const segmentId = 1;
+  const segmentId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
   const boundingBoxes = skeleton.userBoundingBoxes;
   if (boundingBoxes.length === 0) {
@@ -1033,9 +1033,6 @@ function* performMinCut(): Saga<void> {
 
   // const globalSeedA = [3084, 3080, 1024];
   // const globalSeedB = [3093, 3088, 1024];
-
-  console.log("nodes[0].position", nodes[0].position);
-  console.log("nodes[1].position", nodes[1].position);
 
   const seedA = V3.sub(globalSeedA, boundingBox.min);
   const seedB = V3.sub(globalSeedB, boundingBox.min);
@@ -1215,7 +1212,7 @@ function* performMinCut(): Saga<void> {
 
       const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
 
-      if (distToSeed > 6) {
+      if (distToSeed > 30) {
         path.unshift(neighborPos);
 
         // Remove ingoing

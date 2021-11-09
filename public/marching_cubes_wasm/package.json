@@ -1,0 +1,15 @@
+{
+  "name": "marching-cubes-wasm",
+  "collaborators": [
+    "valentin"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "marching_cubes_wasm_bg.wasm",
+    "marching_cubes_wasm.js",
+    "marching_cubes_wasm.d.ts"
+  ],
+  "module": "marching_cubes_wasm.js",
+  "types": "marching_cubes_wasm.d.ts",
+  "sideEffects": false
+}

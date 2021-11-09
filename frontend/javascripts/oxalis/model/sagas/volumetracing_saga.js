@@ -937,15 +937,19 @@ const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0
 
 const neighborToIndex: Map<Array<number>, number> = new Map();
 
-let idx: number = 0;
-for (const neighbor of NEIGHBOR_LOOKUP) {
-  neighborToIndex.set(neighbor, idx);
+function buildNeighborToIndexMap() {
+  let idx: number = 0;
+  for (const neighbor of NEIGHBOR_LOOKUP) {
+    neighborToIndex.set(neighbor, idx);
 
-  idx++;
+    idx++;
+  }
 }
 
-const invertNeighborIdx = (neighborIdx: number) =>
-  (neighborIdx + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
+buildNeighborToIndexMap();
+
+const invertNeighborId = (neighborId: number) =>
+  (neighborId + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
 
 function getNeighborsFromBitMask(bitMask) {
   const neighbors = {
@@ -953,16 +957,37 @@ function getNeighborsFromBitMask(bitMask) {
     outgoing: [],
   };
 
-  for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
-    if ((bitMask & (2 ** neighborIdx)) !== 0) {
-      neighbors.outgoing.push(NEIGHBOR_LOOKUP[neighborIdx]);
+  for (let neighborId = 0; neighborId < NEIGHBOR_LOOKUP.length; neighborId++) {
+    if ((bitMask & (2 ** neighborId)) !== 0) {
+      neighbors.outgoing.push(NEIGHBOR_LOOKUP[neighborId]);
     }
-    if ((bitMask & (2 ** (neighborIdx + NEIGHBOR_LOOKUP.length))) !== 0) {
-      neighbors.ingoing.push(NEIGHBOR_LOOKUP[neighborIdx]);
+    if ((bitMask & (2 ** (neighborId + NEIGHBOR_LOOKUP.length))) !== 0) {
+      neighbors.ingoing.push(NEIGHBOR_LOOKUP[neighborId]);
     }
   }
 
   return neighbors;
+}
+
+function getNeighborId(neighbor) {
+  const neighborId = neighborToIndex.get(neighbor);
+  if (neighborId == null) {
+    throw new Error("Could not look up neighbor");
+  }
+  return neighborId;
+}
+
+function addOutgoingEdge(edgeBuffer, idx, neighborId) {
+  edgeBuffer[idx] |= 2 ** neighborId;
+}
+function addIngoingEdge(edgeBuffer, idx, neighborId) {
+  edgeBuffer[idx] |= 2 ** (NEIGHBOR_LOOKUP.length + neighborId);
+}
+function removeIngoingEdge(edgeBuffer, idx, neighborId) {
+  edgeBuffer[idx] &= ~(2 ** (NEIGHBOR_LOOKUP.length + neighborId));
+}
+function removeOutgoingEdge(edgeBuffer, idx, neighborId) {
+  edgeBuffer[idx] &= ~(2 ** neighborId);
 }
 
 function* performMinCut(): Saga<void> {
@@ -1027,8 +1052,8 @@ function* performMinCut(): Saga<void> {
         }
 
         // Go over all neighbors
-        for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
-          const neighbor = NEIGHBOR_LOOKUP[neighborIdx];
+        for (let neighborId = 0; neighborId < NEIGHBOR_LOOKUP.length; neighborId++) {
+          const neighbor = NEIGHBOR_LOOKUP[neighborId];
           const neighborPos = V3.add(pos, neighbor);
 
           if (
@@ -1045,12 +1070,8 @@ function* performMinCut(): Saga<void> {
 
           const neighborLinIndex = ll(neighborPos);
           if (inputData[neighborLinIndex] === segmentId) {
-            // Set outgoing edge
-            edgeBuffer[linIndex] |= 2 ** neighborIdx;
-
-            // Set ingoing edge
-            const invertedNeighborIdx = invertNeighborIdx(neighborIdx);
-            edgeBuffer[neighborLinIndex] |= 2 ** (NEIGHBOR_LOOKUP.length + invertedNeighborIdx);
+            addOutgoingEdge(edgeBuffer, linIndex, neighborId);
+            addIngoingEdge(edgeBuffer, neighborLinIndex, invertNeighborId(neighborId));
           }
         }
       }
@@ -1058,26 +1079,30 @@ function* performMinCut(): Saga<void> {
   }
   console.timeEnd("populate data");
 
-  for (let y = 0; y < 4; y++) {
-    for (let x = 0; x < 4; x++) {
-      const neighbors = getNeighborsFromBitMask(edgeBuffer[l(x, y, 0)]);
-      console.log({ x, y, neighbors });
-    }
-  }
+  // for (let y = 0; y < 4; y++) {
+  //   for (let x = 0; x < 4; x++) {
+  //     const neighbors = getNeighborsFromBitMask(edgeBuffer[l(x, y, 0)]);
+  //     console.log({ x, y, neighbors });
+  //   }
+  // }
 
   function populateDistanceField() {
     // Breadth-first search from seedA to seedB
-    const distanceField = new Uint16Array(boundingBox.getVolume()); // .fill(2 ** 12 - 1);
-    const queue = [{ voxel: seedA, distance: 1 }];
+    const distanceField = new Uint16Array(boundingBox.getVolume());
+    const directionField = new Uint8Array(boundingBox.getVolume()).fill(255);
+    const queue: Array<{ voxel: Array<number>, distance: number, usedEdgeIdx: number }> = [
+      { voxel: seedA, distance: 1, usedEdgeIdx: 255 },
+    ];
     let foundTarget = false;
     while (queue.length > 0) {
-      const { voxel: currVoxel, distance } = queue.shift();
+      const { voxel: currVoxel, distance, usedEdgeIdx } = queue.shift();
 
       const currVoxelIdx = ll(currVoxel);
       if (distanceField[currVoxelIdx] > 0) {
         continue;
       }
       distanceField[currVoxelIdx] = distance;
+      directionField[currVoxelIdx] = usedEdgeIdx;
 
       if (currVoxel[0] === seedB[0] && currVoxel[1] === seedB[1] && currVoxel[2] === seedB[2]) {
         console.log("found target seed");
@@ -1087,24 +1112,27 @@ function* performMinCut(): Saga<void> {
 
       const neighbors = getNeighborsFromBitMask(edgeBuffer[currVoxelIdx]).outgoing;
 
-      for (let neighborIdx = 0; neighborIdx < neighbors.length; neighborIdx++) {
-        const neighbor = neighbors[neighborIdx];
+      for (const neighbor of neighbors) {
         const neighborPos = V3.add(currVoxel, neighbor);
 
-        queue.push({ voxel: neighborPos, distance: distance + 1 });
+        const neighborId = getNeighborId(neighbor);
+
+        queue.push({ voxel: neighborPos, distance: distance + 1, usedEdgeIdx: neighborId });
       }
     }
 
-    return { distanceField, foundTarget };
+    return { distanceField, directionField, foundTarget };
   }
 
-  function removeShortestPath(distanceField: Uint16Array) {
+  function removeShortestPath(distanceField: Uint16Array, directionField: Uint8Array) {
     // Extract path from seedB to seedA
     // and remove edges which belong to that path
-    const path = [seedB];
+    const path = [];
     let i = 0;
     let foundSeed = false;
     const voxelStack = [seedB];
+    const maxDistance = distanceField[ll(seedB)];
+
     while (voxelStack.length > 0) {
       const currentVoxel = voxelStack.pop();
       if (i > 1000) {
@@ -1130,78 +1158,145 @@ function* performMinCut(): Saga<void> {
 
       console.log("ingoing edges", neighbors);
 
-      let foundNeighbor = false;
-      for (const neighbor of neighbors) {
-        const neighborPos = V3.add(currentVoxel, neighbor);
-        const neighborIdx = neighborToIndex.get(neighbor);
-
-        if (neighborIdx == null) {
-          throw new Error("Could not look up neighbor");
-        }
-
-        if (
-          neighborPos[0] < 0 ||
-          neighborPos[1] < 0 ||
-          neighborPos[2] < 0 ||
-          neighborPos[0] >= size[0] ||
-          neighborPos[1] >= size[1] ||
-          neighborPos[2] >= size[2]
-        ) {
-          // neighbor is outside of volume
-          continue;
-        }
-
-        if (
-          distanceField[ll(neighborPos)] < currentDistance &&
-          distanceField[ll(neighborPos)] > 0
-        ) {
-          path.unshift(neighborPos);
-
-          const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
-
-          // Remove ingoing
-          // console.log("Before removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
-          edgeBuffer[ll(currentVoxel)] &= ~(2 ** (NEIGHBOR_LOOKUP.length + neighborIdx));
-          // console.log("After removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
-
-          const ingoingNeighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
-          if (ingoingNeighborsOld.length - ingoingNeighbors.length !== 1) {
-            console.log("didn't remove edge successfully");
-            debugger;
-          }
-
-          // Remove outgoing
-          const invertedNeighborIdx = invertNeighborIdx(neighborIdx);
-          console.log("Before removing edge", edgeBuffer[ll(neighborPos)].toString(2));
-          edgeBuffer[ll(neighborPos)] &= ~invertedNeighborIdx;
-          console.log("After removing edge", edgeBuffer[ll(neighborPos)].toString(2));
-
-          console.log("");
-          foundNeighbor = true;
-          voxelStack.push(neighborPos);
-        }
+      const originallyUsedEdgeId = directionField[ll(currentVoxel)];
+      if (originallyUsedEdgeId >= NEIGHBOR_LOOKUP.length) {
+        throw new Error("Could not look up used edge in directionField");
       }
+      const edgeId = invertNeighborId(originallyUsedEdgeId);
+      const neighbor = NEIGHBOR_LOOKUP[edgeId];
+
+      const neighborPos = V3.add(currentVoxel, neighbor);
+      const neighborId = neighborToIndex.get(neighbor);
+
+      if (neighborId == null) {
+        throw new Error("Could not look up neighbor");
+      }
+
+      if (
+        neighborPos[0] < 0 ||
+        neighborPos[1] < 0 ||
+        neighborPos[2] < 0 ||
+        neighborPos[0] >= size[0] ||
+        neighborPos[1] >= size[1] ||
+        neighborPos[2] >= size[2]
+      ) {
+        throw new Error("neighbor is outside of volume ?");
+      }
+
+      if (
+        !(distanceField[ll(neighborPos)] < currentDistance && distanceField[ll(neighborPos)] > 0)
+      ) {
+        throw new Error("direction points towards a higher distance?");
+      }
+
+      const currDist = distanceField[ll(neighborPos)];
+      const distToSeed = Math.min(currDist, maxDistance - currDist);
+      if (distToSeed > 6) {
+        path.unshift(neighborPos);
+      }
+
+      const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
+
+      // Remove ingoing
+      // console.log("Before removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
+
+      removeIngoingEdge(edgeBuffer, ll(currentVoxel), neighborId);
+
+      // console.log("After removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
+
+      const ingoingNeighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
+      if (ingoingNeighborsOld.length - ingoingNeighbors.length !== 1) {
+        console.log("didn't remove edge successfully");
+        debugger;
+      }
+
+      // Remove outgoing
+      const invertedNeighborId = invertNeighborId(neighborId);
+      // console.log("Before removing edge", edgeBuffer[ll(neighborPos)].toString(2));
+
+      removeOutgoingEdge(edgeBuffer, ll(neighborPos), invertedNeighborId);
+
+      // console.log("After removing edge", edgeBuffer[ll(neighborPos)].toString(2));
+
+      console.log("");
+      voxelStack.push(neighborPos);
     }
 
     return { path, foundSeed };
   }
 
-  for (let loopBuster = 0; loopBuster < 1; loopBuster++) {
+  function traverseResidualsField() {
+    // Breadth-first search from seedA to seedB
+    const visitedField = new Uint16Array(boundingBox.getVolume());
+    const queue: Array<{ voxel: Array<number> }> = [{ voxel: seedA }];
+    while (queue.length > 0) {
+      const { voxel: currVoxel } = queue.shift();
+
+      const currVoxelIdx = ll(currVoxel);
+      if (visitedField[currVoxelIdx] > 0) {
+        continue;
+      }
+      visitedField[currVoxelIdx] = 1;
+      const neighbors = getNeighborsFromBitMask(edgeBuffer[currVoxelIdx]).outgoing;
+
+      for (const neighbor of neighbors) {
+        const neighborPos = V3.add(currVoxel, neighbor);
+
+        queue.push({ voxel: neighborPos });
+      }
+    }
+
+    // queue.push({ voxel: seedB });
+    // while (queue.length > 0) {
+    //   const { voxel: currVoxel } = queue.shift();
+
+    //   const currVoxelIdx = ll(currVoxel);
+    //   if (visitedField[currVoxelIdx] > 0) {
+    //     continue;
+    //   }
+    //   visitedField[currVoxelIdx] = 1;
+    //   const neighbors = getNeighborsFromBitMask(edgeBuffer[currVoxelIdx]).ingoing;
+
+    //   for (const neighbor of neighbors) {
+    //     const neighborPos = V3.add(currVoxel, neighbor);
+
+    //     queue.push({ voxel: neighborPos });
+    //   }
+    // }
+
+    return { visitedField };
+  }
+
+  for (let loopBuster = 0; loopBuster < 20; loopBuster++) {
     console.log("populate distance field", loopBuster);
-    const { foundTarget, distanceField } = populateDistanceField();
+    const { foundTarget, distanceField, directionField } = populateDistanceField();
     if (foundTarget) {
-      const { path } = removeShortestPath(distanceField);
+      const { path } = removeShortestPath(distanceField, directionField);
       console.log({ path });
 
-      for (const el of path) {
-        api.data.labelVoxels([V3.add(boundingBox.min, el)], 0);
-      }
+      // for (const el of path) {
+      //   api.data.labelVoxels([V3.add(boundingBox.min, el)], 0);
+      // }
     } else {
       console.log("segmentation is partitioned");
       break;
     }
   }
+  const { visitedField } = traverseResidualsField();
 
+  function labelDeletedEdges() {
+    for (let x = 0; x < size[0]; x++) {
+      for (let y = 0; y < size[1]; y++) {
+        for (let z = 0; z < size[2]; z++) {
+          const idx = l(x, y, z);
+          if (visitedField[idx] === 0 && inputData[idx] === segmentId) {
+            api.data.labelVoxels([V3.add(boundingBox.min, [x, y, z])], 0);
+          }
+        }
+      }
+    }
+  }
+  labelDeletedEdges();
   console.log({ seedA, seedB, boundingBox, inputData, edgeBuffer });
 }
 

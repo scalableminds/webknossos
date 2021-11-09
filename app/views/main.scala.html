@@ -153,7 +153,8 @@
           const triangles = new Float32Array(memory.buffer, marching_cubes.get_triangle_ptr(), marching_cubes.get_triangle_size());
           console.log("received triangles");
           console.log(triangles);
-          return triangles;
+          const neighbors = marching_cubes.find_neighbors(segment_id);
+          return [triangles, neighbors];
         }
         const width = 2
         const height = 2

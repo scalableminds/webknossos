@@ -367,19 +367,21 @@ function* maybeLoadIsosurface(
           zoomStep
       );
       console.timeEnd("fetch data")
-      console.time("marching cubes")
+      console.time("marching cubes and find neighbors")
       const resolution = resolutionInfo.getDenseResolutions()[zoomStep];
-      const vertices = window.marching_cubes(cube, segmentId, clippedPosition[0], clippedPosition[1], clippedPosition[2], cubeSize[0], cubeSize[1], cubeSize[2], scale[0], scale[1], scale[2], resolution[0], resolution[0], resolution[0]);
-      console.timeEnd("marching cubes")
-      const neighbors = [];
-
+      console.log("requesting bbox: ", boundingBox)
+      console.log("is segment id in cube: ", cube.indexOf(segmentId));
+      const [vertices, neighbors] = window.marching_cubes(cube, segmentId, clippedPosition[0], clippedPosition[1], clippedPosition[2], cubeSize[0], cubeSize[1], cubeSize[2], scale[0], scale[1], scale[2], resolution[0], resolution[0], resolution[0]);
+      console.timeEnd("marching cubes and find neighbors")
+      console.log("found neighbors: ", neighbors);
+      const neighbors_2 = Array.from(neighbors);
       if (removeExistingIsosurface) {
         getSceneController().removeIsosurfaceById(segmentId);
       }
       console.time("populate scene")
       getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
       console.timeEnd("populate scene")
-      return neighbors.map(neighbor =>
+      return neighbors_2.map(neighbor =>
         getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
       );
     } catch (exception) {

@@ -951,7 +951,7 @@ buildNeighborToIndexMap();
 const invertNeighborId = (neighborId: number) =>
   (neighborId + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
 
-function getNeighborsFromBitMask(bitMask) {
+function _getNeighborsFromBitMask(bitMask) {
   const neighbors = {
     ingoing: [],
     outgoing: [],
@@ -968,6 +968,8 @@ function getNeighborsFromBitMask(bitMask) {
 
   return neighbors;
 }
+
+const getNeighborsFromBitMask = _.memoize(_getNeighborsFromBitMask);
 
 function getNeighborId(neighbor) {
   const neighborId = neighborToIndex.get(neighbor);
@@ -1237,7 +1239,6 @@ function* performMinCut(): Saga<void> {
         // console.log("After removing edge", edgeBuffer[ll(neighborPos)].toString(2));
       }
 
-      console.log("");
       voxelStack.push(neighborPos);
     }
 
@@ -1286,7 +1287,8 @@ function* performMinCut(): Saga<void> {
     return { visitedField };
   }
 
-  for (let loopBuster = 0; loopBuster < 200; loopBuster++) {
+  console.time("find & delete paths");
+  for (let loopBuster = 0; loopBuster < 2000; loopBuster++) {
     console.log("populate distance field", loopBuster);
     const { foundTarget, distanceField, directionField } = populateDistanceField();
     if (foundTarget) {
@@ -1300,8 +1302,17 @@ function* performMinCut(): Saga<void> {
       console.log("segmentation is partitioned");
       break;
     }
+
+    if (loopBuster === 2000 - 1) {
+      console.warn("loop busted");
+    }
   }
+  console.timeEnd("find & delete paths");
+
+  console.time("traverseResidualsField");
+
   const { visitedField } = traverseResidualsField();
+  console.timeEnd("traverseResidualsField");
 
   function labelDeletedEdges() {
     for (let x = 0; x < size[0]; x++) {
@@ -1311,7 +1322,7 @@ function* performMinCut(): Saga<void> {
           if (visitedField[idx] === 1) {
             const neighbors = getNeighborsFromBitMask(originalEdgeBuffer[idx]).outgoing;
             const currentPos = [x, y, z];
-            api.data.labelVoxels([V3.add(boundingBox.min, currentPos)], 2);
+            // api.data.labelVoxels([V3.add(boundingBox.min, currentPos)], 2);
 
             for (const neighbor of neighbors) {
               const neighborPos = V3.add(currentPos, neighbor);
@@ -1325,7 +1336,9 @@ function* performMinCut(): Saga<void> {
       }
     }
   }
+  console.time("labelDeletedEdges");
   labelDeletedEdges();
+  console.timeEnd("labelDeletedEdges");
   console.log({ seedA, seedB, boundingBox, inputData, edgeBuffer });
 }
 

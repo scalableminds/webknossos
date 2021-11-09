@@ -153,8 +153,9 @@ function createDelayAwareMoveHandler(multiplier: number) {
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
 
-  const fn = (timeFactor, first) =>
-    MoveHandlers.moveW(getMoveValue(timeFactor) * multiplier, first);
+  // const fn = (timeFactor, first) =>
+  //   MoveHandlers.moveW(getMoveValue(timeFactor) * multiplier, first);
+  const fn = (timeFactor, first) => {};
 
   fn.customAdditionalDelayFn = () => {
     // Depending on the float fraction of the current position, we want to

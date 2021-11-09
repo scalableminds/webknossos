@@ -25,7 +25,10 @@ import {
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  performMinCutAction,
+  setActiveCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   getSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
@@ -208,6 +211,7 @@ function NodeContextMenuOptions({
   hideTree,
   useLegacyBindings,
 }: NodeContextMenuOptionsProps) {
+  const dispatch = useDispatch();
   if (skeletonTracing == null) {
     return null;
   }
@@ -231,6 +235,13 @@ function NodeContextMenuOptions({
         onClick={() => setActiveNode(clickedNodeId)}
       >
         Select this Node
+      </Menu.Item>
+      <Menu.Item
+        className="node-context-menu-item"
+        key="min-cut"
+        onClick={() => dispatch(performMinCutAction())}
+      >
+        Perform Min-Cut
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"

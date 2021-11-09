@@ -134,11 +134,10 @@
         // chunk u32 with segment id
         // output mesh (vertices[faces]), neighbors: array[int] (indices into offset table)
         // const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
-        window.marching_cubes = function(cube, segment_id, topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z) {
+        window.marching_cubes = function(cube, segment_id, topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z, resolution_x, resolution_y, resolution_z) {
           // cube: Uint32Array, segment_id: uin32
           // width, height, depth all usize
-          debugger
-          const marching_cubes = MarchingCubes.new(topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z);
+          const marching_cubes = MarchingCubes.new(topleft_x, topleft_y, topleft_z, width, height, depth, scale_x, scale_y, scale_z, resolution_x, resolution_y, resolution_z);
           console.log("after init marching cubes");
           const cube_ptr = marching_cubes.get_cube_ptr();
           console.log("got cube ptr", cube_ptr);

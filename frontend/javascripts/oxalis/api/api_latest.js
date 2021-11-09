@@ -1187,12 +1187,6 @@ class DataApi {
     const buckets = await Promise.all(
       bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
     );
-    for (const bucket of buckets) {
-      if (bucket.visualize != null) {
-        bucket.visualize();
-      }
-
-    }
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     return this.cutOutCuboid(buckets, bbox, elementClass, zoomStep);
   }

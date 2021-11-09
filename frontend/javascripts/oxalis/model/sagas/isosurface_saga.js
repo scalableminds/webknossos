@@ -368,7 +368,8 @@ function* maybeLoadIsosurface(
       );
       console.timeEnd("fetch data")
       console.time("marching cubes")
-      const vertices = window.marching_cubes(cube, segmentId, clippedPosition[0], clippedPosition[1], clippedPosition[2], cubeSize[0], cubeSize[1], cubeSize[2], scale[0], scale[1], scale[2]);
+      const resolution = resolutionInfo.getDenseResolutions()[zoomStep];
+      const vertices = window.marching_cubes(cube, segmentId, clippedPosition[0], clippedPosition[1], clippedPosition[2], cubeSize[0], cubeSize[1], cubeSize[2], scale[0], scale[1], scale[2], resolution[0], resolution[0], resolution[0]);
       console.timeEnd("marching cubes")
       const neighbors = [];
 

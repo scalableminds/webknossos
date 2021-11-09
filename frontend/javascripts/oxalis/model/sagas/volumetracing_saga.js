@@ -998,7 +998,7 @@ function* performMinCut(): Saga<void> {
     console.log("no skeleton");
     return;
   }
-  const activeTree = getActiveTree(skeleton);
+  const activeTree = getActiveTree(skeleton).getOrElse(null);
 
   if (!activeTree) {
     console.log("no active tree");
@@ -1009,14 +1009,33 @@ function* performMinCut(): Saga<void> {
 
   const segmentId = 1;
 
-  const boundingBoxObj = {
-    min: [3079, 3075, 1024],
-    max: [3079 + 20, 3075 + 19, 1024 + 1],
-  };
+  const boundingBoxes = skeleton.userBoundingBoxes;
+  if (boundingBoxes.length === 0) {
+    console.log("no bounding box defined for min-cut");
+    return;
+  }
+  // const boundingBoxObj = {
+  //   min: [3079, 3075, 1024],
+  //   max: [3079 + 20, 3075 + 19, 1024 + 1],
+  // };
+  const boundingBoxObj = boundingBoxes[0].boundingBox;
   const boundingBox = new BoundingBox(boundingBoxObj);
 
-  const globalSeedA = [3084, 3080, 1024];
-  const globalSeedB = [3093, 3088, 1024];
+  const nodes = Array.from(activeTree.nodes.values());
+
+  if (nodes.length < 2) {
+    console.log("not enough seeds");
+    return;
+  }
+
+  const globalSeedA = Utils.floor3(nodes[0].position);
+  const globalSeedB = Utils.floor3(nodes[1].position);
+
+  // const globalSeedA = [3084, 3080, 1024];
+  // const globalSeedB = [3093, 3088, 1024];
+
+  console.log("nodes[0].position", nodes[0].position);
+  console.log("nodes[1].position", nodes[1].position);
 
   const seedA = V3.sub(globalSeedA, boundingBox.min);
   const seedB = V3.sub(globalSeedB, boundingBox.min);
@@ -1156,9 +1175,9 @@ function* performMinCut(): Saga<void> {
       }
 
       // Go over all neighbors
-      const neighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
+      // const neighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
 
-      console.log("ingoing edges", neighbors);
+      // console.log("ingoing edges", neighbors);
 
       const originallyUsedEdgeId = directionField[ll(currentVoxel)];
       if (originallyUsedEdgeId >= NEIGHBOR_LOOKUP.length) {
@@ -1270,12 +1289,12 @@ function* performMinCut(): Saga<void> {
     return { visitedField };
   }
 
-  for (let loopBuster = 0; loopBuster < 20; loopBuster++) {
+  for (let loopBuster = 0; loopBuster < 200; loopBuster++) {
     console.log("populate distance field", loopBuster);
     const { foundTarget, distanceField, directionField } = populateDistanceField();
     if (foundTarget) {
-      const { path } = removeShortestPath(distanceField, directionField);
-      console.log({ path });
+      removeShortestPath(distanceField, directionField);
+      // console.log({ path });
 
       // for (const el of path) {
       //   api.data.labelVoxels([V3.add(boundingBox.min, el)], 0);

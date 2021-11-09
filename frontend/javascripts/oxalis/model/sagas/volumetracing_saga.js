@@ -13,6 +13,7 @@ import {
   type SetActiveCellAction,
   type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import {
   addUserBoundingBoxesAction,
   type AddIsosurfaceAction,
@@ -932,7 +933,41 @@ export function* maintainHoveredSegmentId(): Saga<void> {
   yield _takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
 }
 
+const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
+
+const neighborToIndex: Map<Array<number>, number> = new Map();
+
+let idx: number = 0;
+for (const neighbor of NEIGHBOR_LOOKUP) {
+  neighborToIndex.set(neighbor, idx);
+
+  idx++;
+}
+
+const invertNeighborIdx = (neighborIdx: number) =>
+  (neighborIdx + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
+
+function getNeighborsFromBitMask(bitMask) {
+  const neighbors = {
+    ingoing: [],
+    outgoing: [],
+  };
+
+  for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
+    if ((bitMask & (2 ** neighborIdx)) !== 0) {
+      neighbors.outgoing.push(NEIGHBOR_LOOKUP[neighborIdx]);
+    }
+    if ((bitMask & (2 ** (neighborIdx + NEIGHBOR_LOOKUP.length))) !== 0) {
+      neighbors.ingoing.push(NEIGHBOR_LOOKUP[neighborIdx]);
+    }
+  }
+
+  return neighbors;
+}
+
 function* performMinCut(): Saga<void> {
+  yield* put(disableSavingAction());
+
   const skeleton = yield* select(store => store.tracing.skeleton);
   if (!skeleton) {
     console.log("no skeleton");
@@ -949,14 +984,17 @@ function* performMinCut(): Saga<void> {
 
   const segmentId = 1;
 
-  const seedA = [3087, 3084, 1024];
-  const seedB = [3084, 3080, 1024];
-
   const boundingBoxObj = {
     min: [3079, 3075, 1024],
     max: [3079 + 20, 3075 + 19, 1024 + 1],
   };
   const boundingBox = new BoundingBox(boundingBoxObj);
+
+  const globalSeedA = [3084, 3080, 1024];
+  const globalSeedB = [3093, 3088, 1024];
+
+  const seedA = V3.sub(globalSeedA, boundingBox.min);
+  const seedB = V3.sub(globalSeedB, boundingBox.min);
 
   const volumeTracingLayer = yield* select(store => getSegmentationTracingLayer(store.dataset));
   if (!volumeTracingLayer) {
@@ -972,27 +1010,7 @@ function* performMinCut(): Saga<void> {
   const size = boundingBox.getSize();
   const l = (x, y, z) => z * size[1] * size[0] + y * size[0] + x;
   const ll = ([x, y, z]) => z * size[1] * size[0] + y * size[0] + x;
-  const buffer = new Uint16Array(boundingBox.getVolume()); // .fill(2 ** 12 - 1);
-
-  const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
-
-  function getNeighborsFromBitMask(bitMask) {
-    const neighbors = {
-      ingoing: [],
-      outgoing: [],
-    };
-
-    for (let ingoingIdx = 0; ingoingIdx < NEIGHBOR_LOOKUP.length; ingoingIdx++) {
-      if ((bitMask & (2 ** ingoingIdx)) > 0) {
-        neighbors.ingoing.push(NEIGHBOR_LOOKUP[ingoingIdx]);
-      }
-      if ((bitMask & (2 ** (ingoingIdx + NEIGHBOR_LOOKUP.length))) > 0) {
-        neighbors.outgoing.push(NEIGHBOR_LOOKUP[ingoingIdx]);
-      }
-    }
-
-    return neighbors;
-  }
+  const edgeBuffer = new Uint16Array(boundingBox.getVolume()); // .fill(2 ** 12 - 1);
 
   console.time("populate data");
   for (let x = 0; x < size[0]; x++) {
@@ -1027,11 +1045,12 @@ function* performMinCut(): Saga<void> {
 
           const neighborLinIndex = ll(neighborPos);
           if (inputData[neighborLinIndex] === segmentId) {
-            // Set ingoing and outgoing edge
-            buffer[linIndex] |= 2 ** neighborIdx;
-            const invertedNeighborIdx =
-              (neighborIdx + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
-            buffer[neighborLinIndex] |= 2 ** (NEIGHBOR_LOOKUP.length + invertedNeighborIdx);
+            // Set outgoing edge
+            edgeBuffer[linIndex] |= 2 ** neighborIdx;
+
+            // Set ingoing edge
+            const invertedNeighborIdx = invertNeighborIdx(neighborIdx);
+            edgeBuffer[neighborLinIndex] |= 2 ** (NEIGHBOR_LOOKUP.length + invertedNeighborIdx);
           }
         }
       }
@@ -1041,12 +1060,149 @@ function* performMinCut(): Saga<void> {
 
   for (let y = 0; y < 4; y++) {
     for (let x = 0; x < 4; x++) {
-      const neighbors = getNeighborsFromBitMask(buffer[l(x, y, 0)]);
+      const neighbors = getNeighborsFromBitMask(edgeBuffer[l(x, y, 0)]);
       console.log({ x, y, neighbors });
     }
   }
 
-  console.log({ seedA, seedB, boundingBox, inputData, buffer });
+  function populateDistanceField() {
+    // Breadth-first search from seedA to seedB
+    const distanceField = new Uint16Array(boundingBox.getVolume()); // .fill(2 ** 12 - 1);
+    const queue = [{ voxel: seedA, distance: 1 }];
+    let foundTarget = false;
+    while (queue.length > 0) {
+      const { voxel: currVoxel, distance } = queue.shift();
+
+      const currVoxelIdx = ll(currVoxel);
+      if (distanceField[currVoxelIdx] > 0) {
+        continue;
+      }
+      distanceField[currVoxelIdx] = distance;
+
+      if (currVoxel[0] === seedB[0] && currVoxel[1] === seedB[1] && currVoxel[2] === seedB[2]) {
+        console.log("found target seed");
+        foundTarget = true;
+        break;
+      }
+
+      const neighbors = getNeighborsFromBitMask(edgeBuffer[currVoxelIdx]).outgoing;
+
+      for (let neighborIdx = 0; neighborIdx < neighbors.length; neighborIdx++) {
+        const neighbor = neighbors[neighborIdx];
+        const neighborPos = V3.add(currVoxel, neighbor);
+
+        queue.push({ voxel: neighborPos, distance: distance + 1 });
+      }
+    }
+
+    return { distanceField, foundTarget };
+  }
+
+  function removeShortestPath(distanceField: Uint16Array) {
+    // Extract path from seedB to seedA
+    // and remove edges which belong to that path
+    const path = [seedB];
+    let i = 0;
+    let foundSeed = false;
+    const voxelStack = [seedB];
+    while (voxelStack.length > 0) {
+      const currentVoxel = voxelStack.pop();
+      if (i > 1000) {
+        console.log("loopBusted!");
+        break;
+      }
+      i++;
+
+      const currentDistance = distanceField[ll(currentVoxel)];
+
+      if (
+        currentVoxel[0] === seedA[0] &&
+        currentVoxel[1] === seedA[1] &&
+        currentVoxel[2] === seedA[2]
+      ) {
+        console.log("found target seed");
+        foundSeed = true;
+        break;
+      }
+
+      // Go over all neighbors
+      const neighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
+
+      console.log("ingoing edges", neighbors);
+
+      let foundNeighbor = false;
+      for (const neighbor of neighbors) {
+        const neighborPos = V3.add(currentVoxel, neighbor);
+        const neighborIdx = neighborToIndex.get(neighbor);
+
+        if (neighborIdx == null) {
+          throw new Error("Could not look up neighbor");
+        }
+
+        if (
+          neighborPos[0] < 0 ||
+          neighborPos[1] < 0 ||
+          neighborPos[2] < 0 ||
+          neighborPos[0] >= size[0] ||
+          neighborPos[1] >= size[1] ||
+          neighborPos[2] >= size[2]
+        ) {
+          // neighbor is outside of volume
+          continue;
+        }
+
+        if (
+          distanceField[ll(neighborPos)] < currentDistance &&
+          distanceField[ll(neighborPos)] > 0
+        ) {
+          path.unshift(neighborPos);
+
+          const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
+
+          // Remove ingoing
+          // console.log("Before removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
+          edgeBuffer[ll(currentVoxel)] &= ~(2 ** (NEIGHBOR_LOOKUP.length + neighborIdx));
+          // console.log("After removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
+
+          const ingoingNeighbors = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
+          if (ingoingNeighborsOld.length - ingoingNeighbors.length !== 1) {
+            console.log("didn't remove edge successfully");
+            debugger;
+          }
+
+          // Remove outgoing
+          const invertedNeighborIdx = invertNeighborIdx(neighborIdx);
+          console.log("Before removing edge", edgeBuffer[ll(neighborPos)].toString(2));
+          edgeBuffer[ll(neighborPos)] &= ~invertedNeighborIdx;
+          console.log("After removing edge", edgeBuffer[ll(neighborPos)].toString(2));
+
+          console.log("");
+          foundNeighbor = true;
+          voxelStack.push(neighborPos);
+        }
+      }
+    }
+
+    return { path, foundSeed };
+  }
+
+  for (let loopBuster = 0; loopBuster < 1; loopBuster++) {
+    console.log("populate distance field", loopBuster);
+    const { foundTarget, distanceField } = populateDistanceField();
+    if (foundTarget) {
+      const { path } = removeShortestPath(distanceField);
+      console.log({ path });
+
+      for (const el of path) {
+        api.data.labelVoxels([V3.add(boundingBox.min, el)], 0);
+      }
+    } else {
+      console.log("segmentation is partitioned");
+      break;
+    }
+  }
+
+  console.log({ seedA, seedB, boundingBox, inputData, edgeBuffer });
 }
 
 export function* listenToMinCut(): Saga<void> {

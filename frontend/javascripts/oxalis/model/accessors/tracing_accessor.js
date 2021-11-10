@@ -9,8 +9,8 @@ export function getSomeTracing(
 ): SkeletonTracing | VolumeTracing | ReadOnlyTracing {
   if (tracing.skeleton != null) {
     return tracing.skeleton;
-  } else if (tracing.volume != null) {
-    return tracing.volume;
+  } else if (tracing.volumes.length > 0) {
+    return tracing.volumes[0];
   } else if (tracing.readOnly != null) {
     return tracing.readOnly;
   }
@@ -25,11 +25,11 @@ export function getSomeServerTracing(serverTracings: Array<ServerTracing>): Serv
 }
 
 export function getTracingType(tracing: Tracing): TracingType {
-  if (tracing.skeleton != null && tracing.volume != null) {
+  if (tracing.skeleton != null && tracing.volumes.length > 0) {
     return TracingTypeEnum.hybrid;
   } else if (tracing.skeleton != null) {
     return TracingTypeEnum.skeleton;
-  } else if (tracing.volume != null) {
+  } else if (tracing.volumes.length > 0) {
     return TracingTypeEnum.volume;
   }
   throw new Error("The active annotation does not contain skeletons nor volume data");

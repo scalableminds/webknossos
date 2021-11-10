@@ -291,7 +291,7 @@ class SceneController {
     const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (Store.getState().tracing.volume != null) {
+    if (Store.getState().tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }

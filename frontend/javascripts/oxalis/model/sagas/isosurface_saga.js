@@ -51,7 +51,10 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  enforceVolumeTracing,
+  getActiveSegmentationTracingLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -153,7 +156,7 @@ function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): 
 // This function either returns the activeCellId of the current volume tracing
 // or the view-only active cell id
 function* getCurrentCellId(): Saga<number> {
-  const volumeTracing = yield* select(state => state.tracing.volume);
+  const volumeTracing = yield* select(state => getActiveSegmentationTracingLayer(state));
   if (volumeTracing != null) {
     return volumeTracing.activeCellId;
   }
@@ -323,7 +326,7 @@ function* maybeLoadIsosurface(
   }/layers/${layer.fallbackLayer != null ? layer.fallbackLayer : layer.name}`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
-  const volumeTracing = yield* select(state => state.tracing.volume);
+  const volumeTracing = yield* select(state => getActiveSegmentationTracingLayer(state));
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
   const mappingInfo = getMappingInfo(activeMappingByLayer, layer.name);
@@ -432,7 +435,7 @@ function* removeIsosurface(
 }
 
 function* markEditedCellAsDirty(): Saga<void> {
-  const volumeTracing = yield* select(state => state.tracing.volume);
+  const volumeTracing = yield* select(state => getActiveSegmentationTracingLayer(state));
   const useTracingStore = volumeTracing != null && volumeTracing.fallbackLayer == null;
   if (useTracingStore) {
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);

@@ -181,6 +181,10 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
   return getTracingForSegmentationLayer(state, visibleLayer);
 }
 
+export function getActiveSegmentationTracingLayer(state: OxalisState): ?VolumeTracing {
+  return getRequestedOrDefaultSegmentationTracingLayer(state, null);
+}
+
 export function getRequestedOrVisibleSegmentationLayerEnforced(
   state: OxalisState,
   layerName: ?string,

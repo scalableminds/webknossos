@@ -22,13 +22,19 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
     },
   };
   // We mirror/sync the user bounding boxes between all tracing objects.
+
+  const newVolumes = state.tracing.volumes.map(volumeTracing => ({
+    ...volumeTracing,
+    userBoundingBoxes,
+  }));
+
   const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
-  const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
+  const maybeVolumeUpdater = { volume: { $set: newVolumes } };
   const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};
   return update(state, {
     tracing: {
-      ...maybeSkeletonUpdater,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+      ...maybeSkeletonUpdater,
       ...maybeVolumeUpdater,
       ...maybeReadOnlyUpdater,
     },
@@ -72,7 +78,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
-      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      const tracing = state.tracing.skeleton || state.tracing.volumes[0] || state.tracing.readOnly;
       if (tracing == null) {
         return state;
       }

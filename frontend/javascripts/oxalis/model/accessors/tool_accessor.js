@@ -1,10 +1,12 @@
 // @flow
 import type { OxalisState } from "oxalis/store";
 import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
-import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracingLayer,
+  isVolumeAnnotationDisallowedForZoom,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getRenderableResolutionForSegmentationTracing,
-  getSegmentationTracingLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
@@ -136,9 +138,9 @@ export function getDisabledInfoForTools(
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const isSegmentationTracingVisibleForMag = labeledResolution != null;
 
-  const hasVolume = state.tracing.volume != null;
+  const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
-  const segmentationTracingLayer = getSegmentationTracingLayer(state.dataset);
+  const segmentationTracingLayer = getActiveSegmentationTracingLayer(state);
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
     getVisibleSegmentationLayer(state) === segmentationTracingLayer;

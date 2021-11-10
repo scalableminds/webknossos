@@ -19,6 +19,7 @@ import {
 import {
   getVolumeTracing,
   getRequestedOrVisibleSegmentationLayer,
+  getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveCellReducer,
@@ -91,7 +92,8 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   // $FlowIgnore[incompatible-use] "tracing.volume" is defined if updateInfo.type === "UPDATE_VOLUME_TRACING"
   const { segments } =
     updateInfo.type === "UPDATE_VOLUME_TRACING"
-      ? state.tracing.volume
+      ? // todo: check whether _layerName is correct here?
+        getVolumeTracingById(state.tracing, _layerName)
       : state.localSegmentationData[updateInfo.layerName];
 
   const oldSegment = segments.getNullable(segmentId);

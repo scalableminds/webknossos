@@ -65,14 +65,14 @@ export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 export type SetSegmentsAction = {
   type: "SET_SEGMENTS",
   segments: SegmentMap,
-  layerName?: string,
+  layerName: string,
 };
 
 export type UpdateSegmentAction = {
   type: "UPDATE_SEGMENT",
   segmentId: number,
   segment: $Shape<Segment>,
-  layerName?: string,
+  layerName: string,
   timestamp: number,
 };
 
@@ -163,10 +163,7 @@ export const clickSegmentAction = (cellId: number, somePosition: Vector3): Click
   somePosition,
 });
 
-export const setSegmentsActions = (
-  segments: SegmentMap,
-  layerName?: string,
-): SetSegmentsAction => ({
+export const setSegmentsActions = (segments: SegmentMap, layerName: string): SetSegmentsAction => ({
   type: "SET_SEGMENTS",
   segments,
   layerName,
@@ -175,7 +172,7 @@ export const setSegmentsActions = (
 export const updateSegmentAction = (
   segmentId: number,
   segment: $Shape<Segment>,
-  layerName?: string,
+  layerName: string,
   timestamp: number = Date.now(),
 ): UpdateSegmentAction => ({
   type: "UPDATE_SEGMENT",

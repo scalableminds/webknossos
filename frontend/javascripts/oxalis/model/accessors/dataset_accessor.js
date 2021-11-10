@@ -680,6 +680,7 @@ export function getFirstSegmentationLayer(
   return null;
 }
 
+// todo: adapt this and change callers
 export function getSegmentationTracingLayer(
   dataset: APIMaybeUnimportedDataset,
 ): ?APISegmentationLayer {

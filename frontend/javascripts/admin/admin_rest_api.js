@@ -48,9 +48,7 @@ import {
   type ExperienceDomainList,
   type MeshMetaData,
   type RemoteMeshMetaData,
-  type ServerSkeletonTracing,
   type ServerTracing,
-  type ServerVolumeTracing,
   type TracingType,
   type WkConnectDatasetConfig,
   type AnnotationLayerDescriptor,
@@ -61,6 +59,7 @@ import type {
   TraceOrViewCommand,
   AnnotationType,
   ActiveMappingInfo,
+  VolumeTracing,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -768,10 +767,11 @@ export function getUpdateActionLog(
   );
 }
 
-export async function importVolumeTracing(tracing: Tracing, dataFile: File): Promise<number> {
-  const volumeTracing = tracing.volume;
-  if (!volumeTracing) throw new Error("Volume Tracing must exist when importing Volume Tracing.");
-
+export async function importVolumeTracing(
+  tracing: Tracing,
+  volumeTracing: VolumeTracing,
+  dataFile: File,
+): Promise<number> {
   return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(
       `${tracing.tracingStore.url}/tracings/volume/${

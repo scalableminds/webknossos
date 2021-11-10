@@ -29,6 +29,20 @@ export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
   return Maybe.Nothing();
 }
 
+export function getVolumeTracingById(tracing: Tracing, tracingId: string): VolumeTracing {
+  const volumeTracing = tracing.volumes.find(t => t.tracingId === tracingId);
+
+  if (volumeTracing == null) {
+    throw new Error(`Could not find volume tracing with id ${tracingId}`);
+  }
+
+  return volumeTracing;
+}
+
+export function hasVolumeTracings(tracing: Tracing): boolean {
+  return tracing.volumes.length > 0;
+}
+
 export function getVolumeDescriptors(
   annotation: APIAnnotation | APIAnnotationCompact,
 ): Array<AnnotationLayerDescriptor> {
@@ -129,6 +143,44 @@ export function getRequestedOrVisibleSegmentationLayer(
   return requestedLayer || getVisibleSegmentationLayer(state);
 }
 
+function getTracingForSegmentationLayer(
+  state: OxalisState,
+  layer: APISegmentationLayer,
+): VolumeTracing {
+  if (layer.tracingId != null) {
+    return getVolumeTracingById(state.tracing, layer.tracingId);
+  } else {
+    throw new Error(
+      "Requested tracing layer is not a tracing, but a disk-based segmentation layer.",
+    );
+  }
+}
+
+export function getRequestedOrDefaultSegmentationTracingLayer(
+  state: OxalisState,
+  layerName: ?string,
+): ?VolumeTracing {
+  // If a layerName is passed, the corresponding volume tracing layer is returned.
+  // Otherwise:
+  //   if there's only one volume tracing layer, return that.
+  //   else: return the visible volume tracing layer
+
+  if (layerName != null) {
+    const layer = getSegmentationLayerByName(state.dataset, layerName);
+    return getTracingForSegmentationLayer(state, layer);
+  }
+
+  if (state.tracing.volumes.length === 1) {
+    return state.tracing.volumes[0];
+  }
+
+  const visibleLayer = getVisibleSegmentationLayer(state);
+  if (visibleLayer == null) {
+    return null;
+  }
+  return getTracingForSegmentationLayer(state, visibleLayer);
+}
+
 export function getRequestedOrVisibleSegmentationLayerEnforced(
   state: OxalisState,
   layerName: ?string,
@@ -158,8 +210,8 @@ export function getSegmentsForLayer(state: OxalisState, layerName: ?string): ?Se
     return null;
   }
 
-  if (layer.isTracingLayer && state.tracing.volume != null) {
-    return state.tracing.volume.segments;
+  if (layer.tracingId != null) {
+    return getVolumeTracingById(state.tracing, layer.tracingId).segments;
   }
 
   return state.localSegmentationData[layer.name].segments;
@@ -171,8 +223,8 @@ export function getVisibleSegments(state: OxalisState): ?SegmentMap {
     return null;
   }
 
-  if (layer.isTracingLayer && state.tracing.volume != null) {
-    return state.tracing.volume.segments;
+  if (layer.tracingId != null) {
+    return getVolumeTracingById(state.tracing, layer.tracingId).segments;
   }
 
   return state.localSegmentationData[layer.name].segments;

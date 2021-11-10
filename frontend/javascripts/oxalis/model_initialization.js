@@ -484,6 +484,8 @@ function setupLayerForVolumeTracing(
 
   const tracingLayer = {
     name: tracing.id,
+    tracingId: tracing.id,
+    isTracingLayer: true,
     elementClass: tracing.elementClass,
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,
@@ -493,7 +495,6 @@ function setupLayerForVolumeTracing(
     // remember the name of the original layer, used to request mappings
     fallbackLayer: tracing.fallbackLayer,
     fallbackLayerInfo: fallbackLayer,
-    isTracingLayer: true,
   };
 
   if (fallbackLayer != null) {

@@ -1,8 +1,4 @@
-/*
- * api_latest.js
- * @flow
- */
-
+// @flow
 import TWEEN from "tween.js";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
@@ -51,6 +47,7 @@ import {
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
   getNameOfRequestedOrVisibleSegmentationLayer,
+  getRequestedOrDefaultSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
@@ -115,6 +112,7 @@ import Store, {
   type TreeMap,
   type UserConfiguration,
   type VolumeTracing,
+  type OxalisState,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
 import PriorityQueue from "js-priority-queue";
@@ -134,24 +132,30 @@ import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentat
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
-function assertExists(value: any, message: string) {
+export function assertExists(value: any, message: string) {
   if (value == null) {
     throw new Error(message);
   }
 }
 
-function assertSkeleton(tracing: Tracing): SkeletonTracing {
+export function assertSkeleton(tracing: Tracing): SkeletonTracing {
   if (tracing.skeleton == null) {
     throw new Error("This api function should only be called in a skeleton annotation.");
   }
   return tracing.skeleton;
 }
 
-function assertVolume(tracing: Tracing): VolumeTracing {
-  if (tracing.volume == null) {
+export function assertVolume(state: OxalisState): VolumeTracing {
+  if (state.tracing.volumes.length > 0) {
     throw new Error("This api function should only be called in a volume annotation.");
   }
-  return tracing.volume;
+  const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
+
+  if (tracing == null) {
+    throw new Error("This api function should only be called in a volume annotation.");
+  }
+
+  return tracing;
 }
 
 /**
@@ -729,6 +733,7 @@ class TracingApi {
       comparator: ([_first, firstDistance], [_second, secondDistance]) =>
         firstDistance <= secondDistance ? -1 : 1,
     });
+
     priorityQueue.queue([sourceNodeId, 0]);
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
@@ -834,7 +839,7 @@ class TracingApi {
    * _Volume tracing only!_
    */
   getActiveCellId(): ?number {
-    const tracing = assertVolume(Store.getState().tracing);
+    const tracing = assertVolume(Store.getState());
     return getActiveCellId(tracing);
   }
 
@@ -844,7 +849,7 @@ class TracingApi {
    * _Volume tracing only!_
    */
   setActiveCell(id: number) {
-    assertVolume(Store.getState().tracing);
+    assertVolume(Store.getState());
     assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
   }
@@ -896,12 +901,15 @@ class TracingApi {
    */
   async downsampleSegmentation() {
     const state = Store.getState();
-    const { annotationId, annotationType, volume } = state.tracing;
+    const { annotationId, annotationType, volumes } = state.tracing;
     if (state.task != null) {
       throw new Error("Cannot downsample segmentation for a task.");
     }
-    if (volume == null) {
-      throw new Error("Cannot downsample segmentation for annotation without volume data.");
+    if (volumes.length !== 1) {
+      // todo: support downsampling volume layers even if there are multiple ones
+      throw new Error(
+        "Can only downsample segmentation for annotation with exactly one volume layer.",
+      );
     }
 
     await this.save();
@@ -1327,7 +1335,7 @@ class DataApi {
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
-    assertVolume(Store.getState().tracing);
+    assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
 
     for (const voxel of voxels) {

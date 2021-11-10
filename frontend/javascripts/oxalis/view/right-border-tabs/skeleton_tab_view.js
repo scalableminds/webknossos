@@ -220,9 +220,20 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
           await Model.ensureSavedState();
           const { tracing, dataset } = Store.getState();
-          const oldVolumeTracing = tracing.volume;
+          if (tracing.volumes.length === 0) {
+            throw new Error("Volume Tracing must exist when importing Volume Tracing.");
+          }
+          if (tracing.volumes.length > 1) {
+            // todo: support this case. Simply add new volume layer here?
+            throw new Error("Ambiguous volume upload");
+          }
+          const oldVolumeTracing = tracing.volumes[0];
 
-          const newLargestSegmentId = await importVolumeTracing(tracing, dataFile);
+          const newLargestSegmentId = await importVolumeTracing(
+            tracing,
+            oldVolumeTracing,
+            dataFile,
+          );
 
           if (oldVolumeTracing) {
             Store.dispatch(importVolumeTracingAction());

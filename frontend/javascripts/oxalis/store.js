@@ -236,6 +236,7 @@ export type VolumeTracing = {|
   +contourTracingMode: ContourMode,
   // Stores points of the currently drawn region in global coordinates
   +contourList: Array<Vector3>,
+  layerName: string,
   +fallbackLayer?: string,
 |};
 
@@ -248,7 +249,7 @@ export type HybridTracing = {|
   ...Annotation,
   +skeleton: ?SkeletonTracing,
   // todo: remove this again
-  +volume: ?VolumeTracing,
+  // +volume: ?VolumeTracing,
   +volumes: Array<VolumeTracing>,
   +readOnly: ?ReadOnlyTracing,
 |};

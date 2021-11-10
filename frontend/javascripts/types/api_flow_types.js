@@ -61,6 +61,7 @@ export type APISegmentationLayer = {|
   // eslint-disable-next-line no-use-before-define
   +fallbackLayerInfo?: APIDataLayer,
   +isTracingLayer?: boolean,
+  +tracingId?: string,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;

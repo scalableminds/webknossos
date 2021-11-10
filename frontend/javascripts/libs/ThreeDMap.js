@@ -63,6 +63,22 @@ export default class ThreeDMap<T> {
     return entries;
   }
 
+  *values(): Generator<T, void, void> {
+    for (const atX of this.map.values()) {
+      if (!atX) {
+        continue;
+      }
+      for (const atY of atX.values()) {
+        if (!atY) {
+          continue;
+        }
+        for (const value of atY.values()) {
+          yield value;
+        }
+      }
+    }
+  }
+
   // This could be extended so the key is a Vector1 | Vector2
   // if needed in the future
   delete(key: number): boolean {

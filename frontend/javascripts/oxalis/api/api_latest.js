@@ -19,7 +19,6 @@ import Constants, {
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import {
   type Bucket,
   getConstructorForElementClass,
@@ -47,12 +46,14 @@ import {
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
-  getVolumeDescriptors,
   getActiveCellId,
+  getVolumeDescriptors,
+  getRequestedOrVisibleSegmentationLayer,
+  getRequestedOrVisibleSegmentationLayerEnforced,
+  getNameOfRequestedOrVisibleSegmentationLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
-  getSegmentationLayerByName,
   getLayerByName,
   getResolutionInfo,
   getVisibleSegmentationLayer,
@@ -114,7 +115,6 @@ import Store, {
   type TreeMap,
   type UserConfiguration,
   type VolumeTracing,
-  type OxalisState,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
 import PriorityQueue from "js-priority-queue";
@@ -124,12 +124,12 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass, type APISegmentationLayer } from "types/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/meshes_view_helper";
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
@@ -152,37 +152,6 @@ function assertVolume(tracing: Tracing): VolumeTracing {
     throw new Error("This api function should only be called in a volume annotation.");
   }
   return tracing.volume;
-}
-
-function getRequestedOrVisibleSegmentationLayer(
-  state: OxalisState,
-  layerName: ?string,
-): ?APISegmentationLayer {
-  const requestedLayer =
-    layerName != null ? getSegmentationLayerByName(state.dataset, layerName) : null;
-  return requestedLayer || getVisibleSegmentationLayer(state);
-}
-
-function getRequestedOrVisibleSegmentationLayerEnforced(
-  state: OxalisState,
-  layerName: ?string,
-): APISegmentationLayer {
-  const effectiveLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
-  if (effectiveLayer != null) {
-    return effectiveLayer;
-  }
-  // If a layerName is passed and invalid, an exception will be raised by getRequestedOrVisibleSegmentationLayer.
-  throw new Error(
-    "No segmentation layer is currently visible. Pass a valid layerName (you may want to use `getSegmentationLayerName`)",
-  );
-}
-
-function getNameOfRequestedOrVisibleSegmentationLayer(
-  state: OxalisState,
-  layerName: ?string,
-): ?string {
-  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
-  return layer != null ? layer.name : null;
 }
 
 /**
@@ -1197,27 +1166,8 @@ class DataApi {
     }
 
     const cube = this.model.getCubeByLayerName(layerName);
-    const pullQueue = this.model.getPullQueueByLayerName(layerName);
     const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
-    const bucket = cube.getOrCreateBucket(bucketAddress);
-
-    if (bucket.type === "null") return 0;
-
-    // todo: use new getBucket api here instead
-
-    let needsToAwaitBucket = false;
-    if (bucket.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (bucket.needsRequest()) {
-      pullQueue.add({ bucket: bucketAddress, priority: PullQueueConstants.PRIORITY_HIGHEST });
-      pullQueue.pull();
-      needsToAwaitBucket = true;
-    }
-    if (needsToAwaitBucket) {
-      await new Promise(resolve => {
-        bucket.on("bucketLoaded", resolve);
-      });
-    }
+    await this.getLoadedBucket(layerName, bucketAddress);
     // Bucket has been loaded by now or was loaded already
     const dataValue = cube.getDataValue(position, null, zoomStep);
     return dataValue;
@@ -1229,25 +1179,7 @@ class DataApi {
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
     const cube = this.model.getCubeByLayerName(layerName);
-    const pullQueue = this.model.getPullQueueByLayerName(layerName);
-    const bucket = cube.getOrCreateBucket(bucketAddress);
-
-    if (bucket.type === "null") return bucket;
-
-    let needsToAwaitBucket = false;
-    if (bucket.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (bucket.needsRequest()) {
-      pullQueue.add({ bucket: bucketAddress, priority: -1 });
-      pullQueue.pull();
-      needsToAwaitBucket = true;
-    }
-    if (needsToAwaitBucket) {
-      await new Promise(resolve => {
-        bucket.on("bucketLoaded", resolve);
-      });
-    }
-    // Bucket has been loaded by now or was loaded already
+    const bucket = await cube.getLoadedBucket(bucketAddress);
     return bucket;
   }
 
@@ -1526,7 +1458,7 @@ class DataApi {
     if (!effectiveLayer) {
       return null;
     }
-    return Store.getState().currentMeshFileByLayer[effectiveLayer.name];
+    return Store.getState().localSegmentationData[effectiveLayer.name].currentMeshFile;
   }
 
   /**
@@ -1554,12 +1486,12 @@ class DataApi {
     }
     const state = Store.getState();
     if (
-      state.availableMeshFilesByLayer[effectiveLayerName] == null ||
-      !state.availableMeshFilesByLayer[effectiveLayerName].includes(meshFile)
+      state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
+      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.includes(meshFile)
     ) {
       throw new Error(
         `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
-          state.availableMeshFilesByLayer[effectiveLayerName] || []
+          state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
         ).join(", ")}`,
       );
     }
@@ -1587,7 +1519,7 @@ class DataApi {
       return;
     }
     const { dataset } = state;
-    const currentMeshFile = state.currentMeshFileByLayer[effectiveLayerName];
+    const currentMeshFile = state.localSegmentationData[effectiveLayerName].currentMeshFile;
     if (currentMeshFile == null) {
       throw new Error(
         "No mesh file was activated. Please call `api.data.setActiveMeshFile` first (use `api.data.getAvailableMeshFiles` to retrieve candidates).",
@@ -1625,7 +1557,7 @@ class DataApi {
       Store.getState(),
       layerName,
     ).name;
-    if (Store.getState().isosurfacesByLayer[effectiveLayerName][segmentId] != null) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].isosurfaces[segmentId] != null) {
       Store.dispatch(updateIsosurfaceVisibilityAction(effectiveLayerName, segmentId, isVisible));
     }
   }
@@ -1643,7 +1575,7 @@ class DataApi {
       layerName,
     ).name;
 
-    if (Store.getState().isosurfacesByLayer[effectiveLayerName][segmentId] != null) {
+    if (Store.getState().localSegmentationData[effectiveLayerName].isosurfaces[segmentId] != null) {
       Store.dispatch(removeIsosurfaceAction(effectiveLayerName, segmentId));
     }
   }
@@ -1660,7 +1592,9 @@ class DataApi {
       Store.getState(),
       layerName,
     ).name;
-    const segmentIds = Object.keys(Store.getState().isosurfacesByLayer[effectiveLayerName]);
+    const segmentIds = Object.keys(
+      Store.getState().localSegmentationData[effectiveLayerName].isosurfaces,
+    );
     for (const segmentId of segmentIds) {
       Store.dispatch(removeIsosurfaceAction(effectiveLayerName, Number(segmentId)));
     }

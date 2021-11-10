@@ -10,6 +10,7 @@ type MessageContent = string | React$Node | MessageConfig;
 
 declare module "antd" {
   declare export class Alert<P> extends React$Component<P> {}
+  declare export class ConfigProvider<P> extends React$Component<P> {}
   declare export class AutoComplete<P> extends React$Component<P> {
     static Option: React$ComponentType<*>;
     blur: () => void;

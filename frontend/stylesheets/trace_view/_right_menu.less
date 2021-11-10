@@ -17,16 +17,39 @@
   height: 100%;
 }
 
-.mesh-list-item {
+.segment-list-item {
+  // By default, antd's list items are flex, which
+  // causes more trouble than it helps.
+  display: block;
   padding-left: 5px;
   padding-right: 5px;
   border-radius: 2px;
-  &.is-centered-cell {
-    background-color: @blue-3;
+  .anticon-edit,
+  .anticon-ellipsis {
+    // Hide edit and ellipsis icon (unless hovered)
+    display: none;
   }
+  &.is-selected-cell {
+    background-color: @blue-2;
+  }
+
   &:hover {
     background-color: @blue-1;
+    .anticon-edit,
+    .anticon-ellipsis {
+      display: inline-block;
+    }
   }
+  // If a cell is hovered in the data viewports,
+  // it should also be highlighted in the list.
+  &.is-hovered-cell {
+    background-color: @blue-1;
+  }
+}
+
+.deemphasized-segment-name {
+  fontstyle: italic;
+  color: #989898;
 }
 
 #commentList {
@@ -38,6 +61,12 @@
   .comment-active {
     background-color: @blue-3;
   }
+}
+
+#segment-list {
+  height: inherit;
+  display: flex;
+  flex-direction: column;
 }
 
 #tree-list {
@@ -62,10 +91,6 @@
     z-index: 1;
   }
 
-  .clickable-text {
-    cursor: pointer;
-  }
-
   .selected-tree-node {
     background-color: rgba(@green-7, 0.8);
   }
@@ -79,6 +104,10 @@
   .rst__rowSearchMatch .rst__rowLabel {
     background-color: @blue-3;
   }
+}
+
+.clickable-text {
+  cursor: pointer;
 }
 
 .padded-tab-content {

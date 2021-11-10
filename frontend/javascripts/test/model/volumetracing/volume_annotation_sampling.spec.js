@@ -1,9 +1,7 @@
 // @flow
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
-import sampleVoxelMapToResolution, {
-  applyVoxelMap,
-} from "oxalis/model/volumetracing/volume_annotation_sampling";
+import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
 import Constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import anyTest, { type TestInterface } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
@@ -15,7 +13,7 @@ mockRequire.stopAll();
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,
-    tracing: { skeleton: skeletontracingServerObject },
+    tracing: { skeleton: skeletontracingServerObject, volume: volumetracingServerObject },
     datasetConfiguration: { fourBit: false },
   }),
   dispatch: sinon.stub(),
@@ -31,6 +29,9 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
 type LabeledVoxelsMapAsArray = Array<[Vector4, Uint8Array]>;
 // Avoid node caching and make sure all mockRequires are applied
 const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
+const { default: sampleVoxelMapToResolution, applyVoxelMap } = mockRequire.reRequire(
+  "oxalis/model/volumetracing/volume_annotation_sampling",
+);
 
 // Ava's recommendation for Flow types
 // https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext

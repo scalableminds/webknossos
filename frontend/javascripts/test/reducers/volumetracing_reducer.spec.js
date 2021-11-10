@@ -17,7 +17,6 @@ mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 const volumeTracing = {
   type: "volume",
   activeCellId: 0,
-  cells: [],
   activeTool: AnnotationToolEnum.MOVE,
   maxCellId: 0,
   contourList: [],
@@ -119,23 +118,6 @@ test("VolumeTracing should set a new active cell, which did not exist before", t
   t.not(newState, initialState);
   getVolumeTracingOrFail(newState.tracing).map(tracing => {
     t.is(tracing.activeCellId, 10);
-    t.is(Object.keys(tracing.cells).length, 1);
-    t.deepEqual(tracing.cells[10], { id: 10 });
-  });
-});
-
-test("VolumeTracing should create cells", t => {
-  const createCellAction = VolumeTracingActions.createCellAction();
-
-  // Set a cell active which did not exist before
-  let newState = VolumeTracingReducer(initialState, createCellAction);
-  newState = VolumeTracingReducer(newState, createCellAction);
-  newState = VolumeTracingReducer(newState, createCellAction);
-
-  t.not(newState, initialState);
-  getVolumeTracingOrFail(newState.tracing).map(tracing => {
-    t.is(Object.keys(tracing.cells).length, 3);
-    t.deepEqual(tracing.cells[2], { id: 2 });
   });
 });
 
@@ -148,8 +130,6 @@ test("VolumeTracing should set active but not create a cell 0", t => {
 
   getVolumeTracingOrFail(newState.tracing).map(tracing => {
     // There should be no cell with the id 0 as it is reserved for "no annotation"
-    t.is(Object.keys(tracing.cells).length, 1);
-    t.is(tracing.cells[0], undefined);
     t.is(tracing.activeCellId, 0);
   });
 });

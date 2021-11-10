@@ -332,7 +332,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isDisabled: boolean,
     onChange: (boolean, SyntheticMouseEvent<>) => void,
   ) => (
-    <Tooltip title={isDisabled ? "Enable" : "Disable"} placement="top">
+    <Tooltip title={isDisabled ? "Show" : "Hide"} placement="top">
       {/* This div is necessary for the tooltip to be displayed */}
       <div style={{ display: "inline-block", marginRight: 8 }}>
         <Switch size="small" onChange={onChange} checked={!isDisabled} />

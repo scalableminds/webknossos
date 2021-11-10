@@ -90,7 +90,7 @@ const defaultState: OxalisState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
-    hoveredIsosurfaceId: 0,
+    hoveredSegmentId: 0,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     isAutoBrushEnabled: false,
@@ -100,6 +100,8 @@ const defaultState: OxalisState = {
       initializedGpuFactor: Constants.GPU_FACTOR_MULTIPLIER,
       maximumLayerCountToRender: 32,
     },
+    preferredQualityForMeshPrecomputation: 2,
+    preferredQualityForMeshAdHocComputation: 2,
   },
   task: null,
   dataset: {
@@ -217,9 +219,7 @@ const defaultState: OxalisState = {
       isBusy: false,
     },
   },
-  isosurfacesByLayer: {},
-  currentMeshFileByLayer: {},
-  availableMeshFilesByLayer: {},
+  localSegmentationData: {},
 };
 
 export default defaultState;

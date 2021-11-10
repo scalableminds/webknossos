@@ -43,7 +43,7 @@ class NMLUnitTestSuite extends PlaySpec {
       case _ => false
     }
 
-  private val dummyTracing = Dummies.tracing
+  private val dummyTracing = Dummies.skeletonTracing
 
   "NML writing and parsing" should {
     "yield the same state" in {

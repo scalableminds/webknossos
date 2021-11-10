@@ -4,8 +4,12 @@
  */
 import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/accessors/dataset_accessor";
-import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
+import {
+  getResolutionInfoOfSegmentationTracingLayer,
+  getVisibleSegmentationLayer,
+  getSegmentationLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
+import type { Tracing, VolumeTracing, OxalisState, SegmentMap } from "oxalis/store";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import type { AnnotationTool, ContourMode } from "oxalis/constants";
 import type {
@@ -14,6 +18,7 @@ import type {
   APIAnnotation,
   AnnotationLayerDescriptor,
   APIAnnotationCompact,
+  APISegmentationLayer,
 } from "types/api_flow_types";
 
 // todo: this is deprecated
@@ -113,4 +118,62 @@ export function isSegmentationMissingForZoomstep(
   maxZoomStepForSegmentation: number,
 ): boolean {
   return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
+}
+
+export function getRequestedOrVisibleSegmentationLayer(
+  state: OxalisState,
+  layerName: ?string,
+): ?APISegmentationLayer {
+  const requestedLayer =
+    layerName != null ? getSegmentationLayerByName(state.dataset, layerName) : null;
+  return requestedLayer || getVisibleSegmentationLayer(state);
+}
+
+export function getRequestedOrVisibleSegmentationLayerEnforced(
+  state: OxalisState,
+  layerName: ?string,
+): APISegmentationLayer {
+  const effectiveLayer = getRequestedOrVisibleSegmentationLayer(state, layerName);
+  if (effectiveLayer != null) {
+    return effectiveLayer;
+  }
+  // If a layerName is passed and invalid, an exception will be raised by getRequestedOrVisibleSegmentationLayer.
+  throw new Error(
+    "No segmentation layer is currently visible. Pass a valid layerName (you may want to use `getSegmentationLayerName`)",
+  );
+}
+
+export function getNameOfRequestedOrVisibleSegmentationLayer(
+  state: OxalisState,
+  layerName: ?string,
+): ?string {
+  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
+  return layer != null ? layer.name : null;
+}
+
+export function getSegmentsForLayer(state: OxalisState, layerName: ?string): ?SegmentMap {
+  const layer = getRequestedOrVisibleSegmentationLayer(state, layerName);
+
+  if (layer == null) {
+    return null;
+  }
+
+  if (layer.isTracingLayer && state.tracing.volume != null) {
+    return state.tracing.volume.segments;
+  }
+
+  return state.localSegmentationData[layer.name].segments;
+}
+
+export function getVisibleSegments(state: OxalisState): ?SegmentMap {
+  const layer = getVisibleSegmentationLayer(state);
+  if (layer == null) {
+    return null;
+  }
+
+  if (layer.isTracingLayer && state.tracing.volume != null) {
+    return state.tracing.volume.segments;
+  }
+
+  return state.localSegmentationData[layer.name].segments;
 }

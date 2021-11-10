@@ -370,7 +370,7 @@ export function getRotationOrtho(planeId: OrthoView): Vector3 {
   }
 }
 
-export type Area = { left: number, top: number, right: number, bottom: number };
+export type Area = { left: number, top: number, right: number, bottom: number, isVisible: boolean };
 
 function getArea(
   rects: OrthoViewRects,
@@ -391,6 +391,8 @@ function getArea(
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
 
+  const isVisible = uHalf > 0 && vHalf > 0;
+
   const left = Math.floor((position[u] - uHalf) / constants.BUCKET_WIDTH);
   const top = Math.floor((position[v] - vHalf) / constants.BUCKET_WIDTH);
   const right = Math.floor((position[u] + uHalf) / constants.BUCKET_WIDTH);
@@ -401,6 +403,7 @@ function getArea(
     top,
     right,
     bottom,
+    isVisible,
   };
 }
 

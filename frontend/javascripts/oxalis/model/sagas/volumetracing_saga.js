@@ -109,7 +109,7 @@ export function* watchVolumeTracingAsync(): Saga<void> {
 
 function* warnOfTooLowOpacity(): Saga<void> {
   yield* take("INITIALIZE_SETTINGS");
-  if (yield* select(state => state.tracing.volume == null)) {
+  if (yield* select(state => state.tracing.volumes.length === 0)) {
     return;
   }
   const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);

@@ -74,7 +74,7 @@ const createState = (trees, _treeGroups): OxalisState => ({
       navigationList: { list: [], activeIndex: -1 },
       showSkeletons: true,
     },
-    volume: null,
+    volumes: [],
   },
 });
 

@@ -55,6 +55,7 @@ import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flyca
 
 import Model from "oxalis/model";
 import Store, {
+  type VolumeTracing,
   type DatasetConfiguration,
   type DatasetLayerConfiguration,
   type OxalisState,
@@ -162,14 +163,16 @@ function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDowns
 }
 
 type State = {|
-  isDownsampleVolumeModalVisible: boolean,
+  // If this is set to not-null, the downsampling modal
+  // is shown for that VolumeTracing
+  volumeTracingToDownsample: ?VolumeTracing,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
 
   state = {
-    isDownsampleVolumeModalVisible: false,
+    volumeTracingToDownsample: null,
   };
 
   componentWillMount() {
@@ -179,13 +182,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   }
 
-  getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
+  getFindDataButton = (
+    layerName: string,
+    isDisabled: boolean,
+    isColorLayer: boolean,
+    maybeVolumeTracing: ?VolumeTracing,
+  ) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
       : "If you are having trouble finding your data, webKnossos can try to find a position which contains data.";
 
-    const { volume } = Store.getState().tracing;
-    if (!isColorLayer && volume && volume.fallbackLayer) {
+    if (!isColorLayer && maybeVolumeTracing && maybeVolumeTracing.fallbackLayer) {
       tooltipText =
         "webKnossos will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
@@ -196,7 +203,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           icon={<ScanOutlined />}
           onClick={
             !isDisabled
-              ? () => this.handleFindData(layerName, isColorLayer)
+              ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
               : () => Promise.resolve()
           }
           style={{
@@ -448,10 +455,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <WarningOutlined style={{ color: "var(--ant-warning)" }} />
             </Tooltip>
           ) : null}
-          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
+          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
 
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
-          {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
+          {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
           {this.getReloadDataButton(layerName)}
           {hasFallbackLayer ? this.getDeleteButton() : null}
         </Col>
@@ -512,9 +519,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   );
 
   getVolumeAnnotationSpecificSettings = (layerName: string) => {
-    const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
-    const { tracing } = this.props;
-
     const segmentationOpacitySetting = (
       <NumberSliderSetting
         label={settings.segmentationPatternOpacity}
@@ -529,7 +533,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <div>
         {segmentationOpacitySetting}
-        {!isPublicViewMode && tracing.volume != null ? this.maybeGetAutoBrushUi() : null}
         <MappingSettingsView layerName={layerName} />
       </div>
     );
@@ -577,8 +580,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  handleFindData = async (layerName: string, isDataLayer: boolean) => {
-    const { volume, tracingStore } = Store.getState().tracing;
+  handleFindData = async (layerName: string, isDataLayer: boolean, volume: ?VolumeTracing) => {
+    const { tracingStore } = Store.getState().tracing;
     const { dataset } = this.props;
     let foundPosition;
     let foundResolution;
@@ -589,7 +592,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         volume.tracingId,
       );
       if ((!position || !resolution) && volume.fallbackLayer) {
-        await this.handleFindData(volume.fallbackLayer, true);
+        await this.handleFindData(volume.fallbackLayer, true, volume);
         return;
       }
       foundPosition = position;
@@ -629,11 +632,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
 
-  getVolumeMagsToDownsample = (): Array<Vector3> => {
+  getVolumeMagsToDownsample = (volumeTracing: ?VolumeTracing): Array<Vector3> => {
     if (this.props.task != null) {
       return [];
     }
-    const volumeTracing = this.props.tracing.volume;
     if (volumeTracing == null) {
       return [];
     }
@@ -657,8 +659,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return magsToDownsample;
   };
 
-  getOptionalDownsampleVolumeIcon = () => {
-    const magsToDownsample = this.getVolumeMagsToDownsample();
+  getOptionalDownsampleVolumeIcon = (volumeTracing: ?VolumeTracing) => {
+    if (!volumeTracing) {
+      return null;
+    }
+    const magsToDownsample = this.getVolumeMagsToDownsample(volumeTracing);
     const hasExtensiveResolutions = magsToDownsample.length === 0;
 
     if (hasExtensiveResolutions) {
@@ -784,12 +789,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  showDownsampleVolumeModal = () => {
-    this.setState({ isDownsampleVolumeModalVisible: true });
+  showDownsampleVolumeModal = (volumeTracing: VolumeTracing) => {
+    this.setState({ volumeTracingToDownsample: volumeTracing });
   };
 
   hideDownsampleVolumeModal = () => {
-    this.setState({ isDownsampleVolumeModalVisible: false });
+    this.setState({ volumeTracingToDownsample: null });
   };
 
   render() {
@@ -805,9 +810,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {layerSettings}
         {this.getSkeletonLayer()}
         <DownsampleVolumeModal
-          visible={this.state.isDownsampleVolumeModalVisible}
+          visible={this.state.volumeTracingToDownsample != null}
           hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
-          magsToDownsample={this.getVolumeMagsToDownsample()}
+          magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
         />
       </div>
     );

@@ -89,7 +89,6 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     return state;
   }
 
-  // $FlowIgnore[incompatible-use] "tracing.volume" is defined if updateInfo.type === "UPDATE_VOLUME_TRACING"
   const { segments } =
     updateInfo.type === "UPDATE_VOLUME_TRACING"
       ? // todo: check whether _layerName is correct here?

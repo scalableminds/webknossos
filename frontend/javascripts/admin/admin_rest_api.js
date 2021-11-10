@@ -1105,13 +1105,16 @@ export function createResumableUpload(
   );
 }
 
-export function reserveDatasetUpload(datastoreHost: string, reserveUploadInformation: {}): Promise<void> {
-  return doWithToken(token => 
+export function reserveDatasetUpload(
+  datastoreHost: string,
+  reserveUploadInformation: {},
+): Promise<void> {
+  return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
       data: reserveUploadInformation,
       host: datastoreHost,
     }),
-    );
+  );
 }
 
 export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}): Promise<void> {

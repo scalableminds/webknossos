@@ -382,11 +382,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(this.props.dataset, layerName);
 
-    const isVolumeTracing = layer.category === "segmentation" ? layer.isTracingLayer : false;
-    const isFallbackLayer =
-      tracing.volume && isVolumeTracing
-        ? tracing.volume.fallbackLayer != null && !isColorLayer
-        : false;
+    const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
+    const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
+    const maybeVolumeTracing =
+      maybeTracingId != null
+        ? tracing.volumes.find(volume => volume.tracingId === maybeTracingId)
+        : null;
+    const hasFallbackLayer =
+      maybeVolumeTracing != null ? maybeVolumeTracing.fallbackLayer != null : false;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
@@ -413,6 +416,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700, wordWrap: "break-word" }}>
+            {
+              // todo: show actual, editable name of volume annotation
+            }
             {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
           </span>
 
@@ -447,7 +453,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
-          {isFallbackLayer ? this.getDeleteButton() : null}
+          {hasFallbackLayer ? this.getDeleteButton() : null}
         </Col>
       </Row>
     );

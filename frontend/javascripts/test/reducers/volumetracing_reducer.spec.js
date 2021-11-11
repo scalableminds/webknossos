@@ -56,7 +56,7 @@ const initialState = update(defaultState, {
             resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
             category: "segmentation",
             name: "segmentation",
-            isTracingLayer: true,
+            tracingId: "tracingId",
           },
         ],
       },

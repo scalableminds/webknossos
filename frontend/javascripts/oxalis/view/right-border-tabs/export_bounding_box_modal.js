@@ -75,7 +75,7 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
     );
     const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
     const isColorLayer = layer.category === "color";
-    if (layer.category === "color" || !layer.isTracingLayer) {
+    if (layer.category === "color" || !layer.tracingId) {
       return {
         displayName: layer.name,
         layerName: layer.name,
@@ -90,11 +90,11 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
         isColorLayer,
       };
     }
-    // The layer is a volume tracing layer, since isTracingLayer is true. Therefore, a volumeTracing
+    // The layer is a volume tracing layer, since tracingId exists. Therefore, a volumeTracing
     // must exist.
     if (volumeTracing == null) {
       // Satisfy flow.
-      throw new Error("Volume tracing is null, but layer.isTracingLayer === true.");
+      throw new Error("Volume tracing is null, but layer.tracingId is defined.");
     }
     if (layer.fallbackLayerInfo != null) {
       return {

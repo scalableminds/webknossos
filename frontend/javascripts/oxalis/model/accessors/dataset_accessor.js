@@ -685,7 +685,7 @@ export function getFirstSegmentationLayer(
 export function getSegmentationTracingLayer(
   dataset: APIMaybeUnimportedDataset,
 ): ?APISegmentationLayer {
-  const tracingLayers = getSegmentationLayers(dataset).filter(layer => layer.isTracingLayer);
+  const tracingLayers = getSegmentationLayers(dataset).filter(layer => layer.tracingId != null);
   if (tracingLayers.length > 0) {
     return tracingLayers[0];
   } else if (tracingLayers.length > 1) {

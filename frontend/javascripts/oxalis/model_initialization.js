@@ -142,6 +142,8 @@ export async function initialize(
 
   initializeDataset(initialFetch, dataset, serverTracings);
 
+  console.log("serverTracings", serverTracings);
+
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
     displayedVolumeTracings,
@@ -184,6 +186,8 @@ export async function initialize(
   if (initialFetch) {
     setInitialTool();
   }
+
+  console.log("Store.getState()", Store.getState());
 
   return initializationInformation;
 }

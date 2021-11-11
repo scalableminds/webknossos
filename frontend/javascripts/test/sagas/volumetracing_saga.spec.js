@@ -39,7 +39,6 @@ const volumeTracing: VolumeTracing = {
   type: "volume",
   createdTimestamp: 0,
   tracingId: "tracingId",
-  layerName: "tracingId",
   version: 0,
   segments: new DiffableMap(),
   activeCellId: 0,
@@ -167,7 +166,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
     ),
   );
   saga.next(); // advance from the put action
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(volumeTracing, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");
@@ -206,7 +205,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
     ),
   );
   saga.next(); // advance from the put action
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(volumeTracing, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");
@@ -252,7 +251,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     ),
   );
   saga.next(); // advance from the put action
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(volumeTracing, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");

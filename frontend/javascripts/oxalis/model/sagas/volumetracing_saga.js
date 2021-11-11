@@ -3,6 +3,7 @@ import { message } from "antd";
 import React from "react";
 import _ from "lodash";
 
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
@@ -32,6 +33,7 @@ import {
   deleteSegmentVolumeAction,
   removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
@@ -945,6 +947,42 @@ export function* maintainHoveredSegmentId(): Saga<void> {
   yield _takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
 }
 
+function* maintainContourGeometry(): Saga<void> {
+  // We wait for the first volume layer editing action
+  // before we access the SceneController to avoid
+  // an too early access.
+  // The while-loop in this function blocks in its tail
+  // until the next relevant action is dispatched.
+
+  yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
+  const SceneController = yield* call(getSceneController);
+  const { contour } = SceneController;
+
+  while (true) {
+    const isTraceToolActive = yield* select(state => isTraceTool(state.uiInformation.activeTool));
+    const volumeTracing = yield* select(getActiveSegmentationTracingLayer);
+    if (!volumeTracing) {
+      continue;
+    }
+
+    if (isTraceToolActive) {
+      const contourList = volumeTracing.contourList;
+
+      // Update meshes according to the new contourList
+      contour.reset();
+      contour.color =
+        volumeTracing.contourTracingMode === ContourModeEnum.DELETE
+          ? CONTOUR_COLOR_DELETE
+          : CONTOUR_COLOR_NORMAL;
+      contourList.forEach(p => contour.addEdgePoint(p));
+    }
+
+    // The blocking is at the while loop's tail for the
+    // reason explained above.
+    yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
+  }
+}
+
 export default [
   editVolumeLayerAsync,
   ensureToolIsAllowedInResolution,
@@ -952,4 +990,5 @@ export default [
   watchVolumeTracingAsync,
   maintainSegmentsMap,
   maintainHoveredSegmentId,
+  maintainContourGeometry,
 ];

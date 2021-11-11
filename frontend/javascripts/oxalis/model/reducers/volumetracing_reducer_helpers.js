@@ -82,7 +82,7 @@ export function addToLayerReducer(
   }
 
   return updateVolumeTracing(state, volumeTracing, {
-    contourList: [position],
+    contourList: [...volumeTracing.contourList, position],
   });
 }
 

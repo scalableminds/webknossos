@@ -169,7 +169,8 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         userBoundingBoxes,
       };
 
-      const newState = update(state, { tracing: { volume: { $set: volumeTracing } } });
+      // todo: adapt to multiple volumeTracing
+      const newState = update(state, { tracing: { volumes: { $set: [volumeTracing] } } });
       return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
     }
 
@@ -204,7 +205,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         }
 
         case "RESET_CONTOUR": {
-          return resetContourReducer(state);
+          return resetContourReducer(state, volumeTracing);
         }
 
         case "HIDE_BRUSH": {
@@ -212,17 +213,17 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         }
 
         case "SET_CONTOUR_TRACING_MODE": {
-          return setContourTracingModeReducer(state, action.mode);
+          return setContourTracingModeReducer(state, volumeTracing, action.mode);
         }
 
         case "SET_MAX_CELL": {
-          return setMaxCellReducer(state, action.cellId);
+          return setMaxCellReducer(state, volumeTracing, action.cellId);
         }
 
         case "FINISH_ANNOTATION_STROKE": {
           // Possibly update the maxCellId after volume annotation
           const { activeCellId, maxCellId } = volumeTracing;
-          return setMaxCellReducer(state, Math.max(activeCellId, maxCellId));
+          return setMaxCellReducer(state, volumeTracing, Math.max(activeCellId, maxCellId));
         }
 
         default:

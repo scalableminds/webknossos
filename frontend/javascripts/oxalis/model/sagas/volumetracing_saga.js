@@ -1,10 +1,8 @@
 // @flow
+import { message } from "antd";
+import React from "react";
 import _ from "lodash";
 
-import React from "react";
-import { message } from "antd";
-import * as Utils from "libs/utils";
-import { diffDiffableMaps } from "libs/diffable_map";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
@@ -13,16 +11,6 @@ import {
   type SetActiveCellAction,
   type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import {
-  addUserBoundingBoxesAction,
-  type AddIsosurfaceAction,
-} from "oxalis/model/actions/annotation_actions";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  updateTemporarySettingAction,
-  type UpdateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
-import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import {
   type Saga,
   _takeEvery,
@@ -47,9 +35,17 @@ import {
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
+  addUserBoundingBoxesAction,
+  type AddIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
+import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { diffDiffableMaps } from "libs/diffable_map";
+import {
   enforceVolumeTracing,
-  isVolumeAnnotationDisallowedForZoom,
+  getActiveSegmentationTracingLayer,
+  getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
+  isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
@@ -57,19 +53,23 @@ import {
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import createProgressCallback from "libs/progress_callback";
 import {
   getResolutionInfoOfSegmentationTracingLayer,
   ResolutionInfo,
   getRenderableResolutionForSegmentationTracing,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   isVolumeDrawingTool,
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import {
+  updateTemporarySettingAction,
+  type UpdateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
@@ -92,7 +92,9 @@ import DataLayer from "oxalis/model/data_layer";
 import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import createProgressCallback from "libs/progress_callback";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
@@ -158,8 +160,18 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
-    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-    yield* put(updateSegmentAction(activeCellId, { somePosition: startEditingAction.position }));
+    const volumeTracing = yield* select(state => getActiveSegmentationTracingLayer(state));
+    if (volumeTracing == null) {
+      throw new Error("No volume tracing active. Cannot handle START_EDITING action.");
+    }
+    const activeCellId = volumeTracing.activeCellId;
+    yield* put(
+      updateSegmentAction(
+        activeCellId,
+        { somePosition: startEditingAction.position },
+        volumeTracing.layerName,
+      ),
+    );
 
     const {
       zoomStep: labeledZoomStep,
@@ -242,7 +254,9 @@ export function* editVolumeLayerAsync(): Saga<any> {
       labeledZoomStep,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
-    yield* put(updateSegmentAction(activeCellId, { somePosition: lastPosition }));
+    yield* put(
+      updateSegmentAction(activeCellId, { somePosition: lastPosition }, volumeTracing.layerName),
+    );
     yield* put(finishAnnotationStrokeAction());
   }
 }
@@ -860,20 +874,22 @@ function* ensureSegmentExists(
     | UpdateTemporarySettingAction
     | ClickSegmentAction,
 ): Saga<void> {
-  const segments = yield* select(store =>
-    getSegmentsForLayer(
-      store,
-      // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
-      action.layerName,
-    ),
+  const layer = yield* select(store =>
+    // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
+    getRequestedOrVisibleSegmentationLayer(store, action.layerName),
   );
+  if (!layer) {
+    return;
+  }
+  const layerName = layer.name;
+  const segments = yield* select(store => getSegmentsForLayer(store, layerName));
   const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
   if (cellId === 0 || cellId == null || segments == null || segments.getNullable(cellId) != null) {
     return;
   }
 
   if (action.type === "ADD_ISOSURFACE") {
-    const { seedPosition, layerName } = action;
+    const { seedPosition } = action;
     yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
   } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
     const { somePosition } = action;
@@ -883,13 +899,13 @@ function* ensureSegmentExists(
       return;
     }
 
-    yield* put(updateSegmentAction(cellId, { somePosition }));
+    yield* put(updateSegmentAction(cellId, { somePosition }, layerName));
   } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
     const globalMousePosition = yield* call(getGlobalMousePosition);
     if (globalMousePosition == null) {
       return;
     }
-    yield* put(updateSegmentAction(cellId, { somePosition: globalMousePosition }));
+    yield* put(updateSegmentAction(cellId, { somePosition: globalMousePosition }, layerName));
   }
 }
 

@@ -78,6 +78,7 @@ export function serverTracingAsVolumeTracingMaybe(
   return Maybe.Nothing();
 }
 
+// todo: adapt callers
 export function enforceVolumeTracing(tracing: Tracing): VolumeTracing {
   return getVolumeTracing(tracing).get();
 }

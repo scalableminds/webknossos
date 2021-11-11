@@ -39,6 +39,7 @@ const volumeTracing: VolumeTracing = {
   type: "volume",
   createdTimestamp: 0,
   tracingId: "tracingId",
+  layerName: "tracingId",
   version: 0,
   segments: new DiffableMap(),
   activeCellId: 0,
@@ -52,7 +53,7 @@ const volumeTracing: VolumeTracing = {
 
 const initialState = update(defaultState, {
   tracing: {
-    volume: { $set: volumeTracing },
+    volumes: { $set: [volumeTracing] },
   },
 });
 
@@ -124,9 +125,13 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
     t,
     saga.next(ACTIVE_CELL_ID), // pass active cell id
     put(
-      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
-        somePosition: startEditingAction.position,
-      }),
+      VolumeTracingActions.updateSegmentAction(
+        ACTIVE_CELL_ID,
+        {
+          somePosition: startEditingAction.position,
+        },
+        volumeTracing.tracingId,
+      ),
     ),
   );
 
@@ -152,9 +157,13 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
     t,
     saga.next(ACTIVE_CELL_ID), // pass active cell id
     put(
-      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
-        somePosition: startEditingAction.position,
-      }),
+      VolumeTracingActions.updateSegmentAction(
+        ACTIVE_CELL_ID,
+        {
+          somePosition: startEditingAction.position,
+        },
+        volumeTracing.tracingId,
+      ),
     ),
   );
   saga.next(); // advance from the put action
@@ -187,9 +196,13 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
     t,
     saga.next(ACTIVE_CELL_ID), // pass active cell id
     put(
-      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
-        somePosition: startEditingAction.position,
-      }),
+      VolumeTracingActions.updateSegmentAction(
+        ACTIVE_CELL_ID,
+        {
+          somePosition: startEditingAction.position,
+        },
+        volumeTracing.tracingId,
+      ),
     ),
   );
   saga.next(); // advance from the put action
@@ -229,9 +242,13 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     t,
     saga.next(ACTIVE_CELL_ID), // pass active cell id
     put(
-      VolumeTracingActions.updateSegmentAction(ACTIVE_CELL_ID, {
-        somePosition: startEditingAction.position,
-      }),
+      VolumeTracingActions.updateSegmentAction(
+        ACTIVE_CELL_ID,
+        {
+          somePosition: startEditingAction.position,
+        },
+        volumeTracing.tracingId,
+      ),
     ),
   );
   saga.next(); // advance from the put action

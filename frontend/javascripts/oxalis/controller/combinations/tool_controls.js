@@ -10,8 +10,8 @@ import {
   AnnotationToolEnum,
 } from "oxalis/constants";
 import {
+  enforceActiveVolumeTracing,
   getContourTracingMode,
-  enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   handleAgglomerateSkeletonAtClick,
@@ -339,8 +339,8 @@ export class DrawTool {
         if (!useLegacyBindings) {
           return;
         }
-        const { tracing } = Store.getState();
-        const volumeTracing = enforceVolumeTracing(tracing);
+        const state = Store.getState();
+        const volumeTracing = enforceActiveVolumeTracing(state);
         const contourTracingMode = getContourTracingMode(volumeTracing);
 
         if (contourTracingMode === ContourModeEnum.DELETE) {

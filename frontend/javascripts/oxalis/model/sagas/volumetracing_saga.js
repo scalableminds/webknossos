@@ -1,4 +1,5 @@
 // @flow
+
 import { message } from "antd";
 import React from "react";
 import _ from "lodash";
@@ -33,7 +34,6 @@ import {
   deleteSegmentVolumeAction,
   removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
@@ -43,7 +43,7 @@ import {
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
 import {
-  enforceVolumeTracing,
+  enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
@@ -97,6 +97,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import createProgressCallback from "libs/progress_callback";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
@@ -139,9 +140,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
     if (startEditingAction.type !== "START_EDITING") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
-    const contourTracingMode = yield* select(
-      state => enforceVolumeTracing(state.tracing).contourTracingMode,
-    );
+    const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    const contourTracingMode = volumeTracing.contourTracingMode;
     const overwriteMode = yield* select(state => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
@@ -162,10 +162,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
-    const volumeTracing = yield* select(state => getActiveSegmentationTracingLayer(state));
-    if (volumeTracing == null) {
-      throw new Error("No volume tracing active. Cannot handle START_EDITING action.");
-    }
     const activeCellId = volumeTracing.activeCellId;
     yield* put(
       updateSegmentAction(
@@ -181,6 +177,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     } = maybeLabeledResolutionWithZoomStep;
     const currentLayer = yield* call(
       createVolumeLayer,
+      volumeTracing,
       startEditingAction.planeId,
       labeledResolution,
     );
@@ -290,11 +287,15 @@ function* getBoundingBoxForFloodFill(
   return { min: clippedMin, max: clippedMax };
 }
 
-function* createVolumeLayer(planeId: OrthoView, labeledResolution: Vector3): Saga<VolumeLayer> {
+function* createVolumeLayer(
+  volumeTracing: VolumeTracing,
+  planeId: OrthoView,
+  labeledResolution: Vector3,
+): Saga<VolumeLayer> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
 
-  return new VolumeLayer(planeId, thirdDimValue, labeledResolution);
+  return new VolumeLayer(volumeTracing, planeId, thirdDimValue, labeledResolution);
 }
 
 function* labelWithVoxelBuffer2D(
@@ -306,7 +307,8 @@ function* labelWithVoxelBuffer2D(
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  const activeCellId = volumeTracing.activeCellId;
   const segmentationLayer = yield* call([Model, Model.getEnforcedSegmentationTracingLayer]);
   const { cube } = segmentationLayer;
 
@@ -451,7 +453,8 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     activeViewport,
   );
 
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  const activeCellId = volumeTracing.activeCellId;
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
@@ -532,7 +535,8 @@ export function* floodFill(): Saga<void> {
     const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
     const { cube } = segmentationLayer;
     const seedPosition = Dimensions.roundCoordinate(positionFloat);
-    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+    const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    const activeCellId = volumeTracing.activeCellId;
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const resolutionInfo = yield* select(state =>

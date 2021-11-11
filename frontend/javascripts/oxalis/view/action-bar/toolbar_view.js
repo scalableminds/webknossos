@@ -3,6 +3,30 @@ import { Radio, Tooltip, Badge, Space, Popover } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect } from "react";
 
+import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
+import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
+import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  createTreeAction,
+  setMergerModeEnabledAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { document } from "libs/window";
+import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getDisabledInfoForTools,
+  adaptActiveToolToShortcuts,
+} from "oxalis/model/accessors/tool_accessor";
+import {
+  getMappingInfoForTracingLayer,
+  getRenderableResolutionForSegmentationTracing,
+} from "oxalis/model/accessors/dataset_accessor";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { toNullable } from "libs/utils";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { usePrevious, useKeyPress } from "libs/react_hooks";
+import { userSettings } from "types/schemas/user_settings.schema";
+import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, {
   ToolsWithOverwriteCapabilities,
   type AnnotationTool,
@@ -11,32 +35,8 @@ import Constants, {
   OverwriteModeEnum,
   FillModeEnum,
 } from "oxalis/constants";
-import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
-import { document } from "libs/window";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getMappingInfoForTracingLayer,
-  getRenderableResolutionForSegmentationTracing,
-} from "oxalis/model/accessors/dataset_accessor";
-import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { usePrevious, useKeyPress } from "libs/react_hooks";
-import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import {
-  getDisabledInfoForTools,
-  adaptActiveToolToShortcuts,
-} from "oxalis/model/accessors/tool_accessor";
-import {
-  createTreeAction,
-  setMergerModeEnabledAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
-import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
-import { userSettings } from "types/schemas/user_settings.schema";
-import { toNullable } from "libs/utils";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -224,9 +224,7 @@ const mapId = id => {
 };
 
 function CreateCellButton() {
-  const unmappedActiveCellId = useSelector(
-    state => enforceVolumeTracing(state.tracing).activeCellId,
-  );
+  const unmappedActiveCellId = useSelector(state => enforceActiveVolumeTracing(state).activeCellId);
 
   const mappingColors = useSelector(state => getMappingInfoForTracingLayer(state).mappingColors);
   const isMappingEnabled = useSelector(

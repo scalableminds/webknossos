@@ -51,10 +51,7 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
-import {
-  enforceVolumeTracing,
-  getActiveSegmentationTracingLayer,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -436,9 +433,8 @@ function* removeIsosurface(
 
 function* markEditedCellAsDirty(): Saga<void> {
   const volumeTracing = yield* select(state => getActiveSegmentationTracingLayer(state));
-  const useTracingStore = volumeTracing != null && volumeTracing.fallbackLayer == null;
-  if (useTracingStore) {
-    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  if (volumeTracing != null && volumeTracing.fallbackLayer == null) {
+    const activeCellId = volumeTracing.activeCellId;
     modifiedCells.add(activeCellId);
   }
 }

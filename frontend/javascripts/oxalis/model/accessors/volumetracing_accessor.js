@@ -3,15 +3,20 @@
  * @flow
  */
 import Maybe from "data.maybe";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import memoizeOne from "memoize-one";
+
 import {
-  getResolutionInfoOfSegmentationTracingLayer,
-  getVisibleSegmentationLayer,
+  type AnnotationTool,
+  AnnotationToolEnum,
+  type ContourMode,
+  VolumeTools,
+} from "oxalis/constants";
+import {
+  ResolutionInfo,
+  getResolutionInfo,
   getSegmentationLayerByName,
+  getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import type { Tracing, VolumeTracing, OxalisState, SegmentMap } from "oxalis/store";
-import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
-import type { AnnotationTool, ContourMode } from "oxalis/constants";
 import type {
   ServerTracing,
   ServerVolumeTracing,
@@ -20,6 +25,8 @@ import type {
   APIAnnotationCompact,
   APISegmentationLayer,
 } from "types/api_flow_types";
+import type { Tracing, VolumeTracing, OxalisState, SegmentMap } from "oxalis/store";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 // todo: this is deprecated
 export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
@@ -60,6 +67,26 @@ export function getVolumeTracings(tracings: ?Array<ServerTracing>): Array<Server
   return volumeTracings;
 }
 
+function getSegmentationLayerForTracing(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+): APISegmentationLayer {
+  return getSegmentationLayerByName(state.dataset, volumeTracing.tracingId);
+}
+
+function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState): ResolutionInfo {
+  const volumeTracing = getActiveSegmentationTracingLayer(state);
+  if (!volumeTracing) {
+    return new ResolutionInfo([]);
+  }
+  const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
+  return getResolutionInfo(segmentationLayer.resolutions);
+}
+
+export const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
+  _getResolutionInfoOfActiveSegmentationTracingLayer,
+);
+
 // todo: adapt callers to multiple volume annotations
 export function serverTracingAsVolumeTracingMaybe(
   tracings: ?Array<ServerTracing>,
@@ -78,8 +105,9 @@ export function serverTracingAsVolumeTracingMaybe(
   return Maybe.Nothing();
 }
 
-// todo: adapt callers
+// todo: adapt callers (instead use enforceActiveVolumeTracing)
 export function enforceVolumeTracing(tracing: Tracing): VolumeTracing {
+  // remove
   return getVolumeTracing(tracing).get();
 }
 
@@ -106,7 +134,7 @@ export function isVolumeTool(tool: AnnotationTool): boolean {
 }
 
 export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state: OxalisState) {
-  if (getVolumeTracing(state.tracing).isNothing) {
+  if (state.tracing.volumes.length === 0) {
     return true;
   }
 
@@ -118,7 +146,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
     return false;
   }
 
-  const volumeResolutions = getResolutionInfoOfSegmentationTracingLayer(state.dataset);
+  const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
   const lowestExistingResolutionIndex = volumeResolutions.getClosestExistingIndex(0);
 
   // The current resolution is too high for the tool
@@ -184,6 +212,16 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
 
 export function getActiveSegmentationTracingLayer(state: OxalisState): ?VolumeTracing {
   return getRequestedOrDefaultSegmentationTracingLayer(state, null);
+}
+
+export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
+  const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
+
+  if (tracing == null) {
+    throw new Error("No volume tracing is available.");
+  }
+
+  return tracing;
 }
 
 export function getRequestedOrVisibleSegmentationLayerEnforced(

@@ -319,6 +319,7 @@ function _getResolutionInfoOfSegmentationTracingLayer(dataset: APIDataset): Reso
   return getResolutionInfo(segmentationLayer.resolutions);
 }
 
+// todo: remove in favor of getResolutionInfoOfActiveSegmentationTracingLayer
 export const getResolutionInfoOfSegmentationTracingLayer = memoizeOne(
   _getResolutionInfoOfSegmentationTracingLayer,
 );

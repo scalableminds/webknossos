@@ -141,9 +141,11 @@ export function getDisabledInfoForTools(
   const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
   const segmentationTracingLayer = getActiveSegmentationTracingLayer(state);
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
-    getVisibleSegmentationLayer(state) === segmentationTracingLayer;
+    visibleSegmentationLayer != null &&
+    visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
 
   const genericDisabledExplanation = getExplanationForDisabledVolume(
     isSegmentationTracingVisible,

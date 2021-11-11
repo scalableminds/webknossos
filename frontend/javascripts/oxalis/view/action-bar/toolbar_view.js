@@ -332,7 +332,7 @@ function ChangeBrushSizeButton() {
 }
 
 export default function ToolbarView() {
-  const hasVolume = useSelector(state => state.tracing.volume != null);
+  const hasVolume = useSelector(state => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
   const viewMode = useSelector(state => state.temporaryConfiguration.viewMode);
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);

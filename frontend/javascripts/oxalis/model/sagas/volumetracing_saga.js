@@ -169,7 +169,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       updateSegmentAction(
         activeCellId,
         { somePosition: startEditingAction.position },
-        volumeTracing.layerName,
+        volumeTracing.tracingId,
       ),
     );
 
@@ -255,7 +255,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
-      updateSegmentAction(activeCellId, { somePosition: lastPosition }, volumeTracing.layerName),
+      updateSegmentAction(activeCellId, { somePosition: lastPosition }, volumeTracing.tracingId),
     );
     yield* put(finishAnnotationStrokeAction());
   }

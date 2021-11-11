@@ -4,14 +4,13 @@
  */
 import update from "immutability-helper";
 
-import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { ContourModeEnum } from "oxalis/constants";
+import type { OxalisState, VolumeTracing } from "oxalis/store";
 import type {
   VolumeTracingAction,
   UpdateSegmentAction,
   SetSegmentsAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
@@ -30,13 +29,16 @@ import {
   hideBrushReducer,
   setContourTracingModeReducer,
   setMaxCellReducer,
+  updateVolumeTracing,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 
 type SegmentUpdateInfo =
   | {
       +type: "UPDATE_VOLUME_TRACING",
+      +volumeTracing: VolumeTracing,
     }
   | {
       +type: "UPDATE_LOCAL_SEGMENTATION_DATA",
@@ -55,26 +57,24 @@ function getSegmentUpdateInfo(state: OxalisState, layerName: ?string): SegmentUp
   if (!layer) {
     return { type: "NOOP" };
   }
-  const isReferringToVolumeTracing = layer.isTracingLayer;
-
-  if (isReferringToVolumeTracing) {
-    return { type: "UPDATE_VOLUME_TRACING" };
+  if (layer.tracingId != null) {
+    const volumeTracing = getVolumeTracingById(state.tracing, layer.tracingId);
+    return { type: "UPDATE_VOLUME_TRACING", volumeTracing };
   } else {
     return { type: "UPDATE_LOCAL_SEGMENTATION_DATA", layerName: layer.name };
   }
 }
 
 function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
-  const { segments, layerName: _layerName } = action;
+  const { segments, layerName } = action;
 
-  const updateInfo = getSegmentUpdateInfo(state, _layerName);
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
   if (updateInfo.type === "NOOP") {
     return state;
   }
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    // $FlowIgnore[prop-missing] "tracing.volume" must exist.
-    return updateKey2(state, "tracing", "volume", { segments });
+    return updateVolumeTracing(state, updateInfo.volumeTracing, { segments });
   }
 
   // Update localSegmentationData
@@ -91,8 +91,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
 
   const { segments } =
     updateInfo.type === "UPDATE_VOLUME_TRACING"
-      ? // todo: check whether _layerName is correct here?
-        getVolumeTracingById(state.tracing, _layerName)
+      ? updateInfo.volumeTracing
       : state.localSegmentationData[updateInfo.layerName];
 
   const oldSegment = segments.getNullable(segmentId);
@@ -123,8 +122,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   const newSegmentMap = segments.set(segmentId, newSegment);
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    // $FlowIgnore[prop-missing] "tracing.volume" must exist.
-    return updateKey2(state, "tracing", "volume", { segments: newSegmentMap });
+    return updateVolumeTracing(state, updateInfo.volumeTracing, { segments: newSegmentMap });
   }
 
   // Update localSegmentationData
@@ -164,7 +162,8 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         // todo: use AnnotationLayerDescriptor::name here
-        layerName: action.tracing.fallbackLayer || "Volume Tracing",
+        // layerName: action.tracing.fallbackLayer || "Volume Tracing",
+
         fallbackLayer: action.tracing.fallbackLayer,
         userBoundingBoxes,
       };

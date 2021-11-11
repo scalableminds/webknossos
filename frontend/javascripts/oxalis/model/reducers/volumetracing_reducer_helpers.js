@@ -7,7 +7,7 @@ import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volu
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { updateKey } from "oxalis/model/helpers/deep_update";
 
-function updateVolumeTracing(
+export function updateVolumeTracing(
   state: OxalisState,
   volumeTracing: VolumeTracing,
   shape: $Shape<VolumeTracing>,

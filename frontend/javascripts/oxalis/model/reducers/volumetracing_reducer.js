@@ -16,7 +16,6 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import {
-  getVolumeTracing,
   getRequestedOrVisibleSegmentationLayer,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -184,52 +183,55 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
     // pass
   }
 
-  return getVolumeTracing(state.tracing)
-    .map(volumeTracing => {
-      switch (action.type) {
-        case "SET_ACTIVE_CELL": {
-          return setActiveCellReducer(state, volumeTracing, action.cellId);
-        }
+  const volumeLayer = getRequestedOrVisibleSegmentationLayer(state, null);
 
-        case "CREATE_CELL": {
-          return createCellReducer(state, volumeTracing);
-        }
+  if (volumeLayer == null || volumeLayer.tracingId == null) {
+    return state;
+  }
+  const volumeTracing = getVolumeTracingById(state.tracing, volumeLayer.tracingId);
 
-        case "UPDATE_DIRECTION": {
-          return updateDirectionReducer(state, volumeTracing, action.centroid);
-        }
+  switch (action.type) {
+    case "SET_ACTIVE_CELL": {
+      return setActiveCellReducer(state, volumeTracing, action.cellId);
+    }
 
-        case "ADD_TO_LAYER": {
-          return addToLayerReducer(state, volumeTracing, action.position);
-        }
+    case "CREATE_CELL": {
+      return createCellReducer(state, volumeTracing);
+    }
 
-        case "RESET_CONTOUR": {
-          return resetContourReducer(state, volumeTracing);
-        }
+    case "UPDATE_DIRECTION": {
+      return updateDirectionReducer(state, volumeTracing, action.centroid);
+    }
 
-        case "HIDE_BRUSH": {
-          return hideBrushReducer(state);
-        }
+    case "ADD_TO_LAYER": {
+      return addToLayerReducer(state, volumeTracing, action.position);
+    }
 
-        case "SET_CONTOUR_TRACING_MODE": {
-          return setContourTracingModeReducer(state, volumeTracing, action.mode);
-        }
+    case "RESET_CONTOUR": {
+      return resetContourReducer(state, volumeTracing);
+    }
 
-        case "SET_MAX_CELL": {
-          return setMaxCellReducer(state, volumeTracing, action.cellId);
-        }
+    case "HIDE_BRUSH": {
+      return hideBrushReducer(state);
+    }
 
-        case "FINISH_ANNOTATION_STROKE": {
-          // Possibly update the maxCellId after volume annotation
-          const { activeCellId, maxCellId } = volumeTracing;
-          return setMaxCellReducer(state, volumeTracing, Math.max(activeCellId, maxCellId));
-        }
+    case "SET_CONTOUR_TRACING_MODE": {
+      return setContourTracingModeReducer(state, volumeTracing, action.mode);
+    }
 
-        default:
-          return state;
-      }
-    })
-    .getOrElse(state);
+    case "SET_MAX_CELL": {
+      return setMaxCellReducer(state, volumeTracing, action.cellId);
+    }
+
+    case "FINISH_ANNOTATION_STROKE": {
+      // Possibly update the maxCellId after volume annotation
+      const { activeCellId, maxCellId } = volumeTracing;
+      return setMaxCellReducer(state, volumeTracing, Math.max(activeCellId, maxCellId));
+    }
+
+    default:
+      return state;
+  }
 }
 
 export default VolumeTracingReducer;

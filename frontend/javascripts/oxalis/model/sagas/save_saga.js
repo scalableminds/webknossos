@@ -8,7 +8,15 @@ import Maybe from "data.maybe";
 
 import type { Action } from "oxalis/model/actions/actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import type {
+  OxalisState,
+  Tracing,
+  SkeletonTracing,
+  Flycam,
+  SaveQueueEntry,
+  CameraData,
+  SegmentMap,
+} from "oxalis/store";
 import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
@@ -22,17 +30,6 @@ import {
   setTracingAction,
   centerActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type {
-  OxalisState,
-  Tracing,
-  SkeletonTracing,
-  Flycam,
-  SaveQueueEntry,
-  CameraData,
-  SegmentMap,
-} from "oxalis/store";
-import createProgressCallback from "libs/progress_callback";
-import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   type UndoAction,
   type RedoAction,
@@ -73,13 +70,15 @@ import {
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import DiffableMap from "libs/diffable_map";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { doWithToken } from "admin/admin_rest_api";
+import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/accessors/dataset_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
+import DiffableMap from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
 import Request, { type RequestOptionsWithData } from "libs/request";
@@ -87,6 +86,7 @@ import Toast from "libs/toast";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
+import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 
@@ -230,7 +230,7 @@ export function* collectUndoStates(): Saga<void> {
           type: "volume",
           data: { buckets: currentVolumeUndoBuckets, segments: prevSegments },
         });
-        const segments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
+        const segments = yield* select(state => enforceActiveVolumeTracing(state).segments);
         // The SegmentMap is immutable. So, no need to copy.
         prevSegments = segments;
         currentVolumeUndoBuckets = [];
@@ -503,7 +503,9 @@ function* applyAndGetRevertingVolumeBatch(
     }
   }
   // The SegmentMap is immutable. So, no need to copy.
-  const currentSegments = yield* select(state => enforceVolumeTracing(state.tracing).segments);
+
+  // todo: the volume tracing id should be encoded in the undo stack
+  const currentSegments = yield* select(state => enforceActiveVolumeTracing(state).segments);
 
   yield* put(setSegmentsActions(volumeAnnotationBatch.segments));
   cube.triggerPushQueue();

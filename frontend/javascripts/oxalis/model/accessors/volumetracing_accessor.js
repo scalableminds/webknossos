@@ -28,14 +28,6 @@ import type {
 import type { Tracing, VolumeTracing, OxalisState, SegmentMap } from "oxalis/store";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
-// todo: this is deprecated
-export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
-  if (tracing.volumes.length > 0) {
-    return Maybe.Just(tracing.volumes[0]);
-  }
-  return Maybe.Nothing();
-}
-
 export function getVolumeTracingById(tracing: Tracing, tracingId: string): VolumeTracing {
   const volumeTracing = tracing.volumes.find(t => t.tracingId === tracingId);
 
@@ -103,12 +95,6 @@ export function serverTracingAsVolumeTracingMaybe(
     return Maybe.Just(volumeTracings[0]);
   }
   return Maybe.Nothing();
-}
-
-// todo: adapt callers (instead use enforceActiveVolumeTracing)
-export function enforceVolumeTracing(tracing: Tracing): VolumeTracing {
-  // remove
-  return getVolumeTracing(tracing).get();
 }
 
 export function getActiveCellId(volumeTracing: VolumeTracing): number {

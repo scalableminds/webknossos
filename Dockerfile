@@ -3,8 +3,8 @@ RUN apt-get update \
     && apt-get -y install postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /srv/webknossos
-WORKDIR /srv/webknossos
+RUN mkdir -p /webknossos
+WORKDIR /webknossos
 
 COPY target/universal/stage .
 COPY webknossos-datastore/lib/native target/universal/stage/lib/native

@@ -1,4 +1,4 @@
-version: '2.1'
+version: "2.1"
 
 services:
   webknossos-tracingstore:
@@ -25,7 +25,7 @@ services:
       - $USER_GROUP_2
     volumes:
       - ./tmp:/tmp
-      - ./config/tracingstore-docker.conf:/srv/webknossos-tracingstore/conf/docker.conf
+      - ./config/tracingstore-docker.conf:/webknossos-tracingstore/conf/docker.conf
     environment:
       - NEW_RELIC_LICENSE_KEY
       - NEW_RELIC_APP_NAME

@@ -1,12 +1,12 @@
 FROM openjdk:8-jre
 
-RUN mkdir -p /srv/webknossos-datastore \
+RUN mkdir -p /webknossos-datastore \
   && groupadd -g 1000 -r webknossos \
   && useradd -u 1000 -r -g webknossos webknossos
 
-WORKDIR /srv/webknossos-datastore
+WORKDIR /webknossos-datastore
 
-VOLUME /srv/webknossos-datastore/binaryData /tmp
+VOLUME /webknossos-datastore/binaryData /tmp
 
 COPY target/universal/stage .
 COPY lib/native target/universal/stage/lib/native

@@ -1,13 +1,13 @@
 FROM openjdk:8-jre
 
-RUN mkdir -p /srv/webknossos-tracingstore \
+RUN mkdir -p /webknossos-tracingstore \
   && groupadd -g 1000 -r webknossos \
   && useradd -u 1000 -r -g webknossos webknossos \
-  && mkdir /srv/webknossos-tracingstore/tracingData
+  && mkdir /webknossos-tracingstore/tracingData
 
-WORKDIR /srv/webknossos-tracingstore
+WORKDIR /webknossos-tracingstore
 
-VOLUME /srv/webknossos-tracingstore/tracingData /tmp
+VOLUME /webknossos-tracingstore/tracingData /tmp
 
 COPY target/universal/stage .
 

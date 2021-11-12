@@ -32,7 +32,7 @@ services:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Dplay.http.router="noDS.Routes"
     volumes:
-      - ./binaryData:/srv/webknossos/binaryData
+      - ./binaryData:/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     user: ${USER_UID:-1000}:${USER_GID:-1000}
@@ -44,7 +44,7 @@ services:
       - "9090:9090"
     entrypoint: bin/webknossos-datastore
     volumes:
-      - ./binaryData:/srv/webknossos-datastore/binaryData
+      - ./binaryData:/webknossos-datastore/binaryData
     command:
       - -J-Xmx20G
       - -J-Xms1G

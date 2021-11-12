@@ -813,7 +813,7 @@ export function* saveTracingTypeAsync(
       tracing,
     );
     if (items.length > 0) {
-      yield* put(pushSaveQueueTransaction(items, tracingType));
+      yield* put(pushSaveQueueTransaction(items, tracingType, tracingId));
     }
     prevTracing = tracing;
     prevFlycam = flycam;

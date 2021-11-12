@@ -2,7 +2,6 @@
  * volumetracing_accessor.js
  * @flow
  */
-import Maybe from "data.maybe";
 import memoizeOne from "memoize-one";
 
 import {
@@ -80,9 +79,9 @@ export const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
 );
 
 // todo: adapt callers to multiple volume annotations
-export function serverTracingAsVolumeTracingMaybe(
+export function serverTracingAsVolumeTracings(
   tracings: ?Array<ServerTracing>,
-): Maybe<ServerVolumeTracing> {
+): Array<ServerVolumeTracing> {
   // todo
   // $FlowIgnore[prop-missing]
   // $FlowIgnore[incompatible-type]
@@ -90,11 +89,7 @@ export function serverTracingAsVolumeTracingMaybe(
     // $FlowIgnore[prop-missing]
     tracing => tracing.largestSegmentId != null,
   );
-  if (volumeTracings.length > 0) {
-    // Only one skeleton is supported
-    return Maybe.Just(volumeTracings[0]);
-  }
-  return Maybe.Nothing();
+  return volumeTracings;
 }
 
 export function getActiveCellId(volumeTracing: VolumeTracing): number {

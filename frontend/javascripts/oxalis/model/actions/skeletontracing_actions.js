@@ -19,7 +19,7 @@ import Store, {
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
 
-type InitializeSkeletonTracingAction = {
+export type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",
   tracing: ServerSkeletonTracing,
 };

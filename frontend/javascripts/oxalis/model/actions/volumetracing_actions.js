@@ -9,7 +9,7 @@ import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import { type Dispatch } from "redux";
 
-type InitializeVolumeTracingAction = {
+export type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
   tracing: ServerVolumeTracing,
 };

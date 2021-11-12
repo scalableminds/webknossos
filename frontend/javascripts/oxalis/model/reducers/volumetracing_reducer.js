@@ -167,8 +167,12 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         userBoundingBoxes,
       };
 
-      // todo: adapt to multiple volumeTracing
-      const newState = update(state, { tracing: { volumes: { $set: [volumeTracing] } } });
+      const newVolumes = state.tracing.volumes.filter(
+        tracing => tracing.tracingId !== volumeTracing.tracingId,
+      );
+      newVolumes.push(volumeTracing);
+
+      const newState = update(state, { tracing: { volumes: { $set: newVolumes } } });
       return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
     }
 

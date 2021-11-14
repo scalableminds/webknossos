@@ -866,8 +866,7 @@ class TracingApi {
         `Annotation tool has to be one of: "${Object.keys(AnnotationToolEnum).join('", "')}".`,
       );
     }
-    const previousTool = Store.getState().uiInformation.activeTool;
-    Store.dispatch(setToolAction(tool, previousTool));
+    Store.dispatch(setToolAction(tool));
   }
 
   /**

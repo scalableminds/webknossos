@@ -125,7 +125,7 @@ test("VolumeTracing should create cells and only update the maxCellId after a vo
 });
 
 test("VolumeTracing should set trace/view tool", t => {
-  const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE, AnnotationToolEnum.MOVE);
+  const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
 
   // Change tool to Trace
   const newState = UiReducer(initialState, setToolAction);
@@ -135,7 +135,7 @@ test("VolumeTracing should set trace/view tool", t => {
 });
 
 test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(zoomStep) is > 1", t => {
-  const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE, AnnotationToolEnum.MOVE);
+  const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: { $set: 3 },
@@ -154,33 +154,33 @@ test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(
 });
 
 test("VolumeTracing should cycle trace/view/brush tool", t => {
-  const cycleToolAction = previousTool => UiActions.cycleToolAction(previousTool);
+  const cycleToolAction = () => UiActions.cycleToolAction();
 
   // Cycle tool to Brush
-  let newState = UiReducer(initialState, cycleToolAction(AnnotationToolEnum.MOVE));
+  let newState = UiReducer(initialState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BRUSH);
 
-  newState = UiReducer(newState, cycleToolAction(AnnotationToolEnum.BRUSH));
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.ERASE_BRUSH);
 
   // Cycle tool to Trace
-  newState = UiReducer(newState, cycleToolAction(AnnotationToolEnum.ERASE_BRUSH));
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.TRACE);
 
-  newState = UiReducer(newState, cycleToolAction(AnnotationToolEnum.TRACE));
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.ERASE_TRACE);
 
-  newState = UiReducer(newState, cycleToolAction(AnnotationToolEnum.ERASE_TRACE));
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.FILL_CELL);
 
-  newState = UiReducer(newState, cycleToolAction(AnnotationToolEnum.FILL_CELL));
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.PICK_CELL);
 
-  newState = UiReducer(newState, cycleToolAction(AnnotationToolEnum.PICK_CELL));
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BOUNDING_BOX);
 
   // Cycle tool back to MOVE
-  newState = UiReducer(newState, cycleToolAction(AnnotationToolEnum.BOUNDING_BOX));
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
 });
 

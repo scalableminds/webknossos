@@ -767,8 +767,7 @@ export function* ensureToolIsAllowedInResolution(): Saga<*> {
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
     if (isResolutionTooLow) {
-      const previousTool = yield* select(state => state.uiInformation.activeTool);
-      yield* put(setToolAction(AnnotationToolEnum.MOVE, previousTool));
+      yield* put(setToolAction(AnnotationToolEnum.MOVE));
     }
   }
 }

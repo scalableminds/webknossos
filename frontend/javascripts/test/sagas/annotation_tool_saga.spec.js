@@ -51,8 +51,9 @@ test.serial(
     const saga = watchToolDeselection();
     saga.next();
     saga.next(wkReadyAction());
+    saga.next(newState.uiInformation.activeTool);
     const cycleTool = () => {
-      const action = cycleToolAction(newState.uiInformation.activeTool);
+      const action = cycleToolAction();
       newState = UiReducer(newState, action);
       saga.next(action);
       saga.next(newState);
@@ -86,8 +87,9 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   const saga = watchToolDeselection();
   saga.next();
   saga.next(wkReadyAction());
+  saga.next(newState.uiInformation.activeTool);
   const cycleTool = nextTool => {
-    const action = setToolAction(nextTool, newState.uiInformation.activeTool);
+    const action = setToolAction(nextTool);
     newState = UiReducer(newState, action);
     saga.next(action);
     saga.next(newState);

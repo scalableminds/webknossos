@@ -313,7 +313,7 @@ function setInitialTool() {
     // We are in a annotation which contains a skeleton. Due to the
     // enabled legacy-bindings, the user can expect to immediately create new nodes
     // with right click. Therefore, switch to the skeleton tool.
-    Store.dispatch(setToolAction(AnnotationToolEnum.SKELETON, AnnotationToolEnum.MOVE));
+    Store.dispatch(setToolAction(AnnotationToolEnum.SKELETON));
   }
 }
 

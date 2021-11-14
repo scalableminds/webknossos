@@ -6,10 +6,9 @@ import { type BorderOpenStatus, type Theme } from "oxalis/store";
 export type SetToolAction = {
   type: "SET_TOOL",
   tool: AnnotationTool,
-  previousTool: AnnotationTool,
 };
 
-export type CycleToolAction = { type: "CYCLE_TOOL", previousTool: AnnotationTool };
+export type CycleToolAction = { type: "CYCLE_TOOL" };
 
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",
@@ -119,18 +118,13 @@ export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAc
   value,
 });
 
-export const setToolAction = (
-  tool: AnnotationTool,
-  previousTool: AnnotationTool,
-): SetToolAction => ({
+export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
   type: "SET_TOOL",
   tool,
-  previousTool,
 });
 
-export const cycleToolAction = (previousTool: AnnotationTool): CycleToolAction => ({
+export const cycleToolAction = (): CycleToolAction => ({
   type: "CYCLE_TOOL",
-  previousTool,
 });
 
 export const setThemeAction = (value: Theme): SetThemeAction => ({

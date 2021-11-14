@@ -1,7 +1,6 @@
 // @flow
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
 import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
-
 import * as React from "react";
 import _ from "lodash";
 

@@ -78,8 +78,7 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
 type OwnProps = {| showContextMenuAt: ShowContextMenuFunction |};
 
 const cycleTools = () => {
-  const { activeTool } = Store.getState().uiInformation;
-  Store.dispatch(cycleToolAction(activeTool));
+  Store.dispatch(cycleToolAction());
 };
 
 type StateProps = {|

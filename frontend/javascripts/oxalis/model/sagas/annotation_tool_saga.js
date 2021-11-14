@@ -7,6 +7,7 @@ import { getToolClassForAnnotationTool } from "oxalis/controller/combinations/to
 
 export function* watchToolDeselection(): Saga<void> {
   yield* take("WK_READY");
+  let previousTool = yield* select(state => state.uiInformation.activeTool);
   while (true) {
     const action = ((yield* take(["SET_TOOL", "CYCLE_TOOL"]): any):
       | SetToolAction
@@ -19,7 +20,8 @@ export function* watchToolDeselection(): Saga<void> {
       executeDeselect = true;
     }
     if (executeDeselect) {
-      getToolClassForAnnotationTool(action.previousTool).onToolDeselected();
+      getToolClassForAnnotationTool(previousTool).onToolDeselected();
     }
+    previousTool = storeState.uiInformation.activeTool;
   }
 }

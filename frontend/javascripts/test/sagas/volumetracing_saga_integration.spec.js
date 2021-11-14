@@ -62,7 +62,7 @@ test.serial("Executing a floodfill in mag 1", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 43]));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -147,7 +147,7 @@ test.serial("Executing a floodfill in mag 2", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 43]));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -262,7 +262,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
   // Assert state after flood-fill
   await assertFloodFilledState();
 
-  // Undo created bounding box by flood fill and flood fill and assert initial state
+  // Undo created bounding box by flood fill and flood fill and assert initial state.
   await dispatchUndoAsync(Store.dispatch);
   await dispatchUndoAsync(Store.dispatch);
   await assertInitialState();
@@ -320,7 +320,7 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -381,7 +381,7 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -429,7 +429,7 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
 
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -466,7 +466,7 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
 
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
@@ -561,7 +561,7 @@ async function testLabelingManyBuckets(t, saveInbetween) {
   ]);
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
-  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH, AnnotationToolEnum.MOVE));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
   Store.dispatch(setActiveCellAction(newCellId));
 
   for (const paintPosition of paintPositions1) {

@@ -92,11 +92,8 @@ const handleUpdateBrushSize = (value: number) => {
   Store.dispatch(updateUserSettingAction("brushSize", value));
 };
 
-const handleSetTool = (
-  event: { target: { value: AnnotationTool } },
-  previousSelectedTool: AnnotationTool,
-) => {
-  Store.dispatch(setToolAction(event.target.value, previousSelectedTool));
+const handleSetTool = (event: { target: { value: AnnotationTool } }) => {
+  Store.dispatch(setToolAction(event.target.value));
 };
 
 const handleCreateCell = () => {
@@ -387,8 +384,7 @@ export default function ToolbarView() {
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
-      const previousTool = activeTool;
-      Store.dispatch(setToolAction(AnnotationToolEnum.MOVE, previousTool));
+      Store.dispatch(setToolAction(AnnotationToolEnum.MOVE));
     }
   }, [activeTool, disabledInfoForCurrentTool]);
 
@@ -426,7 +422,7 @@ export default function ToolbarView() {
         if (document.activeElement) document.activeElement.blur();
       }}
     >
-      <Radio.Group onChange={evt => handleSetTool(evt, activeTool)} value={adaptedActiveTool}>
+      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
         <RadioButtonWithTooltip
           title={moveToolDescription}
           disabledTitle=""

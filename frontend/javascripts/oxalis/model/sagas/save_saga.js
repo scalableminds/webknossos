@@ -4,7 +4,6 @@
  */
 
 import { type Saga, type Task } from "redux-saga";
-import Maybe from "data.maybe";
 
 import type { Action } from "oxalis/model/actions/actions";
 import {
@@ -17,8 +16,22 @@ import {
   type InitializeVolumeTracingAction,
   setSegmentsActions,
 } from "oxalis/model/actions/volumetracing_actions";
+import {
+  AllUserBoundingBoxActions,
+  setUserBoundingBoxesAction,
+  type UserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import type {
+  OxalisState,
+  SkeletonTracing,
+  Flycam,
+  SaveQueueEntry,
+  CameraData,
+  UserBoundingBox,
+  SegmentMap,
+  VolumeTracing,
+} from "oxalis/store";
 import {
   PUSH_THROTTLE_TIME,
   SAVE_RETRY_WAITING_TIME,
@@ -33,18 +46,6 @@ import {
   type InitializeSkeletonTracingAction,
   setTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type {
-  OxalisState,
-  SkeletonTracing,
-  Flycam,
-  SaveQueueEntry,
-  CameraData,
-  UserBoundingBox,
-  SegmentMap,
-  VolumeTracing,
-} from "oxalis/store";
-import createProgressCallback from "libs/progress_callback";
-import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   type UndoAction,
   type RedoAction,
@@ -83,6 +84,9 @@ import { doWithToken } from "admin/admin_rest_api";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/accessors/dataset_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { selectQueue } from "oxalis/model/accessors/save_accessor";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
@@ -92,12 +96,8 @@ import Toast from "libs/toast";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
+import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
-import {
-  AllUserBoundingBoxActions,
-  setUserBoundingBoxesAction,
-  type UserBoundingBoxAction,
-} from "oxalis/model/actions/annotation_actions";
 import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
@@ -115,7 +115,11 @@ type UndoBucket = {
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
 };
 type VolumeUndoBuckets = Array<UndoBucket>;
-type VolumeAnnotationBatch = { buckets: VolumeUndoBuckets, segments: SegmentMap };
+type VolumeAnnotationBatch = {
+  buckets: VolumeUndoBuckets,
+  segments: SegmentMap,
+  tracingId: string,
+};
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
 type BoundingBoxUndoState = { type: "bounding_box", data: Array<UserBoundingBox> };
@@ -258,13 +262,17 @@ export function* collectUndoStates(): Saga<void> {
       } else if (finishAnnotationStrokeAction) {
         yield* join([...pendingCompressions]);
         bucketsAlreadyInUndoState.clear();
+        const activeVolumeTracing = yield* select(state => enforceActiveVolumeTracing(state));
         undoStack.push({
           type: "volume",
-          data: { buckets: currentVolumeUndoBuckets, segments: prevSegments },
+          data: {
+            buckets: currentVolumeUndoBuckets,
+            segments: prevSegments,
+            tracingId: activeVolumeTracing.tracingId,
+          },
         });
-        const segments = yield* select(state => enforceActiveVolumeTracing(state).segments);
         // The SegmentMap is immutable. So, no need to copy.
-        prevSegments = segments;
+        prevSegments = activeVolumeTracing.segments;
         currentVolumeUndoBuckets = [];
         pendingCompressions = [];
       } else if (userBoundingBoxAction) {
@@ -585,34 +593,33 @@ function* applyAndGetRevertingVolumeBatch(
   }
   // The SegmentMap is immutable. So, no need to copy.
 
-  // todo: the volume tracing id should be encoded in the undo stack
-  const currentSegments = yield* select(state => enforceActiveVolumeTracing(state).segments);
+  const activeVolumeTracing = yield* select(state => enforceActiveVolumeTracing(state));
+  const currentSegments = activeVolumeTracing.segments;
 
-  yield* put(setSegmentsActions(volumeAnnotationBatch.segments));
+  yield* put(setSegmentsActions(volumeAnnotationBatch.segments, activeVolumeTracing.tracingId));
   cube.triggerPushQueue();
 
   return {
     type: "volume",
-    data: { buckets: allCompressedBucketsOfCurrentState, segments: currentSegments },
+    data: {
+      buckets: allCompressedBucketsOfCurrentState,
+      segments: currentSegments,
+      tracingId: activeVolumeTracing.tracingId,
+    },
   };
 }
 
-export function* pushAnnotationAsync(): Saga<void> {
-  // todo: call for each volume tracing?
-  yield _all([_call(pushTracingTypeAsync, "skeleton"), _call(pushTracingTypeAsync, "volume")]);
-}
-
-export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
-  yield* take(
-    tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
-  );
+export function* pushTracingTypeAsync(
+  tracingType: "skeleton" | "volume",
+  tracingId: string,
+): Saga<void> {
   yield* put(setLastSaveTimestampAction(tracingType));
   while (true) {
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
 
-    saveQueue = yield* select(state => state.save.queue[tracingType]);
+    saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
     if (saveQueue.length === 0) {
       // Save queue is empty, wait for push event
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
@@ -624,9 +631,9 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     yield* put(setSaveBusyAction(true, tracingType));
     while (true) {
       // Send batches to the server until the save queue is empty
-      saveQueue = yield* select(state => state.save.queue[tracingType]);
+      saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
       if (saveQueue.length > 0) {
-        yield* call(sendRequestToServer, tracingType);
+        yield* call(sendRequestToServer, tracingType, tracingId);
       } else {
         break;
       }
@@ -666,13 +673,14 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
-export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<void> {
-  const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
+export function* sendRequestToServer(
+  tracingType: "skeleton" | "volume",
+  tracingId: string,
+): Saga<void> {
+  const fullSaveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const { version, type, tracingId } = yield* select(state =>
-    Maybe.fromNullable(state.tracing[tracingType]).get(),
-  );
+  const { version, type } = yield* select(state => selectTracing(state, tracingType, tracingId));
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
@@ -703,7 +711,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         setVersionNumberAction(version + compactedSaveQueue.length, tracingType, tracingId),
       );
       yield* put(setLastSaveTimestampAction(tracingType));
-      yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
+      yield* put(shiftSaveQueueAction(saveQueue.length, tracingType, tracingId));
       yield _call(markBucketsAsNotDirty, compactedSaveQueue);
       yield* call(toggleErrorHighlighting, false);
       return;
@@ -843,9 +851,18 @@ function selectTracing(
 export function* saveTracingTypeAsync(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
 ): Saga<void> {
+  /*
+    Listen to changes to the annotation and derive UpdateActions from the
+    old and new state.
+
+    The actual push to the server is done by the forked pushTracingTypeAsync saga.
+  */
+
   const tracingType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
+
+  yield* fork(pushTracingTypeAsync, tracingType, tracingId);
 
   let prevTracing = yield* select(state => selectTracing(state, tracingType, tracingId));
   let prevFlycam = yield* select(state => state.flycam);
@@ -901,4 +918,4 @@ export function* saveTracingTypeAsync(
   }
 }
 
-export default [pushAnnotationAsync, saveTracingAsync, collectUndoStates];
+export default [saveTracingAsync, collectUndoStates];

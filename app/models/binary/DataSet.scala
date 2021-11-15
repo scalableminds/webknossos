@@ -295,7 +295,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     val inclusionPredicate =
       if (existingDataSetIds.isEmpty) "true"
       else s"_id not in ${writeStructTupleWithQuotes(existingDataSetIds.map(_.id))}"
-    val notAlreadyInactiveStatus = s"status not in ${writeStructTupleWithQuotes(inactiveStatusList)}"
+    val statusNotAlreadyInactive = s"status not in ${writeStructTupleWithQuotes(inactiveStatusList)}"
     val deleteResolutionsQuery =
       sqlu"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and #$inclusionPredicate)"""
     val deleteLayersQuery =
@@ -303,7 +303,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     val setToUnusableQuery =
       sqlu"""update webknossos.datasets
              set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
-             where _dataStore = $dataStoreName and #$inclusionPredicate and #$notAlreadyInactiveStatus"""
+             where _dataStore = $dataStoreName and #$inclusionPredicate and #$statusNotAlreadyInactive"""
     for {
       _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()

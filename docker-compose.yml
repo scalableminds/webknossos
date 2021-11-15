@@ -22,6 +22,7 @@ services:
       - -Djava.net.preferIPv4Stack=true
       - -Dtracingstore.fossildb.address=fossildb
       - -Dtracingstore.redis.address=redis
+      - -Ddatastore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -DwebKnossos.sampleOrganization.enabled=false
       # the following lines need to be adapted for non-localhost deployments
@@ -52,6 +53,10 @@ services:
       - -Dhttp.port=9090
       - -Dhttp.uri=http://webknossos-datastore:9090
       - -Ddatastore.webKnossos.uri=webknossos:9000
+      - -Dtracingstore.redis.address=redis
+    depends_on:
+      redis:
+        condition: service_healthy
 
   webknossos-tracingstore:
     build: webknossos-tracingstore
@@ -139,6 +144,7 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dtracingstore.fossildb.address=fossildb
           -Dtracingstore.redis.address=redis"
+          -Ddatastore.redis.address=redis"
     stdin_open: true
 
   # Tests
@@ -179,6 +185,7 @@ services:
         "testOnly e2e.* --
           -Dtracingstore.fossildb.address=fossildb
           -Dtracingstore.redis.address=redis"
+          -Ddatastore.redis.address=redis"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 

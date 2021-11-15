@@ -149,7 +149,7 @@ Expects:
                   val id = DataSourceId(name, organization)
                   val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                   for {
-                    isKnownUpload <- uploadService.isKnownFileUpload(uploadId)
+                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadId)
                     _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadId,

@@ -45,8 +45,8 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val actorPoolSize: Int = get[Int]("datastore.isosurface.actorPoolSize")
     }
     object Redis {
-      val address: String = get[String]("tracingstore.redis.address")
-      val port: Int = get[Int]("tracingstore.redis.port")
+      val address: String = get[String]("datastore.redis.address")
+      val port: Int = get[Int]("datastore.redis.port")
     }
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")

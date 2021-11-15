@@ -8,7 +8,7 @@
 - fixes #
 
 ------
-Please delete unneded items, merge only when none are left open:
+(Please delete unneded items, merge only when none are left open)
 - [ ] Updated [(unreleased) changelog](../blob/master/CHANGELOG.unreleased.md#unreleased)
 - [ ] Updated [(unreleased) migration guide](../blob/master/MIGRATIONS.unreleased.md#unreleased) if applicable
 - [ ] Updated [documentation](../blob/master/docs) if applicable

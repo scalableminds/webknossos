@@ -1,6 +1,6 @@
 // @flow
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
-import { DeleteOutlined, DownloadOutlined, EditOutlined } from "@ant-design/icons";
+import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 
@@ -286,13 +286,6 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
   );
 }
 
-export type UserBoundingBoxInputUpdate = {
-  boundingBox?: Vector6,
-  name?: string,
-  color?: Vector3,
-  isVisible?: boolean,
-};
-
 type UserBoundingBoxInputProps = {
   value: Vector6,
   name: string,
@@ -300,9 +293,13 @@ type UserBoundingBoxInputProps = {
   isVisible: boolean,
   isExportEnabled: boolean,
   tooltipTitle: string,
-  onChange: UserBoundingBoxInputUpdate => void,
+  onBoundingChange: Vector6 => void,
   onDelete: () => void,
   onExport: () => void,
+  onGoToBoundingBox: () => void,
+  onVisibilityChange: boolean => void,
+  onNameChange: string => void,
+  onColorChange: Vector3 => void,
 };
 
 type State = {
@@ -363,33 +360,40 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      this.props.onChange({ boundingBox: Utils.numberArrayToVector6(value) });
+      this.props.onBoundingChange(Utils.numberArrayToVector6(value));
     }
     this.setState({ text, isValid });
   };
 
   handleColorChange = (color: Vector3) => {
     color = ((color.map(colorPart => colorPart / 255): any): Vector3);
-    this.props.onChange({ color });
-  };
-
-  handleVisibilityChange = (isVisible: boolean) => {
-    this.props.onChange({ isVisible });
+    this.props.onColorChange(color);
   };
 
   handleNameChanged = (evt: SyntheticInputEvent<>) => {
     const currentEnteredName = evt.target.value;
     if (currentEnteredName !== this.props.name) {
-      this.props.onChange({ name: evt.target.value });
+      this.props.onNameChange(currentEnteredName);
     }
   };
 
   render() {
     const { name } = this.state;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-    const { tooltipTitle, color, isVisible, onDelete, onExport, isExportEnabled } = this.props;
+    const {
+      tooltipTitle,
+      color,
+      isVisible,
+      onDelete,
+      onExport,
+      isExportEnabled,
+      onGoToBoundingBox,
+    } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
-    const iconStyle = { margin: "auto 0px auto 6px" };
+    const iconStyle = {
+      marginRight: 0,
+      marginLeft: 6,
+    };
     const exportIconStyle = isExportEnabled
       ? iconStyle
       : { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
@@ -403,19 +407,19 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
         </Tooltip>
       </Col>
     ) : null;
-    const nameColSpan = exportColumn == null ? 17 : 15;
     return (
       <React.Fragment>
         <Row style={{ marginBottom: 10 }}>
           <Col span={5}>
             <Switch
               size="small"
-              onChange={this.handleVisibilityChange}
+              onChange={this.props.onVisibilityChange}
               checked={isVisible}
               style={{ margin: "auto 0px" }}
             />
           </Col>
-          <Col span={nameColSpan}>
+
+          <Col span={15}>
             <Input
               defaultValue={name}
               placeholder="Bounding Box Name"
@@ -437,9 +441,11 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
         </Row>
         <Row style={{ marginBottom: 20 }} align="top">
           <Col span={5}>
-            <label className="settings-label"> Bounds: </label>
+            <Tooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
+              <label className="settings-label"> Bounds: </label>
+            </Tooltip>
           </Col>
-          <Col span={nameColSpan}>
+          <Col span={15}>
             <Tooltip
               trigger={["focus"]}
               title={tooltipTitle}
@@ -463,6 +469,11 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               className="ant-btn"
               style={iconStyle}
             />
+          </Col>
+          <Col span={2}>
+            <Tooltip title="Go to the center of the bounding box.">
+              <ScanOutlined onClick={onGoToBoundingBox} style={{ ...iconStyle, marginTop: 6 }} />
+            </Tooltip>
           </Col>
         </Row>
       </React.Fragment>

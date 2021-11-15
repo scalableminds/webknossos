@@ -113,14 +113,24 @@ export type UserBoundingBoxToServer = {
   isVisible?: boolean,
 };
 
-export type UserBoundingBox = {
-  id: number,
+export type UserBoundingBoxWithoutIdMaybe = {|
+  boundingBox?: BoundingBoxType,
+  name?: string,
+  color?: Vector3,
+  isVisible?: boolean,
+|};
+
+export type UserBoundingBoxWithoutId = {|
   boundingBox: BoundingBoxType,
   name: string,
   color: Vector3,
   isVisible: boolean,
-};
+|};
 
+export type UserBoundingBox = {
+  id: number,
+  ...UserBoundingBoxWithoutId,
+};
 export type MutableTree = {|
   treeId: number,
   groupId: ?number,

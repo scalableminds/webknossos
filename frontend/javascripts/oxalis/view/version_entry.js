@@ -49,7 +49,7 @@ const descriptionFns = {
     icon: <RocketOutlined />,
   }),
   updateUserBoundingBoxes: (): Description => ({
-    description: "Updated a user bounding box.",
+    description: "Updated a bounding box.",
     icon: <CodepenOutlined />,
   }),
   removeFallbackLayer: (): Description => ({

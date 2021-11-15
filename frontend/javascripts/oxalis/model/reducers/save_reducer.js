@@ -1,8 +1,4 @@
-/**
- * save_reducer.js
- * @flow
- */
-
+// @flow
 import _ from "lodash";
 import update from "immutability-helper";
 
@@ -53,6 +49,16 @@ function updateVersion(state, action) {
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
+    case "INITIALIZE_VOLUMETRACING": {
+      // Set up empty save queue array for volume tracing
+      const newVolumesQueue = {
+        ...state.save.queue.volumes,
+        [action.tracing.id]: [],
+      };
+
+      return updateKey2(state, "save", "queue", { volumes: newVolumesQueue });
+    }
+
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
       // Only report tracing statistics, if a "real" update to the tracing happened
       const stats = _.some(action.items, ua => ua.name !== "updateTracing")

@@ -915,6 +915,9 @@ export function isLayerVisible(
   viewMode: ViewMode,
 ): boolean {
   const layerConfig = datasetConfiguration.layers[layerName];
+  if (!layerConfig) {
+    return false;
+  }
   const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
   const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
 

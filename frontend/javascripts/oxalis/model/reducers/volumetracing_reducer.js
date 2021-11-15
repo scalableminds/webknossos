@@ -189,6 +189,12 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
     // pass
   }
 
+  if (state.tracing.volumes.length === 0) {
+    // If no volume exists yet (i.e., it wasn't initialized, yet),
+    // the following reducer code should not run.
+    return state;
+  }
+
   const volumeLayer = getRequestedOrVisibleSegmentationLayer(state, null);
 
   if (volumeLayer == null || volumeLayer.tracingId == null) {

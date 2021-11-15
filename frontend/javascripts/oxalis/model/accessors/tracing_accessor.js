@@ -1,8 +1,13 @@
 // @flow
 
-import type { ServerTracing, TracingType } from "types/api_flow_types";
-import { TracingTypeEnum } from "types/api_flow_types";
-import type { Tracing, VolumeTracing, SkeletonTracing, ReadOnlyTracing } from "oxalis/store";
+import type {
+  OxalisState,
+  ReadOnlyTracing,
+  SkeletonTracing,
+  Tracing,
+  VolumeTracing,
+} from "oxalis/store";
+import { type ServerTracing, type TracingType, TracingTypeEnum } from "types/api_flow_types";
 
 export function maybeGetSomeTracing(
   tracing: Tracing,
@@ -45,4 +50,22 @@ export function getTracingType(tracing: Tracing): TracingType {
   throw new Error("The active annotation does not contain skeletons nor volume data");
 }
 
-export default {};
+export function selectTracing(
+  state: OxalisState,
+  tracingType: "skeleton" | "volume",
+  tracingId: string,
+): SkeletonTracing | VolumeTracing {
+  if (tracingType === "skeleton") {
+    if (state.tracing.skeleton == null) {
+      throw new Error(`Skeleton tracing with id ${tracingId} not found`);
+    }
+    return state.tracing.skeleton;
+  }
+
+  const volumeTracing = state.tracing.volumes.find(tracing => tracing.tracingId === tracingId);
+  if (volumeTracing == null) {
+    throw new Error(`Volume tracing with id ${tracingId} not found`);
+  }
+
+  return volumeTracing;
+}

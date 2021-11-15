@@ -1,8 +1,4 @@
-/*
- * save_saga.js
- * @flow
- */
-
+// @flow
 import { type Saga, type Task } from "redux-saga";
 
 import type { Action } from "oxalis/model/actions/actions";
@@ -84,7 +80,7 @@ import { doWithToken } from "admin/admin_rest_api";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/accessors/dataset_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { maybeGetSomeTracing, selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
@@ -826,26 +822,6 @@ export function performDiffTracing(
 export function* saveTracingAsync(): Saga<void> {
   yield _takeEvery("INITIALIZE_SKELETONTRACING", saveTracingTypeAsync);
   yield _takeEvery("INITIALIZE_VOLUMETRACING", saveTracingTypeAsync);
-}
-
-function selectTracing(
-  state: OxalisState,
-  tracingType: "skeleton" | "volume",
-  tracingId: string,
-): SkeletonTracing | VolumeTracing {
-  if (tracingType === "skeleton") {
-    if (state.tracing.skeleton == null) {
-      throw new Error(`Skeleton tracing with id ${tracingId} not found`);
-    }
-    return state.tracing.skeleton;
-  }
-
-  const volumeTracing = state.tracing.volumes.find(tracing => tracing.tracingId === tracingId);
-  if (volumeTracing == null) {
-    throw new Error(`Volume tracing with id ${tracingId} not found`);
-  }
-
-  return volumeTracing;
 }
 
 export function* saveTracingTypeAsync(

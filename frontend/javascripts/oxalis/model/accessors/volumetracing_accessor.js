@@ -78,7 +78,6 @@ export const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
   _getResolutionInfoOfActiveSegmentationTracingLayer,
 );
 
-// todo: adapt callers to multiple volume annotations
 export function serverTracingAsVolumeTracings(
   tracings: ?Array<ServerTracing>,
 ): Array<ServerVolumeTracing> {

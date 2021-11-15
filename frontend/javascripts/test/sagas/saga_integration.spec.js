@@ -12,6 +12,7 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
+import { tracing as VOLUME_TRACING } from "test/fixtures/volumetracing_server_objects";
 
 const {
   createTreeMapFromTreeArray,
@@ -103,13 +104,14 @@ test.serial("Save actions should be chunked after compacting (3/3)", t => {
 
   Store.dispatch(discardSaveQueuesAction());
   t.deepEqual(Store.getState().save.queue.skeleton, []);
-  t.deepEqual(Store.getState().save.queue.volume, []);
+  t.deepEqual(Store.getState().save.queue.volumes[VOLUME_TRACING.id], []);
 
   // Delete some node, NOTE that this is not the node in the middle of the tree!
   // The addTreesAndGroupsAction gives new ids to nodes and edges in a non-deterministic way.
   const middleNodeId = trees[0].nodes[nodeCount / 2].id;
   Store.dispatch(deleteNodeAction(middleNodeId));
-  const { skeleton: skeletonSaveQueue, volume: volumeSaveQueue } = Store.getState().save.queue;
+  const { skeleton: skeletonSaveQueue, volumes } = Store.getState().save.queue;
+  const volumeSaveQueue = volumes[VOLUME_TRACING.id];
 
   // There should only be one chunk
   t.is(skeletonSaveQueue.length, 1);

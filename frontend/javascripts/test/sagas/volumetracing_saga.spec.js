@@ -51,6 +51,7 @@ const volumeTracing: VolumeTracing = {
   contourTracingMode: ContourModeEnum.DRAW,
 };
 
+// todo: use VolumeTracingReducer here? would need refactoring
 const serverVolumeTracing: ServerVolumeTracing = {
   id: "tracingId",
   elementClass: "uint32",

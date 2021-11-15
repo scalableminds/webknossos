@@ -175,6 +175,7 @@ const getUserBoundingBoxesFromState = state => {
 };
 
 function getNullableSegments(state: OxalisState): ?SegmentMap {
+  // todo
   if (state.tracing.volume) {
     return state.tracing.volume.segments;
   }

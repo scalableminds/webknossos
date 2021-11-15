@@ -164,7 +164,7 @@
     "javascript-natural-sort": "^0.7.1",
     "js-priority-queue": "^0.1.5",
     "jsonschema": "^1.2.4",
-    "jszip": "^3.5.0",
+    "jszip": "^3.7.0",
     "lodash": "^4.17.21",
     "lz4js": "^0.2.0",
     "memoize-one": "^4.0.2",

@@ -34,9 +34,11 @@ import Constants, {
   type OverwriteMode,
   OverwriteModeEnum,
   FillModeEnum,
+  VolumeTools,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -44,8 +46,8 @@ const narrowButtonStyle = {
 };
 
 const imgStyleForSpaceyIcons = {
-  width: 14,
-  height: 14,
+  width: 19,
+  height: 19,
   lineHeight: 10,
   marginTop: -2,
 };
@@ -96,6 +98,10 @@ const handleSetTool = (event: { target: { value: AnnotationTool } }) => {
 
 const handleCreateCell = () => {
   Store.dispatch(createCellAction());
+};
+
+const handleAddNewUserBoundingBox = () => {
+  Store.dispatch(addUserBoundingBoxAction());
 };
 
 const handleSetOverwriteMode = (event: { target: { value: OverwriteMode } }) => {
@@ -245,6 +251,23 @@ function CreateCellButton() {
         </ButtonComponent>
       </Tooltip>
     </Badge>
+  );
+}
+
+function CreateNewBoundingBoxButton() {
+  return (
+    <Tooltip title="Create a new bounding box centered around the current position.">
+      <ButtonComponent
+        onClick={handleAddNewUserBoundingBox}
+        style={{ paddingLeft: 9, paddingRight: 9 }}
+      >
+        <img
+          src="/assets/images/new-bounding-box.svg"
+          alt="New Bounding Box Icon"
+          style={imgStyleForSpaceyIcons}
+        />
+      </ButtonComponent>
+    </Tooltip>
   );
 }
 
@@ -552,6 +575,23 @@ export default function ToolbarView() {
                 }}
               />
             </RadioButtonWithTooltip>
+            <RadioButtonWithTooltip
+              title="Bounding Box Tool - Create, resize and modify bounding boxes."
+              disabled={false}
+              style={narrowButtonStyle}
+              value={AnnotationToolEnum.BOUNDING_BOX}
+            >
+              <img
+                src="/assets/images/bounding-box.svg"
+                alt="Bounding Box Icon"
+                style={{
+                  opacity: disabledInfosForTools[AnnotationToolEnum.BOUNDING_BOX].isDisabled
+                    ? 0.5
+                    : 1,
+                  ...imgStyleForSpaceyIcons,
+                }}
+              />
+            </RadioButtonWithTooltip>
           </React.Fragment>
         ) : null}
       </Radio.Group>
@@ -575,8 +615,8 @@ function ToolSpecificSettings({
   isShiftPressed,
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
-  const showCreateCellButton =
-    isVolumeSupported && !showCreateTreeButton && adaptedActiveTool !== AnnotationToolEnum.MOVE;
+  const showNewBoundingBoxButton = adaptedActiveTool === AnnotationToolEnum.BOUNDING_BOX;
+  const showCreateCellButton = isVolumeSupported && VolumeTools.includes(adaptedActiveTool);
   const showChangeBrushSizeButton =
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationToolEnum.BRUSH ||
@@ -588,6 +628,12 @@ function ToolSpecificSettings({
         <Space size={0} className="antd-legacy-group" style={{ marginLeft: 10 }}>
           <CreateTreeButton />
           <AdditionalSkeletonModesButtons />
+        </Space>
+      ) : null}
+
+      {showNewBoundingBoxButton ? (
+        <Space size={0} className="antd-legacy-group" style={{ marginLeft: 10 }}>
+          <CreateNewBoundingBoxButton />
         </Space>
       ) : null}
 

@@ -4,12 +4,16 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import { V3 } from "libs/mjs";
 import {
   type StateShape1,
   updateKey,
   updateKey2,
   updateKey4,
 } from "oxalis/model/helpers/deep_update";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import * as Utils from "libs/utils";
+import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
@@ -77,16 +81,64 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, action.userBoundingBoxes);
     }
 
-    case "ADD_USER_BOUNDING_BOXES": {
-      const tracing = state.tracing.skeleton || state.tracing.volumes[0] || state.tracing.readOnly;
+    case "CHANGE_USER_BOUNDING_BOX": {
+      const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {
         return state;
       }
-      let highestBoundingBoxId = Math.max(-1, ...tracing.userBoundingBoxes.map(bb => bb.id));
-      const additionalUserBoundingBoxes = action.userBoundingBoxes.map(bb => {
-        highestBoundingBoxId++;
-        return { ...bb, id: highestBoundingBoxId };
-      });
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
+        bbox.id === action.id
+          ? {
+              id: bbox.id,
+              ...bbox,
+              ...action.newProps,
+            }
+          : bbox,
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
+    case "ADD_NEW_USER_BOUNDING_BOX": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const { userBoundingBoxes } = tracing;
+      const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
+      const boundingBoxId = highestBoundingBoxId + 1;
+      let newBoundingBox: UserBoundingBox;
+      if (action.newBoundingBox != null) {
+        newBoundingBox = ({ id: boundingBoxId, ...action.newBoundingBox }: UserBoundingBox);
+      } else {
+        const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
+        newBoundingBox = {
+          boundingBox: { min, max },
+          id: boundingBoxId,
+          name: `Bounding box ${boundingBoxId}`,
+          color: Utils.getRandomColor(),
+          isVisible: true,
+        };
+        if (action.center != null) {
+          newBoundingBox.boundingBox = {
+            min: V3.toArray(V3.round(V3.sub(action.center, halfBoxExtent))),
+            max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
+          };
+        }
+      }
+      const updatedUserBoundingBoxes = [...userBoundingBoxes, newBoundingBox];
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
+    case "ADD_USER_BOUNDING_BOXES": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map(bb => bb.id));
+      const additionalUserBoundingBoxes = action.userBoundingBoxes.map((bb, index) => ({
+        ...bb,
+        id: highestBoundingBoxId + index + 1,
+      }));
       const mergedUserBoundingBoxes = [
         ...tracing.userBoundingBoxes,
         ...additionalUserBoundingBoxes,
@@ -94,7 +146,17 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
     }
 
-    case "UPDATE_LOCAL_MESH_METADATA":
+    case "DELETE_USER_BOUNDING_BOX": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
+        bbox => bbox.id !== action.id,
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
     case "UPDATE_REMOTE_MESH_METADATA": {
       const { id, meshShape } = action;
       const newMeshes = state.tracing.meshes.map(mesh => {

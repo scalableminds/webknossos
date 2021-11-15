@@ -8,6 +8,7 @@ import {
   type ShowContextMenuFunction,
   type AnnotationTool,
   AnnotationToolEnum,
+  OrthoViewValuesWithoutTDView,
 } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
@@ -19,12 +20,21 @@ import {
 } from "oxalis/controller/combinations/segmentation_handlers";
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
+import {
+  type SelectedEdge,
+  getClosestHoveredBoundingBox,
+  handleResizingBoundingBox,
+  highlightAndSetCursorOnHoveredBoundingBox,
+} from "oxalis/controller/combinations/bounding_box_handlers";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
+import { document } from "libs/window";
 import api from "oxalis/api/internal_api";
 
 /*
@@ -97,14 +107,7 @@ export class MoveTool {
         handleClickSegment(pos);
       },
       pinch: delta => MoveHandlers.zoom(delta, true),
-      mouseMove: (delta: Point2, position: Point2, id, event) => {
-        // Always set the correct mouse position. Otherwise, using alt + mouse move and
-        // alt + scroll won't result in the correct zoomToMouse behavior.
-        MoveHandlers.setMousePosition(position);
-        if (event.altKey && !event.shiftKey && !event.ctrlKey) {
-          MoveHandlers.handleMovePlane(delta);
-        }
-      },
+      mouseMove: MoveHandlers.moveWhenAltIsPressed,
       out: () => {
         MoveHandlers.setMousePosition(null);
       },
@@ -121,7 +124,7 @@ export class MoveTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ) {
     return (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      SkeletonHandlers.openContextMenu(
+      SkeletonHandlers.handleOpenContextMenu(
         planeView,
         pos,
         plane,
@@ -153,6 +156,8 @@ export class MoveTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class SkeletonTool {
@@ -302,6 +307,8 @@ export class SkeletonTool {
       rightClick: useLegacyBindings && !shiftKey ? "Place Node" : "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class DrawTool {
@@ -388,7 +395,7 @@ export class DrawTool {
           return;
         }
 
-        SkeletonHandlers.openContextMenu(
+        SkeletonHandlers.handleOpenContextMenu(
           planeView,
           pos,
           plane,
@@ -423,6 +430,8 @@ export class DrawTool {
       rightClick,
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class EraseTool {
@@ -445,7 +454,7 @@ export class EraseTool {
       },
 
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        SkeletonHandlers.openContextMenu(
+        SkeletonHandlers.handleOpenContextMenu(
           planeView,
           pos,
           plane,
@@ -473,6 +482,8 @@ export class EraseTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class PickCellTool {
@@ -496,6 +507,8 @@ export class PickCellTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
 }
 
 export class FillCellTool {
@@ -528,11 +541,95 @@ export class FillCellTool {
       rightClick: "Context Menu",
     };
   }
+
+  static onToolDeselected() {}
+}
+
+export class BoundingBoxTool {
+  static getPlaneMouseControls(
+    planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): * {
+    let primarySelectedEdge: ?SelectedEdge = null;
+    let secondarySelectedEdge: ?SelectedEdge = null;
+    return {
+      leftDownMove: (delta: Point2, pos: Point2, _id: ?string, _event: MouseEvent) => {
+        if (primarySelectedEdge != null) {
+          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
+        } else {
+          MoveHandlers.handleMovePlane(delta);
+        }
+      },
+      leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        const hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
+        if (hoveredEdgesInfo) {
+          [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+          getSceneController().highlightUserBoundingBox(primarySelectedEdge.boxId);
+        }
+      },
+
+      leftMouseUp: () => {
+        if (primarySelectedEdge) {
+          Store.dispatch(finishedResizingUserBoundingBoxAction(primarySelectedEdge.boxId));
+        }
+        primarySelectedEdge = null;
+        secondarySelectedEdge = null;
+        getSceneController().highlightUserBoundingBox(null);
+      },
+
+      mouseMove: (delta: Point2, position: Point2, _id, event: MouseEvent) => {
+        if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
+          MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
+          highlightAndSetCursorOnHoveredBoundingBox(delta, position, planeId);
+        }
+      },
+
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlKey: boolean,
+    _altKey: boolean,
+  ): Object {
+    return {
+      leftDrag: "Resize Bounding Boxes",
+      rightClick: "Context Menu",
+    };
+  }
+
+  static onToolDeselected() {
+    const { body } = document;
+    if (body == null) {
+      return;
+    }
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const inputCatcher = document.getElementById(`inputcatcher_${planeId}`);
+      if (inputCatcher) {
+        inputCatcher.style.cursor = "auto";
+      }
+    }
+    getSceneController().highlightUserBoundingBox(null);
+  }
 }
 
 const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
+  [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,
   [AnnotationToolEnum.ERASE_TRACE]: EraseTool,

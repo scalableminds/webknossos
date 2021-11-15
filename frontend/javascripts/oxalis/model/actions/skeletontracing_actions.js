@@ -18,6 +18,7 @@ import Store, {
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
+import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 
 export type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -198,8 +199,6 @@ export const SkeletonTracingSaveRelevantActions = [
   "SHUFFLE_ALL_TREE_COLORS",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
-  "SET_USER_BOUNDING_BOXES",
-  "ADD_USER_BOUNDING_BOXES",
   "SET_TREE_GROUPS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
@@ -210,6 +209,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_TREE_COLOR",
   // Composited actions, only dispatched using `batchActions`
   "DELETE_GROUP_AND_TREES",
+  ...AllUserBoundingBoxActions,
 ];
 
 const noAction = (): NoAction => ({

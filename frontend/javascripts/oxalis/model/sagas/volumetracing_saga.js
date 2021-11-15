@@ -14,6 +14,15 @@ import {
   type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
+  addUserBoundingBoxAction,
+  type AddIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
+import {
+  updateTemporarySettingAction,
+  type UpdateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import {
   type Saga,
   _takeEvery,
   _takeLatest,
@@ -36,11 +45,6 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
-import {
-  addUserBoundingBoxesAction,
-  type AddIsosurfaceAction,
-} from "oxalis/model/actions/annotation_actions";
-import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
 import {
   enforceActiveVolumeTracing,
@@ -61,17 +65,12 @@ import {
   getRenderableResolutionForSegmentationTracing,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   isVolumeDrawingTool,
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
-import {
-  updateTemporarySettingAction,
-  type UpdateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
@@ -637,24 +636,15 @@ export function* floodFill(): Saga<void> {
         },
       );
 
-      const userBoundingBoxes = yield* select(
-        state => getSomeTracing(state.tracing).userBoundingBoxes,
-      );
-      const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
-      const boundingBoxId = highestBoundingBoxId + 1;
-
       yield* put(
-        addUserBoundingBoxesAction([
-          {
-            id: boundingBoxId,
-            boundingBox: coveredBoundingBox,
-            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-              ",",
-            )}, timestamp=${new Date().getTime()})`,
-            color: Utils.getRandomColor(),
-            isVisible: true,
-          },
-        ]),
+        addUserBoundingBoxAction({
+          boundingBox: coveredBoundingBox,
+          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+            ",",
+          )}, timestamp=${new Date().getTime()})`,
+          color: Utils.getRandomColor(),
+          isVisible: true,
+        }),
       );
     } else {
       yield* call(progressCallback, true, "Floodfill done.");

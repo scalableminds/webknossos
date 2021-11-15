@@ -18,6 +18,7 @@ type ShiftSaveQueueAction = {
   type: "SHIFT_SAVE_QUEUE",
   count: number,
   tracingType: TracingType,
+  tracingId: string,
 };
 type DiscardSaveQueuesAction = { type: "DISCARD_SAVE_QUEUES" };
 type SetSaveBusyAction = { type: "SET_SAVE_BUSY", isBusy: boolean, tracingType: TracingType };
@@ -30,6 +31,7 @@ type SetVersionNumberAction = {
   type: "SET_VERSION_NUMBER",
   version: number,
   tracingType: TracingType,
+  tracingId: string,
 };
 export type UndoAction = { type: "UNDO", callback?: () => void };
 export type RedoAction = { type: "REDO", callback?: () => void };
@@ -66,10 +68,12 @@ export const saveNowAction = (): SaveNowAction => ({
 export const shiftSaveQueueAction = (
   count: number,
   tracingType: TracingType,
+  tracingId: string,
 ): ShiftSaveQueueAction => ({
   type: "SHIFT_SAVE_QUEUE",
   count,
   tracingType,
+  tracingId,
 });
 
 export const discardSaveQueuesAction = (): DiscardSaveQueuesAction => ({
@@ -96,10 +100,12 @@ export const setLastSaveTimestampAction = (
 export const setVersionNumberAction = (
   version: number,
   tracingType: TracingType,
+  tracingId: string,
 ): SetVersionNumberAction => ({
   type: "SET_VERSION_NUMBER",
   version,
   tracingType,
+  tracingId,
 });
 
 export const undoAction = (callback?: () => void): UndoAction => ({

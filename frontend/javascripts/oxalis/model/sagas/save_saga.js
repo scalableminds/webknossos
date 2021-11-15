@@ -521,6 +521,7 @@ function* applyAndGetRevertingVolumeBatch(
 }
 
 export function* pushAnnotationAsync(): Saga<void> {
+  // todo: call for each volume tracing?
   yield _all([_call(pushTracingTypeAsync, "skeleton"), _call(pushTracingTypeAsync, "volume")]);
 }
 
@@ -621,7 +622,9 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         );
       }
 
-      yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
+      yield* put(
+        setVersionNumberAction(version + compactedSaveQueue.length, tracingType, tracingId),
+      );
       yield* put(setLastSaveTimestampAction(tracingType));
       yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
       yield _call(markBucketsAsNotDirty, compactedSaveQueue);

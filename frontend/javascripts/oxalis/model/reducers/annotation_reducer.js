@@ -29,7 +29,7 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
   }));
 
   const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
-  const maybeVolumeUpdater = { volume: { $set: newVolumes } };
+  const maybeVolumeUpdater = { volumes: { $set: newVolumes } };
   const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};
   return update(state, {
     tracing: {

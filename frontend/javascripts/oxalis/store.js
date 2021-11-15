@@ -409,8 +409,12 @@ export type SaveState = {
   +isBusyInfo: IsBusyInfo,
   +queue: {
     +skeleton: Array<SaveQueueEntry>,
-    +volume: Array<SaveQueueEntry>,
+    +volumes: {
+      [key: string]: Array<SaveQueueEntry>,
+    },
   },
+  // todo: unused and wrong definition (is used as a dict).
+  // fix or remove?
   +lastSaveTimestamp: number,
   +progressInfo: ProgressInfo,
 };
@@ -506,6 +510,7 @@ export type OxalisState = {|
   +userConfiguration: UserConfiguration,
   +temporaryConfiguration: TemporaryConfiguration,
   +dataset: APIDataset,
+  // todo: should probably be renamed to annotation
   +tracing: Tracing,
   +task: ?Task,
   +save: SaveState,

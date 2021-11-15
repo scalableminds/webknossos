@@ -133,12 +133,15 @@ function getOldestUnsavedTimestamp(saveQueue): ?number {
   if (saveQueue.skeleton.length > 0) {
     oldestUnsavedTimestamp = saveQueue.skeleton[0].timestamp;
   }
-  if (saveQueue.volume.length > 0) {
-    const oldestVolumeTimestamp = saveQueue.volume[0].timestamp;
-    oldestUnsavedTimestamp = Math.min(
-      oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,
-      oldestVolumeTimestamp,
-    );
+  for (const volumeQueueKey of Object.keys(saveQueue.volumes)) {
+    const volumeQueue = saveQueue.volumes[volumeQueueKey];
+    if (volumeQueue.length > 0) {
+      const oldestVolumeTimestamp = volumeQueue[0].timestamp;
+      oldestUnsavedTimestamp = Math.min(
+        oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,
+        oldestVolumeTimestamp,
+      );
+    }
   }
   return oldestUnsavedTimestamp;
 }

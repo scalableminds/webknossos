@@ -102,14 +102,26 @@ class VersionList extends React.Component<Props, State> {
 
   handleRestoreVersion = async (version: number) => {
     if (this.props.allowUpdate) {
-      Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
-      Store.dispatch(pushSaveQueueTransaction([revertToVersion(version)], this.props.tracingType));
+      Store.dispatch(
+        setVersionNumberAction(
+          this.getNewestVersion(),
+          this.props.tracingType,
+          this.props.tracing.tracingId,
+        ),
+      );
+      Store.dispatch(
+        pushSaveQueueTransaction(
+          [revertToVersion(version)],
+          this.props.tracingType,
+          this.props.tracing.tracingId,
+        ),
+      );
       await Model.ensureSavedState();
       Store.dispatch(setVersionRestoreVisibilityAction(false));
       Store.dispatch(setAnnotationAllowUpdateAction(true));
     } else {
-      const { annotationType, annotationId, volume } = Store.getState().tracing;
-      const includesVolumeFallbackData = volume != null && volume.fallbackLayer != null;
+      const { annotationType, annotationId, volumes } = Store.getState().tracing;
+      const includesVolumeFallbackData = volumes.some(volume => volume.fallbackLayer != null);
       downloadNml(annotationId, annotationType, includesVolumeFallbackData, {
         // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [this.props.tracingType]: version,

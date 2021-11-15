@@ -237,7 +237,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
           if (oldVolumeTracing) {
             Store.dispatch(importVolumeTracingAction());
-            Store.dispatch(setVersionNumberAction(oldVolumeTracing.version + 1, "volume"));
+            Store.dispatch(
+              setVersionNumberAction(
+                oldVolumeTracing.version + 1,
+                "volume",
+                oldVolumeTracing.tracingId,
+              ),
+            );
             Store.dispatch(setMaxCellAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
             await api.data.reloadBuckets(oldVolumeTracing.tracingId);

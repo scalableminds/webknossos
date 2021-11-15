@@ -166,6 +166,7 @@ test("VolumeTracing should create an existing cell and not update the maxCellId"
   const createCellAction = VolumeTracingActions.createCellAction();
   const alteredState = update(initialState, {
     tracing: {
+      // todo
       volume: { maxCellId: { $set: 5 } },
     },
   });

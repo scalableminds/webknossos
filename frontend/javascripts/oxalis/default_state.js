@@ -156,7 +156,7 @@ const defaultState: OxalisState = {
   save: {
     queue: {
       skeleton: [],
-      volume: [],
+      volumes: {},
     },
     isBusyInfo: {
       skeleton: false,

@@ -90,15 +90,15 @@ class VersionView extends React.Component<Props, State> {
                 />
               </TabPane>
             ) : null}
-            {this.props.tracing.volume != null ? (
+            {this.props.tracing.volumes.map(volumeTracing => (
               <TabPane tab="Volume" key="volume">
                 <VersionList
                   tracingType="volume"
-                  tracing={this.props.tracing.volume}
+                  tracing={volumeTracing}
                   allowUpdate={this.state.initialAllowUpdate}
                 />
               </TabPane>
-            ) : null}
+            ))}
           </Tabs>
         </div>
       </div>

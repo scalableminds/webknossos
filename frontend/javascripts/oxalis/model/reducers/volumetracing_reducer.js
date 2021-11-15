@@ -73,7 +73,7 @@ function handleSetSegments(state: OxalisState, action: SetSegmentsAction) {
   }
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    return updateVolumeTracing(state, updateInfo.volumeTracing, { segments });
+    return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, { segments });
   }
 
   // Update localSegmentationData
@@ -121,7 +121,9 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   const newSegmentMap = segments.set(segmentId, newSegment);
 
   if (updateInfo.type === "UPDATE_VOLUME_TRACING") {
-    return updateVolumeTracing(state, updateInfo.volumeTracing, { segments: newSegmentMap });
+    return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
+      segments: newSegmentMap,
+    });
   }
 
   // Update localSegmentationData

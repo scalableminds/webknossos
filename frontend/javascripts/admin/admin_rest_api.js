@@ -1096,7 +1096,6 @@ export function createResumableUpload(
         query: additionalParameters,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
-        // Only increase this value when https://github.com/scalableminds/webknossos/issues/5056 is fixed
         simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
@@ -1105,9 +1104,17 @@ export function createResumableUpload(
   );
 }
 
+type ReserveUploadInformation = {
+  uploadId: string,
+  organization: string,
+  name: string,
+  totalFileCount: number,
+  initialTeams: Array<string>,
+};
+
 export function reserveDatasetUpload(
   datastoreHost: string,
-  reserveUploadInformation: {},
+  reserveUploadInformation: ReserveUploadInformation,
 ): Promise<void> {
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {

@@ -46,10 +46,17 @@ export default function* loadHistogramData(): Saga<void> {
     const minimumInHistogramData = Math.min(...allMinValues);
     const maximumInHistogramData = Math.max(...allMaxValues);
     let newIntensityRange = [];
-    if (layerConfigurations[layerName]) {
+    const currentLayerConfig = layerConfigurations[layerName];
+    if (currentLayerConfig) {
       newIntensityRange = [
-        Math.max(layerConfigurations[layerName].intensityRange[0], minimumInHistogramData),
-        Math.min(layerConfigurations[layerName].intensityRange[1], maximumInHistogramData),
+        Math.max(
+          currentLayerConfig.intensityRange[0],
+          currentLayerConfig.min != null ? currentLayerConfig.min : minimumInHistogramData,
+        ),
+        Math.min(
+          currentLayerConfig.intensityRange[1],
+          currentLayerConfig.max != null ? currentLayerConfig.max : maximumInHistogramData,
+        ),
       ];
     } else {
       newIntensityRange = [minimumInHistogramData, maximumInHistogramData];

@@ -88,17 +88,17 @@ trait RedisTemporaryStore extends LazyLogging {
         Fox.failure(msg)
     }
 
-  def insert_into_set(id: String, value: String): Fox[Boolean] =
+  def insertIntoSet(id: String, value: String): Fox[Boolean] =
     withExceptionHandler {
       r.sadd(id, value).getOrElse(0L) > 0
     }
 
-  def remove_from_set(id: String, value: String): Fox[Boolean] =
+  def removeFromSet(id: String, value: String): Fox[Boolean] =
     withExceptionHandler {
       r.srem(id, value).getOrElse(0L) > 0
     }
 
-  def find_set(id: String): Fox[Set[String]] =
+  def findSet(id: String): Fox[Set[String]] =
     withExceptionHandler {
       r.smembers(id).map(_.flatten).getOrElse(Set.empty)
     }

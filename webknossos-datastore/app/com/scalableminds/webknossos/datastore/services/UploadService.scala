@@ -18,8 +18,6 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class ResumableUploadInformation(chunkSize: Int, totalChunkCount: Long)
-
 case class ReserveUploadInformation(uploadId: String,
                                     name: String,
                                     organization: String,
@@ -36,7 +34,7 @@ object UploadInformation {
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
-                              chunkKeyStore: DataStoreRedisStore)
+                              runningUploadMetadataStore: DataStoreRedisStore)
     extends LazyLogging
     with DataSetDeleter
     with FoxImplicits {
@@ -44,20 +42,28 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   val dataBaseDir: Path = dataSourceService.dataBaseDir
   private val uploadingDir: String = ".uploading"
 
-  // redis structure: uploadId -> fileCount, uploadId -> set(fileName), uploadId#fileName -> totalChunkCount, uploadId#fileName -> set(chunkIndices)
-  // redis synchronizes all db accesses, so we do not need to do it anymore
-  private def uploadKey(uploadId: String, typeString: String): String = s"upload___${uploadId}___$typeString"
-  private def uploadFileKey(uploadId: String, fileName: String, typeString: String): String =
-    s"uploadFile___${uploadId}___${fileName}___$typeString"
-  private val setType: String = "set"
-  private val stringType: String = "string"
+  /* Redis stores different information for each upload, with different prefixes in the keys:
+   *  uploadId -> fileCount
+   *  uploadId -> set(fileName),
+   *  uploadId#fileName -> totalChunkCount
+   *  uploadId#fileName -> set(chunkIndices)
+   * Note that Redis synchronizes all db accesses, so we do not need to do it
+   */
+  private def redisKeyForFileCount(uploadId: String): String =
+    s"upload___${uploadId}___fileCount"
+  private def redisKeyForFileNameSet(uploadId: String): String =
+    s"upload___${uploadId}___fileNameSet"
+  private def redisKeyForFileChunkCount(uploadId: String, fileName: String): String =
+    s"upload___${uploadId}___file___${fileName}___chunkCount"
+  private def redisKeyForFileChunkSet(uploadId: String, fileName: String): String =
+    s"upload___${uploadId}___file___${fileName}___chunkSet"
 
   cleanUpOrphanUploads()
 
   def isKnownUploadByFileId(uploadFileId: String): Fox[Boolean] = isKnownUpload(extractDatasetUploadId(uploadFileId))
 
   def isKnownUpload(uploadId: String): Fox[Boolean] =
-    chunkKeyStore.contains(uploadKey(uploadId, stringType))
+    runningUploadMetadataStore.contains(redisKeyForFileCount(uploadId))
 
   private def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
@@ -66,14 +72,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def reserveUpload(reserveUploadInformation: ReserveUploadInformation): Fox[Unit] =
     for {
-      _ <- chunkKeyStore.insert(uploadKey(reserveUploadInformation.uploadId, stringType),
-                                String.valueOf(reserveUploadInformation.totalFileCount))
+      _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInformation.uploadId),
+                                             String.valueOf(reserveUploadInformation.totalFileCount))
+      _ = logger.info(
+        f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
   def handleUploadChunk(uploadFileId: String,
                         datasourceId: DataSourceId,
-                        resumableUploadInformation: ResumableUploadInformation,
-                        currentChunkNumber: Int,
+                        chunkSize: Long,
+                        totalChunkCount: Long,
+                        currentChunkNumber: Long,
                         chunkFile: File): Fox[Unit] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     val uploadDir = uploadDirectory(datasourceId.team, uploadId)
@@ -81,19 +90,20 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     val filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
 
     val isNewChunk = for {
-      isFileKnown <- chunkKeyStore.contains(uploadFileKey(uploadId, filePath, stringType))
+      isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       _ <- if (isFileKnown) Fox.successful(())
       else {
-        chunkKeyStore
-          .insert_into_set(uploadKey(uploadId, setType), filePath)
+        runningUploadMetadataStore
+          .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)
           .flatMap(
             _ =>
-              chunkKeyStore.insert(uploadFileKey(uploadId, filePath, stringType),
-                                   String.valueOf(resumableUploadInformation.totalChunkCount)))
+              runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
+                                                String.valueOf(totalChunkCount)))
       }
-      isNewChunk <- chunkKeyStore.insert_into_set(uploadFileKey(uploadId, filePath, setType),
-                                                  String.valueOf(currentChunkNumber))
+      isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                             String.valueOf(currentChunkNumber))
     } yield isNewChunk
+
     isNewChunk map {
       case true =>
         try {
@@ -101,14 +111,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
           this.synchronized {
             PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
             val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
-            tempFile.seek((currentChunkNumber - 1) * resumableUploadInformation.chunkSize)
+            tempFile.seek((currentChunkNumber - 1) * chunkSize)
             tempFile.write(bytes)
             tempFile.close()
           }
         } catch {
           case e: Exception =>
-            chunkKeyStore.remove_from_set(uploadFileKey(uploadId, filePath, setType),
-                                          String.valueOf(currentChunkNumber))
+            runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                     String.valueOf(currentChunkNumber))
             val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${datasourceId.name}: ${e.getMessage}"
             logger.warn(errorMsg)
             return Fox.failure(errorMsg)
@@ -131,7 +141,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataSet.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
-      _ <- cleanUpUploadedDataset(uploadDir, uploadId)
+      //_ <- cleanUpUploadedDataset(uploadDir, uploadId)
       _ <- unpackResult match {
         case Full(_) =>
           if (datasetNeedsConversion)
@@ -157,14 +167,16 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
-      fileCountString <- chunkKeyStore.find(uploadKey(uploadId, stringType))
+      fileCountString <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId))
       fileCount <- tryo(Integer.parseInt(fileCountString.getOrElse(""))).toFox
-      fileNames <- chunkKeyStore.find_set(uploadKey(uploadId, setType))
+      fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- bool2Fox(fileCount == fileNames.size)
       list <- Fox.serialCombined(fileNames.toList) { fileName =>
         val chunkCount =
-          chunkKeyStore.find(uploadFileKey(uploadId, fileName, stringType)).map(s => Integer.valueOf(s.getOrElse("")))
-        val chunks = chunkKeyStore.find_set(uploadFileKey(uploadId, fileName, setType))
+          runningUploadMetadataStore
+            .find(redisKeyForFileChunkCount(uploadId, fileName))
+            .map(s => Integer.valueOf(s.getOrElse("")))
+        val chunks = runningUploadMetadataStore.findSet(redisKeyForFileChunkSet(uploadId, fileName))
         chunks.flatMap(set => chunkCount.map(_ == set.size))
       }
       _ <- bool2Fox(list.forall(identity))
@@ -247,14 +259,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       PathUtils.deleteDirectoryRecursively(uploadDir)
     }
     for {
-      fileNames <- chunkKeyStore.find_set(uploadKey(uploadId, setType))
+      fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- Fox.serialCombined(fileNames.toList) { fileName =>
-        chunkKeyStore
-          .remove(uploadFileKey(uploadId, fileName, stringType))
-          .flatMap(_ => chunkKeyStore.remove(uploadFileKey(uploadId, fileName, setType)))
+        runningUploadMetadataStore
+          .remove(redisKeyForFileChunkCount(uploadId, fileName))
+          .flatMap(_ => runningUploadMetadataStore.remove(redisKeyForFileChunkSet(uploadId, fileName)))
       }
-      _ <- chunkKeyStore.remove(uploadKey(uploadId, stringType))
-      _ <- chunkKeyStore.remove(uploadKey(uploadId, setType))
+      _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
+      _ <- runningUploadMetadataStore.remove(redisKeyForFileNameSet(uploadId))
     } yield ()
   }
 
@@ -271,15 +283,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       uploadDirs <- PathUtils.listDirectories(orgaUploadingDir).toFox
       _ <- Fox.serialCombined(uploadDirs) { uploadDir =>
         isKnownUpload(uploadDir.getFileName.toString).map {
-          case true => {
+          case false =>
             val deleteResult = PathUtils.deleteDirectoryRecursively(uploadDir)
             if (deleteResult.isDefined) {
               logger.info(f"Deleted orphan dataset upload at $uploadDir")
             } else {
               logger.warn(f"Failed to delete orphan dataset upload at $uploadDir")
             }
-          }
-          case false => ()
+          case true => ()
         }
       }
     } yield ()

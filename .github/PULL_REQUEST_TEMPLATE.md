@@ -13,6 +13,6 @@
 - [ ] Updated [(unreleased) migration guide](../blob/master/MIGRATIONS.unreleased.md#unreleased) if applicable
 - [ ] Updated [documentation](../blob/master/docs) if applicable
 - [ ] Adapted [wk-connect](https://github.com/scalableminds/webknossos-connect) if datastore API changes
-- [ ] Adapted [wk-libs python client](https://github.com/scalableminds/webknossos-libs/tree/master/webknossos) if relevant API parts change
+- [ ] Adapted [wk-libs python client](https://github.com/scalableminds/webknossos-libs/tree/master/webknossos/webknossos/client) if relevant API parts change
 - [ ] Needs datastore update after deployment
 - [ ] Ready for review

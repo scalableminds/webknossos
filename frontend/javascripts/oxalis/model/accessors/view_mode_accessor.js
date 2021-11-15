@@ -1,7 +1,7 @@
 // @flow
 
 import memoizeOne from "memoize-one";
-
+import _ from "lodash";
 import { type OxalisState } from "oxalis/store";
 import constants, {
   ArbitraryViewport,
@@ -10,12 +10,18 @@ import constants, {
   type Rect,
   type Viewport,
   OrthoViews,
+  type OrthoView,
   type Point2,
   type Vector3,
+  OrthoViewValuesWithoutTDView,
   type ViewMode,
 } from "oxalis/constants";
+import { V3 } from "libs/mjs";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getPlaneExtentInVoxelFromStore,
+} from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
@@ -77,7 +83,7 @@ export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewpor
 
 //   // example I:
 //   // 16 : 9 --> 1.78
-//   // useWdth: false
+//   // useWidth: false
 
 //   const useWidth = false;
 //   const scaledWidth = width * (useWidth ? 1 : aspectRatio);
@@ -97,19 +103,21 @@ export function getViewportScale(state: OxalisState, viewport: Viewport): [numbe
   return [xScale, yScale];
 }
 
-function _calculateMaybeGlobalPos(state: OxalisState, clickPos: Point2): ?Vector3 {
+function _calculateMaybeGlobalPos(
+  state: OxalisState,
+  clickPos: Point2,
+  planeId: ?OrthoView,
+): ?Vector3 {
   let position;
-  const { activeViewport } = state.viewModeData.plane;
+  planeId = planeId || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
-  const zoomFactors = getPlaneScalingFactor(state, state.flycam, activeViewport);
-  const viewportScale = getViewportScale(state, activeViewport);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
-
-  const center = [0, 1].map(dim => (constants.VIEWPORT_WIDTH * viewportScale[dim]) / 2);
-  const diffX = ((center[0] - clickPos.x) / viewportScale[0]) * zoomFactors[0];
-  const diffY = ((center[1] - clickPos.y) / viewportScale[1]) * zoomFactors[1];
-
-  switch (activeViewport) {
+  const { width, height } = getInputCatcherRect(state, planeId);
+  // Subtract clickPos from only half of the viewport extent as
+  // the center of the viewport / the flycam position is used as a reference point.
+  const diffX = (width / 2 - clickPos.x) * state.flycam.zoomStep;
+  const diffY = (height / 2 - clickPos.y) * state.flycam.zoomStep;
+  switch (planeId) {
     case OrthoViews.PLANE_XY:
       position = [
         curGlobalPos[0] - diffX * planeRatio[0],
@@ -138,14 +146,41 @@ function _calculateMaybeGlobalPos(state: OxalisState, clickPos: Point2): ?Vector
   return position;
 }
 
-function _calculateGlobalPos(state: OxalisState, clickPos: Point2): Vector3 {
-  const position = _calculateMaybeGlobalPos(state, clickPos);
+function _calculateGlobalPos(state: OxalisState, clickPos: Point2, planeId: ?OrthoView): Vector3 {
+  const position = _calculateMaybeGlobalPos(state, clickPos, planeId);
   if (!position) {
     console.error("Trying to calculate the global position, but no data viewport is active.");
     return [0, 0, 0];
   }
 
   return position;
+}
+
+export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
+  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
+  const curGlobalCenterPos = getPosition(state.flycam);
+  const extents = OrthoViewValuesWithoutTDView.map(orthoView =>
+    getPlaneExtentInVoxelFromStore(state, state.flycam.zoomStep, orthoView),
+  );
+  const [xyExtent, yzExtent, xzExtent] = extents;
+  const minExtent = 1;
+  const getMinExtent = (val1, val2) => _.min([val1, val2].filter(v => v >= minExtent)) || minExtent;
+  const xMinExtent = getMinExtent(xyExtent[0], xzExtent[0]) * planeRatio[0];
+  const yMinExtent = getMinExtent(xyExtent[1], yzExtent[1]) * planeRatio[1];
+  const zMinExtent = getMinExtent(xzExtent[1], yzExtent[0]) * planeRatio[2];
+  // The new bounding box should cover half of what is displayed in the viewports.
+  // As the flycam position is taken as a center, the factor is halved again, resulting in a 0.25.
+  const extentFactor = 0.25;
+  const halfBoxExtent = [
+    Math.max(xMinExtent * extentFactor, 1),
+    Math.max(yMinExtent * extentFactor, 1),
+    Math.max(zMinExtent * extentFactor, 1),
+  ];
+  return {
+    min: V3.toArray(V3.round(V3.sub(curGlobalCenterPos, halfBoxExtent))),
+    max: V3.toArray(V3.round(V3.add(curGlobalCenterPos, halfBoxExtent))),
+    halfBoxExtent,
+  };
 }
 
 export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGlobalPos);

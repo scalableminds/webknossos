@@ -8,6 +8,7 @@ import Maybe from "data.maybe";
 
 import type { Action } from "oxalis/model/actions/actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   PUSH_THROTTLE_TIME,
@@ -29,6 +30,7 @@ import type {
   Flycam,
   SaveQueueEntry,
   CameraData,
+  UserBoundingBox,
   SegmentMap,
 } from "oxalis/store";
 import createProgressCallback from "libs/progress_callback";
@@ -88,11 +90,20 @@ import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import messages from "messages";
+import {
+  AllUserBoundingBoxActions,
+  setUserBoundingBoxesAction,
+  type UserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
 import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const byteArrayToLz4Array = createWorker(compressLz4Block);
+
+const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
+  action => action !== "SET_USER_BOUNDING_BOXES",
+);
 
 type UndoBucket = {
   zoomedBucketAddress: Vector4,
@@ -104,13 +115,15 @@ type VolumeUndoBuckets = Array<UndoBucket>;
 type VolumeAnnotationBatch = { buckets: VolumeUndoBuckets, segments: SegmentMap };
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
+type BoundingBoxUndoState = { type: "bounding_box", data: Array<UserBoundingBox> };
 type WarnUndoState = { type: "warning", reason: string };
-type UndoState = SkeletonUndoState | VolumeUndoState | WarnUndoState;
+type UndoState = SkeletonUndoState | VolumeUndoState | BoundingBoxUndoState | WarnUndoState;
 
 type RelevantActionsForUndoRedo = {
   skeletonUserAction?: SkeletonTracingAction,
   addBucketToUndoAction?: AddBucketToUndoAction,
   finishAnnotationStrokeAction?: FinishAnnotationStrokeAction,
+  userBoundingBoxAction?: UserBoundingBoxAction,
   importVolumeTracingAction?: ImportVolumeTracingAction,
   undo?: UndoAction,
   redo?: RedoAction,
@@ -142,14 +155,21 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
     return {
       updateSegment: action,
     };
-  } else if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
-    return {
-      skeletonUserAction: ((action: any): SkeletonTracingAction),
-    };
+  } else if (UndoRedoRelevantBoundingBoxActions.includes(action.type)) {
+    return { userBoundingBoxAction: ((action: any): UserBoundingBoxAction) };
+  }
+
+  if (SkeletonTracingSaveRelevantActions.includes(action.type)) {
+    return { skeletonUserAction: ((action: any): SkeletonTracingAction) };
   }
 
   throw new Error("Could not unpack redux action from channel");
 }
+
+const getUserBoundingBoxesFromState = state => {
+  const maybeSomeTracing = maybeGetSomeTracing(state.tracing);
+  return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
+};
 
 function getNullableSegments(state: OxalisState): ?SegmentMap {
   if (state.tracing.volume) {
@@ -161,8 +181,10 @@ function getNullableSegments(state: OxalisState): ?SegmentMap {
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
+  // This variable must be any (no Action) as otherwise cyclic dependencies are created which flow cannot handle.
   let previousAction: ?any = null;
   let prevSkeletonTracingOrNull: ?SkeletonTracing = null;
+  let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   let pendingCompressions: Array<Task<void>> = [];
   let currentVolumeUndoBuckets: VolumeUndoBuckets = [];
   // The copy of the segment list that needs to be added to the next volume undo stack entry.
@@ -170,6 +192,7 @@ export function* collectUndoStates(): Saga<void> {
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
+  prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
 
   // The SegmentMap is immutable. So, no need to copy. If there's no volume
   // tracing, prevSegments can remain empty as it's not needed.
@@ -177,6 +200,7 @@ export function* collectUndoStates(): Saga<void> {
 
   const actionChannel = yield _actionChannel([
     ...SkeletonTracingSaveRelevantActions,
+    ...UndoRedoRelevantBoundingBoxActions,
     "ADD_BUCKET_TO_UNDO",
     "FINISH_ANNOTATION_STROKE",
     "IMPORT_VOLUMETRACING",
@@ -184,20 +208,25 @@ export function* collectUndoStates(): Saga<void> {
     "UNDO",
     "REDO",
   ]);
+
   while (true) {
     const currentAction = yield* take(actionChannel);
-
     const {
       skeletonUserAction,
       addBucketToUndoAction,
       finishAnnotationStrokeAction,
+      userBoundingBoxAction,
       importVolumeTracingAction,
       undo,
       redo,
       updateSegment,
     } = unpackRelevantActionForUndo(currentAction);
-
-    if (skeletonUserAction || addBucketToUndoAction || finishAnnotationStrokeAction) {
+    if (
+      skeletonUserAction ||
+      addBucketToUndoAction ||
+      finishAnnotationStrokeAction ||
+      userBoundingBoxAction
+    ) {
       let shouldClearRedoState =
         addBucketToUndoAction != null || finishAnnotationStrokeAction != null;
       if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
@@ -235,6 +264,17 @@ export function* collectUndoStates(): Saga<void> {
         prevSegments = segments;
         currentVolumeUndoBuckets = [];
         pendingCompressions = [];
+      } else if (userBoundingBoxAction) {
+        const boundingBoxUndoState = getBoundingBoxToUndoState(
+          userBoundingBoxAction,
+          prevUserBoundingBoxes,
+          previousAction,
+        );
+        if (boundingBoxUndoState) {
+          shouldClearRedoState = true;
+          undoStack.push(boundingBoxUndoState);
+        }
+        previousAction = userBoundingBoxAction;
       }
       if (shouldClearRedoState) {
         // Clear the redo stack when a new action is executed.
@@ -250,19 +290,29 @@ export function* collectUndoStates(): Saga<void> {
         ({ type: "warning", reason: messages["undo.import_volume_tracing"] }: WarnUndoState),
       );
     } else if (undo) {
-      if (undoStack.length > 0 && undoStack[undoStack.length - 1].type === "skeleton") {
-        previousAction = null;
-      }
-      yield* call(applyStateOfStack, undoStack, redoStack, prevSkeletonTracingOrNull, "undo");
+      previousAction = null;
+      yield* call(
+        applyStateOfStack,
+        undoStack,
+        redoStack,
+        prevSkeletonTracingOrNull,
+        prevUserBoundingBoxes,
+        "undo",
+      );
       if (undo.callback != null) {
         undo.callback();
       }
       yield* put(setBusyBlockingInfoAction(false));
     } else if (redo) {
-      if (redoStack.length > 0 && redoStack[redoStack.length - 1].type === "skeleton") {
-        previousAction = null;
-      }
-      yield* call(applyStateOfStack, redoStack, undoStack, prevSkeletonTracingOrNull, "redo");
+      previousAction = null;
+      yield* call(
+        applyStateOfStack,
+        redoStack,
+        undoStack,
+        prevSkeletonTracingOrNull,
+        prevUserBoundingBoxes,
+        "redo",
+      );
       if (redo.callback != null) {
         redo.callback();
       }
@@ -278,19 +328,40 @@ export function* collectUndoStates(): Saga<void> {
     }
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
+    prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
   }
 }
 
 function* getSkeletonTracingToUndoState(
   skeletonUserAction: SkeletonTracingAction,
   prevTracing: SkeletonTracing,
-  previousAction: ?SkeletonTracingAction,
+  previousAction: ?Action,
 ): Saga<?SkeletonUndoState> {
   const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
   if (curTracing !== prevTracing) {
     if (shouldAddToUndoStack(skeletonUserAction, previousAction)) {
       return { type: "skeleton", data: prevTracing };
     }
+  }
+  return null;
+}
+
+function getBoundingBoxToUndoState(
+  userBoundingBoxAction: UserBoundingBoxAction,
+  prevUserBoundingBoxes: Array<UserBoundingBox>,
+  previousAction: ?Action,
+): ?BoundingBoxUndoState {
+  const isSameActionOnSameBoundingBox =
+    previousAction != null &&
+    userBoundingBoxAction.id != null &&
+    previousAction.id != null &&
+    userBoundingBoxAction.type === previousAction.type &&
+    userBoundingBoxAction.id === previousAction.id;
+  // Used to distinguish between different resizing actions of the same bounding box.
+  const isFinishedResizingAction =
+    userBoundingBoxAction.type === "FINISHED_RESIZING_USER_BOUNDING_BOX";
+  if (!isSameActionOnSameBoundingBox && !isFinishedResizingAction) {
+    return { type: "bounding_box", data: prevUserBoundingBoxes };
   }
   return null;
 }
@@ -358,6 +429,7 @@ function* applyStateOfStack(
   sourceStack: Array<UndoState>,
   stackToPushTo: Array<UndoState>,
   prevSkeletonTracingOrNull: ?SkeletonTracing,
+  prevUserBoundingBoxes: ?Array<UserBoundingBox>,
   direction: "undo" | "redo",
 ): Saga<void> {
   if (sourceStack.length <= 0) {
@@ -407,6 +479,12 @@ function* applyStateOfStack(
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
     yield* call(progressCallback, true, `Finished ${direction}...`);
+  } else if (stateToRestore.type === "bounding_box") {
+    if (prevUserBoundingBoxes != null) {
+      stackToPushTo.push({ type: "bounding_box", data: prevUserBoundingBoxes });
+    }
+    const newBoundingBoxes = stateToRestore.data;
+    yield* put(setUserBoundingBoxesAction(newBoundingBoxes));
   } else if (stateToRestore.type === "warning") {
     Toast.info(stateToRestore.reason);
   }

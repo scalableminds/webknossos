@@ -374,7 +374,7 @@ function initializeDataset(
   const volumeTracings = getVolumeTracings(serverTracings);
   if (volumeTracings.length > 0) {
     // todo: adapt this invocation to multiple volumeTracing
-    const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracings[0]);
+    const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracings);
     mutableDataset.dataSource.dataLayers = newDataLayers;
   }
 
@@ -460,58 +460,64 @@ function initializeDataLayerInstances(
 
 function setupLayerForVolumeTracing(
   dataset: APIDataset,
-  tracing: ServerVolumeTracing,
+  tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
   let layers = _.clone(dataset.dataSource.dataLayers);
 
-  // The tracing always contains the layer information for the user segmentation.
-  // Two possible cases:
-  // 1) The volume layer should not be based on an existing layer. In that case, fallbackLayer is undefined
-  //    and a new layer is created and added.
-  // 2) The volume layer should be based on a fallback layer. In that case, merge the original fallbackLayer
-  //    with the new volume layer.
-  const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
-  const fallbackLayer = layers[fallbackLayerIndex];
-  const boundaries = getBoundaries(dataset);
+  for (const tracing of tracings) {
+    // The tracing always contains the layer information for the user segmentation.
+    // Two possible cases:
+    // 1) The volume layer should not be based on an existing layer. In that case, fallbackLayer is undefined
+    //    and a new layer is created and added.
+    // 2) The volume layer should be based on a fallback layer. In that case, merge the original fallbackLayer
+    //    with the new volume layer.
+    const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
+    const fallbackLayer = layers[fallbackLayerIndex];
+    const boundaries = getBoundaries(dataset);
 
-  const resolutions = tracing.resolutions || [];
-  const tracingHasResolutionList = resolutions.length > 0;
+    const resolutions = tracing.resolutions || [];
+    const tracingHasResolutionList = resolutions.length > 0;
 
-  // Legacy tracings don't have the `tracing.resolutions` property
-  // since they were created before WK started to maintain multiple resolution
-  // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
-  // that case.
-  const tracingResolutions = tracingHasResolutionList
-    ? resolutions.map(({ x, y, z }) => [x, y, z])
-    : [[1, 1, 1]];
+    // Legacy tracings don't have the `tracing.resolutions` property
+    // since they were created before WK started to maintain multiple resolution
+    // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
+    // that case.
+    const tracingResolutions = tracingHasResolutionList
+      ? resolutions.map(({ x, y, z }) => [x, y, z])
+      : [[1, 1, 1]];
 
-  const tracingLayer = {
-    name: tracing.id,
-    tracingId: tracing.id,
-    elementClass: tracing.elementClass,
-    category: "segmentation",
-    largestSegmentId: tracing.largestSegmentId,
-    boundingBox: convertBoundariesToBoundingBox(boundaries),
-    resolutions: tracingResolutions,
-    mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
-    // remember the name of the original layer, used to request mappings
-    fallbackLayer: tracing.fallbackLayer,
-    fallbackLayerInfo: fallbackLayer,
-  };
+    const tracingLayer = {
+      name: tracing.id,
+      tracingId: tracing.id,
+      elementClass: tracing.elementClass,
+      category: "segmentation",
+      largestSegmentId: tracing.largestSegmentId,
+      boundingBox: convertBoundariesToBoundingBox(boundaries),
+      resolutions: tracingResolutions,
+      mappings:
+        fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
+      // remember the name of the original layer, used to request mappings
+      fallbackLayer: tracing.fallbackLayer,
+      fallbackLayerInfo: fallbackLayer,
+    };
 
-  if (fallbackLayer != null) {
-    // Replace the original tracing layer
-    layers[fallbackLayerIndex] = tracingLayer;
-  } else {
-    // Remove other segmentation layers, since we are adding a new one.
-    // This is a temporary workaround. Even though we support multiple segmentation
-    // layers, we cannot render both at the same time. Hiding the existing segmentation
-    // layer would be good, but this information is stored per dataset and not per annotation
-    // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
-    layers = layers.filter(layer => layer.category !== "segmentation");
-    layers.push(tracingLayer);
+    if (fallbackLayer != null) {
+      // Replace the original tracing layer
+      layers[fallbackLayerIndex] = tracingLayer;
+    } else {
+      // Remove other segmentation layers, since we are adding a new one.
+      // This is a temporary workaround. Even though we support multiple segmentation
+      // layers, we cannot render both at the same time. Hiding the existing segmentation
+      // layer would be good, but this information is stored per dataset and not per annotation
+      // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
+
+      // todo
+      // layers = layers.filter(layer => layer.category !== "segmentation");
+      layers.push(tracingLayer);
+    }
   }
+
   return layers;
 }
 

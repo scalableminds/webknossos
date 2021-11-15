@@ -610,6 +610,8 @@ export function* pushTracingTypeAsync(
   tracingType: "skeleton" | "volume",
   tracingId: string,
 ): Saga<void> {
+  yield* take("WK_READY");
+
   yield* put(setLastSaveTimestampAction(tracingType));
   while (true) {
     let saveQueue;

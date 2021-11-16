@@ -1,5 +1,7 @@
 package models.job
 
+import java.sql.Timestamp
+
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
@@ -32,7 +34,7 @@ case class Job(
     latestRunId: Option[String] = None,
     returnValue: Option[String] = None,
     started: Option[Long] = None,
-    completed: Option[Long] = None,
+    ended: Option[Long] = None,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -60,7 +62,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.latestrunid,
         r.returnvalue,
         r.started.map(_.getTime),
-        r.completed.map(_.getTime),
+        r.ended.map(_.getTime),
         r.created.getTime,
         r.isdeleted
       )
@@ -85,6 +87,14 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
+    for {
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') order by created"
+          .as[JobsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
     for {
       results: Seq[String] <- run(
@@ -95,27 +105,31 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, state, manualState, _worker, latestRunId,
-               returnValue, started, completed, created, isDeleted)
+               returnValue, started, ended, created, isDeleted)
                          values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}',
                           '#${j.state.toString}', #${optionLiteralSanitized(j.manualState.map(_.toString))},
                           #${optionLiteral(j._worker.map(_.toString))},
                           #${optionLiteralSanitized(j.latestRunId)},
                           #${optionLiteralSanitized(j.returnValue)},
                           #${optionLiteral(j.started.map(_.toString))},
-                          #${optionLiteral(j.completed.map(_.toString))},
+                          #${optionLiteral(j.ended.map(_.toString))},
                           ${new java.sql.Timestamp(j.created)}, ${j.isDeleted})""")
     } yield ()
 
-  def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] =
+  def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] = {
+    val format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+    val startedTimestamp = s.started.map(started => format.format(new Timestamp(started)))
+    val endedTimestamp = s.ended.map(ended => format.format(new Timestamp(ended)))
     for {
       _ <- run(sqlu"""update webknossos.jobs set
-              latest_run_id = ${s.latestRunId},
-              state = ${s.state.toString},
-              return_value = #${optionLiteralSanitized(s.returnValue)},
-              started = #${optionLiteralSanitized(s.started.map(_.toString))},
-              completed = #${optionLiteralSanitized(s.completed.map(_.toString))},
+              latestRunId = ${s.latest_run_id},
+              state = '#${s.state.toString}',
+              returnValue = #${optionLiteralSanitized(s.return_value)},
+              started = #${optionLiteralSanitized(startedTimestamp)},
+              ended = #${optionLiteralSanitized(endedTimestamp)}
               where _id = $jobId""")
     } yield ()
+  }
 
 }
 
@@ -173,7 +187,7 @@ class JobService @Inject()(wkConf: WkConf,
         "latestRunId" -> job.latestRunId,
         "returnValue" -> job.returnValue,
         "started" -> job.started,
-        "completed" -> job.completed,
+        "ended" -> job.ended,
       ))
 
   def parameterWrites(job: Job): JsObject =

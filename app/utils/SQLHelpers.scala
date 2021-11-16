@@ -2,12 +2,13 @@ package utils
 
 import com.github.ghik.silencer.silent
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
+import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import play.api.libs.json.{Json, JsonValidationError, OFormat, Reads}
 import reactivemongo.bson.BSONObjectID
@@ -15,9 +16,6 @@ import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import javax.inject.Inject
-import models.job.JobState.JobState
-import oxalis.telemetry.SlackNotificationService
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}

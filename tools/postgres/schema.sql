@@ -386,7 +386,7 @@ CREATE TABLE webknossos.jobs(
   latestRunId VARCHAR(1024),
   returnValue Text,
   started TIMESTAMPTZ,
-  completed TIMESTAMPTZ,
+  ended TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

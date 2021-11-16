@@ -4,11 +4,11 @@ import models.job.JobState.JobState
 import play.api.libs.json.{Json, OFormat}
 
 case class JobStatus(
-    latestRunId: String,
+    latest_run_id: String, // TODO: make camel case again, but cannot use auto-generated json format then (custom format needed either here or in worker)
     state: JobState,
-    returnValue: Option[String],
+    return_value: Option[String],
     started: Option[Long],
-    completed: Option[Long],
+    ended: Option[Long],
 )
 
 object JobStatus {

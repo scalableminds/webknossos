@@ -14,7 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a new bounding box tool that allows resizing and creating bounding boxes more easily. Additionally, the context menu now contains options to modify the bounding box close to the clicked position. [#5767](https://github.com/scalableminds/webknossos/pull/5767)
 
 ### Changed
--
+- The docker setup has been restructured, which requires changes to existing docker-compose setups. See the migration guide for details. [#5843](https://github.com/scalableminds/webknossos/pull/5843) 
 
 ### Fixed
 -

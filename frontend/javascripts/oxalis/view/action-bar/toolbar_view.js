@@ -224,8 +224,8 @@ function AdditionalSkeletonModesButtons() {
   );
 }
 
-const mapId = id => {
-  const { cube } = Model.getEnforcedSegmentationTracingLayer();
+const mapId = (volumeTracing, id) => {
+  const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   return cube.mapId(id);
 };
 
@@ -240,7 +240,9 @@ function CreateCellButton() {
     return null;
   }
   const customColors = isMappingEnabled ? mappingColors : null;
-  const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;
+  const activeCellId = isMappingEnabled
+    ? mapId(volumeTracing, unmappedActiveCellId)
+    : unmappedActiveCellId;
   const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
 

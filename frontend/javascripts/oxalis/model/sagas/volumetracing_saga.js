@@ -308,7 +308,10 @@ function* labelWithVoxelBuffer2D(
 
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const activeCellId = volumeTracing.activeCellId;
-  const segmentationLayer = yield* call([Model, Model.getEnforcedSegmentationTracingLayer]);
+  const segmentationLayer = yield* call(
+    [Model, Model.getSegmentationTracingLayer],
+    volumeTracing.tracingId,
+  );
   const { cube } = segmentationLayer;
 
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
@@ -432,10 +435,11 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
-  const segmentationLayer: DataLayer = yield* call([
-    Model,
-    Model.getEnforcedSegmentationTracingLayer,
-  ]);
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  const segmentationLayer: DataLayer = yield* call(
+    [Model, Model.getSegmentationTracingLayer],
+    volumeTracing.tracingId,
+  );
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
@@ -448,7 +452,6 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     activeViewport,
   );
 
-  const volumeTracing = yield* select(enforceActiveVolumeTracing);
   const activeCellId = volumeTracing.activeCellId;
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
@@ -527,10 +530,13 @@ export function* floodFill(): Saga<void> {
     }
 
     const { position: positionFloat, planeId } = floodFillAction;
-    const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
+    const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    const segmentationLayer = yield* call(
+      [Model, Model.getSegmentationTracingLayer],
+      volumeTracing.tracingId,
+    );
     const { cube } = segmentationLayer;
     const seedPosition = Dimensions.roundCoordinate(positionFloat);
-    const volumeTracing = yield* select(enforceActiveVolumeTracing);
     const activeCellId = volumeTracing.activeCellId;
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));

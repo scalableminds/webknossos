@@ -13,6 +13,7 @@ services:
       redis:
         condition: service_healthy
     command:
+      - bin/webknossos
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dtracingstore.fossildb.address=fossildb

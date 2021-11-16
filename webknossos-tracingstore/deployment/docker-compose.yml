@@ -3,8 +3,8 @@ version: "2.1"
 services:
   webknossos-tracingstore:
     image: scalableminds/webknossos-tracingstore:${DATASTORE_TAG}
-    entrypoint: bin/webknossos-tracingstore
     command:
+      - bin/webknossos-tracingstore
       - -J-Xmx20G
       - -J-Xms1G
       - -J-XX:+UseG1GC

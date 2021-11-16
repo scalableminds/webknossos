@@ -15,6 +15,9 @@ RUN chown -R webknossos . \
   && chmod go+x bin/webknossos-datastore \
   && chmod go+w .
 
+RUN echo '#!/bin/bash\numask 002\n/bin/bash\n' > /docker-entrypoint.sh \
+  && chmod +x /docker-entrypoint.sh
+
 USER webknossos
 
 HEALTHCHECK \
@@ -23,5 +26,5 @@ HEALTHCHECK \
 
 EXPOSE 9090
 
-ENTRYPOINT ["bin/webknossos-datastore"]
-CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-datastore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["bin/webknossos-datastore", "-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-datastore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]

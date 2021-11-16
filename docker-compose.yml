@@ -18,6 +18,7 @@ services:
       redis:
         condition: service_healthy
     command:
+      - bin/webknossos
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dtracingstore.fossildb.address=fossildb
@@ -42,10 +43,10 @@ services:
     image: scalableminds/webknossos-datastore:${DOCKER_TAG:-master}
     ports:
       - "9090:9090"
-    entrypoint: bin/webknossos-datastore
     volumes:
       - ./binaryData:/webknossos-datastore/binaryData
     command:
+      - bin/webknossos-datastore
       - -J-Xmx20G
       - -J-Xms1G
       - -Dconfig.file=conf/standalone-datastore.conf
@@ -58,8 +59,8 @@ services:
     image: scalableminds/webknossos-tracingstore:${DOCKER_TAG:-master}
     ports:
       - "9050:9050"
-    entrypoint: bin/webknossos-tracingstore
     command:
+      - bin/webknossos-tracingstore
       - -J-Xmx20G
       - -J-Xms1G
       - -Dconfig.file=conf/standalone-tracingstore.conf

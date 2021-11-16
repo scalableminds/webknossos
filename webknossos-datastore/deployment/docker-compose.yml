@@ -3,8 +3,8 @@ version: "2.1"
 services:
   webknossos-datastore:
     image: scalableminds/webknossos-datastore:${DATASTORE_TAG}
-    entrypoint: bin/webknossos-datastore
     command:
+      - bin/webknossos-datastore
       - -J-Xmx20G
       - -J-Xms1G
       - -J-XX:+UseG1GC

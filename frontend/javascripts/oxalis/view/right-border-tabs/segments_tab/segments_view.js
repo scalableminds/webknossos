@@ -234,6 +234,12 @@ class SegmentsView extends React.Component<Props, State> {
     }
   }
 
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
+      maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
+    }
+  }
+
   componentWillUnmount() {
     if (this.intervalID != null) {
       clearTimeout(this.intervalID);

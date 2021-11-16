@@ -156,7 +156,7 @@ export async function initialize(
   if (initialFetch) {
     const { gpuMemoryFactor } = initialUserSettings;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
-    if (serverTracings != null)
+    if (serverTracings.length > 0)
       Store.dispatch(setZoomStepAction(getSomeServerTracing(serverTracings).zoomLevel));
     const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
     Store.dispatch(
@@ -169,7 +169,7 @@ export async function initialize(
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
-  if (annotation != null && serverTracings != null) {
+  if (annotation != null) {
     initializeTracing(annotation, serverTracings);
   } else {
     // In view only tracings we need to set the view mode too.

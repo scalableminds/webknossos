@@ -179,13 +179,11 @@ export function getRequestedOrVisibleSegmentationLayer(
 function getTracingForSegmentationLayer(
   state: OxalisState,
   layer: APISegmentationLayer,
-): VolumeTracing {
+): ?VolumeTracing {
   if (layer.tracingId != null) {
     return getVolumeTracingById(state.tracing, layer.tracingId);
   } else {
-    throw new Error(
-      "Requested tracing layer is not a tracing, but a disk-based segmentation layer.",
-    );
+    return null;
   }
 }
 
@@ -200,7 +198,13 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
 
   if (layerName != null) {
     const layer = getSegmentationLayerByName(state.dataset, layerName);
-    return getTracingForSegmentationLayer(state, layer);
+    const tracing = getTracingForSegmentationLayer(state, layer);
+    if (!tracing) {
+      throw new Error(
+        "Requested tracing layer is not a tracing, but a disk-based segmentation layer.",
+      );
+    }
+    return tracing;
   }
 
   if (state.tracing.volumes.length === 1) {

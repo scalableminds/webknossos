@@ -1,15 +1,17 @@
 // @flow
 import { Button, Modal, Alert } from "antd";
+import { useSelector } from "react-redux";
 import React, { useState } from "react";
+
+import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { BoundingBoxType } from "oxalis/constants";
 import type { Tracing, AnnotationType } from "oxalis/store";
-import type { APIDataset, APIDataLayer } from "types/api_flow_types";
-import { startExportTiffJob } from "admin/admin_rest_api";
 import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import { startExportTiffJob } from "admin/admin_rest_api";
 import Model from "oxalis/model";
-import features from "features";
 import * as Utils from "libs/utils";
-import { useSelector } from "react-redux";
+import features from "features";
 
 type Props = {
   handleClose: () => void,
@@ -34,7 +36,6 @@ type LayerInfos = {
 
 const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: Props) => {
   const [startedExports, setStartedExports] = useState([]);
-  const volumeTracing = tracing != null ? tracing.volume : null;
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
   const activeMappingInfos = useSelector(
@@ -90,12 +91,13 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
         isColorLayer,
       };
     }
-    // The layer is a volume tracing layer, since tracingId exists. Therefore, a volumeTracing
+    // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
     // must exist.
-    if (volumeTracing == null) {
+    if (tracing == null) {
       // Satisfy flow.
-      throw new Error("Volume tracing is null, but layer.tracingId is defined.");
+      throw new Error("Tracing is null, but layer.tracingId is defined.");
     }
+    const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
     if (layer.fallbackLayerInfo != null) {
       return {
         displayName: "Volume annotation with fallback segmentation",

@@ -713,13 +713,12 @@ export function createExplorational(
 
 export async function getTracingForAnnotations(
   annotation: APIAnnotation,
-  // todo: versions by callers? previously versions.skeleton or versions.volume
   versions?: Versions = {},
 ): Promise<Array<ServerTracing>> {
   const fullAnnotationLayers = await Promise.all(
-    annotation.annotationLayers.map(layer => getTracingForAnnotationType(annotation, layer)),
-    // getTracingForAnnotationType(annotation, "skeleton"),
-    // getTracingForAnnotationType(annotation, "volume"),
+    annotation.annotationLayers.map(layer =>
+      getTracingForAnnotationType(annotation, layer, versions),
+    ),
   );
 
   const skeletonLayers = annotation.annotationLayers.filter(layer => layer.typ === "Skeleton");
@@ -731,12 +730,27 @@ export async function getTracingForAnnotations(
   return fullAnnotationLayers;
 }
 
+function extractVersion(
+  versions: Versions,
+  tracingId: string,
+  typ: "Volume" | "Skeleton",
+): ?number {
+  if (typ === "Skeleton") {
+    return versions.skeleton;
+  } else if (versions.volumes != null) {
+    return versions.volumes[tracingId];
+  }
+  return null;
+}
+
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,
-  version?: ?number,
+  versions?: Versions = {},
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
+
+  const version = extractVersion(versions, tracingId, typ);
   const tracingType = typ.toLowerCase();
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken(token =>

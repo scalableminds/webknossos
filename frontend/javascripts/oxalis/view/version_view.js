@@ -14,7 +14,7 @@ const { TabPane } = Tabs;
 
 export type Versions = {
   skeleton?: ?number,
-  volume?: ?number,
+  volumes?: { [tracingId: string]: number },
 };
 
 type StateProps = {|
@@ -90,8 +90,8 @@ class VersionView extends React.Component<Props, State> {
                 />
               </TabPane>
             ) : null}
-            {this.props.tracing.volumes.map(volumeTracing => (
-              <TabPane tab="Volume" key="volume">
+            {this.props.tracing.volumes.map((volumeTracing, index) => (
+              <TabPane tab={`Volume ${index + 1}`} key={volumeTracing.tracingId}>
                 <VersionList
                   tracingType="volume"
                   tracing={volumeTracing}

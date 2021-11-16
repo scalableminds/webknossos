@@ -100,7 +100,7 @@ export async function initialize(
 }> {
   Store.dispatch(setControlModeAction(initialCommandType.type));
 
-  let annotation: APIAnnotation;
+  let annotation: ?APIAnnotation;
   let datasetId: APIDatasetId;
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
@@ -464,7 +464,7 @@ function setupLayerForVolumeTracing(
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
-  let layers = _.clone(dataset.dataSource.dataLayers);
+  const layers = _.clone(dataset.dataSource.dataLayers);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.

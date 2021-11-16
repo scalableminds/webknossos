@@ -108,6 +108,16 @@ export class OxalisModel {
       );
   }
 
+  getSegmentationTracingLayers(): Array<DataLayer> {
+    return Object.keys(this.dataLayers)
+      .map(k => this.dataLayers[k])
+      .filter(dataLayer => {
+        const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
+
+        return layer.category === "segmentation" && layer.tracingId != null;
+      });
+  }
+
   getSomeSegmentationLayer(): ?DataLayer {
     // Prefer the visible segmentation layer. If that does not exist,
     // simply use one of the available segmentation layers.

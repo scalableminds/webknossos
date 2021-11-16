@@ -47,21 +47,31 @@ const MOMENT_CALENDAR_FORMAT = {
 
 const VERSION_LIST_PLACEHOLDER = { emptyText: "No versions created yet." };
 
-export async function previewVersion(
-  tracing: SkeletonTracing | VolumeTracing,
-  versions?: Versions,
-) {
+export async function previewVersion(versions?: Versions) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
   const { annotationType, annotationId } = state.tracing;
   await api.tracing.restart(annotationType, annotationId, controlMode, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
 
-  const segmentationLayer =
-    tracing.type === "volume" ? Model.getSegmentationTracingLayer(tracing.tracingId) : null;
-  const shouldPreviewVolumeVersion = versions != null && versions.volume != null;
-  const shouldPreviewNewestVersion = versions == null;
-  if (segmentationLayer != null && (shouldPreviewVolumeVersion || shouldPreviewNewestVersion)) {
+  if (versions == null) {
+    // No versions were passed which means that the newest annotation should be
+    // shown. Therefore, reload all segmentation layers.
+    for (const segmentationLayer of Model.getSegmentationTracingLayers()) {
+      segmentationLayer.cube.collectAllBuckets();
+      segmentationLayer.layerRenderingManager.refresh();
+    }
+    return;
+  }
+  if (versions.volumes == null) {
+    // No volume versions were specified. Don't reload the segmentation layer,
+    // as it's not necessary when previewing skeleton versions.
+    return;
+  }
+
+  // Since volume versions were specified, reload the volumeTracing layers
+  for (const volumeTracingId of Object.keys(versions.volumes)) {
+    const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracingId);
     segmentationLayer.cube.collectAllBuckets();
     segmentationLayer.layerRenderingManager.refresh();
   }
@@ -133,9 +143,13 @@ class VersionList extends React.Component<Props, State> {
     }
   };
 
-  handlePreviewVersion = (version: number) =>
-    // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
-    previewVersion(this.props.tracing, { [this.props.tracingType]: version });
+  handlePreviewVersion = (version: number) => {
+    if (this.props.tracingType === "skeleton") {
+      return previewVersion({ skeleton: version });
+    } else {
+      return previewVersion({ volumes: { [this.props.tracing.tracingId]: version } });
+    }
+  };
 
   // eslint-disable-next-line react/sort-comp
   getGroupedAndChunkedVersions = _.memoize(

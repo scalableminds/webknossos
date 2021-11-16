@@ -38,17 +38,6 @@ class JobsController @Inject()(
     } yield Ok
   }
 
-  def request: Action[AnyContent] = Action.async { implicit request =>
-    Fox.successful(Ok)
-  }
-
-  def updateStatus(jobId: String): Action[JobStatus] = Action.async(validateJson[JobStatus]) { implicit request =>
-    for {
-      jobIdParsed <- ObjectId.parse(jobId)
-      _ <- jobDAO.updateStatus(jobIdParsed, request.body)
-    } yield Ok
-  }
-
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"

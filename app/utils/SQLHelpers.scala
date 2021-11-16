@@ -2,6 +2,7 @@ package utils
 
 import com.github.ghik.silencer.silent
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
@@ -15,6 +16,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 import javax.inject.Inject
+import models.job.JobState.JobState
 import oxalis.telemetry.SlackNotificationService
 
 import scala.concurrent.ExecutionContext

@@ -367,7 +367,7 @@ CREATE TABLE webknossos.workers(
   _dataStore CHAR(256) NOT NULL,
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
-  maxParallelJobs INT NOT NULL DEFAULT 1
+  maxParallelJobs INT NOT NULL DEFAULT 1,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -390,6 +390,7 @@ CREATE TABLE webknossos.jobs(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
+
 
 CREATE TABLE webknossos.invites(
   _id CHAR(24) PRIMARY KEY DEFAULT '',

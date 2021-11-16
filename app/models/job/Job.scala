@@ -76,6 +76,15 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  def findAllByState(jobState: JobState)(implicit ctx: DBAccessContext): Fox[List[Job]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where state = '#${sanitize(jobState.toString)}' and #$accessQuery order by created"
+          .as[JobsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
     for {
       results: Seq[String] <- run(
@@ -156,7 +165,7 @@ class JobService @Inject()(wkConf: WkConf,
   def publicWrites(job: Job): Fox[JsObject] =
     Fox.successful(
       Json.obj(
-        "id" -> job._id,
+        "id" -> job._id.id,
         "command" -> job.command,
         "commandArgs" -> (job.commandArgs - "webknossos_token"),
         "state" -> job.state,
@@ -166,6 +175,13 @@ class JobService @Inject()(wkConf: WkConf,
         "started" -> job.started,
         "completed" -> job.completed,
       ))
+
+  def parameterWrites(job: Job): JsObject =
+    Json.obj(
+      "job_id" -> job._id.id,
+      "command" -> job.command,
+      "job_kwargs" -> job.commandArgs
+    )
 
   def submitJob(command: String, commandArgs: JsObject, owner: User): Fox[Job] =
     for {

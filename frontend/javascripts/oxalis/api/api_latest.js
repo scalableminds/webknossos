@@ -1,27 +1,41 @@
 // @flow
+import PriorityQueue from "js-priority-queue";
 import TWEEN from "tween.js";
 import _ from "lodash";
-import { V3 } from "libs/mjs";
 
-import Constants, {
-  type BoundingBoxType,
-  type ControlMode,
-  ControlModeEnum,
-  OrthoViews,
-  type Vector3,
-  type Vector4,
-  type AnnotationTool,
-  AnnotationToolEnum,
-  TDViewDisplayModeEnum,
-} from "oxalis/constants";
-import { InputKeyboardNoLoop } from "libs/input";
 import {
   type Bucket,
   getConstructorForElementClass,
 } from "oxalis/model/bucket_data_handling/bucket";
+import { type ElementClass } from "types/api_flow_types";
+import { InputKeyboardNoLoop } from "libs/input";
+import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
+import {
+  addTreesAndGroupsAction,
+  setActiveNodeAction,
+  createCommentAction,
+  deleteNodeAction,
+  centerActiveNodeAction,
+  deleteTreeAction,
+  resetSkeletonTracingAction,
+  setNodeRadiusAction,
+  setTreeNameAction,
+  setActiveTreeAction,
+  setActiveGroupAction,
+  setActiveTreeByNameAction,
+  setTreeColorIndexAction,
+  setTreeVisibilityAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  bucketPositionToGlobalAddress,
+  globalPositionToBaseBucket,
+} from "oxalis/model/helpers/position_converter";
 import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
@@ -43,11 +57,12 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
-  getVolumeDescriptors,
-  getRequestedOrVisibleSegmentationLayer,
-  getRequestedOrVisibleSegmentationLayerEnforced,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
+  getRequestedOrVisibleSegmentationLayer,
+  getRequestedOrVisibleSegmentationLayerEnforced,
+  getVolumeDescriptors,
+  hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
@@ -57,40 +72,22 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
-  bucketPositionToGlobalAddress,
-  globalPositionToBaseBucket,
-} from "oxalis/model/helpers/position_converter";
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  addTreesAndGroupsAction,
-  setActiveNodeAction,
-  createCommentAction,
-  deleteNodeAction,
-  centerActiveNodeAction,
-  deleteTreeAction,
-  resetSkeletonTracingAction,
-  setNodeRadiusAction,
-  setTreeNameAction,
-  setActiveTreeAction,
-  setActiveGroupAction,
-  setActiveTreeByNameAction,
-  setTreeColorIndexAction,
-  setTreeVisibilityAction,
-  setTreeGroupAction,
-  setTreeGroupsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateCurrentMeshFileAction,
   refreshIsosurfacesAction,
   updateIsosurfaceVisibilityAction,
   removeIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -99,7 +96,19 @@ import {
   setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
+import Constants, {
+  type BoundingBoxType,
+  type ControlMode,
+  ControlModeEnum,
+  OrthoViews,
+  type Vector3,
+  type Vector4,
+  type AnnotationTool,
+  AnnotationToolEnum,
+  TDViewDisplayModeEnum,
+} from "oxalis/constants";
 import Model, { type OxalisModel } from "oxalis/model";
+import Request from "libs/request";
 import Store, {
   type AnnotationType,
   type MappingType,
@@ -115,20 +124,12 @@ import Store, {
   type OxalisState,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
-import PriorityQueue from "js-priority-queue";
 import UrlManager from "oxalis/controller/url_manager";
-import Request from "libs/request";
+import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass } from "types/api_flow_types";
-import UserLocalStorage from "libs/user_local_storage";
-import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -948,7 +949,7 @@ class DataApi {
    */
   // todo: make this deprecated and add getVolumeTracingLayerNameS
   getVolumeTracingLayerName(): string {
-    const segmentationLayer = this.model.getSegmentationTracingLayer();
+    const segmentationLayer = this.model.getActiveSegmentationTracingLayer();
     if (segmentationLayer != null) {
       return segmentationLayer.name;
     }
@@ -978,11 +979,11 @@ class DataApi {
     await Promise.all(
       Object.keys(this.model.dataLayers).map(async currentLayerName => {
         const dataLayer = this.model.dataLayers[currentLayerName];
-        if (dataLayer.cube.isSegmentation) {
-          await Model.ensureSavedState();
-        }
 
         if (dataLayer.name === layerName) {
+          if (dataLayer.cube.isSegmentation) {
+            await Model.ensureSavedState();
+          }
           dataLayer.cube.collectAllBuckets();
           dataLayer.layerRenderingManager.refresh();
         }
@@ -994,7 +995,7 @@ class DataApi {
    * Invalidates all downloaded buckets so that they are reloaded.
    */
   async reloadAllBuckets(): Promise<void> {
-    if (this.model.getSegmentationTracingLayer() != null) {
+    if (hasVolumeTracings(Store.getState().tracing)) {
       await Model.ensureSavedState();
     }
     _.forEach(this.model.dataLayers, dataLayer => {

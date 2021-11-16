@@ -669,7 +669,7 @@ export function getFirstSegmentationLayer(
 }
 
 // todo: adapt this and change callers. rather use:
-// getActiveSegmentationTracingLayer
+// getActiveSegmentationTracingLayer. only used by getSegmentationTracingOrVisibleLayer now
 function getSegmentationTracingLayer(dataset: APIMaybeUnimportedDataset): ?APISegmentationLayer {
   const tracingLayers = getSegmentationLayers(dataset).filter(layer => layer.tracingId != null);
   if (tracingLayers.length > 0) {

@@ -47,14 +47,18 @@ const MOMENT_CALENDAR_FORMAT = {
 
 const VERSION_LIST_PLACEHOLDER = { emptyText: "No versions created yet." };
 
-export async function previewVersion(versions?: Versions) {
+export async function previewVersion(
+  tracing: SkeletonTracing | VolumeTracing,
+  versions?: Versions,
+) {
   const state = Store.getState();
   const { controlMode } = state.temporaryConfiguration;
   const { annotationType, annotationId } = state.tracing;
   await api.tracing.restart(annotationType, annotationId, controlMode, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
 
-  const segmentationLayer = Model.getSegmentationTracingLayer();
+  const segmentationLayer =
+    tracing.type === "volume" ? Model.getSegmentationTracingLayer(tracing.tracingId) : null;
   const shouldPreviewVolumeVersion = versions != null && versions.volume != null;
   const shouldPreviewNewestVersion = versions == null;
   if (segmentationLayer != null && (shouldPreviewVolumeVersion || shouldPreviewNewestVersion)) {
@@ -129,8 +133,9 @@ class VersionList extends React.Component<Props, State> {
     }
   };
 
-  // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
-  handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
+  handlePreviewVersion = (version: number) =>
+    // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
+    previewVersion(this.props.tracing, { [this.props.tracingType]: version });
 
   // eslint-disable-next-line react/sort-comp
   getGroupedAndChunkedVersions = _.memoize(

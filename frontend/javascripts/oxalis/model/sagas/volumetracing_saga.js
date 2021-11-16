@@ -255,7 +255,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
     yield* put(
       updateSegmentAction(activeCellId, { somePosition: lastPosition }, volumeTracing.tracingId),
     );
-    yield* put(finishAnnotationStrokeAction());
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   }
 }
 
@@ -512,7 +512,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     z,
     false,
   );
-  yield* put(finishAnnotationStrokeAction());
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 }
 
 const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
@@ -610,7 +610,7 @@ export function* floodFill(): Saga<void> {
         true,
       );
     }
-    yield* put(finishAnnotationStrokeAction());
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
     console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
 
     if (wasBoundingBoxExceeded) {

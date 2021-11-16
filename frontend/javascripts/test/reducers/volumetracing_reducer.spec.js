@@ -98,7 +98,9 @@ test("VolumeTracing should create an existing cell and not update the maxCellId"
 
 test("VolumeTracing should create cells and only update the maxCellId after a voxel was annotated", t => {
   const createCellAction = VolumeTracingActions.createCellAction();
-  const finishAnnotationStrokeAction = VolumeTracingActions.finishAnnotationStrokeAction();
+  const finishAnnotationStrokeAction = VolumeTracingActions.finishAnnotationStrokeAction(
+    "tracingId",
+  );
   const alteredState = update(initialState, {
     tracing: {
       volume: {

@@ -18,8 +18,14 @@ import {
   type UserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import {
+  PUSH_THROTTLE_TIME,
+  SAVE_RETRY_WAITING_TIME,
+  MAX_SAVE_RETRY_WAITING_TIME,
+  UNDO_HISTORY_SIZE,
+  maximumActionCountPerSave,
+} from "oxalis/model/sagas/save_saga_constants";
 import type {
-  OxalisState,
   SkeletonTracing,
   Flycam,
   SaveQueueEntry,
@@ -28,13 +34,6 @@ import type {
   SegmentMap,
   VolumeTracing,
 } from "oxalis/store";
-import {
-  PUSH_THROTTLE_TIME,
-  SAVE_RETRY_WAITING_TIME,
-  MAX_SAVE_RETRY_WAITING_TIME,
-  UNDO_HISTORY_SIZE,
-  maximumActionCountPerSave,
-} from "oxalis/model/sagas/save_saga_constants";
 import {
   type SkeletonTracingAction,
   SkeletonTracingSaveRelevantActions,
@@ -77,14 +76,17 @@ import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { doWithToken } from "admin/admin_rest_api";
-import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getVolumeTracingById,
+  getVolumeTracingByLayerName,
+  getVolumeTracings,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { maybeGetSomeTracing, selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
-import DiffableMap from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
 import Request, { type RequestOptionsWithData } from "libs/request";
@@ -174,14 +176,6 @@ const getUserBoundingBoxesFromState = state => {
   return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
 };
 
-function getNullableSegments(state: OxalisState): ?SegmentMap {
-  // todo
-  if (state.tracing.volume) {
-    return state.tracing.volume.segments;
-  }
-  return null;
-}
-
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
@@ -190,17 +184,29 @@ export function* collectUndoStates(): Saga<void> {
   let prevSkeletonTracingOrNull: ?SkeletonTracing = null;
   let prevUserBoundingBoxes: Array<UserBoundingBox> = [];
   let pendingCompressions: Array<Task<void>> = [];
-  let currentVolumeUndoBuckets: VolumeUndoBuckets = [];
-  // The copy of the segment list that needs to be added to the next volume undo stack entry.
-  let prevSegments = new DiffableMap();
 
-  yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
+  const volumeInfoById: {
+    [tracingId: string]: {
+      currentVolumeUndoBuckets: VolumeUndoBuckets,
+      prevSegments: SegmentMap,
+    },
+  } = {};
+
+  yield* take("WK_READY");
   prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
   prevUserBoundingBoxes = yield* select(getUserBoundingBoxesFromState);
 
-  // The SegmentMap is immutable. So, no need to copy. If there's no volume
-  // tracing, prevSegments can remain empty as it's not needed.
-  prevSegments = (yield* select(getNullableSegments)) || prevSegments;
+  const volumeTracings = yield* select(state => getVolumeTracings(state.tracing));
+
+  for (const volumeTracing of volumeTracings) {
+    volumeInfoById[volumeTracing.tracingId] = {
+      currentVolumeUndoBuckets: [],
+      // The copy of the segment list that needs to be added to the next volume undo stack entry.
+      // The SegmentMap is immutable. So, no need to copy. If there's no volume
+      // tracing, prevSegments can remain empty as it's not needed.
+      prevSegments: volumeTracing.segments,
+    };
+  }
 
   const actionChannel = yield _actionChannel([
     ...SkeletonTracingSaveRelevantActions,
@@ -246,31 +252,39 @@ export function* collectUndoStates(): Saga<void> {
         }
         previousAction = skeletonUserAction;
       } else if (addBucketToUndoAction) {
-        const { zoomedBucketAddress, bucketData, maybeBucketLoadedPromise } = addBucketToUndoAction;
+        const {
+          zoomedBucketAddress,
+          bucketData,
+          maybeBucketLoadedPromise,
+          tracingId,
+        } = addBucketToUndoAction;
         pendingCompressions.push(
           yield* fork(
             compressBucketAndAddToList,
             zoomedBucketAddress,
             bucketData,
             maybeBucketLoadedPromise,
-            currentVolumeUndoBuckets,
+            volumeInfoById[tracingId].currentVolumeUndoBuckets,
           ),
         );
       } else if (finishAnnotationStrokeAction) {
+        const activeVolumeTracing = yield* select(state =>
+          getVolumeTracingById(state.tracing, finishAnnotationStrokeAction.tracingId),
+        );
         yield* join([...pendingCompressions]);
         bucketsAlreadyInUndoState.clear();
-        const activeVolumeTracing = yield* select(state => enforceActiveVolumeTracing(state));
+        const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
         undoStack.push({
           type: "volume",
           data: {
-            buckets: currentVolumeUndoBuckets,
-            segments: prevSegments,
+            buckets: volumeInfo.currentVolumeUndoBuckets,
+            segments: volumeInfo.prevSegments,
             tracingId: activeVolumeTracing.tracingId,
           },
         });
         // The SegmentMap is immutable. So, no need to copy.
-        prevSegments = activeVolumeTracing.segments;
-        currentVolumeUndoBuckets = [];
+        volumeInfo.prevSegments = activeVolumeTracing.segments;
+        volumeInfo.currentVolumeUndoBuckets = [];
         pendingCompressions = [];
       } else if (userBoundingBoxAction) {
         const boundingBoxUndoState = getBoundingBoxToUndoState(
@@ -332,7 +346,13 @@ export function* collectUndoStates(): Saga<void> {
       // should be created, either).
       // If no volume tracing exists (but a segmentation layer exists, otherwise, the action wouldn't
       // have been dispatched), prevSegments doesn't need to be updated, as it's not used.
-      prevSegments = (yield* select(getNullableSegments)) || prevSegments;
+      const volumeTracing = yield* select(state =>
+        getVolumeTracingByLayerName(state.tracing, updateSegment.layerName),
+      );
+      if (volumeTracing != null) {
+        const volumeInfo = volumeInfoById[volumeTracing.tracingId];
+        volumeInfo.prevSegments = volumeTracing.segments;
+      }
     }
     // We need the updated tracing here
     prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
@@ -590,10 +610,12 @@ function* applyAndGetRevertingVolumeBatch(
   }
   // The SegmentMap is immutable. So, no need to copy.
 
-  const activeVolumeTracing = yield* select(state => enforceActiveVolumeTracing(state));
+  const activeVolumeTracing = yield* select(state =>
+    getVolumeTracingById(state.tracing, volumeAnnotationBatch.tracingId),
+  );
   const currentSegments = activeVolumeTracing.segments;
 
-  yield* put(setSegmentsActions(volumeAnnotationBatch.segments, activeVolumeTracing.tracingId));
+  yield* put(setSegmentsActions(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));
   cube.triggerPushQueue();
 
   return {
@@ -601,7 +623,7 @@ function* applyAndGetRevertingVolumeBatch(
     data: {
       buckets: allCompressedBucketsOfCurrentState,
       segments: currentSegments,
-      tracingId: activeVolumeTracing.tracingId,
+      tracingId: volumeAnnotationBatch.tracingId,
     },
   };
 }

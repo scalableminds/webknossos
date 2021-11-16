@@ -52,7 +52,7 @@ import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracin
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   serverTracingAsVolumeTracings,
-  getVolumeTracings,
+  getServerVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveNodeAction,
@@ -372,7 +372,7 @@ function initializeDataset(
   });
   mutableDataset.dataSource.dataLayers = updatedDataLayers;
 
-  const volumeTracings = getVolumeTracings(serverTracings);
+  const volumeTracings = getServerVolumeTracings(serverTracings);
   if (volumeTracings.length > 0) {
     // todo: adapt this invocation to multiple volumeTracing
     const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracings);

@@ -30,6 +30,10 @@ import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_st
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
+export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
+  return tracing.volumes;
+}
+
 export function getVolumeTracingById(tracing: Tracing, tracingId: string): VolumeTracing {
   const volumeTracing = tracing.volumes.find(t => t.tracingId === tracingId);
 
@@ -37,6 +41,13 @@ export function getVolumeTracingById(tracing: Tracing, tracingId: string): Volum
     throw new Error(`Could not find volume tracing with id ${tracingId}`);
   }
 
+  return volumeTracing;
+}
+
+export function getVolumeTracingByLayerName(tracing: Tracing, layerName: string): ?VolumeTracing {
+  // Given a segmentation layer, there might be a corresponding volume tracing. In that case,
+  // the layer name will be the tracing id.
+  const volumeTracing = tracing.volumes.find(t => t.tracingId === layerName);
   return volumeTracing;
 }
 
@@ -50,7 +61,9 @@ export function getVolumeDescriptors(
   return annotation.annotationLayers.filter(layer => layer.typ === "Volume");
 }
 
-export function getVolumeTracings(tracings: ?Array<ServerTracing>): Array<ServerVolumeTracing> {
+export function getServerVolumeTracings(
+  tracings: ?Array<ServerTracing>,
+): Array<ServerVolumeTracing> {
   // todo: add a type property to ServerTracing
   // $FlowIgnore[prop-missing]
   // $FlowIgnore[incompatible-type]

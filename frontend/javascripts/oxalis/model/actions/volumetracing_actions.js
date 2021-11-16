@@ -50,10 +50,11 @@ export type AddBucketToUndoAction = {
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  tracingId: string,
 };
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourAction = { type: "RESET_CONTOUR" };
-export type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE" };
+export type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE", tracingId: string };
 type SetMousePositionAction = { type: "SET_MOUSE_POSITION", position: ?Vector2 };
 type HideBrushAction = { type: "HIDE_BRUSH" };
 type SetContourTracingModeAction = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourMode };
@@ -196,8 +197,9 @@ export const resetContourAction = (): ResetContourAction => ({
   type: "RESET_CONTOUR",
 });
 
-export const finishAnnotationStrokeAction = (): FinishAnnotationStrokeAction => ({
+export const finishAnnotationStrokeAction = (tracingId: string): FinishAnnotationStrokeAction => ({
   type: "FINISH_ANNOTATION_STROKE",
+  tracingId,
 });
 
 export const setMousePositionAction = (position: ?Vector2): SetMousePositionAction => ({
@@ -218,11 +220,13 @@ export const addBucketToUndoAction = (
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  tracingId: string,
 ): AddBucketToUndoAction => ({
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress,
   bucketData,
   maybeBucketLoadedPromise,
+  tracingId,
 });
 
 export const inferSegmentationInViewportAction = (

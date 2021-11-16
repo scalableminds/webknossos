@@ -4,6 +4,7 @@
  */
 
 import { Col, Row, Switch, Tooltip, Modal } from "antd";
+import type { Dispatch } from "redux";
 import {
   EditOutlined,
   InfoCircleOutlined,
@@ -12,7 +13,6 @@ import {
   StopOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
@@ -27,7 +27,10 @@ import {
   ColorSetting,
 } from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
-import features from "features";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   findDataPositionForLayer,
   clearCache,
@@ -43,16 +46,22 @@ import {
   getResolutions,
   isColorLayer as getIsColorLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { userSettings } from "types/schemas/user_settings.schema";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  setNodeRadiusAction,
+  setShowSkeletonsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateTemporarySettingAction,
   updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-
+import { userSettings } from "types/schemas/user_settings.schema";
+import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
+import LinkButton from "components/link_button";
 import Model from "oxalis/model";
 import Store, {
   type VolumeTracing,
@@ -64,23 +73,14 @@ import Store, {
   type Tracing,
   type Task,
 } from "oxalis/store";
-import LinkButton from "components/link_button";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  setNodeRadiusAction,
-  setShowSkeletonsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
+import features from "features";
 import messages, { settings } from "messages";
-import MappingSettingsView from "./mapping_settings_view";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
+import MappingSettingsView from "./mapping_settings_view";
 
 type DatasetSettingsProps = {|
   userConfiguration: UserConfiguration,
@@ -392,11 +392,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
     const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
     const maybeVolumeTracing =
-      maybeTracingId != null
-        ? tracing.volumes.find(volume => volume.tracingId === maybeTracingId)
-        : null;
+      maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
     const hasFallbackLayer =
       maybeVolumeTracing != null ? maybeVolumeTracing.fallbackLayer != null : false;
+    const maybeFallbackLayer =
+      maybeVolumeTracing != null && maybeVolumeTracing.fallbackLayer != null
+        ? maybeVolumeTracing.fallbackLayer
+        : null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
@@ -446,6 +448,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           >
             <InfoCircleOutlined style={{ marginLeft: 4 }} />
           </Tooltip>
+          {isVolumeTracing ? (
+            <Tooltip
+              title={`This layer is a volume annotation.${
+                maybeFallbackLayer
+                  ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
+                  : ""
+              }`}
+              placement="left"
+            >
+              <i className="fas fa-paint-brush" style={{ opacity: 0.7 }} />
+            </Tooltip>
+          ) : null}
 
           {intensityRange[0] === intensityRange[1] && !isDisabled ? (
             <Tooltip
@@ -518,7 +532,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Row>
   );
 
-  getVolumeAnnotationSpecificSettings = (layerName: string) => {
+  getSegmentationSpecificSettings = (layerName: string) => {
     const segmentationOpacitySetting = (
       <NumberSliderSetting
         label={settings.segmentationPatternOpacity}
@@ -573,7 +587,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             {isColorLayer
               ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
-              : this.getVolumeAnnotationSpecificSettings(layerName)}
+              : this.getSegmentationSpecificSettings(layerName)}
           </div>
         )}
       </div>

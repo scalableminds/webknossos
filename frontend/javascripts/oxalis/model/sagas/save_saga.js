@@ -237,8 +237,7 @@ export function* collectUndoStates(): Saga<void> {
       finishAnnotationStrokeAction ||
       userBoundingBoxAction
     ) {
-      let shouldClearRedoState =
-        addBucketToUndoAction != null || finishAnnotationStrokeAction != null;
+      let shouldClearRedoState = false;
       if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
         const skeletonUndoState = yield* call(
           getSkeletonTracingToUndoState,
@@ -252,6 +251,7 @@ export function* collectUndoStates(): Saga<void> {
         }
         previousAction = skeletonUserAction;
       } else if (addBucketToUndoAction) {
+        shouldClearRedoState = true;
         const {
           zoomedBucketAddress,
           bucketData,
@@ -268,6 +268,7 @@ export function* collectUndoStates(): Saga<void> {
           ),
         );
       } else if (finishAnnotationStrokeAction) {
+        shouldClearRedoState = true;
         const activeVolumeTracing = yield* select(state =>
           getVolumeTracingById(state.tracing, finishAnnotationStrokeAction.tracingId),
         );

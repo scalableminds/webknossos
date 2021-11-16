@@ -7,7 +7,6 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables.Jobs
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
@@ -26,6 +25,7 @@ import scala.concurrent.ExecutionContext
 case class Job(
     _id: ObjectId,
     _owner: ObjectId,
+    _dataStore: String,
     command: String,
     commandArgs: JsObject = Json.obj(),
     state: JobState = JobState.PENDING,
@@ -54,6 +54,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       Job(
         ObjectId(r._Id),
         ObjectId(r._Owner),
+        r._Datastore,
         r.command,
         Json.parse(r.commandargs).as[JsObject],
         state,
@@ -78,14 +79,21 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllByState(jobState: JobState)(implicit ctx: DBAccessContext): Fox[List[Job]] =
+  def countByStateAndDataStore(jobState: JobState, _dataStore: String): Fox[Int] =
     for {
-      accessQuery <- readAccessQuery
       r <- run(
-        sql"select #$columns from #$existingCollectionName where state = '#${sanitize(jobState.toString)}' and #$accessQuery order by created"
-          .as[JobsRow])
-      parsed <- parseAll(r)
-    } yield parsed
+        sql"select count(_id) from #$existingCollectionName where state = '#${sanitize(jobState.toString)}' and _dataStore = $_dataStore"
+          .as[Int])
+      head <- r.headOption
+    } yield head
+
+  def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
+    for {
+      r <- run(
+        sql"select count(_id) from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}')"
+          .as[Int])
+      head <- r.headOption
+    } yield head
 
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
@@ -104,9 +112,9 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(j: Job): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, state, manualState, _worker, latestRunId,
+        sqlu"""insert into webknossos.jobs(_id, _owner, _dataStore, command, commandArgs, state, manualState, _worker, latestRunId,
                returnValue, started, ended, created, isDeleted)
-                         values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}',
+                         values(${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, '#${sanitize(j.commandArgs.toString)}',
                           '#${j.state.toString}', #${optionLiteralSanitized(j.manualState.map(_.toString))},
                           #${optionLiteral(j._worker.map(_.toString))},
                           #${optionLiteralSanitized(j.latestRunId)},
@@ -130,6 +138,8 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               where _id = $jobId""")
     } yield ()
   }
+
+  def reserveNextJob(worker: Worker): Fox[Unit] = Fox.empty
 
 }
 
@@ -186,6 +196,7 @@ class JobService @Inject()(wkConf: WkConf,
         "manualState" -> job.manualState,
         "latestRunId" -> job.latestRunId,
         "returnValue" -> job.returnValue,
+        "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
       ))
@@ -201,7 +212,8 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
       argsWrapped = Json.obj("kwargs" -> commandArgs)
-      job = Job(ObjectId.generate, owner._id, command, commandArgs)
+      // TODO: select correct datastore for job
+      job = Job(ObjectId.generate, owner._id, "localhost", command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job

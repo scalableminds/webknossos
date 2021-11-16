@@ -365,7 +365,6 @@ INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL,
-  url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
   maxParallelJobs INT NOT NULL DEFAULT 1,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -378,6 +377,7 @@ CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAIL
 CREATE TABLE webknossos.jobs(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _owner CHAR(24) NOT NULL,
+  _dataStore CHAR(256) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
   state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING',
@@ -420,6 +420,7 @@ CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDele
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 

@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.job._
 import models.organization.OrganizationDAO
+import net.liftweb.common.Full
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.MessagesProvider
 import play.api.libs.json.Json
@@ -21,17 +22,28 @@ class WKRemoteWorkerController @Inject()(
     organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def getNextJobs(workerId: ObjectId): Fox[List[Job]] = ???
-
   def requestJobs: Action[AnyContent] = Action.async { implicit request =>
     for {
       worker <- validateWorkerAccess
+      _ <- reserveNextJobs(worker)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
-      nextJobs: List[Job] <- if (assignedUnfinishedJobs.length >= worker.maxParallelJobs) Fox.successful(List())
-      else getNextJobs(worker._id)
-      js = (assignedUnfinishedJobs ++ nextJobs).map(jobService.parameterWrites)
+      js = (assignedUnfinishedJobs).map(jobService.parameterWrites)
     } yield Ok(Json.toJson(js))
   }
+
+  private def reserveNextJobs(worker: Worker): Fox[Unit] = {
+    reserveNextJobsIter(worker)
+  }
+
+  private def reserveNextJobsIter(worker: Worker): Fox[Unit] = {
+      for {
+        unfinishedCount <- jobDAO.countUnfinishedByWorker(worker._id)
+        pendingCount <- jobDAO.countByStateAndDataStore(JobState.PENDING, worker._dataStore)
+        _ <- if (unfinishedCount >= worker.maxParallelJobs || pendingCount == 0) Fox.successful(()) else {
+          jobDAO.reserveNextJob(worker).flatMap(reserveNextJobsIter(worker))
+        }
+      } yield ()
+    }
 
   def updateJobStatus(id: String): Action[JobStatus] = Action.async(validateJson[JobStatus]) { implicit request =>
     for {

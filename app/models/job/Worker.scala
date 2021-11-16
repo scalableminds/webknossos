@@ -10,7 +10,7 @@ import utils.{ObjectId, SQLClient, SQLDAO}
 import scala.concurrent.ExecutionContext
 
 case class Worker(_id: ObjectId,
-                  _dataStore: ObjectId,
+                  _dataStore: String,
                   url: String,
                   key: String,
                   maxParallelJobs: Int,
@@ -29,7 +29,7 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     Fox.successful(
       Worker(
         ObjectId(r._Id),
-        ObjectId(r._Datastore),
+        r._Datastore,
         r.url,
         r.key,
         r.maxparalleljobs,

@@ -74,7 +74,7 @@ import UrlManager, {
   type UrlStateByLayer,
 } from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import constants, { ControlModeEnum } from "oxalis/constants";
+import constants, { ControlModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
 
@@ -313,7 +313,7 @@ function setInitialTool() {
     // We are in a annotation which contains a skeleton. Due to the
     // enabled legacy-bindings, the user can expect to immediately create new nodes
     // with right click. Therefore, switch to the skeleton tool.
-    Store.dispatch(setToolAction("SKELETON"));
+    Store.dispatch(setToolAction(AnnotationToolEnum.SKELETON));
   }
 }
 

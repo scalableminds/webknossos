@@ -884,13 +884,3 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
     layer ? layer.name : null,
   );
 }
-
-export function getMappingInfoForTracingLayer(state: OxalisState): ActiveMappingInfo {
-  const layer = getSegmentationTracingLayer(state.dataset);
-  return getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    layer ? layer.name : null,
-  );
-}
-
-export default {};

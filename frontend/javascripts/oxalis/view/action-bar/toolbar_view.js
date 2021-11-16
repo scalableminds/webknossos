@@ -13,7 +13,8 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { document } from "libs/window";
 import {
-  enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
+  getMappingInfoForVolumeTracing,
   getRenderableResolutionForActiveSegmentationTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -21,7 +22,6 @@ import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import { getMappingInfoForTracingLayer } from "oxalis/model/accessors/dataset_accessor";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -230,12 +230,15 @@ const mapId = id => {
 };
 
 function CreateCellButton() {
-  const unmappedActiveCellId = useSelector(state => enforceActiveVolumeTracing(state).activeCellId);
-
-  const mappingColors = useSelector(state => getMappingInfoForTracingLayer(state).mappingColors);
-  const isMappingEnabled = useSelector(
-    state => getMappingInfoForTracingLayer(state).isMappingEnabled,
+  const volumeTracing = useSelector(state => getActiveSegmentationTracing(state));
+  const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
+  const { isMappingEnabled, mappingColors } = useSelector(state =>
+    getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
   );
+
+  if (!volumeTracing) {
+    return null;
+  }
   const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;
   const activeCellColor = convertCellIdToCSS(activeCellId, customColors);

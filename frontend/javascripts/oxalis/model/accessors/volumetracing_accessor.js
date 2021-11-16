@@ -4,6 +4,13 @@
  */
 import memoizeOne from "memoize-one";
 
+import type {
+  ActiveMappingInfo,
+  OxalisState,
+  SegmentMap,
+  Tracing,
+  VolumeTracing,
+} from "oxalis/store";
 import {
   type AnnotationTool,
   AnnotationToolEnum,
@@ -13,6 +20,7 @@ import {
 } from "oxalis/constants";
 import {
   ResolutionInfo,
+  getMappingInfo,
   getResolutionInfo,
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
@@ -25,7 +33,6 @@ import type {
   APIAnnotationCompact,
   APISegmentationLayer,
 } from "types/api_flow_types";
-import type { Tracing, VolumeTracing, OxalisState, SegmentMap } from "oxalis/store";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
@@ -220,7 +227,7 @@ export function getActiveSegmentationTracingLayer(state: OxalisState): ?APISegme
 }
 
 export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
-  const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
+  const tracing = getActiveSegmentationTracing(state);
 
   if (tracing == null) {
     throw new Error("No volume tracing is available.");
@@ -351,3 +358,10 @@ function _getRenderableResolutionForActiveSegmentationTracing(
 export const getRenderableResolutionForActiveSegmentationTracing = reuseInstanceOnEquality(
   _getRenderableResolutionForActiveSegmentationTracing,
 );
+
+export function getMappingInfoForVolumeTracing(
+  state: OxalisState,
+  tracingId: ?string,
+): ActiveMappingInfo {
+  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
+}

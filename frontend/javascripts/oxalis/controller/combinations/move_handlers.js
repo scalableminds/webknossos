@@ -71,6 +71,15 @@ export const moveW = (deltaW: number, oneSlide: boolean): void => {
   }
 };
 
+export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, event: MouseEvent) {
+  // Always set the correct mouse position. Otherwise, using alt + mouse move and
+  // alt + scroll won't result in the correct zoomToMouse behavior.
+  setMousePosition(position);
+  if (event.altKey && !event.shiftKey && !event.ctrlKey) {
+    handleMovePlane(delta);
+  }
+}
+
 export const zoom = (value: number, zoomToMouse: boolean) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
   if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {

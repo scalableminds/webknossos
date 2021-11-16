@@ -618,14 +618,8 @@ export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?API
     return segmentationLayers[0];
   }
 
-  // If there is more than one segmentation layer and merger mode is enabled,
-  // prefer the volume tracing or visible layer.
-  if (state.temporaryConfiguration.isMergerModeEnabled) {
-    return getSegmentationTracingOrVisibleLayer(state);
-  }
-
-  // There are multiple segmentation layers and merger mode is not enabled.
-  // From the visible segmentation layers, return the first layer which has enabled mappings.
+  // There are multiple segmentation layers. From the visible segmentation layers,
+  // return the first layer which has enabled mappings.
   // If no layer has enabled mappings, pick a layer which has some mappings (this is important
   // for the initialization of the mapping textures, since isMappingEnabled will be set to true
   // after all mapping data was copied to the GPU, but getSegmentationLayerWithMappingSupport is
@@ -666,22 +660,6 @@ export function getFirstSegmentationLayer(
   }
 
   return null;
-}
-
-// todo: adapt this and change callers. rather use:
-// getActiveSegmentationTracingLayer. only used by getSegmentationTracingOrVisibleLayer now
-function getSegmentationTracingLayer(dataset: APIMaybeUnimportedDataset): ?APISegmentationLayer {
-  const tracingLayers = getSegmentationLayers(dataset).filter(layer => layer.tracingId != null);
-  if (tracingLayers.length > 0) {
-    return tracingLayers[0];
-  } else if (tracingLayers.length > 1) {
-    throw new Error("webKnossos only supports one volume tracing layer per annotation currently.");
-  }
-  return null;
-}
-
-export function getSegmentationTracingOrVisibleLayer(state: OxalisState): ?APISegmentationLayer {
-  return getSegmentationTracingLayer(state.dataset) || getVisibleSegmentationLayer(state);
 }
 
 export function getSegmentationLayers(

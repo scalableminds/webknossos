@@ -8,6 +8,7 @@ import {
   type AnnotationTool,
   AnnotationToolEnum,
   type ContourMode,
+  type Vector3,
   VolumeTools,
 } from "oxalis/constants";
 import {
@@ -25,7 +26,9 @@ import type {
   APISegmentationLayer,
 } from "types/api_flow_types";
 import type { Tracing, VolumeTracing, OxalisState, SegmentMap } from "oxalis/store";
+import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 export function getVolumeTracingById(tracing: Tracing, tracingId: string): VolumeTracing {
   const volumeTracing = tracing.volumes.find(t => t.tracingId === tracingId);
@@ -66,7 +69,7 @@ function getSegmentationLayerForTracing(
 }
 
 function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState): ResolutionInfo {
-  const volumeTracing = getActiveSegmentationTracingLayer(state);
+  const volumeTracing = getActiveSegmentationTracing(state);
   if (!volumeTracing) {
     return new ResolutionInfo([]);
   }
@@ -74,14 +77,15 @@ function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState):
   return getResolutionInfo(segmentationLayer.resolutions);
 }
 
-export const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
+// done: check callers
+const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
   _getResolutionInfoOfActiveSegmentationTracingLayer,
 );
 
 export function serverTracingAsVolumeTracings(
   tracings: ?Array<ServerTracing>,
 ): Array<ServerVolumeTracing> {
-  // todo
+  // todo: fix flow?
   // $FlowIgnore[prop-missing]
   // $FlowIgnore[incompatible-type]
   const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
@@ -190,8 +194,16 @@ export function getRequestedOrDefaultSegmentationTracingLayer(
   return getTracingForSegmentationLayer(state, visibleLayer);
 }
 
-export function getActiveSegmentationTracingLayer(state: OxalisState): ?VolumeTracing {
+export function getActiveSegmentationTracing(state: OxalisState): ?VolumeTracing {
   return getRequestedOrDefaultSegmentationTracingLayer(state, null);
+}
+
+export function getActiveSegmentationTracingLayer(state: OxalisState): ?APISegmentationLayer {
+  const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
+  if (!tracing) {
+    return null;
+  }
+  return getSegmentationLayerForTracing(state, tracing);
 }
 
 export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
@@ -252,3 +264,77 @@ export function getVisibleSegments(state: OxalisState): ?SegmentMap {
 
   return state.localSegmentationData[layer.name].segments;
 }
+
+/*
+  This function returns the resolution and zoom step in which the given segmentation
+  tracing layer is currently rendered (if it is rendered). These properties should be used
+  when labeling volume data.
+ */
+function _getRenderableResolutionForSegmentationTracing(
+  state: OxalisState,
+  segmentationTracing: ?VolumeTracing,
+): ?{ resolution: Vector3, zoomStep: number } {
+  if (!segmentationTracing) {
+    return null;
+  }
+  const segmentationLayer = getSegmentationLayerForTracing(state, segmentationTracing);
+  const requestedZoomStep = getRequestLogZoomStep(state);
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
+  const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
+
+  // Check whether the segmentation layer is enabled
+  const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
+  if (segmentationSettings.isDisabled) {
+    return null;
+  }
+
+  // Check whether the requested zoom step exists
+  if (resolutionInfo.hasIndex(requestedZoomStep)) {
+    return {
+      zoomStep: requestedZoomStep,
+      resolution: resolutionInfo.getResolutionByIndexOrThrow(requestedZoomStep),
+    };
+  }
+
+  // Since `renderMissingDataBlack` is enabled, the fallback resolutions
+  // should not be considered.
+  // rendered.
+  if (renderMissingDataBlack) {
+    return null;
+  }
+
+  // The current resolution is missing and fallback rendering
+  // is activated. Thus, check whether one of the fallback
+  // zoomSteps can be rendered.
+  for (
+    let fallbackZoomStep = requestedZoomStep + 1;
+    fallbackZoomStep <= requestedZoomStep + maxZoomStepDiff;
+    fallbackZoomStep++
+  ) {
+    if (resolutionInfo.hasIndex(fallbackZoomStep)) {
+      return {
+        zoomStep: fallbackZoomStep,
+        resolution: resolutionInfo.getResolutionByIndexOrThrow(fallbackZoomStep),
+      };
+    }
+  }
+
+  return null;
+}
+
+// done: check callers
+export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableResolutionForSegmentationTracing,
+);
+
+function _getRenderableResolutionForActiveSegmentationTracing(
+  state: OxalisState,
+): ?{ resolution: Vector3, zoomStep: number } {
+  const activeSegmentationTracing = getActiveSegmentationTracing(state);
+  return getRenderableResolutionForSegmentationTracing(state, activeSegmentationTracing);
+}
+
+export const getRenderableResolutionForActiveSegmentationTracing = reuseInstanceOnEquality(
+  _getRenderableResolutionForActiveSegmentationTracing,
+);

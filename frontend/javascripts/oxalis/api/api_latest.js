@@ -946,6 +946,7 @@ class DataApi {
    * segmentation layer.
    * Use `getSegmentationLayerNames` if you want to get actual segmentation layers (independent of a tracing).
    */
+  // todo: make this deprecated and add getVolumeTracingLayerNameS
   getVolumeTracingLayerName(): string {
     const segmentationLayer = this.model.getSegmentationTracingLayer();
     if (segmentationLayer != null) {

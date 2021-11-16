@@ -1,16 +1,15 @@
 // @flow
-import type { OxalisState } from "oxalis/store";
+import memoizeOne from "memoize-one";
+
 import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
 import {
-  getActiveSegmentationTracingLayer,
+  getActiveSegmentationTracing,
+  getRenderableResolutionForSegmentationTracing,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getRenderableResolutionForSegmentationTracing,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
-import memoizeOne from "memoize-one";
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
@@ -139,14 +138,17 @@ export function getDisabledInfoForTools(
 ): { [key: AnnotationTool]: { isDisabled: boolean, explanation: string } } {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentationTracing(state);
-  const labeledResolution =
-    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
-  const isSegmentationTracingVisibleForMag = labeledResolution != null;
 
   const hasVolume = state.tracing.volumes.length > 0;
   const hasSkeleton = state.tracing.skeleton != null;
-  const segmentationTracingLayer = getActiveSegmentationTracingLayer(state);
+  const segmentationTracingLayer = getActiveSegmentationTracing(state);
+  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentationTracing(
+    state,
+    segmentationTracingLayer,
+  );
+  const labeledResolution =
+    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
+  const isSegmentationTracingVisibleForMag = labeledResolution != null;
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&

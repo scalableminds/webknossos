@@ -8,12 +8,12 @@ import _ from "lodash";
 
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerWithMappingSupport,
   getLayerByName,
   isLayerVisible,
-  getSegmentationTracingLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
@@ -143,9 +143,13 @@ export class OxalisModel {
     return this.getSegmentationLayers().length > 0;
   }
 
-  getSegmentationTracingLayer(): ?DataLayer {
-    const { dataset } = Store.getState();
-    const layer = getSegmentationTracingLayer(dataset);
+  getSegmentationTracingLayer(tracingId: string): DataLayer {
+    return this.getLayerByName(tracingId);
+  }
+
+  getActiveSegmentationTracingLayer(): ?DataLayer {
+    const state = Store.getState();
+    const layer = getActiveSegmentationTracingLayer(state);
     if (layer == null) {
       return null;
     }
@@ -154,7 +158,7 @@ export class OxalisModel {
   }
 
   getEnforcedSegmentationTracingLayer(): DataLayer {
-    const layer = this.getSegmentationTracingLayer();
+    const layer = this.getActiveSegmentationTracingLayer();
     if (layer == null) {
       // The function should never be called if no segmentation layer exists.
       throw new Error("No segmentation layer found.");

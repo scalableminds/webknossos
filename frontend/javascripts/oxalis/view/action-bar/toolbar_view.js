@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect } from "react";
 
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
@@ -11,16 +12,16 @@ import {
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { document } from "libs/window";
-import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  enforceActiveVolumeTracing,
+  getRenderableResolutionForActiveSegmentationTracing,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getDisabledInfoForTools,
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
-import {
-  getMappingInfoForTracingLayer,
-  getRenderableResolutionForSegmentationTracing,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfoForTracingLayer } from "oxalis/model/accessors/dataset_accessor";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -38,7 +39,6 @@ import Constants, {
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -361,7 +361,9 @@ export default function ToolbarView() {
 
   const activeTool = useSelector(state => state.uiInformation.activeTool);
 
-  const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentationTracing);
+  const maybeResolutionWithZoomStep = useSelector(
+    getRenderableResolutionForActiveSegmentationTracing,
+  );
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
 

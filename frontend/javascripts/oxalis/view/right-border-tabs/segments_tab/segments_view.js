@@ -19,7 +19,7 @@ import {
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
-  getActiveSegmentationTracingLayer,
+  getActiveSegmentationTracing,
   getVisibleSegments,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -97,7 +97,7 @@ type StateProps = {|
 
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  const activeVolumeTracing = getActiveSegmentationTracingLayer(state);
+  const activeVolumeTracing = getActiveSegmentationTracing(state);
   const mappingInfo = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,

@@ -78,7 +78,7 @@ import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { doWithToken } from "admin/admin_rest_api";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getResolutionInfoOfSegmentationTracingLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { maybeGetSomeTracing, selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
@@ -513,7 +513,7 @@ function* applyAndGetRevertingVolumeBatch(
   // Applies a VolumeAnnotationBatch and returns a VolumeUndoState (which simply wraps
   // another VolumeAnnotationBatch) for reverting the undo operation.
 
-  const segmentationLayer = Model.getSegmentationTracingLayer();
+  const segmentationLayer = Model.getSegmentationTracingLayer(volumeAnnotationBatch.tracingId);
   if (!segmentationLayer) {
     throw new Error("Undoing a volume annotation but no volume layer exists.");
   }
@@ -711,10 +711,13 @@ export function* sendRequestToServer(
       );
       yield* put(setLastSaveTimestampAction(tracingType));
       yield* put(shiftSaveQueueAction(saveQueue.length, tracingType, tracingId));
-      yield _call(markBucketsAsNotDirty, compactedSaveQueue);
+      if (tracingType === "volume") {
+        yield _call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
+      }
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {
+      console.warn("Error during saving. Will retry. Error:", error);
       const controlMode = yield* select(state => state.temporaryConfiguration.controlMode);
       const isViewOrSandboxMode =
         controlMode === ControlModeEnum.VIEW || controlMode === ControlModeEnum.SANDBOX;
@@ -748,10 +751,9 @@ export function* sendRequestToServer(
   }
 }
 
-function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
-  const segmentationLayer = Model.getSegmentationTracingLayer();
-  const dataset = yield* select(state => state.dataset);
-  const segmentationResolutionInfo = getResolutionInfoOfSegmentationTracingLayer(dataset);
+function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
+  const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+  const segmentationResolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   if (segmentationLayer != null) {
     for (const saveEntry of saveQueue) {
       for (const updateAction of saveEntry.actions) {

@@ -14,14 +14,10 @@ import {
   type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  addUserBoundingBoxAction,
-  type AddIsosurfaceAction,
-} from "oxalis/model/actions/annotation_actions";
-import {
-  updateTemporarySettingAction,
-  type UpdateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
-import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+  ResolutionInfo,
+  getBoundaries,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   type Saga,
   _takeEvery,
@@ -45,10 +41,16 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
+import {
+  addUserBoundingBoxAction,
+  type AddIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
+import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
 import {
   enforceActiveVolumeTracing,
-  getActiveSegmentationTracingLayer,
+  getActiveSegmentationTracing,
+  getRenderableResolutionForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
@@ -60,17 +62,15 @@ import {
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getResolutionInfoOfSegmentationTracingLayer,
-  ResolutionInfo,
-  getRenderableResolutionForSegmentationTracing,
-  getBoundaries,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
   isVolumeDrawingTool,
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import {
+  updateTemporarySettingAction,
+  type UpdateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
@@ -153,8 +153,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
       continue;
     }
 
-    const maybeLabeledResolutionWithZoomStep = yield* select(
-      getRenderableResolutionForSegmentationTracing,
+    const maybeLabeledResolutionWithZoomStep = yield* select(state =>
+      getRenderableResolutionForSegmentationTracing(state, volumeTracing),
     );
     if (!maybeLabeledResolutionWithZoomStep) {
       // Volume data is currently not rendered. Don't annotate anything.
@@ -316,9 +316,7 @@ function* labelWithVoxelBuffer2D(
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   const dimensionIndices = Dimensions.getIndices(activeViewport);
 
-  const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
-  );
+  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]) =>
@@ -440,9 +438,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   ]);
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
-  const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
-  );
+  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
   const dimensionIndices = Dimensions.getIndices(activeViewport);
@@ -538,9 +534,7 @@ export function* floodFill(): Saga<void> {
     const activeCellId = volumeTracing.activeCellId;
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
-    const resolutionInfo = yield* select(state =>
-      getResolutionInfoOfSegmentationTracingLayer(state.dataset),
-    );
+    const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
     const oldSegmentIdAtSeed = cube.getDataValue(seedPosition, null, labeledZoomStep);
 
@@ -954,7 +948,7 @@ function* maintainContourGeometry(): Saga<void> {
 
   while (true) {
     const isTraceToolActive = yield* select(state => isTraceTool(state.uiInformation.activeTool));
-    const volumeTracing = yield* select(getActiveSegmentationTracingLayer);
+    const volumeTracing = yield* select(getActiveSegmentationTracing);
     if (!volumeTracing) {
       continue;
     }

@@ -6,7 +6,8 @@ import java.util.Date
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
-import models.job.{JobDAO, JobService, JobStatus}
+import models.binary.DataSetDAO
+import models.job.{JobDAO, JobService}
 import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
@@ -20,6 +21,7 @@ import scala.concurrent.ExecutionContext
 class JobsController @Inject()(
     jobDAO: JobDAO,
     sil: Silhouette[WkEnv],
+    dataSetDAO: DataSetDAO,
     jobService: JobService,
     wkconf: WkConf,
     slackNotificationService: SlackNotificationService,
@@ -54,7 +56,10 @@ class JobsController @Inject()(
     } yield Ok(js)
   }
 
-  def runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
+  def runConvertToWkwJob(organizationName: String,
+                         dataSetName: String,
+                         scale: String,
+                         dataStoreName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -69,7 +74,7 @@ class JobsController @Inject()(
             "webknossos_token" -> RpcTokenHolder.webKnossosToken
           )
 
-          job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataStoreName) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -85,6 +90,9 @@ class JobsController @Inject()(
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataSet.notFound",
+          dataSetName) ~> NOT_FOUND
         command = "compute_mesh_file"
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -93,7 +101,7 @@ class JobsController @Inject()(
           "mag" -> mag,
           "agglomerate_view" -> agglomerateView
         )
-        job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunComputeMeshFile"
+        job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunComputeMeshFile"
         js <- jobService.publicWrites(job)
       } yield Ok(js)
     }
@@ -105,6 +113,9 @@ class JobsController @Inject()(
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
           command = "infer_nuclei"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -112,7 +123,7 @@ class JobsController @Inject()(
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunNucleiInferral"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -135,6 +146,9 @@ class JobsController @Inject()(
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
           command = "export_tiff"
           exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${tracingId.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
@@ -153,7 +167,7 @@ class JobsController @Inject()(
             "mapping_type" -> mappingType,
             "hide_unmapped_ids" -> hideUnmappedIds
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunTiffExport"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

@@ -253,6 +253,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   formValues.name,
                   activeUser.organization,
                   formValues.scale,
+                  formValues.datastore,
                 );
               } catch (error) {
                 maybeError = error;

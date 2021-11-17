@@ -889,9 +889,10 @@ export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,
   scale: Vector3,
+  datastoreName: string,
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}`,
+    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&datastoreName=${datastoreName}}`,
   );
 }
 

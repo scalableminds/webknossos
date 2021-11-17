@@ -127,7 +127,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
   def updateName(annotationId: ObjectId, tracingId: String, newName: Option[String]): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"update webknossos.annotation_layers set name = $newName where annotationId = $annotationId and tracingId = $tracingId")
+        sqlu"update webknossos.annotation_layers set name = $newName where _annotation = $annotationId and tracingId = $tracingId")
     } yield ()
 
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =

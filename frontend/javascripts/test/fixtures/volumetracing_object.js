@@ -1,5 +1,5 @@
-/* eslint-disable import/prefer-default-export */
 // @flow
+/* eslint-disable import/prefer-default-export */
 import update from "immutability-helper";
 
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
@@ -15,6 +15,7 @@ const volumeTracing = {
   maxCellId: 0,
   contourList: [],
   lastCentroid: null,
+  tracingId: "tracingId",
 };
 
 const notEmptyViewportRect = {
@@ -38,7 +39,7 @@ export const initialState = update(defaultState, {
         resolutionRestrictions: { min: null, max: null },
       },
     },
-    volume: { $set: volumeTracing },
+    volumes: { $set: [volumeTracing] },
   },
   dataset: {
     dataSource: {
@@ -49,8 +50,10 @@ export const initialState = update(defaultState, {
             // getRequestLogZoomStep will always return 0
             resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
             category: "segmentation",
-            name: "segmentation",
+            name: "tracingId",
             tracingId: "tracingId",
+            isDisabled: false,
+            alpha: 100,
           },
         ],
       },
@@ -58,7 +61,7 @@ export const initialState = update(defaultState, {
   },
   datasetConfiguration: {
     layers: {
-      segmentation: {
+      tracingId: {
         $set: {
           color: [0, 0, 0],
           alpha: 100,

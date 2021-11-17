@@ -119,8 +119,8 @@ const modelData = {
 };
 
 export function getVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
-  if (tracing.volume != null) {
-    return Maybe.Just(tracing.volume);
+  if (tracing.volumes.length > 0) {
+    return Maybe.Just(tracing.volumes[0]);
   }
   throw new Error("Tracing is not of type volume!");
 }

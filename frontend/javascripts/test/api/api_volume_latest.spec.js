@@ -43,16 +43,17 @@ test("setAnnotationTool should throw an error for an invalid tool", t => {
   t.throws(() => api.tracing.setAnnotationTool());
 });
 
-test("Data API: labelVoxels should label a list of voxels", t => {
-  const { api, model } = t.context;
-  const { cube } = model.getSegmentationTracingLayer();
+test.only("Data API: labelVoxels should label a list of voxels", async t => {
+  const { api } = t.context;
+  const volumeTracingId = api.data.getVolumeTracingLayerIds()[0];
 
   api.data.labelVoxels([[1, 2, 3], [7, 8, 9]], 34);
+
   // The specified voxels should be labeled with the new value
-  t.is(cube.getDataValue([1, 2, 3]), 34);
-  t.is(cube.getDataValue([7, 8, 9]), 34);
+  t.is(await api.data.getDataValue(volumeTracingId, [1, 2, 3]), 34);
+  t.is(await api.data.getDataValue(volumeTracingId, [7, 8, 9]), 34);
   // Some other voxel should not
-  t.not(cube.getDataValue([11, 12, 13]), 34);
+  t.not(await api.data.getDataValue(volumeTracingId, [11, 12, 13]), 34);
 });
 
 test("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {

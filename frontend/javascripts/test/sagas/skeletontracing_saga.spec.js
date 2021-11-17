@@ -40,7 +40,7 @@ const { pushSaveQueueTransaction } = mockRequire.reRequire("oxalis/model/actions
 const SkeletonTracingReducer = mockRequire.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
-const { take, put } = mockRequire.reRequire("redux-saga/effects");
+const { put } = mockRequire.reRequire("redux-saga/effects");
 
 function testDiffing(prevTracing, nextTracing, prevFlycam, flycam) {
   return withoutUpdateTracing(

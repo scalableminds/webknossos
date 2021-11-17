@@ -148,7 +148,7 @@ export function assertSkeleton(tracing: Tracing): SkeletonTracing {
 }
 
 export function assertVolume(state: OxalisState): VolumeTracing {
-  if (state.tracing.volumes.length > 0) {
+  if (state.tracing.volumes.length === 0) {
     throw new Error("This api function should only be called in a volume annotation.");
   }
   const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
@@ -944,7 +944,7 @@ class DataApi {
   }
 
   /**
-   * DEPRECATED! Use getSegmentationLayerNames, getVisibleSegmentationLayer or getVolumeTracingLayerNames instead.
+   * DEPRECATED! Use getSegmentationLayerNames, getVisibleSegmentationLayer or getVolumeTracingLayerIds instead.
    *
    * Returns the name of the volume tracing layer (only exists for a volume annotation) or the visible
    * segmentation layer.
@@ -956,7 +956,7 @@ class DataApi {
     }
     const visibleLayer = getVisibleSegmentationLayer(Store.getState());
     console.warn(
-      "getVolumeTracingLayerName is deprecated. Please use getVolumeTracingLayerNames instead.",
+      "getVolumeTracingLayerName is deprecated. Please use getVolumeTracingLayerIds instead.",
     );
     if (visibleLayer != null) {
       console.warn(

@@ -7,7 +7,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.job.{JobDAO, JobService}
+import models.job.{JobDAO, JobService, WorkerDAO, WorkerService}
 import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
@@ -23,6 +23,8 @@ class JobsController @Inject()(
     sil: Silhouette[WkEnv],
     dataSetDAO: DataSetDAO,
     jobService: JobService,
+    workerService: WorkerService,
+    workerDAO: WorkerDAO,
     wkconf: WkConf,
     slackNotificationService: SlackNotificationService,
     organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -31,13 +33,14 @@ class JobsController @Inject()(
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.successful(())
-      /*jobCountsByStatus <- jobService.countByStatus()
-      workerStatus <- jobService.workerStatus()
+      jobCountsByStatus <- jobDAO.countByStatus
+      workers <- workerDAO.findAll
+      workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
-        "workers" -> workerStatus,
-        "queue" -> Json.toJson(jobCountsByStatus)
-      )*/
-    } yield Ok
+        "workers" -> workersJson,
+        "jobsByStatus" -> Json.toJson(jobCountsByStatus)
+      )
+    } yield Ok(jsStatus)
   }
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

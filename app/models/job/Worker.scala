@@ -3,6 +3,7 @@ package models.job
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -41,4 +42,15 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       r: Seq[WorkersRow] <- run(sql"select #$columns from #$existingCollectionName where key = $key".as[WorkersRow])
       parsed <- parseFirst(r, "key")
     } yield parsed
+}
+
+class WorkerService @Inject()() {
+  def publicWrites(worker: Worker): JsObject = {
+    Json.obj(
+      "id" -> worker._id.id,
+      "maxParallelJobs" -> worker.maxParallelJobs,
+      "created" -> worker.created,
+      "lastHeartBeat" -> "TODO"
+    )
+  }
 }

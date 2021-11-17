@@ -6,6 +6,7 @@ import memoizeOne from "memoize-one";
 
 import type {
   ActiveMappingInfo,
+  HybridTracing,
   OxalisState,
   SegmentMap,
   Tracing,
@@ -63,9 +64,22 @@ export function hasVolumeTracings(tracing: Tracing): boolean {
 }
 
 export function getVolumeDescriptors(
-  annotation: APIAnnotation | APIAnnotationCompact,
+  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
 ): Array<AnnotationLayerDescriptor> {
   return annotation.annotationLayers.filter(layer => layer.typ === "Volume");
+}
+
+export function getVolumeDescriptorById(
+  annotation: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  tracingId: string,
+): AnnotationLayerDescriptor {
+  const descriptors = getVolumeDescriptors(annotation).filter(
+    layer => layer.typ === "Volume" && layer.tracingId === tracingId,
+  );
+  if (descriptors.length === 0) {
+    throw new Error(`Could not find volume descriptor with id ${tracingId}`);
+  }
+  return descriptors[0];
 }
 
 export function getServerVolumeTracings(

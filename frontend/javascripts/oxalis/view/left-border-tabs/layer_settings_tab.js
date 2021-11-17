@@ -18,7 +18,7 @@ import React, { useState } from "react";
 import _ from "lodash";
 import classnames from "classnames";
 
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
@@ -27,6 +27,7 @@ import {
   ColorSetting,
 } from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
+import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -47,7 +48,10 @@ import {
   isColorLayer as getIsColorLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
-import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getVolumeDescriptorById,
+  getVolumeTracingById,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setNodeRadiusAction,
   setShowSkeletonsAction,
@@ -61,6 +65,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
 import Model from "oxalis/model";
 import Store, {
@@ -102,6 +107,7 @@ type DatasetSettingsProps = {|
   tracing: Tracing,
   task: ?Task,
   onChangeEnableAutoBrush: (active: boolean) => void,
+  onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void,
   isAutoBrushEnabled: boolean,
   controlMode: ControlMode,
   isArbitraryMode: boolean,
@@ -420,15 +426,25 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
 
+    const volumeDescriptor =
+      layer.tracingId != null ? getVolumeDescriptorById(tracing, layer.tracingId) : null;
+
     return (
       <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700, wordWrap: "break-word" }}>
-            {
-              // todo: show actual, editable name of volume annotation
-            }
-            {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
+            {volumeDescriptor != null ? (
+              <EditableTextLabel
+                value={volumeDescriptor.name}
+                onChange={newName => {
+                  this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, { name: newName });
+                }}
+                label="Volume Layer Name"
+              />
+            ) : (
+              layerName
+            )}
           </span>
 
           <Tooltip
@@ -876,6 +892,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     const { annotationId, annotationType } = tracing;
     await unlinkFallbackSegmentation(annotationId, annotationType);
     await api.tracing.hardReload();
+  },
+  onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {
+    dispatch(editAnnotationLayerAction(tracingId, layerProperties));
   },
 });
 

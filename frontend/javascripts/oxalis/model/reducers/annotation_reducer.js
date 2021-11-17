@@ -65,6 +65,22 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "EDIT_ANNOTATION_LAYER": {
+      const newAnnotationLayers = state.tracing.annotationLayers.map(layer => {
+        if (layer.tracingId !== action.tracingId) {
+          return layer;
+        } else {
+          return {
+            ...layer,
+            ...action.layerProperties,
+          };
+        }
+      });
+      return updateTracing(state, {
+        annotationLayers: newAnnotationLayers,
+      });
+    }
+
     case "SET_ANNOTATION_DESCRIPTION": {
       const { description } = action;
       return updateTracing(state, {

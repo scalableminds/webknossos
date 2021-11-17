@@ -152,6 +152,7 @@ const defaultState: OxalisState = {
     volumes: [],
     skeleton: null,
     user: null,
+    annotationLayers: [],
   },
   save: {
     queue: {

@@ -1,5 +1,10 @@
 // @flow
-import { type EditableAnnotation, editAnnotation } from "admin/admin_rest_api";
+import type { EditAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
+import {
+  type EditableAnnotation,
+  editAnnotation,
+  updateAnnotationLayer,
+} from "admin/admin_rest_api";
 import {
   type Saga,
   _takeEvery,
@@ -8,13 +13,13 @@ import {
   take,
   _delay,
 } from "oxalis/model/sagas/effect-generators";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import constants from "oxalis/constants";
 import messages from "messages";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -30,6 +35,15 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
     description: tracing.description,
   };
   yield* call(editAnnotation, tracing.annotationId, tracing.annotationType, editObject);
+}
+
+function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
+  const { tracingId, layerProperties } = action;
+
+  const annotationId = yield* select(storeState => storeState.tracing.annotationId);
+  const annotationType = yield* select(storeState => storeState.tracing.annotationType);
+
+  yield* call(updateAnnotationLayer, annotationId, annotationType, tracingId, layerProperties);
 }
 
 function shouldDisplaySegmentationData(): boolean {
@@ -106,6 +120,7 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield _takeEvery("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
   yield _takeEvery("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield _takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
+  yield _takeEvery("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 
 export default [warnAboutSegmentationZoom, watchAnnotationAsync];

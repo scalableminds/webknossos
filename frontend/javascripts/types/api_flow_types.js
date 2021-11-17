@@ -371,10 +371,12 @@ export type APITask = {
 };
 
 export type AnnotationLayerDescriptor = {
-  name: string,
+  name: ?string,
   tracingId: string,
   typ: "Volume" | "Skeleton",
 };
+
+export type EditableLayerProperties = $Shape<{| name: ?string |}>;
 
 export type APIAnnotationCompact = {
   +annotationLayers: Array<AnnotationLayerDescriptor>,

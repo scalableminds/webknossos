@@ -1,12 +1,16 @@
 // @flow
+import { saveAs } from "file-saver";
+import ResumableJS from "resumablejs";
 import _ from "lodash";
 
 import {
   type APIActiveUser,
   type APIAnnotation,
   type APIAnnotationCompact,
-  type APIAnnotationWithTask,
+  type APIAnnotationType,
+  APIAnnotationTypeEnum,
   type APIAnnotationVisibility,
+  type APIAnnotationWithTask,
   type APIBuildInfo,
   type APIDataSource,
   type APIDataSourceWithMessages,
@@ -39,20 +43,20 @@ import {
   type APITimeInterval,
   type APITimeTracking,
   type APITracingStore,
-  type APIAnnotationType,
-  APIAnnotationTypeEnum,
   type APIUpdateActionBatch,
   type APIUser,
-  type APIUserTheme,
   type APIUserLoggedTime,
+  type APIUserTheme,
+  type AnnotationLayerDescriptor,
+  type EditableLayerProperties,
   type ExperienceDomainList,
   type MeshMetaData,
   type RemoteMeshMetaData,
   type ServerTracing,
   type TracingType,
   type WkConnectDatasetConfig,
-  type AnnotationLayerDescriptor,
 } from "types/api_flow_types";
+import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   Tracing,
@@ -64,17 +68,14 @@ import type {
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import Request, { type RequestOptions } from "libs/request";
 import Toast, { type Message } from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { saveAs } from "file-saver";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import ResumableJS from "resumablejs";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -609,6 +610,21 @@ export function editAnnotation(
     data,
     method: "PATCH",
   });
+}
+
+export function updateAnnotationLayer(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  tracingId: string,
+  layerProperties: EditableLayerProperties,
+): Promise<{ name: ?string }> {
+  return Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/editLayer/${tracingId}`,
+    {
+      method: "PATCH",
+      data: layerProperties,
+    },
+  );
 }
 
 export function finishAnnotation(

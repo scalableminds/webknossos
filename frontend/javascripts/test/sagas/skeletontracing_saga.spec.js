@@ -109,17 +109,18 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
 );
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {
-  const saga = saveTracingTypeAsync("skeleton");
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
+  const saga = saveTracingTypeAsync(
+    SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
+  );
+  saga.next(); // forking pushTracingTypeAsync
   saga.next();
-  saga.next(initialState.tracing);
+  saga.next(initialState.tracing.skeleton);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
-  saga.next(true);
   saga.next();
   saga.next(true);
-  saga.next(initialState.tracing);
+  saga.next(initialState.tracing.skeleton);
   saga.next(initialState.flycam);
   // only updateTracing
   const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
@@ -129,17 +130,18 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => 
 test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
 
-  const saga = saveTracingTypeAsync("skeleton");
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
+  const saga = saveTracingTypeAsync(
+    SkeletonTracingActions.initializeSkeletonTracingAction(skeletonTracing),
+  );
+  saga.next(); // forking pushTracingTypeAsync
   saga.next();
-  saga.next(initialState.tracing);
+  saga.next(initialState.tracing.skeleton);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
-  saga.next(true);
   saga.next();
   saga.next(true);
-  saga.next(newState.tracing);
+  saga.next(newState.tracing.skeleton);
   saga.next(newState.flycam);
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.true(withoutUpdateTracing(items).length > 0);

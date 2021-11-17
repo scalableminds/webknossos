@@ -225,7 +225,7 @@ function _SegmentListItem({
                 updateSegment(segment.id, { name }, visibleSegmentationLayer.name);
               }
             }}
-            horizontalMargin={5}
+            margin="0 5px"
             disableEditing={!allowUpdate}
           />
           <Tooltip title="Open context menu (also available via right-click)">

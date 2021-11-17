@@ -436,7 +436,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <span style={{ fontWeight: 700, wordWrap: "break-word" }}>
             {volumeDescriptor != null ? (
               <EditableTextLabel
-                value={volumeDescriptor.name}
+                margin="0 10px 0 0"
+                width={150}
+                value={volumeDescriptor.name || "Volume Layer"}
                 onChange={newName => {
                   this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, { name: newName });
                 }}

@@ -740,7 +740,9 @@ export async function getTracingForAnnotations(
   const skeletonLayers = annotation.annotationLayers.filter(layer => layer.typ === "Skeleton");
 
   if (skeletonLayers.length > 1) {
-    throw new Error("More than one skeleton layer is currently not supported by webKnossos.");
+    throw new Error(
+      "Having more than one skeleton layer is currently not supported by webKnossos.",
+    );
   }
 
   return fullAnnotationLayers;

@@ -6,11 +6,15 @@ import {
   updateAnnotationLayer,
 } from "admin/admin_rest_api";
 import {
+  SETTINGS_MAX_RETRY_COUNT,
+  SETTINGS_RETRY_DELAY,
+} from "oxalis/model/sagas/save_saga_constants";
+import {
   type Saga,
-  _takeEvery,
-  call,
+  _takeLatest,
   select,
   take,
+  retry,
   _delay,
 } from "oxalis/model/sagas/effect-generators";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -34,7 +38,14 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
     visibility: tracing.visibility,
     description: tracing.description,
   };
-  yield* call(editAnnotation, tracing.annotationId, tracing.annotationType, editObject);
+  yield* retry(
+    SETTINGS_MAX_RETRY_COUNT,
+    SETTINGS_RETRY_DELAY,
+    editAnnotation,
+    tracing.annotationId,
+    tracing.annotationType,
+    editObject,
+  );
 }
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
@@ -43,7 +54,15 @@ function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Sag
   const annotationId = yield* select(storeState => storeState.tracing.annotationId);
   const annotationType = yield* select(storeState => storeState.tracing.annotationType);
 
-  yield* call(updateAnnotationLayer, annotationId, annotationType, tracingId, layerProperties);
+  yield* retry(
+    SETTINGS_MAX_RETRY_COUNT,
+    SETTINGS_RETRY_DELAY,
+    updateAnnotationLayer,
+    annotationId,
+    annotationType,
+    tracingId,
+    layerProperties,
+  );
 }
 
 function shouldDisplaySegmentationData(): boolean {
@@ -117,10 +136,15 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
 }
 
 export function* watchAnnotationAsync(): Saga<void> {
-  yield _takeEvery("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
-  yield _takeEvery("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
-  yield _takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
-  yield _takeEvery("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
+  // Consuming the latest action here handles an offline scenario better.
+  // If the user is offline and performs multiple changes to the annotation
+  // name, only the latest action is relevant. If `_takeEvery` was used,
+  // all updates to the annotation name would be retried regularily, which
+  // would also cause race conditions.
+  yield _takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
+  yield _takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
+  yield _takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
+  yield _takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 
 export default [warnAboutSegmentationZoom, watchAnnotationAsync];

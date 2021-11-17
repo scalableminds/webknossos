@@ -52,7 +52,7 @@ services:
   webknossos:
     ...
     volumes:
-      - ./data:/srv/webknossos/binaryData
+      - ./data:/webknossos/binaryData
       - /cluster:/cluster
 ...
 ```

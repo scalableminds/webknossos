@@ -17,7 +17,7 @@ trait Formatter {
   }
 
   def formatDateForFilename(date: Date): String = {
-    val sdf = new SimpleDateFormat("YYYY-MM-DD_HH-mm")
+    val sdf = new SimpleDateFormat("YYYY-MM-dd_HH-mm")
     sdf.format(date)
   }
 

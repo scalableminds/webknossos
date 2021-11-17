@@ -63,11 +63,12 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     isDisabled: true,
     explanation: genericDisabledExplanation,
   };
+  const notDisabledInfo = {
+    isDisabled: false,
+    explanation: "",
+  };
   return {
-    [AnnotationToolEnum.MOVE]: {
-      isDisabled: false,
-      explanation: "",
-    },
+    [AnnotationToolEnum.MOVE]: notDisabledInfo,
     [AnnotationToolEnum.SKELETON]: {
       isDisabled: !hasSkeleton,
       explanation: disabledSkeletonExplanation,
@@ -78,6 +79,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     [AnnotationToolEnum.ERASE_TRACE]: disabledInfo,
     [AnnotationToolEnum.FILL_CELL]: disabledInfo,
     [AnnotationToolEnum.PICK_CELL]: disabledInfo,
+    [AnnotationToolEnum.BOUNDING_BOX]: notDisabledInfo,
   };
 }
 const getDisabledInfoWhenVolumeIsDisabled = memoizeOne(_getDisabledInfoWhenVolumeIsDisabled);
@@ -121,6 +123,10 @@ function _getDisabledInfoFromArgs(
     [AnnotationToolEnum.PICK_CELL]: {
       isDisabled: false,
       explanation: genericDisabledExplanation,
+    },
+    [AnnotationToolEnum.BOUNDING_BOX]: {
+      isDisabled: false,
+      explanation: disabledSkeletonExplanation,
     },
   };
 }

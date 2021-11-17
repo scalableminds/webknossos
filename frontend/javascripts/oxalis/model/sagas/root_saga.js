@@ -14,6 +14,7 @@ import ErrorHandling from "libs/error_handling";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
 import { watchMaximumRenderableLayers } from "oxalis/model/sagas/dataset_saga";
+import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import HistogramSaga from "oxalis/model/sagas/load_histogram_data_saga";
@@ -47,6 +48,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchMaximumRenderableLayers),
       _call(MappingSaga),
       _call(watchAgglomerateLoading),
+      _call(watchToolDeselection),
       ...AnnotationSagas.map(saga => _call(saga)),
       ...SaveSagas.map(saga => _call(saga)),
       ...VolumetracingSagas.map(saga => _call(saga)),

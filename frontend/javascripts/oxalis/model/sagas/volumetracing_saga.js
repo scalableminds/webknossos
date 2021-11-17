@@ -14,10 +14,9 @@ import {
   type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  addUserBoundingBoxesAction,
+  addUserBoundingBoxAction,
   type AddIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   updateTemporarySettingAction,
   type UpdateTemporarySettingAction,
@@ -617,24 +616,15 @@ export function* floodFill(): Saga<void> {
         },
       );
 
-      const userBoundingBoxes = yield* select(
-        state => getSomeTracing(state.tracing).userBoundingBoxes,
-      );
-      const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
-      const boundingBoxId = highestBoundingBoxId + 1;
-
       yield* put(
-        addUserBoundingBoxesAction([
-          {
-            id: boundingBoxId,
-            boundingBox: coveredBoundingBox,
-            name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-              ",",
-            )}, timestamp=${new Date().getTime()})`,
-            color: Utils.getRandomColor(),
-            isVisible: true,
-          },
-        ]),
+        addUserBoundingBoxAction({
+          boundingBox: coveredBoundingBox,
+          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+            ",",
+          )}, timestamp=${new Date().getTime()})`,
+          color: Utils.getRandomColor(),
+          isVisible: true,
+        }),
       );
     } else {
       yield* call(progressCallback, true, "Floodfill done.");

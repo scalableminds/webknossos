@@ -4,7 +4,10 @@ import { __setupOxalis } from "test/helpers/apiHelpers";
 import test from "ava";
 import window from "libs/window";
 
-import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
+import {
+  tracing as TRACING,
+  annotation as ANNOTATION,
+} from "../fixtures/volumetracing_server_objects";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach(t => __setupOxalis(t, "volume"));
@@ -54,7 +57,7 @@ test("Data API: labelVoxels should label a list of voxels", t => {
 
 test("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {
   const { api } = t.context;
-  t.is(api.data.getVolumeTracingLayerName(), "segmentation");
+  t.is(api.data.getVolumeTracingLayerName(), ANNOTATION.annotationLayers[0].tracingId);
 });
 
 test("Data API: downloadRawDataCuboid should open a popup with the correct URL", async t => {

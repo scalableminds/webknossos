@@ -66,8 +66,8 @@ test.beforeEach(t => {
     .returns(Promise.resolve(_.cloneDeep(DATASET)));
 
   // The following code assumes non-hybrid tracings
-  const contentType = ANNOTATION.tracing.skeleton != null ? "skeleton" : "volume";
-  const tracingId = ANNOTATION.tracing[contentType];
+  const contentType = "skeleton";
+  const { tracingId } = ANNOTATION.annotationLayers[0];
 
   Request.receiveJSON
     .withArgs(`${ANNOTATION.tracingStore.url}/tracings/${contentType}/${tracingId}`)

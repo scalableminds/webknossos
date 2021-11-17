@@ -25,9 +25,6 @@ services:
     volumes:
       - ./tmp:/tmp
       - ./config/tracingstore-docker.conf:/webknossos-tracingstore/conf/docker.conf
-    environment:
-      - NEW_RELIC_LICENSE_KEY
-      - NEW_RELIC_APP_NAME
 
   fossildb:
     image: scalableminds/fossildb:${FOSSILDB_TAG}

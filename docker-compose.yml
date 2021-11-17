@@ -18,7 +18,6 @@ services:
       redis:
         condition: service_healthy
     command:
-      - bin/webknossos
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dtracingstore.fossildb.address=fossildb
@@ -46,7 +45,6 @@ services:
     volumes:
       - ./binaryData:/webknossos-datastore/binaryData
     command:
-      - bin/webknossos-datastore
       - -J-Xmx20G
       - -J-Xms1G
       - -Dconfig.file=conf/standalone-datastore.conf
@@ -60,7 +58,6 @@ services:
     ports:
       - "9050:9050"
     command:
-      - bin/webknossos-tracingstore
       - -J-Xmx20G
       - -J-Xms1G
       - -Dconfig.file=conf/standalone-tracingstore.conf

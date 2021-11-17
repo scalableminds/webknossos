@@ -4,7 +4,6 @@ services:
   webknossos-tracingstore:
     image: scalableminds/webknossos-tracingstore:${DATASTORE_TAG}
     command:
-      - bin/webknossos-tracingstore
       - -J-Xmx20G
       - -J-Xms1G
       - -J-XX:+UseG1GC

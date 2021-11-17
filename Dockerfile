@@ -17,7 +17,7 @@ RUN addgroup --system --gid 999 webknossos \
   && chmod go+x bin/webknossos \
   && chmod go+w .
 
-RUN echo '#!/bin/bash\numask 002\n/bin/bash "$@"\n' > /docker-entrypoint.sh \
+RUN echo '#!/bin/bash\numask 002\nbin/webknossos "$@"\n' > /docker-entrypoint.sh \
   && chmod +x /docker-entrypoint.sh
 
 HEALTHCHECK \
@@ -29,4 +29,3 @@ USER webknossos
 EXPOSE 9000
 
 ENTRYPOINT [ "/docker-entrypoint.sh" ]
-CMD [ "bin/webknossos" ]

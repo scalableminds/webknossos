@@ -187,8 +187,6 @@ export async function initialize(
     setInitialTool();
   }
 
-  console.log("Store.getState()", Store.getState());
-
   return initializationInformation;
 }
 

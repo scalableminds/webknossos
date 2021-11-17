@@ -160,8 +160,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       // Volume data is currently not rendered. Don't annotate anything.
       continue;
     }
-
-    const activeCellId = volumeTracing.activeCellId;
+    const activeCellId = yield* select(state => enforceActiveVolumeTracing(state).activeCellId);
     yield* put(
       updateSegmentAction(
         activeCellId,

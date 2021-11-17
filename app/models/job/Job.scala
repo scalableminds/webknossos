@@ -17,6 +17,7 @@ import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
@@ -79,11 +80,12 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def countByStateAndDataStore(jobState: JobState, _dataStore: String): Fox[Int] =
+  def countUnassignedPendingForDataStore(_dataStore: String): Fox[Int] =
     for {
-      r <- run(
-        sql"select count(_id) from #$existingCollectionName where state = '#${sanitize(jobState.toString)}' and _dataStore = $_dataStore"
-          .as[Int])
+      r <- run(sql"""select count(_id) from #$existingCollectionName
+              where state = '#${JobState.PENDING}'
+              and _dataStore = ${_dataStore}
+              and _worker is null""".as[Int])
       head <- r.headOption
     } yield head
 
@@ -114,7 +116,8 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- run(
         sqlu"""insert into webknossos.jobs(_id, _owner, _dataStore, command, commandArgs, state, manualState, _worker, latestRunId,
                returnValue, started, ended, created, isDeleted)
-                         values(${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, '#${sanitize(j.commandArgs.toString)}',
+                         values(${j._id}, ${j._owner}, ${j._dataStore}, ${j.command}, '#${sanitize(
+          j.commandArgs.toString)}',
                           '#${j.state.toString}', #${optionLiteralSanitized(j.manualState.map(_.toString))},
                           #${optionLiteral(j._worker.map(_.toString))},
                           #${optionLiteralSanitized(j.latestRunId)},
@@ -130,16 +133,41 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     val endedTimestamp = s.ended.map(ended => format.format(new Timestamp(ended)))
     for {
       _ <- run(sqlu"""update webknossos.jobs set
-              latestRunId = ${s.latest_run_id},
+              latestRunId = ${s.latestRunId},
               state = '#${s.state.toString}',
-              returnValue = #${optionLiteralSanitized(s.return_value)},
+              returnValue = #${optionLiteralSanitized(s.returnValue)},
               started = #${optionLiteralSanitized(startedTimestamp)},
               ended = #${optionLiteralSanitized(endedTimestamp)}
               where _id = $jobId""")
     } yield ()
   }
 
-  def reserveNextJob(worker: Worker): Fox[Unit] = Fox.empty
+  def reserveNextJob(worker: Worker): Fox[Unit] = {
+    val query =
+      sqlu"""
+          with subquery as (
+            select _id
+            from webknossos.jobs_
+            where
+              state = '#${JobState.PENDING}'
+              and _dataStore = ${worker._dataStore}
+              and _worker is NULL
+            order by created
+            limit 1
+          )
+          update webknossos.jobs_ j
+          set _worker = ${worker._id}
+          from subquery
+          where j._id = subquery._id
+          """
+    for {
+      _ <- run(
+        query.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
+    } yield ()
+  }
 
 }
 

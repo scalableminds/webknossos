@@ -11,7 +11,6 @@ import scala.concurrent.ExecutionContext
 
 case class Worker(_id: ObjectId,
                   _dataStore: String,
-                  url: String,
                   key: String,
                   maxParallelJobs: Int,
                   created: Long = System.currentTimeMillis,
@@ -30,7 +29,6 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       Worker(
         ObjectId(r._Id),
         r._Datastore,
-        r.url,
         r.key,
         r.maxparalleljobs,
         r.created.getTime,

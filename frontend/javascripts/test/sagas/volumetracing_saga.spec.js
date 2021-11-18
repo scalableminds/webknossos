@@ -71,6 +71,36 @@ const initialState = update(defaultState, {
   tracing: {
     volumes: { $set: [volumeTracing] },
   },
+  dataset: {
+    dataSource: {
+      dataLayers: {
+        $set: [
+          {
+            category: "segmentation",
+            // +largestSegmentId: number,
+            // +originalElementClass?: ElementClass,
+            // +mappings?: Array<string>,
+            // +agglomerates?: Array<string>,
+            // +fallbackLayer?: ?string,
+            // // eslint-disable-next-line no-use-before-define
+            // +fallbackLayerInfo?: APIDataLayer,
+            name: volumeTracing.tracingId,
+            tracingId: volumeTracing.tracingId,
+          },
+        ],
+      },
+    },
+  },
+  datasetConfiguration: {
+    layers: {
+      $set: {
+        [volumeTracing.tracingId]: {
+          isDisabled: false,
+          alpha: 100,
+        },
+      },
+    },
+  },
 });
 
 const ACTIVE_CELL_ID = 5;
@@ -92,14 +122,13 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   );
   saga.next(); // forking pushTracingTypeAsync
   saga.next();
-  saga.next(initialState.tracing);
+  saga.next(initialState.tracing.volumes[0]);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
-  saga.next(true);
   saga.next();
   saga.next(true);
-  saga.next(initialState.tracing);
+  saga.next(initialState.tracing.volumes[0]);
   saga.next(initialState.flycam);
   // only updateTracing
   const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
@@ -114,14 +143,13 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   );
   saga.next(); // forking pushTracingTypeAsync
   saga.next();
-  saga.next(initialState.tracing);
+  saga.next(initialState.tracing.volumes[0]);
   saga.next(initialState.flycam);
   saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
-  saga.next(true);
   saga.next();
   saga.next(true);
-  saga.next(newState.tracing);
+  saga.next(newState.tracing.volumes[0]);
   saga.next(newState.flycam);
   const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
@@ -139,7 +167,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DRAW);
+  saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.BRUSH);
   saga.next(false);
@@ -172,7 +200,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DRAW);
+  saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
@@ -211,7 +239,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DRAW);
+  saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);
@@ -257,7 +285,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DELETE);
+  saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.TRACE);
   saga.next(false);

@@ -686,10 +686,3 @@ export type ServerVolumeTracing = {|
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
-
-export type HybridServerTracing = {
-  skeleton: ?ServerSkeletonTracing,
-  volume: ?ServerVolumeTracing,
-};
-
-export default {};

@@ -285,8 +285,8 @@ export type TraceOrViewCommand =
 
 export type DatasetLayerConfiguration = {|
   +color: Vector3,
-  brightness?: number,
-  contrast?: number,
+  +brightness?: number,
+  +contrast?: number,
   +alpha: number,
   +intensityRange: Vector2,
   +min?: number,

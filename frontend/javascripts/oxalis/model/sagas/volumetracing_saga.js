@@ -160,8 +160,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       // Volume data is currently not rendered. Don't annotate anything.
       continue;
     }
-
-    const activeCellId = volumeTracing.activeCellId;
+    const activeCellId = yield* select(state => enforceActiveVolumeTracing(state).activeCellId);
     yield* put(
       updateSegmentAction(
         activeCellId,
@@ -942,17 +941,12 @@ export function* maintainHoveredSegmentId(): Saga<void> {
 }
 
 function* maintainContourGeometry(): Saga<void> {
-  // We wait for the first volume layer editing action
-  // before we access the SceneController to avoid
-  // an too early access.
-  // The while-loop in this function blocks in its tail
-  // until the next relevant action is dispatched.
-
-  yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
+  yield* take("SCENE_CONTROLLER_READY");
   const SceneController = yield* call(getSceneController);
   const { contour } = SceneController;
 
   while (true) {
+    yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
     const isTraceToolActive = yield* select(state => isTraceTool(state.uiInformation.activeTool));
     const volumeTracing = yield* select(getActiveSegmentationTracing);
     if (!volumeTracing) {
@@ -970,10 +964,6 @@ function* maintainContourGeometry(): Saga<void> {
           : CONTOUR_COLOR_NORMAL;
       contourList.forEach(p => contour.addEdgePoint(p));
     }
-
-    // The blocking is at the while loop's tail for the
-    // reason explained above.
-    yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
   }
 }
 

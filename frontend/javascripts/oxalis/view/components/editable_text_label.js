@@ -20,10 +20,11 @@ export type EditableTextLabelProp = {|
   rows?: number,
   markdown?: boolean,
   label: string,
-  horizontalMargin?: number,
+  margin?: number | string,
   onClick?: () => void,
   disableEditing?: boolean,
   onContextMenu?: () => void,
+  width?: string | number,
 |};
 
 type State = {
@@ -74,13 +75,16 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
 
   render() {
     const iconStyle = { cursor: "pointer" };
-    const horizontalMargin = this.props.horizontalMargin != null ? this.props.horizontalMargin : 10;
+    const margin = this.props.margin != null ? this.props.margin : "0 10px";
 
     const inputComponentProps = {
       value: this.state.value,
       onChange: this.handleInputChange,
       onPressEnter: this.handleOnChange,
-      style: { width: "60%", margin: `0 ${horizontalMargin}px` },
+      style: {
+        width: this.props.width != null ? this.props.width : "60%",
+        margin,
+      },
       size: "small",
       autoFocus: true,
       rows: this.props.rows,
@@ -117,7 +121,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       return (
         <span style={{ display: "inline-block" }}>
           <span
-            style={{ margin: `0 ${horizontalMargin}px`, display: "inline-block" }}
+            style={{ margin, display: "inline-block" }}
             className={this.props.onClick != null ? "clickable-text" : null}
             onClick={this.props.onClick}
             onContextMenu={this.props.onContextMenu}

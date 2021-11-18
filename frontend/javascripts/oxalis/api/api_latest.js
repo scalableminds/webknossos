@@ -62,6 +62,7 @@ import {
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
   getVolumeDescriptors,
+  getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -147,7 +148,7 @@ export function assertSkeleton(tracing: Tracing): SkeletonTracing {
 }
 
 export function assertVolume(state: OxalisState): VolumeTracing {
-  if (state.tracing.volumes.length > 0) {
+  if (state.tracing.volumes.length === 0) {
     throw new Error("This api function should only be called in a volume annotation.");
   }
   const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
@@ -943,17 +944,20 @@ class DataApi {
   }
 
   /**
+   * DEPRECATED! Use getSegmentationLayerNames, getVisibleSegmentationLayer or getVolumeTracingLayerIds instead.
+   *
    * Returns the name of the volume tracing layer (only exists for a volume annotation) or the visible
    * segmentation layer.
-   * Use `getSegmentationLayerNames` if you want to get actual segmentation layers (independent of a tracing).
    */
-  // todo: make this deprecated and add getVolumeTracingLayerNameS
   getVolumeTracingLayerName(): string {
     const segmentationLayer = this.model.getActiveSegmentationTracingLayer();
     if (segmentationLayer != null) {
       return segmentationLayer.name;
     }
     const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+    console.warn(
+      "getVolumeTracingLayerName is deprecated. Please use getVolumeTracingLayerIds instead.",
+    );
     if (visibleLayer != null) {
       console.warn(
         "getVolumeTracingLayerName was called, but there is no volume tracing. Falling back to the visible segmentation layer. Please use getSegmentationLayerNames instead.",
@@ -965,8 +969,29 @@ class DataApi {
     );
   }
 
+  /*
+   * Returns the name of the visible segmentation layer (if it exists). Note for
+   * if the visible layer is a volume tracing layer, the name will be an ID
+   * (a not the name which the user can specify in the UI).
+   */
+  getVisibleSegmentationLayerName(): ?string {
+    const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+    if (visibleLayer != null) {
+      return visibleLayer.name;
+    }
+    return null;
+  }
+
+  /*
+   * Returns the ids of the existing volume tracing layers.
+   */
+  getVolumeTracingLayerIds(): Array<string> {
+    return getVolumeTracings(Store.getState().tracing).map(tracing => tracing.tracingId);
+  }
+
   /**
-   * Return a list of segmentation layer names.
+   * Return a list of segmentation layer names. Note for volume tracing layers,
+   * the name will be an ID (a not the name which the user can specify in the UI).
    */
   getSegmentationLayerNames(): Array<string> {
     return this.model.getSegmentationLayers().map(layer => layer.name);
@@ -1158,8 +1183,8 @@ class DataApi {
    * @example // Using the await keyword instead of the promise syntax
    * const greyscaleColor = await api.data.getDataValue("binary", position);
    *
-   * @example // Get the segmentation id for a segmentation layer
-   * const segmentId = await api.data.getDataValue("segmentation", position);
+   * @example // Get the segmentation id for the first volume tracing layer
+   * const segmentId = await api.data.getDataValue(api.data.getVolumeTracingLayerIds()[0], position);
    */
   async getDataValue(
     layerName: string,

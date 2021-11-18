@@ -31,7 +31,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
-  getTracingForAnnotations,
+  getTracingsForAnnotation,
   getAnnotationInformation,
   getEmptySandboxAnnotationInformation,
   getDataset,
@@ -187,8 +187,6 @@ export async function initialize(
     setInitialTool();
   }
 
-  console.log("Store.getState()", Store.getState());
-
   return initializationInformation;
 }
 
@@ -201,7 +199,7 @@ async function fetchParallel(
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    annotation ? getTracingForAnnotations(annotation, versions) : [],
+    annotation ? getTracingsForAnnotation(annotation, versions) : [],
   ]);
 }
 
@@ -464,7 +462,7 @@ function setupLayerForVolumeTracing(
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
-  const layers = _.clone(dataset.dataSource.dataLayers);
+  let layers = _.clone(dataset.dataSource.dataLayers);
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -514,7 +512,7 @@ function setupLayerForVolumeTracing(
       // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
 
       // todo
-      // layers = layers.filter(layer => layer.category !== "segmentation");
+      layers = layers.filter(layer => layer.category !== "segmentation");
       layers.push(tracingLayer);
     }
   }

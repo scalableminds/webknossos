@@ -709,25 +709,30 @@ export function createExplorational(
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
-  return Request.sendJSONReceiveJSON(
-    url,
-    Object.assign(
-      {},
-      {
-        // oldkey: "value",
-        // Object.assign({}, { data: { typ, fallbackLayerName, resolutionRestrictions } }, options),
-        data: [
-          { typ: "Skeleton", name: "Skeleton" },
-          { typ: "Volume", name: "Volume", fallbackLayerName, resolutionRestrictions },
-          // { typ: "Volume", name: "Volume 2" },
-        ],
-      },
-      options,
-    ),
-  );
+
+  let layers = [];
+  if (typ === "skeleton") {
+    layers = [{ typ: "Skeleton", name: "Skeleton" }];
+  } else if (typ === "volume") {
+    layers = [
+      { typ: "Volume", name: "Volume", fallbackLayerName, resolutionRestrictions },
+      // { typ: "Volume", name: "Volume 2" },
+    ];
+  } else {
+    layers = [
+      { typ: "Skeleton", name: "Skeleton" },
+      { typ: "Volume", name: "Volume", fallbackLayerName, resolutionRestrictions },
+      // { typ: "Volume", name: "Volume 2" },
+    ];
+  }
+
+  return Request.sendJSONReceiveJSON(url, {
+    ...options,
+    data: layers,
+  });
 }
 
-export async function getTracingForAnnotations(
+export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
   versions?: Versions = {},
 ): Promise<Array<ServerTracing>> {
@@ -740,7 +745,9 @@ export async function getTracingForAnnotations(
   const skeletonLayers = annotation.annotationLayers.filter(layer => layer.typ === "Skeleton");
 
   if (skeletonLayers.length > 1) {
-    throw new Error("More than one skeleton layer is currently not supported by webKnossos.");
+    throw new Error(
+      "Having more than one skeleton layer is currently not supported by webKnossos.",
+    );
   }
 
   return fullAnnotationLayers;

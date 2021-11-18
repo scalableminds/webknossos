@@ -67,7 +67,7 @@ test.serial("Executing a floodfill in mag 1", async t => {
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     t.is(
@@ -174,7 +174,7 @@ test.serial("Executing a floodfill in mag 2", async t => {
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     t.is(
@@ -265,7 +265,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
   const paintCenter = [128, 128, 128];
   Store.dispatch(setPositionAction(paintCenter));
 
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0), 0);
 
   const floodingCellId = 3;
@@ -361,7 +361,7 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
   const brushSize = 10;
 
   const newCellId = 2;
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
@@ -443,7 +443,7 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
   // function.
   await t.context.api.data.reloadAllBuckets();
 
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), oldCellId);
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -510,7 +510,7 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
 
   await dispatchUndoAsync(Store.dispatch);
 
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
@@ -553,7 +553,7 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
 
   await dispatchUndoAsync(Store.dispatch);
 
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
@@ -605,7 +605,7 @@ async function testLabelingManyBuckets(t, saveInbetween) {
   // We set MAXIMUM_BUCKET_COUNT to 150 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
   // In between, we will save the data which allows the buckets of the first batch to be GC'ed.
   // Therefore, saving the buckets of the second batch should not cause any problems.
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   t.context.model.getCubeByLayerName(volumeTracingLayerName).MAXIMUM_BUCKET_COUNT = 150;
 
   const oldCellId = 11;

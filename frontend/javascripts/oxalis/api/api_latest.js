@@ -1183,8 +1183,8 @@ class DataApi {
    * @example // Using the await keyword instead of the promise syntax
    * const greyscaleColor = await api.data.getDataValue("binary", position);
    *
-   * @example // Get the segmentation id for a segmentation layer
-   * const segmentId = await api.data.getDataValue("segmentation", position);
+   * @example // Get the segmentation id for the first volume tracing layer
+   * const segmentId = await api.data.getDataValue(api.data.getVolumeTracingLayerIds()[0], position);
    */
   async getDataValue(
     layerName: string,

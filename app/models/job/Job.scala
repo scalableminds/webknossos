@@ -5,6 +5,7 @@ import java.sql.Timestamp
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -38,7 +39,12 @@ case class Job(
     ended: Option[Long] = None,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
-)
+) {
+  def isEnded: Boolean = {
+    val relevantState = manualState.getOrElse(state)
+    relevantState == JobState.SUCCESS || state == JobState.FAILURE
+  }
+}
 
 class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
@@ -190,34 +196,45 @@ class JobService @Inject()(wkConf: WkConf,
                            val lifecycle: ApplicationLifecycle,
                            val system: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with LazyLogging {
+    with LazyLogging
+    with Formatter {
 
-  private val incompleteStates = List("STARTED", "PENDING", "RETRY", "UNKNOWN")
+  def trackStatusChange(jobBeforeChange: Job, newStatus: JobStatus): Unit = {
+    if (jobBeforeChange.isEnded) return
+    if (newStatus.state == JobState.SUCCESS) trackNewlySuccessful(jobBeforeChange, newStatus)
+    if (newStatus.state == JobState.FAILURE) trackNewlyFailed(jobBeforeChange, newStatus)
+  }
 
-  private def trackNewlyFailed(job: Job): Unit = {
+  private def trackNewlyFailed(jobBeforeChange: Job, newStatus: JobStatus): Unit = {
     for {
-      user <- userDAO.findOne(job._owner)(GlobalAccessContext)
+      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      _ = analyticsService.track(FailedJobEvent(user, job.command))
+      durationLabel = newStatus.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
+      _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
+      msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}."
+      _ = logger.warn(msg)
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
-        s"Job ${job._id} failed. Command ${job.command}, organization name: ${organization.name}."
+        msg
       )
     } yield ()
     ()
   }
 
-  private def trackNewlySuccessful(job: Job): Unit = {
+  private def trackNewlySuccessful(jobBeforeChange: Job, newStatus: JobStatus): Unit = {
     for {
-      user <- userDAO.findOne(job._owner)(GlobalAccessContext)
+      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      _ = slackNotificationService.info(
+      durationLabel = newStatus.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}."
+      _ = logger.info(msg)
+      _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
-        s"Job ${job._id} succeeded. Command ${job.command}, organization name: ${organization.name}."
+        msg
       )
     } yield ()
     ()

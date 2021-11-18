@@ -20,6 +20,9 @@ class SlackClient(rpc: RPC, slackUri: String, name: String, verboseLoggingEnable
   def info(title: String, msg: String): Unit =
     sendMessage(title, msg, "#333ccc")
 
+  def success(title: String, msg: String): Unit =
+    sendMessage(title, msg, "#049b4a")
+
   def error(title: String, msg: String): Unit =
     sendMessage(title, msg, "#e10000")
 

@@ -3,11 +3,13 @@ package models.job
 import akka.actor.ActorSystem
 import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import oxalis.telemetry.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
@@ -77,9 +79,11 @@ class WorkerService @Inject()(conf: WkConf) {
 
 class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
+                                      slackNotificationService: SlackNotificationService,
                                       val lifecycle: ApplicationLifecycle,
                                       @Named("webknossos-datastore") val system: ActorSystem)
     extends IntervalScheduler
+    with Formatter
     with LazyLogging {
 
   override protected def tickerInitialDelay: FiniteDuration = 1 minute
@@ -108,9 +112,16 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
     }
   }
 
-  private def reportAsDead(worker: Worker): Unit =
-    logger.warn(s"Worker ${worker._id} is not reporting") // TODO: Slack notification
-  private def reportAsResurrected(worker: Worker): Unit =
-    logger.info(s"Worker ${worker._id} is reporting again")
+  private def reportAsDead(worker: Worker): Unit = {
+    val msg = s"Worker ${worker._id} is not reporting. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+    slackNotificationService.warn("Worker missing", msg)
+    logger.warn(msg)
+  }
+
+  private def reportAsResurrected(worker: Worker): Unit = {
+    val msg = s"Worker ${worker._id} is reporting again. Last heartbeat was at ${formatDate(worker.lastHeartBeat)}"
+    slackNotificationService.success("Worker return", msg)
+    logger.info(msg)
+  }
 
 }

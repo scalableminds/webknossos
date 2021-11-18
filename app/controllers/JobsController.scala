@@ -13,21 +13,20 @@ import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class JobsController @Inject()(
-    jobDAO: JobDAO,
-    sil: Silhouette[WkEnv],
-    dataSetDAO: DataSetDAO,
-    jobService: JobService,
-    workerService: WorkerService,
-    workerDAO: WorkerDAO,
-    wkconf: WkConf,
-    slackNotificationService: SlackNotificationService,
-    organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class JobsController @Inject()(jobDAO: JobDAO,
+                               sil: Silhouette[WkEnv],
+                               dataSetDAO: DataSetDAO,
+                               jobService: JobService,
+                               workerService: WorkerService,
+                               workerDAO: WorkerDAO,
+                               wkconf: WkConf,
+                               slackNotificationService: SlackNotificationService,
+                               organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

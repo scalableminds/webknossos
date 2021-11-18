@@ -1,24 +1,18 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.job._
-import models.organization.OrganizationDAO
-import oxalis.telemetry.SlackNotificationService
-import play.api.i18n.MessagesProvider
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Request}
-import utils.{ObjectId, WkConf}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteWorkerController @Inject()(
-    jobDAO: JobDAO,
-    jobService: JobService,
-    workerDAO: WorkerDAO,
-    wkconf: WkConf,
-    slackNotificationService: SlackNotificationService,
-    organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService, workerDAO: WorkerDAO)(
+    implicit ec: ExecutionContext,
+    bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def requestJobs: Action[AnyContent] = Action.async { implicit request =>
@@ -27,7 +21,7 @@ class WKRemoteWorkerController @Inject()(
       _ <- reserveNextJobs(worker)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
       _ = workerDAO.updateHeartBeat(worker._id)
-      js = (assignedUnfinishedJobs).map(jobService.parameterWrites)
+      js = assignedUnfinishedJobs.map(jobService.parameterWrites)
     } yield Ok(Json.toJson(js))
   }
 
@@ -50,11 +44,13 @@ class WKRemoteWorkerController @Inject()(
     for {
       _ <- validateWorkerAccess
       jobIdParsed <- ObjectId.parse(id)
+      job <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
       _ <- jobDAO.updateStatus(jobIdParsed, request.body)
+      _ = jobService.trackStatusChange(job, request.body)
     } yield Ok
   }
 
-  private def validateWorkerAccess[A](implicit request: Request[A], m: MessagesProvider): Fox[Worker] =
+  private def validateWorkerAccess[A](implicit request: Request[A]): Fox[Worker] =
     for {
       key <- request.getQueryString("key").toFox
       worker <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"

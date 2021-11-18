@@ -43,7 +43,7 @@ test("setAnnotationTool should throw an error for an invalid tool", t => {
   t.throws(() => api.tracing.setAnnotationTool());
 });
 
-test.only("Data API: labelVoxels should label a list of voxels", async t => {
+test("Data API: labelVoxels should label a list of voxels", async t => {
   const { api } = t.context;
   const volumeTracingId = api.data.getVolumeTracingLayerIds()[0];
 

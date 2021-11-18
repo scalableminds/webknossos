@@ -36,11 +36,11 @@ export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
 }
 
 export function getSkeletonDescriptor(annotation: APIAnnotation): ?AnnotationLayerDescriptor {
-  // $FlowIgnore[prop-missing]
-  const skeletonLayers = annotation.annotationLayers.filter(layer => layer.trees != null);
+  const skeletonLayers = annotation.annotationLayers.filter(
+    descriptor => descriptor.typ === "Skeleton",
+  );
   if (skeletonLayers.length > 0) {
-    // $FlowIgnore[prop-missing]
-    return skeletonLayers.length[0];
+    return skeletonLayers[0];
   }
   return null;
 }

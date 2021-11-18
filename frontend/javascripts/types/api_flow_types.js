@@ -371,7 +371,7 @@ export type APITask = {
 };
 
 export type AnnotationLayerDescriptor = {
-  name: ?string,
+  name?: ?string,
   tracingId: string,
   typ: "Volume" | "Skeleton",
 };

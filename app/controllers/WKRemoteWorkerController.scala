@@ -26,6 +26,7 @@ class WKRemoteWorkerController @Inject()(
       worker <- validateWorkerAccess
       _ <- reserveNextJobs(worker)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
+      _ = workerDAO.updateHeartBeat(worker._id)
       js = (assignedUnfinishedJobs).map(jobService.parameterWrites)
     } yield Ok(Json.toJson(js))
   }

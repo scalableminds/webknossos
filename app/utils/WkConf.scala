@@ -121,12 +121,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
   }
 
   object Jobs {
-    object Flower {
-      val uri: String = get[String]("jobs.flower.uri")
-      val user: String = get[String]("jobs.flower.user")
-      val password: String = get[String]("jobs.flower.password")
-    }
-    val children = List(Flower)
+    val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
   }
 
   object Braintracing {

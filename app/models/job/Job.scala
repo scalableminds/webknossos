@@ -169,7 +169,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def countByStatus: Fox[Map[String, Int]] = {
+  def countByStatus: Fox[Map[String, Int]] =
     for {
       result <- run(sql"""select state, count(_id)
                            from webknossos.jobs_
@@ -177,7 +177,6 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                            order by state
                            """.as[(String, Int)])
     } yield result.toMap
-  }
 
 }
 

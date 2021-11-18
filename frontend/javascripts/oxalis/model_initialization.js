@@ -31,7 +31,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
-  getTracingForAnnotations,
+  getTracingsForAnnotation,
   getAnnotationInformation,
   getEmptySandboxAnnotationInformation,
   getDataset,
@@ -199,7 +199,7 @@ async function fetchParallel(
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    annotation ? getTracingForAnnotations(annotation, versions) : [],
+    annotation ? getTracingsForAnnotation(annotation, versions) : [],
   ]);
 }
 

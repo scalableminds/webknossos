@@ -224,9 +224,14 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           const storeState = Store.getState();
           const { tracing, dataset } = storeState;
           if (tracing.volumes.length === 0) {
-            throw new Error("Volume Tracing must exist when importing Volume Tracing.");
+            throw new Error("A volume tracing must already exist when importing a volume tracing.");
           }
           const oldVolumeTracing = getActiveSegmentationTracing(storeState);
+          if (oldVolumeTracing == null) {
+            throw new Error(
+              "Ensure that a volume tracing layer is visible when importing a volume tracing.",
+            );
+          }
 
           const newLargestSegmentId = await importVolumeTracing(
             tracing,

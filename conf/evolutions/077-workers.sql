@@ -52,21 +52,28 @@ update webknossos.jobs
 set state = 'FAILURE';
 
 update webknossos.jobs
-set state = (celeryInfo->>'state')::TEXT::webknossos.job_state;
+set state = (celeryInfo->>'state')::TEXT::webknossos.job_state
 where celeryInfo ? 'state' and celeryInfo ->> 'state' != 'None';
+
+update webknossos.jobs
+set commandArgs = commandArgs->'kwargs';
 
 -- values end
 
--- todo make _datastore + state not null
--- todo foreign keys
+alter table webknossos.jobs alter column _dataStore SET NOT NULL;
+alter table webknossos.jobs alter column state SET NOT NULL;
 
+-- todo unpack args?
 
 ALTER TABLE webknossos.jobs DROP COLUMN manualState;
-ALTER TABLE webknossos.jobs RENAME COLUMN manualState_NEW TO manualState;
-ALTER TABLE webknossos.jobs DROP COLUMN celeryInfo;
-ALTER TABLE webknossos.jobs DROP COLUMN celeryJobId;
+    ALTER TABLE webknossos.jobs RENAME COLUMN manualState_NEW TO manualState;
+    ALTER TABLE webknossos.jobs DROP COLUMN celeryInfo;
+    ALTER TABLE webknossos.jobs DROP COLUMN celeryJobId;
 
 DROP TYPE webknossos.JOB_MANUAL_STATE;
+
+ALTER TABLE webknossos.jobs ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
+ALTER TABLE webknossos.jobs ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
 
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
 CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;

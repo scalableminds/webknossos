@@ -121,7 +121,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
   def replaceTracingId(annotationId: ObjectId, oldTracingId: String, newTracingId: String): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"update webknossos.annotation_layers set tracingId = $newTracingId where annotationId = $annotationId and tracingId = $oldTracingId")
+        sqlu"update webknossos.annotation_layers set tracingId = $newTracingId where _annotation = $annotationId and tracingId = $oldTracingId")
     } yield ()
 
   def updateName(annotationId: ObjectId, tracingId: String, newName: Option[String]): Fox[Unit] =

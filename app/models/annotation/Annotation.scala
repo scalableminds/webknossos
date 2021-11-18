@@ -131,7 +131,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
     } yield ()
 
   def deleteAllForAnnotationQuery(annotationId: ObjectId): SqlAction[Int, NoStream, Effect] =
-    sqlu"delete from webknossos.annotation_layers where annotationId = $annotationId"
+    sqlu"delete from webknossos.annotation_layers where _annotation = $annotationId"
 
 }
 

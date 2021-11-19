@@ -1,14 +1,15 @@
 // @flow
 
 import { Button, Alert, Tabs } from "antd";
+import { CloseOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 
+import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Store, { type OxalisState, type Tracing } from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
-import { CloseOutlined } from "@ant-design/icons";
 
 const { TabPane } = Tabs;
 
@@ -90,8 +91,11 @@ class VersionView extends React.Component<Props, State> {
                 />
               </TabPane>
             ) : null}
-            {this.props.tracing.volumes.map((volumeTracing, index) => (
-              <TabPane tab={`Volume ${index + 1}`} key={volumeTracing.tracingId}>
+            {this.props.tracing.volumes.map(volumeTracing => (
+              <TabPane
+                tab={getReadableNameByVolumeTracingId(this.props.tracing, volumeTracing.tracingId)}
+                key={volumeTracing.tracingId}
+              >
                 <VersionList
                   tracingType="volume"
                   tracing={volumeTracing}

@@ -82,6 +82,14 @@ export function getVolumeDescriptorById(
   return descriptors[0];
 }
 
+export function getReadableNameByVolumeTracingId(
+  tracing: APIAnnotation | APIAnnotationCompact | HybridTracing,
+  tracingId: string,
+) {
+  const volumeDescriptor = getVolumeDescriptorById(tracing, tracingId);
+  return volumeDescriptor.name || "Volume Layer";
+}
+
 export function getServerVolumeTracings(
   tracings: ?Array<ServerTracing>,
 ): Array<ServerVolumeTracing> {

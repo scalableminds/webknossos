@@ -49,6 +49,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
+  getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -429,6 +430,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const volumeDescriptor =
       layer.tracingId != null ? getVolumeDescriptorById(tracing, layer.tracingId) : null;
 
+    const readableName =
+      layer.tracingId != null
+        ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+        : layerName;
+
     return (
       <Row>
         <Col span={24}>
@@ -438,7 +444,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <EditableTextLabel
                 margin="0 10px 0 0"
                 width={150}
-                value={volumeDescriptor.name || "Volume Layer"}
+                value={readableName}
                 onChange={newName => {
                   this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, { name: newName });
                 }}

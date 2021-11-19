@@ -10,12 +10,12 @@ import type {
   ServerVolumeTracing,
   ServerTracing,
 } from "types/api_flow_types";
+import type { Versions } from "oxalis/view/version_view";
 import {
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
   validateMinimumRequirements,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import type { Versions } from "oxalis/view/version_view";
 import { convertBoundariesToBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
   determineAllowedModes,
@@ -29,6 +29,7 @@ import {
   getSegmentationLayers,
   getSegmentationLayerByNameOrFallbackName,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,
@@ -40,7 +41,6 @@ import {
   getDatasetViewConfiguration,
 } from "admin/admin_rest_api";
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   initializeSettingsAction,
   initializeGpuSetupAction,
@@ -49,7 +49,6 @@ import {
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   serverTracingAsVolumeTracings,
   getServerVolumeTracings,
@@ -66,11 +65,12 @@ import {
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
-import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
+import Store, { type AnnotationType, type TraceOrViewCommand } from "oxalis/store";
 import Toast from "libs/toast";
 import UrlManager, {
   type PartialUrlManagerState,
@@ -372,9 +372,10 @@ function initializeDataset(
 
   const volumeTracings = getServerVolumeTracings(serverTracings);
   if (volumeTracings.length > 0) {
-    // todo: adapt this invocation to multiple volumeTracing
     const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracings);
     mutableDataset.dataSource.dataLayers = newDataLayers;
+
+    validateVolumeLayers(volumeTracings, newDataLayers);
   }
 
   ensureMatchingLayerResolutions(mutableDataset);
@@ -518,6 +519,25 @@ function setupLayerForVolumeTracing(
   }
 
   return layers;
+}
+
+function validateVolumeLayers(
+  volumeTracings: Array<ServerVolumeTracing>,
+  dataLayers: Array<APIDataLayer>,
+) {
+  /*
+   * Validate that every volume tracing got a corresponding data layer.
+   */
+  const layersForVolumeTracings = volumeTracings.map(volumeTracing =>
+    dataLayers.find(
+      layer => layer.category === "segmentation" && layer.tracingId === volumeTracing.id,
+    ),
+  );
+  if (layersForVolumeTracings.some(layer => layer == null)) {
+    throw new Error(
+      "Initialization of volume tracing layers didn't succeed. Not all volume tracings have a corresponding data layer.",
+    );
+  }
 }
 
 function determineDefaultState(

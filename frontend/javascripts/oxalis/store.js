@@ -248,7 +248,6 @@ export type VolumeTracing = {|
   +contourTracingMode: ContourMode,
   // Stores points of the currently drawn region in global coordinates
   +contourList: Array<Vector3>,
-  // +layerName: string,
   +fallbackLayer?: string,
 |};
 

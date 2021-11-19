@@ -132,14 +132,11 @@ export async function initialize(
     Object,
     Array<ServerTracing>,
   ] = await fetchParallel(annotation, datasetId, versions);
-  const displayedVolumeTracings = (serverTracings || [])
-    // $FlowIgnore[prop-missing]
-    .filter(tracing => tracing.largestSegmentId != null)
-    .map(volumeTracing => volumeTracing.id);
+  const displayedVolumeTracings = getServerVolumeTracings(serverTracings).map(
+    volumeTracing => volumeTracing.id,
+  );
 
   initializeDataset(initialFetch, dataset, serverTracings);
-
-  console.log("serverTracings", serverTracings);
 
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,

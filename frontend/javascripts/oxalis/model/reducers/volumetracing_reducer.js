@@ -162,9 +162,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        // todo: use AnnotationLayerDescriptor::name here
-        // layerName: action.tracing.fallbackLayer || "Volume Tracing",
-
         fallbackLayer: action.tracing.fallbackLayer,
         userBoundingBoxes,
       };

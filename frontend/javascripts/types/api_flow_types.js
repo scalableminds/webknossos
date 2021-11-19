@@ -373,7 +373,7 @@ export type APITask = {
 export type AnnotationLayerDescriptor = {
   name?: ?string,
   tracingId: string,
-  typ: "Volume" | "Skeleton",
+  typ: "Skeleton" | "Volume",
 };
 
 export type EditableLayerProperties = $Shape<{| name: ?string |}>;
@@ -640,6 +640,13 @@ export type ServerSkeletonTracingTree = {
   isVisible?: boolean,
 };
 
+type ServerSegment = {|
+  segmentId: number,
+  name: ?string,
+  anchorPosition: Point3,
+  creationTime: ?number,
+|};
+
 export type ServerTracingBase = {|
   id: string,
   userBoundingBoxes: Array<UserBoundingBoxFromServer>,
@@ -655,6 +662,10 @@ export type ServerTracingBase = {|
 
 export type ServerSkeletonTracing = {|
   ...ServerTracingBase,
+  // The following property is added when fetching the
+  // tracing from the back-end (by `getTracingForAnnotationType`)
+  // This is done to simplify the selection for the type.
+  typ: "Skeleton",
   activeNodeId?: number,
   boundingBox?: ServerBoundingBox,
   trees: Array<ServerSkeletonTracingTree>,
@@ -662,15 +673,12 @@ export type ServerSkeletonTracing = {|
   organizationName?: string,
 |};
 
-type ServerSegment = {|
-  segmentId: number,
-  name: ?string,
-  anchorPosition: Point3,
-  creationTime: ?number,
-|};
-
 export type ServerVolumeTracing = {|
   ...ServerTracingBase,
+  // The following property is added when fetching the
+  // tracing from the back-end (by `getTracingForAnnotationType`)
+  // This is done to simplify the selection for the type.
+  typ: "Volume",
   activeSegmentId?: number,
   boundingBox: ServerBoundingBox,
   elementClass: ElementClass,

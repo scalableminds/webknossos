@@ -2,6 +2,7 @@
 import type { ServerVolumeTracing, APIAnnotation } from "types/api_flow_types";
 
 export const tracing: ServerVolumeTracing = {
+  typ: "Volume",
   activeSegmentId: 10000,
   boundingBox: { topLeft: { x: 0, y: 0, z: 0 }, width: 10240, height: 10240, depth: 10240 },
   userBoundingBoxes: [],

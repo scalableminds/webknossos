@@ -736,13 +736,12 @@ export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
   versions?: Versions = {},
 ): Promise<Array<ServerTracing>> {
+  const skeletonLayers = annotation.annotationLayers.filter(layer => layer.typ === "Skeleton");
   const fullAnnotationLayers = await Promise.all(
     annotation.annotationLayers.map(layer =>
       getTracingForAnnotationType(annotation, layer, versions),
     ),
   );
-
-  const skeletonLayers = annotation.annotationLayers.filter(layer => layer.typ === "Skeleton");
 
   if (skeletonLayers.length > 1) {
     throw new Error(
@@ -788,6 +787,12 @@ export async function getTracingForAnnotationType(
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
+
+  // Additionally, we assign the typ property (skeleton vs volume).
+  // Flow complains since we don't doublecheck that we assign the correct type depending
+  // on the tracing's structure.
+  // $FlowIgnore[incompatible-type]
+  tracing.typ = typ;
 
   return tracing;
 }

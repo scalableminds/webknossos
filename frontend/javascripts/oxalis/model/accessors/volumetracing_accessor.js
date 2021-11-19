@@ -74,7 +74,7 @@ export function getVolumeDescriptorById(
   tracingId: string,
 ): AnnotationLayerDescriptor {
   const descriptors = getVolumeDescriptors(annotation).filter(
-    layer => layer.typ === "Volume" && layer.tracingId === tracingId,
+    layer => layer.tracingId === tracingId,
   );
   if (descriptors.length === 0) {
     throw new Error(`Could not find volume descriptor with id ${tracingId}`);
@@ -91,14 +91,14 @@ export function getReadableNameByVolumeTracingId(
 }
 
 export function getServerVolumeTracings(
-  tracings: ?Array<ServerTracing>,
+  tracings: Array<ServerTracing>,
 ): Array<ServerVolumeTracing> {
-  // todo: add a type property to ServerTracing
+  // Type refinement by filtering does not work in flow.
+  // See https://github.com/facebook/flow/issues/1414
   // $FlowIgnore[prop-missing]
   // $FlowIgnore[incompatible-type]
   const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
-    // $FlowIgnore[prop-missing]
-    tracing => tracing.largestSegmentId != null,
+    tracing => tracing.typ === "Volume",
   );
   return volumeTracings;
 }

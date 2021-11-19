@@ -48,16 +48,9 @@ export function getSkeletonDescriptor(annotation: APIAnnotation): ?AnnotationLay
 export function getNullableSkeletonTracing(
   tracings: ?Array<ServerTracing>,
 ): ?ServerSkeletonTracing {
-  // todo: fix
-  // $FlowIgnore[prop-missing]
-  // $FlowIgnore[incompatible-type]
-  const skeletonTracings: Array<ServerSkeletonTracing> = (tracings || []).filter(
-    tracing =>
-      // $FlowIgnore[prop-missing]
-      tracing.trees != null,
-  );
-  if (skeletonTracings.length > 0) {
-    // Only one skeleton is supported
+  const skeletonTracings = (tracings || []).filter(tracing => tracing.typ === "Skeleton");
+  if (skeletonTracings.length > 0 && skeletonTracings[0].typ === "Skeleton") {
+    // Only one skeleton is supported. The second typ-check is only for flow.
     return skeletonTracings[0];
   }
   return null;

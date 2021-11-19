@@ -53,6 +53,7 @@ const volumeTracing: VolumeTracing = {
 
 // todo: use VolumeTracingReducer here? would need refactoring
 const serverVolumeTracing: ServerVolumeTracing = {
+  typ: "Volume",
   id: "tracingId",
   elementClass: "uint32",
   createdTimestamp: 0,

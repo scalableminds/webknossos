@@ -868,12 +868,14 @@ export async function downloadNml(
 export async function unlinkFallbackSegmentation(
   annotationId: string,
   annotationType: APIAnnotationType,
-  // todo
-  // tracingId: string,
+  tracingId: string,
 ): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/unlinkFallback`, {
-    method: "PATCH",
-  });
+  await Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/unlinkFallback?tracingId=${tracingId}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 // When the annotation is open, please use the corresponding method

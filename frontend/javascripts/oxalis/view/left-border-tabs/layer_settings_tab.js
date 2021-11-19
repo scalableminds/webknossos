@@ -103,7 +103,7 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
-  onUnlinkFallbackLayer: Tracing => Promise<void>,
+  onUnlinkFallbackLayer: (Tracing, VolumeTracing) => Promise<void>,
   tracing: Tracing,
   task: ?Task,
   onChangeEnableAutoBrush: (active: boolean) => void,
@@ -242,11 +242,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getDeleteButton = () => (
+  getDeleteButton = (volumeTracing: VolumeTracing) => (
     <Tooltip title="Unlink dataset's original segmentation layer">
       <StopOutlined
         onClick={() => {
-          this.removeFallbackLayer();
+          this.removeFallbackLayer(volumeTracing);
         }}
         style={{
           position: "absolute",
@@ -258,7 +258,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Tooltip>
   );
 
-  removeFallbackLayer = () => {
+  removeFallbackLayer = (volumeTracing: VolumeTracing) => {
     Modal.confirm({
       title: messages["tracing.confirm_remove_fallback_layer.title"],
       content: (
@@ -270,7 +270,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </div>
       ),
       onOk: async () => {
-        this.props.onUnlinkFallbackLayer(this.props.tracing);
+        this.props.onUnlinkFallbackLayer(this.props.tracing, volumeTracing);
       },
       width: 600,
     });
@@ -492,7 +492,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
           {this.getReloadDataButton(layerName)}
-          {hasFallbackLayer ? this.getDeleteButton() : null}
+          {maybeVolumeTracing && hasFallbackLayer ? this.getDeleteButton(maybeVolumeTracing) : null}
         </Col>
       </Row>
     );
@@ -890,9 +890,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },
-  async onUnlinkFallbackLayer(tracing: Tracing) {
+  async onUnlinkFallbackLayer(tracing: Tracing, volumeTracing: VolumeTracing) {
     const { annotationId, annotationType } = tracing;
-    await unlinkFallbackSegmentation(annotationId, annotationType);
+    await unlinkFallbackSegmentation(annotationId, annotationType, volumeTracing.tracingId);
     await api.tracing.hardReload();
   },
   onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {

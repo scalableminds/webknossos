@@ -49,10 +49,7 @@ import {
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  serverTracingAsVolumeTracings,
-  getServerVolumeTracings,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
@@ -270,7 +267,7 @@ function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<Ser
     // $FlowIssue[prop-missing] For some reason flow thinks the task property is missing, but it is not
     Store.dispatch(initializeAnnotationAction(annotation));
 
-    serverTracingAsVolumeTracings(serverTracings).map(volumeTracing => {
+    getServerVolumeTracings(serverTracings).map(volumeTracing => {
       ErrorHandling.assert(
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],

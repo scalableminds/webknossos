@@ -90,19 +90,6 @@ export function getReadableNameByVolumeTracingId(
   return volumeDescriptor.name || "Volume Layer";
 }
 
-export function getServerVolumeTracings(
-  tracings: Array<ServerTracing>,
-): Array<ServerVolumeTracing> {
-  // Type refinement by filtering does not work in flow.
-  // See https://github.com/facebook/flow/issues/1414
-  // $FlowIgnore[prop-missing]
-  // $FlowIgnore[incompatible-type]
-  const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
-    tracing => tracing.typ === "Volume",
-  );
-  return volumeTracings;
-}
-
 function getSegmentationLayerForTracing(
   state: OxalisState,
   volumeTracing: VolumeTracing,
@@ -124,15 +111,15 @@ const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
   _getResolutionInfoOfActiveSegmentationTracingLayer,
 );
 
-export function serverTracingAsVolumeTracings(
+export function getServerVolumeTracings(
   tracings: ?Array<ServerTracing>,
 ): Array<ServerVolumeTracing> {
-  // todo: fix flow?
+  // Type refinement by filtering does not work in flow.
+  // See https://github.com/facebook/flow/issues/1414
   // $FlowIgnore[prop-missing]
   // $FlowIgnore[incompatible-type]
   const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
-    // $FlowIgnore[prop-missing]
-    tracing => tracing.largestSegmentId != null,
+    tracing => tracing.typ === "Volume",
   );
   return volumeTracings;
 }

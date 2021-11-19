@@ -118,7 +118,7 @@ const modelData = {
   },
 };
 
-export function getVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
+export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volumes.length > 0) {
     return Maybe.Just(tracing.volumes[0]);
   }

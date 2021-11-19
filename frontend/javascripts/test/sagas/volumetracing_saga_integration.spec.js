@@ -10,7 +10,7 @@ import "test/sagas/saga_integration.mock";
 import {
   __setupOxalis,
   createBucketResponseFunction,
-  getVolumeTracingOrFail,
+  getFirstVolumeTracingOrFail,
 } from "test/helpers/apiHelpers";
 import { OrthoViews, FillModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
@@ -340,7 +340,7 @@ test.serial(
     Store.dispatch(copySegmentationLayerAction());
 
     // maxCellId should be updated after copySegmentationLayer
-    getVolumeTracingOrFail(Store.getState().tracing).map(tracing => {
+    getFirstVolumeTracingOrFail(Store.getState().tracing).map(tracing => {
       t.is(tracing.maxCellId, newCellId);
     });
   },

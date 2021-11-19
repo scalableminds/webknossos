@@ -4,6 +4,7 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SaveState } from "oxalis/store";
+import type { SetVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
@@ -37,13 +38,29 @@ export function getTotalSaveQueueLength(queueObj: $ElementType<SaveState, "queue
   );
 }
 
-function updateVersion(state, action) {
-  if (action.tracingType === "skeleton") {
-    // $FlowIgnore[prop-missing] todo: double check that this really works
+function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
+  if (action.tracingType === "skeleton" && state.tracing.skeleton != null) {
+    // Flow thinks that tracing.skeleton might be null and complains therefore.
+    // $FlowIgnore[prop-missing]
     return updateKey2(state, "tracing", "skeleton", { version: action.version });
   }
   return updateVolumeTracing(state, action.tracingId, {
     version: action.version,
+  });
+}
+
+function updateLastSaveTimestamp(state, action) {
+  if (action.tracingType === "skeleton") {
+    return updateKey2(state, "save", "lastSaveTimestamp", { skeleton: action.timestamp });
+  }
+
+  const newVolumesDict = {
+    ...state.save.lastSaveTimestamp.volumes,
+    [action.tracingId]: action.timestamp,
+  };
+
+  return updateKey2(state, "save", "lastSaveTimestamp", {
+    volumes: newVolumesDict,
   });
 }
 
@@ -154,11 +171,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_LAST_SAVE_TIMESTAMP": {
-      // todo: see comment in store for `lastSaveTimestamp`
-      return update(state, {
-        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
-        save: { lastSaveTimestamp: { [action.tracingType]: { $set: action.timestamp } } },
-      });
+      return updateLastSaveTimestamp(state, action);
     }
 
     case "SET_VERSION_NUMBER": {

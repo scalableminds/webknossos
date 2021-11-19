@@ -26,8 +26,9 @@ type SetLastSaveTimestampAction = {
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp: number,
   tracingType: TracingType,
+  tracingId: string,
 };
-type SetVersionNumberAction = {
+export type SetVersionNumberAction = {
   type: "SET_VERSION_NUMBER",
   version: number,
   tracingType: TracingType,
@@ -91,10 +92,12 @@ export const setSaveBusyAction = (
 
 export const setLastSaveTimestampAction = (
   tracingType: TracingType,
+  tracingId: string,
 ): SetLastSaveTimestampAction => ({
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp: Date.now(),
   tracingType,
+  tracingId,
 });
 
 export const setVersionNumberAction = (

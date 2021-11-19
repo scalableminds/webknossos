@@ -635,7 +635,7 @@ export function* pushTracingTypeAsync(
 ): Saga<void> {
   yield* take("WK_READY");
 
-  yield* put(setLastSaveTimestampAction(tracingType));
+  yield* put(setLastSaveTimestampAction(tracingType, tracingId));
   while (true) {
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
@@ -732,7 +732,7 @@ export function* sendRequestToServer(
       yield* put(
         setVersionNumberAction(version + compactedSaveQueue.length, tracingType, tracingId),
       );
-      yield* put(setLastSaveTimestampAction(tracingType));
+      yield* put(setLastSaveTimestampAction(tracingType, tracingId));
       yield* put(shiftSaveQueueAction(saveQueue.length, tracingType, tracingId));
       if (tracingType === "volume") {
         yield _call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
@@ -816,7 +816,7 @@ export function addVersionNumbers(
   updateActionsBatches: Array<SaveQueueEntry>,
   lastVersion: number,
 ): Array<SaveQueueEntry> {
-  return updateActionsBatches.map(batch => Object.assign({}, batch, { version: ++lastVersion }));
+  return updateActionsBatches.map(batch => ({ ...batch, version: ++lastVersion }));
 }
 
 export function performDiffTracing(

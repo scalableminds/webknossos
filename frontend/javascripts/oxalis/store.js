@@ -396,7 +396,7 @@ export type Script = APIScript;
 
 export type Task = APITask;
 
-export type SaveQueueEntry = {
+export type SaveQueueEntry = {|
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
@@ -405,7 +405,7 @@ export type SaveQueueEntry = {
   transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-};
+|};
 
 export type ProgressInfo = {
   +processedActionCount: number,
@@ -422,12 +422,15 @@ export type SaveState = {
   +queue: {
     +skeleton: Array<SaveQueueEntry>,
     +volumes: {
-      [key: string]: Array<SaveQueueEntry>,
+      [tracingId: string]: Array<SaveQueueEntry>,
     },
   },
-  // todo: unused and wrong definition (is used as a dict).
-  // fix or remove?
-  +lastSaveTimestamp: number,
+  +lastSaveTimestamp: {|
+    +skeleton: number,
+    +volumes: {
+      [tracingId: string]: number,
+    },
+  |},
   +progressInfo: ProgressInfo,
 };
 
@@ -522,7 +525,6 @@ export type OxalisState = {|
   +userConfiguration: UserConfiguration,
   +temporaryConfiguration: TemporaryConfiguration,
   +dataset: APIDataset,
-  // todo: should probably be renamed to annotation
   +tracing: Tracing,
   +task: ?Task,
   +save: SaveState,

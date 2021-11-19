@@ -163,7 +163,10 @@ const defaultState: OxalisState = {
       skeleton: false,
       volume: false,
     },
-    lastSaveTimestamp: 0,
+    lastSaveTimestamp: {
+      skeleton: 0,
+      volumes: {},
+    },
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

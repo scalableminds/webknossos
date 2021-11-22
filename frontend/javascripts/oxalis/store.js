@@ -25,6 +25,7 @@ import type {
   APIUserBase,
   MeshMetaData,
   TracingType,
+  APIMeshFile,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
@@ -513,8 +514,8 @@ export type OxalisState = {|
   +localSegmentationData: {
     [segmentationLayerName: string]: {
       +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
-      +availableMeshFiles: ?Array<string>,
-      +currentMeshFile: ?string,
+      +availableMeshFiles: ?Array<APIMeshFile>,
+      +currentMeshFile: ?APIMeshFile,
       // Note that for a volume tracing, this information should be stored
       // in state.tracing.volume.segments, as this is also persisted on the
       // server (i.e., not "local").

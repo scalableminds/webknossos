@@ -1,13 +1,15 @@
 // @flow
+import React, { useState, type ComponentType } from "react";
+import { Popconfirm } from "antd";
 import {
   getMeshfileChunksForSegment,
   getMeshfileChunkData,
   getMeshfilesForDatasetLayer,
 } from "admin/admin_rest_api";
-import type { APIDataset, APIDataLayer } from "types/api_flow_types";
+import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import Store from "oxalis/store";
+import Store, { type ActiveMappingInfo } from "oxalis/store";
 import {
   addIsosurfaceAction,
   startedLoadingIsosurfaceAction,
@@ -20,6 +22,7 @@ import type { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
+import { setMappingAction } from "oxalis/model/actions/settings_actions";
 
 const PARALLEL_MESH_LOADING_COUNT = 6;
 
@@ -32,7 +35,7 @@ export async function maybeFetchMeshFiles(
   dataset: APIDataset,
   mustRequest: boolean,
   autoActivate: boolean = true,
-): Promise<Array<string>> {
+): Promise<Array<APIMeshFile>> {
   if (!segmentationLayer) {
     return [];
   }
@@ -53,7 +56,7 @@ export async function maybeFetchMeshFiles(
       availableMeshFiles.length > 0 &&
       autoActivate
     ) {
-      Store.dispatch(updateCurrentMeshFileAction(layerName, availableMeshFiles[0]));
+      Store.dispatch(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].meshFileName));
     }
     return availableMeshFiles;
   }
@@ -123,4 +126,57 @@ export async function loadMeshFromFile(
   }
 
   Store.dispatch(finishedLoadingIsosurfaceAction(layerName, id));
+}
+
+type MappingActivationConfirmationProps<R> = {|
+  currentMeshFile: ?APIMeshFile,
+  layerName: ?string,
+  mappingInfo: ActiveMappingInfo,
+  onClick: Function,
+  ...R,
+|};
+
+export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
+  WrappedComponent: C,
+): ComponentType<MappingActivationConfirmationProps<P>> {
+  return function ComponentWithMappingActivationConfirmation(
+    props: MappingActivationConfirmationProps<P>,
+  ) {
+    const { currentMeshFile, layerName, mappingInfo, onClick: originalOnClick, ...rest } = props;
+    const [isConfirmVisible, setConfirmVisible] = useState(false);
+    if (currentMeshFile == null || layerName == null) {
+      return <WrappedComponent {...rest} onClick={originalOnClick} />;
+    }
+
+    const enabledMappingName = mappingInfo.isMappingEnabled ? mappingInfo.mappingName : null;
+    const checkWhetherConfirmIsNeeded = () => {
+      if (enabledMappingName !== currentMeshFile.mappingName) {
+        setConfirmVisible(true);
+      } else {
+        originalOnClick();
+      }
+    };
+
+    const mappingString =
+      currentMeshFile.mappingName != null
+        ? `for the mapping "${currentMeshFile.mappingName}" which is not active`
+        : "without a mapping but a mapping is active";
+
+    return (
+      <Popconfirm
+        title={`The currently active mesh file "${
+          currentMeshFile.meshFileName
+        }" was computed ${mappingString}. Do you want to activate that mapping?`}
+        visible={isConfirmVisible}
+        onConfirm={() => {
+          setConfirmVisible(false);
+          Store.dispatch(setMappingAction(layerName, currentMeshFile.mappingName, "HDF5"));
+          originalOnClick();
+        }}
+        onCancel={() => setConfirmVisible(false)}
+      >
+        <WrappedComponent {...rest} onClick={checkWhetherConfirmIsNeeded} />
+      </Popconfirm>
+    );
+  };
 }

@@ -12,7 +12,7 @@ import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observe
 import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 
-import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
+import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type {
   OxalisState,
   Flycam,
@@ -86,8 +86,8 @@ type StateProps = {|
   allowUpdate: boolean,
   organization: string,
   datasetName: string,
-  availableMeshFiles: ?Array<string>,
-  currentMeshFile: ?string,
+  availableMeshFiles: ?Array<APIMeshFile>,
+  currentMeshFile: ?APIMeshFile,
   activeUser: ?APIUser,
   activeCellId: ?number,
   preferredQualityForMeshPrecomputation: number,
@@ -200,6 +200,12 @@ const formatMagWithLabel = (mag: Vector3, index: number) => {
   return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
 };
 
+const formatMeshFile = (meshFile: ?APIMeshFile): ?string => {
+  if (meshFile == null) return null;
+  if (meshFile.mappingName == null) return meshFile.meshFileName;
+  return `${meshFile.meshFileName} (${meshFile.mappingName})`;
+};
+
 function _getMapIdFn(visibleSegmentationLayer: ?DataLayer) {
   const mapId =
     visibleSegmentationLayer != null ? id => visibleSegmentationLayer.cube.mapId(id) : id => id;
@@ -230,6 +236,12 @@ class SegmentsView extends React.Component<Props, State> {
     maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
     if (features().jobsEnabled) {
       this.pollJobData();
+    }
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
+      maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
     }
   }
 
@@ -336,10 +348,13 @@ class SegmentsView extends React.Component<Props, State> {
     if (!currentMeshFile || !visibleSegmentationLayer) {
       return;
     }
+
+    // TODO: Activate correct mapping and get mapped segment id
+
     await loadMeshFromFile(
       segment.id,
       segment.somePosition,
-      currentMeshFile,
+      currentMeshFile.meshFileName,
       visibleSegmentationLayer,
       dataset,
     );
@@ -510,17 +525,17 @@ class SegmentsView extends React.Component<Props, State> {
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
         <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
           <Select
-            style={{ width: 180, display: "inline-blck" }}
+            style={{ width: 180, display: "inline-block" }}
             placeholder="Select a mesh file"
-            value={this.props.currentMeshFile}
+            value={formatMeshFile(this.props.currentMeshFile)}
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map(meshFile => (
-                <Option key={meshFile} value={meshFile}>
-                  {meshFile}
+                <Option key={meshFile.meshFileName} value={formatMeshFile(meshFile)}>
+                  {formatMeshFile(meshFile)}
                 </Option>
               ))
             ) : (

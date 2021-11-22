@@ -12,7 +12,7 @@ import React from "react";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 
-import type { APISegmentationLayer } from "types/api_flow_types";
+import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { IsosurfaceInformation, Segment, ActiveMappingInfo } from "oxalis/store";
 import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
@@ -60,7 +60,7 @@ const getLoadPrecomputedMeshMenuItem = (
         key="tooltip"
         title={
           currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile}`
+            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
             : "There is no mesh file."
         }
       >
@@ -109,7 +109,7 @@ type Props = {
   isosurface: ?IsosurfaceInformation,
   setPosition: (Vector3, boolean) => void,
   loadPrecomputedMeshForSegment: Segment => Promise<void>,
-  currentMeshFile: ?string,
+  currentMeshFile: ?APIMeshFile,
 };
 
 function getSegmentTooltip(segment: Segment) {

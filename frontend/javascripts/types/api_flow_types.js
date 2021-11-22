@@ -687,4 +687,9 @@ export type HybridServerTracing = {
   volume: ?ServerVolumeTracing,
 };
 
+export type APIMeshFile = {|
+  meshFileName: string,
+  mappingName: ?string,
+|};
+
 export default {};

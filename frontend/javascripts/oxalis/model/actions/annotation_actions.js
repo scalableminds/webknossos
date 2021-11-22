@@ -5,6 +5,7 @@ import type {
   MeshMetaData,
   RemoteMeshMetaData,
   APIAnnotationVisibility,
+  APIMeshFile,
 } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { UserBoundingBox } from "oxalis/store";
@@ -113,12 +114,12 @@ export type FinishedLoadingIsosurfaceAction = {
 export type UpdateMeshFileListAction = {
   type: "UPDATE_MESH_FILE_LIST",
   layerName: string,
-  meshFiles: Array<string>,
+  meshFiles: Array<APIMeshFile>,
 };
 export type UpdateCurrentMeshFileAction = {
   type: "UPDATE_CURRENT_MESH_FILE",
   layerName: string,
-  meshFile: ?string,
+  meshFileName: ?string,
 };
 
 export type ImportIsosurfaceFromStlAction = {
@@ -311,7 +312,7 @@ export const finishedLoadingIsosurfaceAction = (
 
 export const updateMeshFileListAction = (
   layerName: string,
-  meshFiles: Array<string>,
+  meshFiles: Array<APIMeshFile>,
 ): UpdateMeshFileListAction => ({
   type: "UPDATE_MESH_FILE_LIST",
   layerName,
@@ -320,11 +321,11 @@ export const updateMeshFileListAction = (
 
 export const updateCurrentMeshFileAction = (
   layerName: string,
-  meshFile: ?string,
+  meshFileName: ?string,
 ): UpdateCurrentMeshFileAction => ({
   type: "UPDATE_CURRENT_MESH_FILE",
   layerName,
-  meshFile,
+  meshFileName,
 });
 
 export const importIsosurfaceFromStlAction = (

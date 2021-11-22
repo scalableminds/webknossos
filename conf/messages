@@ -251,6 +251,7 @@ annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton
 annotation.unlinkFallback.explorationalsOnly=Could not unlink fallback segmentation (only allowed for explorational annotations).
 annotation.unlinkFallback.noVolume=Could not unlink fallback segmentation (only allowed for annotations with volume layer).
 annotation.unlinkFallback.layerNotFound=Could not unlink fallback segmentation (annotation layer not found)
+annotation.downsample.layerNotFound=Could not downsample volume annotation (annotation layer not found)
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.

@@ -57,6 +57,7 @@ type SetMappingEnabledAction = {
   type: "SET_MAPPING_ENABLED",
   isMappingEnabled: boolean,
   layerName: string,
+  dataInvalidationPromise: ?() => void,
 };
 export type SetMappingAction = {
   type: "SET_MAPPING",
@@ -68,12 +69,14 @@ export type SetMappingAction = {
   mappingType: MappingType,
   layerName: string,
   showLoadingIndicator: ?boolean,
+  dataInvalidationPromise: ?() => void,
 };
 
 type SetHideUnmappedIdsAction = {
   type: "SET_HIDE_UNMAPPED_IDS",
   hideUnmappedIds: boolean,
   layerName: string,
+  dataInvalidationPromise: ?() => void,
 };
 
 export type SettingAction =
@@ -171,10 +174,12 @@ export const setControlModeAction = (controlMode: ControlMode): SetControlModeAc
 export const setMappingEnabledAction = (
   layerName: string,
   isMappingEnabled: boolean,
+  dataInvalidationPromise?: ?() => void,
 ): SetMappingEnabledAction => ({
   type: "SET_MAPPING_ENABLED",
   layerName,
   isMappingEnabled,
+  dataInvalidationPromise,
 });
 
 export type OptionalMappingProperties = {|
@@ -183,6 +188,7 @@ export type OptionalMappingProperties = {|
   mappingColors?: Array<number>,
   hideUnmappedIds?: boolean,
   showLoadingIndicator?: boolean,
+  dataInvalidationPromise?: ?() => void,
 |};
 
 export const setMappingAction = (
@@ -195,6 +201,7 @@ export const setMappingAction = (
     mappingColors,
     hideUnmappedIds,
     showLoadingIndicator,
+    dataInvalidationPromise,
   }: OptionalMappingProperties = {},
 ): SetMappingAction => ({
   type: "SET_MAPPING",
@@ -206,15 +213,18 @@ export const setMappingAction = (
   mappingColors,
   hideUnmappedIds,
   showLoadingIndicator,
+  dataInvalidationPromise,
 });
 
 export const setHideUnmappedIdsAction = (
   layerName: string,
   hideUnmappedIds: boolean,
+  dataInvalidationPromise?: ?() => void,
 ): SetHideUnmappedIdsAction => ({
   type: "SET_HIDE_UNMAPPED_IDS",
   hideUnmappedIds,
   layerName,
+  dataInvalidationPromise,
 });
 
 export const initializeGpuSetupAction = (

@@ -439,6 +439,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     hideContextMenu,
     setActiveCell,
     mappingInfo,
+    zoomStep,
   } = props;
 
   const dispatch = useDispatch();
@@ -452,13 +453,13 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     if (!currentMeshFile) return;
 
     if (visibleSegmentationLayer) {
+      // Make sure the corresponding bucket is loaded
+      await api.data.getDataValue(visibleSegmentationLayer.name, globalPosition, zoomStep);
       const id = getSegmentIdForPosition(globalPosition);
       if (id === 0) {
         Toast.info("No segment found at the clicked position");
         return;
       }
-
-      // TODO: Activate correct mapping and get mapped segment id
 
       await loadMeshFromFile(
         id,

@@ -4,6 +4,7 @@ import {
   type Saga,
   _all,
   _call,
+  _takeEvery,
   _takeLatest,
   call,
   select,
@@ -24,18 +25,51 @@ import {
   getAgglomeratesForDatasetLayer,
 } from "admin/admin_rest_api";
 import type { APIMapping } from "types/api_flow_types";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerByName, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { type Mapping } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
+import api from "oxalis/api/internal_api";
 
 type APIMappings = { [string]: APIMapping };
 
+const isAgglomerate = mapping => {
+  if (!mapping) {
+    return false;
+  }
+  return mapping.mappingType === "HDF5";
+};
+
 export default function* watchActivatedMappings(): Saga<void> {
+  const oldActiveMappingByLayer = {};
   // Buffer actions since they might be dispatched before WK_READY
-  const actionChannel = yield _actionChannel("SET_MAPPING");
+  const setMappingActionChannel = yield _actionChannel("SET_MAPPING");
+  const mappingChangeActionChannel = yield _actionChannel([
+    "SET_MAPPING_ENABLED",
+    "SET_HIDE_UNMAPPED_IDS",
+  ]);
   yield* take("WK_READY");
-  yield _takeLatest(actionChannel, maybeFetchMapping);
+  yield _takeLatest(setMappingActionChannel, maybeFetchMapping);
+  yield _takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
+}
+
+function* maybeReloadData(oldActiveMappingByLayer, action: SetMappingAction): Saga<void> {
+  const { layerName, dataInvalidationPromise } = action;
+
+  const oldMapping = getMappingInfo(oldActiveMappingByLayer, layerName);
+  const activeMappingByLayer = yield* select(
+    state => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const mapping = getMappingInfo(activeMappingByLayer, layerName);
+
+  const isAgglomerateMappingInvolved = isAgglomerate(oldMapping) || isAgglomerate(mapping);
+  const hasChanged = oldMapping !== mapping;
+  const shouldReload = isAgglomerateMappingInvolved && hasChanged;
+  if (shouldReload) {
+    yield* call([api.data, api.data.reloadBuckets], layerName);
+  }
+  if (dataInvalidationPromise != null) dataInvalidationPromise();
+  oldActiveMappingByLayer = activeMappingByLayer;
 }
 
 function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
@@ -45,6 +79,7 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
     mappingType,
     mapping: existingMapping,
     showLoadingIndicator,
+    dataInvalidationPromise,
   } = action;
 
   if (mappingName == null || existingMapping != null) {
@@ -86,7 +121,7 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
 
   if (mappingType !== "JSON") {
     // Activate HDF5 mappings immediately. JSON mappings will be activated once they have been fetched.
-    yield* put(setMappingEnabledAction(layerName, true));
+    yield* put(setMappingEnabledAction(layerName, true, dataInvalidationPromise));
     message.destroy(MAPPING_MESSAGE_KEY);
     return;
   }

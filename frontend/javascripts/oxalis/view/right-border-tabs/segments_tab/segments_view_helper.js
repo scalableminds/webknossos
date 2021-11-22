@@ -168,9 +168,15 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
           currentMeshFile.meshFileName
         }" was computed ${mappingString}. Do you want to activate that mapping?`}
         visible={isConfirmVisible}
-        onConfirm={() => {
+        onConfirm={async () => {
           setConfirmVisible(false);
-          Store.dispatch(setMappingAction(layerName, currentMeshFile.mappingName, "HDF5"));
+          await new Promise(resolve =>
+            Store.dispatch(
+              setMappingAction(layerName, currentMeshFile.mappingName, "HDF5", {
+                dataInvalidationPromise: resolve,
+              }),
+            ),
+          );
           originalOnClick();
         }}
         onCancel={() => setConfirmVisible(false)}

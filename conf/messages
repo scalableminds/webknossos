@@ -223,6 +223,7 @@ annotation.reopened=Annotation was reopened
 annotation.saved=Annotation was saved
 annotation.edit.success=Successfully updated annotation
 annotation.edit.failed=Updating the annotation failed
+annotation.updateSharedTeams.failed.accessingTeam=Failed to update shared teams for annotation, a team could not be found or accessed.
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
 annotation.finish.failed=Finishing the annotation failed
 annotation.reset.success=Annotation was successfully reset

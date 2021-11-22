@@ -1,9 +1,8 @@
-version: '2.1'
+version: "2.1"
 
 services:
   webknossos-datastore:
     image: scalableminds/webknossos-datastore:${DATASTORE_TAG}
-    entrypoint: bin/webknossos-datastore
     command:
       - -J-Xmx20G
       - -J-Xms1G
@@ -21,9 +20,6 @@ services:
       - $USER_GROUP_1
       - $USER_GROUP_2
     volumes:
-      - $BINARY_DATA_PATH:/srv/webknossos-datastore/binaryData
+      - $BINARY_DATA_PATH:/webknossos-datastore/binaryData
       - ./tmp:/tmp
-      - ./config/datastore-docker.conf:/srv/webknossos-datastore/conf/docker.conf
-    environment:
-      - NEW_RELIC_LICENSE_KEY
-      - NEW_RELIC_APP_NAME
+      - ./config/datastore-docker.conf:/webknossos-datastore/conf/docker.conf

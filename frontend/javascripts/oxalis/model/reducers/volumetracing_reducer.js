@@ -33,6 +33,7 @@ import {
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
+import type { ServerVolumeTracing } from "types/api_flow_types";
 
 type SegmentUpdateInfo =
   | {
@@ -132,39 +133,42 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   });
 }
 
+export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
+  const maxCellId = tracing.largestSegmentId;
+  const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
+  const volumeTracing = {
+    createdTimestamp: tracing.createdTimestamp,
+    type: "volume",
+    segments: new DiffableMap(
+      tracing.segments.map(segment => [
+        segment.segmentId,
+        {
+          ...segment,
+          id: segment.segmentId,
+          somePosition: Utils.point3ToVector3(segment.anchorPosition),
+        },
+      ]),
+    ),
+    activeCellId: 0,
+    lastCentroid: null,
+    contourTracingMode: ContourModeEnum.DRAW,
+    contourList: [],
+    maxCellId,
+    tracingId: tracing.id,
+    version: tracing.version,
+    boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
+    fallbackLayer: tracing.fallbackLayer,
+    userBoundingBoxes,
+  };
+  return volumeTracing;
+}
+
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
-      const maxCellId = action.tracing.largestSegmentId;
-      const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
-        action.tracing.userBoundingBoxes,
-      );
-      const volumeTracing: VolumeTracing = {
-        createdTimestamp: action.tracing.createdTimestamp,
-        type: "volume",
-        segments: new DiffableMap(
-          action.tracing.segments.map(segment => [
-            segment.segmentId,
-            {
-              ...segment,
-              id: segment.segmentId,
-              somePosition: Utils.point3ToVector3(segment.anchorPosition),
-            },
-          ]),
-        ),
-        activeCellId: 0,
-        lastCentroid: null,
-        contourTracingMode: ContourModeEnum.DRAW,
-        contourList: [],
-        maxCellId,
-        tracingId: action.tracing.id,
-        version: action.tracing.version,
-        boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        fallbackLayer: action.tracing.fallbackLayer,
-        userBoundingBoxes,
-      };
+      const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
 
       const newVolumes = state.tracing.volumes.filter(
         tracing => tracing.tracingId !== volumeTracing.tracingId,

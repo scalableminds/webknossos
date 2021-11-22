@@ -11,9 +11,7 @@ import {
   OverwriteModeEnum,
 } from "oxalis/constants";
 import type { ServerVolumeTracing } from "types/api_flow_types";
-import type { VolumeTracing } from "oxalis/store";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
-import DiffableMap from "libs/diffable_map";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import defaultState from "oxalis/default_state";
@@ -35,23 +33,10 @@ mockRequire("oxalis/workers/tensorflow.worker", {});
 const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
+const {
+  serverVolumeToClientVolumeTracing,
+} = require("oxalis/model/reducers/volumetracing_reducer");
 
-const volumeTracing: VolumeTracing = {
-  type: "volume",
-  createdTimestamp: 0,
-  tracingId: "tracingId",
-  version: 0,
-  segments: new DiffableMap(),
-  activeCellId: 0,
-  maxCellId: 0,
-  contourList: [[1, 2, 3], [7, 8, 9]],
-  boundingBox: null,
-  userBoundingBoxes: [],
-  lastCentroid: null,
-  contourTracingMode: ContourModeEnum.DRAW,
-};
-
-// todo: use VolumeTracingReducer here? would need refactoring
 const serverVolumeTracing: ServerVolumeTracing = {
   typ: "Volume",
   id: "tracingId",
@@ -67,6 +52,7 @@ const serverVolumeTracing: ServerVolumeTracing = {
   dataSetName: "dataset_name",
   largestSegmentId: 0,
 };
+const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);
 
 const initialState = update(defaultState, {
   tracing: {

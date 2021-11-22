@@ -182,7 +182,7 @@ services:
         -v
         "testOnly e2e.* --
           -Dtracingstore.fossildb.address=fossildb
-          -Dtracingstore.redis.address=redis"
+          -Dtracingstore.redis.address=redis
           -Ddatastore.redis.address=redis"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X

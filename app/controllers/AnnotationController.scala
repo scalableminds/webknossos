@@ -12,7 +12,7 @@ import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import models.team.TeamService
+import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.{URLSharing, WkEnv}
@@ -46,6 +46,7 @@ class AnnotationController @Inject()(
     userService: UserService,
     teamService: TeamService,
     projectDAO: ProjectDAO,
+    teamDAO: TeamDAO,
     timeSpanService: TimeSpanService,
     annotationMerger: AnnotationMerger,
     tracingStoreService: TracingStoreService,
@@ -402,11 +403,10 @@ class AnnotationController @Inject()(
           annotation <- provider.provideAnnotation(typ, id, request.identity)
           _ <- bool2Fox(
             annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> "notAllowed" ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
-          userTeams <- userService.teamIdsFor(request.identity._id)
-          updateTeams = teamIdsValidated.intersect(userTeams)
-          _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, updateTeams)
-        } yield Ok(Json.toJson(updateTeams.map(_.toString)))
+          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse)
+          _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> "updateSharedTeams.failed.accessingTeam"
+          _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
+        } yield Ok(Json.toJson(teamIdsValidated))
       }
   }
 

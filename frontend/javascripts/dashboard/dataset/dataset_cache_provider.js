@@ -2,8 +2,14 @@
 import React, { createContext, useState, type Node } from "react";
 
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
-import type { APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
-import { getDatastores, triggerDatasetCheck, getDatasets, getDataset } from "admin/admin_rest_api";
+import type { APIMaybeUnimportedDataset, APIDatasetId, APIDataset } from "types/api_flow_types";
+import {
+  getDatastores,
+  triggerDatasetCheck,
+  getDatasets,
+  getDataset,
+  updateDataset,
+} from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
@@ -19,10 +25,11 @@ type Context = {
   isLoading: boolean,
   checkDatasets: () => Promise<void>,
   fetchDatasets: (options?: Options) => Promise<void>,
-  updateDataset: (
+  reloadDataset: (
     datasetId: APIDatasetId,
     datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
   ) => Promise<void>,
+  updateCachedDataset: (dataset: APIDataset) => Promise<void>,
 };
 
 const oldWkDatasetsCacheKey = "wk.datasets";
@@ -32,7 +39,12 @@ export const datasetCache = {
     UserLocalStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));
   },
   get(): APIMaybeUnimportedDataset[] {
-    return Utils.parseAsMaybe(UserLocalStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
+    return (
+      Utils.parseAsMaybe(UserLocalStorage.getItem(wkDatasetsCacheKey))
+        .getOrElse([])
+        // Ensuring that each dataset has tags.
+        .map(dataset => ({ ...dataset, tags: dataset.tags || [] }))
+    );
   },
   clear(): void {
     UserLocalStorage.removeItem(wkDatasetsCacheKey);
@@ -44,7 +56,8 @@ export const DatasetCacheContext = createContext<Context>({
   isLoading: false,
   fetchDatasets: async () => {},
   checkDatasets: async () => {},
-  updateDataset: async () => {},
+  reloadDataset: async () => {},
+  updateCachedDataset: async () => {},
 });
 
 export default function DatasetCacheProvider({ children }: { children: Node }) {
@@ -108,7 +121,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
     }
   }
 
-  async function updateDataset(
+  async function reloadDataset(
     datasetId: APIDatasetId,
     datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
   ) {
@@ -155,9 +168,41 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
     }
   }
 
+  async function updateCachedDataset(dataset: APIDataset) {
+    if (isLoading) return;
+    setIsLoading(true);
+
+    const updatedDatasets = datasets.map(currentDataset => {
+      if (
+        dataset.name === currentDataset.name &&
+        dataset.owningOrganization === currentDataset.owningOrganization
+      ) {
+        return dataset;
+      } else {
+        return currentDataset;
+      }
+    });
+    setDatasets(updatedDatasets);
+    datasetCache.set(updatedDatasets);
+    try {
+      await updateDataset(dataset, dataset);
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <DatasetCacheContext.Provider
-      value={{ datasets, isLoading, checkDatasets, fetchDatasets, updateDataset }}
+      value={{
+        datasets,
+        isLoading,
+        checkDatasets,
+        fetchDatasets,
+        reloadDataset,
+        updateCachedDataset,
+      }}
     >
       {children}
     </DatasetCacheContext.Provider>

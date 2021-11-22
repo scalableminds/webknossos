@@ -9,14 +9,18 @@ import dice from "dice-coefficient";
 import update from "immutability-helper";
 
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import type { APITeam, APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
+import type {
+  APITeam,
+  APIMaybeUnimportedDataset,
+  APIDatasetId,
+  APIDataset,
+} from "types/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
-import UserLocalStorage from "libs/user_local_storage";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
 
@@ -24,22 +28,23 @@ const { Column } = Table;
 
 const typeHint: APIMaybeUnimportedDataset[] = [];
 const useLruRank = true;
-const LOCAL_STORAGE_FILTER_TAGS_KEY = "lastDatasetSearchTags";
 
 type Props = {
   datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
+  searchTags: Array<string>,
   isUserAdmin: boolean,
   isUserTeamManager: boolean,
   isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
-  updateDataset: (APIDatasetId, Array<APIMaybeUnimportedDataset>) => Promise<void>,
+  reloadDataset: (APIDatasetId, Array<APIMaybeUnimportedDataset>) => Promise<void>,
+  updateDataset: APIDataset => Promise<void>,
+  addTagToSearch: (tag: string) => void,
 };
 
 type State = {
   prevSearchQuery: string,
   sortedInfo: Object,
-  filterTags: Array<string>,
 };
 
 class DatasetTable extends React.PureComponent<Props, State> {
@@ -49,7 +54,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
       order: "descend",
     },
     prevSearchQuery: "",
-    filterTags: [],
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State): $Shape<State> {
@@ -68,18 +72,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
     };
   }
 
-  componentDidMount() {
-    this.restoreSearchTags();
-  }
-
   handleChange = (pagination: Object, filters: Object, sorter: Object) => {
     this.setState({
       sortedInfo: sorter,
     });
   };
 
-  updateSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
-    this.props.updateDataset(datasetId, this.props.datasets);
+  reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
+    this.props.reloadDataset(datasetId, this.props.datasets);
 
   getFilteredDatasets() {
     const filterByMode = datasets => {
@@ -95,7 +95,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
     const filteredByTags = datasets =>
       datasets.filter(dataset => {
-        const notIncludedTags = _.difference(this.state.filterTags, dataset.tags);
+        const notIncludedTags = _.difference(this.props.searchTags, dataset.tags);
         return notIncludedTags.length === 0;
       });
 
@@ -114,29 +114,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
     return filterByQuery(filteredByTags(filterByMode(filterByHasLayers(this.props.datasets))));
   }
 
-  restoreSearchTags() {
-    // restore the search query tags from the last session
-    const searchTagString = UserLocalStorage.getItem(LOCAL_STORAGE_FILTER_TAGS_KEY);
-    if (searchTagString) {
-      try {
-        const searchTags = JSON.parse(searchTagString);
-        this.setState({ filterTags: searchTags });
-      } catch (error) {
-        // pass
-      }
-    }
-  }
-
-  addTagToSearch = (tag: string): void => {
-    if (!this.state.filterTags.includes(tag)) {
-      this.setState(prevState => {
-        const newTags = update(prevState.filterTags, { $push: [tag] });
-        UserLocalStorage.setItem(LOCAL_STORAGE_FILTER_TAGS_KEY, JSON.stringify(newTags));
-        return { filterTags: newTags };
-      });
-    }
-  };
-
   editTagFromDataset = (
     dataset: APIMaybeUnimportedDataset,
     shouldAddTag: boolean,
@@ -144,6 +121,10 @@ class DatasetTable extends React.PureComponent<Props, State> {
     event: SyntheticInputEvent<>,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
+    if (!dataset.isActive) {
+      console.error(`Tags can only be added to active datasets. ${dataset.name} is not active.`);
+      return;
+    }
     let updatedDataset = dataset;
     if (shouldAddTag) {
       updatedDataset = update(dataset, { tags: { $push: [tag] } });
@@ -151,7 +132,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       const newTags = _.without(dataset.tags, tag);
       updatedDataset = update(dataset, { tags: { $set: newTags } });
     }
-    this.updateSingleDataset(updatedDataset);
+    this.props.updateDataset(updatedDataset);
   };
 
   renderEmptyText() {
@@ -250,25 +231,31 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="tags"
           width={280}
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
-          render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) => (
-            <div>
-              {tags.map(tag => (
-                <Tag
-                  key={tag}
-                  color={stringToColor(tag)}
-                  onClick={_.partial(this.addTagToSearch, tag)}
-                  onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
-                  closable
-                >
-                  {tag}
-                </Tag>
-              ))}
-              <EditableTextIcon
-                icon={<PlusOutlined />}
-                onChange={_.partial(this.editTagFromDataset, dataset, true)}
-              />
-            </div>
-          )}
+          render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
+            dataset.isActive ? (
+              <div>
+                {tags.map(tag => (
+                  <Tag
+                    key={tag}
+                    color={stringToColor(tag)}
+                    onClick={_.partial(this.props.addTagToSearch, tag)}
+                    onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
+                    closable
+                  >
+                    {tag}
+                  </Tag>
+                ))}
+                <EditableTextIcon
+                  icon={<PlusOutlined />}
+                  onChange={_.partial(this.editTagFromDataset, dataset, true)}
+                />
+              </div>
+            ) : (
+              <div style={{ color: "@disabled-color" }}>
+                Not tags available for inactive datasets.
+              </div>
+            )
+          }
         />
         <Column
           title="Voxel Size & Extent"
@@ -358,7 +345,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView dataset={dataset} updateDataset={this.updateSingleDataset} />
+            <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
           )}
         />
       </FixedExpandableTable>

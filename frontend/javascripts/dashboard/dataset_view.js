@@ -2,7 +2,20 @@
 
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
-import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin, Tooltip, Alert } from "antd";
+import {
+  Badge,
+  Button,
+  Radio,
+  Col,
+  Dropdown,
+  Input,
+  Menu,
+  Row,
+  Spin,
+  Tooltip,
+  Alert,
+  Tag,
+} from "antd";
 import {
   CloudUploadOutlined,
   LoadingOutlined,
@@ -22,6 +35,7 @@ import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import features, { getDemoDatasetUrl } from "features";
+import { stringToColor } from "libs/format_utils";
 import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
 import { getJobs } from "admin/admin_rest_api";
@@ -29,6 +43,7 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
+import UserLocalStorage from "libs/user_local_storage";
 const { Search, Group: InputGroup } = Input;
 
 type Props = {
@@ -45,6 +60,7 @@ type PersistenceState = {
 const CONVERSION_JOBS_REFRESH_INTERVAL = 60 * 1000;
 const MAX_JOBS_TO_DISPLAY = 5;
 const RECENT_DATASET_DAY_THRESHOLD = 3;
+const LOCAL_STORAGE_FILTER_TAGS_KEY = "lastDatasetSearchTags";
 
 const persistence: Persistence<PersistenceState> = new Persistence(
   {
@@ -69,6 +85,7 @@ function DatasetView(props: Props) {
   const history = useHistory();
   const context = useContext(DatasetCacheContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchTags, setSearchTags] = useState<Array<string>>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
     "onlyShowReported",
   );
@@ -110,11 +127,39 @@ function DatasetView(props: Props) {
   }, []);
 
   useEffect(() => {
+    // restore the search query tags from the last session
+    const searchTagString = UserLocalStorage.getItem(LOCAL_STORAGE_FILTER_TAGS_KEY);
+    if (searchTagString) {
+      try {
+        const loadedSearchTags = JSON.parse(searchTagString);
+        setSearchTags(loadedSearchTags);
+      } catch (error) {
+        // pass
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // store newest the search query tags
+    UserLocalStorage.setItem(LOCAL_STORAGE_FILTER_TAGS_KEY, JSON.stringify(searchTags));
+  }, [searchTags]);
+
+  useEffect(() => {
     persistence.persist(history, {
       searchQuery,
       datasetFilteringMode,
     });
   }, [searchQuery, datasetFilteringMode]);
+
+  function addTagToSearch(tag: string) {
+    if (!searchTags.includes(tag)) {
+      setSearchTags([...searchTags, tag]);
+    }
+  }
+
+  function removeTag(tag: string) {
+    setSearchTags(searchTags.filter(currentTag => currentTag !== tag));
+  }
 
   function handleSearch(event: SyntheticInputEvent<>) {
     setSearchQuery(event.target.value);
@@ -202,11 +247,14 @@ function DatasetView(props: Props) {
       <DatasetTable
         datasets={filteredDatasets}
         searchQuery={searchQuery}
+        searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserTeamManager={Utils.isUserTeamManager(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
-        updateDataset={context.updateDataset}
+        updateDataset={context.updateCachedDataset}
+        reloadDataset={context.reloadDataset}
+        addTagToSearch={addTagToSearch}
       />
     );
   }
@@ -325,6 +373,23 @@ function DatasetView(props: Props) {
     searchBox
   );
 
+  const selectedSearchTags = (
+    <>
+      {searchTags.map(tag => (
+        <Tag
+          key={tag}
+          color={stringToColor(tag)}
+          onClose={() => {
+            removeTag(tag);
+          }}
+          closable
+        >
+          {tag}
+        </Tag>
+      ))}
+    </>
+  );
+
   const adminHeader = (
     <div className="pull-right" style={{ display: "flex" }}>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
@@ -356,6 +421,7 @@ function DatasetView(props: Props) {
   return (
     <div>
       {adminHeader}
+      {selectedSearchTags}
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       {renderNewJobsAlert()}
       <div className="clearfix" style={{ margin: "20px 0px" }} />

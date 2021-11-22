@@ -7,8 +7,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
 
-- 
+- If your setup includes a webknossos-worker, it needs to be updated to the latest version (PR https://github.com/scalableminds/webknossos-worker/pull/70)
 
 ### Postgres Evolutions:
 
-- 
+- [077-workers.sql](conf/evolutions/077-workers.sql)

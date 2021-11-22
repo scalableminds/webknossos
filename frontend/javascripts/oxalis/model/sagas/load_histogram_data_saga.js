@@ -48,6 +48,10 @@ export default function* loadHistogramData(): Saga<void> {
     let newIntensityRange = [];
     const currentLayerConfig = layerConfigurations[layerName];
     if (currentLayerConfig) {
+      // The intensityRange is the range where the color value will be clamped to
+      // while min/max are the value range of the histogram slider.
+      // The following keeps the intensityRange within the min and max bounds if they exist.
+      // If the do not exist the tracing / dataset has never been opened and thus the histogram data is used as a default range delimiter.
       newIntensityRange = [
         Math.max(
           currentLayerConfig.intensityRange[0],

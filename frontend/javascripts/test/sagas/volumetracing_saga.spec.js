@@ -4,13 +4,15 @@ import "test/sagas/volumetracing_saga.mock.js";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
 
+import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
 import {
   OrthoViews,
   AnnotationToolEnum,
   ContourModeEnum,
   OverwriteModeEnum,
 } from "oxalis/constants";
-import type { ServerVolumeTracing } from "types/api_flow_types";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
+import { enforce } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -54,6 +56,16 @@ const serverVolumeTracing: ServerVolumeTracing = {
 };
 const volumeTracing = serverVolumeToClientVolumeTracing(serverVolumeTracing);
 
+const volumeTracingLayer: APISegmentationLayer = {
+  name: volumeTracing.tracingId,
+  category: "segmentation",
+  boundingBox: enforce(convertFrontendBoundingBoxToServer)(volumeTracing.boundingBox),
+  resolutions: [[1, 1, 1]],
+  elementClass: serverVolumeTracing.elementClass,
+  largestSegmentId: serverVolumeTracing.largestSegmentId,
+  tracingId: volumeTracing.tracingId,
+};
+
 const initialState = update(defaultState, {
   tracing: {
     volumes: { $set: [volumeTracing] },
@@ -61,20 +73,7 @@ const initialState = update(defaultState, {
   dataset: {
     dataSource: {
       dataLayers: {
-        $set: [
-          {
-            category: "segmentation",
-            // +largestSegmentId: number,
-            // +originalElementClass?: ElementClass,
-            // +mappings?: Array<string>,
-            // +agglomerates?: Array<string>,
-            // +fallbackLayer?: ?string,
-            // // eslint-disable-next-line no-use-before-define
-            // +fallbackLayerInfo?: APIDataLayer,
-            name: volumeTracing.tracingId,
-            tracingId: volumeTracing.tracingId,
-          },
-        ],
+        $set: [volumeTracingLayer],
       },
     },
   },

@@ -75,16 +75,14 @@ export function convertUserBoundingBoxesFromFrontendToServer(
 }
 
 export function convertFrontendBoundingBoxToServer(
-  boundingBox: ?BoundingBoxType,
-): ?BoundingBoxObject {
-  return Maybe.fromNullable(boundingBox)
-    .map(bb => ({
-      topLeft: bb.min,
-      width: bb.max[0] - bb.min[0],
-      height: bb.max[1] - bb.min[1],
-      depth: bb.max[2] - bb.min[2],
-    }))
-    .getOrElse(null);
+  boundingBox: BoundingBoxType,
+): BoundingBoxObject {
+  return {
+    topLeft: boundingBox.min,
+    width: boundingBox.max[0] - boundingBox.min[0],
+    height: boundingBox.max[1] - boundingBox.min[1],
+    depth: boundingBox.max[2] - boundingBox.min[2],
+  };
 }
 
 export function convertBoundariesToBoundingBox(boundary: Boundary): BoundingBoxObject {

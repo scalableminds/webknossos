@@ -231,14 +231,18 @@ class AnnotationController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def downsample(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
-      annotation <- provider.provideAnnotation(typ, id, request.identity)
-      _ <- annotationService.downsampleAnnotation(annotation) ?~> "annotation.downsample.failed"
-      updated <- provider.provideAnnotation(typ, id, request.identity)
-      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
-    } yield JsonOk(json)
+  def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        annotationLayer <- annotation.annotationLayers
+          .find(_.tracingId == tracingId)
+          .toFox ?~> "annotation.downsample.layerNotFound"
+        _ <- annotationService.downsampleAnnotation(annotation, annotationLayer) ?~> "annotation.downsample.failed"
+        updated <- provider.provideAnnotation(typ, id, request.identity)
+        json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+      } yield JsonOk(json)
   }
 
   @ApiOperation(hidden = true, value = "")

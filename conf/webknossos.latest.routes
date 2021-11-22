@@ -117,7 +117,7 @@ PATCH         /annotations/:typ/:id/transfer                                   c
 
 GET           /annotations/:typ/:id/info                                       controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                 controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
-PATCH         /annotations/:typ/:id/downsample                                 controllers.AnnotationController.downsample(typ: String, id: String)
+PATCH         /annotations/:typ/:id/downsample                                 controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
 PATCH         /annotations/:typ/:id/unlinkFallback                             controllers.AnnotationController.unlinkFallback(typ: String, id: String, tracingId: String)
 DELETE        /annotations/:typ/:id                                            controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                 controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)

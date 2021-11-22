@@ -1,9 +1,11 @@
 -- Note: If your setup contains a webknossos-worker, make sure to change the key below to a secure secret
+-- update webknossos.workers set key = 'mySecretWorkerKey'
 -- This evolution assumes that at most one datastore has worker jobs enabled
 
 START TRANSACTION;
 
 DROP VIEW webknossos.jobs_;
+DROP VIEW webknossos.dataStores_;
 
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
@@ -66,17 +68,20 @@ alter table webknossos.jobs alter column state SET NOT NULL;
 -- todo unpack args?
 
 ALTER TABLE webknossos.jobs DROP COLUMN manualState;
-    ALTER TABLE webknossos.jobs RENAME COLUMN manualState_NEW TO manualState;
-    ALTER TABLE webknossos.jobs DROP COLUMN celeryInfo;
-    ALTER TABLE webknossos.jobs DROP COLUMN celeryJobId;
+ALTER TABLE webknossos.jobs RENAME COLUMN manualState_NEW TO manualState;
+ALTER TABLE webknossos.jobs DROP COLUMN celeryInfo;
+ALTER TABLE webknossos.jobs DROP COLUMN celeryJobId;
 
 DROP TYPE webknossos.JOB_MANUAL_STATE;
 
 ALTER TABLE webknossos.jobs ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.jobs ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
 
+ALTER TABLE webknossos.dataStores DROP COLUMN jobsEnabled;
+
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
 CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
+CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 77;
 

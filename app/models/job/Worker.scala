@@ -54,6 +54,13 @@ class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, "key")
     } yield parsed
 
+  def findOneByDataStore(dataStoreName: String): Fox[Worker] =
+    for {
+      r: Seq[WorkersRow] <- run(
+        sql"select #$columns from #$existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
+      parsed <- parseFirst(r, "dataStoreName")
+    } yield parsed
+
   def updateHeartBeat(_id: ObjectId): Unit = {
     run(sqlu"update webknossos.workers set lastHeartBeat = NOW() where _id = ${_id}")
     // Note that this should not block the jobs polling operation, failures here are not critical

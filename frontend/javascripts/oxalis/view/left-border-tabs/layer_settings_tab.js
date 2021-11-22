@@ -114,12 +114,12 @@ type DatasetSettingsProps = {|
   isArbitraryMode: boolean,
 |};
 
-function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDownsample }) {
+function DownsampleVolumeModal({ hideDownsampleVolumeModal, magsToDownsample, volumeTracing }) {
   const [isDownsampling, setIsDownsampling] = useState(false);
 
   const handleTriggerDownsampling = async () => {
     setIsDownsampling(true);
-    await api.tracing.downsampleSegmentation();
+    await api.tracing.downsampleSegmentation(volumeTracing.tracingId);
     setIsDownsampling(false);
   };
 
@@ -127,7 +127,6 @@ function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDowns
     <Modal
       title="Downsample Volume Annotation"
       onCancel={isDownsampling ? null : hideDownsampleVolumeModal}
-      visible={visible}
       footer={null}
       width={800}
       maskClosable={false}
@@ -847,11 +846,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <div className="tracing-settings-menu">
         {layerSettings}
         {this.getSkeletonLayer()}
-        <DownsampleVolumeModal
-          visible={this.state.volumeTracingToDownsample != null}
-          hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
-          magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
-        />
+        {this.state.volumeTracingToDownsample != null ? (
+          <DownsampleVolumeModal
+            hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
+            volumeTracing={this.state.volumeTracingToDownsample}
+            magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
+          />
+        ) : null}
       </div>
     );
   }

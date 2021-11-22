@@ -901,21 +901,15 @@ class TracingApi {
      Note that this invoking this method will not block the UI. Thus, user actions can be performed during the
      downsampling. The caller should prohibit this (e.g., by showing a not-closable modal during the process).
    */
-  async downsampleSegmentation() {
+  async downsampleSegmentation(volumeTracingId: string) {
     const state = Store.getState();
-    const { annotationId, annotationType, volumes } = state.tracing;
+    const { annotationId, annotationType } = state.tracing;
     if (state.task != null) {
       throw new Error("Cannot downsample segmentation for a task.");
     }
-    if (volumes.length !== 1) {
-      // todo: support downsampling volume layers even if there are multiple ones
-      throw new Error(
-        "Can only downsample segmentation for annotation with exactly one volume layer.",
-      );
-    }
 
     await this.save();
-    await downsampleSegmentation(annotationId, annotationType);
+    await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
   }
 }

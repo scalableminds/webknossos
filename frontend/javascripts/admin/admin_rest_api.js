@@ -889,10 +889,14 @@ export async function unlinkFallbackSegmentation(
 export async function downsampleSegmentation(
   annotationId: string,
   annotationType: APIAnnotationType,
+  tracingId: string,
 ): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/downsample`, {
-    method: "PATCH",
-  });
+  await Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/downsample?tracingId=${tracingId}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 // ### Datasets

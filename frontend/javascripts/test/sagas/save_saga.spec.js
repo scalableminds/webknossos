@@ -233,7 +233,11 @@ test("SaveSaga should remove the correct update actions", t => {
     saga.next(),
     put(SaveActions.setVersionNumberAction(3, TRACING_TYPE, tracingId)),
   );
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE)));
+  expectValueDeepEqual(
+    t,
+    saga.next(),
+    put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE, tracingId)),
+  );
   expectValueDeepEqual(
     t,
     saga.next(),
@@ -261,7 +265,11 @@ test("SaveSaga should set the correct version numbers", t => {
     saga.next(),
     put(SaveActions.setVersionNumberAction(LAST_VERSION + 3, TRACING_TYPE, tracingId)),
   );
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE)));
+  expectValueDeepEqual(
+    t,
+    saga.next(),
+    put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE, tracingId)),
+  );
   expectValueDeepEqual(
     t,
     saga.next(),
@@ -290,7 +298,11 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
     saga.next(),
     put(SaveActions.setVersionNumberAction(LAST_VERSION + 1, TRACING_TYPE, tracingId)),
   );
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE)));
+  expectValueDeepEqual(
+    t,
+    saga.next(),
+    put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE, tracingId)),
+  );
   expectValueDeepEqual(
     t,
     saga.next(),

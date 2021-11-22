@@ -4,7 +4,7 @@
 export const alert = typeof window === "undefined" ? console.log.bind(console) : window.alert;
 export const document =
   typeof window === "undefined" || !window.document
-    ? { getElementById: () => null }
+    ? { getElementById: () => null, body: null }
     : window.document;
 
 // See https://github.com/facebook/flow/blob/master/lib/bom.js#L294-L311

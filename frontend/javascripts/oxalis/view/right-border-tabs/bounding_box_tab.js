@@ -4,76 +4,60 @@
  */
 import { Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
-import type { Dispatch } from "redux";
-import { connect } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 
-import type { APIDataset } from "types/api_flow_types";
-import {
-  UserBoundingBoxInput,
-  type UserBoundingBoxInputUpdate,
-} from "oxalis/view/components/setting_input_views";
-import type { OxalisState, Tracing, UserBoundingBox } from "oxalis/store";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
+import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
-import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
+import {
+  changeUserBoundingBoxAction,
+  addUserBoundingBoxAction,
+  deleteUserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
 import * as Utils from "libs/utils";
 
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
 
-type BoundingBoxTabProps = {
-  tracing: Tracing,
-  onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
-  dataset: APIDataset,
-};
-
-function BoundingBoxTab(props: BoundingBoxTabProps) {
+export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
-  const { tracing, dataset, onChangeBoundingBoxes } = props;
+  const tracing = useSelector(state => state.tracing);
+  const dataset = useSelector(state => state.dataset);
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
-  function handleChangeUserBoundingBox(
-    id: number,
-    { boundingBox, name, color, isVisible }: UserBoundingBoxInputUpdate,
-  ) {
-    const maybeUpdatedBoundingBox = boundingBox
-      ? Utils.computeBoundingBoxFromArray(boundingBox)
-      : undefined;
+  const dispatch = useDispatch();
+  const setChangeBoundingBoxBounds = (id: number, boundingBox: BoundingBoxType) =>
+    dispatch(changeUserBoundingBoxAction(id, { boundingBox }));
+  const addNewBoundingBox = () => dispatch(addUserBoundingBoxAction());
 
-    const updatedUserBoundingBoxes = userBoundingBoxes.map(bb =>
-      bb.id === id
-        ? {
-            ...bb,
-            boundingBox: maybeUpdatedBoundingBox || bb.boundingBox,
-            name: name != null ? name : bb.name,
-            color: color || bb.color,
-            isVisible: isVisible != null ? isVisible : bb.isVisible,
-          }
-        : bb,
-    );
-    onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  const setPosition = (position: Vector3) => dispatch(setPositionAction(position));
+
+  const deleteBoundingBox = (id: number) => dispatch(deleteUserBoundingBoxAction(id));
+  const setBoundingBoxVisibility = (id: number, isVisible: boolean) =>
+    dispatch(changeUserBoundingBoxAction(id, { isVisible }));
+  const setBoundingBoxName = (id: number, name: string) =>
+    dispatch(changeUserBoundingBoxAction(id, { name }));
+  const setBoundingBoxColor = (id: number, color: Vector3) =>
+    dispatch(changeUserBoundingBoxAction(id, { color }));
+
+  function handleBoundingBoxBoundingChange(id: number, boundingBox: Vector6) {
+    setChangeBoundingBoxBounds(id, Utils.computeBoundingBoxFromArray(boundingBox));
   }
 
-  function handleAddNewUserBoundingBox() {
-    const datasetBoundingBox = getDatasetExtentInVoxel(dataset);
-    // We use the default of -1 to get the id 0 for the first user bounding box.
-    const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
-    const boundingBoxId = highestBoundingBoxId + 1;
-    const newUserBoundingBox = {
-      boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(datasetBoundingBox),
-      id: boundingBoxId,
-      name: `user bounding box ${boundingBoxId}`,
-      color: Utils.getRandomColor(),
-      isVisible: true,
-    };
-    const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
-    onChangeBoundingBoxes(updatedUserBoundingBoxes);
-  }
-
-  function handleDeleteUserBoundingBox(id: number) {
-    const updatedUserBoundingBoxes = userBoundingBoxes.filter(boundingBox => boundingBox.id !== id);
-    onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  function handleGoToBoundingBox(id: number) {
+    const boundingBoxEntry = userBoundingBoxes.find(bbox => bbox.id === id);
+    if (!boundingBoxEntry) {
+      return;
+    }
+    const { min, max } = boundingBoxEntry.boundingBox;
+    const center = [
+      min[0] + (max[0] - min[0]) / 2,
+      min[1] + (max[1] - min[1]) / 2,
+      min[2] + (max[2] - min[2]) / 2,
+    ];
+    setPosition(center);
   }
 
   return (
@@ -88,11 +72,15 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
             name={bb.name}
             isExportEnabled={dataset.jobsEnabled}
             isVisible={bb.isVisible}
-            onChange={_.partial(handleChangeUserBoundingBox, bb.id)}
-            onDelete={_.partial(handleDeleteUserBoundingBox, bb.id)}
+            onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
+            onDelete={_.partial(deleteBoundingBox, bb.id)}
             onExport={
               dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
             }
+            onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
+            onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
+            onNameChange={_.partial(setBoundingBoxName, bb.id)}
+            onColorChange={_.partial(setBoundingBoxColor, bb.id)}
           />
         ))
       ) : (
@@ -101,7 +89,7 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
       <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
         <Tooltip title="Click to add another bounding box.">
           <PlusSquareOutlined
-            onClick={handleAddNewUserBoundingBox}
+            onClick={addNewBoundingBox}
             style={{
               cursor: "pointer",
               marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
@@ -120,19 +108,3 @@ function BoundingBoxTab(props: BoundingBoxTabProps) {
     </div>
   );
 }
-
-const mapStateToProps = (state: OxalisState) => ({
-  tracing: state.tracing,
-  dataset: state.dataset,
-});
-
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  onChangeBoundingBoxes(userBoundingBoxes: Array<UserBoundingBox>) {
-    dispatch(setUserBoundingBoxesAction(userBoundingBoxes));
-  },
-});
-
-export default connect<BoundingBoxTabProps, {||}, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(BoundingBoxTab);

@@ -8,7 +8,11 @@ import type {
   APIMeshFile,
 } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
-import type { UserBoundingBox } from "oxalis/store";
+import type {
+  UserBoundingBox,
+  UserBoundingBoxWithoutId,
+  UserBoundingBoxWithoutIdMaybe,
+} from "oxalis/store";
 
 type InitializeAnnotationAction = {
   type: "INITIALIZE_ANNOTATION",
@@ -40,9 +44,33 @@ type SetUserBoundingBoxesAction = {
   userBoundingBoxes: Array<UserBoundingBox>,
 };
 
+type FinishedResizingUserBoundingBoxAction = {
+  type: "FINISHED_RESIZING_USER_BOUNDING_BOX",
+  id: number,
+};
+
 type AddUserBoundingBoxesAction = {
   type: "ADD_USER_BOUNDING_BOXES",
   userBoundingBoxes: Array<UserBoundingBox>,
+};
+
+type AddNewUserBoundingBox = {
+  type: "ADD_NEW_USER_BOUNDING_BOX",
+  newBoundingBox?: ?UserBoundingBoxWithoutId,
+  // Center is the passed position that the new bounding box should have as a center.
+  // If no center is given, the flycam center will be taken.
+  center?: Vector3,
+};
+
+type ChangeUserBoundingBoxAction = {
+  type: "CHANGE_USER_BOUNDING_BOX",
+  id: number,
+  newProps: UserBoundingBoxWithoutIdMaybe,
+};
+
+type DeleteUserBoundingBox = {
+  type: "DELETE_USER_BOUNDING_BOX",
+  id: number,
 };
 
 export type UpdateRemoteMeshMetaDataAction = {
@@ -150,6 +178,10 @@ export type AnnotationActionTypes =
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxesAction
+  | ChangeUserBoundingBoxAction
+  | FinishedResizingUserBoundingBoxAction
+  | AddNewUserBoundingBox
+  | DeleteUserBoundingBox
   | AddUserBoundingBoxesAction
   | AddMeshMetadataAction
   | DeleteMeshAction
@@ -168,6 +200,21 @@ export type AnnotationActionTypes =
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction
   | AddIsosurfaceAction;
+
+export type UserBoundingBoxAction =
+  | SetUserBoundingBoxesAction
+  | AddNewUserBoundingBox
+  | DeleteUserBoundingBox
+  | AddUserBoundingBoxesAction;
+
+export const AllUserBoundingBoxActions = [
+  "SET_USER_BOUNDING_BOXES",
+  "ADD_NEW_USER_BOUNDING_BOX",
+  "CHANGE_USER_BOUNDING_BOX",
+  "FINISHED_RESIZING_USER_BOUNDING_BOX",
+  "DELETE_USER_BOUNDING_BOX",
+  "ADD_USER_BOUNDING_BOXES",
+];
 
 export const initializeAnnotationAction = (
   annotation: APIAnnotation,
@@ -209,6 +256,36 @@ export const setUserBoundingBoxesAction = (
 ): SetUserBoundingBoxesAction => ({
   type: "SET_USER_BOUNDING_BOXES",
   userBoundingBoxes,
+});
+
+export const changeUserBoundingBoxAction = (
+  id: number,
+  newProps: UserBoundingBoxWithoutIdMaybe,
+): ChangeUserBoundingBoxAction => ({
+  type: "CHANGE_USER_BOUNDING_BOX",
+  id,
+  newProps,
+});
+
+export const finishedResizingUserBoundingBoxAction = (
+  id: number,
+): FinishedResizingUserBoundingBoxAction => ({
+  type: "FINISHED_RESIZING_USER_BOUNDING_BOX",
+  id,
+});
+
+export const addUserBoundingBoxAction = (
+  newBoundingBox?: ?UserBoundingBoxWithoutId,
+  center?: Vector3,
+): AddNewUserBoundingBox => ({
+  type: "ADD_NEW_USER_BOUNDING_BOX",
+  newBoundingBox,
+  center,
+});
+
+export const deleteUserBoundingBoxAction = (id: number): DeleteUserBoundingBox => ({
+  type: "DELETE_USER_BOUNDING_BOX",
+  id,
 });
 
 export const addUserBoundingBoxesAction = (

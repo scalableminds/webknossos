@@ -293,7 +293,7 @@ function* createVolumeLayer(
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
 
-  return new VolumeLayer(volumeTracing, planeId, thirdDimValue, labeledResolution);
+  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledResolution);
 }
 
 function* labelWithVoxelBuffer2D(

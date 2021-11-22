@@ -206,7 +206,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
     ),
   );
   saga.next(); // advance from the put action
-  const volumeLayer = new VolumeLayer(volumeTracing, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");
@@ -245,7 +245,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
     ),
   );
   saga.next(); // advance from the put action
-  const volumeLayer = new VolumeLayer(volumeTracing, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");
@@ -291,7 +291,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     ),
   );
   saga.next(); // advance from the put action
-  const volumeLayer = new VolumeLayer(volumeTracing, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  const volumeLayer = new VolumeLayer(volumeTracing.tracingId, OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next("action_channel");

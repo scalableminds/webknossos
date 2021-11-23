@@ -25,38 +25,42 @@ type Properties = {
   lineWidth?: number,
   color?: number,
   showCrossSections?: boolean,
+  id?: number,
+  isHighlighted: boolean,
 };
 
 class Cube {
   crossSections: OrthoViewMap<typeof THREE.Line>;
+
   cube: typeof THREE.Line;
   min: Vector3;
   max: Vector3;
   showCrossSections: boolean;
   initialized: boolean;
   visible: boolean;
+  lineWidth: number;
+  color: number;
+  id: ?number;
+  isHighlighted: boolean;
 
   constructor(properties: Properties) {
     // min/max should denote a half-open interval.
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;
-    const lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
-    const color = properties.color || 0x000000;
+    this.lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
+    this.color = properties.color || 0x000000;
     this.showCrossSections = properties.showCrossSections || false;
+    this.id = properties.id;
 
     this.initialized = false;
     this.visible = true;
+    this.isHighlighted = properties.isHighlighted;
 
-    const lineProperties = { color, linewidth: lineWidth };
-
-    this.cube = new THREE.Line(new THREE.Geometry(), new THREE.LineBasicMaterial(lineProperties));
+    this.cube = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
 
     this.crossSections = {};
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.crossSections[planeId] = new THREE.Line(
-        new THREE.Geometry(),
-        new THREE.LineBasicMaterial(lineProperties),
-      );
+      this.crossSections[planeId] = new THREE.Line(new THREE.Geometry(), this.getLineMaterial());
     }
 
     if (this.min != null && this.max != null) {
@@ -67,6 +71,12 @@ class Cube {
       state => getPosition(state.flycam),
       position => this.updatePosition(position),
     );
+  }
+
+  getLineMaterial() {
+    return this.isHighlighted
+      ? new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: this.lineWidth })
+      : new THREE.LineBasicMaterial({ color: this.color, linewidth: this.lineWidth });
   }
 
   setCorners(min: Vector3, max: Vector3) {
@@ -136,10 +146,9 @@ class Cube {
     if (!this.initialized) {
       return;
     }
-
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const geometry = this.crossSections[planeId].geometry;
+      const { geometry } = this.crossSections[planeId];
       for (const vertex of geometry.vertices) {
         const array = vertex.toArray();
         array[thirdDim] = position[thirdDim];
@@ -153,6 +162,17 @@ class Cube {
 
   getMeshes(): Array<typeof THREE.Line> {
     return [this.cube].concat(_.values(this.crossSections));
+  }
+
+  setIsHighlighted(highlighted: boolean) {
+    if (highlighted === this.isHighlighted) {
+      return;
+    }
+    this.isHighlighted = highlighted;
+    this.getMeshes().forEach(mesh => {
+      mesh.material = this.getLineMaterial();
+    });
+    app.vent.trigger("rerender");
   }
 
   updateForCam(id: OrthoView) {

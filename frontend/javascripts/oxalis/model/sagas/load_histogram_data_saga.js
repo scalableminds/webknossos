@@ -46,10 +46,21 @@ export default function* loadHistogramData(): Saga<void> {
     const minimumInHistogramData = Math.min(...allMinValues);
     const maximumInHistogramData = Math.max(...allMaxValues);
     let newIntensityRange = [];
-    if (layerConfigurations[layerName]) {
+    const currentLayerConfig = layerConfigurations[layerName];
+    if (currentLayerConfig) {
+      // The intensityRange is the range where the color value will be clamped to
+      // while min/max are the value range of the histogram slider.
+      // The following keeps the intensityRange within the min and max bounds if they exist.
+      // If they do not exist the tracing / dataset has never been opened and thus the histogram data is used as a default range delimiter.
       newIntensityRange = [
-        Math.max(layerConfigurations[layerName].intensityRange[0], minimumInHistogramData),
-        Math.min(layerConfigurations[layerName].intensityRange[1], maximumInHistogramData),
+        Math.max(
+          currentLayerConfig.intensityRange[0],
+          currentLayerConfig.min != null ? currentLayerConfig.min : minimumInHistogramData,
+        ),
+        Math.min(
+          currentLayerConfig.intensityRange[1],
+          currentLayerConfig.max != null ? currentLayerConfig.max : maximumInHistogramData,
+        ),
       ];
     } else {
       newIntensityRange = [minimumInHistogramData, maximumInHistogramData];
@@ -57,10 +68,10 @@ export default function* loadHistogramData(): Saga<void> {
     yield* put(updateLayerSettingAction(layerName, "intensityRange", newIntensityRange));
     // Here we also set the minium and maximum values for the intensity range that the user can enter.
     // If values already exist, we skip this step.
-    if (layerConfigurations[layerName] == null || layerConfigurations[layerName].min == null) {
+    if (currentLayerConfig == null || currentLayerConfig.min == null) {
       yield* put(updateLayerSettingAction(layerName, "min", minimumInHistogramData));
     }
-    if (layerConfigurations[layerName] == null || layerConfigurations[layerName].max == null) {
+    if (currentLayerConfig == null || currentLayerConfig.max == null) {
       yield* put(updateLayerSettingAction(layerName, "max", maximumInHistogramData));
     }
   }

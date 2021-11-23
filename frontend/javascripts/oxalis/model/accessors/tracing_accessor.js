@@ -9,9 +9,9 @@ import type {
 import { TracingTypeEnum } from "types/api_flow_types";
 import type { Tracing, VolumeTracing, SkeletonTracing, ReadOnlyTracing } from "oxalis/store";
 
-export function getSomeTracing(
+export function maybeGetSomeTracing(
   tracing: Tracing,
-): SkeletonTracing | VolumeTracing | ReadOnlyTracing {
+): SkeletonTracing | VolumeTracing | ReadOnlyTracing | null {
   if (tracing.skeleton != null) {
     return tracing.skeleton;
   } else if (tracing.volume != null) {
@@ -19,7 +19,17 @@ export function getSomeTracing(
   } else if (tracing.readOnly != null) {
     return tracing.readOnly;
   }
-  throw new Error("The active annotation does not contain skeletons nor volume data");
+  return null;
+}
+
+export function getSomeTracing(
+  tracing: Tracing,
+): SkeletonTracing | VolumeTracing | ReadOnlyTracing {
+  const maybeSomeTracing = maybeGetSomeTracing(tracing);
+  if (maybeSomeTracing == null) {
+    throw new Error("The active annotation does not contain skeletons nor volume data");
+  }
+  return maybeSomeTracing;
 }
 
 export function getSomeServerTracing(

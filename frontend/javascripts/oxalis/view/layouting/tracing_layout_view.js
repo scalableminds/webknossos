@@ -82,6 +82,7 @@ type State = {
   status: ControllerStatus,
   contextMenuPosition: ?[number, number],
   clickedNodeId: ?number,
+  clickedBoundingBoxId: ?number,
   contextMenuGlobalPosition: Vector3,
   contextMenuViewport: ?OrthoView,
   model: Object,
@@ -111,6 +112,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       status: "loading",
       contextMenuPosition: null,
       clickedNodeId: null,
+      clickedBoundingBoxId: null,
       contextMenuGlobalPosition: [0, 0, 0],
       contextMenuViewport: null,
       model: layout,
@@ -161,6 +163,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     xPos: number,
     yPos: number,
     nodeId: ?number,
+    boundingBoxId: ?number,
     globalPosition: Vector3,
     viewport: OrthoView,
   ) => {
@@ -173,6 +176,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         this.setState({
           contextMenuPosition: [xPos, yPos],
           clickedNodeId: nodeId,
+          clickedBoundingBoxId: boundingBoxId,
           contextMenuGlobalPosition: globalPosition,
           contextMenuViewport: viewport,
         }),
@@ -184,6 +188,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     this.setState({
       contextMenuPosition: null,
       clickedNodeId: null,
+      clickedBoundingBoxId: null,
       contextMenuGlobalPosition: [0, 0, 0],
       contextMenuViewport: null,
     });
@@ -243,14 +248,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const {
-      clickedNodeId,
-      contextMenuPosition,
-      contextMenuGlobalPosition,
-      contextMenuViewport,
-      status,
-      activeLayoutName,
-    } = this.state;
+    const { contextMenuPosition, contextMenuViewport, status, activeLayoutName } = this.state;
 
     const layoutType = determineLayout(
       this.props.initialCommandType.type,
@@ -276,9 +274,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         {contextMenuPosition != null && contextMenuViewport != null ? (
           <ContextMenu
             hideContextMenu={this.hideContextMenu}
-            clickedNodeId={clickedNodeId}
+            clickedNodeId={this.state.clickedNodeId}
+            clickedBoundingBoxId={this.state.clickedBoundingBoxId}
+            globalPosition={this.state.contextMenuGlobalPosition}
             contextMenuPosition={contextMenuPosition}
-            globalPosition={contextMenuGlobalPosition}
             viewport={contextMenuViewport}
           />
         ) : null}

@@ -265,7 +265,7 @@ annotation.reopen.notFinished=The requested annotation is not finished.
 annotation.reopen.failed=Failed to reopen the annotation.
 annotation.sandbox.skeletonOnly=Sandbox annotations are currently available as skeleton only.
 annotation.multiLayers.skeleton.notImplemented=This feature is not implemented for annotations with more than one skeleton layer
-annotation.multiLayers.volujme.notImplemented=This feature is not implemented for annotations with more than one volume layer
+annotation.multiLayers.volume.notImplemented=This feature is not implemented for annotations with more than one volume layer
 
 mesh.notFound=Mesh couldn’t be found
 mesh.write.failed=Failed to convert mesh info to json

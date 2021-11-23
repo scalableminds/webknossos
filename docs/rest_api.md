@@ -17,8 +17,8 @@ New versions will be documented here, detailing the changes. Note, however, that
 ### Current api version is `v5`
 
 * New in v5:
-  - The annotation json no longer contains `skeletonTracingId` and `volumeTracingId`, but instead a list of `annotationLayers`, each containing of `tracingId: String, typ: AnnotationLayerType, name: Option[String]`.
-  - `createExplorational` now expects list of layer parameters (`typ: AnnotationLayerType, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions], name: Option[String]`)
+  - The annotation json no longer contains `skeletonTracingId` and `volumeTracingId`, but instead a list of `annotationLayers`, each containing `tracingId: String, typ: AnnotationLayerType, name: Option[String]`.
+  - `createExplorational` now expects a list of layer parameters (`typ: AnnotationLayerType, fallbackLayerName: Option[String], resolutionRestrictions: Option[ResolutionRestrictions], name: Option[String]`)
 
 * New in v4: /projects routes no longer expect `name` but now `id`. The same goes for `POST /tasks/list` when filtering by project.
 

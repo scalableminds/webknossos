@@ -20,13 +20,22 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 case class ResumableUploadInformation(chunkSize: Int, totalChunkCount: Long)
 
+case class LayerIdentifier(organizationName: String,
+                           dataSetName: String,
+                           layerName: String)
+
+object LayerIdentifier {
+  implicit val jsonFormat: OFormat[LayerIdentifier] = Json.format[LayerIdentifier]
+}
+
 case class UploadInformation(uploadId: String,
                              organization: String,
                              name: String,
                              initialTeams: List[String],
+                             layersToLink: List[LayerIdentifier],
                              needsConversion: Option[Boolean])
 object UploadInformation {
-  implicit val uploadInformationFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
+  implicit val jsonFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
 }
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSourceService: DataSourceService)
@@ -128,6 +137,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
             Fox.successful(())
           else {
             addLayerAndResolutionDirIfMissing(unpackToDir)
+            addSymlinksToOtherDatasetLayers(uploadInformation.layersToLink)
             dataSourceRepository.updateDataSource(
               dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team))
           }
@@ -170,6 +180,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       else
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     dataSourceDir
+  }
+
+  private def addSymlinksToOtherDatasetLayers(linkedLayers: List[LayerIdentifier]): Unit = {
+    linkedLayers.foreach { linkedLayer =>
+      val layerPath = dataBaseDir.resolve(linkedLayer.organizationName).resolve(linkedLayer.dataSetName).resolve(linkedLayer.layerName)
+      if (Files.exists(layerPath)) {
+        logger.info(s"Creating layer symlink pointing to $layerPath")
+      }
+    }
+    // todo: datasource-properties.json
+    // todo: check dataset permission
   }
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =

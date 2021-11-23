@@ -20,9 +20,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 case class ResumableUploadInformation(chunkSize: Int, totalChunkCount: Long)
 
-case class LayerIdentifier(organizationName: String,
-                           dataSetName: String,
-                           layerName: String)
+case class LayerIdentifier(organizationName: String, dataSetName: String, layerName: String)
 
 object LayerIdentifier {
   implicit val jsonFormat: OFormat[LayerIdentifier] = Json.format[LayerIdentifier]
@@ -137,7 +135,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
             Fox.successful(())
           else {
             addLayerAndResolutionDirIfMissing(unpackToDir)
-            addSymlinksToOtherDatasetLayers(uploadInformation.layersToLink)
+            addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink)
             dataSourceRepository.updateDataSource(
               dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team))
           }
@@ -182,16 +180,20 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     dataSourceDir
   }
 
-  private def addSymlinksToOtherDatasetLayers(linkedLayers: List[LayerIdentifier]): Unit = {
+  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, linkedLayers: List[LayerIdentifier]): Unit =
     linkedLayers.foreach { linkedLayer =>
-      val layerPath = dataBaseDir.resolve(linkedLayer.organizationName).resolve(linkedLayer.dataSetName).resolve(linkedLayer.layerName)
-      if (Files.exists(layerPath)) {
+      val layerPath = dataBaseDir
+        .resolve(linkedLayer.organizationName)
+        .resolve(linkedLayer.dataSetName)
+        .resolve(linkedLayer.layerName)
+      val newLayerPath = dataSetDir.resolve(linkedLayer.layerName)
+      if (Files.exists(newLayerPath)) {
+        logger.warn(s"Cannot symlink layer at $newLayerPath: a layer with this name already exists.")
+      } else if (Files.exists(layerPath)) {
         logger.info(s"Creating layer symlink pointing to $layerPath")
+        Files.createSymbolicLink(newLayerPath, newLayerPath.getParent.relativize(layerPath))
       }
     }
-    // todo: datasource-properties.json
-    // todo: check dataset permission
-  }
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =
     if (Files.exists(dataSourceDir)) {

@@ -52,7 +52,7 @@ services:
       - -Dhttp.port=9090
       - -Dhttp.uri=http://webknossos-datastore:9090
       - -Ddatastore.webKnossos.uri=webknossos:9000
-      - -Dtracingstore.redis.address=redis
+      - -Ddatastore.redis.address=redis
     depends_on:
       redis:
         condition: service_healthy

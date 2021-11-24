@@ -38,4 +38,5 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
   def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
     Iterator.empty
+
 }

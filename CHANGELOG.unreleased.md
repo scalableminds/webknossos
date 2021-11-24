@@ -15,9 +15,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - The docker setup has been restructured, which requires changes to existing docker-compose setups. See the migration guide for details. [#5843](https://github.com/scalableminds/webknossos/pull/5843)
+- By default, if data is missing in one magnification, higher magnifications are used for rendering. This setting can be controlled via the left sidebar under "Render Missing Data Black". [#5862](https://github.com/scalableminds/webknossos/pull/5862)
 - The communication with webknossos-worker for long-running jobs no longer uses flower/celery, but instead webKnossos itself assigns jobs to polling workers. [#5834](https://github.com/scalableminds/webknossos/pull/5834)
 
 ### Fixed
+- Fixed a bug that the displayed value range of a histogram of a color layer wasn't applied until the slider was dragged a bit. [#5853](https://github.com/scalableminds/webknossos/pull/5853)
 - Fixed a bug where admins could not share annotations with teams they were not explicitly a member of. [#5845](https://github.com/scalableminds/webknossos/pull/5845)
 
 ### Removed

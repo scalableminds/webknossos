@@ -1,7 +1,7 @@
 package oxalis.telemetry
 
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackClient
+import com.scalableminds.webknossos.datastore.slacknotification.SlackClient
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import utils.WkConf

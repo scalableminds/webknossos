@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.datastore.models.{
   _
 }
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
@@ -32,6 +33,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHeader, Result}
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
 @Api(tags = Array("datastore"))
@@ -41,6 +43,7 @@ class BinaryDataController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
+    slackNotificationService: DSSlackNotificationService,
     isosurfaceServiceHolder: IsosurfaceServiceHolder,
     findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -62,19 +65,21 @@ class BinaryDataController @Inject()(
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
-        val t = System.currentTimeMillis()
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-          (data, indices) <- requestData(dataSource, dataLayer, request.body)
-          duration = System.currentTimeMillis() - t
-          _ = if (duration > 10000)
-            logger.info(
-              s"Complete data request took $duration ms.\n"
-                + s"  dataSource: $organizationName/$dataSetName\n"
-                + s"  dataLayer: $dataLayerName\n"
-                + s"  requestCount: ${request.body.size}"
-                + s"  requestHead: ${request.body.headOption}")
-        } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+        logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
+          val t = System.currentTimeMillis()
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            (data, indices) <- requestData(dataSource, dataLayer, request.body)
+            duration = System.currentTimeMillis() - t
+            _ = if (duration > 10000)
+              logger.info(
+                s"Complete data request took $duration ms.\n"
+                  + s"  dataSource: $organizationName/$dataSetName\n"
+                  + s"  dataLayer: $dataLayerName\n"
+                  + s"  requestCount: ${request.body.size}"
+                  + s"  requestHead: ${request.body.headOption}")
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+        }
       }
     }
   }

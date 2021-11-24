@@ -25,6 +25,7 @@ import {
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import classnames from "classnames";
 import Checkbox from "antd/lib/checkbox/Checkbox";
+import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
 const convertCellIdToCSS = (id: number, mappingColors) => {
   const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
@@ -48,13 +49,19 @@ const getLoadPrecomputedMeshMenuItem = (
   currentMeshFile,
   loadPrecomputedMeshForSegment,
   andCloseContextMenu,
+  layerName,
+  mappingInfo,
 ) => {
   const hasCurrentMeshFile = currentMeshFile != null;
+  const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
 
   return (
-    <Menu.Item
+    <MenuItemWithMappingActivationConfirmation
       onClick={() => andCloseContextMenu(loadPrecomputedMeshForSegment(segment))}
       disabled={!hasCurrentMeshFile}
+      currentMeshFile={currentMeshFile}
+      layerName={layerName}
+      mappingInfo={mappingInfo}
     >
       <Tooltip
         key="tooltip"
@@ -66,7 +73,7 @@ const getLoadPrecomputedMeshMenuItem = (
       >
         Load Mesh (precomputed)
       </Tooltip>
-    </Menu.Item>
+    </MenuItemWithMappingActivationConfirmation>
   );
 };
 
@@ -155,6 +162,8 @@ function _SegmentListItem({
         currentMeshFile,
         loadPrecomputedMeshForSegment,
         andCloseContextMenu,
+        visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+        mappingInfo,
       )}
       {getComputeMeshAdHocMenuItem(
         segment,

@@ -15,7 +15,7 @@ import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait GenericJsonFormat[T] {}
 
@@ -51,7 +51,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
-    PathUtils
+    val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), PathUtils.fileExtensionFilter(meshFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
@@ -59,7 +59,29 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .toOption
       .getOrElse(Nil)
       .toSet
+    val agglomerateFileNames = meshFileNames.map { fileName =>
+      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"${fileName}.$meshFileExtension)")
+    }
   }
+
+  def agglomerateFileNameForMeshFile(meshFilePath: Path): Fox[String] = {
+    for {
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      chunkPositionLiterals <- tryo { _: Throwable =>
+        cachedMeshFile.finishAccess()
+      } {
+        cachedMeshFile.reader
+          .`object`()
+          .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
+          .asScala
+          .toList
+      }.toFox
+      _ = cachedMeshFile.finishAccess()
+      positions <- Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
+    } yield positions
+  }
+
+  def agglomerateFileForMeshFile()
 
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,

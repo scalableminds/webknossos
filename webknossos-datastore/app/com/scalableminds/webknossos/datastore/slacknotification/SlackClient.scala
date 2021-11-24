@@ -1,4 +1,4 @@
-package com.scalableminds.webknossos.tracingstore.slacknotification
+package com.scalableminds.webknossos.datastore.slacknotification
 
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging

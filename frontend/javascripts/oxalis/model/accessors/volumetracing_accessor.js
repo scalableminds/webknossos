@@ -106,7 +106,6 @@ function _getResolutionInfoOfActiveSegmentationTracingLayer(state: OxalisState):
   return getResolutionInfo(segmentationLayer.resolutions);
 }
 
-// done: check callers
 const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
   _getResolutionInfoOfActiveSegmentationTracingLayer,
 );
@@ -243,7 +242,7 @@ export function enforceActiveVolumeTracing(state: OxalisState): VolumeTracing {
   const tracing = getActiveSegmentationTracing(state);
 
   if (tracing == null) {
-    throw new Error("No volume tracing is available.");
+    throw new Error("No volume tracing is available or enabled.");
   }
 
   return tracing;
@@ -332,7 +331,6 @@ function _getRenderableResolutionForSegmentationTracing(
 
   // Since `renderMissingDataBlack` is enabled, the fallback resolutions
   // should not be considered.
-  // rendered.
   if (renderMissingDataBlack) {
     return null;
   }
@@ -356,7 +354,6 @@ function _getRenderableResolutionForSegmentationTracing(
   return null;
 }
 
-// done: check callers
 export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
   _getRenderableResolutionForSegmentationTracing,
 );

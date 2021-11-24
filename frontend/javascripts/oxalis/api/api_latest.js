@@ -964,9 +964,9 @@ class DataApi {
   }
 
   /*
-   * Returns the name of the visible segmentation layer (if it exists). Note for
+   * Returns the name of the visible segmentation layer (if it exists). Note that
    * if the visible layer is a volume tracing layer, the name will be an ID
-   * (a not the name which the user can specify in the UI).
+   * (and not the name which the user can specify in the UI).
    */
   getVisibleSegmentationLayerName(): ?string {
     const visibleLayer = getVisibleSegmentationLayer(Store.getState());
@@ -985,7 +985,7 @@ class DataApi {
 
   /**
    * Return a list of segmentation layer names. Note for volume tracing layers,
-   * the name will be an ID (a not the name which the user can specify in the UI).
+   * the name will be an ID (and not the name which the user can specify in the UI).
    */
   getSegmentationLayerNames(): Array<string> {
     return this.model.getSegmentationLayers().map(layer => layer.name);

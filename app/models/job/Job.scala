@@ -265,7 +265,6 @@ class JobService @Inject()(wkConf: WkConf,
   def submitJob(command: String, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
-      argsWrapped = Json.obj("kwargs" -> commandArgs)
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))

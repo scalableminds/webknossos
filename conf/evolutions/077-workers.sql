@@ -10,7 +10,7 @@ DROP VIEW webknossos.dataStores_;
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL,
-  key VARCHAR(1024) NOT NULL,
+  key VARCHAR(1024) NOT NULL UNIQUE,
   maxParallelJobs INT NOT NULL DEFAULT 1,
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -64,8 +64,6 @@ set commandArgs = commandArgs->'kwargs';
 
 alter table webknossos.jobs alter column _dataStore SET NOT NULL;
 alter table webknossos.jobs alter column state SET NOT NULL;
-
--- todo unpack args?
 
 ALTER TABLE webknossos.jobs DROP COLUMN manualState;
 ALTER TABLE webknossos.jobs RENAME COLUMN manualState_NEW TO manualState;

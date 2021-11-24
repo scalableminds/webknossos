@@ -364,7 +364,7 @@ INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL,
-  key VARCHAR(1024) NOT NULL,
+  key VARCHAR(1024) NOT NULL UNIQUE,
   maxParallelJobs INT NOT NULL DEFAULT 1,
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),

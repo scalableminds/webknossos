@@ -26,16 +26,13 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
   }
 
   private def reserveNextJobs(worker: Worker): Fox[Unit] =
-    reserveNextJobsIter(worker, 1)
-
-  private def reserveNextJobsIter(worker: Worker, depth: Int): Fox[Unit] =
     for {
       unfinishedCount <- jobDAO.countUnfinishedByWorker(worker._id)
       pendingCount <- jobDAO.countUnassignedPendingForDataStore(worker._dataStore)
       _ <- if (unfinishedCount >= worker.maxParallelJobs || pendingCount == 0) Fox.successful(())
       else {
         jobDAO.reserveNextJob(worker).flatMap { _ =>
-          reserveNextJobsIter(worker, depth + 1)
+          reserveNextJobs(worker)
         }
       }
     } yield ()

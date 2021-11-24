@@ -4,7 +4,9 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.http.{HttpEntity, Status}
 import play.api.mvc.{Request, Result}
 
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 trait AbstractRequestLogging extends LazyLogging {
 
@@ -40,8 +42,8 @@ trait RequestLogging extends AbstractRequestLogging {
       _ = logRequestFormatted(request, result, notifier)
     } yield result
 
-  def logTime(notifier: String => Unit)(block: => Future[Result])(implicit request: Request[_],
-                                                                  ec: ExecutionContext): Future[Result] = {
+  def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 10 seconds)(
+      block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
     def logTimeFormatted(executionTime: Long, request: Request[_], result: Result): Unit = {
       val debugString = s"Request ${request.method} ${request.uri} took ${BigDecimal(executionTime / 1e9)
         .setScale(2, BigDecimal.RoundingMode.HALF_UP)} seconds and was${if (result.header.status != 200) " not "
@@ -54,7 +56,7 @@ trait RequestLogging extends AbstractRequestLogging {
     for {
       result: Result <- block
       executionTime = System.nanoTime() - start
-      _ = if (executionTime > 1e10) logTimeFormatted(executionTime, request, result)
+      _ = if (executionTime > durationThreshold.toNanos) logTimeFormatted(executionTime, request, result)
     } yield result
   }
 

@@ -50,5 +50,10 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface)
   }
 
-  val children = List(Http, Datastore)
+  object SlackNotifications {
+    val uri: String = get[String]("slackNotifications.uri")
+    val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
+  }
+
+  val children = List(Http, Datastore, SlackNotifications)
 }

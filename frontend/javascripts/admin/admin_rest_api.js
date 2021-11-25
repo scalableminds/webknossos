@@ -1676,20 +1676,18 @@ export function getAgglomerateSkeleton(
   );
 }
 
-export async function getMeshfilesForDatasetLayer(
+export function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<Array<APIMeshFile>> {
-  const meshfiles = await doWithToken(token =>
+  return doWithToken(token =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/meshes?token=${token}`,
     ),
   );
-  // TODO: Replace once the backend sends the correct mappingName
-  return meshfiles.map(meshFileName => ({ meshFileName, mappingName: "agglomerate_view_70" }));
 }
 
 export function getMeshfileChunksForSegment(

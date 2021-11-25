@@ -1,7 +1,6 @@
 package models.job
 
 import akka.actor.ActorSystem
-import com.google.inject.name.Named
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Fox
@@ -88,7 +87,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
                                       slackNotificationService: SlackNotificationService,
                                       val lifecycle: ApplicationLifecycle,
-                                      @Named("webknossos-datastore") val system: ActorSystem)
+                                      val system: ActorSystem)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {

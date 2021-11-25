@@ -58,11 +58,6 @@ type SetMappingEnabledAction = {
   isMappingEnabled: boolean,
   layerName: string,
 };
-type SetMappingBeingActivatedAction = {
-  type: "SET_MAPPING_BEING_ACTIVATED",
-  isMappingBeingActivated: boolean,
-  layerName: string,
-};
 export type SetMappingAction = {
   type: "SET_MAPPING",
   mappingName: ?string,
@@ -95,8 +90,7 @@ export type SettingAction =
   | SetMappingAction
   | SetHideUnmappedIdsAction
   | SetHistogramDataAction
-  | InitializeGpuSetupAction
-  | SetMappingBeingActivatedAction;
+  | InitializeGpuSetupAction;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfiguration>,
@@ -181,15 +175,6 @@ export const setMappingEnabledAction = (
   type: "SET_MAPPING_ENABLED",
   layerName,
   isMappingEnabled,
-});
-
-export const setMappingBeingActivatedAction = (
-  layerName: string,
-  isMappingBeingActivated: boolean,
-): SetMappingBeingActivatedAction => ({
-  type: "SET_MAPPING_BEING_ACTIVATED",
-  layerName,
-  isMappingBeingActivated,
 });
 
 export type OptionalMappingProperties = {|

@@ -22,7 +22,7 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
@@ -108,7 +108,8 @@ const mapStateToProps = (state: OxalisState): StateProps => {
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
         : {},
     dataset: state.dataset,
-    isJSONMappingEnabled: mappingInfo.isMappingEnabled && mappingInfo.mappingType === "JSON",
+    isJSONMappingEnabled:
+      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     flycam: state.flycam,
     hasVolume: state.tracing.volume != null,

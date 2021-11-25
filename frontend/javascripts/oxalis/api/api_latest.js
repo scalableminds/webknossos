@@ -17,6 +17,7 @@ import Constants, {
   type AnnotationTool,
   AnnotationToolEnum,
   TDViewDisplayModeEnum,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import {
@@ -1110,10 +1111,12 @@ class DataApi {
     if (!effectiveLayerName) {
       return false;
     }
-    return getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      effectiveLayerName,
-    ).isMappingEnabled;
+    return (
+      getMappingInfo(
+        Store.getState().temporaryConfiguration.activeMappingByLayer,
+        effectiveLayerName,
+      ).mappingStatus === MappingStatusEnum.ENABLED
+    );
   }
 
   refreshIsosurfaces() {

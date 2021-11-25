@@ -7,7 +7,7 @@ import _ from "lodash";
 import debounceRender from "react-debounce-render";
 
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import { type OrthoView, type Vector3 } from "oxalis/constants";
+import { type OrthoView, type Vector3, MappingStatusEnum } from "oxalis/constants";
 import { type OxalisState, type Mapping, type MappingType } from "oxalis/store";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -299,7 +299,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     dataset: state.dataset,
     position: getPosition(state.flycam),
     hideUnmappedIds: activeMappingInfo.hideUnmappedIds,
-    isMappingEnabled: activeMappingInfo.isMappingEnabled,
+    isMappingEnabled: activeMappingInfo.mappingStatus === MappingStatusEnum.ENABLED,
     mapping: activeMappingInfo.mapping,
     mappingName: activeMappingInfo.mappingName,
     mappingType: activeMappingInfo.mappingType,

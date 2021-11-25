@@ -18,7 +18,7 @@ import {
   updateMeshFileListAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
-import type { Vector3 } from "oxalis/constants";
+import { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
@@ -150,7 +150,8 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     }
 
-    const enabledMappingName = mappingInfo.isMappingEnabled ? mappingInfo.mappingName : null;
+    const isMappingEnabled = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
+    const enabledMappingName = isMappingEnabled ? mappingInfo.mappingName : null;
     const checkWhetherConfirmIsNeeded = () => {
       if (enabledMappingName !== currentMeshFile.mappingName) {
         setConfirmVisible(true);
@@ -175,12 +176,13 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
           Store.dispatch(setMappingAction(layerName, currentMeshFile.mappingName, "HDF5"));
           await waitForCondition(
             () =>
-              !getMappingInfo(
+              getMappingInfo(
                 Store.getState().temporaryConfiguration.activeMappingByLayer,
                 layerName,
-              ).isMappingBeingActivated,
+              ).mappingStatus === MappingStatusEnum.ENABLED,
             100,
           );
+          console.log("get segment id");
           originalOnClick();
         }}
         onCancel={() => setConfirmVisible(false)}

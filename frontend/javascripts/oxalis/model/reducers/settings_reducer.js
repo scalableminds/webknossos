@@ -10,6 +10,7 @@ import {
   getVisibleSegmentationLayers,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
+import { MappingStatusEnum } from "oxalis/constants";
 
 //
 // Update helpers
@@ -182,18 +183,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       return updateActiveMapping(
         state,
         {
-          isMappingEnabled,
-          isMappingBeingActivated: isMappingEnabled,
-        },
-        layerName,
-      );
-    }
-    case "SET_MAPPING_BEING_ACTIVATED": {
-      const { isMappingBeingActivated, layerName } = action;
-      return updateActiveMapping(
-        state,
-        {
-          isMappingBeingActivated,
+          mappingStatus: isMappingEnabled ? MappingStatusEnum.ENABLED : MappingStatusEnum.DISABLED,
         },
         layerName,
       );
@@ -225,7 +215,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           mappingType,
           mappingSize: mappingKeys != null ? mappingKeys.length : 0,
           hideUnmappedIds,
-          isMappingBeingActivated: mappingName != null,
+          mappingStatus:
+            mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
         },
         layerName,
       );

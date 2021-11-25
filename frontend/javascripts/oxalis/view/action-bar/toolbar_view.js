@@ -11,6 +11,7 @@ import Constants, {
   OverwriteModeEnum,
   FillModeEnum,
   VolumeTools,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
 import { document } from "libs/window";
@@ -236,7 +237,7 @@ function CreateCellButton() {
 
   const mappingColors = useSelector(state => getMappingInfoForTracingLayer(state).mappingColors);
   const isMappingEnabled = useSelector(
-    state => getMappingInfoForTracingLayer(state).isMappingEnabled,
+    state => getMappingInfoForTracingLayer(state).mappingStatus === MappingStatusEnum.ENABLED,
   );
   const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;

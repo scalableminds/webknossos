@@ -46,6 +46,7 @@ import {
   type Vector2,
   type Vector3,
   type AnnotationTool,
+  type MappingStatus,
 } from "oxalis/constants";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import DiffableMap from "libs/diffable_map";
@@ -360,8 +361,7 @@ export type ActiveMappingInfo = {
   +mappingKeys: ?Array<number>,
   +mappingColors: ?Array<number>,
   +hideUnmappedIds: boolean,
-  +isMappingEnabled: boolean,
-  +isMappingBeingActivated: boolean,
+  +mappingStatus: MappingStatus,
   +mappingSize: number,
   +mappingType: MappingType,
 };

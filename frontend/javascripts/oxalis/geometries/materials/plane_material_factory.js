@@ -8,6 +8,7 @@ import {
   OrthoViewValues,
   OrthoViews,
   type Vector3,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
@@ -533,7 +534,8 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => getMappingInfoForSupportedLayer(storeState).isMappingEnabled,
+          storeState =>
+            getMappingInfoForSupportedLayer(storeState).mappingStatus === MappingStatusEnum.ENABLED,
           () => this.updateActiveCellId(),
         ),
       );
@@ -548,7 +550,8 @@ class PlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           storeState =>
-            getMappingInfoForSupportedLayer(storeState).isMappingEnabled &&
+            getMappingInfoForSupportedLayer(storeState).mappingStatus ===
+              MappingStatusEnum.ENABLED &&
             // The shader should only know about the mapping when a JSON mapping exists
             getMappingInfoForSupportedLayer(storeState).mappingType === "JSON",
           isEnabled => {

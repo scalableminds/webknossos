@@ -1,7 +1,7 @@
 // @flow
 import { Button, Modal, Alert } from "antd";
 import React, { useState } from "react";
-import type { BoundingBoxType } from "oxalis/constants";
+import { type BoundingBoxType, MappingStatusEnum } from "oxalis/constants";
 import type { Tracing, AnnotationType } from "oxalis/store";
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import { startExportTiffJob } from "admin/admin_rest_api";
@@ -69,11 +69,12 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
   const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
-    const { isMappingEnabled, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
+    const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
       activeMappingInfos,
       layer.name,
     );
-    const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
+    const existsActivePersistentMapping =
+      mappingStatus === MappingStatusEnum.ENABLED && !isMergerModeEnabled;
     const isColorLayer = layer.category === "color";
     if (layer.category === "color" || !layer.isTracingLayer) {
       return {

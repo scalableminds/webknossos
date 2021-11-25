@@ -4,6 +4,7 @@ import type { OxalisState } from "oxalis/store";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import DiffableMap from "libs/diffable_map";
+import { MappingStatusEnum } from "oxalis/constants";
 
 function createDictWithKeysAndValue<T>(
   keys: Array<string>,
@@ -36,8 +37,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
             mappingKeys: null,
             mappingColors: null,
             hideUnmappedIds: false,
-            isMappingEnabled: false,
-            isMappingBeingActivated: false,
+            mappingStatus: MappingStatusEnum.DISABLED,
             mappingSize: 0,
             mappingType: "JSON",
           })),

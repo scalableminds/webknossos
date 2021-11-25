@@ -4,6 +4,7 @@ START TRANSACTION;
 
 DROP VIEW webknossos.jobs_;
 DROP VIEW webknossos.workers_;
+DROP VIEW webknossos.dataStores_;
 
 ALTER TABLE webknossos.jobs DROP CONSTRAINT dataStore_ref;
 ALTER TABLE webknossos.jobs DROP CONSTRAINT worker_ref;
@@ -62,6 +63,7 @@ ALTER TABLE webknossos.jobs RENAME COLUMN manualState_NEW TO manualState;
 DROP TYPE webknossos.JOB_STATE;
 
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 76;
 

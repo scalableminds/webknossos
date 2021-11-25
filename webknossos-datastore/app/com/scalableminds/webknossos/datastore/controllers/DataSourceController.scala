@@ -290,10 +290,11 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   def listMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
-          Ok(Json.toJson(meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)))
+          for {
+            meshFiles <- meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)
+          } yield Ok(Json.toJson(meshFiles))
         }
       }
     }

@@ -10,12 +10,13 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.{CachedMeshFile, MeshFileCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 trait GenericJsonFormat[T] {}
 
@@ -38,6 +39,15 @@ object MeshChunkDataRequest {
   implicit val jsonFormat: OFormat[MeshChunkDataRequest] = Json.format[MeshChunkDataRequest]
 }
 
+case class MeshFileNameWithMappingName(
+    meshFileName: String,
+    mappingName: Option[String]
+)
+
+object MeshFileNameWithMappingName {
+  implicit val jsonFormat: OFormat[MeshFileNameWithMappingName] = Json.format[MeshFileNameWithMappingName]
+}
+
 class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -49,7 +59,9 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private lazy val meshFileCache = new MeshFileCache(30)
 
-  def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
+  def exploreMeshFiles(organizationName: String,
+                       dataSetName: String,
+                       dataLayerName: String): Fox[Set[MeshFileNameWithMappingName]] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
     val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), PathUtils.fileExtensionFilter(meshFileExtension))
@@ -58,30 +70,25 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       }
       .toOption
       .getOrElse(Nil)
-      .toSet
-    val agglomerateFileNames = meshFileNames.map { fileName =>
-      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"${fileName}.$meshFileExtension)")
+    val mappingNameFoxes = meshFileNames.map { fileName =>
+      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
+      mappingNameForMeshFile(meshFilePath)
     }
+    for {
+      mappingNameBoxes: Seq[Box[String]] <- Fox.sequence(mappingNameFoxes)
+      mappingNameOptions = mappingNameBoxes.map(_.toOption)
+      zipped = meshFileNames.zip(mappingNameOptions).toSet
+    } yield zipped.map(tuple => MeshFileNameWithMappingName(tuple._1, tuple._2))
   }
 
-  def agglomerateFileNameForMeshFile(meshFilePath: Path): Fox[String] = {
+  def mappingNameForMeshFile(meshFilePath: Path): Fox[String] =
     for {
       cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
-      chunkPositionLiterals <- tryo { _: Throwable =>
+      mappingName <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
-      } {
-        cachedMeshFile.reader
-          .`object`()
-          .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
-          .asScala
-          .toList
-      }.toFox
+      } { cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name") } ?~> "mesh.file.readEncoding.failed"
       _ = cachedMeshFile.finishAccess()
-      positions <- Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
-    } yield positions
-  }
-
-  def agglomerateFileForMeshFile()
+    } yield mappingName
 
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,

@@ -17,25 +17,27 @@ trait Formatter {
   }
 
   def formatDateForFilename(date: Date): String = {
-    val sdf = new SimpleDateFormat("YYYY-MM-DD_HH-mm")
+    val sdf = new SimpleDateFormat("YYYY-MM-dd_HH-mm")
     sdf.format(date)
   }
 
   def formatHash(id: String): String =
     id.takeRight(6)
 
-  def formatTimeHumanReadable(time: Duration): String =
+  def formatDuration(time: Duration): String =
     if (time == Duration.Inf)
-      "unknown"
+      "infinite"
     else {
       val days = time.toDays
       val hours = time.toHours % 24
-      val minutes = (time.toMinutes % 60) / 5 * 5
+      val minutes = time.toMinutes % 60
+      val seconds = time.toSeconds % 60
 
-      (days, hours) match {
-        case (0, 0) => s"${minutes}m"
-        case (0, _) => s"${hours}h ${minutes}m"
-        case _      => s"${days}d ${hours}h ${minutes}m"
+      (days, hours, minutes) match {
+        case (0, 0, 0) => s"${seconds}s"
+        case (0, 0, _) => s"${minutes}m ${seconds}s"
+        case (0, _, _) => s"${hours}h ${minutes}m ${seconds}s"
+        case _         => s"${days}d ${hours}h ${minutes}m ${seconds}s"
       }
     }
 

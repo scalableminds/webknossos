@@ -196,11 +196,13 @@ GET           /time/userlist/:year/:month                                      c
 GET           /time/user/:userId                                               controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
 
 # Long-Running Jobs
+GET           /jobs/request                                                    controllers.WKRemoteWorkerController.requestJobs
 GET           /jobs                                                            controllers.JobsController.list
 GET           /jobs/status                                                     controllers.JobsController.status
-GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
-GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
-GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String)
+GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String, dataStoreName: String)
 GET           /jobs/run/computeMeshFile/:organizationName/:dataSetName         controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
 GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
 GET           /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
+GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
+GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
+POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(id: String)

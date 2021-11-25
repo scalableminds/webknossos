@@ -162,14 +162,16 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
 
     const mappingString =
       currentMeshFile.mappingName != null
-        ? `for the mapping "${currentMeshFile.mappingName}" which is not active`
-        : "without a mapping but a mapping is active";
+        ? `for the mapping "${
+            currentMeshFile.mappingName
+          }" which is not active. You need to activate the mapping`
+        : "without a mapping but a mapping is active. You need to deactivate the mapping";
 
     return (
       <Popconfirm
         title={`The currently active mesh file "${
           currentMeshFile.meshFileName
-        }" was computed ${mappingString}. Do you want to activate that mapping?`}
+        }" was computed ${mappingString} before continuing.`}
         visible={isConfirmVisible}
         onConfirm={async () => {
           setConfirmVisible(false);
@@ -182,7 +184,6 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
               ).mappingStatus === MappingStatusEnum.ENABLED,
             100,
           );
-          console.log("get segment id");
           originalOnClick();
         }}
         onCancel={() => setConfirmVisible(false)}

@@ -361,6 +361,7 @@ export type ActiveMappingInfo = {
   +mappingColors: ?Array<number>,
   +hideUnmappedIds: boolean,
   +isMappingEnabled: boolean,
+  +isMappingBeingActivated: boolean,
   +mappingSize: number,
   +mappingType: MappingType,
 };

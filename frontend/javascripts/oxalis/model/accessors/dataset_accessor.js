@@ -944,6 +944,7 @@ export function getMappingInfo(
     mappingColors: null,
     hideUnmappedIds: false,
     isMappingEnabled: false,
+    isMappingBeingActivated: false,
     mappingSize: 0,
     mappingType: "JSON",
   };

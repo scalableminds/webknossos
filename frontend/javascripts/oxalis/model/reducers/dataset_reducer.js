@@ -37,6 +37,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
             mappingColors: null,
             hideUnmappedIds: false,
             isMappingEnabled: false,
+            isMappingBeingActivated: false,
             mappingSize: 0,
             mappingType: "JSON",
           })),

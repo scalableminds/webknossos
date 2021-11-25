@@ -183,6 +183,17 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         state,
         {
           isMappingEnabled,
+          isMappingBeingActivated: isMappingEnabled,
+        },
+        layerName,
+      );
+    }
+    case "SET_MAPPING_BEING_ACTIVATED": {
+      const { isMappingBeingActivated, layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          isMappingBeingActivated,
         },
         layerName,
       );
@@ -214,6 +225,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           mappingType,
           mappingSize: mappingKeys != null ? mappingKeys.length : 0,
           hideUnmappedIds,
+          isMappingBeingActivated: mappingName != null,
         },
         layerName,
       );

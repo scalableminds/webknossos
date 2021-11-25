@@ -17,6 +17,7 @@ import { message } from "antd";
 import {
   setMappingAction,
   setMappingEnabledAction,
+  setMappingBeingActivatedAction,
   type SetMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
@@ -44,17 +45,14 @@ export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {};
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield _actionChannel("SET_MAPPING");
-  const mappingChangeActionChannel = yield _actionChannel([
-    "SET_MAPPING_ENABLED",
-    "SET_HIDE_UNMAPPED_IDS",
-  ]);
+  const mappingChangeActionChannel = yield _actionChannel(["SET_MAPPING_ENABLED"]);
   yield* take("WK_READY");
   yield _takeLatest(setMappingActionChannel, maybeFetchMapping);
   yield _takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
 }
 
 function* maybeReloadData(oldActiveMappingByLayer, action: SetMappingAction): Saga<void> {
-  const { layerName, dataInvalidationPromise } = action;
+  const { layerName } = action;
 
   const oldMapping = getMappingInfo(oldActiveMappingByLayer, layerName);
   const activeMappingByLayer = yield* select(
@@ -68,7 +66,10 @@ function* maybeReloadData(oldActiveMappingByLayer, action: SetMappingAction): Sa
   if (shouldReload) {
     yield* call([api.data, api.data.reloadBuckets], layerName);
   }
-  if (dataInvalidationPromise != null) dataInvalidationPromise();
+  // If the new mapping is an agglomerate mapping, the data reload is the last step
+  // of the mapping activation. For JSON mappings, the last step of the mapping activation
+  // is the texture creation in mappings.js
+  if (isAgglomerate(mapping)) yield* put(setMappingBeingActivatedAction(layerName, false));
   oldActiveMappingByLayer = activeMappingByLayer;
 }
 
@@ -79,7 +80,6 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
     mappingType,
     mapping: existingMapping,
     showLoadingIndicator,
-    dataInvalidationPromise,
   } = action;
 
   if (mappingName == null || existingMapping != null) {
@@ -121,7 +121,7 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
 
   if (mappingType !== "JSON") {
     // Activate HDF5 mappings immediately. JSON mappings will be activated once they have been fetched.
-    yield* put(setMappingEnabledAction(layerName, true, dataInvalidationPromise));
+    yield* put(setMappingEnabledAction(layerName, true));
     message.destroy(MAPPING_MESSAGE_KEY);
     return;
   }

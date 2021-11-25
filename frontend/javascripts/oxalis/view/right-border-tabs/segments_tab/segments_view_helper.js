@@ -23,6 +23,8 @@ import Toast from "libs/toast";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
+import { waitForCondition } from "libs/utils";
+import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 
 const PARALLEL_MESH_LOADING_COUNT = 6;
 
@@ -170,12 +172,14 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
         visible={isConfirmVisible}
         onConfirm={async () => {
           setConfirmVisible(false);
-          await new Promise(resolve =>
-            Store.dispatch(
-              setMappingAction(layerName, currentMeshFile.mappingName, "HDF5", {
-                dataInvalidationPromise: resolve,
-              }),
-            ),
+          Store.dispatch(setMappingAction(layerName, currentMeshFile.mappingName, "HDF5"));
+          await waitForCondition(
+            () =>
+              !getMappingInfo(
+                Store.getState().temporaryConfiguration.activeMappingByLayer,
+                layerName,
+              ).isMappingBeingActivated,
+            100,
           );
           originalOnClick();
         }}

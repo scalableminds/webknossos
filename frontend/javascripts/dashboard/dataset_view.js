@@ -2,20 +2,7 @@
 
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
-import {
-  Badge,
-  Button,
-  Radio,
-  Col,
-  Dropdown,
-  Input,
-  Menu,
-  Row,
-  Spin,
-  Tooltip,
-  Alert,
-  Tag,
-} from "antd";
+import { Badge, Button, Radio, Col, Dropdown, Input, Menu, Row, Spin, Tooltip, Alert } from "antd";
 import {
   CloudUploadOutlined,
   LoadingOutlined,
@@ -34,8 +21,8 @@ import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
+import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";
-import { stringToColor } from "libs/format_utils";
 import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
 import { getJobs } from "admin/admin_rest_api";
@@ -43,7 +30,6 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
-import UserLocalStorage from "libs/user_local_storage";
 const { Search, Group: InputGroup } = Input;
 
 type Props = {
@@ -127,24 +113,6 @@ function DatasetView(props: Props) {
   }, []);
 
   useEffect(() => {
-    // restore the search query tags from the last session
-    const searchTagString = UserLocalStorage.getItem(LOCAL_STORAGE_FILTER_TAGS_KEY);
-    if (searchTagString) {
-      try {
-        const loadedSearchTags = JSON.parse(searchTagString);
-        setSearchTags(loadedSearchTags);
-      } catch (error) {
-        // pass
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    // store newest the search query tags
-    UserLocalStorage.setItem(LOCAL_STORAGE_FILTER_TAGS_KEY, JSON.stringify(searchTags));
-  }, [searchTags]);
-
-  useEffect(() => {
     persistence.persist(history, {
       searchQuery,
       datasetFilteringMode,
@@ -155,10 +123,6 @@ function DatasetView(props: Props) {
     if (!searchTags.includes(tag)) {
       setSearchTags([...searchTags, tag]);
     }
-  }
-
-  function removeTag(tag: string) {
-    setSearchTags(searchTags.filter(currentTag => currentTag !== tag));
   }
 
   function handleSearch(event: SyntheticInputEvent<>) {
@@ -373,23 +337,6 @@ function DatasetView(props: Props) {
     searchBox
   );
 
-  const selectedSearchTags = (
-    <>
-      {searchTags.map(tag => (
-        <Tag
-          key={tag}
-          color={stringToColor(tag)}
-          onClose={() => {
-            removeTag(tag);
-          }}
-          closable
-        >
-          {tag}
-        </Tag>
-      ))}
-    </>
-  );
-
   const adminHeader = (
     <div className="pull-right" style={{ display: "flex" }}>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
@@ -421,11 +368,14 @@ function DatasetView(props: Props) {
   return (
     <div>
       {adminHeader}
-      {selectedSearchTags}
+      <CategorizationSearch
+        searchTags={searchTags}
+        setTags={setSearchTags}
+        localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
+      />
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       {renderNewJobsAlert()}
       <div className="clearfix" style={{ margin: "20px 0px" }} />
-
       <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
         {content}
       </Spin>

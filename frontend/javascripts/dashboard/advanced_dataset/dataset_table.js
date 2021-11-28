@@ -21,8 +21,10 @@ import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_lis
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
+import { trackAction } from "oxalis/model/helpers/analytics";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
+import CategorizationLabel from "oxalis/view/components/categorization_label";
 
 const { Column } = Table;
 
@@ -127,11 +129,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
     }
     let updatedDataset = dataset;
     if (shouldAddTag) {
-      updatedDataset = update(dataset, { tags: { $push: [tag] } });
+      if (!dataset.tags.includes(tag)) {
+        updatedDataset = update(dataset, { tags: { $push: [tag] } });
+      }
     } else {
       const newTags = _.without(dataset.tags, tag);
       updatedDataset = update(dataset, { tags: { $set: newTags } });
     }
+    trackAction("Edit dataset tag");
     this.props.updateDataset(updatedDataset);
   };
 
@@ -235,15 +240,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
             dataset.isActive ? (
               <div>
                 {tags.map(tag => (
-                  <Tag
+                  <CategorizationLabel
+                    tag={tag}
                     key={tag}
-                    color={stringToColor(tag)}
+                    kind="datasets"
                     onClick={_.partial(this.props.addTagToSearch, tag)}
                     onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
                     closable
-                  >
-                    {tag}
-                  </Tag>
+                  />
                 ))}
                 <EditableTextIcon
                   icon={<PlusOutlined />}

@@ -1,5 +1,5 @@
 // @flow
-import "test/sagas/volumetracing_saga.mock.js";
+import "test/sagas/volumetracing/volumetracing_saga.mock";
 import sinon from "sinon";
 
 import { take, put, call } from "redux-saga/effects";
@@ -20,8 +20,8 @@ import mockRequire from "mock-require";
 import test from "ava";
 import type { VolumeTracing } from "oxalis/store";
 
-import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
-import { withoutUpdateTracing } from "../helpers/saveHelpers";
+import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
+import { withoutUpdateTracing } from "test/helpers/saveHelpers";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("oxalis/model/sagas/root_saga", function*() {

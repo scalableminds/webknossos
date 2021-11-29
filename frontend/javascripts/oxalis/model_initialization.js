@@ -269,7 +269,6 @@ function initializeTracing(_annotation: APIAnnotation, serverTracings: Array<Ser
         getSegmentationLayers(dataset).length > 0,
         messages["tracing.volume_missing_segmentation"],
       );
-      console.log("initializeVolumeTracingAction");
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
 

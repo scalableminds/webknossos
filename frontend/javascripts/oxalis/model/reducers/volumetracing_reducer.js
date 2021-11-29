@@ -134,6 +134,8 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
 }
 
 export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
+  // As the frontend doesn't know all cells, we have to keep track of the highest id
+  // and cannot compute it
   const maxCellId = tracing.largestSegmentId;
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
   const volumeTracing = {
@@ -166,8 +168,6 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
-      // As the frontend doesn't know all cells, we have to keep track of the highest id
-      // and cannot compute it
       const volumeTracing = serverVolumeToClientVolumeTracing(action.tracing);
 
       const newVolumes = state.tracing.volumes.filter(

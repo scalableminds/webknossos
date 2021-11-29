@@ -949,21 +949,19 @@ function* maintainContourGeometry(): Saga<void> {
     yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
     const isTraceToolActive = yield* select(state => isTraceTool(state.uiInformation.activeTool));
     const volumeTracing = yield* select(getActiveSegmentationTracing);
-    if (!volumeTracing) {
+    if (!volumeTracing || !isTraceToolActive) {
       continue;
     }
 
-    if (isTraceToolActive) {
-      const contourList = volumeTracing.contourList;
+    const contourList = volumeTracing.contourList;
 
-      // Update meshes according to the new contourList
-      contour.reset();
-      contour.color =
-        volumeTracing.contourTracingMode === ContourModeEnum.DELETE
-          ? CONTOUR_COLOR_DELETE
-          : CONTOUR_COLOR_NORMAL;
-      contourList.forEach(p => contour.addEdgePoint(p));
-    }
+    // Update meshes according to the new contourList
+    contour.reset();
+    contour.color =
+      volumeTracing.contourTracingMode === ContourModeEnum.DELETE
+        ? CONTOUR_COLOR_DELETE
+        : CONTOUR_COLOR_NORMAL;
+    contourList.forEach(p => contour.addEdgePoint(p));
   }
 }
 

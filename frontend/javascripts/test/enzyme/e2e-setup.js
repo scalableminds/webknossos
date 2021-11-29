@@ -25,7 +25,8 @@ function setCurrToken(token: string) {
 }
 
 // The values of these keys change if objects are newly created by the backend
-// They have to be omitted from some snapshots
+// They have to be omitted from some snapshots.
+// NOTE: When changing this array, the snapshots need to be recomputed.
 const volatileKeys = [
   "id",
   "skeleton",

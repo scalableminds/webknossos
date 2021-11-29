@@ -384,10 +384,6 @@ export async function enableMergerMode(onProgressUpdate: number => void): Promis
   // wait for preprocessing the already existing trees before returning
   await mergeSegmentsOfAlreadyExistingTrees(0, mergerModeState, onProgressUpdate);
 
-  if (mergerModeState.segmentationLayerName) {
-    api.data.setMappingEnabled(true, mergerModeState.segmentationLayerName);
-  }
-
   return mergerModeState.segmentationLayerName;
 }
 

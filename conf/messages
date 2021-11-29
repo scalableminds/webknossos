@@ -326,6 +326,7 @@ job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
 job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
+jobs.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
 job.export.tiff.invalidBoundingBox = The selected bounding box could not be parsed, must be x,y,z,width,height,depth
 job.export.tiff.volumeExceeded = The volume of the selected bounding box is too large.

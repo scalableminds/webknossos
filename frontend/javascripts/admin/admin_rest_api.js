@@ -853,17 +853,17 @@ export async function getJobs(): Promise<Array<APIJob>> {
   return jobs.map(job => ({
     id: job.id,
     type: job.command,
-    datasetName: job.commandArgs.kwargs.dataset_name,
-    organizationName: job.commandArgs.kwargs.organization_name,
-    layerName: job.commandArgs.kwargs.layer_name,
-    boundingBox: job.commandArgs.kwargs.bbox,
-    exportFileName: job.commandArgs.kwargs.export_file_name,
-    tracingId: job.commandArgs.kwargs.volume_tracing_id,
-    annotationId: job.commandArgs.kwargs.annotation_id,
-    annotationType: job.commandArgs.kwargs.annotation_type,
-    state: adaptJobState(job.command, job.celeryInfo.state, job.manualState),
+    datasetName: job.commandArgs.dataset_name,
+    organizationName: job.commandArgs.organization_name,
+    layerName: job.commandArgs.layer_name,
+    boundingBox: job.commandArgs.bbox,
+    exportFileName: job.commandArgs.export_file_name,
+    tracingId: job.commandArgs.volume_tracing_id,
+    annotationId: job.commandArgs.annotation_id,
+    annotationType: job.commandArgs.annotation_type,
+    state: adaptJobState(job.command, job.state, job.manualState),
     manualState: job.manualState,
-    result: job.celeryInfo.result,
+    result: job.returnValue,
     createdAt: job.created,
   }));
 }
@@ -889,9 +889,10 @@ export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,
   scale: Vector3,
+  datastoreName: string,
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}`,
+    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&dataStoreName=${datastoreName}`,
   );
 }
 

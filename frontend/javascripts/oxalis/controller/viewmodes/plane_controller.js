@@ -17,6 +17,7 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import { document } from "libs/window";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -42,6 +43,7 @@ import {
   EraseTool,
   PickCellTool,
   FillCellTool,
+  BoundingBoxTool,
 } from "oxalis/controller/combinations/tool_controls";
 import constants, {
   type ShowContextMenuFunction,
@@ -74,6 +76,10 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
 }
 
 type OwnProps = {| showContextMenuAt: ShowContextMenuFunction |};
+
+const cycleTools = () => {
+  Store.dispatch(cycleToolAction());
+};
 
 type StateProps = {|
   tracing: Tracing,
@@ -127,15 +133,20 @@ class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(createCellAction()),
-      "1": () => {
-        Store.dispatch(cycleToolAction());
-      },
       v: () => {
         Store.dispatch(copySegmentationLayerAction());
       },
       "shift + v": () => {
         Store.dispatch(copySegmentationLayerAction(true));
       },
+    };
+  }
+}
+
+class BoundingBoxKeybindings {
+  static getKeyboardControls() {
+    return {
+      c: () => Store.dispatch(addUserBoundingBoxAction()),
     };
   }
 }
@@ -287,6 +298,11 @@ class PlaneController extends React.PureComponent<Props> {
     );
     const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
     const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
+    const boundingBoxControls = BoundingBoxTool.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showContextMenuAt,
+    );
 
     const allControlKeys = _.union(
       Object.keys(moveControls),
@@ -295,6 +311,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(eraseControls),
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
+      Object.keys(boundingBoxControls),
     );
     const controls = {};
 
@@ -308,6 +325,7 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.ERASE_TRACE]: eraseControls[controlKey],
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
+        [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
       });
     }
 
@@ -359,9 +377,6 @@ class PlaneController extends React.PureComponent<Props> {
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
 
-        w: () => {
-          Store.dispatch(cycleToolAction());
-        },
         ...loopedKeyboardControls,
       },
       {
@@ -410,19 +425,22 @@ class PlaneController extends React.PureComponent<Props> {
         }
       },
       q: downloadScreenshot,
+      w: cycleTools,
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = { c: null, "1": null };
-    const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
+    const emptyDefaultHandler = { c: null };
+    const { c: skeletonCHandler, ...skeletonControls } =
       this.props.tracing.skeleton != null
         ? SkeletonKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
 
-    const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
+    const { c: volumeCHandler, ...volumeControls } =
       this.props.tracing.volume != null
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
+
+    const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
@@ -431,8 +449,11 @@ class PlaneController extends React.PureComponent<Props> {
       ...skeletonControls,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
-      c: this.createToolDependentKeyboardHandler(skeletonCHandler, volumeCHandler),
-      "1": this.createToolDependentKeyboardHandler(skeletonOneHandler, volumeOneHandler),
+      c: this.createToolDependentKeyboardHandler(
+        skeletonCHandler,
+        volumeCHandler,
+        boundingBoxCHandler,
+      ),
     };
   }
 
@@ -505,28 +526,42 @@ class PlaneController extends React.PureComponent<Props> {
   createToolDependentKeyboardHandler(
     skeletonHandler: ?Function,
     volumeHandler: ?Function,
+    boundingBoxHandler: ?Function,
     viewHandler?: ?Function,
   ): Function {
     return (...args) => {
       const tool = this.props.activeTool;
-      if (tool === AnnotationToolEnum.MOVE) {
-        if (viewHandler != null) {
-          viewHandler(...args);
-        } else if (skeletonHandler != null) {
-          skeletonHandler(...args);
+      switch (tool) {
+        case AnnotationToolEnum.MOVE: {
+          if (viewHandler != null) {
+            viewHandler(...args);
+          } else if (skeletonHandler != null) {
+            skeletonHandler(...args);
+          }
+          return;
         }
-      } else if (tool === AnnotationToolEnum.SKELETON) {
-        if (skeletonHandler != null) {
-          skeletonHandler(...args);
-        } else if (viewHandler != null) {
-          viewHandler(...args);
+        case AnnotationToolEnum.SKELETON: {
+          if (skeletonHandler != null) {
+            skeletonHandler(...args);
+          } else if (viewHandler != null) {
+            viewHandler(...args);
+          }
+          return;
         }
-      } else {
-        // eslint-disable-next-line no-lonely-if
-        if (volumeHandler != null) {
-          volumeHandler(...args);
-        } else if (viewHandler != null) {
-          viewHandler(...args);
+        case AnnotationToolEnum.BOUNDING_BOX: {
+          if (boundingBoxHandler != null) {
+            boundingBoxHandler(...args);
+          } else if (viewHandler != null) {
+            viewHandler(...args);
+          }
+          return;
+        }
+        default: {
+          if (volumeHandler != null) {
+            volumeHandler(...args);
+          } else if (viewHandler != null) {
+            viewHandler(...args);
+          }
         }
       }
     };

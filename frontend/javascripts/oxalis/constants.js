@@ -157,6 +157,7 @@ export const AnnotationToolEnum = {
   ERASE_TRACE: "ERASE_TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
+  BOUNDING_BOX: "BOUNDING_BOX",
 };
 export const VolumeTools = [
   AnnotationToolEnum.BRUSH,
@@ -232,7 +233,14 @@ export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
 // e.g., z in XY viewport).
 export type LabelMasksByBucketAndW = Map<Vector4, Map<number, Uint8Array>>;
 
-export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoView) => void;
+export type ShowContextMenuFunction = (
+  number,
+  number,
+  ?number,
+  ?number,
+  Vector3,
+  OrthoView,
+) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

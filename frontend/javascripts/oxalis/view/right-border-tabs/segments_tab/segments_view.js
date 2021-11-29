@@ -403,9 +403,9 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  handleMeshFileSelected = async (mesh: { key: ?string }) => {
-    if (this.props.visibleSegmentationLayer != null && mesh.key != null) {
-      this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, mesh.key);
+  handleMeshFileSelected = async (meshFileName: ?string) => {
+    if (this.props.visibleSegmentationLayer != null && meshFileName != null) {
+      this.props.setCurrentMeshFile(this.props.visibleSegmentationLayer.name, meshFileName);
     }
   };
 

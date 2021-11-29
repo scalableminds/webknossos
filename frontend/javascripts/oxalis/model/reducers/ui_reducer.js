@@ -3,10 +3,8 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
 import { updateKey } from "oxalis/model/helpers/deep_update";
-import { setToolReducer } from "oxalis/model/reducers/reducer_helpers";
-import { AnnotationToolEnum } from "oxalis/constants";
+import { setToolReducer, getNextTool } from "oxalis/model/reducers/reducer_helpers";
 import { hideBrushReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -50,25 +48,12 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       if (!state.tracing.restrictions.allowUpdate) {
         return state;
       }
-
-      const disabledToolInfo = getDisabledInfoForTools(state);
-
-      const tools = Object.keys(AnnotationToolEnum);
-      const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
-
-      // Search for the next tool which is not disabled.
-      for (
-        let newToolIndex = currentToolIndex + 1;
-        newToolIndex < currentToolIndex + tools.length;
-        newToolIndex++
-      ) {
-        const newTool = tools[newToolIndex % tools.length];
-        if (!disabledToolInfo[newTool].isDisabled) {
-          return setToolReducer(hideBrushReducer(state), newTool);
-        }
+      const nextTool = getNextTool(state);
+      if (nextTool == null) {
+        // Don't change the current tool if another tool could not be selected.
+        return state;
       }
-      // Don't change the current tool if another tool could not be selected.
-      return state;
+      return setToolReducer(hideBrushReducer(state), nextTool);
     }
 
     case "SET_THEME": {

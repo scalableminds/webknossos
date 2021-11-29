@@ -20,5 +20,5 @@ POD=$(
 echo "Going to run 'refresh_schema.sh' in pod $POD"
 
 ssh -t kube.scm.io "
-  sudo kubectl exec $POD -n $NAMESPACE -- /srv/webknossos/tools/postgres/refresh_schema.sh
+  sudo kubectl exec $POD -n $NAMESPACE -- /webknossos/tools/postgres/refresh_schema.sh
 "

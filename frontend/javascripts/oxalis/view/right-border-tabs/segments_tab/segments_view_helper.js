@@ -164,14 +164,14 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
       currentMeshFile.mappingName != null
         ? `for the mapping "${
             currentMeshFile.mappingName
-          }" which is not active. You need to activate the mapping`
-        : "without a mapping but a mapping is active. You need to deactivate the mapping";
+          }" which is not active. The mapping will be activated`
+        : "without a mapping but a mapping is active. The mapping will be deactivated";
 
     return (
       <Popconfirm
         title={`The currently active mesh file "${
           currentMeshFile.meshFileName
-        }" was computed ${mappingString} before continuing.`}
+        }" was computed ${mappingString} when clicking OK.`}
         visible={isConfirmVisible}
         onConfirm={async () => {
           setConfirmVisible(false);

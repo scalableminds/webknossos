@@ -350,8 +350,6 @@ class SegmentsView extends React.Component<Props, State> {
       return;
     }
 
-    // TODO: Activate correct mapping and get mapped segment id
-
     await loadMeshFromFile(
       segment.id,
       segment.somePosition,
@@ -528,14 +526,16 @@ class SegmentsView extends React.Component<Props, State> {
           <Select
             style={{ width: 180, display: "inline-block" }}
             placeholder="Select a mesh file"
-            value={formatMeshFile(this.props.currentMeshFile)}
+            value={
+              this.props.currentMeshFile != null ? this.props.currentMeshFile.meshFileName : null
+            }
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map(meshFile => (
-                <Option key={meshFile.meshFileName} value={formatMeshFile(meshFile)}>
+                <Option key={meshFile.meshFileName} value={meshFile.meshFileName}>
                   {formatMeshFile(meshFile)}
                 </Option>
               ))

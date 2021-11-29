@@ -42,7 +42,9 @@ const isAgglomerate = mapping => {
 };
 
 export default function* watchActivatedMappings(): Saga<void> {
-  const oldActiveMappingByLayer = {};
+  const oldActiveMappingByLayer = yield* select(
+    state => state.temporaryConfiguration.activeMappingByLayer,
+  );
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield _actionChannel("SET_MAPPING");
   const mappingChangeActionChannel = yield _actionChannel(["SET_MAPPING", "SET_MAPPING_ENABLED"]);

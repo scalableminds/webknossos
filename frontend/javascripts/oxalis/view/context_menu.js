@@ -109,6 +109,8 @@ type NoNodeContextMenuProps = {|
   activeTool: AnnotationTool,
 |};
 
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
+
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
     <Tooltip title={title}>
@@ -509,8 +511,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           </Menu.Item>,
         ]
       : [];
-
-  const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
 
   const layerName = visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
   const loadPrecomputedMeshItem = (

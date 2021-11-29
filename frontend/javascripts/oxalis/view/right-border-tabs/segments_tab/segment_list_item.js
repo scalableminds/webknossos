@@ -44,6 +44,8 @@ function getColoredDotIconForSegment(segmentId: number, mappingColors) {
   );
 }
 
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
+
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile,
@@ -53,7 +55,6 @@ const getLoadPrecomputedMeshMenuItem = (
   mappingInfo,
 ) => {
   const hasCurrentMeshFile = currentMeshFile != null;
-  const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
 
   return (
     <MenuItemWithMappingActivationConfirmation

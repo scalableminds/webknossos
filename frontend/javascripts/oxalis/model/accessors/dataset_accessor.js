@@ -903,6 +903,17 @@ export function is2dDataset(dataset: APIDataset): boolean {
   return getDatasetExtentInVoxel(dataset).depth === 1;
 }
 
+const dummyMapping = {
+  mappingName: null,
+  mapping: null,
+  mappingKeys: null,
+  mappingColors: null,
+  hideUnmappedIds: false,
+  mappingStatus: MappingStatusEnum.DISABLED,
+  mappingSize: 0,
+  mappingType: "JSON",
+};
+
 export function getMappingInfo(
   activeMappingInfos: { [layerName: string]: ActiveMappingInfo },
   layerName: ?string,
@@ -913,16 +924,7 @@ export function getMappingInfo(
 
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  return {
-    mappingName: null,
-    mapping: null,
-    mappingKeys: null,
-    mappingColors: null,
-    hideUnmappedIds: false,
-    mappingStatus: MappingStatusEnum.DISABLED,
-    mappingSize: 0,
-    mappingType: "JSON",
-  };
+  return dummyMapping;
 }
 
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {

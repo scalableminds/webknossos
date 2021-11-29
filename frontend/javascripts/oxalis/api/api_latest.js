@@ -149,12 +149,16 @@ export function assertSkeleton(tracing: Tracing): SkeletonTracing {
 
 export function assertVolume(state: OxalisState): VolumeTracing {
   if (state.tracing.volumes.length === 0) {
-    throw new Error("This api function should only be called in a volume annotation.");
+    throw new Error(
+      "This api function should only be called when a volume annotation layer exists.",
+    );
   }
   const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
 
   if (tracing == null) {
-    throw new Error("This api function should only be called in a volume annotation.");
+    throw new Error(
+      "This api function should only be called when a volume annotation layer is visible.",
+    );
   }
 
   return tracing;

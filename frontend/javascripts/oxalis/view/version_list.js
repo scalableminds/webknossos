@@ -54,24 +54,20 @@ export async function previewVersion(versions?: Versions) {
   await api.tracing.restart(annotationType, annotationId, controlMode, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
 
+  const segmentationLayersToReload = [];
   if (versions == null) {
     // No versions were passed which means that the newest annotation should be
     // shown. Therefore, reload all segmentation layers.
-    for (const segmentationLayer of Model.getSegmentationTracingLayers()) {
-      segmentationLayer.cube.collectAllBuckets();
-      segmentationLayer.layerRenderingManager.refresh();
-    }
-    return;
-  }
-  if (versions.volumes == null) {
-    // No volume versions were specified. Don't reload the segmentation layer,
-    // as it's not necessary when previewing skeleton versions.
-    return;
+    segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
+  } else if (versions.volumes != null) {
+    // Since volume versions were specified, reload the volumeTracing layers
+    const versionedSegmentationLayers = Object.keys(versions.volumes).map(volumeTracingId =>
+      Model.getSegmentationTracingLayer(volumeTracingId),
+    );
+    segmentationLayersToReload.push(...versionedSegmentationLayers);
   }
 
-  // Since volume versions were specified, reload the volumeTracing layers
-  for (const volumeTracingId of Object.keys(versions.volumes)) {
-    const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracingId);
+  for (const segmentationLayer of segmentationLayersToReload) {
     segmentationLayer.cube.collectAllBuckets();
     segmentationLayer.layerRenderingManager.refresh();
   }

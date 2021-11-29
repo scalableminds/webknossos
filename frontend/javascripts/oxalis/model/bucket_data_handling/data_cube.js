@@ -191,7 +191,9 @@ class DataCube {
       Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
-    return this.isSegmentation ? activeMapping.hideUnmappedIds : false;
+    return this.isSegmentation && activeMapping.mappingStatus === MappingStatusEnum.ENABLED
+      ? activeMapping.hideUnmappedIds
+      : false;
   }
 
   mapId(idToMap: number): number {

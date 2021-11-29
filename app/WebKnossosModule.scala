@@ -1,7 +1,7 @@
 import com.google.inject.AbstractModule
 import controllers.InitialDataService
 import models.analytics.AnalyticsSessionService
-import models.job.JobService
+import models.job.{JobService, WorkerLivenessService}
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
 import models.task.TaskService
@@ -28,5 +28,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[JobService]).asEagerSingleton()
     bind(classOf[SlackNotificationService]).asEagerSingleton()
     bind(classOf[AnalyticsSessionService]).asEagerSingleton()
+    bind(classOf[WorkerLivenessService]).asEagerSingleton()
   }
 }

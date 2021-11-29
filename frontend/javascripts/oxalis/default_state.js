@@ -1,6 +1,8 @@
 // @flow
 
 import type { OxalisState } from "oxalis/store";
+import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
+import { document } from "libs/window";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
@@ -8,7 +10,6 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
-import { document } from "libs/window";
 
 const defaultViewportRect = {
   top: 0,
@@ -46,14 +47,7 @@ const initialAnnotationInfo = {
 const primaryStylesheetElement: ?HTMLLinkElement = document.getElementById("primary-stylesheet");
 
 const defaultState: OxalisState = {
-  datasetConfiguration: {
-    fourBit: false,
-    interpolation: false,
-    layers: {},
-    loadingStrategy: "PROGRESSIVE_QUALITY",
-    segmentationPatternOpacity: 40,
-    renderMissingDataBlack: false,
-  },
+  datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
     brushSize: 50,

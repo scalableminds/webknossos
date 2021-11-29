@@ -104,7 +104,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Cell                                     |
 | Alt + Mouse Move                  | Move                                                        |
 | C                                 | Create New Cell                                             |
-| W, 1                              | Toggle Modes (Move / Trace / Brush)                         |
+| W                                 | Toggle Modes (Move / Skeleton / Trace / Brush / ...)        |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
 | V                                 | Copy Segmentation of Current Cell From Previous Slice       |
 | SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |

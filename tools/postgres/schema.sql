@@ -160,7 +160,6 @@ CREATE TABLE webknossos.dataStores(
   isForeign BOOLEAN NOT NULL DEFAULT false,
   isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
-  jobsEnabled BOOLEAN NOT NULL DEFAULT false,
   onlyAllowedOrganization CHAR(24)
 );
 
@@ -368,19 +367,37 @@ CREATE TABLE webknossos.maintenance(
 );
 INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
-CREATE TYPE webknossos.JOB_MANUAL_STATE AS ENUM ('SUCCESS', 'FAILURE');
+
+CREATE TABLE webknossos.workers(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _dataStore CHAR(256) NOT NULL,
+  key VARCHAR(1024) NOT NULL UNIQUE,
+  maxParallelJobs INT NOT NULL DEFAULT 1,
+  lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+
+CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE');
 
 CREATE TABLE webknossos.jobs(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _owner CHAR(24) NOT NULL,
+  _dataStore CHAR(256) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
-  celeryJobId CHAR(36) NOT NULL,
-  celeryInfo JSONB NOT NULL,
-  manualState webknossos.JOB_MANUAL_STATE,
+  state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING',
+  manualState webknossos.JOB_STATE,
+  _worker CHAR(24),
+  latestRunId VARCHAR(1024),
+  returnValue Text,
+  started TIMESTAMPTZ,
+  ended TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
+
 
 CREATE TABLE webknossos.invites(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
@@ -410,6 +427,7 @@ CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDele
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 
@@ -501,7 +519,9 @@ ALTER TABLE webknossos.multiUsers
 ALTER TABLE webknossos.experienceDomains
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
 ALTER TABLE webknossos.jobs
-  ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE;
+  ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
+  ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
+  ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$

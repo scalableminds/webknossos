@@ -133,7 +133,6 @@ class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(createCellAction()),
-      "1": cycleTools,
       v: () => {
         Store.dispatch(copySegmentationLayerAction());
       },
@@ -378,7 +377,6 @@ class PlaneController extends React.PureComponent<Props> {
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
 
-        w: cycleTools,
         ...loopedKeyboardControls,
       },
       {
@@ -427,16 +425,17 @@ class PlaneController extends React.PureComponent<Props> {
         }
       },
       q: downloadScreenshot,
+      w: cycleTools,
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = { c: null, "1": null };
-    const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
+    const emptyDefaultHandler = { c: null };
+    const { c: skeletonCHandler, ...skeletonControls } =
       this.props.tracing.skeleton != null
         ? SkeletonKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
 
-    const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
+    const { c: volumeCHandler, ...volumeControls } =
       this.props.tracing.volumes.length > 0
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
@@ -455,7 +454,6 @@ class PlaneController extends React.PureComponent<Props> {
         volumeCHandler,
         boundingBoxCHandler,
       ),
-      "1": this.createToolDependentKeyboardHandler(skeletonOneHandler, volumeOneHandler),
     };
   }
 

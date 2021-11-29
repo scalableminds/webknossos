@@ -22,7 +22,7 @@ import { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
 import processTaskWithPool from "libs/task_pool";
-import { setMappingAction } from "oxalis/model/actions/settings_actions";
+import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { waitForCondition } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 
@@ -153,7 +153,10 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
     const isMappingEnabled = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
     const enabledMappingName = isMappingEnabled ? mappingInfo.mappingName : null;
     const checkWhetherConfirmIsNeeded = () => {
-      if (enabledMappingName !== currentMeshFile.mappingName) {
+      // Normalize the mappingName of the currentMeshFile to be a string or null for comparison
+      // with the enabled mappingName which is also either a string or null
+      const currentMeshFileMappingName = currentMeshFile.mappingName || null;
+      if (enabledMappingName !== currentMeshFileMappingName) {
         setConfirmVisible(true);
       } else {
         originalOnClick();
@@ -175,15 +178,27 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
         visible={isConfirmVisible}
         onConfirm={async () => {
           setConfirmVisible(false);
-          Store.dispatch(setMappingAction(layerName, currentMeshFile.mappingName, "HDF5"));
-          await waitForCondition(
-            () =>
-              getMappingInfo(
-                Store.getState().temporaryConfiguration.activeMappingByLayer,
-                layerName,
-              ).mappingStatus === MappingStatusEnum.ENABLED,
-            100,
-          );
+          if (currentMeshFile.mappingName != null) {
+            Store.dispatch(setMappingAction(layerName, currentMeshFile.mappingName, "HDF5"));
+            await waitForCondition(
+              () =>
+                getMappingInfo(
+                  Store.getState().temporaryConfiguration.activeMappingByLayer,
+                  layerName,
+                ).mappingStatus === MappingStatusEnum.ENABLED,
+              100,
+            );
+          } else {
+            Store.dispatch(setMappingEnabledAction(layerName, false));
+            await waitForCondition(
+              () =>
+                getMappingInfo(
+                  Store.getState().temporaryConfiguration.activeMappingByLayer,
+                  layerName,
+                ).mappingStatus === MappingStatusEnum.DISABLED,
+              100,
+            );
+          }
           originalOnClick();
         }}
         onCancel={() => setConfirmVisible(false)}

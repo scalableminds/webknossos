@@ -31,6 +31,6 @@ CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHER
 DROP TABLE webknossos.annotation_layers;
 DROP TYPE webknossos.ANNOTATION_LAYER_TYPE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 76;
+UPDATE webknossos.releaseInformation SET schemaVersion = 77;
 
 commit;

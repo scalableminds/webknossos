@@ -27,6 +27,6 @@ ALTER TABLE webknossos.annotations DROP COLUMN volumeTracingId;
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 77;
+UPDATE webknossos.releaseInformation SET schemaVersion = 78;
 
 commit;

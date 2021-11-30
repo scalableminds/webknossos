@@ -137,6 +137,11 @@ export const BorderTabs = {
     name: "Layers",
     description: "Change settings of each data layer",
   },
+  ConnectomeView: {
+    id: "ConnectomeView",
+    name: "Connectome",
+    description: "Explore Connectomes of the Dataset",
+  },
 };
 
 export const OrthoViewGrayCrosshairColor = 0x222222;

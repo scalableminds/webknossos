@@ -687,4 +687,9 @@ export type HybridServerTracing = {
   volume: ?ServerVolumeTracing,
 };
 
+export type APIConnectomeFile = {
+  connectomeFileName: string,
+  mappingName: ?string,
+};
+
 export default {};

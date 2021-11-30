@@ -8,6 +8,7 @@ import {
   type APIAnnotationWithTask,
   type APIAnnotationVisibility,
   type APIBuildInfo,
+  type APIConnectomeFile,
   type APIDataSource,
   type APIDataSourceWithMessages,
   type APIDataStore,
@@ -1737,4 +1738,329 @@ export function getMeshfileChunkData(
     );
     return data;
   });
+}
+
+// ### Connectomes
+
+export function getConnectomeFilesForDatasetLayer(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Array<APIConnectomeFile> {
+  // ): Promise<Array<APIConnectomeFile>> {
+  // return doWithToken(token =>
+  //   Request.receiveJSON(
+  //     `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+  //       datasetId.name
+  //     }/layers/${layerName}/connectomes?token=${token}`,
+  //   ),
+  // );
+
+  // TODO: Replace mock with server call
+  return [{ connectomeFileName: "connectome", mappingName: "agglomerate_view_90" }];
+}
+
+export function getSynapticPartnersOfAgglomerate(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  connectomeFile: string,
+  segmentId: number,
+): Array<number> {
+  // ): Promise<Array<number>> {
+  // return doWithToken(token =>
+  //   Request.sendJSONReceiveJSON(
+  //     `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+  //       datasetId.name
+  //     }/layers/${layerName}/connectomes/partners?token=${token}`,
+  //     {
+  //       data: {
+  //         connectomeFile,
+  //         segmentId,
+  //       },
+  //     },
+  //   ),
+  // );
+
+  // TODO: Replace mock with server call
+  return [1, 2, 8, 9, 16, 19, 23, 29, 43];
+}
+
+export function getSynapsesOfAgglomeratePairs(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  connectomeFile: string,
+  segmentId: number,
+  partnerSegmentIds: Array<number>,
+): Array<Array<number>> {
+  // ): Promise<Array<Array<number>>> {
+  // return doWithToken(token =>
+  //   Request.sendJSONReceiveJSON(
+  //     `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+  //       datasetId.name
+  //     }/layers/${layerName}/connectomes/synapses?token=${token}`,
+  //     {
+  //       data: {
+  //         connectomeFile,
+  //         segmentId,
+  //         partnerSegmentIds,
+  //       },
+  //     },
+  //   ),
+  // );
+
+  // TODO: Replace mock with server call
+  return [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+    [64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84],
+    [85],
+    [86],
+    [87],
+    [88, 89],
+    [90],
+    [91],
+    [92],
+  ];
+}
+
+export function getSynapsePositions(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  connectomeFile: string,
+  synapseIds: Array<number>,
+): Array<Vector3> {
+  // ): Promise<Array<Vector3>> {
+  // return doWithToken(token =>
+  //   Request.sendJSONReceiveJSON(
+  //     `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+  //       datasetId.name
+  //     }/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
+  //     {
+  //       data: {
+  //         connectomeFile,
+  //         synapseIds,
+  //       },
+  //     },
+  //   ),
+  // );
+
+  const synapsePositionsLookup = [
+    [126, 134, 47],
+    [100, 100, 28],
+    [118, 126, 29],
+    [126, 100, 75],
+    [104, 220, 49],
+    [116, 254, 26],
+    [126, 136, 25],
+    [116, 250, 62],
+    [104, 254, 83],
+    [126, 152, 65],
+    [104, 284, 26],
+    [114, 282, 63],
+    [102, 296, 96],
+    [126, 272, 64],
+    [118, 108, 55],
+    [252, 124, 25],
+    [144, 126, 45],
+    [240, 126, 48],
+    [254, 106, 46],
+    [254, 100, 65],
+    [150, 280, 26],
+    [138, 260, 63],
+    [256, 162, 29],
+    [132, 144, 53],
+    [194, 248, 56],
+    [172, 226, 31],
+    [234, 196, 50],
+    [254, 150, 45],
+    [136, 238, 59],
+    [134, 244, 87],
+    [230, 242, 63],
+    [130, 210, 63],
+    [130, 202, 76],
+    [182, 254, 93],
+    [246, 254, 80],
+    [254, 176, 81],
+    [254, 196, 68],
+    [210, 254, 88],
+    [242, 258, 65],
+    [182, 278, 30],
+    [216, 274, 56],
+    [218, 272, 40],
+    [134, 290, 95],
+    [136, 284, 69],
+    [160, 296, 94],
+    [252, 278, 81],
+    [254, 280, 99],
+    [278, 126, 25],
+    [280, 114, 49],
+    [278, 126, 57],
+    [260, 126, 34],
+    [256, 258, 50],
+    [294, 158, 31],
+    [294, 190, 42],
+    [256, 202, 30],
+    [296, 180, 25],
+    [270, 136, 48],
+    [292, 184, 47],
+    [268, 166, 61],
+    [268, 244, 66],
+    [256, 254, 78],
+    [292, 254, 81],
+    [258, 292, 29],
+    [256, 274, 82],
+    [122, 218, 103],
+    [124, 254, 112],
+    [104, 256, 110],
+    [256, 110, 64],
+    [112, 138, 88],
+    [168, 156, 96],
+    [254, 136, 61],
+    [262, 188, 90],
+    [148, 158, 96],
+    [242, 174, 89],
+    [144, 232, 104],
+    [198, 140, 90],
+    [210, 180, 98],
+    [248, 254, 101],
+    [254, 170, 71],
+    [254, 234, 98],
+    [254, 176, 85],
+    [212, 286, 108],
+    [266, 176, 63],
+    [258, 222, 96],
+    [258, 248, 99],
+    [252, 122, 63],
+    [254, 126, 62],
+    [254, 136, 61],
+    [198, 250, 105],
+    [228, 290, 108],
+    [254, 252, 99],
+    [130, 294, 112],
+    [272, 188, 64],
+    [126, 236, 112],
+    [126, 278, 117],
+    [198, 116, 87],
+    [120, 110, 97],
+    [254, 158, 76],
+    [256, 192, 124],
+    [290, 254, 106],
+    [166, 296, 124],
+    [282, 160, 65],
+    [278, 124, 120],
+    [272, 260, 105],
+    [288, 186, 82],
+    [296, 250, 115],
+    [118, 272, 124],
+    [118, 108, 101],
+    [156, 106, 120],
+    [152, 264, 120],
+    [196, 162, 118],
+    [180, 244, 121],
+    [168, 246, 116],
+    [100, 126, 92],
+    [110, 136, 96],
+    [128, 100, 92],
+    [210, 124, 101],
+    [214, 124, 101],
+    [254, 264, 105],
+    [260, 254, 124],
+    [232, 248, 105],
+    [244, 254, 104],
+    [252, 244, 122],
+    [264, 164, 110],
+    [256, 264, 105],
+    [292, 264, 117],
+    [236, 162, 114],
+    [256, 174, 123],
+    [254, 254, 100],
+    [136, 290, 115],
+    [238, 254, 105],
+    [248, 254, 103],
+    [298, 126, 48],
+    [256, 136, 103],
+    [274, 176, 64],
+    [126, 258, 123],
+    [128, 126, 118],
+    [100, 122, 103],
+    [134, 168, 113],
+    [254, 116, 62],
+    [254, 116, 63],
+    [254, 116, 63],
+    [162, 124, 113],
+    [160, 126, 113],
+    [256, 104, 65],
+    [220, 126, 77],
+    [258, 170, 81],
+    [208, 128, 81],
+    [254, 164, 79],
+    [252, 120, 65],
+    [198, 132, 87],
+    [254, 158, 76],
+    [258, 116, 65],
+    [274, 156, 93],
+    [270, 144, 74],
+    [260, 162, 87],
+    [266, 166, 86],
+    [222, 126, 81],
+    [254, 134, 69],
+    [256, 132, 99],
+    [246, 146, 62],
+    [248, 144, 63],
+    [252, 138, 63],
+    [174, 128, 89],
+    [174, 128, 90],
+    [254, 266, 106],
+    [266, 254, 121],
+    [256, 188, 111],
+    [256, 208, 115],
+    [254, 200, 112],
+    [254, 210, 115],
+    [258, 232, 120],
+    [272, 272, 123],
+    [252, 256, 103],
+    [200, 128, 87],
+    [200, 128, 85],
+    [260, 178, 115],
+    [254, 160, 116],
+    [254, 202, 119],
+    [274, 200, 122],
+    [272, 250, 124],
+    [250, 172, 86],
+    [252, 172, 86],
+    [254, 164, 111],
+    [254, 164, 111],
+    [254, 164, 111],
+    [254, 166, 111],
+    [252, 166, 111],
+    [178, 256, 32],
+    [174, 256, 106],
+    [178, 254, 106],
+    [180, 256, 106],
+    [254, 260, 124],
+    [254, 256, 104],
+    [252, 256, 103],
+    [256, 126, 108],
+    [256, 240, 40],
+    [268, 230, 39],
+    [296, 128, 54],
+    [298, 128, 54],
+    [266, 126, 104],
+    [258, 128, 99],
+    [256, 128, 104],
+    [296, 256, 120],
+    [294, 208, 117],
+    [296, 216, 112],
+    [298, 248, 117],
+    [286, 228, 118],
+    [296, 256, 120],
+    [282, 206, 120],
+    [296, 254, 120],
+    [256, 256, 104],
+    [256, 256, 105],
+    [298, 258, 87],
+  ];
+  return synapseIds.map(synapseId => synapsePositionsLookup[synapseId]);
 }

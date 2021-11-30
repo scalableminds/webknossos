@@ -33,7 +33,7 @@ import type {
 } from "./flex_layout_types";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 15;
+export const currentLayoutVersion = 16;
 const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
@@ -211,13 +211,19 @@ const _getDefaultLayouts = () => {
       borderTabs.SegmentsView,
       borderTabs.BoundingBoxTab,
       borderTabs.AbstractTreeTab,
+      borderTabs.ConnectomeView,
     ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
     "right",
-    [borderTabs.DatasetInfoTabView, borderTabs.BoundingBoxTab, borderTabs.SegmentsView],
+    [
+      borderTabs.DatasetInfoTabView,
+      borderTabs.BoundingBoxTab,
+      borderTabs.SegmentsView,
+      borderTabs.ConnectomeView,
+    ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );

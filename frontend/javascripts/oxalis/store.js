@@ -11,6 +11,7 @@ import type {
   APIAllowedMode,
   APIAnnotationType,
   APIAnnotationVisibility,
+  APIConnectomeFile,
   APIDataLayer,
   APIDataStore,
   APIDataset,
@@ -517,6 +518,15 @@ export type IsosurfaceInformation = {|
   +fileName?: string,
 |};
 
+export type ConnectomeData = {|
+  +availableConnectomeFiles: ?Array<APIConnectomeFile>,
+  +currentConnectomeFile: ?string,
+  +trees: TreeMap,
+  +tracingId: string,
+  +activeNodeId: ?number,
+  +activeTreeId: ?number,
+|};
+
 export type OxalisState = {|
   +datasetConfiguration: DatasetConfiguration,
   +userConfiguration: UserConfiguration,
@@ -540,6 +550,7 @@ export type OxalisState = {|
       // The `segments` here should only be used for non-annotation volume
       // layers.
       +segments: SegmentMap,
+      +connectomeData: ConnectomeData,
     },
   },
 |};

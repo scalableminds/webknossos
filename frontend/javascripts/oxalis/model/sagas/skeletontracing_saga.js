@@ -383,12 +383,7 @@ export function* diffTrees(
 
 const diffTreeCache = {};
 
-export function cachedDiffTrees(
-  prevSkeletonTracing: SkeletonTracing,
-  skeletonTracing: SkeletonTracing,
-): Array<UpdateAction> {
-  const { trees } = skeletonTracing;
-  const prevTrees = prevSkeletonTracing.trees;
+export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
   // Try to use the cached version of the diff if available to increase performance
   if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
     diffTreeCache.prevTrees = prevTrees;
@@ -405,7 +400,7 @@ export function* diffSkeletonTracing(
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    yield* cachedDiffTrees(prevSkeletonTracing, skeletonTracing);
+    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
       yield updateTreeGroups(skeletonTracing.treeGroups);
     }

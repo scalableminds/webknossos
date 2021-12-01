@@ -267,10 +267,16 @@ export function maybeGetNodeIdFromPosition(
   isTouch: boolean,
 ): ?number {
   const SceneController = getSceneController();
-  const { skeleton } = SceneController;
-  if (!skeleton) {
+  const { skeletons } = SceneController;
+
+  const skeletonsWhichSupportPicking = skeletons.filter(skeleton => skeleton.supportsPicking);
+  if (skeletonsWhichSupportPicking.length === 0) {
     return null;
+  } else if (skeletonsWhichSupportPicking.length > 1) {
+    throw Error("Only one skeleton with supportPicking === true is supported for now.");
   }
+
+  const skeleton = skeletonsWhichSupportPicking[0];
 
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.

@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import Maybe from "data.maybe";
 
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
@@ -74,6 +75,7 @@ import Model from "oxalis/model";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import api from "oxalis/api/internal_api";
 import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const { Option } = Select;
 
@@ -167,6 +169,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
   componentDidMount() {
     this.fetchConnectomeFiles();
+    this.initializeSkeleton();
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
@@ -179,6 +182,18 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentWillUnmount() {}
+
+  initializeSkeleton() {
+    const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer == null) return;
+
+    getSceneController().addSkeleton(state => {
+      const { trees, activeNodeId, activeTreeId, tracingId } = state.localSegmentationData[
+        visibleSegmentationLayer.name
+      ].connectomeData;
+      return Maybe.of({ trees, activeNodeId, activeTreeId, tracingId });
+    }, false);
+  }
 
   fetchConnectomeFiles() {
     const { dataset, visibleSegmentationLayer } = this.props;

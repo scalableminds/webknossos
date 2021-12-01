@@ -27,6 +27,14 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           availableMeshFiles: null,
           currentMeshFile: null,
           segments: new DiffableMap(),
+          connectomeData: {
+            availableConnectomeFiles: null,
+            currentConnectomeFile: null,
+            trees: {},
+            tracingId: "",
+            activeTreeId: null,
+            activeNodeId: null,
+          },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

@@ -180,7 +180,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     }
 
     const updateActions = Array.from(
-      cachedDiffTrees(this.props.skeletonTracing, nextProps.skeletonTracing),
+      cachedDiffTrees(this.props.skeletonTracing.trees, nextProps.skeletonTracing.trees),
     );
 
     const relevantUpdateActions = updateActions.filter(

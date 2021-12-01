@@ -195,7 +195,7 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTree
 }
 
 function updateState(mergerModeState: MergerModeState, skeletonTracing: SkeletonTracing) {
-  const diff = cachedDiffTrees(mergerModeState.prevTracing, skeletonTracing);
+  const diff = cachedDiffTrees(mergerModeState.prevTracing.trees, skeletonTracing.trees);
 
   for (const action of diff) {
     switch (action.name) {

@@ -28,9 +28,24 @@ export type SkeletonTracingStats = {|
   branchPointCount: number,
 |};
 
+export type BasicSkeletonTracing = {|
+  +trees: $PropertyType<SkeletonTracing, "trees">,
+  +activeNodeId: $PropertyType<SkeletonTracing, "activeNodeId">,
+  +activeTreeId: $PropertyType<SkeletonTracing, "activeTreeId">,
+  +tracingId: $PropertyType<SkeletonTracing, "tracingId">,
+|};
+
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
     return Maybe.Just(tracing.skeleton);
+  }
+  return Maybe.Nothing();
+}
+
+export function getBasicSkeletonTracing(tracing: Tracing): Maybe<BasicSkeletonTracing> {
+  if (tracing.skeleton != null) {
+    const { trees, activeTreeId, activeNodeId, tracingId } = tracing.skeleton;
+    return Maybe.Just({ trees, activeTreeId, activeNodeId, tracingId });
   }
   return Maybe.Nothing();
 }

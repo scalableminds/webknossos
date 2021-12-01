@@ -7,6 +7,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
+import Maybe from "data.maybe";
 
 import type { MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
@@ -18,6 +19,10 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getBasicSkeletonTracing,
+  type BasicSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -29,7 +34,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Store, { type UserBoundingBox } from "oxalis/store";
+import Store, { type UserBoundingBox, type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
@@ -48,7 +53,7 @@ import { setSceneController } from "./scene_controller_provider";
 const CUBE_COLOR = 0x999999;
 
 class SceneController {
-  skeleton: ?Skeleton;
+  skeletons: Array<Skeleton> = [];
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
@@ -281,8 +286,10 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
     this.userBoundingBoxes = [];
 
+    const state = Store.getState();
+
     // Cubes
-    const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
+    const { lowerBoundary, upperBoundary } = getBoundaries(state.dataset);
     this.datasetBoundingBox = new Cube({
       min: lowerBoundary,
       max: upperBoundary,
@@ -292,17 +299,16 @@ class SceneController {
     });
     this.datasetBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
+    const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (Store.getState().tracing.volumes.length > 0) {
+    if (state.tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    if (Store.getState().tracing.skeleton != null) {
-      this.skeleton = new Skeleton();
-      this.rootNode.add(this.skeleton.getRootGroup());
+    if (state.tracing.skeleton != null) {
+      this.addSkeleton(_state => getBasicSkeletonTracing(_state.tracing), true);
     }
 
     this.planes = {
@@ -321,6 +327,15 @@ class SceneController {
 
     // Hide all objects at first, they will be made visible later if needed
     this.stopPlaneMode();
+  }
+
+  addSkeleton(
+    skeletonTracingSelector: OxalisState => Maybe<BasicSkeletonTracing>,
+    supportsPicking: boolean,
+  ): void {
+    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
+    this.skeletons.push(skeleton);
+    this.rootNode.add(skeleton.getRootGroup());
   }
 
   buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
@@ -494,9 +509,9 @@ class SceneController {
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
-    if (this.skeleton) {
-      this.skeleton.getRootGroup().visible = isVisible;
-    }
+    this.skeletons.forEach(skeleton => {
+      skeleton.getRootGroup().visible = isVisible;
+    });
   }
 
   stopPlaneMode(): void {

@@ -175,6 +175,7 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
         title={`The currently active mesh file "${
           currentMeshFile.meshFileName
         }" was computed ${mappingString} when clicking OK.`}
+        overlayStyle={{ maxWidth: 500 }}
         visible={isConfirmVisible}
         onConfirm={async () => {
           setConfirmVisible(false);

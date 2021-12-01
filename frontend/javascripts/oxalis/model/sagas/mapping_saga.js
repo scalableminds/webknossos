@@ -10,6 +10,7 @@ import {
   select,
   take,
   put,
+  fork,
   _actionChannel,
 } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
@@ -18,6 +19,7 @@ import {
   setMappingAction,
   setMappingEnabledAction,
   type SetMappingAction,
+  type SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   fetchMapping,
@@ -47,13 +49,16 @@ export default function* watchActivatedMappings(): Saga<void> {
   );
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield _actionChannel("SET_MAPPING");
-  const mappingChangeActionChannel = yield _actionChannel(["SET_MAPPING", "SET_MAPPING_ENABLED"]);
+  const mappingChangeActionChannel = yield _actionChannel(["SET_MAPPING_ENABLED"]);
   yield* take("WK_READY");
-  yield _takeLatest(setMappingActionChannel, maybeFetchMapping);
+  yield _takeLatest(setMappingActionChannel, maybeFetchMapping, oldActiveMappingByLayer);
   yield _takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
 }
 
-function* maybeReloadData(oldActiveMappingByLayer, action: SetMappingAction): Saga<void> {
+function* maybeReloadData(
+  oldActiveMappingByLayer,
+  action: SetMappingAction | SetMappingEnabledAction,
+): Saga<void> {
   const { layerName } = action;
 
   const oldMapping = getMappingInfo(oldActiveMappingByLayer, layerName);
@@ -78,7 +83,7 @@ function* maybeReloadData(oldActiveMappingByLayer, action: SetMappingAction): Sa
   oldActiveMappingByLayer = activeMappingByLayer;
 }
 
-function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
+function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): Saga<void> {
   const {
     layerName,
     mappingName,
@@ -112,17 +117,25 @@ function* maybeFetchMapping(action: SetMappingAction): Saga<void> {
   const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
   if (!mappingsWithCorrectType.includes(mappingName)) {
     // Mapping does not exist, set mappingName back to null
-    const errorMessage = `Mapping with name ${mappingName} and type ${mappingType} does not exist. Available mappings are ${mappingsWithCorrectType.join(
-      ",",
-    )}.`;
+    const availableMappings = mappingsWithCorrectType.join(",");
+    const availableMappingsString =
+      availableMappings.length > 0
+        ? `Available mappings are ${availableMappings}`
+        : "There are no available mappings";
+    const errorMessage = `Mapping with name ${mappingName} and type ${mappingType} does not exist. ${availableMappingsString}.`;
     message.error({
       content: errorMessage,
       key: MAPPING_MESSAGE_KEY,
+      duration: 10,
     });
     console.error(errorMessage);
     yield* put(setMappingAction(layerName, null, mappingType));
     return;
   }
+
+  // Call maybeReloadData only after it was checked whether the activated mapping is valid, otherwise there would
+  // be a race between the maybeReloadData and maybeFetchMapping sagas
+  yield* fork(maybeReloadData, oldActiveMappingByLayer, action);
 
   if (mappingType !== "JSON") {
     // Only JSON mappings need to be fetched, HDF5 mappings are applied by the server

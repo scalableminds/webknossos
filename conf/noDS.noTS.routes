@@ -1,2 +1,3 @@
-
 -> /api/      webknossos.versioned.Routes
+
+GET  /swagger.json  controllers.ApiHelpController.getResources

@@ -4,21 +4,21 @@ import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { doWithToken } from "admin/admin_rest_api";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getResolutions,
   isSegmentationLayer,
   getByteCountFromLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import ErrorHandling from "libs/error_handling";
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
+import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
-import Store, { type DataLayerType } from "oxalis/store";
+import Store, { type DataLayerType, type VolumeTracing } from "oxalis/store";
 import constants, { type Vector3, type Vector4, MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 
@@ -77,38 +77,44 @@ export async function requestWithFallback(
   const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
-  const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
 
   const getDataStoreUrl = (optLayerName?: string) =>
     `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${optLayerName ||
       layerInfo.name}`;
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
+  const maybeVolumeTracing =
+    layerInfo.tracingId != null ? getVolumeTracingById(state.tracing, layerInfo.tracingId) : null;
+
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  const isTracingLayer = layerInfo.category === "segmentation" ? layerInfo.isTracingLayer : false;
-  const shouldUseDataStore = !isSegmentation || !isTracingLayer;
+  const shouldUseDataStore = maybeVolumeTracing == null;
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
 
-  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch);
+  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch, maybeVolumeTracing);
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
   // The request will only be retried for
   // volume annotations with a fallback layer, for buckets that are missing
   // on the tracing store (buckets that were not annotated)
   const retry =
-    !shouldUseDataStore &&
     missingBucketIndices.length > 0 &&
-    enforceVolumeTracing(state.tracing).fallbackLayer != null;
+    maybeVolumeTracing != null &&
+    maybeVolumeTracing.fallbackLayer != null;
   if (!retry) {
+    return bucketBuffers;
+  }
+  if (maybeVolumeTracing == null) {
+    // Satisfy flow
     return bucketBuffers;
   }
 
   // Request missing buckets from the datastore as a fallback
   const fallbackBatch = missingBucketIndices.map(idx => batch[idx]);
   const fallbackBuffers = await requestFromStore(
-    getDataStoreUrl(enforceVolumeTracing(state.tracing).fallbackLayer),
+    getDataStoreUrl(maybeVolumeTracing.fallbackLayer),
     layerInfo,
     fallbackBatch,
+    maybeVolumeTracing,
     true,
   );
 
@@ -126,6 +132,7 @@ export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
+  maybeVolumeTracing: ?VolumeTracing,
   isVolumeFallback: boolean = false,
 ): Promise<Array<?Uint8Array>> {
   const state = Store.getState();
@@ -147,8 +154,8 @@ export async function requestFromStore(
 
   const resolutions = getResolutions(state.dataset);
   const version =
-    !isVolumeFallback && isSegmentation && state.tracing.volume != null
-      ? state.tracing.volume.version
+    !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
+      ? maybeVolumeTracing.version
       : null;
 
   const bucketInfo = batch.map(zoomedAddress =>
@@ -213,7 +220,7 @@ function sliceBufferIntoPieces(
   return bucketBuffers;
 }
 
-export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
+export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
   const items = [];
   for (const bucket of batch) {
     const data = bucket.getData();
@@ -226,5 +233,5 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     const compressedBase64 = await byteArrayToLz4Base64(byteArray);
     items.push(updateBucket(bucketInfo, compressedBase64));
   }
-  Store.dispatch(pushSaveQueueTransaction(items, "volume"));
+  Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

@@ -26,6 +26,7 @@ export default {
           "mitochondria",
           "astrocyte-full",
         ],
+        tracingId: null,
       },
     ],
     scale: [11.239999771118164, 11.239999771118164, 28],

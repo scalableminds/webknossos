@@ -30,6 +30,10 @@ export const wkReadyAction = () => ({
   type: "WK_READY",
 });
 
+export const sceneControllerReadyAction = () => ({
+  type: "SCENE_CONTROLLER_READY",
+});
+
 export const restartSagaAction = () => ({
   type: "RESTART_SAGA",
 });

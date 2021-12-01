@@ -12,7 +12,10 @@ import {
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
-import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveCellId,
+  getActiveSegmentationTracing,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getAddressSpaceDimensions,
   getLookupBufferSize,
@@ -526,7 +529,8 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => Utils.maybe(getActiveCellId)(storeState.tracing.volume).getOrElse(0),
+          storeState =>
+            Utils.maybe(getActiveCellId)(getActiveSegmentationTracing(storeState)).getOrElse(0),
           () => this.updateActiveCellId(),
           true,
         ),
@@ -573,7 +577,9 @@ class PlaneMaterialFactory {
   }
 
   updateActiveCellId() {
-    const activeCellId = Utils.maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
+    const activeCellId = Utils.maybe(getActiveCellId)(
+      getActiveSegmentationTracing(Store.getState()),
+    ).getOrElse(0);
     const segmentationLayer = Model.getVisibleSegmentationLayer();
     if (segmentationLayer == null) {
       return;

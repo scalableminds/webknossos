@@ -1,18 +1,19 @@
 // @flow
 import type {
   APIAnnotation,
+  APIAnnotationVisibility,
+  APIMeshFile,
+  EditableLayerProperties,
   LocalMeshMetaData,
   MeshMetaData,
   RemoteMeshMetaData,
-  APIAnnotationVisibility,
-  APIMeshFile,
 } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
 import type {
   UserBoundingBox,
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
 
 type InitializeAnnotationAction = {
   type: "INITIALIZE_ANNOTATION",
@@ -27,6 +28,12 @@ type SetAnnotationNameAction = {
 type SetAnnotationVisibilityAction = {
   type: "SET_ANNOTATION_VISIBILITY",
   visibility: APIAnnotationVisibility,
+};
+
+export type EditAnnotationLayerAction = {
+  type: "EDIT_ANNOTATION_LAYER",
+  tracingId: string,
+  layerProperties: EditableLayerProperties,
 };
 
 type SetAnnotationDescriptionAction = {
@@ -174,6 +181,7 @@ export type AnnotationActionTypes =
   | InitializeAnnotationAction
   | SetAnnotationNameAction
   | SetAnnotationVisibilityAction
+  | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
@@ -233,6 +241,15 @@ export const setAnnotationVisibilityAction = (
 ): SetAnnotationVisibilityAction => ({
   type: "SET_ANNOTATION_VISIBILITY",
   visibility,
+});
+
+export const editAnnotationLayerAction = (
+  tracingId: string,
+  layerProperties: EditableLayerProperties,
+): EditAnnotationLayerAction => ({
+  type: "EDIT_ANNOTATION_LAYER",
+  tracingId,
+  layerProperties,
 });
 
 export const setAnnotationDescriptionAction = (

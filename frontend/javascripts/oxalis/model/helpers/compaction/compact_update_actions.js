@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 
-import type { Tracing } from "oxalis/store";
+import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
 import { type UpdateAction, moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
 
@@ -140,7 +140,7 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
 
 export default function compactUpdateActions(
   updateActions: Array<UpdateAction>,
-  tracing: Tracing,
+  tracing: SkeletonTracing | VolumeTracing,
 ): Array<UpdateAction> {
   return compactToggleActions(
     compactDeletedTrees(compactMovedNodesAndEdges(updateActions)),

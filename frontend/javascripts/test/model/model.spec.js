@@ -65,9 +65,10 @@ test.beforeEach(t => {
     .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
     .returns(Promise.resolve(_.cloneDeep(DATASET)));
 
-  // The following code assumes non-hybrid tracings
-  const contentType = ANNOTATION.tracing.skeleton != null ? "skeleton" : "volume";
-  const tracingId = ANNOTATION.tracing[contentType];
+  // The following code assumes a skeleton tracing (note that ANNOTATION is imported from
+  // skeletontracing_server_objects.js)
+  const contentType = "skeleton";
+  const { tracingId } = ANNOTATION.annotationLayers[0];
 
   Request.receiveJSON
     .withArgs(`${ANNOTATION.tracingStore.url}/tracings/${contentType}/${tracingId}`)

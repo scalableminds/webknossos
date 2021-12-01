@@ -8,7 +8,7 @@
 
 import _ from "lodash";
 
-import type { SkeletonTracing, Tracing, Tree } from "oxalis/store";
+import type { SkeletonTracing, Tree, VolumeTracing } from "oxalis/store";
 import {
   type UpdateAction,
   type UpdateTreeVisibilityUpdateAction,
@@ -138,13 +138,13 @@ function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncesto
 
 export default function compactToggleActions(
   updateActions: Array<UpdateAction>,
-  tracing: Tracing,
+  tracing: SkeletonTracing | VolumeTracing,
 ): Array<UpdateAction> {
-  const skeletonTracing = tracing.skeleton;
-  if (skeletonTracing == null) {
+  if (tracing.type !== "skeleton") {
     // Don't do anything if this is not a skeleton tracing
     return updateActions;
   }
+  const skeletonTracing = tracing;
 
   // Extract the toggleActions which we are interested in
   const [_toggleActions, remainingActions] = _.partition(

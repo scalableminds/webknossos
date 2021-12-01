@@ -312,18 +312,6 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getResolutionInfoOfSegmentationTracingLayer(dataset: APIDataset): ResolutionInfo {
-  const segmentationLayer = getSegmentationTracingLayer(dataset);
-  if (!segmentationLayer) {
-    return new ResolutionInfo([]);
-  }
-  return getResolutionInfo(segmentationLayer.resolutions);
-}
-
-export const getResolutionInfoOfSegmentationTracingLayer = memoizeOne(
-  _getResolutionInfoOfSegmentationTracingLayer,
-);
-
 function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): ResolutionInfo {
   const segmentationLayer = getVisibleSegmentationLayer(state);
   if (!segmentationLayer) {
@@ -656,22 +644,6 @@ export function getFirstSegmentationLayer(
   return null;
 }
 
-export function getSegmentationTracingLayer(
-  dataset: APIMaybeUnimportedDataset,
-): ?APISegmentationLayer {
-  const tracingLayers = getSegmentationLayers(dataset).filter(layer => layer.isTracingLayer);
-  if (tracingLayers.length > 0) {
-    return tracingLayers[0];
-  } else if (tracingLayers.length > 1) {
-    throw new Error("webKnossos only supports one volume tracing layer per annotation currently.");
-  }
-  return null;
-}
-
-export function getSegmentationTracingOrVisibleLayer(state: OxalisState): ?APISegmentationLayer {
-  return getSegmentationTracingLayer(state.dataset) || getVisibleSegmentationLayer(state);
-}
-
 export function getSegmentationLayers(
   dataset: APIMaybeUnimportedDataset,
 ): Array<APISegmentationLayer> {
@@ -785,69 +757,6 @@ export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
   _getUnrenderableLayerInfosForCurrentZoom,
 );
 
-/*
-  This function returns the resolution and zoom step in which the segmentation
-  layer is currently rendered (if it is rendered). These properties should be used
-  when labeling volume data.
- */
-function _getRenderableResolutionForSegmentationTracing(
-  state: OxalisState,
-): ?{ resolution: Vector3, zoomStep: number } {
-  const { dataset } = state;
-  const requestedZoomStep = getRequestLogZoomStep(state);
-  const { renderMissingDataBlack } = state.datasetConfiguration;
-  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
-  const resolutionInfo = getResolutionInfoOfSegmentationTracingLayer(dataset);
-  const segmentationLayer = getVisibleSegmentationLayer(state);
-
-  if (!segmentationLayer) {
-    return null;
-  }
-
-  // Check whether the segmentation layer is enabled
-  const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
-  if (segmentationSettings.isDisabled) {
-    return null;
-  }
-
-  // Check whether the requested zoom step exists
-  if (resolutionInfo.hasIndex(requestedZoomStep)) {
-    return {
-      zoomStep: requestedZoomStep,
-      resolution: resolutionInfo.getResolutionByIndexOrThrow(requestedZoomStep),
-    };
-  }
-
-  // Since `renderMissingDataBlack` is enabled, the fallback resolutions
-  // should not be considered.
-  // rendered.
-  if (renderMissingDataBlack) {
-    return null;
-  }
-
-  // The current resolution is missing and fallback rendering
-  // is activated. Thus, check whether one of the fallback
-  // zoomSteps can be rendered.
-  for (
-    let fallbackZoomStep = requestedZoomStep + 1;
-    fallbackZoomStep <= requestedZoomStep + maxZoomStepDiff;
-    fallbackZoomStep++
-  ) {
-    if (resolutionInfo.hasIndex(fallbackZoomStep)) {
-      return {
-        zoomStep: fallbackZoomStep,
-        resolution: resolutionInfo.getResolutionByIndexOrThrow(fallbackZoomStep),
-      };
-    }
-  }
-
-  return null;
-}
-
-export const getRenderableResolutionForSegmentationTracing = reuseInstanceOnEquality(
-  _getRenderableResolutionForSegmentationTracing,
-);
-
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const organizationName = dataset.owningOrganization;
@@ -889,6 +798,9 @@ export function isLayerVisible(
   viewMode: ViewMode,
 ): boolean {
   const layerConfig = datasetConfiguration.layers[layerName];
+  if (!layerConfig) {
+    return false;
+  }
   const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
   const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
 
@@ -934,13 +846,3 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
     layer ? layer.name : null,
   );
 }
-
-export function getMappingInfoForTracingLayer(state: OxalisState): ActiveMappingInfo {
-  const layer = getSegmentationTracingLayer(state.dataset);
-  return getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    layer ? layer.name : null,
-  );
-}
-
-export default {};

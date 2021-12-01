@@ -1,7 +1,4 @@
-/**
- * tracing_settings_view.js
- * @flow
- */
+// @flow
 
 import { Button, Col, Divider, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
@@ -15,13 +12,12 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { useState } from "react";
+import React from "react";
 import _ from "lodash";
 import classnames from "classnames";
 
 import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
-import { AsyncButton, AsyncIconButton } from "components/async_clickables";
-import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
+import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -48,14 +44,12 @@ import {
   getLayerByName,
   getResolutionInfo,
   getResolutions,
-  getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
-  getVolumeTracingLayers,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setNodeRadiusAction,
@@ -89,6 +83,8 @@ import api from "oxalis/api/internal_api";
 import features from "features";
 import messages, { settings } from "messages";
 
+import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
+import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
 
@@ -117,60 +113,6 @@ type DatasetSettingsProps = {|
   controlMode: ControlMode,
   isArbitraryMode: boolean,
 |};
-
-function DownsampleVolumeModal({ hideDownsampleVolumeModal, magsToDownsample, volumeTracing }) {
-  const [isDownsampling, setIsDownsampling] = useState(false);
-
-  const handleTriggerDownsampling = async () => {
-    setIsDownsampling(true);
-    await api.tracing.downsampleSegmentation(volumeTracing.tracingId);
-    setIsDownsampling(false);
-  };
-
-  return (
-    <Modal
-      title="Downsample Volume Annotation"
-      onCancel={isDownsampling ? null : hideDownsampleVolumeModal}
-      footer={null}
-      width={800}
-      maskClosable={false}
-    >
-      <p>
-        This annotation does not have volume annotation data in all resolutions. Consequently,
-        annotation data cannot be rendered at all zoom values. By clicking &quot;Downsample&quot;,
-        webKnossos will use the best resolution of the volume data to create all dependent
-        resolutions.
-      </p>
-
-      <p>
-        The following resolutions will be added when clicking &quot;Downsample&quot;:{" "}
-        {magsToDownsample.map(mag => mag.join("-")).join(", ")}.
-      </p>
-
-      <div>
-        The cause for the missing resolutions can be one of the following:
-        <ul>
-          <li>
-            The annotation was created before webKnossos supported multi-resolution volume tracings.
-          </li>
-          <li>An old annotation was uploaded which did not include all resolutions.</li>
-          <li>The annotation was created in a task that was restricted to certain resolutions.</li>
-          <li>The dataset was mutated to have more resolutions.</li>
-        </ul>
-      </div>
-
-      <p style={{ fontWeight: "bold" }}>
-        Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
-        Also, the version history of the volume data will be reset.
-      </p>
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-        <AsyncButton onClick={handleTriggerDownsampling} type="primary">
-          Downsample
-        </AsyncButton>
-      </div>
-    </Modal>
-  );
-}
 
 type State = {|
   // If this is set to not-null, the downsampling modal
@@ -887,50 +829,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </div>
     );
   }
-}
-
-function AddVolumeLayerModal({ dataset, onCancel }) {
-  // const [isDownsampling, setIsDownsampling] = useState(false);
-  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState(null);
-
-  const segmentationLayers = getSegmentationLayers(dataset);
-  const volumeTracingLayers = getVolumeTracingLayers(dataset);
-
-  const availableSegmentationLayers = _.differenceWith(segmentationLayers, volumeTracingLayers);
-
-  const handleAddVolumeLayer = () => {
-    console.log("todo: handleAddVolumeLayer");
-    if (selectedSegmentationLayerIndex == null) {
-      console.log("create fresh layer");
-    } else {
-      const newLayer = availableSegmentationLayers[selectedSegmentationLayerIndex];
-      console.log("base new layer on", newLayer);
-    }
-  };
-
-  return (
-    <Modal
-      title="Add Volume Annotation Layer"
-      footer={null}
-      width={500}
-      maskClosable={false}
-      onCancel={onCancel}
-      visible
-    >
-      <NewVolumeLayerSelection
-        dataset={dataset}
-        segmentationLayers={availableSegmentationLayers}
-        selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
-        setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
-      />
-      <Row type="flex" justify="center" align="middle">
-        <Button onClick={handleAddVolumeLayer} type="primary">
-          <PlusOutlined />
-          Add Volume Annotation Layer
-        </Button>
-      </Row>
-    </Modal>
-  );
 }
 
 const mapStateToProps = (state: OxalisState) => ({

@@ -1783,7 +1783,7 @@ export function getSynapticPartnersOfAgglomerate(
   // );
 
   // TODO: Replace mock with server call
-  return [1, 2, 8, 9, 16, 19, 23, 29, 43];
+  return [2, 8, 9, 16, 19, 23, 29, 43];
 }
 
 export function getSynapsesOfAgglomeratePairs(
@@ -1812,7 +1812,6 @@ export function getSynapsesOfAgglomeratePairs(
 
   // TODO: Replace mock with server call
   return [
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
     [64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84],
     [85],
     [86],

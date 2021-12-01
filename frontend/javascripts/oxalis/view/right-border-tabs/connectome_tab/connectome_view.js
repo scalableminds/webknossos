@@ -253,9 +253,19 @@ class ConnectomeView extends React.Component<Props, State> {
     evt: { selected: boolean, selectedNodes: Array<TreeNode>, node: TreeNode, event: string },
   ) => {
     const { data } = evt.node;
-    if (data.type === "synapse") {
+    if (data.type === "synapse" && evt.selected) {
       api.tracing.setCameraPosition(data.position);
-    } else if (data.type === "segment") {
+    }
+  };
+
+  handleCheck = (
+    checkedKeys: Array<string>,
+    evt: { checked: boolean, checkedNodes: Array<TreeNode>, node: TreeNode, event: string },
+  ) => {
+    const { data } = evt.node;
+    if (data.type === "synapse" && evt.checked) {
+      api.tracing.setCameraPosition(data.position);
+    } else if (data.type === "segment" && evt.checked) {
       const { visibleSegmentationLayer } = this.props;
       const { currentConnectomeFile } = this.state;
       if (
@@ -282,7 +292,7 @@ class ConnectomeView extends React.Component<Props, State> {
         value={activeSegmentIdString}
         onPressEnter={this.handleChangeActiveSegment}
         placeholder="Show Synaptic Connections for Segment ID"
-        style={{ width: "50%" }}
+        style={{ width: "280px" }}
       />
     );
   }
@@ -317,12 +327,23 @@ class ConnectomeView extends React.Component<Props, State> {
             return (
               <>
                 {this.getConnectomeHeader()}
-                <Tree
-                  checkable
-                  showLine={{ showLeafIcon: false }}
-                  onSelect={this.handleSelect}
-                  treeData={convertConnectomeToTreeData(this.state.connectomeData)}
-                />
+                {this.state.activeSegmentId == null ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="No segment selected. Use the input field above to enter a segment ID."
+                  />
+                ) : null}
+                {this.state.connectomeData != null ? (
+                  <Tree
+                    checkable
+                    checkStrictly
+                    defaultExpandAll
+                    showLine={{ showLeafIcon: false }}
+                    onSelect={this.handleSelect}
+                    onCheck={this.handleCheck}
+                    treeData={convertConnectomeToTreeData(this.state.connectomeData)}
+                  />
+                ) : null}
               </>
             );
           }}

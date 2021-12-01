@@ -120,8 +120,8 @@ function* maybeFetchMapping(oldActiveMappingByLayer, action: SetMappingAction): 
     const availableMappings = mappingsWithCorrectType.join(",");
     const availableMappingsString =
       availableMappings.length > 0
-        ? `Available mappings are ${availableMappings}`
-        : "There are no available mappings";
+        ? `Available ${mappingType} mappings are ${availableMappings}`
+        : `There are no available ${mappingType} mappings`;
     const errorMessage = `Mapping with name ${mappingName} and type ${mappingType} does not exist. ${availableMappingsString}.`;
     message.error({
       content: errorMessage,

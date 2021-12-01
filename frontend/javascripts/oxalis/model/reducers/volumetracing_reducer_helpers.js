@@ -1,25 +1,36 @@
-/**
- * volumetracing_reducer_helpers.js
- * @flow
- *
- * THESE HELPERFUNCTIONS MUST ONLY BE CALLED FROM A REDUCER
- *
- */
-
+// @flow
 import update from "immutability-helper";
 
 import { type ContourMode, type Vector3 } from "oxalis/constants";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
+import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
+import { updateKey } from "oxalis/model/helpers/deep_update";
+
+export function updateVolumeTracing(
+  state: OxalisState,
+  volumeTracingId: string,
+  shape: $Shape<VolumeTracing>,
+) {
+  const newVolumes = state.tracing.volumes.map(volume => {
+    if (volume.tracingId === volumeTracingId) {
+      return {
+        ...volume,
+        ...shape,
+      };
+    } else {
+      return volume;
+    }
+  });
+
+  return updateKey(state, "tracing", {
+    volumes: newVolumes,
+  });
+}
 
 export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
-  return update(state, {
-    tracing: {
-      volume: {
-        activeCellId: { $set: id },
-      },
-    },
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    activeCellId: id,
   });
 }
 
@@ -36,12 +47,8 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
     id = Math.max(activeCellId, maxCellId) + 1;
   }
 
-  return update(state, {
-    tracing: {
-      volume: {
-        activeCellId: { $set: id },
-      },
-    },
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    activeCellId: id,
   });
 }
 
@@ -58,12 +65,8 @@ export function updateDirectionReducer(
       centroid[2] - volumeTracing.lastCentroid[2],
     ]);
   }
-  return update(newState, {
-    tracing: {
-      volume: {
-        lastCentroid: { $set: centroid },
-      },
-    },
+  return updateVolumeTracing(newState, volumeTracing.tracingId, {
+    lastCentroid: centroid,
   });
 }
 
@@ -78,22 +81,14 @@ export function addToLayerReducer(
     return state;
   }
 
-  return update(state, {
-    tracing: {
-      volume: {
-        contourList: { $push: [position] },
-      },
-    },
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    contourList: [...volumeTracing.contourList, position],
   });
 }
 
-export function resetContourReducer(state: OxalisState) {
-  return update(state, {
-    tracing: {
-      volume: {
-        contourList: { $set: [] },
-      },
-    },
+export function resetContourReducer(state: OxalisState, volumeTracing: VolumeTracing) {
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    contourList: [],
   });
 }
 
@@ -103,22 +98,18 @@ export function hideBrushReducer(state: OxalisState) {
   });
 }
 
-export function setContourTracingModeReducer(state: OxalisState, mode: ContourMode) {
-  return update(state, {
-    tracing: {
-      volume: {
-        contourTracingMode: { $set: mode },
-      },
-    },
+export function setContourTracingModeReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  mode: ContourMode,
+) {
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    contourTracingMode: mode,
   });
 }
 
-export function setMaxCellReducer(state: OxalisState, id: number) {
-  return update(state, {
-    tracing: {
-      volume: {
-        maxCellId: { $set: id },
-      },
-    },
+export function setMaxCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
+  return updateVolumeTracing(state, volumeTracing.tracingId, {
+    maxCellId: id,
   });
 }

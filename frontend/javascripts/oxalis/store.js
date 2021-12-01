@@ -4,8 +4,8 @@
  */
 
 import { createStore, applyMiddleware, type Dispatch } from "redux";
-import createSagaMiddleware from "redux-saga";
 import { enableBatching } from "redux-batched-actions";
+import createSagaMiddleware from "redux-saga";
 
 import type {
   APIAllowedMode,
@@ -23,14 +23,11 @@ import type {
   APITracingStore,
   APIUser,
   APIUserBase,
+  AnnotationLayerDescriptor,
   MeshMetaData,
   TracingType,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
-import type { Matrix4x4 } from "libs/mjs";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import {
   type BoundingBoxType,
   type ContourMode,
@@ -46,6 +43,10 @@ import {
   type Vector3,
   type AnnotationTool,
 } from "oxalis/constants";
+import type { Matrix4x4 } from "libs/mjs";
+import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -188,6 +189,7 @@ export type Annotation = {|
   +annotationId: string,
   +restrictions: RestrictionsAndSettings,
   +visibility: AnnotationVisibility,
+  +annotationLayers: Array<AnnotationLayerDescriptor>,
   +tags: Array<string>,
   +description: string,
   +name: string,
@@ -257,7 +259,7 @@ export type ReadOnlyTracing = {|
 export type HybridTracing = {|
   ...Annotation,
   +skeleton: ?SkeletonTracing,
-  +volume: ?VolumeTracing,
+  +volumes: Array<VolumeTracing>,
   +readOnly: ?ReadOnlyTracing,
 |};
 
@@ -280,8 +282,8 @@ export type TraceOrViewCommand =
 
 export type DatasetLayerConfiguration = {|
   +color: Vector3,
-  brightness?: number,
-  contrast?: number,
+  +brightness?: number,
+  +contrast?: number,
   +alpha: number,
   +intensityRange: Vector2,
   +min?: number,
@@ -391,7 +393,7 @@ export type Script = APIScript;
 
 export type Task = APITask;
 
-export type SaveQueueEntry = {
+export type SaveQueueEntry = {|
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
@@ -400,7 +402,7 @@ export type SaveQueueEntry = {
   transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-};
+|};
 
 export type ProgressInfo = {
   +processedActionCount: number,
@@ -416,9 +418,16 @@ export type SaveState = {
   +isBusyInfo: IsBusyInfo,
   +queue: {
     +skeleton: Array<SaveQueueEntry>,
-    +volume: Array<SaveQueueEntry>,
+    +volumes: {
+      [tracingId: string]: Array<SaveQueueEntry>,
+    },
   },
-  +lastSaveTimestamp: number,
+  +lastSaveTimestamp: {|
+    +skeleton: number,
+    +volumes: {
+      [tracingId: string]: number,
+    },
+  |},
   +progressInfo: ProgressInfo,
 };
 

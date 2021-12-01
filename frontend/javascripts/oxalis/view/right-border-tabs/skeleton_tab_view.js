@@ -11,6 +11,7 @@ import {
   Tooltip,
   notification,
 } from "antd";
+import type { Dispatch } from "redux";
 import {
   DownloadOutlined,
   DownOutlined,
@@ -18,28 +19,36 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import type { Dispatch } from "redux";
-import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
+import { connect } from "react-redux";
 import { saveAs } from "file-saver";
+import JSZip from "jszip";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+
+import { type Action } from "oxalis/model/actions/actions";
+import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import Model from "oxalis/model";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getActiveTree,
   getActiveGroup,
   getTree,
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
+import {
+  importVolumeTracingAction,
+  setMaxCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
 import {
   serializeToNml,
@@ -49,7 +58,6 @@ import {
   NmlParseError,
 } from "oxalis/model/helpers/nml_helpers";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setTreeNameAction,
   createTreeAction,
@@ -67,16 +75,12 @@ import {
   setTreeGroupsAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  importVolumeTracingAction,
-  setMaxCellAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
-import { type Action } from "oxalis/model/actions/actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
+import Model from "oxalis/model";
 import Store, {
   type OxalisState,
   type SkeletonTracing,
@@ -91,11 +95,9 @@ import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
-import JSZip from "jszip";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 
-import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
+import DeleteGroupModalView from "./delete_group_modal_view";
 
 const InputGroup = Input.Group;
 
@@ -219,14 +221,33 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           const dataFile = new File([dataBlob], dataFileName);
 
           await Model.ensureSavedState();
-          const { tracing, dataset } = Store.getState();
-          const oldVolumeTracing = tracing.volume;
+          const storeState = Store.getState();
+          const { tracing, dataset } = storeState;
+          if (tracing.volumes.length === 0) {
+            throw new Error("A volume tracing must already exist when importing a volume tracing.");
+          }
+          const oldVolumeTracing = getActiveSegmentationTracing(storeState);
+          if (oldVolumeTracing == null) {
+            throw new Error(
+              "Ensure that a volume tracing layer is visible when importing a volume tracing.",
+            );
+          }
 
-          const newLargestSegmentId = await importVolumeTracing(tracing, dataFile);
+          const newLargestSegmentId = await importVolumeTracing(
+            tracing,
+            oldVolumeTracing,
+            dataFile,
+          );
 
           if (oldVolumeTracing) {
             Store.dispatch(importVolumeTracingAction());
-            Store.dispatch(setVersionNumberAction(oldVolumeTracing.version + 1, "volume"));
+            Store.dispatch(
+              setVersionNumberAction(
+                oldVolumeTracing.version + 1,
+                "volume",
+                oldVolumeTracing.tracingId,
+              ),
+            );
             Store.dispatch(setMaxCellAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
             await api.data.reloadBuckets(oldVolumeTracing.tracingId);

@@ -127,16 +127,19 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def duplicateOrCreateSkeletonBase(baseAnnotation: Annotation,
                                             params: TaskParameters,
                                             tracingStoreClient: WKRemoteTracingStoreClient): Fox[String] =
-    baseAnnotation.skeletonTracingId
-      .map(id => tracingStoreClient.duplicateSkeletonTracing(id))
-      .getOrElse(
-        tracingStoreClient.saveSkeletonTracing(
-          annotationService.createSkeletonTracingBase(
-            params.dataSet,
-            params.boundingBox,
-            params.editPosition,
-            params.editRotation
-          )))
+    for {
+      baseSkeletonTracingIdOpt <- baseAnnotation.skeletonTracingId
+      newTracingId <- baseSkeletonTracingIdOpt
+        .map(id => tracingStoreClient.duplicateSkeletonTracing(id))
+        .getOrElse(
+          tracingStoreClient.saveSkeletonTracing(
+            annotationService.createSkeletonTracingBase(
+              params.dataSet,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation
+            )))
+    } yield newTracingId
 
   // Used in create (without files) in case of base annotation
   private def duplicateOrCreateVolumeBase(
@@ -145,20 +148,23 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       tracingStoreClient: WKRemoteTracingStoreClient,
       organizationId: ObjectId,
       resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
-    baseAnnotation.volumeTracingId
-      .map(id => tracingStoreClient.duplicateVolumeTracing(id, resolutionRestrictions = resolutionRestrictions))
-      .getOrElse(
-        annotationService
-          .createVolumeTracingBase(
-            params.dataSet,
-            organizationId,
-            params.boundingBox,
-            params.editPosition,
-            params.editRotation,
-            volumeShowFallbackLayer = false,
-            resolutionRestrictions = resolutionRestrictions
-          )
-          .flatMap(tracingStoreClient.saveVolumeTracing(_, resolutionRestrictions = resolutionRestrictions)))
+    for {
+      volumeTracingOpt <- baseAnnotation.volumeTracingId
+      newVolumeTracingId <- volumeTracingOpt
+        .map(id => tracingStoreClient.duplicateVolumeTracing(id, resolutionRestrictions = resolutionRestrictions))
+        .getOrElse(
+          annotationService
+            .createVolumeTracingBase(
+              params.dataSet,
+              organizationId,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation,
+              volumeShowFallbackLayer = false,
+              resolutionRestrictions = resolutionRestrictions
+            )
+            .flatMap(tracingStoreClient.saveVolumeTracing(_, resolutionRestrictions = resolutionRestrictions)))
+    } yield newVolumeTracingId
 
   // Used in create (without files). If base annotations were used, this does nothing.
   def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(

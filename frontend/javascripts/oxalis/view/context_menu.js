@@ -33,6 +33,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
@@ -753,7 +754,7 @@ function mapStateToProps(state: OxalisState): StateProps {
   const someTracing = maybeGetSomeTracing(state.tracing);
   return {
     skeletonTracing: state.tracing.skeleton,
-    volumeTracing: state.tracing.volume,
+    volumeTracing: getActiveSegmentationTracing(state),
     datasetScale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,

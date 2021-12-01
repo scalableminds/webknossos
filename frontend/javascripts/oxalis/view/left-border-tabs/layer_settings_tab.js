@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Row, Switch, Tooltip, Modal } from "antd";
+import { Button, Col, Divider, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -12,6 +12,7 @@ import {
   ScanOutlined,
   StopOutlined,
   WarningOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { useState } from "react";
@@ -20,6 +21,7 @@ import classnames from "classnames";
 
 import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
+import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -41,17 +43,19 @@ import {
 import {
   getDefaultIntensityRangeOfLayer,
   getElementClass,
+  isColorLayer as getIsColorLayer,
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
   getResolutions,
-  isColorLayer as getIsColorLayer,
+  getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
   getReadableNameByVolumeTracingId,
   getVolumeDescriptorById,
   getVolumeTracingById,
+  getVolumeTracingLayers,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setNodeRadiusAction,
@@ -172,6 +176,7 @@ type State = {|
   // If this is set to not-null, the downsampling modal
   // is shown for that VolumeTracing
   volumeTracingToDownsample: ?VolumeTracing,
+  isAddVolumeLayerModalVisible: boolean,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
@@ -179,6 +184,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   state = {
     volumeTracingToDownsample: null,
+    isAddVolumeLayerModalVisible: false,
   };
 
   componentWillMount() {
@@ -763,7 +769,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </Tooltip>
         <span style={{ fontWeight: 700, wordWrap: "break-word" }}>Skeletons</span>
         {showSkeletons ? (
-          <React.Fragment>
+          <div style={{ marginLeft: 10 }}>
             <LogSliderSetting
               label={settings.nodeRadius}
               min={userSettings.nodeRadius.minimum}
@@ -820,7 +826,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               value={userConfiguration.highlightCommentedNodes}
               onChange={this.onChangeUser.highlightCommentedNodes}
             />{" "}
-          </React.Fragment>
+          </div>
         ) : null}
       </React.Fragment>
     );
@@ -834,18 +840,36 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     this.setState({ volumeTracingToDownsample: null });
   };
 
+  showAddVolumeLayerModal = () => {
+    this.setState({ isAddVolumeLayerModalVisible: true });
+  };
+
+  hideAddVolumeLayerModal = () => {
+    this.setState({ isAddVolumeLayerModalVisible: false });
+  };
+
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const layerSettings = Object.entries(layers).map(entry => {
-      const [layerName, layer] = entry;
-      const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
-      // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
-      return this.getLayerSettings(layerName, layer, isColorLayer);
-    });
+    const layerSettings = _.sortBy(
+      _.entries(layers).map(entry => {
+        const [layerName, layer] = entry;
+        const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
+        return { layerName, layer, isColorLayer };
+      }),
+      el => !el.isColorLayer,
+    ).map(el => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
     return (
       <div className="tracing-settings-menu">
         {layerSettings}
         {this.getSkeletonLayer()}
+        <Divider />
+        <Row type="flex" justify="center" align="middle">
+          <Button onClick={this.showAddVolumeLayerModal}>
+            <PlusOutlined />
+            Add Volume Annotation Layer
+          </Button>
+        </Row>
+
         {this.state.volumeTracingToDownsample != null ? (
           <DownsampleVolumeModal
             hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
@@ -853,9 +877,60 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
           />
         ) : null}
+
+        {this.state.isAddVolumeLayerModalVisible ? (
+          <AddVolumeLayerModal
+            dataset={this.props.dataset}
+            onCancel={this.hideAddVolumeLayerModal}
+          />
+        ) : null}
       </div>
     );
   }
+}
+
+function AddVolumeLayerModal({ dataset, onCancel }) {
+  // const [isDownsampling, setIsDownsampling] = useState(false);
+  const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState(null);
+
+  const segmentationLayers = getSegmentationLayers(dataset);
+  const volumeTracingLayers = getVolumeTracingLayers(dataset);
+
+  const availableSegmentationLayers = _.differenceWith(segmentationLayers, volumeTracingLayers);
+
+  const handleAddVolumeLayer = () => {
+    console.log("todo: handleAddVolumeLayer");
+    if (selectedSegmentationLayerIndex == null) {
+      console.log("create fresh layer");
+    } else {
+      const newLayer = availableSegmentationLayers[selectedSegmentationLayerIndex];
+      console.log("base new layer on", newLayer);
+    }
+  };
+
+  return (
+    <Modal
+      title="Add Volume Annotation Layer"
+      footer={null}
+      width={500}
+      maskClosable={false}
+      onCancel={onCancel}
+      visible
+    >
+      <NewVolumeLayerSelection
+        dataset={dataset}
+        segmentationLayers={availableSegmentationLayers}
+        selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
+        setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
+      />
+      <Row type="flex" justify="center" align="middle">
+        <Button onClick={handleAddVolumeLayer} type="primary">
+          <PlusOutlined />
+          Add Volume Annotation Layer
+        </Button>
+      </Row>
+    </Modal>
+  );
 }
 
 const mapStateToProps = (state: OxalisState) => ({

@@ -1,4 +1,12 @@
 // @flow
+import { type APIAnnotation, APIAnnotationTypeEnum } from "types/api_flow_types";
+import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import {
+  getNullableSkeletonTracing,
+  getSkeletonDescriptor,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   resetDatabase,
   replaceVolatileValues,
@@ -6,9 +14,6 @@ import {
   tokenUserA,
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
-import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 import * as api from "admin/admin_rest_api";
@@ -111,7 +116,8 @@ test.serial("editAnnotation()", async t => {
   t.is(editedAnnotation.visibility, newVisibility);
   t.is(editedAnnotation.description, newDescription);
   t.is(editedAnnotation.id, annotationId);
-  t.is(editedAnnotation.tracing.skeleton, "ae417175-f7bb-4a34-8187-d9c3b50143af");
+  t.is(editedAnnotation.annotationLayers[0].typ, "Skeleton");
+  t.is(editedAnnotation.annotationLayers[0].tracingId, "ae417175-f7bb-4a34-8187-d9c3b50143af");
   t.snapshot(replaceVolatileValues(editedAnnotation), { id: "annotations-editAnnotation" });
 
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
@@ -154,36 +160,36 @@ test.serial("createExplorational() and finishAnnotation()", async t => {
   t.is(finishedAnnotation.state, "Finished");
 });
 
-test.serial("getTracingForAnnotations()", async t => {
+test.serial("getTracingsForAnnotation()", async t => {
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", null);
 
-  const tracing = await api.getTracingForAnnotations(createdExplorational);
-  writeFlowCheckingFile(tracing, "tracing", "HybridServerTracing");
-  t.snapshot(replaceVolatileValues(tracing.skeleton), {
+  const tracings = await api.getTracingsForAnnotation(createdExplorational);
+  writeFlowCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
+  t.snapshot(replaceVolatileValues(tracings[0]), {
     id: "annotations-tracing",
   });
 });
 
-test.serial("getTracingForAnnotations() for volume", async t => {
+test.serial("getTracingsForAnnotation() for volume", async t => {
   const createdExplorational = await api.createExplorational(dataSetId, "volume", null);
 
-  const tracing = await api.getTracingForAnnotations(createdExplorational);
-  writeFlowCheckingFile(tracing, "tracing-volume", "HybridServerTracing");
-  t.snapshot(replaceVolatileValues(tracing.volume), {
+  const tracings = await api.getTracingsForAnnotation(createdExplorational);
+  writeFlowCheckingFile(tracings[0], "tracing-volume", "ServerVolumeTracing");
+  t.snapshot(replaceVolatileValues(tracings[0]), {
     id: "annotations-tracing-volume",
   });
 });
 
-test.serial("getTracingForAnnotations() for hybrid", async t => {
+test.serial("getTracingsForAnnotation() for hybrid", async t => {
   const createdExplorational = await api.createExplorational(dataSetId, "hybrid", null);
 
-  const tracing = await api.getTracingForAnnotations(createdExplorational);
-  writeFlowCheckingFile(tracing, "tracing-hybrid", "HybridServerTracing");
+  const tracings = await api.getTracingsForAnnotation(createdExplorational);
+  writeFlowCheckingFile(tracings, "tracing-hybrid", "ServerTracing", { isArray: true });
   // The volatileValues list includes "skeleton" and "volume", because of other requests, so we need to do it like this
   t.snapshot(
     {
-      skeleton: replaceVolatileValues(tracing.skeleton),
-      volume: replaceVolatileValues(tracing.volume),
+      skeleton: replaceVolatileValues(getNullableSkeletonTracing(tracings)),
+      volume: replaceVolatileValues(getServerVolumeTracings(tracings)[0]),
     },
     {
       id: "annotations-tracing-hybrid",
@@ -191,11 +197,13 @@ test.serial("getTracingForAnnotations() for hybrid", async t => {
   );
 });
 
-async function sendUpdateActions(explorational, queue) {
-  const skeletonTracingId = explorational.tracing.skeleton;
-  if (skeletonTracingId == null) throw new Error("No skeleton tracing present.");
+async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue) {
+  const skeletonTracing = getSkeletonDescriptor(explorational);
+  if (skeletonTracing == null) throw new Error("No skeleton tracing present.");
   return sendRequestWithToken(
-    `${explorational.tracingStore.url}/tracings/skeleton/${skeletonTracingId}/update?token=`,
+    `${explorational.tracingStore.url}/tracings/skeleton/${
+      skeletonTracing.tracingId
+    }/update?token=`,
     {
       method: "POST",
       data: queue,
@@ -218,9 +226,9 @@ test.serial("Send update actions and compare resulting tracing", async t => {
     ),
     0,
   );
-  await sendUpdateActions(createdExplorational, saveQueue);
-  const tracing = await api.getTracingForAnnotations(createdExplorational);
-  t.snapshot(replaceVolatileValues(tracing.skeleton), {
+  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  const tracings = await api.getTracingsForAnnotation(createdExplorational);
+  t.snapshot(replaceVolatileValues(tracings[0]), {
     id: "annotations-updateActions",
   });
 });
@@ -259,9 +267,9 @@ test("Send complex update actions and compare resulting tracing", async t => {
     0,
   );
 
-  await sendUpdateActions(createdExplorational, saveQueue);
-  const tracing = await api.getTracingForAnnotations(createdExplorational);
-  t.snapshot(replaceVolatileValues(tracing.skeleton), {
+  await sendUpdateActionsForSkeleton(createdExplorational, saveQueue);
+  const tracings = await api.getTracingsForAnnotation(createdExplorational);
+  t.snapshot(replaceVolatileValues(tracings[0]), {
     id: "annotations-complexUpdateActions",
   });
 });

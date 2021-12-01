@@ -436,7 +436,7 @@ class PlaneController extends React.PureComponent<Props> {
         : emptyDefaultHandler;
 
     const { c: volumeCHandler, ...volumeControls } =
-      this.props.tracing.volume != null
+      this.props.tracing.volumes.length > 0
         ? VolumeKeybindings.getKeyboardControls()
         : emptyDefaultHandler;
 

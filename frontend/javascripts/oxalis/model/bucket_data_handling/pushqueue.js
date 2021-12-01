@@ -95,7 +95,7 @@ class PushQueue {
   push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
-    return sendToStore(batch);
+    return sendToStore(batch, this.cube.layerName);
   }
 }
 

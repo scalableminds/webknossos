@@ -4,31 +4,35 @@ import { getUid } from "libs/uid_generator";
 import Date from "libs/date";
 import Deferred from "libs/deferred";
 
-type Tracing = "skeleton" | "volume";
+type TracingType = "skeleton" | "volume";
 
 type PushSaveQueueTransaction = {
   type: "PUSH_SAVE_QUEUE_TRANSACTION",
   items: Array<UpdateAction>,
-  tracingType: Tracing,
+  tracingType: TracingType,
+  tracingId: string,
   transactionId: string,
 };
 type SaveNowAction = { type: "SAVE_NOW" };
 type ShiftSaveQueueAction = {
   type: "SHIFT_SAVE_QUEUE",
   count: number,
-  tracingType: Tracing,
+  tracingType: TracingType,
+  tracingId: string,
 };
 type DiscardSaveQueuesAction = { type: "DISCARD_SAVE_QUEUES" };
-type SetSaveBusyAction = { type: "SET_SAVE_BUSY", isBusy: boolean, tracingType: Tracing };
+type SetSaveBusyAction = { type: "SET_SAVE_BUSY", isBusy: boolean, tracingType: TracingType };
 type SetLastSaveTimestampAction = {
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp: number,
-  tracingType: Tracing,
+  tracingType: TracingType,
+  tracingId: string,
 };
-type SetVersionNumberAction = {
+export type SetVersionNumberAction = {
   type: "SET_VERSION_NUMBER",
   version: number,
-  tracingType: Tracing,
+  tracingType: TracingType,
+  tracingId: string,
 };
 export type UndoAction = { type: "UNDO", callback?: () => void };
 export type RedoAction = { type: "REDO", callback?: () => void };
@@ -47,12 +51,14 @@ export type SaveAction =
 
 export const pushSaveQueueTransaction = (
   items: Array<UpdateAction>,
-  tracingType: Tracing,
+  tracingType: TracingType,
+  tracingId: string,
   transactionId: string = getUid(),
 ): PushSaveQueueTransaction => ({
   type: "PUSH_SAVE_QUEUE_TRANSACTION",
   items,
   tracingType,
+  tracingId,
   transactionId,
 });
 
@@ -62,36 +68,47 @@ export const saveNowAction = (): SaveNowAction => ({
 
 export const shiftSaveQueueAction = (
   count: number,
-  tracingType: Tracing,
+  tracingType: TracingType,
+  tracingId: string,
 ): ShiftSaveQueueAction => ({
   type: "SHIFT_SAVE_QUEUE",
   count,
   tracingType,
+  tracingId,
 });
 
 export const discardSaveQueuesAction = (): DiscardSaveQueuesAction => ({
   type: "DISCARD_SAVE_QUEUES",
 });
 
-export const setSaveBusyAction = (isBusy: boolean, tracingType: Tracing): SetSaveBusyAction => ({
+export const setSaveBusyAction = (
+  isBusy: boolean,
+  tracingType: TracingType,
+): SetSaveBusyAction => ({
   type: "SET_SAVE_BUSY",
   isBusy,
   tracingType,
 });
 
-export const setLastSaveTimestampAction = (tracingType: Tracing): SetLastSaveTimestampAction => ({
+export const setLastSaveTimestampAction = (
+  tracingType: TracingType,
+  tracingId: string,
+): SetLastSaveTimestampAction => ({
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp: Date.now(),
   tracingType,
+  tracingId,
 });
 
 export const setVersionNumberAction = (
   version: number,
-  tracingType: Tracing,
+  tracingType: TracingType,
+  tracingId: string,
 ): SetVersionNumberAction => ({
   type: "SET_VERSION_NUMBER",
   version,
   tracingType,
+  tracingId,
 });
 
 export const undoAction = (callback?: () => void): UndoAction => ({

@@ -54,10 +54,20 @@ export async function previewVersion(versions?: Versions) {
   await api.tracing.restart(annotationType, annotationId, controlMode, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
 
-  const segmentationLayer = Model.getSegmentationTracingLayer();
-  const shouldPreviewVolumeVersion = versions != null && versions.volume != null;
-  const shouldPreviewNewestVersion = versions == null;
-  if (segmentationLayer != null && (shouldPreviewVolumeVersion || shouldPreviewNewestVersion)) {
+  const segmentationLayersToReload = [];
+  if (versions == null) {
+    // No versions were passed which means that the newest annotation should be
+    // shown. Therefore, reload all segmentation layers.
+    segmentationLayersToReload.push(...Model.getSegmentationTracingLayers());
+  } else if (versions.volumes != null) {
+    // Since volume versions were specified, reload the volumeTracing layers
+    const versionedSegmentationLayers = Object.keys(versions.volumes).map(volumeTracingId =>
+      Model.getSegmentationTracingLayer(volumeTracingId),
+    );
+    segmentationLayersToReload.push(...versionedSegmentationLayers);
+  }
+
+  for (const segmentationLayer of segmentationLayersToReload) {
     segmentationLayer.cube.collectAllBuckets();
     segmentationLayer.layerRenderingManager.refresh();
   }
@@ -102,14 +112,26 @@ class VersionList extends React.Component<Props, State> {
 
   handleRestoreVersion = async (version: number) => {
     if (this.props.allowUpdate) {
-      Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
-      Store.dispatch(pushSaveQueueTransaction([revertToVersion(version)], this.props.tracingType));
+      Store.dispatch(
+        setVersionNumberAction(
+          this.getNewestVersion(),
+          this.props.tracingType,
+          this.props.tracing.tracingId,
+        ),
+      );
+      Store.dispatch(
+        pushSaveQueueTransaction(
+          [revertToVersion(version)],
+          this.props.tracingType,
+          this.props.tracing.tracingId,
+        ),
+      );
       await Model.ensureSavedState();
       Store.dispatch(setVersionRestoreVisibilityAction(false));
       Store.dispatch(setAnnotationAllowUpdateAction(true));
     } else {
-      const { annotationType, annotationId, volume } = Store.getState().tracing;
-      const includesVolumeFallbackData = volume != null && volume.fallbackLayer != null;
+      const { annotationType, annotationId, volumes } = Store.getState().tracing;
+      const includesVolumeFallbackData = volumes.some(volume => volume.fallbackLayer != null);
       downloadNml(annotationId, annotationType, includesVolumeFallbackData, {
         // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [this.props.tracingType]: version,
@@ -117,8 +139,13 @@ class VersionList extends React.Component<Props, State> {
     }
   };
 
-  // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
-  handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
+  handlePreviewVersion = (version: number) => {
+    if (this.props.tracingType === "skeleton") {
+      return previewVersion({ skeleton: version });
+    } else {
+      return previewVersion({ volumes: { [this.props.tracing.tracingId]: version } });
+    }
+  };
 
   // eslint-disable-next-line react/sort-comp
   getGroupedAndChunkedVersions = _.memoize(

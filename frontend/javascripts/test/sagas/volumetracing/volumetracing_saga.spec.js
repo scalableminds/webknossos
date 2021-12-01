@@ -1,5 +1,5 @@
 // @flow
-import "test/sagas/volumetracing_saga.mock.js";
+import "test/sagas/volumetracing/volumetracing_saga.mock";
 
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
@@ -21,8 +21,8 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
 
-import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
-import { withoutUpdateTracing } from "../helpers/saveHelpers";
+import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
+import { withoutUpdateTracing } from "test/helpers/saveHelpers";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("oxalis/model/sagas/root_saga", function*() {

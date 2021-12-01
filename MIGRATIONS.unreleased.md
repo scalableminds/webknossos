@@ -9,4 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 -
 
 ### Postgres Evolutions:
--
+- [078-annotation-layers.sql](conf/evolutions/078-annotation-layers.sql)

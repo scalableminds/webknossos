@@ -224,7 +224,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
         {isInEditMode ? (
           <Row type="flex" align="middle">
             <Col span={4}>
-              <label className="setting-label">min:</label>
+              <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
               <Tooltip title={tooltipTitleFor("minimum")}>
@@ -247,7 +247,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
             </Col>
             <Col span={4}>
               <label className="setting-label" style={{ width: "100%", textAlign: "center" }}>
-                max:
+                Max:
               </label>
             </Col>
             <Col span={8}>

@@ -74,7 +74,7 @@ const createState = (trees, _treeGroups): OxalisState => ({
       navigationList: { list: [], activeIndex: -1 },
       showSkeletons: true,
     },
-    volume: null,
+    volumes: [],
   },
 });
 
@@ -116,7 +116,11 @@ function _updateTreeVisibility(treeId: number, isVisible: boolean) {
 
 function getActions(initialState, newState) {
   const updateActions = testDiffing(initialState, newState);
-  const compactedActions = compactToggleActions(updateActions, newState.tracing);
+  if (newState.tracing.skeleton == null) {
+    // Satisfy flow
+    throw new Error("newState.tracing.skeleton should not be null");
+  }
+  const compactedActions = compactToggleActions(updateActions, newState.tracing.skeleton);
   return [compactedActions, updateActions];
 }
 

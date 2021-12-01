@@ -19,7 +19,9 @@ import {
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import Cube from "oxalis/geometries/cube";
@@ -41,7 +43,6 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
@@ -294,7 +295,7 @@ class SceneController {
     const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (Store.getState().tracing.volume != null) {
+    if (Store.getState().tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
@@ -560,6 +561,7 @@ export function initializeSceneController() {
   const controller = new SceneController();
   setSceneController(controller);
   controller.initialize();
+  Store.dispatch(sceneControllerReadyAction());
 }
 
 // Please use scene_controller_provider to get a reference to SceneController. This avoids

@@ -38,8 +38,9 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreService.validateAccess(name) { dataStore =>
       for {
         uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        organization <- organizationDAO
-          .findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
+        organization <- organizationDAO.findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          uploadInfo.team) ~> NOT_FOUND
         _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
         _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"
         _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"

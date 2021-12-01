@@ -8,7 +8,7 @@ import "test/sagas/saga_integration.mock";
 import {
   __setupOxalis,
   createBucketResponseFunction,
-  getVolumeTracingOrFail,
+  getFirstVolumeTracingOrFail,
 } from "test/helpers/apiHelpers";
 import { OrthoViews, FillModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
@@ -65,18 +65,40 @@ test.serial("Executing a floodfill in mag 1", async t => {
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep),
+      newCellId,
+    );
     // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-    t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep),
+      newCellId,
+    );
     // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
     // (and not at 4,4)
-    t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep),
+      newCellId,
+    );
   }
   await t.context.api.tracing.save();
 
@@ -89,39 +111,39 @@ test.serial("Executing a floodfill in mag 1", async t => {
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     t.is(
-      await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep),
       floodingCellId,
     );
     // A brush size of 10 means a radius of 5 (so, from 0 to 4).
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep),
       floodingCellId,
     );
     // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
     // (and not at 4,4)
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep),
       floodingCellId,
     );
 
     t.snapshot(
-      await t.context.api.data.getDataFor2DBoundingBox("segmentation", {
+      await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
         min: [32, 32, 32],
         max: [64, 64, 64],
       }),
@@ -150,18 +172,40 @@ test.serial("Executing a floodfill in mag 2", async t => {
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep),
+      newCellId,
+    );
     // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-    t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep),
+      newCellId,
+    );
     // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
     // (and not at 4,4)
-    t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep),
+      newCellId,
+    );
   }
   await t.context.api.tracing.save();
 
@@ -174,34 +218,34 @@ test.serial("Executing a floodfill in mag 2", async t => {
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     t.is(
-      await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [1, 0, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 43], zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [0, 1, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 1, 43], zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [1, 1, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 1, 43], zoomStep),
       floodingCellId,
     );
     // A brush size of 10 means a radius of 5 (so, from 0 to 4).
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [4, 0, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [4, 0, 43], zoomStep),
       floodingCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [0, 4, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 4, 43], zoomStep),
       floodingCellId,
     );
     // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
     // (and not at 4,4)
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [3, 3, 43], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [3, 3, 43], zoomStep),
       floodingCellId,
     );
   }
@@ -219,7 +263,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
   const paintCenter = [128, 128, 128];
   Store.dispatch(setPositionAction(paintCenter));
 
-  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerName();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0), 0);
 
   const floodingCellId = 3;
@@ -294,7 +338,7 @@ test.serial(
     Store.dispatch(copySegmentationLayerAction());
 
     // maxCellId should be updated after copySegmentationLayer
-    getVolumeTracingOrFail(Store.getState().tracing).map(tracing => {
+    getFirstVolumeTracingOrFail(Store.getState().tracing).map(tracing => {
       t.is(tracing.maxCellId, newCellId);
     });
   },
@@ -315,6 +359,7 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
   const brushSize = 10;
 
   const newCellId = 2;
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
@@ -325,34 +370,55 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
   Store.dispatch(finishEditingAction());
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    t.is(await t.context.api.data.getDataValue("segmentation", paintCenter, zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 0], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 0], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 1, 0], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 1, 0], zoomStep),
+      newCellId,
+    );
     // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-    t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 0], zoomStep), newCellId);
-    t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 0], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [4, 0, 0], zoomStep),
+      newCellId,
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 4, 0], zoomStep),
+      newCellId,
+    );
     // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
     // (and not at 4,4)
-    t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 0], zoomStep), newCellId);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [3, 3, 0], zoomStep),
+      newCellId,
+    );
 
     // In mag 1 and mag 2,
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [5, 0, 0], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0], zoomStep),
       zoomStep === 0 ? 0 : newCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [0, 5, 0], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 5, 0], zoomStep),
       zoomStep === 0 ? 0 : newCellId,
     );
     t.is(
-      await t.context.api.data.getDataValue("segmentation", [0, 0, 1], zoomStep),
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 1], zoomStep),
       zoomStep === 0 ? 0 : newCellId,
     );
   }
 
   t.snapshot(
-    await t.context.api.data.getDataFor2DBoundingBox("segmentation", {
+    await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
@@ -375,7 +441,8 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
   // function.
   await t.context.api.data.reloadAllBuckets();
 
-  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), oldCellId);
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), oldCellId);
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
   Store.dispatch(setPositionAction([0, 0, 0]));
@@ -385,23 +452,23 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0]), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 1, 0]), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [1, 1, 0]), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 1, 0]), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 1, 0]), newCellId);
   // A brush size of 10 means a radius of 5 (so, from 0 to 4).
-  t.is(await t.context.api.data.getDataValue("segmentation", [4, 0, 0]), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 4, 0]), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [4, 0, 0]), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 4, 0]), newCellId);
   // Since the brush is circle-like, the right-bottom point is only brushed at 3,3
   // (and not at 4,4)
-  t.is(await t.context.api.data.getDataValue("segmentation", [3, 3, 0]), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [3, 3, 0]), newCellId);
 
-  t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0]), oldCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 5, 0]), oldCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [0, 0, 1]), oldCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 5, 0]), oldCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 1]), oldCellId);
 
   t.snapshot(
-    await t.context.api.data.getDataFor2DBoundingBox("segmentation", {
+    await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
@@ -441,9 +508,10 @@ test.serial("Brushing/Tracing with undo (I)", async t => {
 
   await dispatchUndoAsync(Store.dispatch);
 
-  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0]), newCellId);
-  t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0]), oldCellId);
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 });
 
 test.serial("Brushing/Tracing with undo (II)", async t => {
@@ -483,7 +551,8 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
 
   await dispatchUndoAsync(Store.dispatch);
 
-  t.is(await t.context.api.data.getDataValue("segmentation", paintCenter), newCellId + 1);
-  t.is(await t.context.api.data.getDataValue("segmentation", [1, 0, 0]), newCellId + 1);
-  t.is(await t.context.api.data.getDataValue("segmentation", [5, 0, 0]), oldCellId);
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId + 1);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId + 1);
+  t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 });

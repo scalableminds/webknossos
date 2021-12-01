@@ -175,7 +175,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasVolumeFallback: state.tracing.volume != null && state.tracing.volume.fallbackLayer != null,
+  hasVolumeFallback: state.tracing.volumes.some(volume => volume.fallbackLayer != null),
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),

@@ -31,6 +31,7 @@ import FormattedDate from "components/formatted_date";
 import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import messages from "messages";
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 
 const { Item } = Menu;
 const { confirm } = Modal;
@@ -142,7 +143,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => {
-              const isVolumeIncluded = annotation.tracing.volume != null;
+              const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
               return downloadNml(annotation.id, "Task", isVolumeIncluded);
             }}
             icon={<DownloadOutlined />}

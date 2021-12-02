@@ -63,6 +63,9 @@ export const DatasetCacheContext = createContext<Context>({
 export default function DatasetCacheProvider({ children }: { children: Node }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingDatasetUpdates, setPendingDatasetUpdates] = useState<{
+    [string]: Array<APIDataset>,
+  }>({});
   async function fetchDatasets(options?: Options = {}): Promise<void> {
     const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;
     const datasetFilteringMode = options.datasetFilteringMode || "onlyShowReported";
@@ -169,7 +172,6 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
   }
 
   async function updateCachedDataset(dataset: APIDataset) {
-    if (isLoading) return;
     setIsLoading(true);
 
     const updatedDatasets = datasets.map(currentDataset => {
@@ -185,7 +187,15 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
     setDatasets(updatedDatasets);
     datasetCache.set(updatedDatasets);
     try {
-      await updateDataset(dataset, dataset);
+      const previousDatasetUpdatePromise = pendingDatasetUpdates[dataset.name];
+      const newDatasetUpdatePromise = Promise.resolve(previousDatasetUpdatePromise).then(async () =>
+        updateDataset(dataset, dataset),
+      );
+      setPendingDatasetUpdates({
+        ...pendingDatasetUpdates,
+        [dataset.name]: newDatasetUpdatePromise,
+      });
+      await newDatasetUpdatePromise;
     } catch (error) {
       handleGenericError(error);
     } finally {

@@ -77,8 +77,10 @@ function useOlvy() {
         unreadIndicatorPosition: "top-right",
       },
     };
-    window.Olvy.init(OlvyConfig);
-    setIsInitialized(true);
+    if (window.Olvy != null) {
+      window.Olvy.init(OlvyConfig);
+      setIsInitialized(true);
+    }
   }, []);
 
   return isInitialized;

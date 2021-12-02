@@ -187,8 +187,8 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
     setDatasets(updatedDatasets);
     datasetCache.set(updatedDatasets);
     try {
-      const previousDatasetUpdatePromise = pendingDatasetUpdates[dataset.name];
-      const newDatasetUpdatePromise = Promise.resolve(previousDatasetUpdatePromise).then(async () =>
+      const previousDatasetUpdatePromise = pendingDatasetUpdates[dataset.name] || Promise.resolve();
+      const newDatasetUpdatePromise = previousDatasetUpdatePromise.then(() =>
         updateDataset(dataset, dataset),
       );
       setPendingDatasetUpdates({

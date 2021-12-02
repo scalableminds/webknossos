@@ -20,7 +20,7 @@ import messages from "messages";
 import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 
-type InitializeSkeletonTracingAction = {
+export type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",
   tracing: ServerSkeletonTracing,
 };

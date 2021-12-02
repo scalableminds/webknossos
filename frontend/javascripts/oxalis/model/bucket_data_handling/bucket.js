@@ -298,7 +298,12 @@ export class DataBucket {
         // Always use the current state of this.maybeBucketLoadedPromise, since
         // this bucket could be added to multiple undo batches while it's fetched. All entries
         // need to have the corresponding promise for the undo to work correctly.
-        addBucketToUndoAction(this.zoomedAddress, dataClone, this.maybeBucketLoadedPromise),
+        addBucketToUndoAction(
+          this.zoomedAddress,
+          dataClone,
+          this.maybeBucketLoadedPromise,
+          this.getTracingId(),
+        ),
       );
     }
   }
@@ -425,6 +430,10 @@ export class DataBucket {
 
   unexpectedState(): void {
     throw new Error(`Unexpected state: ${this.state}`);
+  }
+
+  getTracingId(): string {
+    return this.cube.layerName;
   }
 
   getFallbackBucket(): Bucket {

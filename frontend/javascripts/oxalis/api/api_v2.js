@@ -1,8 +1,4 @@
-/*
- * api_latest.js
- * @flow
- */
-
+// @flow
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
@@ -36,9 +32,6 @@ import type {
   UserConfiguration,
   DatasetConfiguration,
   TreeMap,
-  Tracing,
-  SkeletonTracing,
-  VolumeTracing,
   AnnotationType,
   Mapping,
 } from "oxalis/store";
@@ -67,26 +60,7 @@ import messages from "messages";
 import type { ToastStyle } from "libs/toast";
 import update from "immutability-helper";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-
-function assertExists(value: any, message: string) {
-  if (value == null) {
-    throw new Error(message);
-  }
-}
-
-function assertSkeleton(tracing: Tracing): SkeletonTracing {
-  if (tracing.skeleton == null) {
-    throw new Error("This api function should only be called in a skeleton tracing.");
-  }
-  return tracing.skeleton;
-}
-
-function assertVolume(tracing: Tracing): VolumeTracing {
-  if (tracing.volume == null) {
-    throw new Error("This api function should only be called in a volume tracing.");
-  }
-  return tracing.volume;
-}
+import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
@@ -480,7 +454,7 @@ class TracingApi {
    * _Volume tracing only!_
    */
   getActiveCellId(): number {
-    const tracing = assertVolume(Store.getState().tracing);
+    const tracing = assertVolume(Store.getState());
     return getActiveCellId(tracing);
   }
 
@@ -490,7 +464,7 @@ class TracingApi {
    * _Volume tracing only!_
    */
   setActiveCell(id: number) {
-    assertVolume(Store.getState().tracing);
+    assertVolume(Store.getState());
     assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
   }
@@ -675,7 +649,7 @@ class DataApi {
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
-    assertVolume(Store.getState().tracing);
+    assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
 
     for (const voxel of voxels) {

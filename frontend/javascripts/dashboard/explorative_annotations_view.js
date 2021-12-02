@@ -42,6 +42,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import TextWithDescription from "components/text_with_description";
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -209,7 +210,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (tracing.typ !== "Explorational") {
       return null;
     }
-    const hasVolumeTracing = tracing.tracing.volume != null;
+
+    const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
     const { typ, id } = tracing;
     if (!this.state.shouldShowArchivedTracings) {
       return (
@@ -421,8 +423,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
             annotation.stats.treeCount != null &&
             annotation.stats.nodeCount != null &&
-            annotation.stats.edgeCount != null &&
-            annotation.tracing.skeleton != null ? (
+            annotation.stats.edgeCount != null ? (
               <div>
                 <span title="Trees">
                   <i className="fas fa-sitemap" />

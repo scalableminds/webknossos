@@ -7,6 +7,7 @@ import type { Dispatch } from "redux";
 
 import type { APIAnnotation } from "types/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
+import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
 import { location } from "libs/window";
@@ -168,7 +169,12 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       Toast.error(messages["merge.different_dataset"]);
       return;
     }
-    const tracing = await getTracingForAnnotationType(annotation, "skeleton");
+    const skeletonDescriptorMaybe = getSkeletonDescriptor(annotation);
+    if (skeletonDescriptorMaybe == null) {
+      Toast.error(messages["merge.volume_unsupported"]);
+      return;
+    }
+    const tracing = await getTracingForAnnotationType(annotation, skeletonDescriptorMaybe);
     if (!tracing || !tracing.trees) {
       Toast.error(messages["merge.volume_unsupported"]);
       return;

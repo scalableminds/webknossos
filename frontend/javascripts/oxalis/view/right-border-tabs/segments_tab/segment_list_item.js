@@ -1,5 +1,4 @@
 // @flow
-import { List, Tooltip, Dropdown, Menu } from "antd";
 import {
   DeleteOutlined,
   LoadingOutlined,
@@ -7,24 +6,28 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
+import { List, Tooltip, Dropdown, Menu } from "antd";
 import { useDispatch } from "react-redux";
+import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
+import classnames from "classnames";
 
 import type { APISegmentationLayer } from "types/api_flow_types";
-import type { IsosurfaceInformation, Segment, ActiveMappingInfo } from "oxalis/store";
-import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import {
   triggerIsosurfaceDownloadAction,
   updateIsosurfaceVisibilityAction,
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-import classnames from "classnames";
-import Checkbox from "antd/lib/checkbox/Checkbox";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import Store, {
+  type ActiveMappingInfo,
+  type IsosurfaceInformation,
+  type Segment,
+} from "oxalis/store";
 
 const convertCellIdToCSS = (id: number, mappingColors) => {
   const [h, s, l, a] = jsConvertCellIdToHSLA(id, mappingColors);
@@ -102,7 +105,7 @@ type Props = {
   handleSegmentDropdownMenuVisibility: (number, boolean) => void,
   activeDropdownSegmentId: ?number,
   allowUpdate: boolean,
-  updateSegment: (number, $Shape<Segment>) => void,
+  updateSegment: (number, $Shape<Segment>, string) => void,
   onSelectSegment: Segment => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
   changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
@@ -217,8 +220,12 @@ function _SegmentListItem({
             value={segment.name || `Segment ${segment.id}`}
             label="Segment Name"
             onClick={() => onSelectSegment(segment)}
-            onChange={name => updateSegment(segment.id, { name })}
-            horizontalMargin={5}
+            onChange={name => {
+              if (visibleSegmentationLayer != null) {
+                updateSegment(segment.id, { name }, visibleSegmentationLayer.name);
+              }
+            }}
+            margin="0 5px"
             disableEditing={!allowUpdate}
           />
           <Tooltip title="Open context menu (also available via right-click)">

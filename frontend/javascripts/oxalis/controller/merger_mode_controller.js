@@ -17,6 +17,10 @@ type State = {
   isMergerModeModalVisible: boolean,
   isMergerModeModalClosable: boolean,
   mergerModeProgress: number,
+  // The component remembers for which segmentation layer,
+  // the merger mode was enabled. This information is used
+  // when disabling the merger mode again.
+  segmentationLayerName: ?string,
 };
 
 class MergerModeController extends PureComponent<MergerModeControllerProps, State> {
@@ -24,6 +28,7 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
     isMergerModeModalVisible: false,
     isMergerModeModalClosable: false,
     mergerModeProgress: 0,
+    segmentationLayerName: null,
   };
 
   componentDidMount() {
@@ -44,7 +49,8 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
         mergerModeProgress: 0,
       });
       const onUpdateProgress = mergerModeProgress => this.setState({ mergerModeProgress });
-      await enableMergerMode(onUpdateProgress);
+      const segmentationLayerName = await enableMergerMode(onUpdateProgress);
+      this.setState({ segmentationLayerName });
       // The modal is only closeable after the merger mode is fully enabled
       // and finished preprocessing
       this.setState({ isMergerModeModalClosable: true });
@@ -53,7 +59,7 @@ class MergerModeController extends PureComponent<MergerModeControllerProps, Stat
         isMergerModeModalVisible: false,
         isMergerModeModalClosable: false,
       });
-      disableMergerMode();
+      disableMergerMode(this.state.segmentationLayerName);
     }
   };
 

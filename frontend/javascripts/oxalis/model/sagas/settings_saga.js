@@ -1,26 +1,36 @@
 // @flow
 import {
+  SETTINGS_MAX_RETRY_COUNT,
+  SETTINGS_RETRY_DELAY,
+} from "oxalis/model/sagas/save_saga_constants";
+import {
   type Saga,
   _all,
   _takeEvery,
   _throttle,
   call,
+  retry,
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import { type UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
+import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import messages from "messages";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select(state => state.activeUser);
   if (activeUser == null) return;
 
   const userConfiguration = yield* select(state => state.userConfiguration);
-  yield* call(updateUserConfiguration, userConfiguration);
+  yield* retry(
+    SETTINGS_MAX_RETRY_COUNT,
+    SETTINGS_RETRY_DELAY,
+    updateUserConfiguration,
+    userConfiguration,
+  );
 }
 
 function* pushDatasetSettingsAsync(): Saga<void> {
@@ -30,7 +40,13 @@ function* pushDatasetSettingsAsync(): Saga<void> {
   const dataset = yield* select(state => state.dataset);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
   try {
-    yield* call(updateDatasetConfiguration, dataset, datasetConfiguration);
+    yield* retry(
+      SETTINGS_MAX_RETRY_COUNT,
+      SETTINGS_RETRY_DELAY,
+      updateDatasetConfiguration,
+      dataset,
+      datasetConfiguration,
+    );
   } catch (error) {
     // We catch errors in view mode as they are not that important here and may annoy the user.
     const tracing = yield* select(state => state.tracing);

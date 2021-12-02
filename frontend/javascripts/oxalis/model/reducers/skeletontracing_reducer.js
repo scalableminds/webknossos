@@ -437,6 +437,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
+        case "SET_MERGER_MODE_ENABLED": {
+          const { active } = action;
+          return update(state, {
+            temporaryConfiguration: {
+              isMergerModeEnabled: {
+                $set: active,
+              },
+            },
+          });
+        }
+
         default:
         // pass
       }
@@ -761,16 +772,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               }),
             )
             .getOrElse(state);
-        }
-        case "SET_MERGER_MODE_ENABLED": {
-          const { active } = action;
-          return update(state, {
-            temporaryConfiguration: {
-              isMergerModeEnabled: {
-                $set: active,
-              },
-            },
-          });
         }
 
         default:

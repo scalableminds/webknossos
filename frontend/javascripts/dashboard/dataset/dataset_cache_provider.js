@@ -64,7 +64,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
   const [pendingDatasetUpdates, setPendingDatasetUpdates] = useState<{
-    [string]: Array<APIDataset>,
+    [string]: Promise<APIDataset>,
   }>({});
   async function fetchDatasets(options?: Options = {}): Promise<void> {
     const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;

@@ -111,6 +111,7 @@ const defaultState: OxalisState = {
       },
     },
     details: null,
+    tags: [],
     isPublic: false,
     isActive: true,
     isEditable: true,

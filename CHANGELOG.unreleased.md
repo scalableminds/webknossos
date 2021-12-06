@@ -11,13 +11,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/21.11.0...HEAD)
 
 ### Added
--
+- Added tagging support for datasets. [#5832](https://github.com/scalableminds/webknossos/pull/5832)
 
 ### Changed
 -
 
 ### Fixed
--
+- Fixed a bug where dataset uploads that contained files larger than 2 GB failed. [#5889](https://github.com/scalableminds/webknossos/pull/5889)
 
 ### Removed
 -

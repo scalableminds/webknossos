@@ -65,6 +65,7 @@ import defaultState from "oxalis/default_state";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 
 export type MutableCommentType = {|
   content: string,
@@ -521,10 +522,7 @@ export type IsosurfaceInformation = {|
 export type ConnectomeData = {|
   +availableConnectomeFiles: ?Array<APIConnectomeFile>,
   +currentConnectomeFile: ?string,
-  +trees: TreeMap,
-  +tracingId: string,
-  +activeNodeId: ?number,
-  +activeTreeId: ?number,
+  +skeleton: ?SkeletonTracing,
 |};
 
 export type OxalisState = {|
@@ -571,6 +569,7 @@ const combinedReducers = reduceReducers(
   AnnotationReducer,
   UserReducer,
   UiReducer,
+  ConnectomeReducer,
 );
 
 const store = createStore<OxalisState, Action, Dispatch<*>>(

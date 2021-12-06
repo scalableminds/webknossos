@@ -70,6 +70,7 @@ import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import createProgressCallback from "libs/progress_callback";
+import { addConnectomeTreeAction } from "oxalis/model/actions/connectome_actions";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
@@ -198,7 +199,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const { layerName, mappingName, agglomerateId } = action;
+  const { layerName, mappingName, agglomerateId, destination } = action;
   if (agglomerateId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
     return;
@@ -234,12 +235,18 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
       throw new Error("Skeleton tracing doesn't contain trees");
     }
 
-    yield* put(
-      addTreesAndGroupsAction(
-        createMutableTreeMapFromTreeArray(parsedTracing.trees),
-        parsedTracing.treeGroups,
-      ),
-    );
+    if (destination === "tracing") {
+      yield* put(
+        addTreesAndGroupsAction(
+          createMutableTreeMapFromTreeArray(parsedTracing.trees),
+          parsedTracing.treeGroups,
+        ),
+      );
+    } else {
+      yield* put(
+        addConnectomeTreeAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
+      );
+    }
   } catch (e) {
     // Hide the progress notification and handle the error
     hideFn();

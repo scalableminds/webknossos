@@ -30,10 +30,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           connectomeData: {
             availableConnectomeFiles: null,
             currentConnectomeFile: null,
-            trees: {},
-            tracingId: "",
-            activeTreeId: null,
-            activeNodeId: null,
+            skeleton: null,
           },
         })),
         temporaryConfiguration: {

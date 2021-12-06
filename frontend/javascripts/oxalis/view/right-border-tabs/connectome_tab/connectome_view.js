@@ -76,6 +76,7 @@ import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_
 import api from "oxalis/api/internal_api";
 import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { initializeConnectomeTracingAction } from "oxalis/model/actions/connectome_actions";
 
 const { Option } = Select;
 
@@ -187,10 +188,16 @@ class ConnectomeView extends React.Component<Props, State> {
     const { visibleSegmentationLayer } = this.props;
     if (visibleSegmentationLayer == null) return;
 
+    Store.dispatch(initializeConnectomeTracingAction(visibleSegmentationLayer.name));
+
     getSceneController().addSkeleton(state => {
-      const { trees, activeNodeId, activeTreeId, tracingId } = state.localSegmentationData[
+      const { skeleton } = state.localSegmentationData[
         visibleSegmentationLayer.name
       ].connectomeData;
+
+      if (skeleton == null) return Maybe.Nothing();
+
+      const { trees, activeNodeId, activeTreeId, tracingId } = skeleton;
       return Maybe.of({ trees, activeNodeId, activeTreeId, tracingId });
     }, false);
   }
@@ -293,6 +300,7 @@ class ConnectomeView extends React.Component<Props, State> {
             visibleSegmentationLayer.name,
             currentConnectomeFile.mappingName,
             data.id,
+            "connectome",
           ),
         );
       }

@@ -229,7 +229,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         initialTeams: formValues.initialTeams.map(team => team.id),
       };
 
-      await reserveDatasetUpload(formValues.datastore, reserveUploadInformation);
+      await reserveDatasetUpload(formValues.datastore.url, reserveUploadInformation);
 
       const resumableUpload = await createResumableUpload(
         datasetId,

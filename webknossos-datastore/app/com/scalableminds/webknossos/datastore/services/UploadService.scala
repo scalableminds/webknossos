@@ -18,7 +18,7 @@ import play.api.libs.json.{Json, OFormat}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class ResumableUploadInformation(chunkSize: Int, totalChunkCount: Long)
+case class ResumableUploadInformation(chunkSize: Long, totalChunkCount: Long)
 
 case class UploadInformation(uploadId: String,
                              organization: String,
@@ -38,7 +38,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   private val uploadingDir: String = ".uploading"
 
   // structure: uploadId → (fileCount, fileName → (totalChunkCount, receivedChunkIndices))
-  val allSavedChunkIds: mutable.HashMap[String, (Long, mutable.HashMap[String, (Long, mutable.HashSet[Int])])] =
+  val allSavedChunkIds: mutable.HashMap[String, (Long, mutable.HashMap[String, (Long, mutable.HashSet[Long])])] =
     mutable.HashMap.empty
 
   cleanUpOrphanUploads()
@@ -54,8 +54,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   def handleUploadChunk(uploadFileId: String,
                         datasourceId: DataSourceId,
                         resumableUploadInformation: ResumableUploadInformation,
-                        currentChunkNumber: Int,
-                        totalFileCount: Int,
+                        currentChunkNumber: Long,
+                        totalFileCount: Long,
                         chunkFile: File): Fox[Unit] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     val uploadDir = uploadDirectory(datasourceId.team, uploadId)
@@ -71,14 +71,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
             case None =>
               savedChunkIdsForUpload.put(
                 filePath,
-                (resumableUploadInformation.totalChunkCount, mutable.HashSet[Int](currentChunkNumber)))
+                (resumableUploadInformation.totalChunkCount, mutable.HashSet[Long](currentChunkNumber)))
               true // isNewChunk
           }
         case None =>
-          val uploadChunksForUpload: mutable.HashMap[String, (Long, mutable.HashSet[Int])] = mutable.HashMap.empty
+          val uploadChunksForUpload: mutable.HashMap[String, (Long, mutable.HashSet[Long])] = mutable.HashMap.empty
           uploadChunksForUpload.put(
             filePath,
-            (resumableUploadInformation.totalChunkCount, mutable.HashSet[Int](currentChunkNumber)))
+            (resumableUploadInformation.totalChunkCount, mutable.HashSet[Long](currentChunkNumber)))
           allSavedChunkIds.put(uploadId, (totalFileCount, uploadChunksForUpload))
           true // isNewChunk
       }
@@ -150,7 +150,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       allSavedChunkIds.get(uploadId) match {
         case Some((fileCountForUpload, savedChunkIdsForUpload)) =>
           val allFilesPresent = fileCountForUpload == savedChunkIdsForUpload.keySet.size
-          val allFilesComplete = savedChunkIdsForUpload.forall { entry: (String, (Long, mutable.HashSet[Int])) =>
+          val allFilesComplete = savedChunkIdsForUpload.forall { entry: (String, (Long, mutable.HashSet[Long])) =>
             val chunkNumber = entry._2._1
             val savedChunksSet = entry._2._2
             savedChunksSet.size == chunkNumber

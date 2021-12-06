@@ -6,8 +6,8 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.cache.SyncCacheApi
 import play.api.libs.json.{Json, OFormat}
+import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
-import play.api.mvc.{Request, Result}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,14 +58,14 @@ trait AccessTokenService {
 
   val AccessExpiration: FiniteDuration = 2.minutes
 
-  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest, token: Option[String])(
-      block: => Result)(implicit request: Request[A], ec: ExecutionContext): Fox[Result] =
+  def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
+      implicit ec: ExecutionContext): Fox[Result] =
     validateAccess(accessRequest, token) {
       Future.successful(block)
     }
 
-  def validateAccess[A](accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(implicit request: Request[A],
-                                                                                    ec: ExecutionContext): Fox[Result] =
+  def validateAccess[A](accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(
+      implicit ec: ExecutionContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)

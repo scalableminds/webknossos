@@ -34,8 +34,8 @@ class WKRemoteDataStoreController @Inject()(
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def validateDataSetUpload(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
+  def validateDataSetUpload(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       for {
         uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
         organization <- organizationDAO.findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> Messages(
@@ -49,9 +49,13 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long): Action[JsValue] =
+  def reportDatasetUpload(name: String,
+                          key: String,
+                          token: String,
+                          dataSetName: String,
+                          dataSetSizeBytes: Long): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      dataStoreService.validateAccess(name) { dataStore =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
         withJsonBodyAs[List[String]] { teams =>
           for {
             user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
@@ -67,8 +71,8 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def statusUpdate(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { _ =>
+  def statusUpdate(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { _ =>
       request.body.validate[DataStoreStatus] match {
         case JsSuccess(status, _) =>
           logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
@@ -80,8 +84,8 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def updateAll(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
+  def updateAll(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           for {
@@ -101,8 +105,8 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def updateOne(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
+  def updateOne(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       request.body.validate[InboxDataSource] match {
         case JsSuccess(dataSource, _) =>
           for {
@@ -117,8 +121,8 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def deleteErroneous(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { _ =>
+  def deleteErroneous(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
         existingDataset = dataSetDAO

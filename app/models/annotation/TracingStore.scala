@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.binary.DataSet
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{Request, Result, Results}
+import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{SQLClient, SQLDAO}
@@ -41,12 +41,10 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
         "url" -> tracingStore.publicUrl
       ))
 
-  def validateAccess[A](name: String)(block: TracingStore => Future[Result])(implicit request: Request[A],
-                                                                             m: MessagesProvider): Fox[Result] =
-    request
-      .getQueryString("key")
-      .toFox
-      .flatMap(key => tracingStoreDAO.findOneByKey(key)) // Check if key is valid
+  def validateAccess[A](name: String, key: String)(block: TracingStore => Future[Result])(
+      implicit m: MessagesProvider): Fox[Result] =
+    tracingStoreDAO
+      .findOneByKey(key) // Check if key is valid
       .flatMap(tracingStore => block(tracingStore)) // Run underlying action
       .getOrElse {
         logger.info(s"Denying tracing store request from $name due to unknown key.")

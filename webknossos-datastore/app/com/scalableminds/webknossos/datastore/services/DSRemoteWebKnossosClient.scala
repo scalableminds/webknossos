@@ -60,11 +60,10 @@ class DSRemoteWebKnossosClient @Inject()(
   def reportUpload(dataSourceId: DataSourceId,
                    initialTeams: List[String],
                    dataSetSizeBytes: Long,
-                   userTokenOpt: Option[String]): Fox[_] = {
+                   userToken: String): Fox[_] = {
     val sleepDuration = 1000 // sleep for 1 second to give wk time to properly register the dataset
     for {
-      userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
-      _ = Thread.sleep(sleepDuration)
+      _ <- Fox.successful(Thread.sleep(sleepDuration))
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)

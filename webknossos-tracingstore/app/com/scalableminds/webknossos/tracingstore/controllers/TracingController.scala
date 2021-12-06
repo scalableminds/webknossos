@@ -50,10 +50,10 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
 
   implicit val bodyParsers: PlayBodyParsers
 
-  def save: Action[T] = Action.async(validateProto[T]) { implicit request =>
+  def save(token: Option[String]): Action[T] = Action.async(validateProto[T]) { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           AllowRemoteOrigin {
             val tracing = request.body
             tracingService.save(tracing, None, 0).map { newId =>
@@ -65,10 +65,10 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def saveMultiple: Action[Ts] = Action.async(validateProto[Ts]) { implicit request =>
+  def saveMultiple(token: Option[String]): Action[Ts] = Action.async(validateProto[Ts]) { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           AllowRemoteOrigin {
             val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
               tracingOpt match {
@@ -83,24 +83,25 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def get(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
-          for {
-            tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-          } yield {
-            Ok(tracing.toByteArray).as("application/x-protobuf")
+  def get(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
+            } yield {
+              Ok(tracing.toByteArray).as("application/x-protobuf")
+            }
           }
         }
       }
-    }
   }
 
-  def getMultiple: Action[List[Option[TracingSelector]]] = Action.async(validateJson[List[Option[TracingSelector]]]) {
-    implicit request =>
+  def getMultiple(token: Option[String]): Action[List[Option[TracingSelector]]] =
+    Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           AllowRemoteOrigin {
             for {
               tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
@@ -110,13 +111,13 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
           }
         }
       }
-  }
+    }
 
-  def update(tracingId: String, token: Option[String]): Action[List[UpdateActionGroup[T]]] =
+  def update(token: Option[String], tracingId: String): Action[List[UpdateActionGroup[T]]] =
     Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+          accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), token) {
             AllowRemoteOrigin {
               val updateGroups = request.body
               if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
@@ -222,10 +223,10 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def mergedFromIds(persist: Boolean): Action[List[Option[TracingSelector]]] =
+  def mergedFromIds(token: Option[String], persist: Boolean): Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           AllowRemoteOrigin {
             for {
               tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages(

@@ -378,6 +378,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,
+        "tags" -> dataSet.tags
       )
     }
 }

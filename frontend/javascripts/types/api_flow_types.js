@@ -150,6 +150,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   sortingKey: number,
   owningOrganization: string,
   publication: ?APIPublication,
+  tags: Array<string>,
 };
 
 type APIDatasetBase = $ReadOnly<MutableAPIDatasetBase>;

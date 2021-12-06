@@ -112,20 +112,19 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
   }
 
-  def update(tracingId: String): Action[List[UpdateActionGroup[T]]] =
+  def update(tracingId: String, token: Option[String]): Action[List[UpdateActionGroup[T]]] =
     Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
             AllowRemoteOrigin {
               val updateGroups = request.body
-              val userToken = request.getQueryString("token")
               if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
-                commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
+                commitUpdates(tracingId, updateGroups, token).map(_ => Ok)
               } else {
                 updateGroups
                   .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
-                    handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
+                    handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, token)
                   }
                   .map(_ => Ok)
               }

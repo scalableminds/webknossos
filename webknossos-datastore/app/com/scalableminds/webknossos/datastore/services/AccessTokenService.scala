@@ -58,26 +58,18 @@ trait AccessTokenService {
 
   val AccessExpiration: FiniteDuration = 2.minutes
 
-  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest)(
+  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest, token: Option[String])(
       block: => Result)(implicit request: Request[A], ec: ExecutionContext): Fox[Result] =
-    validateAccess(accessRequest) {
+    validateAccess(accessRequest, token) {
       Future.successful(block)
     }
 
-  def validateAccess[A](accessRequest: UserAccessRequest)(block: => Future[Result])(implicit request: Request[A],
+  def validateAccess[A](accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(implicit request: Request[A],
                                                                                     ec: ExecutionContext): Fox[Result] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest, request) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
-
-  private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A]): Fox[UserAccessAnswer] = {
-    val tokenOpt = tokenFromRequest(request)
-    hasUserAccess(accessRequest, tokenOpt)
-  }
-
-  def tokenFromRequest[A](request: Request[A]): Option[String] =
-    request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
 
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String]): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)

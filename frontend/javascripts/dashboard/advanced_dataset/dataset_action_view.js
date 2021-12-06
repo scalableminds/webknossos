@@ -87,7 +87,7 @@ function NewAnnotationLink({
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
-  updateDataset: APIDatasetId => Promise<void>,
+  reloadDataset: APIDatasetId => Promise<void>,
 };
 
 type State = {
@@ -131,7 +131,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
     this.setState({ isReloading: true });
     await clearCache(dataset);
-    await this.props.updateDataset(dataset);
+    await this.props.reloadDataset(dataset);
     Toast.success(
       messages["dataset.clear_cache_success"]({
         datasetName: dataset.name,

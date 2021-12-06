@@ -21,6 +21,7 @@ import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
+import { CategorizationSearch } from "oxalis/view/components/categorization_label";
 import features, { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
@@ -45,6 +46,7 @@ type PersistenceState = {
 const CONVERSION_JOBS_REFRESH_INTERVAL = 60 * 1000;
 const MAX_JOBS_TO_DISPLAY = 5;
 const RECENT_DATASET_DAY_THRESHOLD = 3;
+const LOCAL_STORAGE_FILTER_TAGS_KEY = "lastDatasetSearchTags";
 
 const persistence: Persistence<PersistenceState> = new Persistence(
   {
@@ -69,6 +71,7 @@ function DatasetView(props: Props) {
   const history = useHistory();
   const context = useContext(DatasetCacheContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchTags, setSearchTags] = useState<Array<string>>([]);
   const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
     "onlyShowReported",
   );
@@ -115,6 +118,12 @@ function DatasetView(props: Props) {
       datasetFilteringMode,
     });
   }, [searchQuery, datasetFilteringMode]);
+
+  function addTagToSearch(tag: string) {
+    if (!searchTags.includes(tag)) {
+      setSearchTags([...searchTags, tag]);
+    }
+  }
 
   function handleSearch(event: SyntheticInputEvent<>) {
     setSearchQuery(event.target.value);
@@ -202,11 +211,14 @@ function DatasetView(props: Props) {
       <DatasetTable
         datasets={filteredDatasets}
         searchQuery={searchQuery}
+        searchTags={searchTags}
         isUserAdmin={Utils.isUserAdmin(user)}
         isUserTeamManager={Utils.isUserTeamManager(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
-        updateDataset={context.updateDataset}
+        updateDataset={context.updateCachedDataset}
+        reloadDataset={context.reloadDataset}
+        addTagToSearch={addTagToSearch}
       />
     );
   }
@@ -356,10 +368,14 @@ function DatasetView(props: Props) {
   return (
     <div>
       {adminHeader}
+      <CategorizationSearch
+        searchTags={searchTags}
+        setTags={setSearchTags}
+        localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
+      />
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       {renderNewJobsAlert()}
       <div className="clearfix" style={{ margin: "20px 0px" }} />
-
       <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
         {content}
       </Spin>

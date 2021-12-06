@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(78);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(79);
 COMMIT TRANSACTION;
 
 
@@ -105,6 +105,7 @@ CREATE TABLE webknossos.dataSets(
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
   details JSONB,
+  tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),

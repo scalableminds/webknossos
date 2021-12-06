@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 case class ReserveUploadInformation(uploadId: String,
                                     name: String,
                                     organization: String,
-                                    totalFileCount: Int,
+                                    totalFileCount: Long,
                                     initialTeams: List[String])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
@@ -168,14 +168,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
       fileCountString <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId))
-      fileCount <- tryo(Integer.parseInt(fileCountString.getOrElse(""))).toFox
+      fileCount <- tryo(fileCountString.getOrElse("").toLong).toFox
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- bool2Fox(fileCount == fileNames.size)
       list <- Fox.serialCombined(fileNames.toList) { fileName =>
         val chunkCount =
           runningUploadMetadataStore
             .find(redisKeyForFileChunkCount(uploadId, fileName))
-            .map(s => Integer.valueOf(s.getOrElse("")))
+            .map(s => s.getOrElse("").toLong)
         val chunks = runningUploadMetadataStore.findSet(redisKeyForFileChunkSet(uploadId, fileName))
         chunks.flatMap(set => chunkCount.map(_ == set.size))
       }

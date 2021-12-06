@@ -5,7 +5,6 @@ import java.io.File
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl._
-import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -121,10 +120,10 @@ Expects:
                 SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
                 persistTracing = true)
             }
+            annotationLayers <- AnnotationLayer.layersFromIds(mergedSkeletonTracingIdOpt, mergedVolumeTracingIdOpt)
             annotation <- annotationService.createFrom(request.identity,
                                                        dataSet,
-                                                       mergedSkeletonTracingIdOpt,
-                                                       mergedVolumeTracingIdOpt,
+                                                       annotationLayers,
                                                        AnnotationType.Explorational,
                                                        name,
                                                        description)
@@ -261,6 +260,7 @@ Expects:
       } yield result
     }
 
+  // TODO: select versions per layer
   private def downloadExplorational(annotationId: String,
                                     typ: String,
                                     issuingUser: User,
@@ -271,13 +271,12 @@ Expects:
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        skeletonTracingId <- annotation.skeletonTracingId.toFox
-        tracing <- tracingStoreClient.getSkeletonTracing(skeletonTracingId, skeletonVersion)
+        fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
+          tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        (nmlWriter.toNmlStream(Some(tracing),
-                               None,
+        (nmlWriter.toNmlStream(fetchedAnnotationLayers,
                                Some(annotation),
                                dataSet.scale,
                                None,
@@ -290,32 +289,37 @@ Expects:
     def volumeOrHybridToDownloadStream(dataSet: DataSet,
                                        annotation: Annotation,
                                        name: String,
-                                       organizationName: String) =
+                                       organizationName: String): Fox[(Enumerator[Array[Byte]], String)] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        volumeTracingId <- annotation.volumeTracingId.toFox
-        (volumeTracing, data: Option[Source[ByteString, _]]) <- tracingStoreClient.getVolumeTracing(volumeTracingId,
-                                                                                                    volumeVersion,
-                                                                                                    skipVolumeData)
-        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(skeletonId =>
-          tracingStoreClient.getSkeletonTracing(skeletonId, skeletonVersion))
+        fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
+          volumeAnnotationLayer =>
+            tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData)
+        }
+        fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
+          skeletonAnnotationLayer =>
+            tracingStoreClient.getSkeletonTracing(skeletonAnnotationLayer, skeletonVersion)
+        }
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        val dataEnumerator = data.map(d => Enumerator.fromStream(d.runWith(StreamConverters.asInputStream())))
-        val nmlStream = NamedEnumeratorStream(name + ".nml",
-                                              nmlWriter.toNmlStream(skeletonTracingOpt,
-                                                                    Some(volumeTracing),
-                                                                    Some(annotation),
-                                                                    dataSet.scale,
-                                                                    None,
-                                                                    organizationName,
-                                                                    Some(user),
-                                                                    taskOpt))
-        val dataStream: Option[NamedEnumeratorStream] = dataEnumerator.map(d => NamedEnumeratorStream("data.zip", d))
+        val nmlStream = NamedEnumeratorStream(
+          name + ".nml",
+          nmlWriter.toNmlStream(fetchedSkeletonLayers ::: fetchedVolumeLayers,
+                                Some(annotation),
+                                dataSet.scale,
+                                None,
+                                organizationName,
+                                Some(user),
+                                taskOpt)
+        )
+        val dataStreams: List[NamedEnumeratorStream] =
+          fetchedVolumeLayers.zipWithIndex.flatMap {
+            case (volumeLayer, index) => volumeLayer.namedVolumeDataEnumerator(index, fetchedVolumeLayers.length == 1)
+          }
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
-            dataStream.map(d => List(nmlStream, d)).getOrElse(List(nmlStream)),
+            nmlStream :: dataStreams,
             outputStream
           )
         }, name + ".zip")

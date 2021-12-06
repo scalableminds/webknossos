@@ -1,6 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.JsonHelper.box2Option
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
@@ -21,6 +22,7 @@ import oxalis.security.CompactRandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
+import models.job.WorkerDAO
 import models.organization.{Organization, OrganizationDAO}
 import play.api.i18n.{Messages, MessagesProvider}
 
@@ -33,6 +35,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
+                               workerDAO: WorkerDAO,
                                publicationDAO: PublicationDAO,
                                publicationService: PublicationService,
                                dataStoreService: DataStoreService,
@@ -355,7 +358,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
       publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
-      jobsEnabled = conf.Features.jobsEnabled && dataStore.jobsEnabled
+      worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
+      jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {
       Json.obj(
         "name" -> dataSet.name,

@@ -23,8 +23,7 @@ case class DataStore(
     isForeign: Boolean = false,
     isConnector: Boolean = false,
     allowsUpload: Boolean = true,
-    onlyAllowedOrganization: Option[ObjectId] = None,
-    jobsEnabled: Boolean = false
+    onlyAllowedOrganization: Option[ObjectId] = None
 )
 
 object DataStore {
@@ -109,8 +108,7 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isforeign,
         r.isconnector,
         r.allowsupload,
-        r.onlyallowedorganization.map(ObjectId(_)),
-        r.jobsenabled
+        r.onlyallowedorganization.map(ObjectId(_))
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
@@ -142,8 +140,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload, jobsEnabled)
-                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload}, ${d.jobsEnabled})""")
+        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload)
+                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload})""")
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =

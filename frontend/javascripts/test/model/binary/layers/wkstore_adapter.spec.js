@@ -213,6 +213,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
   const getBucketData = sinon.stub();
   getBucketData.returns(data);
 
+  const tracingId = "tracingId";
   const expectedSaveQueueItems = {
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [
@@ -237,9 +238,10 @@ test.serial("sendToStore: Request Handling should send the correct request param
     ],
     transactionId: "dummyRequestId",
     tracingType: "volume",
+    tracingId,
   };
 
-  return sendToStore(batch).then(() => {
+  return sendToStore(batch, tracingId).then(() => {
     t.is(StoreMock.dispatch.callCount, 1);
 
     const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;

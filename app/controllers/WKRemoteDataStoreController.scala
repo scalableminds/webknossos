@@ -41,7 +41,9 @@ class WKRemoteDataStoreController @Inject()(
         val uploadInfo = request.body
         for {
           user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
-          organization <- organizationDAO.findOneByName(uploadInfo.organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
+          organization <- organizationDAO.findOneByName(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            uploadInfo.organization) ~> NOT_FOUND
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"

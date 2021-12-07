@@ -82,7 +82,7 @@ class DSRemoteWebKnossosClient @Inject()(
 
   def validateDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[_] =
     for {
-      userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
+      userToken <- option2Fox(userTokenOpt) ?~> "validateDataSourceUpload.noUserToken"
     } yield
       rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload")
         .addQueryString("key" -> dataStoreKey)

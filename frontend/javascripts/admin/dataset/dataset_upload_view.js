@@ -226,6 +226,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         organization: datasetId.owningOrganization,
         name: datasetId.name,
         totalFileCount: formValues.zipFile.length,
+        layersToLink: [
+          {
+            organizationName: "sample_organization",
+            dataSetName: "dsA+",
+            layerName: "color",
+          },
+        ],
         initialTeams: formValues.initialTeams.map(team => team.id),
       };
 

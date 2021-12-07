@@ -22,6 +22,7 @@ case class ReserveUploadInformation(uploadId: String,
                                     name: String,
                                     organization: String,
                                     totalFileCount: Long,
+                                    layersToLink: List[LayerIdentifier],
                                     initialTeams: List[String])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]

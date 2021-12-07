@@ -32,6 +32,7 @@ import {
   createTreeMapFromTreeArray,
   removeMissingGroupsFromTrees,
   getOrCreateTree,
+  ensureTreeNames,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   getSkeletonTracing,
@@ -46,7 +47,6 @@ import * as Utils from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
-  const { restrictions } = state.tracing;
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const trees = createTreeMapFromTreeArray(action.tracing.trees);
@@ -111,107 +111,12 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
   return getSkeletonTracing(state.tracing)
     .map(skeletonTracing => {
+      /**
+       * ATTENTION: The actions that should be executed regardless of whether allowUpdate is true or false
+       * should be added here!
+       */
+
       switch (action.type) {
-        case "CREATE_NODE": {
-          const { position, rotation, viewport, resolution, treeId, timestamp } = action;
-
-          return getOrCreateTree(state, skeletonTracing, treeId, timestamp)
-            .chain(tree =>
-              createNode(
-                state,
-                skeletonTracing,
-                tree,
-                position,
-                rotation,
-                viewport,
-                resolution,
-                timestamp,
-                restrictions,
-              ).map(([node, edges]) => {
-                const diffableNodeMap = tree.nodes;
-                const newDiffableMap = diffableNodeMap.set(node.id, node);
-                const newTree = update(tree, {
-                  nodes: { $set: newDiffableMap },
-                  edges: { $set: edges },
-                });
-                const activeNodeId = action.dontActivate ? skeletonTracing.activeNodeId : node.id;
-                const activeTreeId = action.dontActivate
-                  ? skeletonTracing.activeTreeId
-                  : tree.treeId;
-                return update(state, {
-                  tracing: {
-                    skeleton: {
-                      trees: {
-                        [tree.treeId]: { $set: newTree },
-                      },
-                      activeNodeId: { $set: activeNodeId },
-                      activeGroupId: { $set: null },
-                      cachedMaxNodeId: { $set: node.id },
-                      activeTreeId: { $set: activeTreeId },
-                    },
-                  },
-                });
-              }),
-            )
-            .getOrElse(state);
-        }
-
-        case "DELETE_NODE": {
-          const { timestamp, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
-            .chain(([tree, node]) => deleteNode(state, tree, node, timestamp, restrictions))
-            .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: { $set: trees },
-                    activeNodeId: { $set: newActiveNodeId },
-                    activeTreeId: { $set: newActiveTreeId },
-                    activeGroupId: { $set: null },
-                    cachedMaxNodeId: { $set: newMaxNodeId },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
-        }
-
-        case "DELETE_EDGE": {
-          const { timestamp, sourceNodeId, targetNodeId } = action;
-
-          if (sourceNodeId === targetNodeId) {
-            return state;
-          }
-
-          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
-          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
-          return sourceTreeMaybe
-            .chain(([sourceTree, sourceNode]) =>
-              targetTreeMaybe.chain(([targetTree, targetNode]) =>
-                deleteEdge(
-                  state,
-                  sourceTree,
-                  sourceNode,
-                  targetTree,
-                  targetNode,
-                  timestamp,
-                  restrictions,
-                ),
-              ),
-            )
-            .map(([trees, newActiveTreeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: { $set: trees },
-                    activeTreeId: { $set: newActiveTreeId },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
-        }
-
         case "SET_ACTIVE_NODE": {
           const { nodeId } = action;
           return findTreeByNodeId(skeletonTracing.trees, nodeId)
@@ -265,134 +170,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               },
             },
           });
-        }
-
-        case "SET_NODE_POSITION": {
-          const { position, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
-            .map(([tree, node]) => {
-              const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
-              const newDiffableMap = diffableMap.set(
-                node.id,
-                update(node, { position: { $set: position } }),
-              );
-              return update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: {
-                      [tree.treeId]: { nodes: { $set: newDiffableMap } },
-                    },
-                  },
-                },
-              });
-            })
-            .getOrElse(state);
-        }
-
-        case "CREATE_BRANCHPOINT": {
-          const { timestamp, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
-            .chain(([tree, node]) =>
-              createBranchPoint(skeletonTracing, tree, node, timestamp, restrictions).map(
-                branchPoint =>
-                  update(state, {
-                    tracing: {
-                      skeleton: {
-                        trees: { [tree.treeId]: { branchPoints: { $push: [branchPoint] } } },
-                      },
-                    },
-                  }),
-              ),
-            )
-            .getOrElse(state);
-        }
-
-        case "DELETE_BRANCHPOINT": {
-          return deleteBranchPoint(skeletonTracing, restrictions)
-            .map(([branchPoints, treeId, newActiveNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: { [treeId]: { branchPoints: { $set: branchPoints } } },
-                    activeNodeId: { $set: newActiveNodeId },
-                    activeTreeId: { $set: treeId },
-                    activeGroupId: { $set: null },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
-        }
-
-        case "CREATE_TREE": {
-          const { timestamp } = action;
-          return createTree(state, timestamp)
-            .map(tree =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: { [tree.treeId]: { $set: tree } },
-                    activeNodeId: { $set: null },
-                    activeTreeId: { $set: tree.treeId },
-                    activeGroupId: { $set: null },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
-        }
-
-        case "ADD_TREES_AND_GROUPS": {
-          const { trees, treeGroups } = action;
-          return addTreesAndGroups(state, trees, treeGroups, restrictions)
-            .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    treeGroups: { $push: updatedTreeGroups },
-                    trees: { $merge: updatedTrees },
-                    cachedMaxNodeId: { $set: newMaxNodeId },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
-        }
-
-        case "DELETE_TREE": {
-          const { treeId } = action;
-          return getTree(skeletonTracing, treeId)
-            .chain(tree => deleteTree(state, tree, restrictions))
-            .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: { $set: trees },
-                    activeTreeId: { $set: newActiveTreeId },
-                    activeNodeId: { $set: newActiveNodeId },
-                    activeGroupId: { $set: null },
-                    cachedMaxNodeId: { $set: newMaxNodeId },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
-        }
-        case "RESET_SKELETON_TRACING": {
-          const newTree = createTree(state, Date.now(), false).get();
-          const newTreesObject = Object.assign({}, { [newTree.treeId]: newTree });
-          const newState = update(state, {
-            tracing: {
-              skeleton: {
-                trees: { $set: newTreesObject },
-                activeTreeId: { $set: newTree.treeId },
-                activeNodeId: { $set: null },
-                activeGroupId: { $set: null },
-                treeGroups: { $set: [] },
-              },
-            },
-          });
-          return newState;
         }
 
         case "SET_ACTIVE_TREE": {
@@ -465,38 +242,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               },
             },
           });
-        }
-
-        case "MERGE_TREES": {
-          const { sourceNodeId, targetNodeId } = action;
-          return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId, restrictions)
-            .map(([trees, newActiveTreeId, newActiveNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: { $set: trees },
-                    activeNodeId: { $set: newActiveNodeId },
-                    activeTreeId: { $set: newActiveTreeId },
-                    activeGroupId: { $set: null },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
-        }
-
-        case "SET_TREE_NAME": {
-          return getTree(skeletonTracing, action.treeId)
-            .map(tree => {
-              const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
-              const newName = action.name || defaultName;
-              return update(state, {
-                tracing: {
-                  skeleton: { trees: { [tree.treeId]: { name: { $set: newName } } } },
-                },
-              });
-            })
-            .getOrElse(state);
         }
 
         case "SELECT_NEXT_TREE": {
@@ -579,39 +324,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               },
             },
           });
-        }
-
-        case "CREATE_COMMENT": {
-          const { commentText, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
-            .chain(([tree, node]) =>
-              createComment(skeletonTracing, tree, node, commentText, restrictions).map(comments =>
-                update(state, {
-                  tracing: {
-                    skeleton: {
-                      trees: { [tree.treeId]: { comments: { $set: comments } } },
-                    },
-                  },
-                }),
-              ),
-            )
-            .getOrElse(state);
-        }
-
-        case "DELETE_COMMENT": {
-          return getNodeAndTree(skeletonTracing, action.nodeId, action.treeId)
-            .chain(([tree, node]) =>
-              deleteComment(skeletonTracing, tree, node, restrictions).map(comments =>
-                update(state, {
-                  tracing: {
-                    skeleton: {
-                      trees: { [tree.treeId]: { comments: { $set: comments } } },
-                    },
-                  },
-                }),
-              ),
-            )
-            .getOrElse(state);
         }
 
         case "SET_TRACING": {
@@ -708,20 +420,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           return toggleTreeGroupReducer(state, skeletonTracing, action.groupId);
         }
 
-        case "SET_TREE_GROUPS": {
-          const { treeGroups } = action;
-          const updatedTrees = removeMissingGroupsFromTrees(skeletonTracing, treeGroups);
-          return update(state, {
-            tracing: {
-              skeleton: {
-                treeGroups: {
-                  $set: action.treeGroups,
-                },
-                trees: { $merge: updatedTrees },
-              },
-            },
-          });
-        }
         case "UPDATE_NAVIGATION_LIST": {
           const { list, activeIndex } = action;
 
@@ -739,6 +437,330 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
+        case "SET_MERGER_MODE_ENABLED": {
+          const { active } = action;
+          return update(state, {
+            temporaryConfiguration: {
+              isMergerModeEnabled: {
+                $set: active,
+              },
+            },
+          });
+        }
+
+        default:
+        // pass
+      }
+
+      /**
+       * ATTENTION: The following actions are only executed if allowUpdate is true!
+       */
+
+      const { restrictions } = state.tracing;
+      const { allowUpdate } = restrictions;
+      if (!allowUpdate) return state;
+
+      switch (action.type) {
+        case "CREATE_NODE": {
+          const { position, rotation, viewport, resolution, treeId, timestamp } = action;
+
+          return getOrCreateTree(state, skeletonTracing, treeId, timestamp)
+            .chain(tree =>
+              createNode(
+                state,
+                skeletonTracing,
+                tree,
+                position,
+                rotation,
+                viewport,
+                resolution,
+                timestamp,
+              ).map(([node, edges]) => {
+                const diffableNodeMap = tree.nodes;
+                const newDiffableMap = diffableNodeMap.set(node.id, node);
+                const newTree = update(tree, {
+                  nodes: { $set: newDiffableMap },
+                  edges: { $set: edges },
+                });
+                const activeNodeId = action.dontActivate ? skeletonTracing.activeNodeId : node.id;
+                const activeTreeId = action.dontActivate
+                  ? skeletonTracing.activeTreeId
+                  : tree.treeId;
+                return update(state, {
+                  tracing: {
+                    skeleton: {
+                      trees: {
+                        [tree.treeId]: { $set: newTree },
+                      },
+                      activeNodeId: { $set: activeNodeId },
+                      activeGroupId: { $set: null },
+                      cachedMaxNodeId: { $set: node.id },
+                      activeTreeId: { $set: activeTreeId },
+                    },
+                  },
+                });
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "DELETE_NODE": {
+          const { timestamp, nodeId, treeId } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
+            .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: { $set: trees },
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeTreeId: { $set: newActiveTreeId },
+                    activeGroupId: { $set: null },
+                    cachedMaxNodeId: { $set: newMaxNodeId },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "DELETE_EDGE": {
+          const { timestamp, sourceNodeId, targetNodeId } = action;
+
+          if (sourceNodeId === targetNodeId) {
+            return state;
+          }
+
+          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
+          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
+          return sourceTreeMaybe
+            .chain(([sourceTree, sourceNode]) =>
+              targetTreeMaybe.chain(([targetTree, targetNode]) =>
+                deleteEdge(state, sourceTree, sourceNode, targetTree, targetNode, timestamp),
+              ),
+            )
+            .map(([trees, newActiveTreeId]) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: { $set: trees },
+                    activeTreeId: { $set: newActiveTreeId },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "SET_NODE_POSITION": {
+          const { position, nodeId, treeId } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .map(([tree, node]) => {
+              const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
+              const newDiffableMap = diffableMap.set(
+                node.id,
+                update(node, { position: { $set: position } }),
+              );
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: { nodes: { $set: newDiffableMap } },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
+        case "CREATE_BRANCHPOINT": {
+          const { timestamp, nodeId, treeId } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .chain(([tree, node]) =>
+              createBranchPoint(skeletonTracing, tree, node, timestamp, restrictions).map(
+                branchPoint =>
+                  update(state, {
+                    tracing: {
+                      skeleton: {
+                        trees: { [tree.treeId]: { branchPoints: { $push: [branchPoint] } } },
+                      },
+                    },
+                  }),
+              ),
+            )
+            .getOrElse(state);
+        }
+
+        case "DELETE_BRANCHPOINT": {
+          return deleteBranchPoint(skeletonTracing, restrictions)
+            .map(([branchPoints, treeId, newActiveNodeId]) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: { [treeId]: { branchPoints: { $set: branchPoints } } },
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeTreeId: { $set: treeId },
+                    activeGroupId: { $set: null },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "CREATE_TREE": {
+          const { timestamp } = action;
+          return createTree(state, timestamp)
+            .map(tree =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: { [tree.treeId]: { $set: tree } },
+                    activeNodeId: { $set: null },
+                    activeTreeId: { $set: tree.treeId },
+                    activeGroupId: { $set: null },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "ADD_TREES_AND_GROUPS": {
+          const { trees, treeGroups } = action;
+          const treesWithNames = ensureTreeNames(state, trees);
+          return addTreesAndGroups(skeletonTracing, treesWithNames, treeGroups)
+            .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    treeGroups: { $push: updatedTreeGroups },
+                    trees: { $merge: updatedTrees },
+                    cachedMaxNodeId: { $set: newMaxNodeId },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "DELETE_TREE": {
+          const { treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .chain(tree => deleteTree(skeletonTracing, tree))
+            .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: { $set: trees },
+                    activeTreeId: { $set: newActiveTreeId },
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeGroupId: { $set: null },
+                    cachedMaxNodeId: { $set: newMaxNodeId },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+        case "RESET_SKELETON_TRACING": {
+          const newTree = createTree(state, Date.now(), false).get();
+          const newTreesObject = Object.assign({}, { [newTree.treeId]: newTree });
+          const newState = update(state, {
+            tracing: {
+              skeleton: {
+                trees: { $set: newTreesObject },
+                activeTreeId: { $set: newTree.treeId },
+                activeNodeId: { $set: null },
+                activeGroupId: { $set: null },
+                treeGroups: { $set: [] },
+              },
+            },
+          });
+          return newState;
+        }
+
+        case "MERGE_TREES": {
+          const { sourceNodeId, targetNodeId } = action;
+          return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId)
+            .map(([trees, newActiveTreeId, newActiveNodeId]) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: { $set: trees },
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeTreeId: { $set: newActiveTreeId },
+                    activeGroupId: { $set: null },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "SET_TREE_NAME": {
+          return getTree(skeletonTracing, action.treeId)
+            .map(tree => {
+              const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
+              const newName = action.name || defaultName;
+              return update(state, {
+                tracing: {
+                  skeleton: { trees: { [tree.treeId]: { name: { $set: newName } } } },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
+        case "CREATE_COMMENT": {
+          const { commentText, nodeId, treeId } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .chain(([tree, node]) =>
+              createComment(skeletonTracing, tree, node, commentText).map(comments =>
+                update(state, {
+                  tracing: {
+                    skeleton: {
+                      trees: { [tree.treeId]: { comments: { $set: comments } } },
+                    },
+                  },
+                }),
+              ),
+            )
+            .getOrElse(state);
+        }
+
+        case "DELETE_COMMENT": {
+          return getNodeAndTree(skeletonTracing, action.nodeId, action.treeId)
+            .chain(([tree, node]) =>
+              deleteComment(skeletonTracing, tree, node).map(comments =>
+                update(state, {
+                  tracing: {
+                    skeleton: {
+                      trees: { [tree.treeId]: { comments: { $set: comments } } },
+                    },
+                  },
+                }),
+              ),
+            )
+            .getOrElse(state);
+        }
+
+        case "SET_TREE_GROUPS": {
+          const { treeGroups } = action;
+          const updatedTrees = removeMissingGroupsFromTrees(skeletonTracing, treeGroups);
+          return update(state, {
+            tracing: {
+              skeleton: {
+                treeGroups: {
+                  $set: action.treeGroups,
+                },
+                trees: { $merge: updatedTrees },
+              },
+            },
+          });
+        }
+
         case "SET_TREE_GROUP": {
           const { treeId, groupId } = action;
           return getTree(skeletonTracing, treeId)
@@ -750,16 +772,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               }),
             )
             .getOrElse(state);
-        }
-        case "SET_MERGER_MODE_ENABLED": {
-          const { active } = action;
-          return update(state, {
-            temporaryConfiguration: {
-              isMergerModeEnabled: {
-                $set: active,
-              },
-            },
-          });
         }
 
         default:

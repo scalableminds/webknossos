@@ -39,6 +39,7 @@ POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/isosu
 # DataSource management
 GET         /datasets                                                                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.list
 POST        /datasets                                                                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.uploadChunk
+POST        /datasets/reserveUpload                                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reserveUpload
 POST        /datasets/finishUpload                                                                                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.finishUpload
 GET         /datasets/:organizationName/:dataSetName/readInboxDataSourceLike                                                      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(organizationName: String, dataSetName: String, returnFormatLike: Boolean ?= true)
 GET         /datasets/:organizationName/:dataSetName/readInboxDataSource                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(organizationName: String, dataSetName: String, returnFormatLike: Boolean ?= false)

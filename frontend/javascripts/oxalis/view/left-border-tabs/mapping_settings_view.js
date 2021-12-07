@@ -15,7 +15,6 @@ import {
   getSegmentationLayerByName,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
   setMappingEnabledAction,
@@ -55,7 +54,6 @@ type StateProps = {|
     optionalProperties?: OptionalMappingProperties,
   ) => void,
   activeViewport: OrthoView,
-  activeCellId: number,
   isMergerModeEnabled: boolean,
   allowUpdate: boolean,
 |};
@@ -306,9 +304,6 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     mappingColors: activeMappingInfo.mappingColors,
     activeViewport: state.viewModeData.plane.activeViewport,
     segmentationLayer: getSegmentationLayerByName(state.dataset, ownProps.layerName),
-    activeCellId: getVolumeTracing(state.tracing)
-      .map(tracing => tracing.activeCellId)
-      .getOrElse(0),
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,
   };

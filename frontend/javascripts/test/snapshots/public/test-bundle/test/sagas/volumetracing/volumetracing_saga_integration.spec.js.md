@@ -1,4 +1,4 @@
-# Snapshot report for `public/test-bundle/test/sagas/volumetracing_saga_integration.spec.js`
+# Snapshot report for `public/test-bundle/test/sagas/volumetracing/volumetracing_saga_integration.spec.js`
 
 The actual snapshot is saved in `volumetracing_saga_integration.spec.js.snap`.
 

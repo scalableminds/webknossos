@@ -49,13 +49,15 @@ class SampleDataSourceService @Inject()(rpc: RPC,
 
   var runningDownloads = new ConcurrentHashMap[DataSourceId, Unit]()
 
-  def initDownload(organizationName: String, dataSetName: String): Fox[Unit] = {
+  def initDownload(organizationName: String, dataSetName: String, userTokenOpt: Option[String] = None): Fox[Unit] = {
     val dataSourceId = DataSourceId(dataSetName, organizationName)
     for {
       _ <- bool2Fox(availableDatasets.contains(dataSetName)) ?~> "dataSet.name.notInSamples"
       _ <- bool2Fox(!runningDownloads.contains(dataSourceId)) ?~> "dataSet.downloadAlreadyRunning"
       _ <- bool2Fox(dataSourceRepository.find(dataSourceId).isEmpty) ?~> "dataSet.alreadyPresent"
-      _ <- remoteWebKnossosClient.validateDataSourceUpload(dataSourceId) ?~> "dataSet.name.alreadyTaken"
+      _ <- remoteWebKnossosClient.validateDataSourceUpload(
+        ReserveUploadInformation("", dataSetName, organizationName, 1, List.empty),
+        userTokenOpt) ?~> "dataSet.name.alreadyTaken"
       _ = runningDownloads.put(dataSourceId, ())
       _ = download(dataSourceId)
     } yield ()
@@ -75,9 +77,8 @@ class SampleDataSourceService @Inject()(rpc: RPC,
           tmpfile.close()
 
           uploadService
-            .finishUpload(
-              UploadInformation(downloadId, id.team, id.name, List.empty, List.empty, needsConversion = None),
-              checkCompletion = false)
+            .finishUpload(UploadInformation(downloadId, id.name, id.team, List.empty, needsConversion = None),
+                          checkCompletion = false)
             .map { _ =>
               runningDownloads.remove(id)
             }

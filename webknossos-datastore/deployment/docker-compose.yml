@@ -12,6 +12,8 @@ services:
       - -Dconfig.file=conf/docker.conf
       - $DATASTORE_ARGS_1
       - $DATASTORE_ARGS_2
+    links:
+      - redis
     ports:
       - $DATASTORE_PORT:9090
       - $DATASTORE_DEBUG_PORT:5011
@@ -23,3 +25,13 @@ services:
       - $BINARY_DATA_PATH:/webknossos-datastore/binaryData
       - ./tmp:/tmp
       - ./config/datastore-docker.conf:/webknossos-datastore/conf/docker.conf
+
+  # Redis
+  redis:
+    image: redis:5.0-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    volumes:
+      - "./redis:/data"

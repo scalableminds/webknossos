@@ -26,6 +26,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
+  reserveDatasetUpload,
   finishDatasetUpload,
   createResumableUpload,
   startConvertToWkwJob,
@@ -160,13 +161,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
     const uploadableDatastores = this.props.datastores.filter(datastore => datastore.allowsUpload);
-    if (this.formRef.current != null) {
+    const currentFormRef = this.formRef.current;
+    if (currentFormRef != null) {
+      const selectedDataStore = currentFormRef.getFieldValue("datastore");
       if (
         prevProps.datastores.length === 0 &&
         uploadableDatastores.length > 0 &&
-        this.formRef.current.getFieldValue("datastore") !== uploadableDatastores[0].url
+        (selectedDataStore == null || selectedDataStore.url !== uploadableDatastores[0].url)
       ) {
-        this.formRef.current.setFieldsValue({ datastore: uploadableDatastores[0].url });
+        currentFormRef.setFieldsValue({ datastore: uploadableDatastores[0] });
       }
     }
   }
@@ -218,10 +221,19 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         datasetId.name
       }__${getRandomString()}`;
 
+      const reserveUploadInformation = {
+        uploadId,
+        organization: datasetId.owningOrganization,
+        name: datasetId.name,
+        totalFileCount: formValues.zipFile.length,
+        initialTeams: formValues.initialTeams.map(team => team.id),
+      };
+
+      await reserveDatasetUpload(formValues.datastore.url, reserveUploadInformation);
+
       const resumableUpload = await createResumableUpload(
         datasetId,
-        formValues.datastore,
-        formValues.zipFile.length,
+        formValues.datastore.url,
         uploadId,
       );
 
@@ -235,7 +247,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           uploadId,
           organization: datasetId.owningOrganization,
           name: datasetId.name,
-          initialTeams: formValues.initialTeams.map(team => team.id),
           layersToLink: [
             {
               organizationName: "sample_organization",
@@ -248,7 +259,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
         this.setState({ isFinishing: true });
 
-        finishDatasetUpload(formValues.datastore, uploadInfo).then(
+        finishDatasetUpload(formValues.datastore.url, uploadInfo).then(
           async () => {
             trackAction("Upload dataset");
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
@@ -260,6 +271,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   formValues.name,
                   activeUser.organization,
                   formValues.scale,
+                  formValues.datastore.name,
                 );
               } catch (error) {
                 maybeError = error;

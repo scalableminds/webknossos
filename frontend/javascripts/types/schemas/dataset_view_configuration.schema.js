@@ -28,16 +28,20 @@ export const layerViewConfiguration = {
   isInEditMode: { type: "boolean" },
 };
 
-export const defaultDatasetViewConfiguration = {
+export const defaultDatasetViewConfigurationWithoutNull = {
   fourBit: false,
   interpolation: true,
-  renderMissingDataBlack: true,
+  renderMissingDataBlack: false,
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,
+  layers: {},
+};
+
+export const defaultDatasetViewConfiguration = {
+  ...defaultDatasetViewConfigurationWithoutNull,
   zoom: null,
   position: null,
   rotation: null,
-  layers: {},
 };
 
 export const baseDatasetViewConfiguration = {

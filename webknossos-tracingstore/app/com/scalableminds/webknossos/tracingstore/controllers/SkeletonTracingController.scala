@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TSRemoteWebKnossosClient}
 import play.api.i18n.Messages
@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
                                           val remoteWebKnossosClient: TSRemoteWebKnossosClient,
                                           val accessTokenService: TracingStoreAccessTokenService,
-                                          val slackNotificationService: SlackNotificationService)(
+                                          val slackNotificationService: TSSlackNotificationService)(
     implicit val ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends TracingController[SkeletonTracing, SkeletonTracings] {

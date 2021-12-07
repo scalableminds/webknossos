@@ -300,8 +300,10 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       throw Error(message);
     }
 
+    // todo: does this logic make sense at all? the above condition seems to exclude
+    // volume tracings
     const fallbackLayer =
-      sandboxTracing.volume != null ? sandboxTracing.volume.fallbackLayer : null;
+      sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
 
     const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
@@ -630,7 +632,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     restrictions: state.tracing.restrictions,
     task: state.task,
     activeUser: state.activeUser,
-    hasTracing: (state.tracing.skeleton || state.tracing.volume) != null,
+    hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isShareModalOpen: state.uiInformation.showShareModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };

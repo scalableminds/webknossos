@@ -1,14 +1,15 @@
 // @flow
-import type { OxalisState } from "oxalis/store";
-import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
-import { isVolumeAnnotationDisallowedForZoom } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getRenderableResolutionForSegmentationTracing,
-  getSegmentationTracingLayer,
-  getVisibleSegmentationLayer,
-} from "oxalis/model/accessors/dataset_accessor";
-import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import memoizeOne from "memoize-one";
+
+import { AnnotationToolEnum, type AnnotationTool } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import {
+  getActiveSegmentationTracing,
+  getRenderableResolutionForSegmentationTracing,
+  isVolumeAnnotationDisallowedForZoom,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 
 const zoomInToUseToolMessage = "Please zoom in further to use this tool.";
 
@@ -21,7 +22,7 @@ const getExplanationForDisabledVolume = (
   isZoomInvalidForTracing,
 ) => {
   if (!isSegmentationTracingVisible) {
-    return "Volume annotation is disabled since the segmentation tracing layer is disabled. Enable it in the left settings sidebar.";
+    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable it in the left settings sidebar.";
   }
   if (isZoomInvalidForTracing) {
     return "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.";
@@ -137,17 +138,22 @@ export function getDisabledInfoForTools(
 ): { [key: AnnotationTool]: { isDisabled: boolean, explanation: string } } {
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
   const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentationTracing(state);
+
+  const hasVolume = state.tracing.volumes.length > 0;
+  const hasSkeleton = state.tracing.skeleton != null;
+  const segmentationTracingLayer = getActiveSegmentationTracing(state);
+  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentationTracing(
+    state,
+    segmentationTracingLayer,
+  );
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const isSegmentationTracingVisibleForMag = labeledResolution != null;
-
-  const hasVolume = state.tracing.volume != null;
-  const hasSkeleton = state.tracing.skeleton != null;
-  const segmentationTracingLayer = getSegmentationTracingLayer(state.dataset);
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
   const isSegmentationTracingVisible =
     segmentationTracingLayer != null &&
-    getVisibleSegmentationLayer(state) === segmentationTracingLayer;
+    visibleSegmentationLayer != null &&
+    visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
 
   const genericDisabledExplanation = getExplanationForDisabledVolume(
     isSegmentationTracingVisible,

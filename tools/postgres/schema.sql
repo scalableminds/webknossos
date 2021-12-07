@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(76);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(79);
 COMMIT TRANSACTION;
 
 
@@ -34,8 +34,6 @@ CREATE TABLE webknossos.annotations(
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
-  skeletonTracingId CHAR(36) UNIQUE,
-  volumeTracingId CHAR(36) UNIQUE, -- has to be unique even over both skeletonTracingId and volumeTracingId. Enforced by datastore.
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name VARCHAR(256) NOT NULL DEFAULT '',
@@ -48,8 +46,17 @@ CREATE TABLE webknossos.annotations(
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
-  CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL),
   CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
+);
+
+
+CREATE TYPE webknossos.ANNOTATION_LAYER_TYPE AS ENUM ('Skeleton', 'Volume');
+CREATE TABLE webknossos.annotation_layers(
+  _annotation CHAR(24) NOT NULL,
+  tracingId CHAR(36) NOT NULL UNIQUE,
+  typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
+  name VARCHAR(256),
+  PRIMARY KEY (_annotation, tracingId)
 );
 
 CREATE TABLE webknossos.annotation_sharedTeams(
@@ -98,6 +105,7 @@ CREATE TABLE webknossos.dataSets(
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
   details JSONB,
+  tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
@@ -153,7 +161,6 @@ CREATE TABLE webknossos.dataStores(
   isForeign BOOLEAN NOT NULL DEFAULT false,
   isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
-  jobsEnabled BOOLEAN NOT NULL DEFAULT false,
   onlyAllowedOrganization CHAR(24)
 );
 
@@ -361,19 +368,37 @@ CREATE TABLE webknossos.maintenance(
 );
 INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
-CREATE TYPE webknossos.JOB_MANUAL_STATE AS ENUM ('SUCCESS', 'FAILURE');
+
+CREATE TABLE webknossos.workers(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _dataStore CHAR(256) NOT NULL,
+  key VARCHAR(1024) NOT NULL UNIQUE,
+  maxParallelJobs INT NOT NULL DEFAULT 1,
+  lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+
+CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE');
 
 CREATE TABLE webknossos.jobs(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _owner CHAR(24) NOT NULL,
+  _dataStore CHAR(256) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
-  celeryJobId CHAR(36) NOT NULL,
-  celeryInfo JSONB NOT NULL,
-  manualState webknossos.JOB_MANUAL_STATE,
+  state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING',
+  manualState webknossos.JOB_STATE,
+  _worker CHAR(24),
+  latestRunId VARCHAR(1024),
+  returnValue Text,
+  started TIMESTAMPTZ,
+  ended TIMESTAMPTZ,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
+
 
 CREATE TABLE webknossos.invites(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
@@ -403,6 +428,7 @@ CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDele
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT isDeleted;
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 
@@ -421,8 +447,6 @@ CREATE INDEX ON webknossos.annotations(_user, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
-CREATE INDEX ON webknossos.annotations(skeletonTracingId);
-CREATE INDEX ON webknossos.annotations(volumeTracingId);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
 CREATE INDEX ON webknossos.dataSets(name);
@@ -496,7 +520,9 @@ ALTER TABLE webknossos.multiUsers
 ALTER TABLE webknossos.experienceDomains
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
 ALTER TABLE webknossos.jobs
-  ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE;
+  ADD CONSTRAINT owner_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE,
+  ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
+  ADD CONSTRAINT worker_ref FOREIGN KEY(_worker) REFERENCES webknossos.workers(_id) DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$

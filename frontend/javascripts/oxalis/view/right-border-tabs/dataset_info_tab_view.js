@@ -376,7 +376,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     if (isDatasetViewMode) return null;
 
     const isSkeleton = this.props.tracing.skeleton != null;
-    const isVolume = this.props.tracing.volume != null;
+    const isVolume = this.props.tracing.volumes.length > 0;
     const isHybrid = isSkeleton && isVolume;
     const { allowUpdate } = this.props.tracing.restrictions;
     const isExplorational =

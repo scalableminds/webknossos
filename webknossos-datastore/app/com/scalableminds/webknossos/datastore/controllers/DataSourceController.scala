@@ -89,6 +89,23 @@ class DataSourceController @Inject()(
     }
   }
 
+  def reserveUpload: Action[ReserveUploadInformation] = Action.async(validateJson[ReserveUploadInformation]) {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+        AllowRemoteOrigin {
+          for {
+            isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
+            userTokenOpt = accessTokenService.tokenFromRequest(request)
+            _ <- if (!isKnownUpload) {
+              (remoteWebKnossosClient
+                .validateDataSourceUpload(request.body, userTokenOpt) ?~> "dataSet.upload.validation.failed")
+                .flatMap(_ => uploadService.reserveUpload(request.body))
+            } else Fox.successful(())
+          } yield Ok
+        }
+      }
+  }
+
   @ApiOperation(
     value = """Upload a byte chunk for a new dataset
 Expects:
@@ -118,9 +135,8 @@ Expects:
           "resumableChunkNumber" -> number,
           "resumableChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
-          "totalFileCount" -> number,
           "resumableIdentifier" -> nonEmptyText
-        )).fill(("", "", -1, -1, -1, -1, ""))
+        )).fill(("", "", -1, -1, -1, ""))
 
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
         AllowRemoteOrigin {
@@ -129,19 +145,17 @@ Expects:
             .fold(
               hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
               success = {
-                case (name, organization, chunkNumber, chunkSize, totalChunkCount, totalFileCount, uploadId) =>
+                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
                   val id = DataSourceId(name, organization)
-                  val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                   for {
-                    _ <- if (!uploadService.isKnownUpload(uploadId))
-                      remoteWebKnossosClient.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
-                    else Fox.successful(())
+                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadId)
+                    _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadId,
                                                          id,
-                                                         resumableUploadInformation,
+                                                         chunkSize,
+                                                         totalChunkCount,
                                                          chunkNumber,
-                                                         totalFileCount,
                                                          new File(chunkFile.ref.path.toString))
                   } yield {
                     Ok
@@ -174,10 +188,10 @@ Expects:
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
-          (dataSourceId, initialTeams, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
+          (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
           userTokenOpt = accessTokenService.tokenFromRequest(request)
           _ <- remoteWebKnossosClient
-            .reportUpload(dataSourceId, initialTeams, dataSetSizeBytes, userTokenOpt) ?~> "setInitialTeams.failed"
+            .reportUpload(dataSourceId, dataSetSizeBytes, userTokenOpt) ?~> "setInitialTeams.failed"
         } yield Ok
       }
     }
@@ -189,8 +203,9 @@ Expects:
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
         AllowRemoteOrigin {
+          val userTokenOpt = accessTokenService.tokenFromRequest(request)
           for {
-            _ <- sampleDatasetService.initDownload(organizationName, dataSetName)
+            _ <- sampleDatasetService.initDownload(organizationName, dataSetName, userTokenOpt)
           } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
         }
       }

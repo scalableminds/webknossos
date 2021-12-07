@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Tree, TreeGroup}
 
+import scala.annotation.tailrec
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 
@@ -122,4 +123,11 @@ object TreeUtils {
 
     childIter(Seq(rootGroup))
   }
+
+  @tailrec
+  def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int] = Seq[Int]()): Seq[Int] =
+    treeGroups match {
+      case head :: tail => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
+      case _            => ids
+    }
 }

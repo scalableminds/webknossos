@@ -17,6 +17,7 @@ services:
       - -Djava.net.preferIPv4Stack=true
       - -Dtracingstore.fossildb.address=fossildb
       - -Dtracingstore.redis.address=redis
+      - -Ddatastore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -DwebKnossos.sampleOrganization.enabled=false
       - -Dtracingstore.publicUri=https://${PUBLIC_HOST}

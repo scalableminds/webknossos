@@ -5,7 +5,11 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
-import { addTreesAndGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  addTreesAndGroups,
+  deleteTree,
+} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { getTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
 
 function getSkeletonTracingForConnectome(
@@ -62,6 +66,31 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
                     connectomeData: {
                       skeleton: {
                         trees: { $merge: updatedTrees },
+                        cachedMaxNodeId: { $set: newMaxNodeId },
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state),
+        )
+        .getOrElse(state);
+    }
+
+    case "DELETE_CONNECTOME_TREE": {
+      const { treeId, layerName } = action;
+      return getSkeletonTracingForConnectome(state, layerName)
+        .map(skeletonTracing =>
+          getTree(skeletonTracing, treeId)
+            .chain(tree => deleteTree(skeletonTracing, tree))
+            .map(([trees, _newActiveTreeId, _newActiveNodeId, newMaxNodeId]) =>
+              update(state, {
+                localSegmentationData: {
+                  [layerName]: {
+                    connectomeData: {
+                      skeleton: {
+                        trees: { $set: trees },
                         cachedMaxNodeId: { $set: newMaxNodeId },
                       },
                     },

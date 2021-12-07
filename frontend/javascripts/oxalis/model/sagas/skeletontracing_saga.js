@@ -37,6 +37,7 @@ import {
   setTreeNameAction,
   addTreesAndGroupsAction,
   type LoadAgglomerateSkeletonAction,
+  deleteTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   generateTreeName,
@@ -70,7 +71,10 @@ import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import createProgressCallback from "libs/progress_callback";
-import { addConnectomeTreeAction } from "oxalis/model/actions/connectome_actions";
+import {
+  addConnectomeTreeAction,
+  deleteConnectomeTreeAction,
+} from "oxalis/model/actions/connectome_actions";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
@@ -193,6 +197,7 @@ export function* watchAgglomerateLoading(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield _takeEvery(actionChannel, loadAgglomerateSkeletonWithId);
+  yield _takeEvery("REMOVE_AGGLOMERATE_SKELETON", removeAgglomerateSkeletonWithId);
 }
 
 function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
@@ -256,6 +261,41 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");
+}
+
+function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
+  const { layerName, mappingName, agglomerateId, destination } = action;
+
+  const findTreeWithName = (trees: TreeMap, treeName: string): ?Tree =>
+    // $FlowIssue[incompatible-call]
+    // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+    Object.values(trees).find((tree: Tree) => tree.name === treeName);
+
+  // This is the pattern for the automatically assigned names for agglomerate skeletons
+  const treeName = `agglomerate ${agglomerateId} (${mappingName})`;
+
+  if (destination === "tracing") {
+    const trees = yield* select(state => enforceSkeletonTracing(state.tracing).trees);
+    const tree = findTreeWithName(trees, treeName);
+
+    if (tree != null) {
+      yield* put(deleteTreeAction(tree.treeId));
+    }
+  } else {
+    const skeleton = yield* select(
+      state => state.localSegmentationData[layerName].connectomeData.skeleton,
+    );
+    if (skeleton == null) return;
+    const { trees } = skeleton;
+    const tree = findTreeWithName(trees, treeName);
+
+    if (tree != null) {
+      yield* put(deleteConnectomeTreeAction(tree.treeId, layerName));
+    }
+  }
 }
 
 export function* watchSkeletonTracingAsync(): Saga<void> {

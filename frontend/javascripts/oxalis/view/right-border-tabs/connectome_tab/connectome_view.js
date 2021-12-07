@@ -74,7 +74,10 @@ import Model from "oxalis/model";
 
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import api from "oxalis/api/internal_api";
-import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  loadAgglomerateSkeletonAction,
+  removeAgglomerateSkeletonAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { initializeConnectomeTracingAction } from "oxalis/model/actions/connectome_actions";
 
@@ -287,7 +290,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const { data } = evt.node;
     if (data.type === "synapse" && evt.checked) {
       api.tracing.setCameraPosition(data.position);
-    } else if (data.type === "segment" && evt.checked) {
+    } else if (data.type === "segment") {
       const { visibleSegmentationLayer } = this.props;
       const { currentConnectomeFile } = this.state;
       if (
@@ -295,14 +298,25 @@ class ConnectomeView extends React.Component<Props, State> {
         currentConnectomeFile != null &&
         currentConnectomeFile.mappingName != null
       ) {
-        Store.dispatch(
-          loadAgglomerateSkeletonAction(
-            visibleSegmentationLayer.name,
-            currentConnectomeFile.mappingName,
-            data.id,
-            "connectome",
-          ),
-        );
+        if (evt.checked) {
+          Store.dispatch(
+            loadAgglomerateSkeletonAction(
+              visibleSegmentationLayer.name,
+              currentConnectomeFile.mappingName,
+              data.id,
+              "connectome",
+            ),
+          );
+        } else {
+          Store.dispatch(
+            removeAgglomerateSkeletonAction(
+              visibleSegmentationLayer.name,
+              currentConnectomeFile.mappingName,
+              data.id,
+              "connectome",
+            ),
+          );
+        }
       }
     }
   };

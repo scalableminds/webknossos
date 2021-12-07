@@ -132,6 +132,13 @@ export type LoadAgglomerateSkeletonAction = {
   agglomerateId: number,
   destination: "tracing" | "connectome",
 };
+export type RemoveAgglomerateSkeletonAction = {
+  type: "REMOVE_AGGLOMERATE_SKELETON",
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+  destination: "tracing" | "connectome",
+};
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -560,6 +567,19 @@ export const loadAgglomerateSkeletonAction = (
   destination: "tracing" | "connectome" = "tracing",
 ): LoadAgglomerateSkeletonAction => ({
   type: "LOAD_AGGLOMERATE_SKELETON",
+  layerName,
+  mappingName,
+  agglomerateId,
+  destination,
+});
+
+export const removeAgglomerateSkeletonAction = (
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+  destination: "tracing" | "connectome" = "tracing",
+): RemoveAgglomerateSkeletonAction => ({
+  type: "REMOVE_AGGLOMERATE_SKELETON",
   layerName,
   mappingName,
   agglomerateId,

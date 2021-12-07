@@ -12,7 +12,16 @@ type AddConnectomeTreeAction = {
   layerName: string,
 };
 
-export type ConnectomeAction = InitializeConnectomeTracingAction | AddConnectomeTreeAction;
+type DeleteConnectomeTreeAction = {
+  type: "DELETE_CONNECTOME_TREE",
+  treeId: number,
+  layerName: string,
+};
+
+export type ConnectomeAction =
+  | InitializeConnectomeTracingAction
+  | AddConnectomeTreeAction
+  | DeleteConnectomeTreeAction;
 
 export const initializeConnectomeTracingAction = (
   layerName: string,
@@ -27,5 +36,14 @@ export const addConnectomeTreeAction = (
 ): AddConnectomeTreeAction => ({
   type: "ADD_CONNECTOME_TREE",
   trees,
+  layerName,
+});
+
+export const deleteConnectomeTreeAction = (
+  treeId: number,
+  layerName: string,
+): DeleteConnectomeTreeAction => ({
+  type: "DELETE_CONNECTOME_TREE",
+  treeId,
   layerName,
 });

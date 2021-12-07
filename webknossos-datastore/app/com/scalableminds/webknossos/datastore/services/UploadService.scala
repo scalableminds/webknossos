@@ -28,7 +28,9 @@ object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
 
-case class LayerIdentifier(organizationName: String, dataSetName: String, layerName: String)
+case class LayerIdentifier(organizationName: String, dataSetName: String, layerName: String) {
+  def pathIn(dataBaseDir: Path): Path = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(layerName)
+}
 
 object LayerIdentifier {
   implicit val jsonFormat: OFormat[LayerIdentifier] = Json.format[LayerIdentifier]
@@ -160,9 +162,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
             Fox.successful(())
           else {
             addLayerAndResolutionDirIfMissing(unpackToDir)
-            addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink)
-            dataSourceRepository.updateDataSource(
-              dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team))
+            for {
+              _ <- addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink)
+              dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team)
+              _ <- dataSourceRepository.updateDataSource(dataSource)
+            } yield ()
           }
         case Empty =>
           Fox.failure(s"Unknown error while unpacking dataset ${dataSourceId.name}")
@@ -204,20 +208,22 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     dataSourceDir
   }
 
-  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, linkedLayers: List[LayerIdentifier]): Unit =
-    linkedLayers.foreach { linkedLayer =>
-      val layerPath = dataBaseDir
-        .resolve(linkedLayer.organizationName)
-        .resolve(linkedLayer.dataSetName)
-        .resolve(linkedLayer.layerName)
-      val newLayerPath = dataSetDir.resolve(linkedLayer.layerName)
-      if (Files.exists(newLayerPath)) {
-        logger.warn(s"Cannot symlink layer at $newLayerPath: a layer with this name already exists.")
-      } else if (Files.exists(layerPath)) {
-        logger.info(s"Creating layer symlink pointing to $layerPath")
-        Files.createSymbolicLink(newLayerPath, newLayerPath.getParent.relativize(layerPath))
+  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, linkedLayers: List[LayerIdentifier]): Fox[Unit] =
+    Fox
+      .serialCombined(linkedLayers) { linkedLayer =>
+        val layerPath = linkedLayer.pathIn(dataBaseDir)
+        val newLayerPath = dataSetDir.resolve(linkedLayer.layerName)
+        for {
+          _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
+          _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."
+          _ <- tryo {
+            Files.createSymbolicLink(newLayerPath, newLayerPath.getParent.relativize(layerPath))
+          } ?~> s"Failed to create symlink at $newLayerPath."
+        } yield ()
       }
-    }
+      .map { _ =>
+        ()
+      }
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =
     if (Files.exists(dataSourceDir)) {

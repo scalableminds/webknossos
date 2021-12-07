@@ -80,14 +80,14 @@ class DSRemoteWebKnossosClient @Inject()(
       .silent
       .put(dataSources)
 
-  def validateDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[_] =
+  def validateDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "validateDataSourceUpload.noUserToken"
-    } yield
-      rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload")
+      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
         .post(info)
+    } yield ()
 
   def deleteErroneousDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteErroneous").addQueryString("key" -> dataStoreKey).post(id)

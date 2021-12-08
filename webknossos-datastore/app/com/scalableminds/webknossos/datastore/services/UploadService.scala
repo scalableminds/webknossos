@@ -7,6 +7,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
@@ -22,24 +23,27 @@ case class ReserveUploadInformation(uploadId: String,
                                     name: String,
                                     organization: String,
                                     totalFileCount: Long,
-                                    layersToLink: List[LayerIdentifier],
+                                    layersToLink: List[LinkedLayerIdentifier],
                                     initialTeams: List[String])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
 
-case class LayerIdentifier(organizationName: String, dataSetName: String, layerName: String) {
+case class LinkedLayerIdentifier(organizationName: String,
+                                 dataSetName: String,
+                                 layerName: String,
+                                 newLayerName: Option[String] = None) {
   def pathIn(dataBaseDir: Path): Path = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(layerName)
 }
 
-object LayerIdentifier {
-  implicit val jsonFormat: OFormat[LayerIdentifier] = Json.format[LayerIdentifier]
+object LinkedLayerIdentifier {
+  implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
 case class UploadInformation(uploadId: String,
                              name: String,
                              organization: String,
-                             layersToLink: List[LayerIdentifier],
+                             layersToLink: List[LinkedLayerIdentifier],
                              needsConversion: Option[Boolean])
 
 object UploadInformation {
@@ -230,11 +234,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     dataSourceDir
   }
 
-  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, linkedLayers: List[LayerIdentifier]): Fox[Unit] =
+  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, linkedLayers: List[LinkedLayerIdentifier]): Fox[Unit] =
     Fox
       .serialCombined(linkedLayers) { linkedLayer =>
         val layerPath = linkedLayer.pathIn(dataBaseDir)
-        val newLayerPath = dataSetDir.resolve(linkedLayer.layerName)
+        val newLayerPath = dataSetDir.resolve(linkedLayer.newLayerName.getOrElse(linkedLayer.layerName))
         for {
           _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
           _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."
@@ -249,7 +253,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
                                                     organizationName: String,
-                                                    linkedLayers: List[LayerIdentifier]): Fox[Unit] =
+                                                    linkedLayers: List[LinkedLayerIdentifier]): Fox[Unit] =
     if (linkedLayers.isEmpty) {
       Fox.successful(())
     } else {
@@ -262,13 +266,19 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       } yield ()
     }
 
-  private def layerFromIdentifier(layerIdentifier: LayerIdentifier): Fox[DataLayer] = {
+  private def layerFromIdentifier(layerIdentifier: LinkedLayerIdentifier): Fox[DataLayer] = {
     val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
     val inboxDataSource = dataSourceService.dataSourceFromFolder(dataSourcePath, layerIdentifier.organizationName)
     for {
       usableDataSource <- inboxDataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
-      layer <- usableDataSource.getDataLayer(layerIdentifier.layerName)
-    } yield layer
+      layer: DataLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox
+      newName = layerIdentifier.newLayerName.getOrElse(layerIdentifier.layerName)
+      layerRenamed: DataLayer <- layer match {
+        case l: WKWSegmentationLayer => Fox.successful(l.copy(name = newName))
+        case l: WKWDataLayer         => Fox.successful(l.copy(name = newName))
+        case _                       => Fox.failure("Unknown layer type for link")
+      }
+    } yield layerRenamed
   }
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =

@@ -4,7 +4,11 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAcce
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{DataStoreStatus, LayerIdentifier, ReserveUploadInformation}
+import com.scalableminds.webknossos.datastore.services.{
+  DataStoreStatus,
+  LinkedLayerIdentifier,
+  ReserveUploadInformation
+}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
@@ -56,8 +60,8 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def validateLayerToLink(layerIdentifier: LayerIdentifier, requestingUser: User)(implicit ec: ExecutionContext,
-                                                                                  m: MessagesProvider): Fox[Unit] =
+  def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
+                          requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
     for {
       organization <- organizationDAO.findOneByName(layerIdentifier.organizationName)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",

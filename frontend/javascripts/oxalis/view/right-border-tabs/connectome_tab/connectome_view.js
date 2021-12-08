@@ -47,6 +47,7 @@ import {
   initializeConnectomeTracingAction,
   deleteConnectomeTreeAction,
   addConnectomeTreesAction,
+  setConnectomeTreeVisibilityAction,
 } from "oxalis/model/actions/connectome_actions";
 import { stringToAntdColorPreset, stringToAntdColorPresetRgb } from "libs/format_utils";
 import { diffArrays } from "libs/utils";
@@ -163,9 +164,21 @@ const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Sy
     // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
     Object.values(connectomeData).map((connections: Connections) => [
       ..._.flatten(Object.values(connections.in)),
-      ..._.flatten(Object.values(connections.in)),
+      ..._.flatten(Object.values(connections.out)),
     ]),
   );
+
+const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> =>
+  _.flatten(
+    Object.keys(connectomeData).map(partnerId1 => [
+      +partnerId1,
+      ...Object.keys(connectomeData[+partnerId1].in).map(idString => +idString),
+      ...Object.keys(connectomeData[+partnerId1].out).map(idString => +idString),
+    ]),
+  );
+
+const getTreeNameForAgglomerateSkeleton = (agglomerateId: number, mappingName: string): string =>
+  `agglomerate ${agglomerateId} (${mappingName})`;
 
 const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
   name: `synapse-${synapseId}`,
@@ -216,6 +229,7 @@ class ConnectomeView extends React.Component<Props, State> {
     }
     if (prevState.connectomeData !== this.state.connectomeData) {
       this.updateSynapseTrees(prevState.connectomeData, this.state.connectomeData);
+      this.maybeRemoveAgglomerateTrees(prevState.connectomeData, this.state.connectomeData);
     }
   }
 
@@ -384,6 +398,39 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   }
 
+  maybeRemoveAgglomerateTrees(
+    prevConnectomeData: ?ConnectomeData,
+    connectomeData: ?ConnectomeData,
+  ) {
+    const { visibleSegmentationLayer } = this.props;
+    const { currentConnectomeFile } = this.state;
+
+    if (visibleSegmentationLayer == null || currentConnectomeFile == null) return;
+
+    let prevAgglomerateIds: Array<number> = [];
+    let agglomerateIds: Array<number> = [];
+    if (prevConnectomeData != null) {
+      prevAgglomerateIds = getAgglomerateIdsFromConnectomeData(prevConnectomeData);
+    }
+    if (connectomeData != null) {
+      agglomerateIds = getAgglomerateIdsFromConnectomeData(connectomeData);
+    }
+
+    const layerName = visibleSegmentationLayer.name;
+    // Find out which synapses where deleted and which were added
+    const { onlyA: deletedAgglomerateIds } = diffArrays(prevAgglomerateIds, agglomerateIds);
+
+    const { mappingName } = currentConnectomeFile;
+
+    if (deletedAgglomerateIds.length) {
+      for (const agglomerateId of deletedAgglomerateIds) {
+        Store.dispatch(
+          removeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
+        );
+      }
+    }
+  }
+
   handleChangeActiveSegment = (evt: SyntheticInputEvent<>) => {
     const segmentId = parseInt(evt.target.value, 10);
 
@@ -412,28 +459,34 @@ class ConnectomeView extends React.Component<Props, State> {
     } else if (data.type === "segment") {
       const { visibleSegmentationLayer } = this.props;
       const { currentConnectomeFile } = this.state;
-      if (
-        visibleSegmentationLayer != null &&
-        currentConnectomeFile != null &&
-        currentConnectomeFile.mappingName != null
-      ) {
+      if (visibleSegmentationLayer != null && currentConnectomeFile != null) {
+        const layerName = visibleSegmentationLayer.name;
+        const agglomerateId = data.id;
+        const { mappingName } = currentConnectomeFile;
+
+        const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
+        if (skeleton == null) return;
+
+        const { trees } = skeleton;
+
+        // This is the pattern for the automatically assigned names for agglomerate skeletons
+        // TODO: Extract into a utility function together with the occurence in skeletontracing_saga
+        const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+        const maybeTree = findTreeByName(trees, treeName);
+
         if (evt.checked) {
-          Store.dispatch(
-            loadAgglomerateSkeletonAction(
-              visibleSegmentationLayer.name,
-              currentConnectomeFile.mappingName,
-              data.id,
-              "connectome",
-            ),
-          );
+          // If the tree was already loaded, make it visible, otherwise load it
+          maybeTree.cata({
+            Nothing: () =>
+              Store.dispatch(
+                loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
+              ),
+            Just: tree =>
+              Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, true, layerName)),
+          });
         } else {
-          Store.dispatch(
-            removeAgglomerateSkeletonAction(
-              visibleSegmentationLayer.name,
-              currentConnectomeFile.mappingName,
-              data.id,
-              "connectome",
-            ),
+          maybeTree.map(tree =>
+            Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, false, layerName)),
           );
         }
       }

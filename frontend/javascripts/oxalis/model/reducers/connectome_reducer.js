@@ -103,6 +103,35 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
         .getOrElse(state);
     }
 
+    case "SET_CONNECTOME_TREE_VISIBILITY": {
+      const { treeId, isVisible, layerName } = action;
+      return getSkeletonTracingForConnectome(state, layerName)
+        .map(skeletonTracing =>
+          getTree(skeletonTracing, treeId)
+            .map(tree =>
+              update(state, {
+                localSegmentationData: {
+                  [layerName]: {
+                    connectomeData: {
+                      skeleton: {
+                        trees: {
+                          [tree.treeId]: {
+                            isVisible: {
+                              $set: isVisible,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state),
+        )
+        .getOrElse(state);
+    }
+
     default:
       return state;
   }

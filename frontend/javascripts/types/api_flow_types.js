@@ -698,5 +698,5 @@ export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 
 export type APIConnectomeFile = {
   connectomeFileName: string,
-  mappingName: ?string,
+  mappingName: string,
 };

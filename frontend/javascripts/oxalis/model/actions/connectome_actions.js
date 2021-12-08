@@ -18,10 +18,18 @@ type DeleteConnectomeTreeAction = {
   layerName: string,
 };
 
+type SetConnectomeTreeVisibilityAction = {
+  type: "SET_CONNECTOME_TREE_VISIBILITY",
+  treeId: number,
+  isVisible: boolean,
+  layerName: string,
+};
+
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
   | AddConnectomeTreesAction
-  | DeleteConnectomeTreeAction;
+  | DeleteConnectomeTreeAction
+  | SetConnectomeTreeVisibilityAction;
 
 export const initializeConnectomeTracingAction = (
   layerName: string,
@@ -45,5 +53,16 @@ export const deleteConnectomeTreeAction = (
 ): DeleteConnectomeTreeAction => ({
   type: "DELETE_CONNECTOME_TREE",
   treeId,
+  layerName,
+});
+
+export const setConnectomeTreeVisibilityAction = (
+  treeId: number,
+  isVisible: boolean,
+  layerName: string,
+): SetConnectomeTreeVisibilityAction => ({
+  type: "SET_CONNECTOME_TREE_VISIBILITY",
+  treeId,
+  isVisible,
   layerName,
 });

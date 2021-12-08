@@ -7,10 +7,9 @@ import * as THREE from "three";
 import _ from "lodash";
 import Maybe from "data.maybe";
 
-import type { Tree, Node, Edge, OxalisState } from "oxalis/store";
+import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { type BasicSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import NodeShader, {
@@ -95,14 +94,14 @@ const EdgeBufferHelperType = {
 class Skeleton {
   rootGroup: typeof THREE.Group;
   pickingNode: typeof THREE.Object3D;
-  prevTracing: BasicSkeletonTracing;
+  prevTracing: SkeletonTracing;
   nodes: BufferCollection;
   edges: BufferCollection;
   treeColorTexture: typeof THREE.DataTexture;
   supportsPicking: boolean;
 
   constructor(
-    skeletonTracingSelectorFn: OxalisState => Maybe<BasicSkeletonTracing>,
+    skeletonTracingSelectorFn: OxalisState => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
   ) {
     this.supportsPicking = supportsPicking;
@@ -124,7 +123,7 @@ class Skeleton {
     });
   }
 
-  reset(skeletonTracing: BasicSkeletonTracing) {
+  reset(skeletonTracing: SkeletonTracing) {
     // Remove all existing geometries
     this.rootGroup.remove(...this.rootGroup.children);
     this.pickingNode.remove(...this.pickingNode.children);
@@ -288,7 +287,7 @@ class Skeleton {
    * @param collection - collection of all buffers
    * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
    */
-  refresh(skeletonTracing: BasicSkeletonTracing) {
+  refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
     const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
 

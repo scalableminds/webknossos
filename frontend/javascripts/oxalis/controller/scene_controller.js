@@ -19,10 +19,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  getBasicSkeletonTracing,
-  type BasicSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -34,7 +31,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Store, { type UserBoundingBox, type OxalisState } from "oxalis/store";
+import Store, { type UserBoundingBox, type OxalisState, type SkeletonTracing } from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
@@ -308,7 +305,7 @@ class SceneController {
     }
 
     if (state.tracing.skeleton != null) {
-      this.addSkeleton(_state => getBasicSkeletonTracing(_state.tracing), true);
+      this.addSkeleton(_state => getSkeletonTracing(_state.tracing), true);
     }
 
     this.planes = {
@@ -330,7 +327,7 @@ class SceneController {
   }
 
   addSkeleton(
-    skeletonTracingSelector: OxalisState => Maybe<BasicSkeletonTracing>,
+    skeletonTracingSelector: OxalisState => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
   ): void {
     const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);

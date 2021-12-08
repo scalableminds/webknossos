@@ -55,10 +55,12 @@ test.before(t => {
   });
 });
 
+const skeletonCreator = () => new Skeleton(state => getSkeletonTracing(state.tracing), true);
+
 test.serial("Skeleton should initialize correctly using the store's state", t => {
   getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
     const trees = skeletonTracing.trees;
-    const skeleton = new Skeleton();
+    const skeleton = skeletonCreator();
 
     t.is(skeleton.nodes.buffers.length, 1);
     t.is(skeleton.edges.buffers.length, 1);
@@ -122,7 +124,7 @@ test.serial("Skeleton should initialize correctly using the store's state", t =>
 });
 
 test.serial("Skeleton should increase its buffers once the max capacity is reached", async t => {
-  const skeleton = new Skeleton();
+  const skeleton = skeletonCreator();
 
   Store.dispatch(createNodeAction([2001, 2001, 2001], [0.5, 0.5, 0.5], 0, 0));
 
@@ -132,7 +134,7 @@ test.serial("Skeleton should increase its buffers once the max capacity is reach
 });
 
 test.serial("Skeleton should invalidate a node upon deletion", async t => {
-  const skeleton = new Skeleton();
+  const skeleton = skeletonCreator();
 
   // do index lookup before "dispatch" because index will be deleted as well
   const id = skeleton.combineIds(1, 1);
@@ -147,7 +149,7 @@ test.serial("Skeleton should invalidate a node upon deletion", async t => {
 });
 
 test.serial("Skeleton should invalidate an edge upon deletion", async t => {
-  const skeleton = new Skeleton();
+  const skeleton = skeletonCreator();
 
   // do index lookup before "dispatch" because index will be deleted as well
   const id = skeleton.combineIds(2, 1);
@@ -162,7 +164,7 @@ test.serial("Skeleton should invalidate an edge upon deletion", async t => {
 });
 
 test.serial("Skeleton should update node types for branchpoints", async t => {
-  const skeleton = new Skeleton();
+  const skeleton = skeletonCreator();
 
   Store.dispatch(createBranchPointAction(3, 1));
 
@@ -176,7 +178,7 @@ test.serial("Skeleton should update node types for branchpoints", async t => {
 });
 
 test.serial.cb("Skeleton should update node radius", t => {
-  const skeleton = new Skeleton();
+  const skeleton = skeletonCreator();
 
   getSkeletonTracing(Store.getState().tracing).map(async skeletonTracing => {
     const { activeNodeId, activeTreeId } = skeletonTracing;
@@ -192,7 +194,7 @@ test.serial.cb("Skeleton should update node radius", t => {
 });
 
 test.serial.cb("Skeleton should update tree colors upon tree creation", t => {
-  const skeleton = new Skeleton();
+  const skeleton = skeletonCreator();
 
   Store.dispatch(createTreeAction());
   getSkeletonTracing(Store.getState().tracing).map(async skeletonTracing => {

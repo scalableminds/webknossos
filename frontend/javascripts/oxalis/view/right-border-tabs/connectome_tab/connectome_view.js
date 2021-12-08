@@ -175,16 +175,13 @@ class ConnectomeView extends React.Component<Props, State> {
 
     Store.dispatch(initializeConnectomeTracingAction(visibleSegmentationLayer.name));
 
-    getSceneController().addSkeleton(state => {
-      const { skeleton } = state.localSegmentationData[
-        visibleSegmentationLayer.name
-      ].connectomeData;
-
-      if (skeleton == null) return Maybe.Nothing();
-
-      const { trees, activeNodeId, activeTreeId, tracingId } = skeleton;
-      return Maybe.of({ trees, activeNodeId, activeTreeId, tracingId });
-    }, false);
+    getSceneController().addSkeleton(
+      state =>
+        Maybe.fromNullable(
+          state.localSegmentationData[visibleSegmentationLayer.name].connectomeData.skeleton,
+        ),
+      false,
+    );
   }
 
   async fetchConnectomeFiles() {

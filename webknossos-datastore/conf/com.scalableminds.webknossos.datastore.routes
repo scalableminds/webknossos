@@ -33,6 +33,13 @@ GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshe
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMeshChunksForSegment(organizationName: String, dataSetName: String, dataLayerName: String)
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshes/chunks/data                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.readMeshChunk(organizationName: String, dataSetName: String, dataLayerName: String)
 
+# Connectome files
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listConnectomeFiles(organizationName: String, dataSetName: String, dataLayerName: String)
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapsesForAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String)
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses/:direction                        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapticPartnerForSynapses(organizationName: String, dataSetName: String, dataLayerName: String, direction: String)
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses/positions                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapsePositions(organizationName: String, dataSetName: String, dataLayerName: String)
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses/types                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapseTypes(organizationName: String, dataSetName: String, dataLayerName: String)
+
 # Isosurfaces
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/isosurface                                             @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String)
 

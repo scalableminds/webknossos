@@ -156,31 +156,53 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataSet.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId)
-      _ <- unpackResult match {
-        case Full(_) =>
-          if (datasetNeedsConversion)
-            Fox.successful(())
-          else {
-            addLayerAndResolutionDirIfMissing(unpackToDir)
-            for {
-              _ <- addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink)
-              dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team)
-              _ <- dataSourceRepository.updateDataSource(dataSource)
-            } yield ()
-          }
-        case Empty =>
-          Fox.failure(s"Unknown error while unpacking dataset ${dataSourceId.name}")
-          deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
-        case Failure(msg, e, _) =>
-          deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
-          dataSourceRepository.cleanUpDataSource(dataSourceId)
-          val errorMsg = s"Error unzipping uploaded dataset to $unpackToDir: $msg, $e"
-          logger.warn(errorMsg)
-          Fox.failure(errorMsg)
-      }
+      _ <- cleanUpOnFailure(unpackResult,
+                            dataSourceId,
+                            datasetNeedsConversion,
+                            label = s"unpacking to dataset to $unpackToDir")
+      postProcessingResult <- postProcessUploadedDataSource(datasetNeedsConversion, unpackToDir, uploadInformation).futureBox
+      _ <- cleanUpOnFailure(postProcessingResult,
+                            dataSourceId,
+                            datasetNeedsConversion,
+                            label = s"processing to dataset at $unpackToDir")
+      dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, uploadInformation.organization)
+      _ <- dataSourceRepository.updateDataSource(dataSource)
       dataSetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
     } yield (dataSourceId, dataSetSizeBytes)
   }
+
+  private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
+                                            unpackToDir: Path,
+                                            uploadInformation: UploadInformation) =
+    if (datasetNeedsConversion)
+      Fox.successful(())
+    else {
+      for {
+        _ <- tryo(addLayerAndResolutionDirIfMissing(unpackToDir)).toFox
+        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink)
+        _ <- addLinkedLayersToDataSourceProperties(unpackToDir,
+                                                   uploadInformation.organization,
+                                                   uploadInformation.layersToLink)
+      } yield ()
+    }
+
+  private def cleanUpOnFailure[T](result: Box[T],
+                                  dataSourceId: DataSourceId,
+                                  dataSetNeedsConversion: Boolean,
+                                  label: String): Fox[Unit] =
+    result match {
+      case Full(_) =>
+        Fox.successful(())
+      case Empty =>
+        Fox.failure(s"Unknown error $label")
+        deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
+      case Failure(msg, e, _) =>
+        deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
+        dataSourceRepository.cleanUpDataSource(dataSourceId)
+        val errorMsg = s"Error $label: $msg, $e"
+        logger.warn(errorMsg)
+        Fox.failure(errorMsg)
+    }
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
@@ -224,6 +246,30 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       .map { _ =>
         ()
       }
+
+  private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
+                                                    organizationName: String,
+                                                    linkedLayers: List[LayerIdentifier]): Fox[Unit] =
+    if (linkedLayers.isEmpty) {
+      Fox.successful(())
+    } else {
+      val dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, organizationName)
+      for {
+        dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
+        layers <- Fox.serialCombined(linkedLayers)(layerFromIdentifier)
+        dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
+        _ <- dataSourceService.updateDataSource(dataSourceWithLinkedLayers)
+      } yield ()
+    }
+
+  private def layerFromIdentifier(layerIdentifier: LayerIdentifier): Fox[DataLayer] = {
+    val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
+    val inboxDataSource = dataSourceService.dataSourceFromFolder(dataSourcePath, layerIdentifier.organizationName)
+    for {
+      usableDataSource <- inboxDataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
+      layer <- usableDataSource.getDataLayer(layerIdentifier.layerName)
+    } yield layer
+  }
 
   private def addLayerAndResolutionDirIfMissing(dataSourceDir: Path): Unit =
     if (Files.exists(dataSourceDir)) {

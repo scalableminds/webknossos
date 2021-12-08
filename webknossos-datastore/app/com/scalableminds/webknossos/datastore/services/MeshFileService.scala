@@ -7,7 +7,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.{CachedMeshFile, MeshFileCache}
+import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import net.liftweb.util.Helpers.tryo
@@ -47,7 +47,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   private val meshFileExtension = "hdf5"
   private val defaultLevelOfDetail = 0
 
-  private lazy val meshFileCache = new MeshFileCache(30)
+  private lazy val meshFileCache = new Hdf5FileCache(30)
 
   def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -123,9 +123,9 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield Point3D(asInts.head, asInts(1), asInts(2))
   }
 
-  def initHDFReader(meshFilePath: Path): CachedMeshFile = {
+  def initHDFReader(meshFilePath: Path): CachedHdf5File = {
     val reader = HDF5FactoryProvider.get.openForReading(meshFilePath.toFile)
-    CachedMeshFile(reader)
+    CachedHdf5File(reader)
   }
 
 }

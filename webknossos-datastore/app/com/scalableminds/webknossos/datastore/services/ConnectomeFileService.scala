@@ -9,8 +9,27 @@ import com.scalableminds.webknossos.datastore.storage.Hdf5FileCache
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import org.apache.commons.io.FilenameUtils
+import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
+
+case class ByAgglomerateIdsRequest(
+    connectomeFile: String,
+    agglomerateIds: List[Long]
+)
+
+object ByAgglomerateIdsRequest {
+  implicit val jsonFormat: OFormat[ByAgglomerateIdsRequest] = Json.format[ByAgglomerateIdsRequest]
+}
+
+case class BySynapseIdsRequest(
+    connectomeFile: String,
+    synapseIds: List[Long]
+)
+
+object BySynapseIdsRequest {
+  implicit val jsonFormat: OFormat[BySynapseIdsRequest] = Json.format[BySynapseIdsRequest]
+}
 
 class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits

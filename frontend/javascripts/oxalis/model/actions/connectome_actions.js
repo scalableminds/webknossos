@@ -6,8 +6,8 @@ export type InitializeConnectomeTracingAction = {
   layerName: string,
 };
 
-type AddConnectomeTreeAction = {
-  type: "ADD_CONNECTOME_TREE",
+type AddConnectomeTreesAction = {
+  type: "ADD_CONNECTOME_TREES",
   trees: MutableTreeMap,
   layerName: string,
 };
@@ -20,7 +20,7 @@ type DeleteConnectomeTreeAction = {
 
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
-  | AddConnectomeTreeAction
+  | AddConnectomeTreesAction
   | DeleteConnectomeTreeAction;
 
 export const initializeConnectomeTracingAction = (
@@ -30,11 +30,11 @@ export const initializeConnectomeTracingAction = (
   layerName,
 });
 
-export const addConnectomeTreeAction = (
+export const addConnectomeTreesAction = (
   trees: MutableTreeMap,
   layerName: string,
-): AddConnectomeTreeAction => ({
-  type: "ADD_CONNECTOME_TREE",
+): AddConnectomeTreesAction => ({
+  type: "ADD_CONNECTOME_TREES",
   trees,
   layerName,
 });

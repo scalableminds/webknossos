@@ -9,6 +9,7 @@ import {
   _take,
   _takeEvery,
   _throttle,
+  _all,
   call,
   fork,
   put,
@@ -47,6 +48,7 @@ import {
   getActiveNode,
   getBranchPoints,
   enforceSkeletonTracing,
+  findTreeByName,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -72,7 +74,7 @@ import { getAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import createProgressCallback from "libs/progress_callback";
 import {
-  addConnectomeTreeAction,
+  addConnectomeTreesAction,
   deleteConnectomeTreeAction,
 } from "oxalis/model/actions/connectome_actions";
 
@@ -249,7 +251,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
       );
     } else {
       yield* put(
-        addConnectomeTreeAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
+        addConnectomeTreesAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
       );
     }
   } catch (e) {
@@ -269,32 +271,25 @@ function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction)
 
   const { layerName, mappingName, agglomerateId, destination } = action;
 
-  const findTreeWithName = (trees: TreeMap, treeName: string): ?Tree =>
-    // $FlowIssue[incompatible-call]
-    // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
-    Object.values(trees).find((tree: Tree) => tree.name === treeName);
-
   // This is the pattern for the automatically assigned names for agglomerate skeletons
   const treeName = `agglomerate ${agglomerateId} (${mappingName})`;
 
   if (destination === "tracing") {
     const trees = yield* select(state => enforceSkeletonTracing(state.tracing).trees);
-    const tree = findTreeWithName(trees, treeName);
 
-    if (tree != null) {
-      yield* put(deleteTreeAction(tree.treeId));
-    }
+    yield _all(findTreeByName(trees, treeName).map(tree => put(deleteTreeAction(tree.treeId))));
   } else {
     const skeleton = yield* select(
       state => state.localSegmentationData[layerName].connectomeData.skeleton,
     );
     if (skeleton == null) return;
     const { trees } = skeleton;
-    const tree = findTreeWithName(trees, treeName);
 
-    if (tree != null) {
-      yield* put(deleteConnectomeTreeAction(tree.treeId, layerName));
-    }
+    yield _all(
+      findTreeByName(trees, treeName).map(tree =>
+        put(deleteConnectomeTreeAction(tree.treeId, layerName)),
+      ),
+    );
   }
 }
 

@@ -1,5 +1,6 @@
 // @flow
 import moment from "moment";
+import { presetPalettes } from "@ant-design/colors";
 
 import { Unicode, type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
@@ -19,19 +20,7 @@ const COLOR_MAP: Array<string> = [
 ];
 
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
-const COLOR_MAP_ANTD: Array<string> = [
-  "magenta",
-  "purple",
-  "red",
-  "geekblue",
-  "volcano",
-  "blue",
-  "orange",
-  "cyan",
-  "gold",
-  "green",
-  "lime",
-];
+const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
 
 export function stringToColor(string: string): string {
   const hash = hashString(string);
@@ -41,6 +30,12 @@ export function stringToColor(string: string): string {
 export function stringToAntdColorPreset(string: string): string {
   const hash = hashString(string);
   return COLOR_MAP_ANTD[hash];
+}
+
+export function stringToAntdColorPresetRgb(string: string): Vector3 {
+  const presetString = stringToAntdColorPreset(string);
+  // This will be a hex code, see https://www.npmjs.com/package/@ant-design/colors
+  return Utils.hexToRgb(presetPalettes[presetString].primary);
 }
 
 function hashString(string: string): number {

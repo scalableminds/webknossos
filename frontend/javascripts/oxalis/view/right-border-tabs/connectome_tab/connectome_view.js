@@ -1,6 +1,7 @@
 // @flow
 import { Tag, Empty, Tree } from "antd";
 import type { Dispatch } from "redux";
+import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -12,9 +13,14 @@ import type { ExtractReturn } from "libs/type_helpers";
 
 import type { APISegmentationLayer, APIDataset, APIConnectomeFile } from "types/api_flow_types";
 import InputComponent from "oxalis/view/components/input_component";
-import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import ButtonComponent from "oxalis/view/components/button_component";
+import Store, {
+  type OxalisState,
+  type MutableTree,
+  type MutableNode,
+  type MutableTreeMap,
+} from "oxalis/store";
+import Constants, { type Vector3 } from "oxalis/constants";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   updateDatasetSettingAction,
@@ -30,21 +36,29 @@ import {
   getConnectomeFilesForDatasetLayer,
 } from "admin/admin_rest_api";
 import Model from "oxalis/model";
-
 import api from "oxalis/api/internal_api";
 import {
   loadAgglomerateSkeletonAction,
   removeAgglomerateSkeletonAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { findTreeByName } from "oxalis/model/accessors/skeletontracing_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import { initializeConnectomeTracingAction } from "oxalis/model/actions/connectome_actions";
-import { stringToAntdColorPreset } from "libs/format_utils";
+import {
+  initializeConnectomeTracingAction,
+  deleteConnectomeTreeAction,
+  addConnectomeTreesAction,
+} from "oxalis/model/actions/connectome_actions";
+import { stringToAntdColorPreset, stringToAntdColorPresetRgb } from "libs/format_utils";
+import { diffArrays } from "libs/utils";
+import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 
 const connectomeTabId = "connectome";
 
 type Synapse = { id: number, position: Vector3, type: string };
 type SynapticPartners = { [number]: Array<Synapse> };
-type ConnectomeData = { [number]: { in: SynapticPartners, out: SynapticPartners } };
+type Connections = { in: SynapticPartners, out: SynapticPartners };
+type ConnectomeData = { [number]: Connections };
 
 type SegmentData = { type: "segment", id: number };
 type SynapseData = { type: "synapse", id: number, position: Vector3, synapseType: string };
@@ -144,6 +158,41 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
   }));
 };
 
+const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Synapse> =>
+  _.flatten(
+    // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
+    Object.values(connectomeData).map((connections: Connections) => [
+      ..._.flatten(Object.values(connections.in)),
+      ..._.flatten(Object.values(connections.in)),
+    ]),
+  );
+
+const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
+  name: `synapse-${synapseId}`,
+  treeId: synapseId,
+  nodes: new DiffableMap(),
+  timestamp: Date.now(),
+  // $FlowIssue[invalid-tuple-arity] Flow has troubles with understanding that mapping a tuple, returns another tuple
+  color: stringToAntdColorPresetRgb(synapseType).map(el => el / 255),
+  branchPoints: [],
+  edges: new EdgeCollection(),
+  comments: [],
+  isVisible: true,
+  groupId: null,
+});
+
+const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
+  position: synapsePosition,
+  radius: Constants.DEFAULT_NODE_RADIUS,
+  rotation: [0, 0, 0],
+  viewport: 0,
+  resolution: 0,
+  id: synapseId,
+  timestamp: Date.now(),
+  bitDepth: 8,
+  interpolation: false,
+});
+
 const convertConnectomeToTreeData = memoizeOne(_convertConnectomeToTreeData);
 
 class ConnectomeView extends React.Component<Props, State> {
@@ -165,9 +214,16 @@ class ConnectomeView extends React.Component<Props, State> {
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
       this.fetchConnectomeFiles();
     }
+    if (prevState.connectomeData !== this.state.connectomeData) {
+      this.updateSynapseTrees(prevState.connectomeData, this.state.connectomeData);
+    }
   }
 
   componentWillUnmount() {}
+
+  reset = () => {
+    this.setState({ connectomeData: null, activeSegmentId: null });
+  };
 
   initializeSkeleton() {
     const { visibleSegmentationLayer } = this.props;
@@ -281,6 +337,53 @@ class ConnectomeView extends React.Component<Props, State> {
     this.setState({ connectomeData });
   }
 
+  updateSynapseTrees(prevConnectomeData: ?ConnectomeData, connectomeData: ?ConnectomeData) {
+    const { visibleSegmentationLayer } = this.props;
+
+    if (visibleSegmentationLayer == null) return;
+
+    let prevSynapses: Array<Synapse> = [];
+    let synapses: Array<Synapse> = [];
+    if (prevConnectomeData != null) {
+      prevSynapses = getSynapsesFromConnectomeData(prevConnectomeData);
+    }
+    if (connectomeData != null) {
+      synapses = getSynapsesFromConnectomeData(connectomeData);
+    }
+
+    const layerName = visibleSegmentationLayer.name;
+    // Find out which synapses where deleted and which were added
+    const { onlyA: deletedSynapseIds, onlyB: addedSynapseIds } = diffArrays(
+      prevSynapses.map(synapse => synapse.id),
+      synapses.map(synapse => synapse.id),
+    );
+
+    const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
+    if (skeleton == null) return;
+
+    const { trees } = skeleton;
+
+    if (deletedSynapseIds.length) {
+      const actions = deletedSynapseIds.map(synapseId =>
+        findTreeByName(trees, `synapse-${synapseId}`)
+          .map(tree => deleteConnectomeTreeAction(tree.treeId, layerName))
+          .getOrElse(null),
+      );
+      Store.dispatch(batchActions(actions, "DELETE_CONNECTOME_TREES"));
+    }
+
+    if (addedSynapseIds.length) {
+      const synapseIdToSynapse = _.keyBy(synapses, "id");
+      const newTrees: MutableTreeMap = {};
+      for (const synapseId of addedSynapseIds) {
+        newTrees[synapseId] = synapseTreeCreator(synapseId, synapseIdToSynapse[synapseId].type);
+        const synapseNode = synapseNodeCreator(synapseId, synapseIdToSynapse[synapseId].position);
+        newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
+      }
+      Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
+    }
+  }
+
   handleChangeActiveSegment = (evt: SyntheticInputEvent<>) => {
     const segmentId = parseInt(evt.target.value, 10);
 
@@ -358,12 +461,15 @@ class ConnectomeView extends React.Component<Props, State> {
     const { activeSegmentId } = this.state;
     const activeSegmentIdString = activeSegmentId != null ? activeSegmentId.toString() : "";
     return (
-      <InputComponent
-        value={activeSegmentIdString}
-        onPressEnter={this.handleChangeActiveSegment}
-        placeholder="Show Synaptic Connections for Segment ID"
-        style={{ width: "280px" }}
-      />
+      <>
+        <InputComponent
+          value={activeSegmentIdString}
+          onPressEnter={this.handleChangeActiveSegment}
+          placeholder="Show Synaptic Connections for Segment ID"
+          style={{ width: "280px" }}
+        />
+        <ButtonComponent onClick={this.reset}>Reset</ButtonComponent>
+      </>
     );
   }
 

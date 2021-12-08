@@ -7,7 +7,6 @@ import type { APIBuildInfo } from "types/api_flow_types";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
-  DEFAULT_NODE_RADIUS,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import Date from "libs/date";
@@ -28,7 +27,7 @@ import type {
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import Constants, { type BoundingBoxType, type Vector3 } from "oxalis/constants";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -635,7 +634,7 @@ export function parseNml(
               bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
               viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
               resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
-              radius: _parseFloat(attr, "radius", DEFAULT_NODE_RADIUS),
+              radius: _parseFloat(attr, "radius", Constants.DEFAULT_NODE_RADIUS),
               timestamp: _parseTimestamp(attr, "time", DEFAULT_TIMESTAMP),
             };
             if (currentTree == null)

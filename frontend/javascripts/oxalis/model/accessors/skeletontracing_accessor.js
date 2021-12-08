@@ -97,6 +97,10 @@ export function findTreeByNodeId(trees: TreeMap, nodeId: number): Maybe<Tree> {
   return Maybe.fromNullable(_.values(trees).find(tree => tree.nodes.has(nodeId)));
 }
 
+export function findTreeByName(trees: TreeMap, treeName: string): Maybe<Tree> {
+  return Maybe.fromNullable(_.values(trees).find((tree: Tree) => tree.name === treeName));
+}
+
 export function getTree(skeletonTracing: SkeletonTracing, treeId: ?number): Maybe<Tree> {
   if (treeId != null) {
     return Maybe.fromNullable(skeletonTracing.trees[treeId]);

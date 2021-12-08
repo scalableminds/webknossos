@@ -46,8 +46,6 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
 
-export const DEFAULT_NODE_RADIUS = 1.0;
-
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
   if (state.activeUser) {
@@ -137,7 +135,7 @@ export function createNode(
   // Use the same radius as current active node or revert to default value
   const radius = activeNodeMaybe
     .map(activeNode => activeNode.radius)
-    .getOrElse(DEFAULT_NODE_RADIUS);
+    .getOrElse(Constants.DEFAULT_NODE_RADIUS);
 
   // Find new node id by increasing the max node id.
   const nextNewId = skeletonTracing.cachedMaxNodeId + 1;

@@ -54,7 +54,7 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
   }
 
   switch (action.type) {
-    case "ADD_CONNECTOME_TREE": {
+    case "ADD_CONNECTOME_TREES": {
       const { trees, layerName } = action;
       return getSkeletonTracingForConnectome(state, layerName)
         .map(skeletonTracing =>

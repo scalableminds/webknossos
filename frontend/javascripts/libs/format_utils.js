@@ -18,9 +18,29 @@ const COLOR_MAP: Array<string> = [
   "#60e0ac",
 ];
 
-export function stringToColor(role: string): string {
-  const hash = hashString(role);
+// Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
+const COLOR_MAP_ANTD: Array<string> = [
+  "magenta",
+  "purple",
+  "red",
+  "geekblue",
+  "volcano",
+  "blue",
+  "orange",
+  "cyan",
+  "gold",
+  "green",
+  "lime",
+];
+
+export function stringToColor(string: string): string {
+  const hash = hashString(string);
   return COLOR_MAP[hash];
+}
+
+export function stringToAntdColorPreset(string: string): string {
+  const hash = hashString(string);
+  return COLOR_MAP_ANTD[hash];
 }
 
 function hashString(string: string): number {

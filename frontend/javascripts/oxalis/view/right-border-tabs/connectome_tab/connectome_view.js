@@ -1,6 +1,5 @@
 // @flow
-import { Button, ConfigProvider, Input, List, Tooltip, Select, Popover, Empty, Tree } from "antd";
-import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
+import { Tag, Empty, Tree } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
@@ -8,71 +7,30 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import Maybe from "data.maybe";
 
-import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 
-import type {
-  APISegmentationLayer,
-  APIUser,
-  APIDataset,
-  APIConnectomeFile,
-} from "types/api_flow_types";
+import type { APISegmentationLayer, APIDataset, APIConnectomeFile } from "types/api_flow_types";
 import InputComponent from "oxalis/view/components/input_component";
-import type {
-  OxalisState,
-  Flycam,
-  IsosurfaceInformation,
-  Segment,
-  SegmentMap,
-  ActiveMappingInfo,
-} from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import {
-  createMeshFromBufferAction,
-  deleteMeshAction,
-  importIsosurfaceFromStlAction,
-  triggerActiveIsosurfaceDownloadAction,
-  updateCurrentMeshFileAction,
-} from "oxalis/model/actions/annotation_actions";
-import features from "features";
-import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-  getBaseSegmentationName,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   updateDatasetSettingAction,
-  updateTemporarySettingAction,
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
-import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
-import { getVisibleSegments } from "oxalis/model/accessors/volumetracing_accessor";
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getVisibleSegmentationLayer,
-  getResolutionInfoOfVisibleSegmentationLayer,
-  getMappingInfo,
-  ResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
-import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
-import { readFileAsArrayBuffer } from "libs/read_file";
-import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import {
-  getSynapticPartnersOfAgglomerate,
-  getSynapsesOfAgglomeratePairs,
+  getSynapsesOfAgglomerates,
+  getSynapseSources,
+  getSynapseDestinations,
   getSynapsePositions,
+  getSynapseTypes,
   getConnectomeFilesForDatasetLayer,
 } from "admin/admin_rest_api";
 import Model from "oxalis/model";
 
-import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import api from "oxalis/api/internal_api";
 import {
   loadAgglomerateSkeletonAction,
@@ -80,16 +38,18 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { initializeConnectomeTracingAction } from "oxalis/model/actions/connectome_actions";
-
-const { Option } = Select;
+import { stringToAntdColorPreset } from "libs/format_utils";
 
 const connectomeTabId = "connectome";
 
-type Synapse = { id: number, position: Vector3 };
-type ConnectomeData = { [number]: { [number]: Array<Synapse> } };
+type Synapse = { id: number, position: Vector3, type: string };
+type SynapticPartners = { [number]: Array<Synapse> };
+type ConnectomeData = { [number]: { in: SynapticPartners, out: SynapticPartners } };
 
 type SegmentData = { type: "segment", id: number };
-type SynapseData = { type: "synapse", id: number, position: Vector3 };
+type SynapseData = { type: "synapse", id: number, position: Vector3, synapseType: string };
+type NoneData = { type: "none" };
+type TreeNodeData = SegmentData | SynapseData | NoneData;
 type TreeNode = {
   key: string,
   title: string,
@@ -97,7 +57,7 @@ type TreeNode = {
   disabled?: boolean,
   selectable?: boolean,
   checkable?: boolean,
-  data: SegmentData | SynapseData,
+  data: TreeNodeData,
 };
 type TreeData = Array<TreeNode>;
 
@@ -134,31 +94,53 @@ const segmentData = (segmentId: number): SegmentData => ({
   type: "segment",
   id: segmentId,
 });
-const synapseData = (synapseId: number, position: Vector3): SynapseData => ({
+const synapseData = (synapseId: number, position: Vector3, type: string): SynapseData => ({
   type: "synapse",
   id: synapseId,
   position,
+  synapseType: type,
 });
+const noneData = { type: "none" };
 
 const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeData => {
   if (connectomeData == null) return null;
+
+  const convertSynapsesForPartner = (partners, partnerId1, inOrOut) =>
+    Object.keys(partners).map(partnerId2 => ({
+      key: `segment-${partnerId1}-${inOrOut}-${partnerId2}`,
+      title: `Segment ${partnerId2}`,
+      data: segmentData(+partnerId2),
+      children: partners[+partnerId2].map(synapse => ({
+        key: `synapse-${inOrOut}-${synapse.id}`,
+        title: `Synapse ${synapse.id}`,
+        data: synapseData(synapse.id, synapse.position, synapse.type),
+        children: [],
+        checkable: false,
+      })),
+    }));
 
   return Object.keys(connectomeData).map(partnerId1 => ({
     key: `segment-${partnerId1}`,
     title: `Segment ${partnerId1}`,
     data: segmentData(+partnerId1),
-    children: Object.keys(connectomeData[+partnerId1]).map(partnerId2 => ({
-      key: `segment-${partnerId1}-${partnerId2}`,
-      title: `Segment ${partnerId2}`,
-      data: segmentData(+partnerId2),
-      children: connectomeData[+partnerId1][+partnerId2].map(synapse => ({
-        key: `synapse-${synapse.id}`,
-        title: `Synapse ${synapse.id}`,
-        data: synapseData(synapse.id, synapse.position),
-        children: [],
+    children: [
+      {
+        key: `segment-${partnerId1}-in`,
+        title: "Incoming Synapses",
+        data: noneData,
+        children: convertSynapsesForPartner(connectomeData[+partnerId1].in, partnerId1, "in"),
         checkable: false,
-      })),
-    })),
+        selectable: false,
+      },
+      {
+        key: `segment-${partnerId1}-out`,
+        title: "Outgoing Synapses",
+        data: noneData,
+        children: convertSynapsesForPartner(connectomeData[+partnerId1].out, partnerId1, "out"),
+        checkable: false,
+        selectable: false,
+      },
+    ],
   }));
 };
 
@@ -205,12 +187,12 @@ class ConnectomeView extends React.Component<Props, State> {
     }, false);
   }
 
-  fetchConnectomeFiles() {
+  async fetchConnectomeFiles() {
     const { dataset, visibleSegmentationLayer } = this.props;
 
     if (visibleSegmentationLayer == null) return;
 
-    const connectomeFiles = getConnectomeFilesForDatasetLayer(
+    const connectomeFiles = await getConnectomeFilesForDatasetLayer(
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(visibleSegmentationLayer),
@@ -227,7 +209,7 @@ class ConnectomeView extends React.Component<Props, State> {
     );
   }
 
-  fetchConnections() {
+  async fetchConnections() {
     const { currentConnectomeFile, activeSegmentId } = this.state;
     const { dataset, visibleSegmentationLayer } = this.props;
 
@@ -244,22 +226,59 @@ class ConnectomeView extends React.Component<Props, State> {
       getBaseSegmentationName(visibleSegmentationLayer),
       currentConnectomeFile.connectomeFileName,
     ];
-    const synapticPartners = getSynapticPartnersOfAgglomerate(...fetchProperties, activeSegmentId);
-    const synapseIdsPerPair = getSynapsesOfAgglomeratePairs(
-      ...fetchProperties,
+    const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(...fetchProperties, [
       activeSegmentId,
-      synapticPartners,
-    );
-    const synapsePositions = synapseIdsPerPair.map(synapseIds =>
-      getSynapsePositions(...fetchProperties, synapseIds),
-    );
+    ]);
 
-    const connectomeData = { [activeSegmentId]: {} };
-    synapticPartners.forEach((partnerId, i) => {
-      connectomeData[activeSegmentId][partnerId] = synapseIdsPerPair[i].map((synapseId, j) => ({
+    if (synapsesOfAgglomerates.length !== 1) {
+      throw new Error(
+        `Requested synapses of one agglomerate, but got synapses for ${
+          synapsesOfAgglomerates.length
+        } agglomerates.`,
+      );
+    }
+
+    const { in: inSynapses, out: outSynapses } = synapsesOfAgglomerates[0];
+    const allSynapses = [...inSynapses, ...outSynapses];
+
+    const [
+      synapseSources,
+      synapseDestinations,
+      synapsePositions,
+      synapseTypesAndNames,
+    ] = await Promise.all([
+      getSynapseSources(...fetchProperties, inSynapses),
+      getSynapseDestinations(...fetchProperties, outSynapses),
+      getSynapsePositions(...fetchProperties, allSynapses),
+      getSynapseTypes(...fetchProperties, allSynapses),
+    ]);
+
+    const { synapseTypes, typeToString } = synapseTypesAndNames;
+
+    const connectomeData = { [activeSegmentId]: { in: {}, out: {} } };
+
+    inSynapses.forEach((synapseId, i) => {
+      const synapticPartnerId = synapseSources[i];
+      if (!(synapticPartnerId in connectomeData[activeSegmentId].in)) {
+        connectomeData[activeSegmentId].in[synapticPartnerId] = [];
+      }
+      connectomeData[activeSegmentId].in[synapticPartnerId].push({
         id: synapseId,
-        position: synapsePositions[i][j],
-      }));
+        position: synapsePositions[i],
+        type: typeToString[synapseTypes[i]],
+      });
+    });
+    outSynapses.forEach((synapseId, i) => {
+      const synapticPartnerId = synapseDestinations[i];
+      if (!(synapticPartnerId in connectomeData[activeSegmentId].out)) {
+        connectomeData[activeSegmentId].out[synapticPartnerId] = [];
+      }
+      connectomeData[activeSegmentId].out[synapticPartnerId].push({
+        id: synapseId,
+        // synapsePositions and synapseTypes contains data for all synapses. inSynapses first and then outSynapses.
+        position: synapsePositions[inSynapses.length + i],
+        type: typeToString[synapseTypes[inSynapses.length + i]],
+      });
     });
 
     this.setState({ connectomeData });
@@ -321,6 +340,23 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   };
 
+  renderNode(node: TreeNode) {
+    const { data } = node;
+    if (data.type === "segment" || data.type === "none") return node.title;
+
+    return (
+      <>
+        {node.title}
+        <Tag
+          style={{ marginLeft: 10, marginBottom: 0 }}
+          color={stringToAntdColorPreset(data.synapseType)}
+        >
+          {data.synapseType}
+        </Tag>
+      </>
+    );
+  }
+
   getConnectomeHeader() {
     const { activeSegmentId } = this.state;
     const activeSegmentIdString = activeSegmentId != null ? activeSegmentId.toString() : "";
@@ -340,7 +376,7 @@ class ConnectomeView extends React.Component<Props, State> {
     return (
       <div id={connectomeTabId} className="padded-tab-content">
         <DomVisibilityObserver targetId={connectomeTabId}>
-          {isVisibleInDom => {
+          {_isVisibleInDom => {
             // if (!isVisibleInDom) return null;
 
             if (!visibleSegmentationLayer) {
@@ -378,6 +414,7 @@ class ConnectomeView extends React.Component<Props, State> {
                     showLine={{ showLeafIcon: false }}
                     onSelect={this.handleSelect}
                     onCheck={this.handleCheck}
+                    titleRender={this.renderNode}
                     treeData={convertConnectomeToTreeData(this.state.connectomeData)}
                   />
                 ) : null}

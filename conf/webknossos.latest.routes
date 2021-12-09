@@ -85,7 +85,7 @@ GET           /datastores                                                      c
 PUT           /datastores/:name/datasource                                     controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
 PUT           /datastores/:name/datasources                                    controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
 PATCH         /datastores/:name/status                                         controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
-POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String)
+POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
 POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteErroneous                                controllers.WKRemoteDataStoreController.deleteErroneous(name: String, key: String)
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])

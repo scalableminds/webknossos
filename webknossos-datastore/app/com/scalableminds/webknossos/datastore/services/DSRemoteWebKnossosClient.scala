@@ -57,21 +57,15 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def reportUpload(dataSourceId: DataSourceId,
-                   initialTeams: List[String],
-                   dataSetSizeBytes: Long,
-                   userToken: String): Fox[_] = {
-    val sleepDuration = 1000 // sleep for 1 second to give wk time to properly register the dataset
+  def reportUpload(dataSourceId: DataSourceId, dataSetSizeBytes: Long, userToken: String): Fox[Unit] =
     for {
-      _ <- Fox.successful(Thread.sleep(sleepDuration))
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryString("token" -> userToken)
-        .post(initialTeams)
+        .post()
     } yield ()
-  }
 
   def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportIsosurfaceRequest")
@@ -85,8 +79,14 @@ class DSRemoteWebKnossosClient @Inject()(
       .silent
       .put(dataSources)
 
-  def validateDataSourceUpload(id: DataSourceId): Fox[_] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload").addQueryString("key" -> dataStoreKey).post(id)
+  def validateDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[_] =
+    for {
+      userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
+    } yield
+      rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload")
+        .addQueryString("key" -> dataStoreKey)
+        .addQueryString("token" -> userToken)
+        .post(info)
 
   def deleteErroneousDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteErroneous").addQueryString("key" -> dataStoreKey).post(id)

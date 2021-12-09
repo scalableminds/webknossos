@@ -94,6 +94,36 @@ class DataSourceController @Inject()(
   }
 
   @ApiOperation(
+    value =
+      """Reserve an upload for a new dataset
+Expects:
+ - As JSON object body with keys:
+  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
+  - organization (string): owning organization name
+  - name (string): dataset name
+  - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
+  - initialTeams (list of string): names of the webknossos teams dataset should be accessible for
+ - As GET parameter:
+  - token (string): datastore token identifying the uploading user
+""",
+    nickname = "datasetUploadChunk"
+  )
+  def reserveUpload(token: String): Action[ReserveUploadInformation] =
+    Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
+        AllowRemoteOrigin {
+          for {
+            isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
+            _ <- if (!isKnownUpload) {
+              (remoteWebKnossosClient.validateDataSourceUpload(request.body, Some(token)) ?~> "dataSet.upload.validation.failed")
+                .flatMap(_ => uploadService.reserveUpload(request.body))
+            } else Fox.successful(())
+          } yield Ok
+        }
+      }
+    }
+
+  @ApiOperation(
     value = """Upload a byte chunk for a new dataset
 Expects:
  - As file attachment: A raw byte chunk of the dataset
@@ -124,9 +154,8 @@ Expects:
           "resumableChunkNumber" -> number,
           "resumableChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
-          "totalFileCount" -> number,
           "resumableIdentifier" -> nonEmptyText
-        )).fill(("", "", -1, -1, -1, -1, ""))
+        )).fill(("", "", -1, -1, -1, ""))
 
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
         AllowRemoteOrigin {
@@ -135,19 +164,17 @@ Expects:
             .fold(
               hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
               success = {
-                case (name, organization, chunkNumber, chunkSize, totalChunkCount, totalFileCount, uploadId) =>
+                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
                   val id = DataSourceId(name, organization)
-                  val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                   for {
-                    _ <- if (!uploadService.isKnownUpload(uploadId))
-                      remoteWebKnossosClient.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
-                    else Fox.successful(())
+                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadId)
+                    _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadId,
                                                          id,
-                                                         resumableUploadInformation,
+                                                         chunkSize,
+                                                         totalChunkCount,
                                                          chunkNumber,
-                                                         totalFileCount,
                                                          new File(chunkFile.ref.path.toString))
                   } yield {
                     Ok
@@ -166,7 +193,6 @@ Expects:
   - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
   - organization (string): owning organization name
   - name (string): dataset name
-  - initialTeams (list of string): names of the webknossos teams dataset should be accessible for
   - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
  - As GET parameter:
   - token (string): datastore token identifying the uploading user
@@ -183,9 +209,8 @@ Expects:
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
         AllowRemoteOrigin {
           for {
-            (dataSourceId, initialTeams, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-            _ <- remoteWebKnossosClient
-              .reportUpload(dataSourceId, initialTeams, dataSetSizeBytes, token) ?~> "setInitialTeams.failed"
+            (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
+            _ <- remoteWebKnossosClient.reportUpload(dataSourceId, dataSetSizeBytes, token) ?~> "reportUpload.failed"
           } yield Ok
         }
       }
@@ -198,7 +223,7 @@ Expects:
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
         AllowRemoteOrigin {
           for {
-            _ <- sampleDatasetService.initDownload(organizationName, dataSetName)
+            _ <- sampleDatasetService.initDownload(organizationName, dataSetName, token)
           } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
         }
       }

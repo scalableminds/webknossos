@@ -2,12 +2,19 @@ package com.scalableminds.webknossos.datastore.storage
 
 import java.nio.file.Path
 
-import ch.systemsx.cisd.hdf5.IHDF5Reader
+import ch.systemsx.cisd.hdf5.{HDF5FactoryProvider, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 
 case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable {
   override protected def onFinalize(): Unit = reader.close()
+}
+
+object CachedHdf5File {
+  def initHDFReader(meshFilePath: Path): CachedHdf5File = {
+    val reader = HDF5FactoryProvider.get.openForReading(meshFilePath.toFile)
+    CachedHdf5File(reader)
+  }
 }
 
 class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, CachedHdf5File] {

@@ -23,7 +23,7 @@ case class ReserveUploadInformation(uploadId: String,
                                     name: String,
                                     organization: String,
                                     totalFileCount: Long,
-                                    layersToLink: List[LinkedLayerIdentifier],
+                                    layersToLink: Option[List[LinkedLayerIdentifier]],
                                     initialTeams: List[String])
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
@@ -43,7 +43,7 @@ object LinkedLayerIdentifier {
 case class UploadInformation(uploadId: String,
                              name: String,
                              organization: String,
-                             layersToLink: List[LinkedLayerIdentifier],
+                             layersToLink: Option[List[LinkedLayerIdentifier]],
                              needsConversion: Option[Boolean])
 
 object UploadInformation {
@@ -183,10 +183,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     else {
       for {
         _ <- tryo(addLayerAndResolutionDirIfMissing(unpackToDir)).toFox
-        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink)
+        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink.getOrElse(List.empty))
         _ <- addLinkedLayersToDataSourceProperties(unpackToDir,
                                                    uploadInformation.organization,
-                                                   uploadInformation.layersToLink)
+                                                   uploadInformation.layersToLink.getOrElse(List.empty))
       } yield ()
     }
 
@@ -198,8 +198,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       case Full(_) =>
         Fox.successful(())
       case Empty =>
-        Fox.failure(s"Unknown error $label")
         deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
+        Fox.failure(s"Unknown error $label")
       case Failure(msg, e, _) =>
         deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
         dataSourceRepository.cleanUpDataSource(dataSourceId)
@@ -234,11 +234,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     dataSourceDir
   }
 
-  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, linkedLayers: List[LinkedLayerIdentifier]): Fox[Unit] =
+  private def addSymlinksToOtherDatasetLayers(dataSetDir: Path, layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
     Fox
-      .serialCombined(linkedLayers) { linkedLayer =>
-        val layerPath = linkedLayer.pathIn(dataBaseDir)
-        val newLayerPath = dataSetDir.resolve(linkedLayer.newLayerName.getOrElse(linkedLayer.layerName))
+      .serialCombined(layersToLink) { layerToLink =>
+        val layerPath = layerToLink.pathIn(dataBaseDir)
+        val newLayerPath = dataSetDir.resolve(layerToLink.newLayerName.getOrElse(layerToLink.layerName))
         for {
           _ <- bool2Fox(!Files.exists(newLayerPath)) ?~> s"Cannot symlink layer at $newLayerPath: a layer with this name already exists."
           _ <- bool2Fox(Files.exists(layerPath)) ?~> s"Cannot symlink to layer at $layerPath: The layer does not exist."
@@ -253,14 +253,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
                                                     organizationName: String,
-                                                    linkedLayers: List[LinkedLayerIdentifier]): Fox[Unit] =
-    if (linkedLayers.isEmpty) {
+                                                    layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
+    if (layersToLink.isEmpty) {
       Fox.successful(())
     } else {
       val dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, organizationName)
       for {
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
-        layers <- Fox.serialCombined(linkedLayers)(layerFromIdentifier)
+        layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
         dataSourceWithLinkedLayers = dataSourceUsable.copy(dataLayers = dataSourceUsable.dataLayers ::: layers)
         _ <- dataSourceService.updateDataSource(dataSourceWithLinkedLayers)
       } yield ()

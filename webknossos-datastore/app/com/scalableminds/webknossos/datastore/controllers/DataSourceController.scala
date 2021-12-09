@@ -386,9 +386,7 @@ Expects:
           } yield {
             if (encoding.contains("gzip")) {
               Ok(data).withHeaders("Content-Encoding" -> "gzip")
-            } else {
-              Ok(data)
-            }
+            } else Ok(data)
           }
         }
       }
@@ -470,11 +468,23 @@ Expects:
                           dataSetName: String,
                           dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-        token) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
-          Ok(Json.toJson(connectomeFileService.exploreConnectomeFiles(organizationName, dataSetName, dataLayerName)))
+          val connectomeFileNames =
+            connectomeFileService.exploreConnectomeFiles(organizationName, dataSetName, dataLayerName)
+          for {
+            mappingNames <- Fox.serialCombined(connectomeFileNames.toList) { connectomeFileName =>
+              val path = connectomeFileService.connectomeFilePath(organizationName,
+                                                                  dataSetName,
+                                                                  dataLayerName,
+                                                                  connectomeFileName)
+              connectomeFileService.mappingNameForConnectomeFile(path)
+            }
+            connectomesWithMappings = connectomeFileNames
+              .zip(mappingNames)
+              .map(tuple => ConnectomeFileNameWithMappingName(tuple._1, tuple._2))
+          } yield Ok(Json.toJson(connectomesWithMappings))
         }
       }
     }

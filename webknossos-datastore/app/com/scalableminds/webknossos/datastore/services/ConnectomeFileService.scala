@@ -41,6 +41,15 @@ object DirectedSynapseList {
   implicit val jsonFormat: OFormat[DirectedSynapseList] = Json.format[DirectedSynapseList]
 }
 
+case class ConnectomeFileNameWithMappingName(
+    connectomeFileName: String,
+    mappingName: String
+)
+
+object ConnectomeFileNameWithMappingName {
+  implicit val jsonFormat: OFormat[ConnectomeFileNameWithMappingName] = Json.format[ConnectomeFileNameWithMappingName]
+}
+
 class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -73,6 +82,15 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
       .resolve(dataLayerName)
       .resolve(connectomesDir)
       .resolve(s"$connectomeFileName.$connectomeFileExtension")
+
+  def mappingNameForConnectomeFile(connectomeFilePath: Path): Fox[String] =
+    for {
+      cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
+      mappingName <- tryo { _: Throwable =>
+        cachedConnectomeFile.finishAccess()
+      } { cachedConnectomeFile.reader.string().getAttr("/", "metadata/mapping_name") } ?~> "connectome.file.readEncoding.failed"
+      _ = cachedConnectomeFile.finishAccess()
+    } yield mappingName
 
   def synapsesForAgglomerates(connectomeFilePath: Path, agglomerateIds: List[Long]): Fox[List[DirectedSynapseList]] =
     if (agglomerateIds.length == 1) {

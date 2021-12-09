@@ -41,6 +41,15 @@ object DirectedSynapseList {
   implicit val jsonFormat: OFormat[DirectedSynapseList] = Json.format[DirectedSynapseList]
 }
 
+case class SynapseTypesWithLegend(
+    synapseTypes: List[Long],
+    typeToString: List[String],
+)
+
+object SynapseTypesWithLegend {
+  implicit val jsonFormat: OFormat[SynapseTypesWithLegend] = Json.format[SynapseTypesWithLegend]
+}
+
 case class ConnectomeFileNameWithMappingName(
     connectomeFileName: String,
     mappingName: String
@@ -175,4 +184,21 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
         }.flatMap(_.headOption)
       }
     } yield synapsePositions.map(_.toList)
+
+  def typesForSynapses(connectomeFilePath: Path, synapseIds: List[Long]): Fox[SynapseTypesWithLegend] =
+    for {
+      cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
+      typeNames <- tryo { _: Throwable =>
+        cachedConnectomeFile.finishAccess()
+      } {
+        cachedConnectomeFile.reader.string().getAttr("/", "synapse_types") // TODO: ArrayAttr?
+      } ?~> "connectome.file.readTypeNames.failed"
+      synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+        tryo { _: Throwable =>
+          cachedConnectomeFile.finishAccess()
+        } {
+          cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/synapse_types", 1, synapseId)
+        }.flatMap(_.headOption)
+      }
+    } yield SynapseTypesWithLegend(synapseTypes, List(typeNames))
 }

@@ -465,10 +465,14 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def listConnectomeFiles(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+  def listConnectomeFiles(token: Option[String],
+                          organizationName: String,
+                          dataSetName: String,
+                          dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        token) {
         AllowRemoteOrigin {
           Ok(Json.toJson(connectomeFileService.exploreConnectomeFiles(organizationName, dataSetName, dataLayerName)))
         }
@@ -476,12 +480,14 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getSynapsesForAgglomerates(organizationName: String,
+  def getSynapsesForAgglomerates(token: Option[String],
+                                 organizationName: String,
                                  dataSetName: String,
                                  dataLayerName: String): Action[ByAgglomerateIdsRequest] =
     Action.async(validateJson[ByAgglomerateIdsRequest]) { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        token) {
         AllowRemoteOrigin {
           Ok
         }
@@ -489,13 +495,15 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getSynapticPartnerForSynapses(organizationName: String,
+  def getSynapticPartnerForSynapses(token: Option[String],
+                                    organizationName: String,
                                     dataSetName: String,
                                     dataLayerName: String,
                                     direction: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        token) {
         AllowRemoteOrigin {
           Ok
         }
@@ -503,12 +511,14 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getSynapsePositions(organizationName: String,
+  def getSynapsePositions(token: Option[String],
+                          organizationName: String,
                           dataSetName: String,
                           dataLayerName: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        token) {
         AllowRemoteOrigin {
           Ok
         }
@@ -516,12 +526,14 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def getSynapseTypes(organizationName: String,
+  def getSynapseTypes(token: Option[String],
+                      organizationName: String,
                       dataSetName: String,
                       dataLayerName: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
       accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+        token) {
         AllowRemoteOrigin {
           Ok
         }

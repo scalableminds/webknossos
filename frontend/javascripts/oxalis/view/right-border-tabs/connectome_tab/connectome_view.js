@@ -180,34 +180,34 @@ const _convertConnectomeToTreeData = (
   }));
 };
 
-function removeEmpty(obj) {
-  return _.omitBy(obj, (value, key: string) => {
-    const newValue = _.isPlainObject(value) ? removeEmpty(value) : value;
-    obj[key] = newValue;
-    return _.isEmpty(newValue);
-  });
-}
+// function removeEmpty(obj) {
+//   return _.omitBy(obj, (value, key: string) => {
+//     const newValue = _.isPlainObject(value) ? removeEmpty(value) : value;
+//     obj[key] = newValue;
+//     return _.isEmpty(newValue);
+//   });
+// }
 
-const getFilteredConnectomeData = (
-  connectomeData: ConnectomeData,
-  filters: ConnectomeFilters,
-): ConnectomeData => {
-  const { synapseTypes } = filters;
+// const getFilteredConnectomeData = (
+//   connectomeData: ConnectomeData,
+//   filters: ConnectomeFilters,
+// ): ConnectomeData => {
+//   const { synapseTypes } = filters;
 
-  if (synapseTypes.length === 0) return connectomeData;
+//   if (synapseTypes.length === 0) return connectomeData;
 
-  return removeEmpty(
-    _.mapValues(connectomeData, connections =>
-      _.mapValues(connections, partners =>
-        _.mapValues(partners, synapses =>
-          synapses.filter(
-            synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
-          ),
-        ),
-      ),
-    ),
-  );
-};
+//   return removeEmpty(
+//     _.mapValues(connectomeData, connections =>
+//       _.mapValues(connections, partners =>
+//         _.mapValues(partners, synapses =>
+//           synapses.filter(
+//             synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
+//           ),
+//         ),
+//       ),
+//     ),
+//   );
+// };
 
 const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Synapse> =>
   _.flatten(
@@ -373,6 +373,13 @@ class ConnectomeView extends React.Component<Props, State> {
       getSynapsePositions(...fetchProperties, allSynapses),
       getSynapseTypes(...fetchProperties, allSynapses),
     ]);
+
+    // TODO: Remove once the backend sends the correct typeToString mapping
+    synapseTypesAndNames.typeToString = [
+      "dendritic-shaft-synapse",
+      "spine-head-synapse",
+      "soma-synapse",
+    ];
 
     const { synapseTypes, typeToString } = synapseTypesAndNames;
 

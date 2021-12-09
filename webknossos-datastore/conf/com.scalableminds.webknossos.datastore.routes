@@ -35,9 +35,9 @@ POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/meshe
 
 # Connectome files
 GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listConnectomeFiles(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
-POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses/:direction                        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapticPartnerForSynapses(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, direction: String)
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses/positions                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapsePositions(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses/types                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapseTypes(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses/:direction                        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapticPartnerForSynapses(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String, direction: String)
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/connectomes/synapses                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSynapsesForAgglomerates(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 
 # Isosurfaces

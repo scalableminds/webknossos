@@ -164,4 +164,15 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
       }
     } yield agglomerateIds
 
+  def positionsForSynapses(connectomeFilePath: Path, synapseIds: List[Long]): Fox[List[List[Long]]] =
+    for {
+      cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
+      synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+        tryo { _: Throwable =>
+          cachedConnectomeFile.finishAccess()
+        } {
+          cachedConnectomeFile.reader.uint64().readMatrixBlockWithOffset("/synapse_positions", 1, 3, synapseId, 0)
+        }.flatMap(_.headOption)
+      }
+    } yield synapsePositions.map(_.toList)
 }

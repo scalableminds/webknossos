@@ -78,14 +78,14 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     if (agglomerateIds.length == 1) {
       for {
         agglomerateId <- agglomerateIds.headOption.toFox ?~> "Failed to extract the single agglomerate ID from request"
-        inSynapses <- inSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read ingoing synapses"
-        outSynapses <- outSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read outgoing synapses"
+        inSynapses <- ingoingSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read ingoing synapses"
+        outSynapses <- outgoingSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read outgoing synapses"
       } yield List(DirectedSynapseList(inSynapses, outSynapses))
     } else {
       Fox.failure("Synapses between multiple agglomerates is not yet implemented")
     }
 
-  def inSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =
+  private def ingoingSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =
     for {
       cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
       fromAndTo: Array[Long] <- tryo { _: Throwable =>
@@ -111,7 +111,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
       _ = cachedConnectomeFile.finishAccess()
     } yield synapseIdsFlat
 
-  def outSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =
+  private def outgoingSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =
     for {
       cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
       fromAndTo: Array[Long] <- tryo { _: Throwable =>
@@ -131,5 +131,19 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
       synapseStart <- synapseStartEnd.lift(0) ?~> "Could not read start offset from connectome file"
       synapseEnd <- synapseStartEnd.lift(1) ?~> "Could not read end offset from connectome file"
     } yield List.range(synapseStart, synapseEnd)
+
+  def synapticPartnerForSynapses(connectomeFilePath: Path, synapseIds: List[Long], direction: String): Fox[List[Long]] =
+    for {
+      _ <- bool2Fox(direction == "src" || direction == "dst") ?~> s"Invalid synaptic partner direction: $direction"
+      collection = s"/synapse_to_${direction}_agglomerate"
+      cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
+      agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+        tryo { _: Throwable =>
+          cachedConnectomeFile.finishAccess()
+        } {
+          cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset(collection, 1, synapseId)
+        }.flatMap(_.headOption)
+      }
+    } yield agglomerateIds
 
 }

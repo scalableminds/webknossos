@@ -505,11 +505,17 @@ Expects:
                                     dataLayerName: String,
                                     direction: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-        token) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
-          Ok
+          for {
+            meshFilePath <- Fox.successful(
+              connectomeFileService
+                .connectomeFilePath(organizationName, dataSetName, dataLayerName, request.body.connectomeFile))
+            agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFilePath,
+                                                                               request.body.synapseIds,
+                                                                               direction)
+          } yield Ok(Json.toJson(agglomerateIds))
         }
       }
     }

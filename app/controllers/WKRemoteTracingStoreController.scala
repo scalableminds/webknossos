@@ -32,9 +32,9 @@ class WKRemoteTracingStoreController @Inject()(
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def handleTracingUpdateReport(name: String): Action[TracingUpdatesReport] =
+  def handleTracingUpdateReport(name: String, key: String): Action[TracingUpdatesReport] =
     Action.async(validateJson[TracingUpdatesReport]) { implicit request =>
-      tracingStoreService.validateAccess(name) { _ =>
+      tracingStoreService.validateAccess(name, key) { _ =>
         val report = request.body
         for {
           annotation <- annotationDAO.findOneByTracingId(report.tracingId)(GlobalAccessContext)
@@ -62,9 +62,9 @@ class WKRemoteTracingStoreController @Inject()(
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
 
-  def dataSource(name: String, organizationName: Option[String], dataSetName: String): Action[AnyContent] =
+  def dataSource(name: String, key: String, organizationName: Option[String], dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      tracingStoreService.validateAccess(name) { _ =>
+      tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
           organizationIdOpt <- Fox.runOptional(organizationName) {

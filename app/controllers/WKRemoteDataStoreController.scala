@@ -51,7 +51,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
-          _ <- Fox.serialCombined(uploadInfo.layersToLink)(l => validateLayerToLink(l, user)) ?~> "dataSet.upload.invalidLinkedLayers"
+          _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataSet.upload.invalidLinkedLayers"
           dataSet <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataSet.name.alreadyTaken"
           _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user),
                                                                                 request.messages)

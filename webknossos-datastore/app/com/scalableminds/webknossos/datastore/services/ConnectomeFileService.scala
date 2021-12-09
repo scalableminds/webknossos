@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.storage.Hdf5FileCache
+import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
@@ -31,6 +32,15 @@ object BySynapseIdsRequest {
   implicit val jsonFormat: OFormat[BySynapseIdsRequest] = Json.format[BySynapseIdsRequest]
 }
 
+case class DirectedSynapseList(
+    in: List[Long],
+    out: List[Long]
+)
+
+object DirectedSynapseList {
+  implicit val jsonFormat: OFormat[DirectedSynapseList] = Json.format[DirectedSynapseList]
+}
+
 class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -52,4 +62,74 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
       .getOrElse(Nil)
       .toSet
   }
+
+  def connectomeFilePath(organizationName: String,
+                         dataSetName: String,
+                         dataLayerName: String,
+                         connectomeFileName: String): Path =
+    dataBaseDir
+      .resolve(organizationName)
+      .resolve(dataSetName)
+      .resolve(dataLayerName)
+      .resolve(connectomesDir)
+      .resolve(s"$connectomeFileName.$connectomeFileExtension")
+
+  def synapsesForAgglomerates(connectomeFilePath: Path, agglomerateIds: List[Long]): Fox[List[DirectedSynapseList]] =
+    if (agglomerateIds.length == 1) {
+      for {
+        agglomerateId <- agglomerateIds.headOption.toFox ?~> "Failed to extract the single agglomerate ID from request"
+        inSynapses <- inSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read ingoing synapses"
+        outSynapses <- outSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read outgoing synapses"
+      } yield List(DirectedSynapseList(inSynapses, outSynapses))
+    } else {
+      Fox.failure("Synapses between multiple agglomerates is not yet implemented")
+    }
+
+  def inSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =
+    for {
+      cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
+      fromAndTo: Array[Long] <- tryo { _: Throwable =>
+        cachedConnectomeFile.finishAccess()
+      } {
+        cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/CSC_indptr", 2, agglomerateId)
+      } ?~> "Could not read offsets from connectome file"
+      from <- fromAndTo.lift(0) ?~> "Could not read start offset from connectome file"
+      to <- fromAndTo.lift(1) ?~> "Could not read end offset from connectome file"
+      agglomeratePairs: Array[Long] <- tryo { _: Throwable =>
+        cachedConnectomeFile.finishAccess()
+      } {
+        cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/CSC_agglomerate_pair", (to - from).toInt, from)
+      } ?~> "Could not read agglomerate pairs from connectome file"
+      synapseIdsNested: List[Array[Long]] <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
+        tryo { _: Throwable =>
+          cachedConnectomeFile.finishAccess()
+        } {
+          cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/agglomerate_pair_offsets", 1, agglomeratePair)
+        }
+      } ?~> "Could not read synapses from connectome file"
+      synapseIdsFlat = synapseIdsNested.flatMap(_.toList)
+      _ = cachedConnectomeFile.finishAccess()
+    } yield synapseIdsFlat
+
+  def outSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =
+    for {
+      cachedConnectomeFile <- tryo { connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.initHDFReader) } ?~> "connectome.file.open.failed"
+      fromAndTo: Array[Long] <- tryo { _: Throwable =>
+        cachedConnectomeFile.finishAccess()
+      } {
+        cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/CSC_indptr", 2, agglomerateId)
+      } ?~> "Could not read offsets from connectome file"
+      from <- fromAndTo.lift(0) ?~> "Could not read start offset from connectome file"
+      to <- fromAndTo.lift(1) ?~> "Could not read end offset from connectome file"
+      synapseStartEnd: Array[Long] <- tryo { _: Throwable =>
+        cachedConnectomeFile.finishAccess()
+      } {
+        cachedConnectomeFile.reader
+          .uint64()
+          .readArrayBlockWithOffset("/agglomerate_pair_offsets", (to - from).toInt, from)
+      } ?~> "Could not synapses from connectome file"
+      synapseStart <- synapseStartEnd.lift(0) ?~> "Could not read start offset from connectome file"
+      synapseEnd <- synapseStartEnd.lift(1) ?~> "Could not read end offset from connectome file"
+    } yield List.range(synapseStart, synapseEnd)
+
 }

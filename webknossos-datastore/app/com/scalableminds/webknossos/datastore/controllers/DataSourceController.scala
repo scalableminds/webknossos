@@ -485,11 +485,15 @@ Expects:
                                  dataSetName: String,
                                  dataLayerName: String): Action[ByAgglomerateIdsRequest] =
     Action.async(validateJson[ByAgglomerateIdsRequest]) { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-        token) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
-          Ok
+          for {
+            meshFilePath <- Fox.successful(
+              connectomeFileService
+                .connectomeFilePath(organizationName, dataSetName, dataLayerName, request.body.connectomeFile))
+            synapses <- connectomeFileService.synapsesForAgglomerates(meshFilePath, request.body.agglomerateIds)
+          } yield Ok(Json.toJson(synapses))
         }
       }
     }

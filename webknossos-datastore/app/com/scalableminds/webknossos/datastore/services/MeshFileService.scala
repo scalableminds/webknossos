@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 
-import ch.systemsx.cisd.hdf5.HDF5FactoryProvider
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -74,7 +73,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.initHDFReader) } ?~> "mesh.file.open.failed"
       chunkPositionLiterals <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } {
@@ -100,7 +99,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.initHDFReader) } ?~> "mesh.file.open.failed"
       encoding <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } { cachedMeshFile.reader.string().getAttr("/", "metadata/encoding") } ?~> "mesh.file.readEncoding.failed"
@@ -121,11 +120,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       _ <- bool2Fox(split.length == 3)
       asInts <- tryo { split.map(_.toInt) }
     } yield Point3D(asInts.head, asInts(1), asInts(2))
-  }
-
-  def initHDFReader(meshFilePath: Path): CachedHdf5File = {
-    val reader = HDF5FactoryProvider.get.openForReading(meshFilePath.toFile)
-    CachedHdf5File(reader)
   }
 
 }

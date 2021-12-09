@@ -1821,7 +1821,7 @@ export function getMeshfileChunkData(
 
 // ### Connectomes
 
-const USE_CONNECTOME_MOCK_DATA = true;
+const USE_CONNECTOME_MOCK_DATA = false;
 
 export function getConnectomeFilesForDatasetLayer(
   dataStoreUrl: string,

@@ -102,7 +102,7 @@ class BinaryDataController @Inject()(
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
   def requestRawCuboid(
-      @ApiParam(value = "Datastore token identifying the requesting user", required = false) token: Option[String],
+      @ApiParam(value = "Datastore token identifying the requesting user") token: Option[String],
       @ApiParam(value = "Name of the dataset’s organization", required = true) organizationName: String,
       @ApiParam(value = "Dataset name", required = true) dataSetName: String,
       @ApiParam(value = "Layer name of the dataset", required = true) dataLayerName: String,

@@ -311,7 +311,11 @@ function _MeshInfoItem(props: {
     <Tooltip title="Download Mesh">
       <VerticalAlignBottomOutlined
         key="download-button"
-        onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segment.name ? segment.name : "mesh", segment.id))}
+        onClick={() =>
+          Store.dispatch(
+            triggerIsosurfaceDownloadAction(segment.name ? segment.name : "mesh", segment.id),
+          )
+        }
       />
     </Tooltip>
   );

@@ -119,6 +119,7 @@ export type TriggerActiveIsosurfaceDownloadAction = {
 
 export type TriggerIsosurfaceDownloadAction = {
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellName: string,
   cellId: number,
 };
 
@@ -362,9 +363,11 @@ export const triggerActiveIsosurfaceDownloadAction = (): TriggerActiveIsosurface
 });
 
 export const triggerIsosurfaceDownloadAction = (
+  cellName: string,
   cellId: number,
 ): TriggerIsosurfaceDownloadAction => ({
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellName,
   cellId,
 });
 

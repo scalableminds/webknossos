@@ -1848,7 +1848,7 @@ export function getSynapsesOfAgglomerates(
   datasetId: APIDatasetId,
   layerName: string,
   connectomeFile: string,
-  segmentIds: Array<number>,
+  agglomerateIds: Array<number>,
 ): Promise<Array<{| in: Array<number>, out: Array<number> |}>> {
   if (USE_CONNECTOME_MOCK_DATA) {
     return new Promise(resolve =>
@@ -1868,7 +1868,7 @@ export function getSynapsesOfAgglomerates(
         {
           data: {
             connectomeFile,
-            segmentIds,
+            agglomerateIds,
           },
         },
       ),

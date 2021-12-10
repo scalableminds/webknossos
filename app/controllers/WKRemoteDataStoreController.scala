@@ -4,17 +4,21 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAcce
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.{DataStoreStatus, ReserveUploadInformation}
+import com.scalableminds.webknossos.datastore.services.{
+  DataStoreStatus,
+  LinkedLayerIdentifier,
+  ReserveUploadInformation
+}
 import com.typesafe.scalalogging.LazyLogging
-
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.organization.OrganizationDAO
+import models.user.User
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsError, JsSuccess, JsValue}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -47,6 +51,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
           _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
+          _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataSet.upload.invalidLinkedLayers"
           dataSet <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataSet.name.alreadyTaken"
           _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user),
                                                                                 request.messages)
@@ -54,6 +59,17 @@ class WKRemoteDataStoreController @Inject()(
         } yield Ok
       }
     }
+
+  def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
+                          requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOneByName(layerIdentifier.organizationName)(GlobalAccessContext) ?~> Messages(
+        "organization.notFound",
+        layerIdentifier.organizationName) ~> NOT_FOUND
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
+        AuthorizedAccessContext(requestingUser)) ?~> Messages("dataSet.notFound", layerIdentifier.dataSetName)
+      _ <- bool2Fox(dataSet.isPublic) ?~> Messages("dataSet.upload.linkPublicOnly")
+    } yield ()
 
   def reportDatasetUpload(name: String,
                           key: String,

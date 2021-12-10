@@ -56,7 +56,7 @@ class SampleDataSourceService @Inject()(rpc: RPC,
       _ <- bool2Fox(!runningDownloads.contains(dataSourceId)) ?~> "dataSet.downloadAlreadyRunning"
       _ <- bool2Fox(dataSourceRepository.find(dataSourceId).isEmpty) ?~> "dataSet.alreadyPresent"
       _ <- remoteWebKnossosClient.validateDataSourceUpload(
-        ReserveUploadInformation("", dataSetName, organizationName, 1, List.empty),
+        ReserveUploadInformation("", dataSetName, organizationName, 1, None, List.empty),
         userTokenOpt) ?~> "dataSet.name.alreadyTaken"
       _ = runningDownloads.put(dataSourceId, ())
       _ = download(dataSourceId)
@@ -77,7 +77,7 @@ class SampleDataSourceService @Inject()(rpc: RPC,
           tmpfile.close()
 
           uploadService
-            .finishUpload(UploadInformation(downloadId, id.name, id.team, needsConversion = None),
+            .finishUpload(UploadInformation(downloadId, id.name, id.team, None, needsConversion = None),
                           checkCompletion = false)
             .map { _ =>
               runningDownloads.remove(id)

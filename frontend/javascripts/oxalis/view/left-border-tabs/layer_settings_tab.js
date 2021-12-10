@@ -84,6 +84,7 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import features from "features";
 import messages, { settings } from "messages";
+import { formatExtentWithLength } from "libs/format_utils";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
@@ -456,15 +457,25 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
           <Tooltip
             title={
-              <div>
-                Data Type: {elementClass}
-                <br />
-                Available resolutions:
-                <ul>
-                  {resolutions.map(r => (
-                    <li key={r.join()}>{r.join("-")}</li>
-                  ))}
-                </ul>
+              <div style={{ display: "grid", gridTemplateRows: "25% 25% 25% 25%", gridGap: "3px", alignItems: "center" }}>
+                <div>Data Type: {elementClass}</div>
+                <div>
+                  Available resolutions:
+                  <ul>
+                    {resolutions.map(r => (
+                      <li key={r.join()}>{r.join("-")}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div style={{ height:"26px", display: "grid", gridTemplateColumns: "33% 33% 33%", gridTemplateRows: "30% 70%", alignItems: "end" }}>
+                  <div style={{ fontSize:"70%" }}>Min X</div>
+                  <div style={{ fontSize:"70%" }}>Min Y</div>
+                  <div style={{ fontSize:"70%" }}>Min Z</div>
+                  <div>{layer.boundingBox.topLeft[0]} </div>
+                  <div>{layer.boundingBox.topLeft[1]} </div>
+                  <div>{layer.boundingBox.topLeft[2]}</div>
+                </div>
+                <div>{formatExtentWithLength(layer.boundingBox, x => `${x}`)} voxel³</div>
               </div>
             }
             placement="left"

@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Fixed
--
+- Fixed a security vulnerability by upgrading log4j to newest version. [#5900](https://github.com/scalableminds/webknossos/pull/5900)
 
 ### Removed
 -

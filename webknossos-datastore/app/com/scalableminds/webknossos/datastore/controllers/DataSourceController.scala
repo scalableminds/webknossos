@@ -16,7 +16,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import java.io.File
 
-import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -108,6 +108,12 @@ Expects:
 """,
     nickname = "datasetReserveUpload"
   )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "reserveUploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[ReserveUploadInformation],
+                           paramType = "body")))
   def reserveUpload(token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
@@ -199,6 +205,12 @@ Expects:
 """,
     nickname = "datasetFinishUpload"
   )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "uploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[UploadInformation],
+                           paramType = "body")))
   @ApiResponses(
     Array(
       new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),

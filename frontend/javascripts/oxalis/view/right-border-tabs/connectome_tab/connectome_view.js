@@ -1,10 +1,11 @@
 // @flow
-import { Tag, Empty, Tree, Tooltip, Popover, Checkbox, Divider } from "antd";
+import { Tag, Empty, Tree, Tooltip, Popover, Checkbox, Divider, Input } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import React from "react";
+import { AutoSizer } from "react-virtualized";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import Maybe from "data.maybe";
@@ -696,7 +697,7 @@ The format should be: \`{
     const isAnyFilterActive = filters.synapseTypes.length;
 
     return (
-      <>
+      <Input.Group compact className="compact-icons">
         <InputComponent
           value={activeSegmentIdString}
           onPressEnter={this.handleChangeActiveSegment}
@@ -711,7 +712,7 @@ The format should be: \`{
             </ButtonComponent>
           </Popover>
         </Tooltip>
-      </>
+      </Input.Group>
     );
   }
 
@@ -753,16 +754,23 @@ The format should be: \`{
                   />
                 ) : null}
                 {filteredConnectomeData != null ? (
-                  <Tree
-                    checkable
-                    checkStrictly
-                    defaultExpandAll
-                    showLine={{ showLeafIcon: false }}
-                    onSelect={this.handleSelect}
-                    onCheck={this.handleCheck}
-                    titleRender={this.renderNode}
-                    treeData={convertConnectomeToTreeData(filteredConnectomeData)}
-                  />
+                  <AutoSizer>
+                    {({ height, width }) => (
+                      <div style={{ height, width }}>
+                        <Tree
+                          checkable
+                          checkStrictly
+                          defaultExpandAll
+                          height={height}
+                          showLine={{ showLeafIcon: false }}
+                          onSelect={this.handleSelect}
+                          onCheck={this.handleCheck}
+                          titleRender={this.renderNode}
+                          treeData={convertConnectomeToTreeData(filteredConnectomeData)}
+                        />
+                      </div>
+                    )}
+                  </AutoSizer>
                 ) : null}
               </>
             );

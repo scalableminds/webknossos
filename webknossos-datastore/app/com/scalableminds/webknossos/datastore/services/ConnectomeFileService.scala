@@ -132,9 +132,14 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
       } ?~> "Could not read offsets from connectome file"
       from <- fromAndToPtr.lift(0) ?~> "Could not read start offset from connectome file"
       to <- fromAndToPtr.lift(1) ?~> "Could not read end offset from connectome file"
-      agglomeratePairs: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
-        cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/CSC_agglomerate_pair", (to - from).toInt, from)
-      } ?~> "Could not read agglomerate pairs from connectome file"
+      // readArrayBlockWithOffset has a bug and does not return the empty array when block size 0 is passed, hence the if.
+      agglomeratePairs: Array[Long] <- if (to - from == 0L) Fox.successful(Array.empty[Long])
+      else
+        finishAccessOnFailure(cachedConnectomeFile) {
+          cachedConnectomeFile.reader
+            .uint64()
+            .readArrayBlockWithOffset("/CSC_agglomerate_pair", (to - from).toInt, from)
+        } ?~> "Could not read agglomerate pairs from connectome file"
       synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
         for {
           from <- finishAccessOnFailure(cachedConnectomeFile) {

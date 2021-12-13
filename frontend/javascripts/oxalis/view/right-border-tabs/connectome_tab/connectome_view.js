@@ -107,6 +107,7 @@ type State = {
   currentConnectomeFile: ?APIConnectomeFile,
   activeSegmentId: ?number,
   connectomeData: ?ConnectomeData,
+  filteredConnectomeData: ?ConnectomeData,
   synapseTypes: Array<string>,
   filters: ConnectomeFilters,
 };
@@ -123,36 +124,23 @@ const synapseData = (synapseId: number, position: Vector3, type: string): Synaps
 });
 const noneData = { type: "none" };
 
-const _convertConnectomeToTreeData = (
-  connectomeData: ?ConnectomeData,
-  filters: ConnectomeFilters,
-): ?TreeData => {
+const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeData => {
   if (connectomeData == null) return null;
-
-  const { synapseTypes } = filters;
 
   const convertSynapsesForPartner = (partners, partnerId1, inOrOut): Array<TreeNode> =>
     Object.keys(partners)
-      .map(partnerId2 => {
-        const filteredSynapses = partners[+partnerId2].filter(
-          synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
-        );
-        // $FlowIssue[incompatible-return] For some reason Flow ignores that these null values are filtered after the map
-        if (filteredSynapses.length === 0) return null;
-
-        return {
-          key: `segment-${partnerId1}-${inOrOut}-${partnerId2}`,
-          title: `Segment ${partnerId2}`,
-          data: segmentData(+partnerId2),
-          children: filteredSynapses.map(synapse => ({
-            key: `synapse-${inOrOut}-${synapse.id}`,
-            title: `Synapse ${synapse.id}`,
-            data: synapseData(synapse.id, synapse.position, synapse.type),
-            children: [],
-            checkable: false,
-          })),
-        };
-      })
+      .map(partnerId2 => ({
+        key: `segment-${partnerId1}-${inOrOut}-${partnerId2}`,
+        title: `Segment ${partnerId2}`,
+        data: segmentData(+partnerId2),
+        children: partners[+partnerId2].map(synapse => ({
+          key: `synapse-${inOrOut}-${synapse.id}`,
+          title: `Synapse ${synapse.id}`,
+          data: synapseData(synapse.id, synapse.position, synapse.type),
+          children: [],
+          checkable: false,
+        })),
+      }))
       .filter(el => el != null);
 
   return Object.keys(connectomeData).map(partnerId1 => ({
@@ -180,34 +168,36 @@ const _convertConnectomeToTreeData = (
   }));
 };
 
-// function removeEmpty(obj) {
-//   return _.omitBy(obj, (value, key: string) => {
-//     const newValue = _.isPlainObject(value) ? removeEmpty(value) : value;
-//     obj[key] = newValue;
-//     return _.isEmpty(newValue);
-//   });
-// }
+function removeEmpty(obj) {
+  return _.omitBy(obj, (value, key: string) => {
+    const newValue = _.isPlainObject(value) ? removeEmpty(value) : value;
+    obj[key] = newValue;
+    return _.isEmpty(newValue);
+  });
+}
 
-// const getFilteredConnectomeData = (
-//   connectomeData: ConnectomeData,
-//   filters: ConnectomeFilters,
-// ): ConnectomeData => {
-//   const { synapseTypes } = filters;
+const getFilteredConnectomeData = (
+  connectomeData: ?ConnectomeData,
+  filters: ?ConnectomeFilters,
+): ?ConnectomeData => {
+  if (connectomeData == null || filters == null) return connectomeData;
 
-//   if (synapseTypes.length === 0) return connectomeData;
+  const { synapseTypes } = filters;
 
-//   return removeEmpty(
-//     _.mapValues(connectomeData, connections =>
-//       _.mapValues(connections, partners =>
-//         _.mapValues(partners, synapses =>
-//           synapses.filter(
-//             synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
-//           ),
-//         ),
-//       ),
-//     ),
-//   );
-// };
+  if (synapseTypes.length === 0) return connectomeData;
+
+  return removeEmpty(
+    _.mapValues(_.clone(connectomeData), connections =>
+      _.mapValues(connections, partners =>
+        _.mapValues(partners, synapses =>
+          synapses.filter(
+            synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
+          ),
+        ),
+      ),
+    ),
+  );
+};
 
 const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Synapse> =>
   _.flatten(
@@ -263,6 +253,7 @@ class ConnectomeView extends React.Component<Props, State> {
     currentConnectomeFile: null,
     activeSegmentId: null,
     connectomeData: null,
+    filteredConnectomeData: null,
     synapseTypes: [],
     filters: {
       synapseTypes: [],
@@ -281,9 +272,18 @@ class ConnectomeView extends React.Component<Props, State> {
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
       this.fetchConnectomeFiles();
     }
-    if (prevState.connectomeData !== this.state.connectomeData) {
-      this.updateSynapseTrees(prevState.connectomeData, this.state.connectomeData);
-      this.maybeRemoveAgglomerateTrees(prevState.connectomeData, this.state.connectomeData);
+    if (
+      prevState.connectomeData !== this.state.connectomeData ||
+      prevState.filters !== this.state.filters
+    ) {
+      this.updateFilteredConnectomeData(this.state.connectomeData, this.state.filters);
+    }
+    if (prevState.filteredConnectomeData !== this.state.filteredConnectomeData) {
+      this.updateSynapseTrees(prevState.filteredConnectomeData, this.state.filteredConnectomeData);
+      this.maybeRemoveAgglomerateTrees(
+        prevState.filteredConnectomeData,
+        this.state.filteredConnectomeData,
+      );
     }
   }
 
@@ -415,7 +415,16 @@ class ConnectomeView extends React.Component<Props, State> {
       typeToString.includes(synapseType),
     );
 
-    this.setState({ connectomeData, synapseTypes: typeToString, filters: newFilters });
+    this.setState({
+      connectomeData,
+      synapseTypes: typeToString,
+      filters: newFilters,
+    });
+  }
+
+  updateFilteredConnectomeData(connectomeData: ?ConnectomeData, filters: ?ConnectomeFilters) {
+    const filteredConnectomeData = getFilteredConnectomeData(connectomeData, filters);
+    this.setState({ filteredConnectomeData });
   }
 
   updateSynapseTrees(prevConnectomeData: ?ConnectomeData, connectomeData: ?ConnectomeData) {
@@ -433,7 +442,7 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     const layerName = visibleSegmentationLayer.name;
-    // Find out which synapses where deleted and which were added
+    // Find out which synapses were deleted and which were added
     const { onlyA: deletedSynapseIds, onlyB: addedSynapseIds } = diffArrays(
       prevSynapses.map(synapse => synapse.id),
       synapses.map(synapse => synapse.id),
@@ -632,7 +641,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
   render() {
     const { visibleSegmentationLayer } = this.props;
-    const { activeSegmentId, connectomeData, currentConnectomeFile, filters } = this.state;
+    const { activeSegmentId, filteredConnectomeData, currentConnectomeFile } = this.state;
 
     return (
       <div id={connectomeTabId} className="padded-tab-content">
@@ -667,7 +676,7 @@ class ConnectomeView extends React.Component<Props, State> {
                     description="No segment selected. Use the input field above to enter a segment ID."
                   />
                 ) : null}
-                {connectomeData != null ? (
+                {filteredConnectomeData != null ? (
                   <Tree
                     checkable
                     checkStrictly
@@ -676,7 +685,7 @@ class ConnectomeView extends React.Component<Props, State> {
                     onSelect={this.handleSelect}
                     onCheck={this.handleCheck}
                     titleRender={this.renderNode}
-                    treeData={convertConnectomeToTreeData(connectomeData, filters)}
+                    treeData={convertConnectomeToTreeData(filteredConnectomeData)}
                   />
                 ) : null}
               </>

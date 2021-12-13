@@ -30,12 +30,12 @@ import oxalis.mail.{MailchimpClient, MailchimpTag}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class CreateExplorationalParameters(typ: AnnotationLayerType,
-                                         fallbackLayerName: Option[String],
-                                         resolutionRestrictions: Option[ResolutionRestrictions],
-                                         name: Option[String])
-object CreateExplorationalParameters {
-  implicit val jsonFormat: OFormat[CreateExplorationalParameters] = Json.format[CreateExplorationalParameters]
+case class AnnotationLayerParameters(typ: AnnotationLayerType,
+                                     fallbackLayerName: Option[String],
+                                     resolutionRestrictions: Option[ResolutionRestrictions],
+                                     name: Option[String])
+object AnnotationLayerParameters {
+  implicit val jsonFormat: OFormat[AnnotationLayerParameters] = Json.format[AnnotationLayerParameters]
 }
 
 @Api
@@ -168,9 +168,21 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reopened"))
   }
 
+  def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
+    sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        organization <- organizationDAO.findOne(request.identity._organization)
+        _ <- annotationService.addAnnotationLayer(annotation, organization.name, request.body)
+        updated <- provider.provideAnnotation(typ, id, request.identity)
+        json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+      } yield JsonOk(json)
+    }
+
   @ApiOperation(hidden = true, value = "")
-  def createExplorational(organizationName: String, dataSetName: String): Action[List[CreateExplorationalParameters]] =
-    sil.SecuredAction.async(validateJson[List[CreateExplorationalParameters]]) { implicit request =>
+  def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
+    sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",

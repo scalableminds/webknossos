@@ -25,9 +25,8 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingDownsampling
 }
 import com.typesafe.scalalogging.LazyLogging
-import controllers.CreateExplorationalParameters
+import controllers.AnnotationLayerParameters
 import javax.inject.Inject
-import models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
@@ -140,11 +139,26 @@ class AnnotationService @Inject()(
       )
   }
 
-  def createTracingsForExplorational(dataSet: DataSet,
-                                     dataSource: DataSource,
-                                     allAnnotationLayerParameters: List[CreateExplorationalParameters],
-                                     organizationName: String,
-                                     existingAnnotationLayers: List[AnnotationLayer] = List())(
+  def addAnnotationLayer(annotation: Annotation,
+                         organizationName: String,
+                         annotationLayerParameters: AnnotationLayerParameters)(implicit ec: ExecutionContext,
+                                                                               ctx: DBAccessContext): Fox[Unit] =
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
+      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSource.notFound"
+      newAnnotationLayers <- createTracingsForExplorational(dataSet,
+                                                            dataSource,
+                                                            List(annotationLayerParameters),
+                                                            organizationName,
+                                                            annotation.annotationLayers)
+      _ <- Fox.serialCombined(newAnnotationLayers)(l => annotationLayersDAO.insertOne(annotation._id, l))
+    } yield ()
+
+  private def createTracingsForExplorational(dataSet: DataSet,
+                                             dataSource: DataSource,
+                                             allAnnotationLayerParameters: List[AnnotationLayerParameters],
+                                             organizationName: String,
+                                             existingAnnotationLayers: List[AnnotationLayer] = List())(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
 
     // TODO: ensure that user bboxes + bbox is preserved. Either by copying
@@ -196,7 +210,7 @@ class AnnotationService @Inject()(
 
   def createExplorationalFor(user: User,
                              _dataSet: ObjectId,
-                             annotationLayerParameters: List[CreateExplorationalParameters])(
+                             annotationLayerParameters: List[AnnotationLayerParameters])(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[Annotation] =
     for {
@@ -216,39 +230,20 @@ class AnnotationService @Inject()(
     }
 
   def makeAnnotationHybrid(annotation: Annotation, organizationName: String, fallbackLayerName: Option[String])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-
-    def selectNewAnnotationLayerType: Fox[AnnotationLayerType] =
-      annotation.tracingType match {
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      newAnnotationLayerType <- annotation.tracingType match {
         case TracingType.skeleton => Fox.successful(AnnotationLayerType.Volume)
         case TracingType.volume   => Fox.successful(AnnotationLayerType.Skeleton)
         case _                    => Fox.failure("annotation.makeHybrid.alreadyHybrid")
       }
-
-    def createNewTracings(dataSet: DataSet, dataSource: DataSource) =
-      for {
-        newAnnotationLayerType <- selectNewAnnotationLayerType
-        usedFallbackLayerName = if (newAnnotationLayerType == AnnotationLayerType.Volume) fallbackLayerName else None
-        newAnnotationLayerParameters = CreateExplorationalParameters(newAnnotationLayerType,
-                                                                     usedFallbackLayerName,
-                                                                     Some(ResolutionRestrictions.empty),
-                                                                     None)
-        newAnnotationLayers <- createTracingsForExplorational(dataSet,
-                                                              dataSource,
-                                                              List(newAnnotationLayerParameters),
-                                                              organizationName,
-                                                              annotation.annotationLayers)
-        newAnnotationLayer <- newAnnotationLayers.headOption.toFox // exactly one new layer was requested, exactly one should have been returned
-        _ <- annotationLayersDAO.insertOne(annotation._id, newAnnotationLayer)
-      } yield ()
-
-    for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFoundForAnnotation"
-      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSource.notFound"
-      _ <- createNewTracings(dataSet, dataSource) ?~> "makeHybrid.createTracings.failed"
+      usedFallbackLayerName = if (newAnnotationLayerType == AnnotationLayerType.Volume) fallbackLayerName else None
+      newAnnotationLayerParameters = AnnotationLayerParameters(newAnnotationLayerType,
+                                                               usedFallbackLayerName,
+                                                               Some(ResolutionRestrictions.empty),
+                                                               None)
+      _ <- addAnnotationLayer(annotation, organizationName, newAnnotationLayerParameters) ?~> "makeHybrid.createTracings.failed"
     } yield ()
-
-  }
 
   def downsampleAnnotation(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
       implicit ctx: DBAccessContext): Fox[Unit] =

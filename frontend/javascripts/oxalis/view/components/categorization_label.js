@@ -22,7 +22,13 @@ type FilterProps = {|
 export default function CategorizationLabel({ tag, kind, onClick, onClose, closable }: LabelProps) {
   return (
     <Tooltip title={`Click to only show ${kind} with this tag.`}>
-      <Tag color={stringToColor(tag)} onClick={onClick} onClose={onClose} closable={closable}>
+      <Tag
+        color={stringToColor(tag)}
+        onClick={onClick}
+        onClose={onClose}
+        closable={closable}
+        style={{ cursor: "pointer" }}
+      >
         {tag}
       </Tag>
     </Tooltip>
@@ -63,6 +69,7 @@ export function CategorizationSearch({ searchTags, setTags, localStorageSavingKe
           onClose={() => {
             removeTag(tag);
           }}
+          style={{ cursor: "pointer" }}
           closable
         >
           {tag}

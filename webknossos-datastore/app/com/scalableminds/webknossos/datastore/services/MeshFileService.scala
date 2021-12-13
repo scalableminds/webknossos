@@ -81,6 +81,10 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield zipped.map(tuple => MeshFileNameWithMappingName(tuple._1, tuple._2))
   }
 
+  /*
+   Note that null is a valid value here for once. Meshfiles with no information about the
+   meshFilePath will return Fox.empty, while meshfiles with one marked as empty, will return Fox.successful(null)
+   */
   def mappingNameForMeshFile(meshFilePath: Path): Fox[String] =
     for {
       cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"

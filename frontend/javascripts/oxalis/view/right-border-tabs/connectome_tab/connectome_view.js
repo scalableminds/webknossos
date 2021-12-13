@@ -53,6 +53,7 @@ import { stringToAntdColorPreset, stringToAntdColorPresetRgb } from "libs/format
 import { diffArrays } from "libs/utils";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import Toast from "libs/toast";
 
 const connectomeTabId = "connectome";
 
@@ -398,12 +399,18 @@ class ConnectomeView extends React.Component<Props, State> {
       getSynapseTypes(...fetchProperties, allSynapses),
     ]);
 
-    // TODO: Remove once the backend sends the correct typeToString mapping
-    synapseTypesAndNames.typeToString = [
-      "dendritic-shaft-synapse",
-      "spine-head-synapse",
-      "soma-synapse",
-    ];
+    // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file
+    if (synapseTypesAndNames.typeToString.length === 0) {
+      Toast.error(`Couldn't read synapseTypes mapping. Please add a json file containing the synapseTypes next to the connectome file.
+The format should be: \`{
+  "synapse_type_names": [ "type1", "type2", ... ]
+}\``);
+      // Create mocked synapse types
+      const largestSynapseTypeId = Math.max(...synapseTypesAndNames.synapseTypes);
+      synapseTypesAndNames.typeToString = [...Array(largestSynapseTypeId + 1).keys()].map(
+        i => `type${i + 1}`,
+      );
+    }
 
     const { synapseTypes, typeToString } = synapseTypesAndNames;
 

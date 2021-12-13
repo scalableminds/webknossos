@@ -108,9 +108,12 @@ Expects:
 """,
     nickname = "datasetReserveUpload"
   )
-  @ApiImplicitParams({
-    @ApiImplicitParam(name = "ReserveUploadInformation", required = true, dataTypeClass = classOf[ReserveUploadInformation], paramType = "body")
-  })
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "ReserveUploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[ReserveUploadInformation],
+                           paramType = "body")))
   def reserveUpload(token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {

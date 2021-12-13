@@ -48,6 +48,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
   val unreportedStatus = "No longer available on datastore."
+  val notYetUploadedStatus = "Not yet fully uploaded."
+  val inactiveStatusList = List(unreportedStatus, notYetUploadedStatus)
   val initialTeamsTimeout: FiniteDuration = 1 day
 
   def isProperDataSetName(name: String): Boolean =
@@ -56,8 +58,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Unit] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[ObjectId] = {
-    val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), unreportedStatus)
+  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[DataSet] = {
+    val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), notYetUploadedStatus)
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }
 
@@ -66,37 +68,38 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       owningOrganization: String,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None
-  ): Fox[ObjectId] = {
+  ): Fox[DataSet] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     val newId = ObjectId.generate
     val details =
       Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
+    val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
       organization <- organizationDAO.findOneByName(owningOrganization)
-      _ <- dataSetDAO.insertOne(
-        DataSet(
-          newId,
-          dataStore.name,
-          organization._id,
-          publication,
-          None,
-          Some(dataSource.hashCode()),
-          dataSource.defaultViewConfiguration,
-          adminViewConfiguration = None,
-          description = None,
-          displayName = None,
-          isPublic = false,
-          isUsable = dataSource.toUsable.isDefined,
-          name = dataSource.id.name,
-          scale = dataSource.scaleOpt,
-          sharingToken = None,
-          status = dataSource.statusOpt.getOrElse(""),
-          logoUrl = None,
-          details = publication.map(_ => details)
-        ))
+      dataSet = DataSet(
+        newId,
+        dataStore.name,
+        organization._id,
+        publication,
+        None,
+        dataSourceHash,
+        dataSource.defaultViewConfiguration,
+        adminViewConfiguration = None,
+        description = None,
+        displayName = None,
+        isPublic = false,
+        isUsable = dataSource.isUsable,
+        name = dataSource.id.name,
+        scale = dataSource.scaleOpt,
+        sharingToken = None,
+        status = dataSource.statusOpt.getOrElse(""),
+        logoUrl = None,
+        details = publication.map(_ => details)
+      )
+      _ <- dataSetDAO.insertOne(dataSet)
       _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
-    } yield newId
+    } yield dataSet
   }
 
   def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(
@@ -207,7 +210,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def insertNewDataSet(dataSource: InboxDataSource, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
-      createDataSet(dataStore, dataSource.id.team, dataSource, publicationId)
+      createDataSet(dataStore, dataSource.id.team, dataSource, publicationId).map(_._id)
     }.futureBox
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
@@ -221,7 +224,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     } else Fox.successful(None)
 
   def deactivateUnreportedDataSources(existingDataSetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
-    dataSetDAO.deactivateUnreported(existingDataSetIds, dataStore.name, unreportedStatus)
+    dataSetDAO.deactivateUnreported(existingDataSetIds, dataStore.name, unreportedStatus, inactiveStatusList)
 
   def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
@@ -378,6 +381,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "isForeign" -> dataStore.isForeign,
         "jobsEnabled" -> jobsEnabled,
+        "tags" -> dataSet.tags
       )
     }
 }

@@ -1,7 +1,7 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tag } from "antd";
+import { Spin, Input, Table, Button, Modal } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -27,18 +27,20 @@ import {
   downloadNml,
   getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
-import { formatHash, stringToColor } from "libs/format_utils";
+import { formatHash } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
+import CategorizationLabel, {
+  CategorizationSearch,
+} from "oxalis/view/components/categorization_label";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-import UserLocalStorage from "libs/user_local_storage";
 import TextWithDescription from "components/text_with_description";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 
@@ -100,25 +102,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   componentDidMount() {
-    this.restoreSearchTags();
     this.fetchNextPage(0);
   }
 
   componentWillUpdate(nextProps, nextState) {
     persistence.persist(this.props.history, nextState);
-  }
-
-  restoreSearchTags() {
-    // restore the search query tags from the last session
-    const searchTagString = UserLocalStorage.getItem("lastDashboardSearchTags");
-    if (searchTagString) {
-      try {
-        const searchTags = JSON.parse(searchTagString);
-        this.setState({ tags: searchTags });
-      } catch (error) {
-        // pass
-      }
-    }
   }
 
   getCurrentModeState = () =>
@@ -320,20 +308,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   addTagToSearch = (tag: string): void => {
     if (!this.state.tags.includes(tag)) {
-      this.setState(prevState => {
-        const newTags = update(prevState.tags, { $push: [tag] });
-        UserLocalStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
-        return { tags: newTags };
-      });
+      this.setState(prevState => ({ tags: [...prevState.tags, tag] }));
     }
-  };
-
-  removeTagFromSearch = (tag: string): void => {
-    this.setState(prevState => {
-      const newTags = prevState.tags.filter(t => t !== tag);
-      UserLocalStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
-      return { tags: newTags };
-    });
   };
 
   editTagFromAnnotation = (
@@ -351,7 +327,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         if (t.id === annotation.id) {
           if (shouldAddTag) {
             // add the tag to an annotation
-            newAnnotation = update(t, { tags: { $push: [tag] } });
+            if (!t.tags.includes(tag)) {
+              newAnnotation = update(t, { tags: { $push: [tag] } });
+            }
           } else {
             // remove the tag from an annotation
             const newTags = _.without(t.tags, tag);
@@ -471,18 +449,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           render={(tags: Array<string>, annotation: APIAnnotationCompact) => (
             <div>
               {tags.map(tag => (
-                <Tag
+                <CategorizationLabel
                   key={tag}
-                  color={stringToColor(tag)}
+                  kind="annotations"
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
+                  tag={tag}
                   closable={
                     !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
                     !this.state.shouldShowArchivedTracings
                   }
-                >
-                  {tag}
-                </Tag>
+                />
               ))}
               {this.state.shouldShowArchivedTracings ? null : (
                 <EditableTextIcon
@@ -513,16 +490,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   renderSearchTags() {
-    return this.state.tags.map(tag => (
-      <Tag
-        key={tag}
-        color={stringToColor(tag)}
-        onClose={_.partial(this.removeTagFromSearch, tag)}
-        closable
-      >
-        {tag}
-      </Tag>
-    ));
+    return (
+      <CategorizationSearch
+        searchTags={this.state.tags}
+        setTags={tags => this.setState({ tags })}
+        localStorageSavingKey="lastDashboardSearchTags"
+      />
+    );
   }
 
   render() {

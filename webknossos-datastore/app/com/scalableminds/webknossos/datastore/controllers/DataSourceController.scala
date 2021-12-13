@@ -110,7 +110,7 @@ Expects:
   )
   @ApiImplicitParams(
     Array(
-      new ApiImplicitParam(name = "ReserveUploadInformation",
+      new ApiImplicitParam(name = "reserveUploadInformation",
                            required = true,
                            dataTypeClass = classOf[ReserveUploadInformation],
                            paramType = "body")))
@@ -205,6 +205,12 @@ Expects:
 """,
     nickname = "datasetFinishUpload"
   )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "uploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[UploadInformation],
+                           paramType = "body")))
   @ApiResponses(
     Array(
       new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),

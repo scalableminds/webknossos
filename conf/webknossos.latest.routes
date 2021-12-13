@@ -82,23 +82,23 @@ GET           /datasets/:organizationName/:dataSetName                         c
 
 # Datastores
 GET           /datastores                                                      controllers.DataStoreController.list
-PUT           /datastores/:name/datasource                                     controllers.WKRemoteDataStoreController.updateOne(name: String)
-PUT           /datastores/:name/datasources                                    controllers.WKRemoteDataStoreController.updateAll(name: String)
-PATCH         /datastores/:name/status                                         controllers.WKRemoteDataStoreController.statusUpdate(name: String)
-POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String)
-POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
-POST          /datastores/:name/deleteErroneous                                controllers.WKRemoteDataStoreController.deleteErroneous(name: String)
-POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
+PUT           /datastores/:name/datasource                                     controllers.WKRemoteDataStoreController.updateOne(name: String, key: String)
+PUT           /datastores/:name/datasources                                    controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
+PATCH         /datastores/:name/status                                         controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
+POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
+POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
+POST          /datastores/:name/deleteErroneous                                controllers.WKRemoteDataStoreController.deleteErroneous(name: String, key: String)
+POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create
 DELETE        /datastores/:name                                                controllers.DataStoreController.delete(name: String)
 PUT           /datastores/:name                                                controllers.DataStoreController.update(name: String)
 
 # Tracingstores
 GET           /tracingstore                                                    controllers.TracingStoreController.listOne
-POST          /tracingstores/:name/handleTracingUpdateReport                   controllers.WKRemoteTracingStoreController.handleTracingUpdateReport(name: String)
-POST          /tracingstores/:name/validateUserAccess                          controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
+POST          /tracingstores/:name/handleTracingUpdateReport                   controllers.WKRemoteTracingStoreController.handleTracingUpdateReport(name: String, key: String)
+POST          /tracingstores/:name/validateUserAccess                          controllers.UserTokenController.validateAccessViaTracingstore(name: String, key: String, token: Option[String])
 PUT           /tracingstores/:name                                             controllers.TracingStoreController.update(name: String)
-GET           /tracingstores/:name/dataSource/:dataSetName                     controllers.WKRemoteTracingStoreController.dataSource(name: String, organizationName: Option[String], dataSetName: String)
+GET           /tracingstores/:name/dataSource/:dataSetName                     controllers.WKRemoteTracingStoreController.dataSource(name: String, key: String, organizationName: Option[String], dataSetName: String)
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                              controllers.UserTokenController.generateTokenForDataStore
@@ -197,7 +197,7 @@ GET           /time/userlist/:year/:month                                      c
 GET           /time/user/:userId                                               controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
 
 # Long-Running Jobs
-GET           /jobs/request                                                    controllers.WKRemoteWorkerController.requestJobs
+GET           /jobs/request                                                    controllers.WKRemoteWorkerController.requestJobs(key: String)
 GET           /jobs                                                            controllers.JobsController.list
 GET           /jobs/status                                                     controllers.JobsController.status
 GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            controllers.JobsController.runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String, dataStoreName: String)
@@ -206,4 +206,4 @@ GET           /jobs/run/exportTiff/:organizationName/:dataSetName              c
 GET           /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
-POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(id: String)
+POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

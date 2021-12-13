@@ -1011,6 +1011,19 @@ export function startNucleiInferralJob(
   );
 }
 
+export function startGlobalizeFloodfillsJob(
+  organizationName: string,
+  datasetName: string,
+  newDatasetName: string,
+  layerName: string,
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/globalizeFloodfills/${organizationName}/${datasetName}?newDatasetName=${newDatasetName}&layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {

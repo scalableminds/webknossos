@@ -1,30 +1,32 @@
-/**
- * tracing_settings_view.js
- * @flow
- */
-import { Tooltip } from "antd";
+// @flow
+import { Button, Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
 import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import * as Utils from "libs/utils";
-
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { hasVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { startGlobalizeFloodfillsJob } from "admin/admin_rest_api";
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
+import * as Utils from "libs/utils";
+import features from "features";
+
+const GLOBALIZE_FLOODFILL_REGEX = /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
 
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
   const tracing = useSelector(state => state.tracing);
   const dataset = useSelector(state => state.dataset);
+  const activeUser = useSelector(state => state.activeUser);
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
   const dispatch = useDispatch();
@@ -60,8 +62,38 @@ export default function BoundingBoxTab() {
     setPosition(center);
   }
 
+  const showGlobalizeFloodfillsButton =
+    features().jobsEnabled &&
+    activeUser != null &&
+    hasVolumeTracings(tracing) != null &&
+    userBoundingBoxes.some(bbox => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null);
+
+  const onGlobalizeFloodfills = () => {
+    startGlobalizeFloodfillsJob(
+      dataset.owningOrganization,
+      dataset.name,
+      `${dataset.name}_with_floodfills`,
+      "segmentation",
+      tracing.annotationId,
+      tracing.annotationType,
+    );
+  };
+
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
+      {showGlobalizeFloodfillsButton ? (
+        <Tooltip title="For this annotation some floodfill operations were aborted prematurely, because they covered a too big volume. webKnossos can finish these operations via a long-running job.">
+          <Button size="small" style={{ marginBottom: 4 }} onClick={onGlobalizeFloodfills}>
+            <i
+              className="fas fa-fill-drip"
+              style={{
+                opacity: false ? 0.5 : 1,
+              }}
+            />
+            Globalize Flood-Fills
+          </Button>
+        </Tooltip>
+      ) : null}
       {userBoundingBoxes.length > 0 ? (
         userBoundingBoxes.map(bb => (
           <UserBoundingBoxInput

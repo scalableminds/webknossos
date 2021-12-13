@@ -11,8 +11,8 @@ case class CachedHdf5File(reader: IHDF5Reader) extends SafeCachable {
 }
 
 object CachedHdf5File {
-  def initHDFReader(meshFilePath: Path): CachedHdf5File = {
-    val reader = HDF5FactoryProvider.get.openForReading(meshFilePath.toFile)
+  def fromPath(path: Path): CachedHdf5File = {
+    val reader = HDF5FactoryProvider.get.openForReading(path.toFile)
     CachedHdf5File(reader)
   }
 }

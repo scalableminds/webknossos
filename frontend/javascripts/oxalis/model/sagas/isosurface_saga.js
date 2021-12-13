@@ -394,11 +394,6 @@ function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<
   yield* call(downloadIsosurfaceCellById, action.cellName, action.cellId);
 }
 
-function* downloadActiveIsosurfaceCell(): Saga<void> {
-  const currentId = yield* call(getCurrentCellId);
-  yield* call(downloadIsosurfaceCellById, currentId);
-}
-
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
   const { layerName, buffer } = action;
   const dataView = new DataView(buffer);
@@ -513,7 +508,6 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
   yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
-  yield _takeEvery("TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);

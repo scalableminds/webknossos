@@ -113,10 +113,6 @@ export type CreateMeshFromBufferAction = {
   name: string,
 };
 
-export type TriggerActiveIsosurfaceDownloadAction = {
-  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
-};
-
 export type TriggerIsosurfaceDownloadAction = {
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
   cellName: string,
@@ -196,7 +192,6 @@ export type AnnotationActionTypes =
   | CreateMeshFromBufferAction
   | UpdateLocalMeshMetaDataAction
   | UpdateIsosurfaceVisibilityAction
-  | TriggerActiveIsosurfaceDownloadAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
   | FinishedRefreshingIsosurfacesAction
@@ -356,10 +351,6 @@ export const createMeshFromBufferAction = (
   type: "CREATE_MESH_FROM_BUFFER",
   buffer,
   name,
-});
-
-export const triggerActiveIsosurfaceDownloadAction = (): TriggerActiveIsosurfaceDownloadAction => ({
-  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
 });
 
 export const triggerIsosurfaceDownloadAction = (

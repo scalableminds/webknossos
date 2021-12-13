@@ -73,7 +73,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
         .resolve(s"${listMeshChunksRequest.meshFile}.$meshFileExtension")
 
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
       chunkPositionLiterals <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } {
@@ -99,7 +99,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       .resolve(meshesDir)
       .resolve(s"${meshChunkDataRequest.meshFile}.$meshFileExtension")
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
       encoding <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } { cachedMeshFile.reader.string().getAttr("/", "metadata/encoding") } ?~> "mesh.file.readEncoding.failed"

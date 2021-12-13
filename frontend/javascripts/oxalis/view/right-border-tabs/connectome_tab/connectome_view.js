@@ -1,5 +1,5 @@
 // @flow
-import { Tag, Empty, Tree, Tooltip, Popover, Checkbox } from "antd";
+import { Tag, Empty, Tree, Tooltip, Popover, Checkbox, Divider } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
@@ -110,6 +110,7 @@ type State = {
   filteredConnectomeData: ?ConnectomeData,
   synapseTypes: Array<string>,
   filters: ConnectomeFilters,
+  checkedKeys: Array<string>,
 };
 
 const segmentData = (segmentId: number): SegmentData => ({
@@ -128,20 +129,18 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
   if (connectomeData == null) return null;
 
   const convertSynapsesForPartner = (partners, partnerId1, inOrOut): Array<TreeNode> =>
-    Object.keys(partners)
-      .map(partnerId2 => ({
-        key: `segment-${partnerId1}-${inOrOut}-${partnerId2}`,
-        title: `Segment ${partnerId2}`,
-        data: segmentData(+partnerId2),
-        children: partners[+partnerId2].map(synapse => ({
-          key: `synapse-${inOrOut}-${synapse.id}`,
-          title: `Synapse ${synapse.id}`,
-          data: synapseData(synapse.id, synapse.position, synapse.type),
-          children: [],
-          checkable: false,
-        })),
-      }))
-      .filter(el => el != null);
+    Object.keys(partners).map(partnerId2 => ({
+      key: `segment-${partnerId1}-${inOrOut}-${partnerId2}`,
+      title: `Segment ${partnerId2}`,
+      data: segmentData(+partnerId2),
+      children: partners[+partnerId2].map(synapse => ({
+        key: `synapse-${inOrOut}-${synapse.id}`,
+        title: `Synapse ${synapse.id}`,
+        data: synapseData(synapse.id, synapse.position, synapse.type),
+        children: [],
+        checkable: false,
+      })),
+    }));
 
   return Object.keys(connectomeData).map(partnerId1 => ({
     key: `segment-${partnerId1}`,
@@ -220,6 +219,17 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
 const getTreeNameForAgglomerateSkeleton = (agglomerateId: number, mappingName: string): string =>
   `agglomerate ${agglomerateId} (${mappingName})`;
 
+const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
+  keys
+    .map(key => {
+      const parts = key.split("-");
+      // The id identifying the respective agglomerate is at the very end if at all
+      const lastPart = parts[parts.length - 1];
+      // $FlowIssue[incompatible-return] For some reason flow ignores that the null values are filtered out, later
+      return isNaN(lastPart) ? null : +lastPart;
+    })
+    .filter(val => val != null);
+
 const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
   name: `synapse-${synapseId}`,
   treeId: synapseId,
@@ -248,6 +258,10 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
 
 const convertConnectomeToTreeData = memoizeOne(_convertConnectomeToTreeData);
 
+const defaultFilters = {
+  synapseTypes: [],
+};
+
 class ConnectomeView extends React.Component<Props, State> {
   state = {
     currentConnectomeFile: null,
@@ -255,9 +269,8 @@ class ConnectomeView extends React.Component<Props, State> {
     connectomeData: null,
     filteredConnectomeData: null,
     synapseTypes: [],
-    filters: {
-      synapseTypes: [],
-    },
+    filters: defaultFilters,
+    checkedKeys: [],
   };
 
   componentDidMount() {
@@ -280,9 +293,16 @@ class ConnectomeView extends React.Component<Props, State> {
     }
     if (prevState.filteredConnectomeData !== this.state.filteredConnectomeData) {
       this.updateSynapseTrees(prevState.filteredConnectomeData, this.state.filteredConnectomeData);
-      this.maybeRemoveAgglomerateTrees(
+    }
+    if (
+      prevState.connectomeData !== this.state.connectomeData ||
+      prevState.filteredConnectomeData !== this.state.filteredConnectomeData ||
+      prevState.checkedKeys !== this.state.checkedKeys
+    ) {
+      this.updateAgglomerateTrees(
+        prevState.connectomeData,
         prevState.filteredConnectomeData,
-        this.state.filteredConnectomeData,
+        prevState.checkedKeys,
       );
     }
   }
@@ -290,7 +310,11 @@ class ConnectomeView extends React.Component<Props, State> {
   componentWillUnmount() {}
 
   reset = () => {
-    this.setState({ connectomeData: null, activeSegmentId: null });
+    this.setState({ connectomeData: null, filteredConnectomeData: null, activeSegmentId: null });
+  };
+
+  resetFilters = () => {
+    this.setState({ filters: defaultFilters });
   };
 
   initializeSkeleton() {
@@ -419,6 +443,7 @@ class ConnectomeView extends React.Component<Props, State> {
       connectomeData,
       synapseTypes: typeToString,
       filters: newFilters,
+      checkedKeys: [],
     });
   }
 
@@ -427,18 +452,21 @@ class ConnectomeView extends React.Component<Props, State> {
     this.setState({ filteredConnectomeData });
   }
 
-  updateSynapseTrees(prevConnectomeData: ?ConnectomeData, connectomeData: ?ConnectomeData) {
+  updateSynapseTrees(
+    prevFilteredConnectomeData: ?ConnectomeData,
+    filteredConnectomeData: ?ConnectomeData,
+  ) {
     const { visibleSegmentationLayer } = this.props;
 
     if (visibleSegmentationLayer == null) return;
 
     let prevSynapses: Array<Synapse> = [];
     let synapses: Array<Synapse> = [];
-    if (prevConnectomeData != null) {
-      prevSynapses = getSynapsesFromConnectomeData(prevConnectomeData);
+    if (prevFilteredConnectomeData != null) {
+      prevSynapses = getSynapsesFromConnectomeData(prevFilteredConnectomeData);
     }
-    if (connectomeData != null) {
-      synapses = getSynapsesFromConnectomeData(connectomeData);
+    if (filteredConnectomeData != null) {
+      synapses = getSynapsesFromConnectomeData(filteredConnectomeData);
     }
 
     const layerName = visibleSegmentationLayer.name;
@@ -474,27 +502,60 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   }
 
-  maybeRemoveAgglomerateTrees(
+  updateAgglomerateTrees(
     prevConnectomeData: ?ConnectomeData,
-    connectomeData: ?ConnectomeData,
+    prevFilteredConnectomeData: ?ConnectomeData,
+    prevCheckedKeys: Array<string>,
   ) {
     const { visibleSegmentationLayer } = this.props;
-    const { currentConnectomeFile } = this.state;
+    const {
+      currentConnectomeFile,
+      connectomeData,
+      filteredConnectomeData,
+      checkedKeys,
+    } = this.state;
 
     if (visibleSegmentationLayer == null || currentConnectomeFile == null) return;
 
-    let prevAgglomerateIds: Array<number> = [];
-    let agglomerateIds: Array<number> = [];
+    let prevFilteredAgglomerateIds: Array<number> = [];
+    let filteredAgglomerateIds: Array<number> = [];
+    let prevUnfilteredAgglomerateIds: Array<number> = [];
+    let unfilteredAgglomerateIds: Array<number> = [];
+    if (prevFilteredConnectomeData != null) {
+      prevFilteredAgglomerateIds = getAgglomerateIdsFromConnectomeData(prevFilteredConnectomeData);
+    }
+    if (filteredConnectomeData != null) {
+      filteredAgglomerateIds = getAgglomerateIdsFromConnectomeData(filteredConnectomeData);
+    }
     if (prevConnectomeData != null) {
-      prevAgglomerateIds = getAgglomerateIdsFromConnectomeData(prevConnectomeData);
+      prevUnfilteredAgglomerateIds = getAgglomerateIdsFromConnectomeData(prevConnectomeData);
     }
     if (connectomeData != null) {
-      agglomerateIds = getAgglomerateIdsFromConnectomeData(connectomeData);
+      unfilteredAgglomerateIds = getAgglomerateIdsFromConnectomeData(connectomeData);
     }
 
+    const checkedAgglomerateIds = getAgglomerateIdsFromKeys(checkedKeys);
+    const prevCheckedAgglomerateIds = getAgglomerateIdsFromKeys(prevCheckedKeys);
+
     const layerName = visibleSegmentationLayer.name;
-    // Find out which synapses where deleted and which were added
-    const { onlyA: deletedAgglomerateIds } = diffArrays(prevAgglomerateIds, agglomerateIds);
+    // Find out which agglomerates were deleted
+    const { onlyA: deletedAgglomerateIds } = diffArrays(
+      prevUnfilteredAgglomerateIds,
+      unfilteredAgglomerateIds,
+    );
+
+    const prevVisibleAgglomerateIds = prevCheckedAgglomerateIds.filter(agglomerateId =>
+      prevFilteredAgglomerateIds.includes(agglomerateId),
+    );
+    const visibleAgglomerateIds = checkedAgglomerateIds.filter(agglomerateId =>
+      filteredAgglomerateIds.includes(agglomerateId),
+    );
+
+    // Find out which agglomerates were hidden or added by filtering/checking
+    const { onlyA: hiddenAgglomerateIds, onlyB: addedAgglomerateIds } = diffArrays(
+      prevVisibleAgglomerateIds,
+      visibleAgglomerateIds,
+    );
 
     const { mappingName } = currentConnectomeFile;
 
@@ -503,6 +564,39 @@ class ConnectomeView extends React.Component<Props, State> {
         Store.dispatch(
           removeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
         );
+      }
+    }
+
+    const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
+    if (skeleton == null) return;
+
+    const { trees } = skeleton;
+
+    if (hiddenAgglomerateIds.length) {
+      for (const agglomerateId of hiddenAgglomerateIds) {
+        // Hide agglomerates that are no longer visible
+        const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+        findTreeByName(trees, treeName).map(tree =>
+          Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, false, layerName)),
+        );
+      }
+    }
+
+    if (addedAgglomerateIds.length) {
+      for (const agglomerateId of addedAgglomerateIds) {
+        // Show agglomerates that were made visible
+        const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+        const maybeTree = findTreeByName(trees, treeName);
+
+        // If the tree was already loaded, make it visible, otherwise load it
+        maybeTree.cata({
+          Just: tree =>
+            Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, true, layerName)),
+          Nothing: () =>
+            Store.dispatch(
+              loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
+            ),
+        });
       }
     }
   }
@@ -526,47 +620,15 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   handleCheck = (
-    checkedKeys: Array<string>,
+    { checked }: { checked: Array<string> },
     evt: { checked: boolean, checkedNodes: Array<TreeNode>, node: TreeNode, event: string },
   ) => {
     const { data } = evt.node;
-    if (data.type === "synapse" && evt.checked) {
-      api.tracing.setCameraPosition(data.position);
-    } else if (data.type === "segment") {
-      const { visibleSegmentationLayer } = this.props;
-      const { currentConnectomeFile } = this.state;
-      if (visibleSegmentationLayer != null && currentConnectomeFile != null) {
-        const layerName = visibleSegmentationLayer.name;
-        const agglomerateId = data.id;
-        const { mappingName } = currentConnectomeFile;
 
-        const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
-        if (skeleton == null) return;
+    // Only nodes with type segment are checkable anyways
+    if (data.type !== "segment") return;
 
-        const { trees } = skeleton;
-
-        // This is the pattern for the automatically assigned names for agglomerate skeletons
-        // TODO: Extract into a utility function together with the occurence in skeletontracing_saga
-        const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-        const maybeTree = findTreeByName(trees, treeName);
-
-        if (evt.checked) {
-          // If the tree was already loaded, make it visible, otherwise load it
-          maybeTree.cata({
-            Nothing: () =>
-              Store.dispatch(
-                loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
-              ),
-            Just: tree =>
-              Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, true, layerName)),
-          });
-        } else {
-          maybeTree.map(tree =>
-            Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, false, layerName)),
-          );
-        }
-      }
-    }
+    this.setState({ checkedKeys: checked });
   };
 
   renderNode(node: TreeNode) {
@@ -604,6 +666,12 @@ class ConnectomeView extends React.Component<Props, State> {
 
     return (
       <div>
+        <h4 style={{ display: "inline-block" }}>Filters</h4>
+        <ButtonComponent style={{ float: "right" }} onClick={this.resetFilters}>
+          Reset
+        </ButtonComponent>
+        <Divider style={{ margin: "10px 0" }} />
+        <h4>by Synapse Type</h4>
         <Checkbox.Group
           options={synapseTypeOptions}
           value={filters.synapseTypes}
@@ -614,9 +682,10 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   getConnectomeHeader() {
-    const { activeSegmentId, filters } = this.state;
+    const { activeSegmentId, filters, synapseTypes } = this.state;
     const activeSegmentIdString = activeSegmentId != null ? activeSegmentId.toString() : "";
 
+    const isAnyFilterAvailable = synapseTypes.length;
     const isAnyFilterActive = filters.synapseTypes.length;
 
     return (
@@ -628,9 +697,9 @@ class ConnectomeView extends React.Component<Props, State> {
           style={{ width: "280px" }}
         />
         <ButtonComponent onClick={this.reset}>Reset</ButtonComponent>
-        <Tooltip title="Configure ad-hoc mesh computation">
+        <Tooltip title="Configure Filters">
           <Popover content={this.getFilterSettings} trigger="click" placement="bottom">
-            <ButtonComponent>
+            <ButtonComponent disabled={!isAnyFilterAvailable}>
               <FilterOutlined style={isAnyFilterActive ? { color: "red" } : {}} />
             </ButtonComponent>
           </Popover>

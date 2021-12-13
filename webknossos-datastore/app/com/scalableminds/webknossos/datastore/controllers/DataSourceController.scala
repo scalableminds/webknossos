@@ -106,7 +106,7 @@ Expects:
  - As GET parameter:
   - token (string): datastore token identifying the uploading user
 """,
-    nickname = "datasetUploadChunk"
+    nickname = "datasetReserveUpload"
   )
   def reserveUpload(token: String): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>

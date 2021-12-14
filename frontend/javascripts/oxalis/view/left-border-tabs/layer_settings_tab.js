@@ -804,13 +804,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <div className="tracing-settings-menu">
         {layerSettings}
         {this.getSkeletonLayer()}
-        <Divider />
-        <Row type="flex" justify="center" align="middle">
-          <Button onClick={this.showAddVolumeLayerModal}>
-            <PlusOutlined />
-            Add Volume Annotation Layer
-          </Button>
-        </Row>
+
+        {this.props.tracing.restrictions.allowUpdate ? (
+          <>
+            <Divider />
+            <Row type="flex" justify="center" align="middle">
+              <Button onClick={this.showAddVolumeLayerModal}>
+                <PlusOutlined />
+                Add Volume Annotation Layer
+              </Button>
+            </Row>
+          </>
+        ) : null}
 
         {this.state.volumeTracingToDownsample != null ? (
           <DownsampleVolumeModal

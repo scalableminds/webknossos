@@ -161,10 +161,6 @@ class AnnotationService @Inject()(
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
       implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
 
-    // TODO: ensure that user bboxes + bbox is preserved. Either by copying
-    //   from the right existingAnnotationLayers into the new right one, or
-    //   by changing that precedence altogether
-
     def getFallbackLayer(fallbackLayerName: String): Fox[SegmentationLayer] =
       for {
         fallbackLayer <- dataSource.dataLayers
@@ -178,7 +174,8 @@ class AnnotationService @Inject()(
         _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
       } yield fallbackLayer
 
-    Fox.serialCombined(allAnnotationLayerParameters) { annotationLayerParameters =>
+    def createAndSaveAnnotationLayer(annotationLayerParameters: AnnotationLayerParameters,
+                                     oldPrecedenceLayer: Option[FetchedAnnotationLayer]): Fox[AnnotationLayer] =
       for {
         client <- tracingStoreService.clientFor(dataSet)
         tracingId <- annotationLayerParameters.typ match {
@@ -205,7 +202,40 @@ class AnnotationService @Inject()(
             Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
         }
       } yield AnnotationLayer(tracingId, annotationLayerParameters.typ, annotationLayerParameters.name)
-    }
+
+    def fetchOldPrecedenceLayer: Fox[Option[FetchedAnnotationLayer]] =
+      if (existingAnnotationLayers.isEmpty) Fox.successful(None)
+      else
+        for {
+          oldPrecedenceLayer <- selectLayerWithPrecedence(existingAnnotationLayers)
+          tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+          oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
+            tracingStoreClient.getSkeletonTracing(oldPrecedenceLayer, None)
+          else tracingStoreClient.getVolumeTracing(oldPrecedenceLayer, None, skipVolumeData = true)
+        } yield Some(oldPrecedenceLayerFetched)
+
+    def extractPrecedenceProperties(oldPrecedenceLayer: Option[FetchedAnnotationLayer]) = ()
+
+    for {
+      oldPrecedenceLayer <- fetchOldPrecedenceLayer
+      precedenceProperties = extractPrecedenceProperties(oldPrecedenceLayer)
+      newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
+        createAndSaveAnnotationLayer(p, oldPrecedenceLayer))
+    } yield newAnnotationLayers
+  }
+
+  /*
+   If there is more than one tracing, select the one that has precedence for the parameters (they should be identical anyway)
+   This needs to match the code in NmlWriter’s selectLayerWithPrecedence, though the types are different
+   */
+  private def selectLayerWithPrecedence(annotationLayers: List[AnnotationLayer]): Fox[AnnotationLayer] = {
+    val skeletonLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
+    val volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
+    if (skeletonLayers.nonEmpty) {
+      Fox.successful(skeletonLayers.minBy(_.tracingId))
+    } else if (volumeLayers.nonEmpty) {
+      Fox.successful(volumeLayers.minBy(_.tracingId))
+    } else Fox.failure("annotation.download.noLayers")
   }
 
   def createExplorationalFor(user: User,

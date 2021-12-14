@@ -107,12 +107,13 @@ type Props = {| ...DispatchProps, ...StateProps |};
 
 type State = {
   currentConnectomeFile: ?APIConnectomeFile,
-  activeSegmentId: ?number,
+  activeAgglomerateId: ?number,
   connectomeData: ?ConnectomeData,
   filteredConnectomeData: ?ConnectomeData,
   synapseTypes: Array<string>,
   filters: ConnectomeFilters,
   checkedKeys: Array<string>,
+  expandedKeys: Array<string>,
 };
 
 const segmentData = (segmentId: number): SegmentData => ({
@@ -260,6 +261,18 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
 
 const convertConnectomeToTreeData = memoizeOne(_convertConnectomeToTreeData);
 
+function* mapTreeData<R>(
+  nodes: Array<TreeNode>,
+  callback: TreeNode => R,
+): Generator<R, void, void> {
+  for (const node of nodes) {
+    yield callback(node);
+    if (node.children) {
+      yield* mapTreeData(node.children, callback);
+    }
+  }
+}
+
 const defaultFilters = {
   synapseTypes: [],
 };
@@ -267,12 +280,13 @@ const defaultFilters = {
 class ConnectomeView extends React.Component<Props, State> {
   state = {
     currentConnectomeFile: null,
-    activeSegmentId: null,
+    activeAgglomerateId: null,
     connectomeData: null,
     filteredConnectomeData: null,
     synapseTypes: [],
     filters: defaultFilters,
     checkedKeys: [],
+    expandedKeys: [],
   };
 
   componentDidMount() {
@@ -281,7 +295,7 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    if (prevState.activeSegmentId !== this.state.activeSegmentId) {
+    if (prevState.activeAgglomerateId !== this.state.activeAgglomerateId) {
       this.fetchConnections();
     }
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
@@ -312,7 +326,11 @@ class ConnectomeView extends React.Component<Props, State> {
   componentWillUnmount() {}
 
   reset = () => {
-    this.setState({ connectomeData: null, filteredConnectomeData: null, activeSegmentId: null });
+    this.setState({
+      connectomeData: null,
+      filteredConnectomeData: null,
+      activeAgglomerateId: null,
+    });
   };
 
   resetFilters = () => {
@@ -357,13 +375,13 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   async fetchConnections() {
-    const { currentConnectomeFile, activeSegmentId, filters } = this.state;
+    const { currentConnectomeFile, activeAgglomerateId, filters } = this.state;
     const { dataset, visibleSegmentationLayer } = this.props;
 
     if (
       currentConnectomeFile == null ||
       visibleSegmentationLayer == null ||
-      activeSegmentId == null
+      activeAgglomerateId == null
     )
       return;
 
@@ -374,7 +392,7 @@ class ConnectomeView extends React.Component<Props, State> {
       currentConnectomeFile.connectomeFileName,
     ];
     const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(...fetchProperties, [
-      activeSegmentId,
+      activeAgglomerateId,
     ]);
 
     if (synapsesOfAgglomerates.length !== 1) {
@@ -415,14 +433,14 @@ The format should be: \`{
 
     const { synapseTypes, typeToString } = synapseTypesAndNames;
 
-    const connectomeData = { [activeSegmentId]: { in: {}, out: {} } };
+    const connectomeData = { [activeAgglomerateId]: { in: {}, out: {} } };
 
     inSynapses.forEach((synapseId, i) => {
       const synapticPartnerId = synapseSources[i];
-      if (!(synapticPartnerId in connectomeData[activeSegmentId].in)) {
-        connectomeData[activeSegmentId].in[synapticPartnerId] = [];
+      if (!(synapticPartnerId in connectomeData[activeAgglomerateId].in)) {
+        connectomeData[activeAgglomerateId].in[synapticPartnerId] = [];
       }
-      connectomeData[activeSegmentId].in[synapticPartnerId].push({
+      connectomeData[activeAgglomerateId].in[synapticPartnerId].push({
         id: synapseId,
         position: synapsePositions[i],
         type: typeToString[synapseTypes[i]],
@@ -430,10 +448,10 @@ The format should be: \`{
     });
     outSynapses.forEach((synapseId, i) => {
       const synapticPartnerId = synapseDestinations[i];
-      if (!(synapticPartnerId in connectomeData[activeSegmentId].out)) {
-        connectomeData[activeSegmentId].out[synapticPartnerId] = [];
+      if (!(synapticPartnerId in connectomeData[activeAgglomerateId].out)) {
+        connectomeData[activeAgglomerateId].out[synapticPartnerId] = [];
       }
-      connectomeData[activeSegmentId].out[synapticPartnerId].push({
+      connectomeData[activeAgglomerateId].out[synapticPartnerId].push({
         id: synapseId,
         // synapsePositions and synapseTypes contains data for all synapses. inSynapses first and then outSynapses.
         position: synapsePositions[inSynapses.length + i],
@@ -447,11 +465,17 @@ The format should be: \`{
       typeToString.includes(synapseType),
     );
 
+    // Auto-expand all nodes by default. The antd properties like `defaultExpandAll` only work on the first render
+    // but not when switching to another agglomerate, afterwards.
+    const treeData = convertConnectomeToTreeData(connectomeData);
+    const allKeys = Array.from(mapTreeData(treeData || [], node => node.key));
+
     this.setState({
       connectomeData,
       synapseTypes: typeToString,
       filters: newFilters,
       checkedKeys: [],
+      expandedKeys: allKeys,
     });
   }
 
@@ -612,7 +636,7 @@ The format should be: \`{
   handleChangeActiveSegment = (evt: SyntheticInputEvent<>) => {
     const segmentId = parseInt(evt.target.value, 10);
 
-    this.setState({ activeSegmentId: segmentId });
+    this.setState({ activeAgglomerateId: segmentId });
 
     evt.target.blur();
   };
@@ -637,6 +661,10 @@ The format should be: \`{
     if (data.type !== "segment") return;
 
     this.setState({ checkedKeys: checked });
+  };
+
+  handleExpand = (expandedKeys: Array<string>) => {
+    this.setState({ expandedKeys });
   };
 
   renderNode(node: TreeNode) {
@@ -690,8 +718,9 @@ The format should be: \`{
   };
 
   getConnectomeHeader() {
-    const { activeSegmentId, filters, synapseTypes } = this.state;
-    const activeSegmentIdString = activeSegmentId != null ? activeSegmentId.toString() : "";
+    const { activeAgglomerateId, filters, synapseTypes } = this.state;
+    const activeAgglomerateIdString =
+      activeAgglomerateId != null ? activeAgglomerateId.toString() : "";
 
     const isAnyFilterAvailable = synapseTypes.length;
     const isAnyFilterActive = filters.synapseTypes.length;
@@ -699,7 +728,7 @@ The format should be: \`{
     return (
       <Input.Group compact className="compact-icons">
         <InputComponent
-          value={activeSegmentIdString}
+          value={activeAgglomerateIdString}
           onPressEnter={this.handleChangeActiveSegment}
           placeholder="Show Synaptic Connections for Segment ID"
           style={{ width: "280px" }}
@@ -718,7 +747,13 @@ The format should be: \`{
 
   render() {
     const { visibleSegmentationLayer } = this.props;
-    const { activeSegmentId, filteredConnectomeData, currentConnectomeFile } = this.state;
+    const {
+      activeAgglomerateId,
+      filteredConnectomeData,
+      currentConnectomeFile,
+      checkedKeys,
+      expandedKeys,
+    } = this.state;
 
     return (
       <div id={connectomeTabId} className="padded-tab-content">
@@ -747,7 +782,7 @@ The format should be: \`{
             return (
               <>
                 {this.getConnectomeHeader()}
-                {activeSegmentId == null ? (
+                {activeAgglomerateId == null ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description="No segment selected. Use the input field above to enter a segment ID."
@@ -765,6 +800,9 @@ The format should be: \`{
                           showLine={{ showLeafIcon: false }}
                           onSelect={this.handleSelect}
                           onCheck={this.handleCheck}
+                          onExpand={this.handleExpand}
+                          checkedKeys={checkedKeys}
+                          expandedKeys={expandedKeys}
                           titleRender={this.renderNode}
                           treeData={convertConnectomeToTreeData(filteredConnectomeData)}
                         />

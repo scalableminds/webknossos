@@ -824,6 +824,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <AddVolumeLayerModal
             dataset={this.props.dataset}
             onCancel={this.hideAddVolumeLayerModal}
+            tracing={this.props.tracing}
           />
         ) : null}
       </div>

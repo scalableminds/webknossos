@@ -761,7 +761,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </Dropdown>
                 </InputGroup>
                 <InputGroup compact className="compact-icons compact-items">
-                  <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
+                  <ButtonComponent
+                    onClick={this.props.onSelectNextTreeBackward}
+                    title="Select previous tree"
+                  >
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
                   <InputComponent
@@ -770,7 +773,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     disabled={noTreesAndGroups}
                     style={{ width: "70%" }}
                   />
-                  <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
+                  <ButtonComponent
+                    onClick={this.props.onSelectNextTreeForward}
+                    title="Select next tree"
+                  >
                     <i className="fas fa-arrow-right" />
                   </ButtonComponent>
                   <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>

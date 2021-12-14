@@ -627,6 +627,26 @@ export function updateAnnotationLayer(
   );
 }
 
+type AnnotationLayerCreateDescriptor = {
+  typ: "Skeleton" | "Volume",
+  fallbackLayerName?: ?string,
+  resolutionRestrictions?: ?APIResolutionRestrictions,
+};
+
+export function addAnnotationLayer(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  newAnnotationLayer: AnnotationLayerCreateDescriptor,
+): Promise<APIUser> {
+  return Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
+    {
+      method: "PATCH",
+      data: newAnnotationLayer,
+    },
+  );
+}
+
 export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -710,7 +730,7 @@ export function createExplorational(
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
 
-  let layers = [];
+  let layers: Array<AnnotationLayerCreateDescriptor> = [];
   if (typ === "skeleton") {
     layers = [{ typ: "Skeleton", name: "Skeleton" }];
   } else if (typ === "volume") {

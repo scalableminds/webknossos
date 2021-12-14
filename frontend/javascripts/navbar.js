@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Badge, Layout, Menu, Popover } from "antd";
+import { Avatar, Button, Badge, Layout, Menu, Popover } from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -8,6 +8,7 @@ import {
   HomeOutlined,
   QuestionCircleOutlined,
   UserOutlined,
+  MailOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
 import classnames from "classnames";
@@ -550,6 +551,14 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       // JSX can not be used here directly as it adds a item between the menu and the actual menu item and this leads to a bug.
       menuItems.push(getTimeTrackingMenu({ collapse: collapseAllNavItems }));
     }
+
+    trailingNavItems.push(
+      <div style={{ position: "relative", display: "flex", marginRight: 12 }}>
+        <Badge count={1} size="small">
+          <Button shape="circle" icon={<MailOutlined className="without-icon-margin" />} />
+        </Badge>
+      </div>,
+    );
 
     trailingNavItems.push(
       <LoggedInAvatar

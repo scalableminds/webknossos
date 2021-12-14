@@ -72,12 +72,14 @@ export default function AddVolumeLayerModal({
         value={newLayerName}
         style={{ width: "60%", marginBottom: 16, marginLeft: 8 }}
       />
-      <NewVolumeLayerSelection
-        dataset={dataset}
-        segmentationLayers={availableSegmentationLayers}
-        selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
-        setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
-      />
+      {availableSegmentationLayers.length > 0 ? (
+        <NewVolumeLayerSelection
+          dataset={dataset}
+          segmentationLayers={availableSegmentationLayers}
+          selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
+          setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
+        />
+      ) : null}
       <Row type="flex" justify="center" align="middle">
         <AsyncButton onClick={handleAddVolumeLayer} type="primary" icon={<PlusOutlined />}>
           Add Volume Annotation Layer

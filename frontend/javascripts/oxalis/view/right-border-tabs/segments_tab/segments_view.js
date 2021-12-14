@@ -15,7 +15,6 @@ import {
   createMeshFromBufferAction,
   deleteMeshAction,
   importIsosurfaceFromStlAction,
-  triggerActiveIsosurfaceDownloadAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
@@ -157,9 +156,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
       trackAction("Import STL");
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
     }
-  },
-  downloadIsosurface() {
-    dispatch(triggerActiveIsosurfaceDownloadAction());
   },
   changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3, shouldReload: boolean) {
     if (cellId == null) {

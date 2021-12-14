@@ -84,7 +84,6 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import features from "features";
 import messages, { settings } from "messages";
-import { formatExtentWithLength } from "libs/format_utils";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 import MappingSettingsView from "./mapping_settings_view";
@@ -456,15 +455,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </span>
 
           <Tooltip
+            overlayStyle={{ maxWidth: 800 }}
             title={
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateRows: "25% 25% 25% 25%",
-                  gridGap: "3px",
-                  alignItems: "center",
-                }}
-              >
+              <div>
                 <div>Data Type: {elementClass}</div>
                 <div>
                   Available resolutions:
@@ -474,23 +467,34 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                     ))}
                   </ul>
                 </div>
-                <div
-                  style={{
-                    height: "26px",
-                    display: "grid",
-                    gridTemplateColumns: "33% 33% 33%",
-                    gridTemplateRows: "30% 70%",
-                    alignItems: "end",
-                  }}
-                >
-                  <div style={{ fontSize: "70%" }}>Min X</div>
-                  <div style={{ fontSize: "70%" }}>Min Y</div>
-                  <div style={{ fontSize: "70%" }}>Min Z</div>
-                  <div>{layer.boundingBox.topLeft[0]} </div>
-                  <div>{layer.boundingBox.topLeft[1]} </div>
-                  <div>{layer.boundingBox.topLeft[2]}</div>
-                </div>
-                <div>{formatExtentWithLength(layer.boundingBox, x => `${x}`)} voxel³</div>
+                Bounding Box:
+                <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
+                  <tr>
+                    <td />
+                    <td style={{ fontSize: 10 }}>X</td>
+                    <td style={{ fontSize: 10 }}>Y</td>
+                    <td style={{ fontSize: 10 }}>Z</td>
+                  </tr>
+
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Min</td>
+                    <td>{layer.boundingBox.topLeft[0]} </td>
+                    <td>{layer.boundingBox.topLeft[1]} </td>
+                    <td>{layer.boundingBox.topLeft[2]}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Max</td>
+                    <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
+                    <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
+                    <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Size</td>
+                    <td>{layer.boundingBox.width} </td>
+                    <td>{layer.boundingBox.height} </td>
+                    <td>{layer.boundingBox.depth}</td>
+                  </tr>
+                </table>
               </div>
             }
             placement="left"

@@ -245,7 +245,7 @@ class JobService @Inject()(wkConf: WkConf,
       Json.obj(
         "id" -> job._id.id,
         "command" -> job.command,
-        "commandArgs" -> (job.commandArgs - "webknossos_token"),
+        "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
         "state" -> job.state,
         "manualState" -> job.manualState,
         "latestRunId" -> job.latestRunId,

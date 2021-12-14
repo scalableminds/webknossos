@@ -222,6 +222,8 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
 const getTreeNameForAgglomerateSkeleton = (agglomerateId: number, mappingName: string): string =>
   `agglomerate ${agglomerateId} (${mappingName})`;
 
+const getTreeNameForSynapse = (synapseId: number): string => `synapse-${synapseId}`;
+
 const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
   keys
     .map(key => {
@@ -234,7 +236,7 @@ const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
     .filter(val => val != null);
 
 const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
-  name: `synapse-${synapseId}`,
+  name: getTreeNameForSynapse(synapseId),
   treeId: synapseId,
   nodes: new DiffableMap(),
   timestamp: Date.now(),
@@ -305,10 +307,10 @@ class ConnectomeView extends React.Component<Props, State> {
       prevState.connectomeData !== this.state.connectomeData ||
       prevState.filters !== this.state.filters
     ) {
-      this.updateFilteredConnectomeData(this.state.connectomeData, this.state.filters);
+      this.updateFilteredConnectomeData();
     }
     if (prevState.filteredConnectomeData !== this.state.filteredConnectomeData) {
-      this.updateSynapseTrees(prevState.filteredConnectomeData, this.state.filteredConnectomeData);
+      this.updateSynapseTrees(prevState.filteredConnectomeData);
     }
     if (
       prevState.connectomeData !== this.state.connectomeData ||
@@ -479,33 +481,38 @@ The format should be: \`{
     });
   }
 
-  updateFilteredConnectomeData(connectomeData: ?ConnectomeData, filters: ?ConnectomeFilters) {
+  updateFilteredConnectomeData() {
+    const { connectomeData, filters } = this.state;
     const filteredConnectomeData = getFilteredConnectomeData(connectomeData, filters);
     this.setState({ filteredConnectomeData });
   }
 
-  updateSynapseTrees(
-    prevFilteredConnectomeData: ?ConnectomeData,
-    filteredConnectomeData: ?ConnectomeData,
-  ) {
+  updateSynapseTrees(prevFilteredConnectomeData: ?ConnectomeData) {
     const { visibleSegmentationLayer } = this.props;
+    const { filteredConnectomeData, connectomeData } = this.state;
 
     if (visibleSegmentationLayer == null) return;
 
-    let prevSynapses: Array<Synapse> = [];
-    let synapses: Array<Synapse> = [];
+    let prevFilteredSynapses: Array<Synapse> = [];
+    let filteredSynapses: Array<Synapse> = [];
+    let unfilteredSynapseIds: Array<number> = [];
     if (prevFilteredConnectomeData != null) {
-      prevSynapses = getSynapsesFromConnectomeData(prevFilteredConnectomeData);
+      prevFilteredSynapses = getSynapsesFromConnectomeData(prevFilteredConnectomeData);
     }
     if (filteredConnectomeData != null) {
-      synapses = getSynapsesFromConnectomeData(filteredConnectomeData);
+      filteredSynapses = getSynapsesFromConnectomeData(filteredConnectomeData);
+    }
+    if (connectomeData != null) {
+      unfilteredSynapseIds = getSynapsesFromConnectomeData(connectomeData).map(
+        synapse => synapse.id,
+      );
     }
 
     const layerName = visibleSegmentationLayer.name;
     // Find out which synapses were deleted and which were added
     const { onlyA: deletedSynapseIds, onlyB: addedSynapseIds } = diffArrays(
-      prevSynapses.map(synapse => synapse.id),
-      synapses.map(synapse => synapse.id),
+      prevFilteredSynapses.map(synapse => synapse.id),
+      filteredSynapses.map(synapse => synapse.id),
     );
 
     const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
@@ -515,22 +522,46 @@ The format should be: \`{
 
     if (deletedSynapseIds.length) {
       const actions = deletedSynapseIds.map(synapseId =>
-        findTreeByName(trees, `synapse-${synapseId}`)
-          .map(tree => deleteConnectomeTreeAction(tree.treeId, layerName))
+        findTreeByName(trees, getTreeNameForSynapse(synapseId))
+          .map(tree =>
+            // Delete synapse tree if it is no longer part of the unfiltered data
+            // and only hide it otherwise
+            unfilteredSynapseIds.includes(synapseId)
+              ? setConnectomeTreeVisibilityAction(tree.treeId, false, layerName)
+              : deleteConnectomeTreeAction(tree.treeId, layerName),
+          )
           .getOrElse(null),
       );
-      Store.dispatch(batchActions(actions, "DELETE_CONNECTOME_TREES"));
+      Store.dispatch(batchActions(actions, "DELETE_OR_HIDE_CONNECTOME_TREES"));
     }
 
     if (addedSynapseIds.length) {
-      const synapseIdToSynapse = _.keyBy(synapses, "id");
+      const synapseIdToSynapse = _.keyBy(filteredSynapses, "id");
       const newTrees: MutableTreeMap = {};
+      const visibilityActions = [];
       for (const synapseId of addedSynapseIds) {
-        newTrees[synapseId] = synapseTreeCreator(synapseId, synapseIdToSynapse[synapseId].type);
-        const synapseNode = synapseNodeCreator(synapseId, synapseIdToSynapse[synapseId].position);
-        newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
+        const maybeTree = findTreeByName(trees, getTreeNameForSynapse(synapseId));
+        // If the tree was already created, make it visible, otherwise created it
+        maybeTree.cata({
+          Just: tree =>
+            visibilityActions.push(setConnectomeTreeVisibilityAction(tree.treeId, true, layerName)),
+          Nothing: () => {
+            newTrees[synapseId] = synapseTreeCreator(synapseId, synapseIdToSynapse[synapseId].type);
+            const synapseNode = synapseNodeCreator(
+              synapseId,
+              synapseIdToSynapse[synapseId].position,
+            );
+            newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
+          },
+        });
       }
-      Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
+
+      if (visibilityActions.length) {
+        Store.dispatch(batchActions(visibilityActions, "SET_CONNECTOME_TREES_VISIBILITY"));
+      }
+      if (_.size(newTrees)) {
+        Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
+      }
     }
   }
 

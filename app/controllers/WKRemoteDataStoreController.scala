@@ -4,18 +4,23 @@ import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAcce
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.DataStoreStatus
+import com.scalableminds.webknossos.datastore.services.{
+  DataStoreStatus,
+  LinkedLayerIdentifier,
+  ReserveUploadInformation
+}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
 import models.organization.OrganizationDAO
+import models.user.User
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsError, JsSuccess, JsValue}
-import play.api.mvc.Action
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,48 +32,65 @@ class WKRemoteDataStoreController @Inject()(
     organizationDAO: OrganizationDAO,
     dataSetDAO: DataSetDAO,
     mailchimpClient: MailchimpClient,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext)
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with LazyLogging {
 
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def validateDataSetUpload(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
-      for {
-        uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        organization <- organizationDAO.findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          uploadInfo.team) ~> NOT_FOUND
-        _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"
-        _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
-        _ <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.team, dataStore)
-      } yield Ok
-    }
-  }
-
-  def reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long): Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
-      dataStoreService.validateAccess(name) { dataStore =>
-        withJsonBodyAs[List[String]] { teams =>
-          for {
-            user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
-            dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
-              "dataSet.notFound",
-              dataSetName) ~> NOT_FOUND
-            _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
-            _ = mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
-            _ <- dataSetService.addInitialTeams(dataSet, teams)(AuthorizedAccessContext(user), request.messages)
-            _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
-          } yield Ok
-        }
+  def validateDataSetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
+    Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        val uploadInfo = request.body
+        for {
+          user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
+          organization <- organizationDAO.findOneByName(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            uploadInfo.organization) ~> NOT_FOUND
+          _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
+          _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
+          _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l => validateLayerToLink(l, user)) ?~> "dataSet.upload.invalidLinkedLayers"
+          dataSet <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.organization, dataStore) ?~> "dataSet.name.alreadyTaken"
+          _ <- dataSetService.addInitialTeams(dataSet, uploadInfo.initialTeams)(AuthorizedAccessContext(user),
+                                                                                request.messages)
+          _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
+        } yield Ok
       }
     }
 
-  def statusUpdate(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { _ =>
+  def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
+                          requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOneByName(layerIdentifier.organizationName)(GlobalAccessContext) ?~> Messages(
+        "organization.notFound",
+        layerIdentifier.organizationName) ~> NOT_FOUND
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
+        AuthorizedAccessContext(requestingUser)) ?~> Messages("dataSet.notFound", layerIdentifier.dataSetName)
+      _ <- bool2Fox(dataSet.isPublic) ?~> Messages("dataSet.upload.linkPublicOnly")
+    } yield ()
+
+  def reportDatasetUpload(name: String,
+                          key: String,
+                          token: String,
+                          dataSetName: String,
+                          dataSetSizeBytes: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        for {
+          user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
+          _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
+          _ = mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
+        } yield Ok
+      }
+    }
+
+  def statusUpdate(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { _ =>
       request.body.validate[DataStoreStatus] match {
         case JsSuccess(status, _) =>
           logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
@@ -80,8 +102,8 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def updateAll(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
+  def updateAll(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           for {
@@ -101,8 +123,8 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def updateOne(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
+  def updateOne(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { dataStore =>
       request.body.validate[InboxDataSource] match {
         case JsSuccess(dataSource, _) =>
           for {
@@ -117,8 +139,8 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def deleteErroneous(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { _ =>
+  def deleteErroneous(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name, key) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
         existingDataset = dataSetDAO

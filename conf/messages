@@ -130,6 +130,8 @@ dataSet.uploader.notEmpty=Dataset already has non-empty uploader
 dataset.delete.disabled=Dataset deletion is disabled for this webKnossos instance
 dataSet.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
 dataSet.upload.validation.failed=Failed to validate Dataset information for upload.
+dataSet.upload.linkPublicOnly=Only layers of existing public datasets can be linked
+dataSet.upload.invalidLinkedLayers=Could not link all requested layers
 
 dataSource.notFound=Datasource not found on datastore server
 

@@ -455,8 +455,18 @@ function setupLayerForVolumeTracing(
   dataset: APIDataset,
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {
-  // This method adds/merges the segmentation layers of the tracing into the dataset layers
-  let layers = _.clone(dataset.dataSource.dataLayers);
+  // This method adds/merges the segmentation layers of the tracing into the dataset layers.
+  // This is done by
+  // 1) removing all segmentation data layers (gathered in newLayers)
+  // 2) appending new tracing layers (using the original layers for fallback information)
+  const originalLayers = dataset.dataSource.dataLayers;
+
+  // Remove other segmentation layers, since we are adding new ones.
+  // This is a temporary workaround. Even though we support multiple segmentation
+  // layers, we cannot render both at the same time. Hiding the existing segmentation
+  // layer would be good, but this information is stored per dataset and not per annotation
+  // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
+  const newLayers = originalLayers.filter(layer => layer.category !== "segmentation");
 
   for (const tracing of tracings) {
     // The tracing always contains the layer information for the user segmentation.
@@ -465,8 +475,11 @@ function setupLayerForVolumeTracing(
     //    and a new layer is created and added.
     // 2) The volume layer should be based on a fallback layer. In that case, merge the original fallbackLayer
     //    with the new volume layer.
-    const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
-    const fallbackLayer = layers[fallbackLayerIndex];
+    const fallbackLayerIndex = _.findIndex(
+      originalLayers,
+      layer => layer.name === tracing.fallbackLayer,
+    );
+    const fallbackLayer = originalLayers[fallbackLayerIndex];
     const boundaries = getBoundaries(dataset);
 
     const resolutions = tracing.resolutions || [];
@@ -490,28 +503,15 @@ function setupLayerForVolumeTracing(
       resolutions: tracingResolutions,
       mappings:
         fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
-      // remember the name of the original layer, used to request mappings
+      // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
     };
 
-    if (fallbackLayer != null) {
-      // Replace the original tracing layer
-      layers[fallbackLayerIndex] = tracingLayer;
-    } else {
-      // Remove other segmentation layers, since we are adding a new one.
-      // This is a temporary workaround. Even though we support multiple segmentation
-      // layers, we cannot render both at the same time. Hiding the existing segmentation
-      // layer would be good, but this information is stored per dataset and not per annotation
-      // currently. Also, see https://github.com/scalableminds/webknossos/issues/5695
-
-      // todo
-      layers = layers.filter(layer => layer.category !== "segmentation");
-      layers.push(tracingLayer);
-    }
+    newLayers.push(tracingLayer);
   }
 
-  return layers;
+  return newLayers;
 }
 
 function validateVolumeLayers(

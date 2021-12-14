@@ -24,7 +24,6 @@ export default function AddVolumeLayerModal({
   onCancel: () => void,
   tracing: Tracing,
 }) {
-  // const [isDownsampling, setIsDownsampling] = useState(false);
   const [selectedSegmentationLayerIndex, setSelectedSegmentationLayerIndex] = useState(null);
   const [newLayerName, setNewLayerName] = useState("Volume");
   const handleSetNewLayerName = evt => setNewLayerName(evt.target.value);

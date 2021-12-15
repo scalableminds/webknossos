@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Button, Badge, Layout, Menu, Popover } from "antd";
+import { Avatar, Button, Badge, Tooltip, Layout, Menu, Popover } from "antd";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -124,19 +124,18 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
-function UserInitials({ activeUser, isMultiMember, showNotification }) {
+function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
     <div style={{ position: "relative", display: "flex" }}>
-      <Badge dot={showNotification}>
-        <Avatar
-          className="hover-effect-via-opacity"
-          style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
-        >
-          {initialOf(firstName) + initialOf(lastName)}
-        </Avatar>
-      </Badge>
+      <Avatar
+        className="hover-effect-via-opacity"
+        style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
+      >
+        {initialOf(firstName) + initialOf(lastName)}
+      </Avatar>
+
       {isMultiMember ? (
         <SwapOutlined
           style={{
@@ -333,6 +332,39 @@ function DashboardSubMenu({ collapse, ...other }) {
   );
 }
 
+function NotificationIcon({ activeUser }) {
+  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
+  if (!features().isDemoInstance) {
+    return null;
+  }
+
+  const handleShowWhatsNewView = () => {
+    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
+      lastViewedWhatsNewTimestamp: new Date().getTime(),
+    });
+
+    Store.dispatch(setActiveUserAction(newUserSync));
+    sendAnalyticsEvent("open_whats_new_view");
+
+    if (window.Olvy) {
+      window.Olvy.show();
+    }
+  };
+  return (
+    <div style={{ position: "relative", display: "flex", marginRight: 12 }}>
+      <Tooltip title="See what's new in webKnossos" placement="bottomLeft">
+        <Badge count={maybeUnreadReleaseCount || 0} size="small">
+          <Button
+            onClick={handleShowWhatsNewView}
+            shape="circle"
+            icon={<MailOutlined className="without-icon-margin" />}
+          />
+        </Badge>
+      </Tooltip>
+    </div>
+  );
+}
+
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
@@ -386,33 +418,11 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
 
   const isMultiMember = switchableOrganizations.length > 0;
 
-  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
-  const showNotification =
-    features().isDemoInstance && maybeUnreadReleaseCount != null
-      ? maybeUnreadReleaseCount > 0
-      : false;
-  const handleShowWhatsNewView = () => {
-    const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
-      lastViewedWhatsNewTimestamp: new Date().getTime(),
-    });
-
-    Store.dispatch(setActiveUserAction(newUserSync));
-    sendAnalyticsEvent("open_whats_new_view");
-
-    window.Olvy.show();
-  };
-
   return (
     <NavbarMenuItem>
       <SubMenu
         key="loggedMenu"
-        title={
-          <UserInitials
-            showNotification={showNotification}
-            activeUser={activeUser}
-            isMultiMember={isMultiMember}
-          />
-        }
+        title={<UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />}
         style={{ padding: 0 }}
         className="sub-menu-without-padding vertical-center-flex-fix"
         {...other}
@@ -453,16 +463,6 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
             ),
           )}
         </Menu.SubMenu>
-
-        {/* The onClick has to be defined on <Menu.Item /> so that the entire menu item
-        is clickable. The dummy <a /> tag is still needed for styling. */}
-        {features().isDemoInstance ? (
-          <Menu.Item onClick={handleShowWhatsNewView}>
-            <Badge dot={showNotification}>
-              <a href="#">What&apos;s New</a>
-            </Badge>
-          </Menu.Item>
-        ) : null}
 
         <Menu.Item key="logout">
           <a href="/" onClick={handleLogout}>
@@ -552,13 +552,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       menuItems.push(getTimeTrackingMenu({ collapse: collapseAllNavItems }));
     }
 
-    trailingNavItems.push(
-      <div style={{ position: "relative", display: "flex", marginRight: 12 }}>
-        <Badge count={1} size="small">
-          <Button shape="circle" icon={<MailOutlined className="without-icon-margin" />} />
-        </Badge>
-      </div>,
-    );
+    trailingNavItems.push(<NotificationIcon activeUser={loggedInUser} />);
 
     trailingNavItems.push(
       <LoggedInAvatar

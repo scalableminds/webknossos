@@ -224,6 +224,41 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     } else List.empty
   }
 
+  private def synapseIdsForPair(connectomeFilePath: Path,
+                                srcAgglomerateId: Long,
+                                dstAgglomerateId: Long): Fox[List[Long]] =
+    for {
+      cachedConnectomeFile <- tryo {
+        connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.fromPath)
+      } ?~> "connectome.file.open.failed"
+      fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
+        cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/CSR_indptr", 2, srcAgglomerateId)
+      } ?~> "Could not read offsets from connectome file"
+      fromPtr <- fromAndToPtr.lift(0) ?~> "Could not read start offset from connectome file"
+      toPtr <- fromAndToPtr.lift(1) ?~> "Could not read end offset from connectome file"
+      columnValues: Array[Long] <- if (toPtr - fromPtr == 0L) Fox.successful(Array.empty[Long])
+      else
+        finishAccessOnFailure(cachedConnectomeFile) {
+          cachedConnectomeFile.reader
+            .uint64()
+            .readArrayBlockWithOffset("/CSR_indices", (toPtr - fromPtr).toInt, fromPtr)
+        } ?~> "Could not read agglomerate pairs from connectome file"
+      columnOffset = searchSorted(columnValues, dstAgglomerateId)
+      pairIndex = fromPtr + columnOffset
+      synapses <- if ((columnOffset >= columnValues.length) || (columnValues(columnOffset) != dstAgglomerateId))
+        Fox.successful(List.empty)
+      else
+        for {
+          fromAndTo <- finishAccessOnFailure(cachedConnectomeFile) {
+            cachedConnectomeFile.reader.uint64().readArrayBlockWithOffset("/agglomerate_pair_offsets", 2, pairIndex)
+          }
+          from <- fromAndTo.lift(0)
+          to <- fromAndTo.lift(1)
+        } yield List.range(from, to)
+    } yield synapses
+
+  private def searchSorted(haystack: Array[Long], needle: Long): Int = 0
+
   private def finishAccessOnFailure[T](f: CachedHdf5File)(block: => T): Fox[T] =
     tryo { _: Throwable =>
       f.finishAccess()

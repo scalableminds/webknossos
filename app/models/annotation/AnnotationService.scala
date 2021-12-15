@@ -59,6 +59,14 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               taskOpt: Option[Task],
                               organizationName: String)
 
+case class PrecedenceTracingProperties(
+    editPosition: Point3D,
+    editRotation: Vector3D,
+    zoomLevel: Float,
+    userBoundingBoxes: Seq[NamedBoundingBox],
+    boundingBox: Option[BoundingBox]
+)
+
 class AnnotationService @Inject()(
     annotationInformationProvider: AnnotationInformationProvider,
     savedTracingInformationHandler: SavedTracingInformationHandler,
@@ -174,18 +182,36 @@ class AnnotationService @Inject()(
         _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
       } yield fallbackLayer
 
-    def createAndSaveAnnotationLayer(annotationLayerParameters: AnnotationLayerParameters,
-                                     oldPrecedenceLayer: Option[FetchedAnnotationLayer]): Fox[AnnotationLayer] =
+    /*
+
+  editPosition: Point3D,
+  editRotation: Vector3D,
+  zoomLevel: Float,
+  userBoundingBoxes: Seq[NamedBoundingBox],
+  boundingBox: Option[BoundingBox]
+     */
+    def createAndSaveAnnotationLayer(
+        annotationLayerParameters: AnnotationLayerParameters,
+        oldPrecedenceLayerProperties: Option[PrecedenceTracingProperties]): Fox[AnnotationLayer] =
       for {
         client <- tracingStoreService.clientFor(dataSet)
         tracingId <- annotationLayerParameters.typ match {
           case AnnotationLayerType.Skeleton =>
-            client.saveSkeletonTracing(
-              SkeletonTracingDefaults.createInstance.copy(
-                dataSetName = dataSet.name,
-                editPosition = dataSource.center,
-                organizationName = Some(organizationName),
-              ))
+            val skeleton = SkeletonTracingDefaults.createInstance.copy(
+              dataSetName = dataSet.name,
+              editPosition = dataSource.center,
+              organizationName = Some(organizationName),
+            )
+            val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
+              skeleton.copy(
+                editPosition = p.editPosition,
+                editRotation = p.editRotation,
+                zoomLevel = p.zoomLevel,
+                userBoundingBoxes = p.userBoundingBoxes,
+                boundingBox = p.boundingBox
+              )
+            }.getOrElse(skeleton)
+            client.saveSkeletonTracing(skeletonAdapted)
           case AnnotationLayerType.Volume =>
             for {
               fallbackLayer <- Fox.runOptional(annotationLayerParameters.fallbackLayerName)(getFallbackLayer)
@@ -196,7 +222,16 @@ class AnnotationService @Inject()(
                 resolutionRestrictions =
                   annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty)
               )
-              volumeTracingId <- client.saveVolumeTracing(volumeTracing)
+              volumeTracingAdapted = oldPrecedenceLayerProperties.map { p =>
+                volumeTracing.copy(
+                  editPosition = p.editPosition,
+                  editRotation = p.editRotation,
+                  zoomLevel = p.zoomLevel,
+                  userBoundingBoxes = p.userBoundingBoxes,
+                  boundingBox = p.boundingBox
+                )
+              }.getOrElse(volumeTracing)
+              volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted)
             } yield volumeTracingId
           case _ =>
             Fox.failure(s"Unknown AnnotationLayerType: ${annotationLayerParameters.typ}")
@@ -214,13 +249,29 @@ class AnnotationService @Inject()(
           else tracingStoreClient.getVolumeTracing(oldPrecedenceLayer, None, skipVolumeData = true)
         } yield Some(oldPrecedenceLayerFetched)
 
-    def extractPrecedenceProperties(oldPrecedenceLayer: Option[FetchedAnnotationLayer]) = ()
+    def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): PrecedenceTracingProperties =
+      oldPrecedenceLayer.tracing match {
+        case Left(s) =>
+          PrecedenceTracingProperties(
+            s.editPosition,
+            s.editRotation,
+            s.zoomLevel,
+            s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
+            s.boundingBox)
+        case Right(v) =>
+          PrecedenceTracingProperties(
+            v.editPosition,
+            v.editRotation,
+            v.zoomLevel,
+            v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
+            Some(v.boundingBox))
+      }
 
     for {
       oldPrecedenceLayer <- fetchOldPrecedenceLayer
-      precedenceProperties = extractPrecedenceProperties(oldPrecedenceLayer)
+      precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
-        createAndSaveAnnotationLayer(p, oldPrecedenceLayer))
+        createAndSaveAnnotationLayer(p, precedenceProperties))
     } yield newAnnotationLayers
   }
 

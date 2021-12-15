@@ -146,17 +146,17 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
   ) {
     const { currentMeshFile, layerName, mappingInfo, onClick: originalOnClick, ...rest } = props;
     const [isConfirmVisible, setConfirmVisible] = useState(false);
-    if (currentMeshFile == null || layerName == null) {
+
+    // If the mesh file mapping name is undefined, the mesh file doesn't contain that information
+    // because it is too old. In that case never show the activation modal.
+    if (currentMeshFile == null || currentMeshFile.mappingName === undefined || layerName == null) {
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     }
 
     const isMappingEnabled = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
     const enabledMappingName = isMappingEnabled ? mappingInfo.mappingName : null;
     const checkWhetherConfirmIsNeeded = () => {
-      // Normalize the mappingName of the currentMeshFile to be a string or null for comparison
-      // with the enabled mappingName which is also either a string or null
-      const currentMeshFileMappingName = currentMeshFile.mappingName || null;
-      if (enabledMappingName !== currentMeshFileMappingName) {
+      if (currentMeshFile.mappingName !== enabledMappingName) {
         setConfirmVisible(true);
       } else {
         originalOnClick();

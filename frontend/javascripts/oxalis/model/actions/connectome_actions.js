@@ -1,5 +1,6 @@
 // @flow
 import { type MutableTreeMap } from "oxalis/store";
+import { type APIConnectomeFile } from "types/api_flow_types";
 
 export type InitializeConnectomeTracingAction = {
   type: "INITIALIZE_CONNECTOME_TRACING",
@@ -25,11 +26,24 @@ type SetConnectomeTreeVisibilityAction = {
   layerName: string,
 };
 
+export type UpdateConnectomeFileListAction = {
+  type: "UPDATE_CONNECTOME_FILE_LIST",
+  layerName: string,
+  connectomeFiles: Array<APIConnectomeFile>,
+};
+export type UpdateCurrentConnectomeFileAction = {
+  type: "UPDATE_CURRENT_CONNECTOME_FILE",
+  layerName: string,
+  connectomeFileName: ?string,
+};
+
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
   | AddConnectomeTreesAction
   | DeleteConnectomeTreeAction
-  | SetConnectomeTreeVisibilityAction;
+  | SetConnectomeTreeVisibilityAction
+  | UpdateConnectomeFileListAction
+  | UpdateCurrentConnectomeFileAction;
 
 export const initializeConnectomeTracingAction = (
   layerName: string,
@@ -65,4 +79,22 @@ export const setConnectomeTreeVisibilityAction = (
   treeId,
   isVisible,
   layerName,
+});
+
+export const updateConnectomeFileListAction = (
+  layerName: string,
+  connectomeFiles: Array<APIConnectomeFile>,
+): UpdateConnectomeFileListAction => ({
+  type: "UPDATE_CONNECTOME_FILE_LIST",
+  layerName,
+  connectomeFiles,
+});
+
+export const updateCurrentConnectomeFileAction = (
+  layerName: string,
+  connectomeFileName: ?string,
+): UpdateCurrentConnectomeFileAction => ({
+  type: "UPDATE_CURRENT_CONNECTOME_FILE",
+  layerName,
+  connectomeFileName,
 });

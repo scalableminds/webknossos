@@ -1,6 +1,6 @@
 // @flow
-import { Tag, Empty, Tree, Tooltip, Popover, Checkbox, Divider, Input } from "antd";
-import { FilterOutlined } from "@ant-design/icons";
+import { Tag, Empty, Tree, Tooltip, Popover, Checkbox, Divider, Input, Select } from "antd";
+import { FilterOutlined, SettingOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
@@ -49,6 +49,8 @@ import {
   deleteConnectomeTreeAction,
   addConnectomeTreesAction,
   setConnectomeTreeVisibilityAction,
+  updateConnectomeFileListAction,
+  updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
 import { stringToAntdColorPreset, stringToAntdColorPresetRgb } from "libs/format_utils";
 import { diffArrays, unique } from "libs/utils";
@@ -57,6 +59,8 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import Toast from "libs/toast";
 
 const connectomeTabId = "connectome";
+
+const { Option } = Select;
 
 type Synapse = { id: number, position: Vector3, type: string };
 type SynapticPartners = { [number]: Array<Synapse> };
@@ -85,13 +89,21 @@ type TreeData = Array<TreeNode>;
 type StateProps = {|
   dataset: APIDataset,
   visibleSegmentationLayer: ?APISegmentationLayer,
+  availableConnectomeFiles: ?Array<APIConnectomeFile>,
+  currentConnectomeFile: ?APIConnectomeFile,
 |};
 
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const connectomeData =
+    visibleSegmentationLayer != null
+      ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+      : null;
   return {
     dataset: state.dataset,
     visibleSegmentationLayer,
+    availableConnectomeFiles: connectomeData != null ? connectomeData.availableConnectomeFiles : [],
+    currentConnectomeFile: connectomeData != null ? connectomeData.currentConnectomeFile : null,
   };
 };
 
@@ -106,7 +118,6 @@ type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 type Props = {| ...DispatchProps, ...StateProps |};
 
 type State = {
-  currentConnectomeFile: ?APIConnectomeFile,
   activeAgglomerateIds: Array<number>,
   connectomeData: ?ConnectomeData,
   filteredConnectomeData: ?ConnectomeData,
@@ -275,13 +286,30 @@ function* mapTreeData<R>(
   }
 }
 
+function ensureTypeToString(synapseTypesAndNames) {
+  const { synapseTypes, typeToString } = synapseTypesAndNames;
+  if (typeToString.length === 0) {
+    Toast.error(`Couldn't read synapseTypes mapping. Please add a json file containing the synapseTypes next to the connectome file.
+The format should be: \`{
+  "synapse_type_names": [ "type1", "type2", ... ]
+}\``);
+    // Create mocked synapse type strings
+    const largestSynapseTypeId = Math.max(...synapseTypes);
+    const mockedTypeToString = [...Array(largestSynapseTypeId + 1).keys()].map(i => `type${i + 1}`);
+    return {
+      synapseTypes,
+      typeToString: mockedTypeToString,
+    };
+  }
+  return synapseTypesAndNames;
+}
+
 const defaultFilters = {
   synapseTypes: [],
 };
 
 class ConnectomeView extends React.Component<Props, State> {
   state = {
-    currentConnectomeFile: null,
     activeAgglomerateIds: [],
     connectomeData: null,
     filteredConnectomeData: null,
@@ -292,16 +320,25 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   componentDidMount() {
-    this.fetchConnectomeFiles();
+    this.maybeFetchConnectomeFiles();
     this.initializeSkeleton();
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    if (prevState.activeAgglomerateIds !== this.state.activeAgglomerateIds) {
+    if (
+      prevProps.currentConnectomeFile !== this.props.currentConnectomeFile ||
+      prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer
+    ) {
+      this.activateConnectomeMapping();
+    }
+    if (
+      prevState.activeAgglomerateIds !== this.state.activeAgglomerateIds ||
+      prevProps.currentConnectomeFile !== this.props.currentConnectomeFile
+    ) {
       this.fetchConnections();
     }
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
-      this.fetchConnectomeFiles();
+      this.maybeFetchConnectomeFiles();
     }
     if (
       prevState.connectomeData !== this.state.connectomeData ||
@@ -332,6 +369,8 @@ class ConnectomeView extends React.Component<Props, State> {
       connectomeData: null,
       filteredConnectomeData: null,
       activeAgglomerateIds: [],
+      checkedKeys: [],
+      expandedKeys: [],
     });
   };
 
@@ -341,6 +380,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
   initializeSkeleton() {
     const { visibleSegmentationLayer } = this.props;
+    // TODO: Make sure this works even when switching segmentation layers
     if (visibleSegmentationLayer == null) return;
 
     Store.dispatch(initializeConnectomeTracingAction(visibleSegmentationLayer.name));
@@ -354,10 +394,16 @@ class ConnectomeView extends React.Component<Props, State> {
     );
   }
 
-  async fetchConnectomeFiles() {
-    const { dataset, visibleSegmentationLayer } = this.props;
+  async maybeFetchConnectomeFiles() {
+    const {
+      dataset,
+      visibleSegmentationLayer,
+      availableConnectomeFiles,
+      currentConnectomeFile,
+    } = this.props;
 
-    if (visibleSegmentationLayer == null) return;
+    // If availableConnectomeFiles is not null, they have already been fetched
+    if (visibleSegmentationLayer == null || availableConnectomeFiles != null) return;
 
     const connectomeFiles = await getConnectomeFilesForDatasetLayer(
       dataset.dataStore.url,
@@ -365,9 +411,20 @@ class ConnectomeView extends React.Component<Props, State> {
       getBaseSegmentationName(visibleSegmentationLayer),
     );
 
-    const currentConnectomeFile = connectomeFiles[0];
-    // TODO: Persist connectome files properly and do not activate mapping
-    this.setState({ currentConnectomeFile });
+    const layerName = visibleSegmentationLayer.name;
+
+    Store.dispatch(updateConnectomeFileListAction(layerName, connectomeFiles));
+    if (currentConnectomeFile == null && connectomeFiles.length > 0) {
+      Store.dispatch(
+        updateCurrentConnectomeFileAction(layerName, connectomeFiles[0].connectomeFileName),
+      );
+    }
+  }
+
+  activateConnectomeMapping() {
+    const { visibleSegmentationLayer, currentConnectomeFile } = this.props;
+
+    if (visibleSegmentationLayer == null || currentConnectomeFile == null) return;
 
     Store.dispatch(
       setMappingAction(visibleSegmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
@@ -377,8 +434,8 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   async fetchConnections() {
-    const { currentConnectomeFile, activeAgglomerateIds, filters } = this.state;
-    const { dataset, visibleSegmentationLayer } = this.props;
+    const { activeAgglomerateIds, filters } = this.state;
+    const { dataset, visibleSegmentationLayer, currentConnectomeFile } = this.props;
 
     if (
       currentConnectomeFile == null ||
@@ -386,6 +443,9 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds.length === 0
     )
       return;
+
+    // TODO: Check which activeAgglomerateIds were removed and added
+    // to avoid requesting data that is already present
 
     const fetchProperties = [
       dataset.dataStore.url,
@@ -398,11 +458,11 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds,
     );
 
-    if (synapsesOfAgglomerates.length !== 1) {
+    if (synapsesOfAgglomerates.length !== activeAgglomerateIds.length) {
       throw new Error(
-        `Requested synapses of one agglomerate, but got synapses for ${
-          synapsesOfAgglomerates.length
-        } agglomerates.`,
+        `Requested synapses of ${
+          activeAgglomerateIds.length
+        } agglomerate(s), but got synapses for ${synapsesOfAgglomerates.length} agglomerate(s).`,
       );
     }
 
@@ -428,19 +488,7 @@ class ConnectomeView extends React.Component<Props, State> {
     ]);
 
     // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file
-    if (synapseTypesAndNames.typeToString.length === 0) {
-      Toast.error(`Couldn't read synapseTypes mapping. Please add a json file containing the synapseTypes next to the connectome file.
-The format should be: \`{
-  "synapse_type_names": [ "type1", "type2", ... ]
-}\``);
-      // Create mocked synapse types
-      const largestSynapseTypeId = Math.max(...synapseTypesAndNames.synapseTypes);
-      synapseTypesAndNames.typeToString = [...Array(largestSynapseTypeId + 1).keys()].map(
-        i => `type${i + 1}`,
-      );
-    }
-
-    const { synapseTypes, typeToString } = synapseTypesAndNames;
+    const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
     const synapseIdToSource = _.zipObject(allInSynapses, synapseSources);
     const synapseIdToDestination = _.zipObject(allOutSynapses, synapseDestinations);
@@ -486,14 +534,17 @@ The format should be: \`{
 
     // Auto-expand all nodes by default. The antd properties like `defaultExpandAll` only work on the first render
     // but not when switching to another agglomerate, afterwards.
-    const treeData = convertConnectomeToTreeData(connectomeData);
-    const allKeys = Array.from(mapTreeData(treeData || [], node => node.key));
+    const treeData = convertConnectomeToTreeData(connectomeData) || [];
+    const allKeys = Array.from(mapTreeData(treeData, node => node.key));
+
+    // Auto-load the skeletons of the active agglomerates
+    const checkedKeys = treeData.map(topLevelTreeNode => topLevelTreeNode.key);
 
     this.setState({
       connectomeData,
       synapseTypes: typeToString,
       filters: newFilters,
-      checkedKeys: [],
+      checkedKeys,
       expandedKeys: allKeys,
     });
   }
@@ -587,13 +638,8 @@ The format should be: \`{
     prevFilteredConnectomeData: ?ConnectomeData,
     prevCheckedKeys: Array<string>,
   ) {
-    const { visibleSegmentationLayer } = this.props;
-    const {
-      currentConnectomeFile,
-      connectomeData,
-      filteredConnectomeData,
-      checkedKeys,
-    } = this.state;
+    const { visibleSegmentationLayer, currentConnectomeFile } = this.props;
+    const { connectomeData, filteredConnectomeData, checkedKeys } = this.state;
 
     if (visibleSegmentationLayer == null || currentConnectomeFile == null) return;
 
@@ -689,6 +735,15 @@ The format should be: \`{
     evt.target.blur();
   };
 
+  handleConnectomeFileSelected = async (connectomeFileName: ?string) => {
+    const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer != null && connectomeFileName != null) {
+      Store.dispatch(
+        updateCurrentConnectomeFileAction(visibleSegmentationLayer.name, connectomeFileName),
+      );
+    }
+  };
+
   handleSelect = (
     selectedKeys: Array<string>,
     evt: { selected: boolean, selectedNodes: Array<TreeNode>, node: TreeNode, event: string },
@@ -699,15 +754,7 @@ The format should be: \`{
     }
   };
 
-  handleCheck = (
-    { checked }: { checked: Array<string> },
-    evt: { checked: boolean, checkedNodes: Array<TreeNode>, node: TreeNode, event: string },
-  ) => {
-    const { data } = evt.node;
-
-    // Only nodes with type segment are checkable anyways
-    if (data.type !== "segment") return;
-
+  handleCheck = ({ checked }: { checked: Array<string> }) => {
     this.setState({ checkedKeys: checked });
   };
 
@@ -765,6 +812,39 @@ The format should be: \`{
     );
   };
 
+  getConnectomeFileSettings = () => {
+    const { currentConnectomeFile, availableConnectomeFiles } = this.props;
+    const currentConnectomeFileName =
+      currentConnectomeFile != null ? currentConnectomeFile.connectomeFileName : null;
+    return (
+      <Tooltip title="Select a connectome file from which synapses will be loaded.">
+        <Select
+          style={{ width: 250 }}
+          placeholder="Select a connectome file"
+          value={currentConnectomeFileName}
+          onChange={this.handleConnectomeFileSelected}
+          size="small"
+          loading={availableConnectomeFiles == null}
+        >
+          {availableConnectomeFiles ? (
+            availableConnectomeFiles.map(connectomeFile => (
+              <Option
+                key={connectomeFile.connectomeFileName}
+                value={connectomeFile.connectomeFileName}
+              >
+                {connectomeFile.connectomeFileName}
+              </Option>
+            ))
+          ) : (
+            <Option value={null} disabled>
+              No files available.
+            </Option>
+          )}
+        </Select>
+      </Tooltip>
+    );
+  };
+
   getConnectomeHeader() {
     const { activeAgglomerateIds, filters, synapseTypes } = this.state;
     const activeAgglomerateIdString = activeAgglomerateIds.length
@@ -776,12 +856,14 @@ The format should be: \`{
 
     return (
       <Input.Group compact className="compact-icons">
-        <InputComponent
-          value={activeAgglomerateIdString}
-          onPressEnter={this.handleChangeActiveSegment}
-          placeholder="Show Synaptic Connections for Segment ID"
-          style={{ width: "280px" }}
-        />
+        <Tooltip title="Show Synaptic Connections for Segment ID(s)">
+          <InputComponent
+            value={activeAgglomerateIdString}
+            onPressEnter={this.handleChangeActiveSegment}
+            placeholder="Segment ID 1[, Segment ID 2, ...]"
+            style={{ width: 220 }}
+          />
+        </Tooltip>
         <ButtonComponent onClick={this.reset}>Reset</ButtonComponent>
         <Tooltip title="Configure Filters">
           <Popover content={this.getFilterSettings} trigger="click" placement="bottom">
@@ -790,19 +872,20 @@ The format should be: \`{
             </ButtonComponent>
           </Popover>
         </Tooltip>
+        <Tooltip title="Configure Connectome File Settings" placement="left">
+          <Popover content={this.getConnectomeFileSettings} trigger="click" placement="bottom">
+            <ButtonComponent>
+              <SettingOutlined />
+            </ButtonComponent>
+          </Popover>
+        </Tooltip>
       </Input.Group>
     );
   }
 
   render() {
-    const { visibleSegmentationLayer } = this.props;
-    const {
-      activeAgglomerateIds,
-      filteredConnectomeData,
-      currentConnectomeFile,
-      checkedKeys,
-      expandedKeys,
-    } = this.state;
+    const { visibleSegmentationLayer, availableConnectomeFiles } = this.props;
+    const { activeAgglomerateIds, filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
 
     return (
       <div id={connectomeTabId} className="padded-tab-content">
@@ -819,7 +902,7 @@ The format should be: \`{
               );
             }
 
-            if (currentConnectomeFile == null) {
+            if (availableConnectomeFiles == null || availableConnectomeFiles.length === 0) {
               return (
                 <Empty
                   image={Empty.PRESENTED_IMAGE_SIMPLE}

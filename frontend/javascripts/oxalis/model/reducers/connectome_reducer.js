@@ -5,6 +5,7 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import { updateKey3 } from "oxalis/model/helpers/deep_update";
 import {
   addTreesAndGroups,
   deleteTree,
@@ -130,6 +131,27 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
             .getOrElse(state),
         )
         .getOrElse(state);
+    }
+
+    case "UPDATE_CONNECTOME_FILE_LIST": {
+      const { layerName, connectomeFiles } = action;
+      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+        availableConnectomeFiles: connectomeFiles,
+      });
+    }
+
+    case "UPDATE_CURRENT_CONNECTOME_FILE": {
+      const { layerName, connectomeFileName } = action;
+      const availableConnectomeFiles =
+        state.localSegmentationData[layerName].connectomeData.availableConnectomeFiles;
+      if (availableConnectomeFiles == null) return state;
+
+      const connectomeFile = availableConnectomeFiles.find(
+        el => el.connectomeFileName === connectomeFileName,
+      );
+      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+        currentConnectomeFile: connectomeFile,
+      });
     }
 
     default:

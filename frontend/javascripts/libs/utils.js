@@ -86,6 +86,10 @@ function cheapSort<T: string | number>(valueA: T, valueB: T): -1 | 0 | 1 {
   return 0;
 }
 
+export function unique<T>(array: Array<T>): Array<T> {
+  return [...new Set(array)];
+}
+
 export function enforce<A, B>(fn: A => B): (?A) => B {
   return (nullableA: ?A) => {
     if (nullableA == null) {

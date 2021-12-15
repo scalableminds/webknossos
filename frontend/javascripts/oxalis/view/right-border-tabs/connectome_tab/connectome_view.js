@@ -51,7 +51,7 @@ import {
   setConnectomeTreeVisibilityAction,
 } from "oxalis/model/actions/connectome_actions";
 import { stringToAntdColorPreset, stringToAntdColorPresetRgb } from "libs/format_utils";
-import { diffArrays } from "libs/utils";
+import { diffArrays, unique } from "libs/utils";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import Toast from "libs/toast";
@@ -107,7 +107,7 @@ type Props = {| ...DispatchProps, ...StateProps |};
 
 type State = {
   currentConnectomeFile: ?APIConnectomeFile,
-  activeAgglomerateId: ?number,
+  activeAgglomerateIds: Array<number>,
   connectomeData: ?ConnectomeData,
   filteredConnectomeData: ?ConnectomeData,
   synapseTypes: Array<string>,
@@ -282,7 +282,7 @@ const defaultFilters = {
 class ConnectomeView extends React.Component<Props, State> {
   state = {
     currentConnectomeFile: null,
-    activeAgglomerateId: null,
+    activeAgglomerateIds: [],
     connectomeData: null,
     filteredConnectomeData: null,
     synapseTypes: [],
@@ -297,7 +297,7 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    if (prevState.activeAgglomerateId !== this.state.activeAgglomerateId) {
+    if (prevState.activeAgglomerateIds !== this.state.activeAgglomerateIds) {
       this.fetchConnections();
     }
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
@@ -331,7 +331,7 @@ class ConnectomeView extends React.Component<Props, State> {
     this.setState({
       connectomeData: null,
       filteredConnectomeData: null,
-      activeAgglomerateId: null,
+      activeAgglomerateIds: [],
     });
   };
 
@@ -377,13 +377,13 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   async fetchConnections() {
-    const { currentConnectomeFile, activeAgglomerateId, filters } = this.state;
+    const { currentConnectomeFile, activeAgglomerateIds, filters } = this.state;
     const { dataset, visibleSegmentationLayer } = this.props;
 
     if (
       currentConnectomeFile == null ||
       visibleSegmentationLayer == null ||
-      activeAgglomerateId == null
+      activeAgglomerateIds.length === 0
     )
       return;
 
@@ -393,9 +393,10 @@ class ConnectomeView extends React.Component<Props, State> {
       getBaseSegmentationName(visibleSegmentationLayer),
       currentConnectomeFile.connectomeFileName,
     ];
-    const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(...fetchProperties, [
-      activeAgglomerateId,
-    ]);
+    const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(
+      ...fetchProperties,
+      activeAgglomerateIds,
+    );
 
     if (synapsesOfAgglomerates.length !== 1) {
       throw new Error(
@@ -405,8 +406,14 @@ class ConnectomeView extends React.Component<Props, State> {
       );
     }
 
-    const { in: inSynapses, out: outSynapses } = synapsesOfAgglomerates[0];
-    const allSynapses = [...inSynapses, ...outSynapses];
+    // Uniquify synapses to avoid requesting data multiple times
+    const allInSynapses = unique(
+      _.flatten(synapsesOfAgglomerates.map(connections => connections.in)),
+    );
+    const allOutSynapses = unique(
+      _.flatten(synapsesOfAgglomerates.map(connections => connections.out)),
+    );
+    const allSynapses = unique([...allInSynapses, ...allOutSynapses]);
 
     const [
       synapseSources,
@@ -414,8 +421,8 @@ class ConnectomeView extends React.Component<Props, State> {
       synapsePositions,
       synapseTypesAndNames,
     ] = await Promise.all([
-      getSynapseSources(...fetchProperties, inSynapses),
-      getSynapseDestinations(...fetchProperties, outSynapses),
+      getSynapseSources(...fetchProperties, allInSynapses),
+      getSynapseDestinations(...fetchProperties, allOutSynapses),
       getSynapsePositions(...fetchProperties, allSynapses),
       getSynapseTypes(...fetchProperties, allSynapses),
     ]);
@@ -435,29 +442,39 @@ The format should be: \`{
 
     const { synapseTypes, typeToString } = synapseTypesAndNames;
 
-    const connectomeData = { [activeAgglomerateId]: { in: {}, out: {} } };
+    const synapseIdToSource = _.zipObject(allInSynapses, synapseSources);
+    const synapseIdToDestination = _.zipObject(allOutSynapses, synapseDestinations);
+    const synapseIdToPosition = _.zipObject(allSynapses, synapsePositions);
+    const synapseIdToType = _.zipObject(allSynapses, synapseTypes);
 
-    inSynapses.forEach((synapseId, i) => {
-      const synapticPartnerId = synapseSources[i];
-      if (!(synapticPartnerId in connectomeData[activeAgglomerateId].in)) {
-        connectomeData[activeAgglomerateId].in[synapticPartnerId] = [];
-      }
-      connectomeData[activeAgglomerateId].in[synapticPartnerId].push({
-        id: synapseId,
-        position: synapsePositions[i],
-        type: typeToString[synapseTypes[i]],
+    const connectomeData = {};
+    activeAgglomerateIds.forEach((agglomerateId, i) => {
+      connectomeData[agglomerateId] = { in: {}, out: {} };
+
+      const inSynapses = synapsesOfAgglomerates[i].in;
+      const outSynapses = synapsesOfAgglomerates[i].out;
+
+      inSynapses.forEach(synapseId => {
+        const synapticPartnerId = synapseIdToSource[synapseId];
+        if (!(synapticPartnerId in connectomeData[agglomerateId].in)) {
+          connectomeData[agglomerateId].in[synapticPartnerId] = [];
+        }
+        connectomeData[agglomerateId].in[synapticPartnerId].push({
+          id: synapseId,
+          position: synapseIdToPosition[synapseId],
+          type: typeToString[synapseIdToType[synapseId]],
+        });
       });
-    });
-    outSynapses.forEach((synapseId, i) => {
-      const synapticPartnerId = synapseDestinations[i];
-      if (!(synapticPartnerId in connectomeData[activeAgglomerateId].out)) {
-        connectomeData[activeAgglomerateId].out[synapticPartnerId] = [];
-      }
-      connectomeData[activeAgglomerateId].out[synapticPartnerId].push({
-        id: synapseId,
-        // synapsePositions and synapseTypes contains data for all synapses. inSynapses first and then outSynapses.
-        position: synapsePositions[inSynapses.length + i],
-        type: typeToString[synapseTypes[inSynapses.length + i]],
+      outSynapses.forEach(synapseId => {
+        const synapticPartnerId = synapseIdToDestination[synapseId];
+        if (!(synapticPartnerId in connectomeData[agglomerateId].out)) {
+          connectomeData[agglomerateId].out[synapticPartnerId] = [];
+        }
+        connectomeData[agglomerateId].out[synapticPartnerId].push({
+          id: synapseId,
+          position: synapseIdToPosition[synapseId],
+          type: typeToString[synapseIdToType[synapseId]],
+        });
       });
     });
 
@@ -665,9 +682,9 @@ The format should be: \`{
   }
 
   handleChangeActiveSegment = (evt: SyntheticInputEvent<>) => {
-    const segmentId = parseInt(evt.target.value, 10);
+    const agglomerateIds = evt.target.value.split(",").map(part => parseInt(part, 10));
 
-    this.setState({ activeAgglomerateId: segmentId });
+    this.setState({ activeAgglomerateIds: agglomerateIds });
 
     evt.target.blur();
   };
@@ -749,9 +766,10 @@ The format should be: \`{
   };
 
   getConnectomeHeader() {
-    const { activeAgglomerateId, filters, synapseTypes } = this.state;
-    const activeAgglomerateIdString =
-      activeAgglomerateId != null ? activeAgglomerateId.toString() : "";
+    const { activeAgglomerateIds, filters, synapseTypes } = this.state;
+    const activeAgglomerateIdString = activeAgglomerateIds.length
+      ? activeAgglomerateIds.join(",")
+      : "";
 
     const isAnyFilterAvailable = synapseTypes.length;
     const isAnyFilterActive = filters.synapseTypes.length;
@@ -779,7 +797,7 @@ The format should be: \`{
   render() {
     const { visibleSegmentationLayer } = this.props;
     const {
-      activeAgglomerateId,
+      activeAgglomerateIds,
       filteredConnectomeData,
       currentConnectomeFile,
       checkedKeys,
@@ -813,33 +831,35 @@ The format should be: \`{
             return (
               <>
                 {this.getConnectomeHeader()}
-                {activeAgglomerateId == null ? (
+                {activeAgglomerateIds.length === 0 ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description="No segment selected. Use the input field above to enter a segment ID."
                   />
                 ) : null}
                 {filteredConnectomeData != null ? (
-                  <AutoSizer>
-                    {({ height, width }) => (
-                      <div style={{ height, width }}>
-                        <Tree
-                          checkable
-                          checkStrictly
-                          defaultExpandAll
-                          height={height}
-                          showLine={{ showLeafIcon: false }}
-                          onSelect={this.handleSelect}
-                          onCheck={this.handleCheck}
-                          onExpand={this.handleExpand}
-                          checkedKeys={checkedKeys}
-                          expandedKeys={expandedKeys}
-                          titleRender={this.renderNode}
-                          treeData={convertConnectomeToTreeData(filteredConnectomeData)}
-                        />
-                      </div>
-                    )}
-                  </AutoSizer>
+                  <div style={{ flex: "1 1 auto" }}>
+                    <AutoSizer>
+                      {({ height, width }) => (
+                        <div style={{ height, width }}>
+                          <Tree
+                            checkable
+                            checkStrictly
+                            defaultExpandAll
+                            height={height}
+                            showLine={{ showLeafIcon: false }}
+                            onSelect={this.handleSelect}
+                            onCheck={this.handleCheck}
+                            onExpand={this.handleExpand}
+                            checkedKeys={checkedKeys}
+                            expandedKeys={expandedKeys}
+                            titleRender={this.renderNode}
+                            treeData={convertConnectomeToTreeData(filteredConnectomeData)}
+                          />
+                        </div>
+                      )}
+                    </AutoSizer>
+                  </div>
                 ) : null}
               </>
             );

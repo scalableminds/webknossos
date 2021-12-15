@@ -59,12 +59,13 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               taskOpt: Option[Task],
                               organizationName: String)
 
+// Used to pass duplicate properties when creating a new tracing to avoid masking them.
+// Uses the proto-generated geometry classes, hence the full qualifiers.
 case class PrecedenceTracingProperties(
-    editPosition: Point3D,
-    editRotation: Vector3D,
-    zoomLevel: Float,
-    userBoundingBoxes: Seq[NamedBoundingBox],
-    boundingBox: Option[BoundingBox]
+    editPosition: com.scalableminds.webknossos.datastore.geometry.Point3D,
+    editRotation: com.scalableminds.webknossos.datastore.geometry.Vector3D,
+    zoomLevel: Double,
+    userBoundingBoxes: Seq[com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox]
 )
 
 class AnnotationService @Inject()(
@@ -207,8 +208,7 @@ class AnnotationService @Inject()(
                 editPosition = p.editPosition,
                 editRotation = p.editRotation,
                 zoomLevel = p.zoomLevel,
-                userBoundingBoxes = p.userBoundingBoxes,
-                boundingBox = p.boundingBox
+                userBoundingBoxes = p.userBoundingBoxes
               )
             }.getOrElse(skeleton)
             client.saveSkeletonTracing(skeletonAdapted)
@@ -227,8 +227,7 @@ class AnnotationService @Inject()(
                   editPosition = p.editPosition,
                   editRotation = p.editRotation,
                   zoomLevel = p.zoomLevel,
-                  userBoundingBoxes = p.userBoundingBoxes,
-                  boundingBox = p.boundingBox
+                  userBoundingBoxes = p.userBoundingBoxes
                 )
               }.getOrElse(volumeTracing)
               volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted)
@@ -256,15 +255,17 @@ class AnnotationService @Inject()(
             s.editPosition,
             s.editRotation,
             s.zoomLevel,
-            s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
-            s.boundingBox)
+            s.userBoundingBoxes ++ s.userBoundingBox.map(
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox(0, None, None, None, _))
+          )
         case Right(v) =>
           PrecedenceTracingProperties(
             v.editPosition,
             v.editRotation,
             v.zoomLevel,
-            v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
-            Some(v.boundingBox))
+            v.userBoundingBoxes ++ v.userBoundingBox.map(
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox(0, None, None, None, _))
+          )
       }
 
     for {

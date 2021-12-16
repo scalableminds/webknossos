@@ -22,7 +22,7 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
-import constants from "oxalis/constants";
+import constants, { MappingStatusEnum } from "oxalis/constants";
 import messages from "messages";
 
 /* Note that this must stay in sync with the back-end constant
@@ -93,7 +93,10 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
         storeState.temporaryConfiguration.activeMappingByLayer,
         segmentationLayer.name,
       );
-      return mappingInfo.isMappingEnabled && mappingInfo.mappingType === "HDF5";
+      return (
+        mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
+        mappingInfo.mappingType === "HDF5"
+      );
     });
 
     const isZoomThresholdExceeded = yield* select(

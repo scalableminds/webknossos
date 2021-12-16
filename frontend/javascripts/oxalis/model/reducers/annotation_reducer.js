@@ -252,7 +252,11 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
-      const { layerName, meshFile } = action;
+      const { layerName, meshFileName } = action;
+      const availableMeshFiles = state.localSegmentationData[layerName].availableMeshFiles;
+      if (availableMeshFiles == null) return state;
+
+      const meshFile = availableMeshFiles.find(el => el.meshFileName === meshFileName);
       return updateKey2(state, "localSegmentationData", layerName, { currentMeshFile: meshFile });
     }
 

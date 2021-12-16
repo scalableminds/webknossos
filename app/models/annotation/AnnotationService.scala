@@ -61,7 +61,7 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
 
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
 // Uses the proto-generated geometry classes, hence the full qualifiers.
-case class PrecedenceTracingProperties(
+case class RedundantTracingProperties(
     editPosition: com.scalableminds.webknossos.datastore.geometry.Point3D,
     editRotation: com.scalableminds.webknossos.datastore.geometry.Vector3D,
     zoomLevel: Double,
@@ -185,7 +185,7 @@ class AnnotationService @Inject()(
 
     def createAndSaveAnnotationLayer(
         annotationLayerParameters: AnnotationLayerParameters,
-        oldPrecedenceLayerProperties: Option[PrecedenceTracingProperties]): Fox[AnnotationLayer] =
+        oldPrecedenceLayerProperties: Option[RedundantTracingProperties]): Fox[AnnotationLayer] =
       for {
         client <- tracingStoreService.clientFor(dataSet)
         tracingId <- annotationLayerParameters.typ match {
@@ -240,10 +240,10 @@ class AnnotationService @Inject()(
           else tracingStoreClient.getVolumeTracing(oldPrecedenceLayer, None, skipVolumeData = true)
         } yield Some(oldPrecedenceLayerFetched)
 
-    def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): PrecedenceTracingProperties =
+    def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =
       oldPrecedenceLayer.tracing match {
         case Left(s) =>
-          PrecedenceTracingProperties(
+          RedundantTracingProperties(
             s.editPosition,
             s.editRotation,
             s.zoomLevel,
@@ -251,7 +251,7 @@ class AnnotationService @Inject()(
               com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox(0, None, None, None, _))
           )
         case Right(v) =>
-          PrecedenceTracingProperties(
+          RedundantTracingProperties(
             v.editPosition,
             v.editRotation,
             v.zoomLevel,
@@ -261,6 +261,15 @@ class AnnotationService @Inject()(
       }
 
     for {
+      /*
+        Note that the tracings have redundant properties, with a precedence logic selecting a layer
+        from which the values are used. Adding a layer may change this precedence, so the redundant
+        values need to be copied to the new layer from the layer that had precedence before. Otherwise, those
+        properties would be masked and lost.
+        Unfortunately, their history is still lost since the new layer gets only the latest snapshot.
+        We do this for *every* new layer, since we only later get its ID which determines the actual precedence.
+        All of this is skipped if existingAnnotationLayers is empty.
+       */
       oldPrecedenceLayer <- fetchOldPrecedenceLayer
       precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>

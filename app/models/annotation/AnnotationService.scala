@@ -183,14 +183,6 @@ class AnnotationService @Inject()(
         _ <- bool2Fox(fallbackLayer.elementClass != ElementClass.uint64) ?~> "annotation.volume.uint64"
       } yield fallbackLayer
 
-    /*
-
-  editPosition: Point3D,
-  editRotation: Vector3D,
-  zoomLevel: Float,
-  userBoundingBoxes: Seq[NamedBoundingBox],
-  boundingBox: Option[BoundingBox]
-     */
     def createAndSaveAnnotationLayer(
         annotationLayerParameters: AnnotationLayerParameters,
         oldPrecedenceLayerProperties: Option[PrecedenceTracingProperties]): Fox[AnnotationLayer] =
@@ -287,7 +279,7 @@ class AnnotationService @Inject()(
       Fox.successful(skeletonLayers.minBy(_.tracingId))
     } else if (volumeLayers.nonEmpty) {
       Fox.successful(volumeLayers.minBy(_.tracingId))
-    } else Fox.failure("annotation.download.noLayers")
+    } else Fox.failure("Trying to select precedence layer from empty layer list.")
   }
 
   def createExplorationalFor(user: User,

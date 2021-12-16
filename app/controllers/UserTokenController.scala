@@ -61,23 +61,21 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
     for {
       token <- tokenFox
-    } yield {
-      Ok(Json.obj("token" -> token))
-    }
+    } yield Ok(Json.obj("token" -> token))
   }
 
   @ApiOperation(hidden = true, value = "")
-  def validateAccessViaDatastore(name: String, token: Option[String]): Action[UserAccessRequest] =
+  def validateAccessViaDatastore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      dataStoreService.validateAccess(name) { _ =>
+      dataStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }
     }
 
   @ApiOperation(hidden = true, value = "")
-  def validateAccessViaTracingstore(name: String, token: Option[String]): Action[UserAccessRequest] =
+  def validateAccessViaTracingstore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      tracingStoreService.validateAccess(name) { _ =>
+      tracingStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }
     }

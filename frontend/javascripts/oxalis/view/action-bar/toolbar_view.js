@@ -3,6 +3,31 @@ import { Radio, Tooltip, Badge, Space, Popover } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect } from "react";
 
+import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
+import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  createTreeAction,
+  setMergerModeEnabledAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { document } from "libs/window";
+import {
+  getActiveSegmentationTracing,
+  getMappingInfoForVolumeTracing,
+  getRenderableResolutionForActiveSegmentationTracing,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getDisabledInfoForTools,
+  adaptActiveToolToShortcuts,
+} from "oxalis/model/accessors/tool_accessor";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { toNullable } from "libs/utils";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { usePrevious, useKeyPress } from "libs/react_hooks";
+import { userSettings } from "types/schemas/user_settings.schema";
+import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, {
   ToolsWithOverwriteCapabilities,
   type AnnotationTool,
@@ -11,34 +36,10 @@ import Constants, {
   OverwriteModeEnum,
   FillModeEnum,
   VolumeTools,
+  MappingStatusEnum,
 } from "oxalis/constants";
-import { convertCellIdToCSS } from "oxalis/view/left-border-tabs/mapping_settings_view";
-import { document } from "libs/window";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getMappingInfoForTracingLayer,
-  getRenderableResolutionForSegmentationTracing,
-} from "oxalis/model/accessors/dataset_accessor";
-import { createCellAction } from "oxalis/model/actions/volumetracing_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { usePrevious, useKeyPress } from "libs/react_hooks";
-import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import {
-  getDisabledInfoForTools,
-  adaptActiveToolToShortcuts,
-} from "oxalis/model/accessors/tool_accessor";
-import {
-  createTreeAction,
-  setMergerModeEnabledAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
-import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
-import { userSettings } from "types/schemas/user_settings.schema";
-import { toNullable } from "libs/utils";
 
 const narrowButtonStyle = {
   paddingLeft: 10,
@@ -224,22 +225,26 @@ function AdditionalSkeletonModesButtons() {
   );
 }
 
-const mapId = id => {
-  const { cube } = Model.getEnforcedSegmentationTracingLayer();
+const mapId = (volumeTracing, id) => {
+  const { cube } = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
   return cube.mapId(id);
 };
 
 function CreateCellButton() {
-  const unmappedActiveCellId = useSelector(
-    state => enforceVolumeTracing(state.tracing).activeCellId,
+  const volumeTracing = useSelector(state => getActiveSegmentationTracing(state));
+  const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
+  const { mappingStatus, mappingColors } = useSelector(state =>
+    getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
   );
+  const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
 
-  const mappingColors = useSelector(state => getMappingInfoForTracingLayer(state).mappingColors);
-  const isMappingEnabled = useSelector(
-    state => getMappingInfoForTracingLayer(state).isMappingEnabled,
-  );
+  if (!volumeTracing) {
+    return null;
+  }
   const customColors = isMappingEnabled ? mappingColors : null;
-  const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;
+  const activeCellId = isMappingEnabled
+    ? mapId(volumeTracing, unmappedActiveCellId)
+    : unmappedActiveCellId;
   const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
 
@@ -355,7 +360,7 @@ function ChangeBrushSizeButton() {
 }
 
 export default function ToolbarView() {
-  const hasVolume = useSelector(state => state.tracing.volume != null);
+  const hasVolume = useSelector(state => state.tracing.volumes.length > 0);
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
   const viewMode = useSelector(state => state.temporaryConfiguration.viewMode);
   const isVolumeSupported = hasVolume && !Constants.MODES_ARBITRARY.includes(viewMode);
@@ -363,7 +368,9 @@ export default function ToolbarView() {
 
   const activeTool = useSelector(state => state.uiInformation.activeTool);
 
-  const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentationTracing);
+  const maybeResolutionWithZoomStep = useSelector(
+    getRenderableResolutionForActiveSegmentationTracing,
+  );
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
 

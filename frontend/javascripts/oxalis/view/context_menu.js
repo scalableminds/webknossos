@@ -10,9 +10,9 @@ import {
   VolumeTools,
 } from "oxalis/constants";
 
+import type { OxalisState, SkeletonTracing, VolumeTracing, ActiveMappingInfo } from "oxalis/store";
+import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
-import type { APIDataset, APIDataLayer } from "types/api_flow_types";
 import type { Dispatch } from "redux";
 import { connect, useDispatch } from "react-redux";
 import { V3 } from "libs/mjs";
@@ -33,6 +33,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
@@ -40,12 +41,16 @@ import {
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
+  withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getVisibleSegmentationLayer,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { roundTo, hexToRgb, rgbToHex } from "libs/utils";
@@ -87,11 +92,12 @@ type StateProps = {|
   visibleSegmentationLayer: ?APIDataLayer,
   dataset: APIDataset,
   zoomStep: number,
-  currentMeshFile: ?string,
+  currentMeshFile: ?APIMeshFile,
   volumeTracing: ?VolumeTracing,
   activeTool: AnnotationTool,
   useLegacyBindings: boolean,
   userBoundingBoxes: Array<UserBoundingBox>,
+  mappingInfo: ActiveMappingInfo,
 |};
 
 /* eslint-enable react/no-unused-prop-types */
@@ -103,6 +109,8 @@ type NoNodeContextMenuProps = {|
   segmentIdAtPosition: number,
   activeTool: AnnotationTool,
 |};
+
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -433,6 +441,8 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     currentMeshFile,
     hideContextMenu,
     setActiveCell,
+    mappingInfo,
+    zoomStep,
   } = props;
 
   const dispatch = useDispatch();
@@ -446,15 +456,18 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     if (!currentMeshFile) return;
 
     if (visibleSegmentationLayer) {
+      // Make sure the corresponding bucket is loaded
+      await api.data.getDataValue(visibleSegmentationLayer.name, globalPosition, zoomStep);
       const id = getSegmentIdForPosition(globalPosition);
       if (id === 0) {
         Toast.info("No segment found at the clicked position");
         return;
       }
+
       await loadMeshFromFile(
         id,
         globalPosition,
-        currentMeshFile,
+        currentMeshFile.meshFileName,
         visibleSegmentationLayer,
         dataset,
       );
@@ -500,15 +513,19 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
         ]
       : [];
 
+  const layerName = visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
   const loadPrecomputedMeshItem = (
-    <Menu.Item
+    <MenuItemWithMappingActivationConfirmation
       className="node-context-menu-item"
       key="load-precomputed-mesh"
       onClick={loadPrecomputedMesh}
       disabled={!currentMeshFile}
+      currentMeshFile={currentMeshFile}
+      layerName={layerName}
+      mappingInfo={mappingInfo}
     >
       Load Mesh (precomputed)
-    </Menu.Item>
+    </MenuItemWithMappingActivationConfirmation>
   );
 
   const computeMeshAdHocItem = (
@@ -750,10 +767,15 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 
 function mapStateToProps(state: OxalisState): StateProps {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const mappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+  );
+
   const someTracing = maybeGetSomeTracing(state.tracing);
   return {
     skeletonTracing: state.tracing.skeleton,
-    volumeTracing: state.tracing.volume,
+    volumeTracing: getActiveSegmentationTracing(state),
     datasetScale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
@@ -765,6 +787,7 @@ function mapStateToProps(state: OxalisState): StateProps {
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
     userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
+    mappingInfo,
   };
 }
 

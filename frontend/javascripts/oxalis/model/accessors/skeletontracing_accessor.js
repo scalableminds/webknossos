@@ -2,7 +2,12 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
 
-import type { HybridServerTracing, ServerSkeletonTracing } from "types/api_flow_types";
+import type {
+  ServerTracing,
+  ServerSkeletonTracing,
+  APIAnnotation,
+  AnnotationLayerDescriptor,
+} from "types/api_flow_types";
 import type {
   Tracing,
   SkeletonTracing,
@@ -30,14 +35,25 @@ export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   return Maybe.Nothing();
 }
 
-export function serverTracingAsSkeletonTracingMaybe(
-  tracing: ?HybridServerTracing,
-): Maybe<ServerSkeletonTracing> {
-  if (tracing && tracing.skeleton) {
-    return Maybe.Just(tracing.skeleton);
-  } else {
-    return Maybe.Nothing();
+export function getSkeletonDescriptor(annotation: APIAnnotation): ?AnnotationLayerDescriptor {
+  const skeletonLayers = annotation.annotationLayers.filter(
+    descriptor => descriptor.typ === "Skeleton",
+  );
+  if (skeletonLayers.length > 0) {
+    return skeletonLayers[0];
   }
+  return null;
+}
+
+export function getNullableSkeletonTracing(
+  tracings: ?Array<ServerTracing>,
+): ?ServerSkeletonTracing {
+  const skeletonTracings = (tracings || []).filter(tracing => tracing.typ === "Skeleton");
+  if (skeletonTracings.length > 0 && skeletonTracings[0].typ === "Skeleton") {
+    // Only one skeleton is supported. The second type-check is only for flow.
+    return skeletonTracings[0];
+  }
+  return null;
 }
 
 export function enforceSkeletonTracing(tracing: Tracing): SkeletonTracing {

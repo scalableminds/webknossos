@@ -207,6 +207,13 @@ export const TDViewDisplayModeEnum = {
 
 export type TDViewDisplayMode = $Keys<typeof TDViewDisplayModeEnum>;
 
+export const MappingStatusEnum = {
+  DISABLED: "DISABLED",
+  ACTIVATING: "ACTIVATING",
+  ENABLED: "ENABLED",
+};
+export type MappingStatus = $Keys<typeof MappingStatusEnum>;
+
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 

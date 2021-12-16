@@ -23,8 +23,8 @@ const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions"
 const initialState = {
   save: {
     isBusy: false,
-    queue: { skeleton: [], volume: [] },
-    lastSaveTimestamp: { skeleton: 0, volume: 0 },
+    queue: { skeleton: [], volumes: {} },
+    lastSaveTimestamp: { skeleton: 0, volume: {} },
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

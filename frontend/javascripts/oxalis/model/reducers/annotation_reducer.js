@@ -26,13 +26,19 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
     },
   };
   // We mirror/sync the user bounding boxes between all tracing objects.
+
+  const newVolumes = state.tracing.volumes.map(volumeTracing => ({
+    ...volumeTracing,
+    userBoundingBoxes,
+  }));
+
   const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
-  const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
+  const maybeVolumeUpdater = { volumes: { $set: newVolumes } };
   const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};
   return update(state, {
     tracing: {
-      ...maybeSkeletonUpdater,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+      ...maybeSkeletonUpdater,
       ...maybeVolumeUpdater,
       ...maybeReadOnlyUpdater,
     },
@@ -56,6 +62,22 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const { visibility } = action;
       return updateTracing(state, {
         visibility,
+      });
+    }
+
+    case "EDIT_ANNOTATION_LAYER": {
+      const newAnnotationLayers = state.tracing.annotationLayers.map(layer => {
+        if (layer.tracingId !== action.tracingId) {
+          return layer;
+        } else {
+          return {
+            ...layer,
+            ...action.layerProperties,
+          };
+        }
+      });
+      return updateTracing(state, {
+        annotationLayers: newAnnotationLayers,
       });
     }
 
@@ -230,7 +252,11 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
-      const { layerName, meshFile } = action;
+      const { layerName, meshFileName } = action;
+      const availableMeshFiles = state.localSegmentationData[layerName].availableMeshFiles;
+      if (availableMeshFiles == null) return state;
+
+      const meshFile = availableMeshFiles.find(el => el.meshFileName === meshFileName);
       return updateKey2(state, "localSegmentationData", layerName, { currentMeshFile: meshFile });
     }
 

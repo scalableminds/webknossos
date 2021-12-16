@@ -11,16 +11,20 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/21.11.0...HEAD)
 
 ### Added
--
+- Added tagging support for datasets. [#5832](https://github.com/scalableminds/webknossos/pull/5832)
+- Dataset upload back-end now supports linking layers of existing public datasets. [#5863](https://github.com/scalableminds/webknossos/pull/5863)
+- Activate the correct mapping before loading pre-computed meshes if the corresponding mesh file contains that information. [#5859](https://github.com/scalableminds/webknossos/pull/5859)
 
 ### Changed
 -
 
 ### Fixed
--
+- Fixed a security vulnerability by upgrading log4j to newest version. [#5900](https://github.com/scalableminds/webknossos/pull/5900)
+- Fixed a bug that the displayed value range of a histogram of a color layer wasn't applied until the slider was dragged a bit. [#5853](https://github.com/scalableminds/webknossos/pull/5853)
 
 ### Removed
 -
 
 ### Breaking Change
--
+- When using the front-end API, functions that accept a layer name, such as `api.data.getDataValue`, won't interpret the name "segmentation" as the current volume tracing if it exists. Instead, "segmentation" can only be used if the current dataset has a layer which is named "segmentation". If you want to interact with the volume tracing layer, use `api.data.getVolumeTracingLayerIds()` instead. Also see `api.data.getSegmentationLayerNames` and `api.data.getVisibleSegmentationLayer`. [#5771](https://github.com/scalableminds/webknossos/pull/5771)
+- The datastore server routes `/datasets/reserveUpload` and `/datasets/finishUpload` now expect the additional field `layersToLink`, which should be an empty list by default. [#5863](https://github.com/scalableminds/webknossos/pull/5863

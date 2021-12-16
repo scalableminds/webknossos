@@ -23,7 +23,8 @@ export async function testLabelingManyBuckets(t: any, saveInbetween: boolean) {
   // We set MAXIMUM_BUCKET_COUNT to 150 and then label 199 = 75 (mag1) + 124 (downsampled) buckets in total.
   // In between, we will save the data which allows the buckets of the first batch to be GC'ed.
   // Therefore, saving the buckets of the second batch should not cause any problems.
-  t.context.model.getCubeByLayerName("segmentation").MAXIMUM_BUCKET_COUNT = 150;
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  t.context.model.getCubeByLayerName(volumeTracingLayerName).MAXIMUM_BUCKET_COUNT = 150;
 
   const oldCellId = 11;
   const brushSize = 10;

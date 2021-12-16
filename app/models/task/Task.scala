@@ -1,7 +1,7 @@
 package models.task
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{profile, _}
 import javax.inject.Inject
@@ -13,7 +13,6 @@ import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.ExecutionContext
-import scala.util.Random
 
 case class Task(
     _id: ObjectId,
@@ -133,16 +132,14 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                  isTeamManagerOrAdmin: Boolean = false): Fox[(Task, ObjectId)] = {
 
     val annotationId = ObjectId.generate
-    val preliminaryTracingId = Random.alphanumeric.take(36).mkString
 
     val insertAnnotationQ = sqlu"""
            with task as (#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}),
            dataset as (select _id from webknossos.datasets_ limit 1)
-           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
            select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption
       .map(_.id)
-      .getOrElse("")}, ${userId.id}, $preliminaryTracingId,
-                    null, '', '#${AnnotationVisibility.Internal}', '', '#${AnnotationState.Initializing.toString}', '{}',
+      .getOrElse("")}, ${userId.id}, '', '#${AnnotationVisibility.Internal}', '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
            from task, dataset

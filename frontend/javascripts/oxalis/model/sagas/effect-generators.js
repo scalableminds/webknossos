@@ -2,6 +2,9 @@
 // The typings are defined in effect-generators.js.flow.
 import * as IOEffects from "redux-saga/effects";
 
+// Prefer to use these functions in combination with `yield*`
+// as they provide better typing safety with flow.
+
 export function* select(...args) {
   return yield IOEffects.select(...args);
 }
@@ -12,6 +15,10 @@ export function* put(...args) {
 
 export function* call(...args) {
   return yield IOEffects.call(...args);
+}
+
+export function* retry(...args) {
+  return yield IOEffects.retry(...args);
 }
 
 export function* cps(...args) {
@@ -38,8 +45,11 @@ export function* join(...args) {
   return yield IOEffects.join(...args);
 }
 
+// Use these prefixed functions with `yield` or when passing them to effect
+// combinators, such as `race` or `all`.
 export const _take = IOEffects.take;
 export const _call = IOEffects.call;
+export const _retry = IOEffects.retry;
 export const _takeEvery = IOEffects.takeEvery;
 export const _takeLeading = IOEffects.takeLeading;
 export const _takeLatest = IOEffects.takeLatest;

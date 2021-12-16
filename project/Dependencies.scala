@@ -80,11 +80,11 @@ object Dependencies {
     guice,
     swagger,
     spire,
-    akkaHttp
+    akkaHttp,
+    redis
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(
-    redis,
     jgrapht
   )
 

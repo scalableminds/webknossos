@@ -29,9 +29,11 @@ import {
   downloadNml,
 } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getSkeletonDescriptor } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import { handleGenericError } from "libs/error_handling";
-import LinkButton from "components/link_button";
 import FormattedDate from "components/formatted_date";
+import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -233,7 +235,6 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         .map(team => team.name)
         .includes(task.team);
 
-    // TODO use React fragments <> instead of spans / divs
     const label = this.props.isAdminView ? (
       <span>
         <EyeOutlined />
@@ -270,7 +271,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
             <AsyncLink
               href="#"
               onClick={() => {
-                const isVolumeIncluded = annotation.tracing.volume != null;
+                const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadNml(annotation.id, "Task", isVolumeIncluded);
               }}
               icon={<DownloadOutlined />}
@@ -428,15 +429,17 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         <span style={{ marginRight: 8 }}>
           {task.projectName} (<FormattedDate timestamp={task.created} />)
         </span>
-        {task.annotation.tracing.skeleton == null ? null : <Tag color="green">skeleton</Tag>}
-        {task.annotation.tracing.volume == null ? null : <Tag color="orange">volume</Tag>}
+        {getSkeletonDescriptor(task.annotation) == null ? null : <Tag color="green">skeleton</Tag>}
+        {getVolumeDescriptors(task.annotation).length === 0 ? null : (
+          <Tag color="orange">volume</Tag>
+        )}
         {task.type.settings.allowedModes.map(mode => (
           <Tag key={mode}>{mode}</Tag>
         ))}
       </React.Fragment>
     );
 
-    const TaskCard = task =>
+    const TaskCard = (task: APITaskWithAnnotation) =>
       this.state.showFinishedTasks ? (
         <Card key={task.id} style={{ margin: "10px" }}>
           <Row gutter={16}>

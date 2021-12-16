@@ -403,16 +403,46 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           </span>
 
           <Tooltip
+            overlayStyle={{ maxWidth: 800 }}
             title={
               <div>
-                Data Type: {elementClass}
-                <br />
-                Available resolutions:
-                <ul>
-                  {resolutions.map(r => (
-                    <li key={r.join()}>{r.join("-")}</li>
-                  ))}
-                </ul>
+                <div>Data Type: {elementClass}</div>
+                <div>
+                  Available resolutions:
+                  <ul>
+                    {resolutions.map(r => (
+                      <li key={r.join()}>{r.join("-")}</li>
+                    ))}
+                  </ul>
+                </div>
+                Bounding Box:
+                <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
+                  <tr>
+                    <td />
+                    <td style={{ fontSize: 10 }}>X</td>
+                    <td style={{ fontSize: 10 }}>Y</td>
+                    <td style={{ fontSize: 10 }}>Z</td>
+                  </tr>
+
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Min</td>
+                    <td>{layer.boundingBox.topLeft[0]} </td>
+                    <td>{layer.boundingBox.topLeft[1]} </td>
+                    <td>{layer.boundingBox.topLeft[2]}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Max</td>
+                    <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
+                    <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
+                    <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Size</td>
+                    <td>{layer.boundingBox.width} </td>
+                    <td>{layer.boundingBox.height} </td>
+                    <td>{layer.boundingBox.depth}</td>
+                  </tr>
+                </table>
               </div>
             }
             placement="left"
@@ -792,6 +822,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   render() {
     const { layers } = this.props.datasetConfiguration;
+
+    // Show color layer(s) first and then the segmentation layer(s).
     const layerSettings = _.sortBy(
       _.entries(layers).map(entry => {
         const [layerName, layer] = entry;
@@ -800,12 +832,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       }),
       el => !el.isColorLayer,
     ).map(el => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
+
     return (
       <div className="tracing-settings-menu">
         {layerSettings}
         {this.getSkeletonLayer()}
 
-        {this.props.tracing.restrictions.allowUpdate ? (
+        {this.props.tracing.restrictions.allowUpdate &&
+        this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
             <Row type="flex" justify="center" align="middle">

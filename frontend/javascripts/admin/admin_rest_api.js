@@ -55,6 +55,7 @@ import {
   type ServerTracing,
   type TracingType,
   type WkConnectDatasetConfig,
+  type APIMeshFile,
 } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
@@ -637,7 +638,7 @@ export function addAnnotationLayer(
   annotationId: string,
   annotationType: APIAnnotationType,
   newAnnotationLayer: AnnotationLayerCreateDescriptor,
-): Promise<APIUser> {
+): Promise<APIAnnotation> {
   return Request.sendJSONReceiveJSON(
     `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
     {
@@ -1779,7 +1780,7 @@ export function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-): Promise<Array<string>> {
+): Promise<Array<APIMeshFile>> {
   return doWithToken(token =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${

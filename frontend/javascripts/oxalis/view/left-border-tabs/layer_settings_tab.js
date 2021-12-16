@@ -792,6 +792,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   render() {
     const { layers } = this.props.datasetConfiguration;
+
+    // Show color layer(s) first and then the segmentation layer(s).
     const layerSettings = _.sortBy(
       _.entries(layers).map(entry => {
         const [layerName, layer] = entry;
@@ -800,12 +802,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       }),
       el => !el.isColorLayer,
     ).map(el => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
+
     return (
       <div className="tracing-settings-menu">
         {layerSettings}
         {this.getSkeletonLayer()}
 
-        {this.props.tracing.restrictions.allowUpdate ? (
+        {this.props.tracing.restrictions.allowUpdate &&
+        this.props.controlMode === ControlModeEnum.TRACE ? (
           <>
             <Divider />
             <Row type="flex" justify="center" align="middle">

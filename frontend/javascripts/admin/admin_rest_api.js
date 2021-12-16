@@ -637,7 +637,7 @@ export function addAnnotationLayer(
   annotationId: string,
   annotationType: APIAnnotationType,
   newAnnotationLayer: AnnotationLayerCreateDescriptor,
-): Promise<APIUser> {
+): Promise<APIAnnotation> {
   return Request.sendJSONReceiveJSON(
     `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
     {

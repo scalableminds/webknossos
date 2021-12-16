@@ -2,7 +2,6 @@
 import * as THREE from "three";
 import { message } from "antd";
 
-import app from "app";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { getMappings, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
@@ -46,33 +45,7 @@ class Mappings {
 
   constructor(layerName: string) {
     this.layerName = layerName;
-    app.vent.listenTo(app.vent, "webknossos:ready", this.registerReloadHandler);
   }
-
-  registerReloadHandler = () => {
-    let oldMapping = null;
-    const isAgglomerate = mapping => {
-      if (!mapping) {
-        return false;
-      }
-      return mapping.mappingType === "HDF5";
-    };
-
-    listenToStoreProperty(
-      state => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName),
-      mapping => {
-        const shouldReload = isAgglomerate(oldMapping) || isAgglomerate(mapping);
-        oldMapping = mapping;
-        if (shouldReload) {
-          // We cannot use the internal_api here as this will result in a circular dependency
-          window.webknossos.apiReady().then(api => {
-            api.data.reloadBuckets(this.layerName);
-          });
-        }
-      },
-      true,
-    );
-  };
 
   getMappingNames(): Array<string> {
     return getMappings(Store.getState().dataset, this.layerName);

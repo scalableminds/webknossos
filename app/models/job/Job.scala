@@ -6,8 +6,8 @@ import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
@@ -23,6 +23,9 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
+
+import scala.concurrent.duration._
 
 case class Job(
     _id: ObjectId,
@@ -44,6 +47,34 @@ case class Job(
     val relevantState = manualState.getOrElse(state)
     relevantState == JobState.SUCCESS || state == JobState.FAILURE
   }
+
+  def duration: Option[FiniteDuration] =
+    for {
+      e <- ended
+      s <- started
+    } yield (e - s).millis
+
+  def effectiveState: JobState = manualState.getOrElse(state)
+
+  def resultLink(organizationName: String): Option[String] =
+    if (effectiveState != JobState.SUCCESS) None
+    else {
+      command match {
+        case "convert_to_wkw" =>
+          (commandArgs \ "dataset_name").toOption.flatMap(_.asOpt[String]).map { dataSetName =>
+            s"/datasets/$organizationName/$dataSetName/view"
+          }
+        case "export_tiff" =>
+          (commandArgs \ "export_file_name").toOption.flatMap(_.asOpt[String]).map { exportFileName =>
+            s"/api/jobs/${_id.id}/downloadExport/$exportFileName"
+          }
+        case "infer_nuclei" =>
+          returnValue.map { resultDatasetName =>
+            s"/datasets/$organizationName/$resultDatasetName/view"
+          }
+        case _ => None
+      }
+    }
 }
 
 class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -199,19 +230,19 @@ class JobService @Inject()(wkConf: WkConf,
     with LazyLogging
     with Formatter {
 
-  def trackStatusChange(jobBeforeChange: Job, newStatus: JobStatus): Unit = {
+  def trackStatusChange(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     if (jobBeforeChange.isEnded) return
-    if (newStatus.state == JobState.SUCCESS) trackNewlySuccessful(jobBeforeChange, newStatus)
-    if (newStatus.state == JobState.FAILURE) trackNewlyFailed(jobBeforeChange, newStatus)
+    if (jobAfterChange.state == JobState.SUCCESS) trackNewlySuccessful(jobBeforeChange, jobAfterChange)
+    if (jobAfterChange.state == JobState.FAILURE) trackNewlyFailed(jobBeforeChange, jobAfterChange)
   }
 
-  private def trackNewlyFailed(jobBeforeChange: Job, newStatus: JobStatus): Unit = {
+  private def trackNewlyFailed(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      durationLabel = newStatus.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
+      durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
       _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
       msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}."
       _ = logger.warn(msg)
@@ -223,14 +254,16 @@ class JobService @Inject()(wkConf: WkConf,
     ()
   }
 
-  private def trackNewlySuccessful(jobBeforeChange: Job, newStatus: JobStatus): Unit = {
+  private def trackNewlySuccessful(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      resultLink = jobAfterChange.resultLink(organization.name)
+      resultLinkMrkdwn = resultLink.map(l => s" <${wkConf.Http.uri}$l|Result Link>").getOrElse("")
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
-      durationLabel = newStatus.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}."
+      durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization name: ${organization.name}.$resultLinkMrkdwn"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",
@@ -240,8 +273,12 @@ class JobService @Inject()(wkConf: WkConf,
     ()
   }
 
-  def publicWrites(job: Job): Fox[JsObject] =
-    Fox.successful(
+  def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
+      organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
+      resultLink = job.resultLink(organization.name)
+    } yield {
       Json.obj(
         "id" -> job._id.id,
         "command" -> job.command,
@@ -250,10 +287,12 @@ class JobService @Inject()(wkConf: WkConf,
         "manualState" -> job.manualState,
         "latestRunId" -> job.latestRunId,
         "returnValue" -> job.returnValue,
+        "resultLink" -> resultLink,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
-      ))
+      )
+    }
 
   def parameterWrites(job: Job): JsObject =
     Json.obj(

@@ -175,11 +175,8 @@ class JobListView extends React.PureComponent<Props, State> {
     if (job.type === "convert_to_wkw") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
-            <Link
-              to={`/datasets/${this.props.activeUser.organization}/${job.datasetName}/view`}
-              title="View Dataset"
-            >
+          {job.resultLink && (
+            <Link to={job.resultLink} title="View Dataset">
               <EyeOutlined />
               View
             </Link>
@@ -189,8 +186,8 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "export_tiff") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
-            <a href={`/api/jobs/${job.id}/downloadExport/${job.exportFileName}`} title="Download">
+          {job.resultLink && (
+            <a href={job.resultLink} title="Download">
               <DownOutlined />
               Download
             </a>
@@ -200,11 +197,8 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "infer_nuclei") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.result && this.props.activeUser && (
-            <Link
-              to={`/datasets/${this.props.activeUser.organization}/${job.result}/view`}
-              title="View Segmentation"
-            >
+          {job.resultLink && (
+            <Link to={job.resultLink} title="View Segmentation">
               <EyeOutlined />
               View
             </Link>

@@ -14,14 +14,12 @@ import {
   QuestionCircleTwoTone,
   ToolTwoTone,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIJob, APIUser } from "types/api_flow_types";
+import type { APIJob } from "types/api_flow_types";
 import { getJobs } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
-import type { OxalisState } from "oxalis/store";
 import FormattedDate from "components/formatted_date";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
@@ -60,10 +58,7 @@ const { Search } = Input;
 
 const typeHint: APIJob[] = [];
 
-type StateProps = {|
-  activeUser: ?APIUser,
-|};
-type Props = { ...StateProps, history: RouterHistory };
+type Props = { history: RouterHistory };
 
 type State = {
   isLoading: boolean,
@@ -281,8 +276,4 @@ class JobListView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-export default connect<StateProps, {||}, _, _, _, _>(mapStateToProps)(withRouter(JobListView));
+export default withRouter(JobListView);

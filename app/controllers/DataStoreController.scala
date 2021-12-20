@@ -110,6 +110,20 @@ Expects:
       } yield Ok
     }
 
+  @ApiOperation(value = "Get the install script for an existing user datastore", nickname = "userDatastoreInstall")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "install script to setup the user datastore"),
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def getUserDataStore(@ApiParam(value = "Name of the datastore", required = true) name: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
+        dataStore <- dataStoreDAO.findOneByName(name) ?~> "dataStore.notFound" ~> NOT_FOUND
+        _ <- bool2Fox(dataStore.onlyAllowedOrganization.contains(request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
+        installScriptFile <- dataStoreService.getUserDataStoreScript(name)
+      } yield Ok.sendFile(installScriptFile, fileName = _ => Some("install.sh"))
+    }
+
   @ApiOperation(hidden = true, value = "")
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

@@ -100,6 +100,39 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO,
       result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
 
+  def getScript(name: String,
+                url: String,
+                port: String,
+                organizationName: String,
+                key: String,
+                webknossosURL: String,
+                scriptURL: String,
+                jarURL: String): Fox[TemporaryFile] = {
+    val installScript =
+      InstallScript.getInstallScript(name, url, port, organizationName, key, webknossosURL, scriptURL, jarURL)
+    val tmpFile = temporaryFileCreator.create()
+    FileIO.printToFile(tmpFile)(_.write(installScript)).map(_ => tmpFile)
+  }
+
+  def getUserDataStoreScript(name: String)(implicit ctx: DBAccessContext): Fox[TemporaryFile] =
+    for {
+      dataStore <- dataStoreDAO.findOneByName(name)
+      organization <- organizationDAO.findOne(dataStore.onlyAllowedOrganization.getOrElse(ObjectId("")))(
+        GlobalAccessContext)
+      (_, assets) <- checkForUpdate()
+      jarURL = getUrlForFileEnding(assets, ".jar")
+      updateScriptURL = getUrlForFileEnding(assets, ".sh")
+      (url, port) = dataStore.url.splitAt(dataStore.url.lastIndexOf(':'))
+      tmpFile <- getScript(dataStore.name,
+                           url,
+                           port.drop(1),
+                           organization.name,
+                           dataStore.key,
+                           conf.Http.uri,
+                           updateScriptURL,
+                           jarURL)
+    } yield tmpFile
+
   def createNewUserDataStore(config: UserDataStoreConfig, organizationId: ObjectId): Fox[TemporaryFile] =
     for {
       key <- new CompactRandomIDGenerator().generate
@@ -107,22 +140,21 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO,
       (_, assets) <- checkForUpdate()
       jarURL = getUrlForFileEnding(assets, ".jar")
       updateScriptURL = getUrlForFileEnding(assets, ".sh")
-      _ <- dataStoreDAO.insertOne(DataStore(
-        config.name,
-        config.url,
-        config.url,
-        key,
-        onlyAllowedOrganization = Some(organizationId))) ?~> "dataStore.create.failed"
-      installScript = InstallScript.getInstallScript(config.name,
-                                                     config.url,
-                                                     config.port,
-                                                     organization.name,
-                                                     key,
-                                                     conf.Http.uri,
-                                                     updateScriptURL,
-                                                     jarURL)
-      tmpFile = temporaryFileCreator.create()
-      _ <- FileIO.printToFile(tmpFile)(_.write(installScript))
+      _ <- dataStoreDAO.insertOne(
+        DataStore(config.name,
+                  s"${config.url}:${config.port}",
+                  s"${config.url}:${config.port}",
+                  key,
+                  allowsUpload = false,
+                  onlyAllowedOrganization = Some(organizationId))) ?~> "dataStore.create.failed"
+      tmpFile <- getScript(config.name,
+                           config.url,
+                           config.port,
+                           organization.name,
+                           key,
+                           conf.Http.uri,
+                           updateScriptURL,
+                           jarURL)
     } yield tmpFile
 
 }
@@ -181,8 +213,9 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload)
-                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload})""")
+        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload, onlyAllowedOrganization)
+                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload}, ${d.onlyAllowedOrganization
+          .map(_.toString)})""")
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =

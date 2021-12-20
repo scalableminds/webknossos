@@ -92,6 +92,7 @@ POST          /datastores/:name/validateUserAccess                             c
 POST          /datastores                                                      controllers.DataStoreController.create
 POST          /userDatastores                                                  controllers.DataStoreController.createNewUserDataStore
 DELETE        /userDatastores                                                  controllers.DataStoreController.deleteUserDataStore(name: String)
+GET           /userDatastores                                                  controllers.DataStoreController.getUserDataStore(name: String)
 DELETE        /datastores/:name                                                controllers.DataStoreController.delete(name: String)
 PUT           /datastores/:name                                                controllers.DataStoreController.update(name: String)
 

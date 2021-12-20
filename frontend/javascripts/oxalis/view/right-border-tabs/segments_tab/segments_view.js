@@ -7,9 +7,9 @@ import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
+import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { ExtractReturn } from "libs/type_helpers";
-import type { Vector3 } from "oxalis/constants";
+import { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import {
   createMeshFromBufferAction,
@@ -85,8 +85,8 @@ type StateProps = {|
   allowUpdate: boolean,
   organization: string,
   datasetName: string,
-  availableMeshFiles: ?Array<string>,
-  currentMeshFile: ?string,
+  availableMeshFiles: ?Array<APIMeshFile>,
+  currentMeshFile: ?APIMeshFile,
   activeUser: ?APIUser,
   activeCellId: ?number,
   preferredQualityForMeshPrecomputation: number,
@@ -108,7 +108,8 @@ const mapStateToProps = (state: OxalisState): StateProps => {
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
         : {},
     dataset: state.dataset,
-    isJSONMappingEnabled: mappingInfo.isMappingEnabled && mappingInfo.mappingType === "JSON",
+    isJSONMappingEnabled:
+      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     flycam: state.flycam,
     hasVolumeTracing: state.tracing.volumes.length > 0,
@@ -195,6 +196,12 @@ const formatMagWithLabel = (mag: Vector3, index: number) => {
   // Use "Very Low" for all low Mags which don't have extra labels
   const clampedIndex = Math.min(labels.length - 1, index);
   return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
+};
+
+const formatMeshFile = (meshFile: ?APIMeshFile): ?string => {
+  if (meshFile == null) return null;
+  if (meshFile.mappingName == null) return meshFile.meshFileName;
+  return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
 
 function _getMapIdFn(visibleSegmentationLayer: ?DataLayer) {
@@ -339,10 +346,11 @@ class SegmentsView extends React.Component<Props, State> {
     if (!currentMeshFile || !visibleSegmentationLayer) {
       return;
     }
+
     await loadMeshFromFile(
       segment.id,
       segment.somePosition,
-      currentMeshFile,
+      currentMeshFile.meshFileName,
       visibleSegmentationLayer,
       dataset,
     );
@@ -513,17 +521,19 @@ class SegmentsView extends React.Component<Props, State> {
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
         <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
           <Select
-            style={{ width: 180, display: "inline-blck" }}
+            style={{ width: 180, display: "inline-block" }}
             placeholder="Select a mesh file"
-            value={this.props.currentMeshFile}
+            value={
+              this.props.currentMeshFile != null ? this.props.currentMeshFile.meshFileName : null
+            }
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map(meshFile => (
-                <Option key={meshFile} value={meshFile}>
-                  {meshFile}
+                <Option key={meshFile.meshFileName} value={meshFile.meshFileName}>
+                  {formatMeshFile(meshFile)}
                 </Option>
               ))
             ) : (

@@ -13,8 +13,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added tagging support for datasets. [#5832](https://github.com/scalableminds/webknossos/pull/5832)
 - Dataset upload back-end now supports linking layers of existing public datasets. [#5863](https://github.com/scalableminds/webknossos/pull/5863)
+- Activate the correct mapping before loading pre-computed meshes if the corresponding mesh file contains that information. [#5859](https://github.com/scalableminds/webknossos/pull/5859)
 
 ### Changed
+-
 
 ### Fixed
 - Fixed a bug where dataset uploads that contained files larger than 2 GB failed. [#5889](https://github.com/scalableminds/webknossos/pull/5889)

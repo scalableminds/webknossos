@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import React, { useState } from "react";
 
 import type { APIDataset, APIDataLayer } from "types/api_flow_types";
-import type { BoundingBoxType } from "oxalis/constants";
+import { type BoundingBoxType, MappingStatusEnum } from "oxalis/constants";
 import type { Tracing, AnnotationType } from "oxalis/store";
 import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
@@ -70,11 +70,12 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
   const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
-    const { isMappingEnabled, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
+    const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
       activeMappingInfos,
       layer.name,
     );
-    const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
+    const existsActivePersistentMapping =
+      mappingStatus === MappingStatusEnum.ENABLED && !isMergerModeEnabled;
     const isColorLayer = layer.category === "color";
     if (layer.category === "color" || !layer.tracingId) {
       return {

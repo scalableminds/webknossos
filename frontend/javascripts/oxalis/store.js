@@ -27,6 +27,7 @@ import type {
   AnnotationLayerDescriptor,
   MeshMetaData,
   TracingType,
+  APIMeshFile,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import {
@@ -43,6 +44,7 @@ import {
   type Vector2,
   type Vector3,
   type AnnotationTool,
+  type MappingStatus,
 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -363,7 +365,7 @@ export type ActiveMappingInfo = {
   +mappingKeys: ?Array<number>,
   +mappingColors: ?Array<number>,
   +hideUnmappedIds: boolean,
-  +isMappingEnabled: boolean,
+  +mappingStatus: MappingStatus,
   +mappingSize: number,
   +mappingType: MappingType,
 };
@@ -540,8 +542,8 @@ export type OxalisState = {|
   +localSegmentationData: {
     [segmentationLayerName: string]: {
       +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
-      +availableMeshFiles: ?Array<string>,
-      +currentMeshFile: ?string,
+      +availableMeshFiles: ?Array<APIMeshFile>,
+      +currentMeshFile: ?APIMeshFile,
       // Note that for a volume tracing, this information should be stored
       // in state.tracing.volume.segments, as this is also persisted on the
       // server (i.e., not "local").

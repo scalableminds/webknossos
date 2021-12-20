@@ -27,7 +27,11 @@ export type UrlStateByLayer = {
     mappingInfo?: {
       mappingName: string,
       mappingType: MappingType,
-      agglomerateIdsToImport?: [number],
+      agglomerateIdsToImport?: Array<number>,
+    },
+    connectomeInfo?: {
+      connectomeName: string,
+      agglomerateIdsToImport?: Array<number>,
     },
   },
 };

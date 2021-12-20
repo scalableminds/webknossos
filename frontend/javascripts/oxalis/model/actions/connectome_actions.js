@@ -37,13 +37,20 @@ export type UpdateCurrentConnectomeFileAction = {
   connectomeFileName: ?string,
 };
 
+type SetActiveConnectomeAgglomerateIdsAction = {
+  type: "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS",
+  layerName: string,
+  agglomerateIds: Array<number>,
+};
+
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
   | AddConnectomeTreesAction
   | DeleteConnectomeTreeAction
   | SetConnectomeTreeVisibilityAction
   | UpdateConnectomeFileListAction
-  | UpdateCurrentConnectomeFileAction;
+  | UpdateCurrentConnectomeFileAction
+  | SetActiveConnectomeAgglomerateIdsAction;
 
 export const initializeConnectomeTracingAction = (
   layerName: string,
@@ -97,4 +104,13 @@ export const updateCurrentConnectomeFileAction = (
   type: "UPDATE_CURRENT_CONNECTOME_FILE",
   layerName,
   connectomeFileName,
+});
+
+export const setActiveConnectomeAgglomerateIdsAction = (
+  layerName: string,
+  agglomerateIds: Array<number>,
+): SetActiveConnectomeAgglomerateIdsAction => ({
+  type: "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS",
+  layerName,
+  agglomerateIds,
 });

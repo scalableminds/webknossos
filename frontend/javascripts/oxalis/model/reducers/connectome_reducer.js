@@ -154,6 +154,13 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS": {
+      const { layerName, agglomerateIds } = action;
+      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+        activeAgglomerateIds: agglomerateIds,
+      });
+    }
+
     default:
       return state;
   }

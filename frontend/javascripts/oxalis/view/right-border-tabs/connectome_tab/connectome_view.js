@@ -31,6 +31,7 @@ import {
   setConnectomeTreeVisibilityAction,
   updateConnectomeFileListAction,
   updateCurrentConnectomeFileAction,
+  setActiveConnectomeAgglomerateIdsAction,
 } from "oxalis/model/actions/connectome_actions";
 import {
   loadAgglomerateSkeletonAction,
@@ -90,6 +91,7 @@ type StateProps = {|
   visibleSegmentationLayer: ?APISegmentationLayer,
   availableConnectomeFiles: ?Array<APIConnectomeFile>,
   currentConnectomeFile: ?APIConnectomeFile,
+  activeAgglomerateIds: Array<number>,
 |};
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -101,8 +103,10 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   return {
     dataset: state.dataset,
     visibleSegmentationLayer,
-    availableConnectomeFiles: connectomeData != null ? connectomeData.availableConnectomeFiles : [],
+    availableConnectomeFiles:
+      connectomeData != null ? connectomeData.availableConnectomeFiles : null,
     currentConnectomeFile: connectomeData != null ? connectomeData.currentConnectomeFile : null,
+    activeAgglomerateIds: connectomeData != null ? connectomeData.activeAgglomerateIds : [],
   };
 };
 
@@ -117,7 +121,6 @@ type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 type Props = {| ...DispatchProps, ...StateProps |};
 
 type State = {
-  activeAgglomerateIds: Array<number>,
   connectomeData: ?ConnectomeData,
   filteredConnectomeData: ?ConnectomeData,
   synapseTypes: Array<string>,
@@ -309,7 +312,6 @@ const defaultFilters = {
 
 class ConnectomeView extends React.Component<Props, State> {
   state = {
-    activeAgglomerateIds: [],
     connectomeData: null,
     filteredConnectomeData: null,
     synapseTypes: [],
@@ -331,7 +333,7 @@ class ConnectomeView extends React.Component<Props, State> {
       this.activateConnectomeMapping();
     }
     if (
-      prevState.activeAgglomerateIds !== this.state.activeAgglomerateIds ||
+      prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds ||
       prevProps.currentConnectomeFile !== this.props.currentConnectomeFile
     ) {
       this.fetchConnections();
@@ -367,7 +369,6 @@ class ConnectomeView extends React.Component<Props, State> {
     this.setState({
       connectomeData: null,
       filteredConnectomeData: null,
-      activeAgglomerateIds: [],
       checkedKeys: [],
       expandedKeys: [],
     });
@@ -433,8 +434,13 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   async fetchConnections() {
-    const { activeAgglomerateIds, filters } = this.state;
-    const { dataset, visibleSegmentationLayer, currentConnectomeFile } = this.props;
+    const { filters } = this.state;
+    const {
+      dataset,
+      visibleSegmentationLayer,
+      currentConnectomeFile,
+      activeAgglomerateIds,
+    } = this.props;
 
     if (
       currentConnectomeFile == null ||
@@ -727,9 +733,14 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   handleChangeActiveSegment = (evt: SyntheticInputEvent<>) => {
+    const { visibleSegmentationLayer } = this.props;
+    if (visibleSegmentationLayer == null) return;
+
     const agglomerateIds = evt.target.value.split(",").map(part => parseInt(part, 10));
 
-    this.setState({ activeAgglomerateIds: agglomerateIds });
+    Store.dispatch(
+      setActiveConnectomeAgglomerateIdsAction(getVisibleSegmentationLayer.name, agglomerateIds),
+    );
 
     evt.target.blur();
   };
@@ -845,7 +856,8 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   getConnectomeHeader() {
-    const { activeAgglomerateIds, filters, synapseTypes } = this.state;
+    const { filters, synapseTypes } = this.state;
+    const { activeAgglomerateIds } = this.props;
     const activeAgglomerateIdString = activeAgglomerateIds.length
       ? activeAgglomerateIds.join(",")
       : "";
@@ -883,8 +895,8 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   render() {
-    const { visibleSegmentationLayer, availableConnectomeFiles } = this.props;
-    const { activeAgglomerateIds, filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
+    const { visibleSegmentationLayer, availableConnectomeFiles, activeAgglomerateIds } = this.props;
+    const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
 
     return (
       <div id={connectomeTabId} className="padded-tab-content">

@@ -1,33 +1,58 @@
 // @flow
+
+import { message } from "antd";
+import React from "react";
 import _ from "lodash";
 
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
 import {
   type CopySegmentationLayerAction,
   updateDirectionAction,
+  updateSegmentAction,
   finishAnnotationStrokeAction,
+  type SetActiveCellAction,
+  type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
+  ResolutionInfo,
+  getBoundaries,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
   type Saga,
-  _take,
   _takeEvery,
+  _takeLatest,
   _takeLeading,
   call,
   fork,
   put,
-  race,
   select,
   take,
+  _actionChannel,
 } from "oxalis/model/sagas/effect-generators";
 import {
   type UpdateAction,
   updateVolumeTracing,
   updateUserBoundingBoxes,
+  createSegmentVolumeAction,
+  updateSegmentVolumeAction,
+  deleteSegmentVolumeAction,
   removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
-import type { VolumeTracing, Flycam } from "oxalis/store";
+import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
-  enforceVolumeTracing,
+  addUserBoundingBoxAction,
+  type AddIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
+import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { diffDiffableMaps } from "libs/diffable_map";
+import {
+  enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
+  getRenderableResolutionForSegmentationTracing,
+  getRequestedOrVisibleSegmentationLayer,
+  getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -37,19 +62,20 @@ import {
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getResolutionInfoOfSegmentationTracingLayer,
-  ResolutionInfo,
-  getRenderableResolutionForSegmentationTracing,
-} from "oxalis/model/accessors/dataset_accessor";
-import {
   isVolumeDrawingTool,
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
+import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import {
+  updateTemporarySettingAction,
+  type UpdateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
+  OrthoViews,
+  Unicode,
   type BoundingBoxType,
   type ContourMode,
   type OverwriteMode,
@@ -57,17 +83,20 @@ import Constants, {
   OverwriteModeEnum,
   type OrthoView,
   type AnnotationTool,
-  type Vector2,
   type Vector3,
   AnnotationToolEnum,
   type LabeledVoxelsMap,
+  FillModeEnum,
 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import DataLayer from "oxalis/model/data_layer";
 import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import createProgressCallback from "libs/progress_callback";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
@@ -84,7 +113,7 @@ export function* watchVolumeTracingAsync(): Saga<void> {
 
 function* warnOfTooLowOpacity(): Saga<void> {
   yield* take("INITIALIZE_SETTINGS");
-  if (yield* select(state => state.tracing.volume == null)) {
+  if (yield* select(state => state.tracing.volumes.length === 0)) {
     return;
   }
   const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
@@ -101,7 +130,7 @@ function* warnOfTooLowOpacity(): Saga<void> {
   }
 }
 
-export function* editVolumeLayerAsync(): Generator<any, any, any> {
+export function* editVolumeLayerAsync(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
 
@@ -110,9 +139,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     if (startEditingAction.type !== "START_EDITING") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
-    const contourTracingMode = yield* select(
-      state => enforceVolumeTracing(state.tracing).contourTracingMode,
-    );
+    const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    const contourTracingMode = volumeTracing.contourTracingMode;
     const overwriteMode = yield* select(state => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
@@ -125,13 +153,21 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       continue;
     }
 
-    const maybeLabeledResolutionWithZoomStep = yield* select(
-      getRenderableResolutionForSegmentationTracing,
+    const maybeLabeledResolutionWithZoomStep = yield* select(state =>
+      getRenderableResolutionForSegmentationTracing(state, volumeTracing),
     );
     if (!maybeLabeledResolutionWithZoomStep) {
       // Volume data is currently not rendered. Don't annotate anything.
       continue;
     }
+    const activeCellId = yield* select(state => enforceActiveVolumeTracing(state).activeCellId);
+    yield* put(
+      updateSegmentAction(
+        activeCellId,
+        { somePosition: startEditingAction.position },
+        volumeTracing.tracingId,
+      ),
+    );
 
     const {
       zoomStep: labeledZoomStep,
@@ -139,6 +175,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     } = maybeLabeledResolutionWithZoomStep;
     const currentLayer = yield* call(
       createVolumeLayer,
+      volumeTracing,
       startEditingAction.planeId,
       labeledResolution,
     );
@@ -155,11 +192,14 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
 
     let lastPosition = startEditingAction.position;
+
+    const actionChannel = yield _actionChannel(["ADD_TO_LAYER", "FINISH_EDITING"]);
     while (true) {
-      const { addToLayerAction, finishEditingAction } = yield* race({
-        addToLayerAction: _take("ADD_TO_LAYER"),
-        finishEditingAction: _take("FINISH_EDITING"),
-      });
+      const currentAction = yield* take(actionChannel);
+      const { addToLayerAction, finishEditingAction } = {
+        addToLayerAction: currentAction.type === "ADD_TO_LAYER" ? currentAction : null,
+        finishEditingAction: currentAction.type === "FINISH_EDITING" ? currentAction : null,
+      };
 
       if (finishEditingAction) break;
 
@@ -210,32 +250,50 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       overwriteMode,
       labeledZoomStep,
     );
-    yield* put(finishAnnotationStrokeAction());
+    // Update the position of the current segment to the last position of the most recent annotation stroke.
+    yield* put(
+      updateSegmentAction(activeCellId, { somePosition: lastPosition }, volumeTracing.tracingId),
+    );
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   }
 }
 
-function* getBoundingsFromPosition(
+function* getBoundingBoxForFloodFill(
+  position: Vector3,
   currentViewport: OrthoView,
-  numberOfSlices: number,
 ): Saga<BoundingBoxType> {
-  const position = yield* select(state => getFlooredPosition(state.flycam));
-  const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
-  const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
-  const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
+  const fillMode = yield* select(state => state.userConfiguration.fillMode);
+  const halfBoundingBoxSizeUVW = V3.scale(Constants.FLOOD_FILL_EXTENTS[fillMode], 0.5);
   const currentViewportBounding = {
-    min: V3.sub(position, halfViewportExtentsUVW),
-    max: V3.add(position, halfViewportExtentsUVW),
+    min: V3.sub(position, halfBoundingBoxSizeUVW),
+    max: V3.add(position, halfBoundingBoxSizeUVW),
   };
-  currentViewportBounding.max[thirdDimension] =
-    currentViewportBounding.min[thirdDimension] + numberOfSlices;
-  return currentViewportBounding;
+
+  if (fillMode === FillModeEnum._2D) {
+    // Only use current plane
+    const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
+    const numberOfSlices = 1;
+    currentViewportBounding.min[thirdDimension] = position[thirdDimension];
+    currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
+  }
+
+  const { lowerBoundary, upperBoundary } = yield* select(state => getBoundaries(state.dataset));
+  const { min: clippedMin, max: clippedMax } = new BoundingBox(
+    currentViewportBounding,
+  ).intersectedWith(new BoundingBox({ min: lowerBoundary, max: upperBoundary }));
+
+  return { min: clippedMin, max: clippedMax };
 }
 
-function* createVolumeLayer(planeId: OrthoView, labeledResolution: Vector3): Saga<VolumeLayer> {
+function* createVolumeLayer(
+  volumeTracing: VolumeTracing,
+  planeId: OrthoView,
+  labeledResolution: Vector3,
+): Saga<VolumeLayer> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
 
-  return new VolumeLayer(planeId, thirdDimValue, labeledResolution);
+  return new VolumeLayer(volumeTracing.tracingId, planeId, thirdDimValue, labeledResolution);
 }
 
 function* labelWithVoxelBuffer2D(
@@ -247,8 +305,12 @@ function* labelWithVoxelBuffer2D(
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const segmentationLayer = yield* call([Model, Model.getEnforcedSegmentationTracingLayer]);
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  const activeCellId = volumeTracing.activeCellId;
+  const segmentationLayer = yield* call(
+    [Model, Model.getSegmentationTracingLayer],
+    volumeTracing.tracingId,
+  );
   const { cube } = segmentationLayer;
 
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
@@ -256,9 +318,7 @@ function* labelWithVoxelBuffer2D(
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   const dimensionIndices = Dimensions.getIndices(activeViewport);
 
-  const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
-  );
+  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]) =>
@@ -374,15 +434,14 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
-  const segmentationLayer: DataLayer = yield* call([
-    Model,
-    Model.getEnforcedSegmentationTracingLayer,
-  ]);
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
+  const segmentationLayer: DataLayer = yield* call(
+    [Model, Model.getSegmentationTracingLayer],
+    volumeTracing.tracingId,
+  );
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
-  const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationTracingLayer(state.dataset),
-  );
+  const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
   const dimensionIndices = Dimensions.getIndices(activeViewport);
@@ -392,7 +451,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     activeViewport,
   );
 
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const activeCellId = volumeTracing.activeCellId;
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
@@ -455,9 +514,10 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     z,
     false,
   );
-  yield* put(finishAnnotationStrokeAction());
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 }
 
+const FLOODFILL_PROGRESS_KEY = "FLOODFILL_PROGRESS_KEY";
 export function* floodFill(): Saga<void> {
   yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
@@ -467,62 +527,133 @@ export function* floodFill(): Saga<void> {
     if (floodFillAction.type !== "FLOOD_FILL") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
-    const { position, planeId } = floodFillAction;
-    const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
+
+    const { position: positionFloat, planeId } = floodFillAction;
+    const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    const segmentationLayer = yield* call(
+      [Model, Model.getSegmentationTracingLayer],
+      volumeTracing.tracingId,
+    );
     const { cube } = segmentationLayer;
-    const seedVoxel = Dimensions.roundCoordinate(position);
-    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+    const seedPosition = Dimensions.roundCoordinate(positionFloat);
+    const activeCellId = volumeTracing.activeCellId;
     const dimensionIndices = Dimensions.getIndices(planeId);
     const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
-    const resolutionInfo = yield* select(state =>
-      getResolutionInfoOfSegmentationTracingLayer(state.dataset),
-    );
+    const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+    const oldSegmentIdAtSeed = cube.getDataValue(seedPosition, null, labeledZoomStep);
 
-    const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-    // The floodfill and applyVoxelMap methods iterate within the bucket.
-    // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
-    const thirdDimensionValue =
-      Math.floor(seedVoxel[dimensionIndices[2]] / labeledResolution[dimensionIndices[2]]) %
-      Constants.BUCKET_WIDTH;
-    const get3DAddress = (voxel: Vector2) => {
-      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], thirdDimensionValue];
-      const orderedVoxelWithThirdDimension = [
-        unorderedVoxelWithThirdDimension[dimensionIndices[0]],
-        unorderedVoxelWithThirdDimension[dimensionIndices[1]],
-        unorderedVoxelWithThirdDimension[dimensionIndices[2]],
-      ];
-      return orderedVoxelWithThirdDimension;
-    };
-    const get2DAddress = (voxel: Vector3): Vector2 => [
-      voxel[dimensionIndices[0]],
-      voxel[dimensionIndices[1]],
-    ];
-    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 1);
-    const labeledVoxelMapFromFloodFill = cube.floodFill(
-      seedVoxel,
+    if (activeCellId === oldSegmentIdAtSeed) {
+      Toast.warning("The clicked voxel's id is already equal to the active segment id.");
+      continue;
+    }
+
+    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+    if (busyBlockingInfo.isBusy) {
+      console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
+      continue;
+    }
+
+    yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
+
+    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+
+    const progressCallback = createProgressCallback({
+      pauseDelay: 200,
+      successMessageDelay: 2000,
+      // Since only one floodfill operation can be active at any time,
+      // a hardcoded key is sufficient.
+      key: "FLOODFILL_PROGRESS_KEY",
+    });
+    yield* call(progressCallback, false, "Performing floodfill...");
+
+    console.time("cube.floodFill");
+
+    const fillMode = yield* select(state => state.userConfiguration.fillMode);
+    const {
+      bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
+      wasBoundingBoxExceeded,
+      coveredBoundingBox,
+    } = yield* call(
+      [cube, cube.floodFill],
+      seedPosition,
       activeCellId,
-      get3DAddress,
-      get2DAddress,
       dimensionIndices,
       currentViewportBounding,
       labeledZoomStep,
+      progressCallback,
+      fillMode === FillModeEnum._3D,
     );
-    if (labeledVoxelMapFromFloodFill == null) {
-      continue;
+    console.timeEnd("cube.floodFill");
+
+    yield* call(progressCallback, false, "Finalizing floodfill...");
+
+    const indexSet = new Set();
+    for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
+      for (const zIndex of labelMaskByIndex.keys()) {
+        indexSet.add(zIndex);
+      }
     }
-    applyLabeledVoxelMapToAllMissingResolutions(
-      labeledVoxelMapFromFloodFill,
-      labeledZoomStep,
-      dimensionIndices,
-      resolutionInfo,
-      cube,
-      activeCellId,
-      seedVoxel[dimensionIndices[2]],
-      true,
-    );
-    yield* put(finishAnnotationStrokeAction());
+    console.time("applyLabeledVoxelMapToAllMissingResolutions");
+    for (const indexZ of indexSet) {
+      const labeledVoxelMapFromFloodFill = new Map();
+      for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
+        const map = labelMaskByIndex.get(indexZ);
+        if (map != null) {
+          labeledVoxelMapFromFloodFill.set(bucketAddress, map);
+        }
+      }
+
+      applyLabeledVoxelMapToAllMissingResolutions(
+        labeledVoxelMapFromFloodFill,
+        labeledZoomStep,
+        dimensionIndices,
+        resolutionInfo,
+        cube,
+        activeCellId,
+        indexZ,
+        true,
+      );
+    }
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+    console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
+
+    if (wasBoundingBoxExceeded) {
+      yield* call(
+        progressCallback,
+        true,
+        <>
+          Floodfill is done, but terminated since the labeled volume got too large. A bounding box
+          <br />
+          that represents the labeled volume was added.{Unicode.NonBreakingSpace}
+          <a href="#" onClick={() => message.destroy(FLOODFILL_PROGRESS_KEY)}>
+            Close
+          </a>
+        </>,
+        {
+          successMessageDelay: 10000,
+        },
+      );
+
+      yield* put(
+        addUserBoundingBoxAction({
+          boundingBox: coveredBoundingBox,
+          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+            ",",
+          )}, timestamp=${new Date().getTime()})`,
+          color: Utils.getRandomColor(),
+          isVisible: true,
+        }),
+      );
+    } else {
+      yield* call(progressCallback, true, "Floodfill done.");
+    }
+
     cube.triggerPushQueue();
+    yield* put(setBusyBlockingInfoAction(false));
+    if (floodFillAction.callback != null) {
+      floodFillAction.callback();
+    }
   }
 }
 
@@ -673,6 +804,37 @@ function updateTracingPredicate(
   );
 }
 
+export function* diffSegmentLists(
+  prevSegments: SegmentMap,
+  newSegments: SegmentMap,
+): Generator<UpdateAction, void, void> {
+  const {
+    onlyA: deletedSegmentIds,
+    onlyB: addedSegmentIds,
+    changed: bothSegmentIds,
+  } = diffDiffableMaps(prevSegments, newSegments);
+
+  for (const segmentId of deletedSegmentIds) {
+    yield deleteSegmentVolumeAction(segmentId);
+  }
+  for (const segmentId of addedSegmentIds) {
+    const segment = newSegments.get(segmentId);
+    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name);
+  }
+  for (const segmentId of bothSegmentIds) {
+    const segment = newSegments.get(segmentId);
+    const prevSegment = prevSegments.get(segmentId);
+    if (segment !== prevSegment) {
+      yield updateSegmentVolumeAction(
+        segment.id,
+        segment.somePosition,
+        segment.name,
+        segment.creationTime,
+      );
+    }
+  }
+}
+
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
@@ -690,7 +852,125 @@ export function* diffVolumeTracing(
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
+
+  if (prevVolumeTracing.segments !== volumeTracing.segments) {
+    yield* diffSegmentLists(prevVolumeTracing.segments, volumeTracing.segments);
+  }
+
   if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
     yield removeFallbackLayer();
   }
 }
+
+function* ensureSegmentExists(
+  action:
+    | AddIsosurfaceAction
+    | SetActiveCellAction
+    | UpdateTemporarySettingAction
+    | ClickSegmentAction,
+): Saga<void> {
+  const layer = yield* select(store =>
+    // $FlowIgnore[prop-missing] Yes, SetActiveCellAction does not have layerName, but getSegmentsForLayer accepts null
+    getRequestedOrVisibleSegmentationLayer(store, action.layerName),
+  );
+  if (!layer) {
+    return;
+  }
+  const layerName = layer.name;
+  const segments = yield* select(store => getSegmentsForLayer(store, layerName));
+  const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
+  if (cellId === 0 || cellId == null || segments == null || segments.getNullable(cellId) != null) {
+    return;
+  }
+
+  if (action.type === "ADD_ISOSURFACE") {
+    const { seedPosition } = action;
+    yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
+  } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
+    const { somePosition } = action;
+    if (somePosition == null) {
+      // Not all SetActiveCell provide a position (e.g., when simply setting the ID)
+      // via the UI.
+      return;
+    }
+
+    yield* put(updateSegmentAction(cellId, { somePosition }, layerName));
+  } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
+    const globalMousePosition = yield* call(getGlobalMousePosition);
+    if (globalMousePosition == null) {
+      return;
+    }
+    yield* put(updateSegmentAction(cellId, { somePosition: globalMousePosition }, layerName));
+  }
+}
+
+function* maintainSegmentsMap(): Saga<void> {
+  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"], ensureSegmentExists);
+}
+
+function* getGlobalMousePosition(): Saga<?Vector3> {
+  return yield* select(state => {
+    const mousePosition = state.temporaryConfiguration.mousePosition;
+    if (mousePosition) {
+      const [x, y] = mousePosition;
+      return calculateMaybeGlobalPos(state, { x, y });
+    }
+    return undefined;
+  });
+}
+
+function* updateHoveredSegmentId(): Saga<void> {
+  const activeViewport = yield* select(store => store.viewModeData.plane.activeViewport);
+  if (activeViewport === OrthoViews.TDView) {
+    return;
+  }
+
+  const globalMousePosition = yield* call(getGlobalMousePosition);
+  const hoveredCellInfo = yield* call([Model, Model.getHoveredCellId], globalMousePosition);
+  const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
+
+  const oldHoveredSegmentId = yield* select(store => store.temporaryConfiguration.hoveredSegmentId);
+
+  if (oldHoveredSegmentId !== id) {
+    yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+}
+
+export function* maintainHoveredSegmentId(): Saga<void> {
+  yield _takeLatest("SET_MOUSE_POSITION", updateHoveredSegmentId);
+}
+
+function* maintainContourGeometry(): Saga<void> {
+  yield* take("SCENE_CONTROLLER_READY");
+  const SceneController = yield* call(getSceneController);
+  const { contour } = SceneController;
+
+  while (true) {
+    yield* take(["ADD_TO_LAYER", "RESET_CONTOUR"]);
+    const isTraceToolActive = yield* select(state => isTraceTool(state.uiInformation.activeTool));
+    const volumeTracing = yield* select(getActiveSegmentationTracing);
+    if (!volumeTracing || !isTraceToolActive) {
+      continue;
+    }
+
+    const contourList = volumeTracing.contourList;
+
+    // Update meshes according to the new contourList
+    contour.reset();
+    contour.color =
+      volumeTracing.contourTracingMode === ContourModeEnum.DELETE
+        ? CONTOUR_COLOR_DELETE
+        : CONTOUR_COLOR_NORMAL;
+    contourList.forEach(p => contour.addEdgePoint(p));
+  }
+}
+
+export default [
+  editVolumeLayerAsync,
+  ensureToolIsAllowedInResolution,
+  floodFill,
+  watchVolumeTracingAsync,
+  maintainSegmentsMap,
+  maintainHoveredSegmentId,
+  maintainContourGeometry,
+];

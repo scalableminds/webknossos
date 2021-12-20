@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.storage.{CachedMeshFile, MeshFileC
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
+import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
@@ -39,6 +40,15 @@ object MeshChunkDataRequest {
   implicit val jsonFormat: OFormat[MeshChunkDataRequest] = Json.format[MeshChunkDataRequest]
 }
 
+case class MeshFileNameWithMappingName(
+    meshFileName: String,
+    mappingName: Option[String]
+)
+
+object MeshFileNameWithMappingName {
+  implicit val jsonFormat: OFormat[MeshFileNameWithMappingName] = Json.format[MeshFileNameWithMappingName]
+}
+
 class MeshFileService @Inject()(protected val config: DataStoreConfig)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with SingleOrganizationConfigAdapter
@@ -51,18 +61,41 @@ class MeshFileService @Inject()(protected val config: DataStoreConfig)(implicit 
 
   private lazy val meshFileCache = new MeshFileCache(30)
 
-  def exploreMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
+  def exploreMeshFiles(organizationName: String,
+                       dataSetName: String,
+                       dataLayerName: String): Fox[Set[MeshFileNameWithMappingName]] = {
     val layerDir =
       resolveOrganizationFolderIfExists(dataBaseDir, organizationName).resolve(dataSetName).resolve(dataLayerName)
-    PathUtils
+    val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), PathUtils.fileExtensionFilter(meshFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
       .toOption
       .getOrElse(Nil)
-      .toSet
+    val mappingNameFoxes = meshFileNames.map { fileName =>
+      val meshFilePath = layerDir.resolve(meshesDir).resolve(s"$fileName.$meshFileExtension")
+      mappingNameForMeshFile(meshFilePath)
+    }
+    for {
+      mappingNameBoxes: Seq[Box[String]] <- Fox.sequence(mappingNameFoxes)
+      mappingNameOptions = mappingNameBoxes.map(_.toOption)
+      zipped = meshFileNames.zip(mappingNameOptions).toSet
+    } yield zipped.map(tuple => MeshFileNameWithMappingName(tuple._1, tuple._2))
   }
+
+  /*
+   Note that null is a valid value here for once. Meshfiles with no information about the
+   meshFilePath will return Fox.empty, while meshfiles with one marked as empty, will return Fox.successful(null)
+   */
+  def mappingNameForMeshFile(meshFilePath: Path): Fox[String] =
+    for {
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      mappingName <- tryo { _: Throwable =>
+        cachedMeshFile.finishAccess()
+      } { cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name") } ?~> "mesh.file.readEncoding.failed"
+      _ = cachedMeshFile.finishAccess()
+    } yield mappingName
 
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,

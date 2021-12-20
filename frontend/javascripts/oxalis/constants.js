@@ -107,10 +107,10 @@ export const BorderTabs = {
     name: "Comments",
     description: "Add comments to skeleton nodes",
   },
-  MeshesView: {
-    id: "MeshesView",
-    name: "Meshes",
-    description: "Load, compute and organize Meshes of segments",
+  SegmentsView: {
+    id: "SegmentsView",
+    name: "Segments",
+    description: "Organize Segments and Meshes",
   },
   SkeletonTabView: {
     id: "SkeletonTabView",
@@ -143,6 +143,7 @@ export const OrthoViewGrayCrosshairColor = 0x222222;
 
 export const ControlModeEnum = {
   TRACE: "TRACE",
+  SANDBOX: "SANDBOX",
   VIEW: "VIEW",
 };
 export type ControlMode = $Keys<typeof ControlModeEnum>;
@@ -156,6 +157,7 @@ export const AnnotationToolEnum = {
   ERASE_TRACE: "ERASE_TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
+  BOUNDING_BOX: "BOUNDING_BOX",
 };
 export const VolumeTools = [
   AnnotationToolEnum.BRUSH,
@@ -187,8 +189,15 @@ export const OverwriteModeEnum = {
   OVERWRITE_ALL: "OVERWRITE_ALL",
   OVERWRITE_EMPTY: "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
 };
-
 export type OverwriteMode = $Keys<typeof OverwriteModeEnum>;
+
+export const FillModeEnum = {
+  // The leading underscore is a workaround, since leading numbers are not valid identifiers
+  // in JS.
+  _2D: "_2D",
+  _3D: "_3D",
+};
+export type FillMode = $Keys<typeof FillModeEnum>;
 
 export const TDViewDisplayModeEnum = {
   NONE: "NONE",
@@ -197,6 +206,13 @@ export const TDViewDisplayModeEnum = {
 };
 
 export type TDViewDisplayMode = $Keys<typeof TDViewDisplayModeEnum>;
+
+export const MappingStatusEnum = {
+  DISABLED: "DISABLED",
+  ACTIVATING: "ACTIVATING",
+  ENABLED: "ENABLED",
+};
+export type MappingStatus = $Keys<typeof MappingStatusEnum>;
 
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
@@ -219,8 +235,19 @@ export const Unicode = {
 // are stored in a Uint8Array in a binary way (which cell
 // id the voxels should be changed to is not encoded).
 export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+// LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
+// that it can hold multiple slices per bucket (keyed by the W component,
+// e.g., z in XY viewport).
+export type LabelMasksByBucketAndW = Map<Vector4, Map<number, Uint8Array>>;
 
-export type ShowContextMenuFunction = (number, number, ?number, Vector3, OrthoView) => void;
+export type ShowContextMenuFunction = (
+  number,
+  number,
+  ?number,
+  ?number,
+  Vector3,
+  OrthoView,
+) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -265,6 +292,11 @@ const Constants = {
 
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
+
+  FLOOD_FILL_EXTENTS: {
+    _2D: process.env.BABEL_ENV === "test" ? [512, 512, 1] : [768, 768, 1],
+    _3D: process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96],
+  },
 };
 
 export default Constants;

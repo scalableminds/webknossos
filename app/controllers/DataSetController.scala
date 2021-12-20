@@ -53,7 +53,8 @@ class DataSetController @Inject()(userService: UserService,
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
       (__ \ 'sortingKey).readNullable[Long] and
-      (__ \ 'isPublic).read[Boolean]).tupled
+      (__ \ 'isPublic).read[Boolean] and
+      (__ \ 'tags).read[List[String]]).tupled
 
   @ApiOperation(hidden = true, value = "")
   def removeFromThumbnailCache(organizationName: String, dataSetName: String): Action[AnyContent] =
@@ -257,7 +258,7 @@ class DataSetController @Inject()(userService: UserService,
         usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
         _ <- dataSetService
-          .clientFor(dataSet)
+          .clientFor(dataSet)(GlobalAccessContext)
           .flatMap(_.findPositionWithData(organizationName, datalayer.name).flatMap(posWithData =>
             bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
       } yield {
@@ -269,7 +270,7 @@ class DataSetController @Inject()(userService: UserService,
   def update(organizationName: String, dataSetName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       withJsonBodyUsing(dataSetPublicReads) {
-        case (description, displayName, sortingKey, isPublic) =>
+        case (description, displayName, sortingKey, isPublic, tags) =>
           for {
             dataSet <- dataSetDAO
               .findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
@@ -281,14 +282,13 @@ class DataSetController @Inject()(userService: UserService,
                                          displayName,
                                          sortingKey.getOrElse(dataSet.created),
                                          isPublic)
+            _ <- dataSetDAO.updateTags(dataSet._id, tags)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
             dataStore <- dataSetService.dataStoreFor(updated)
             js <- dataSetService.publicWrites(updated, Some(request.identity), organization, dataStore)
-          } yield {
-            Ok(Json.toJson(js))
-          }
+          } yield Ok(Json.toJson(js))
       }
   }
 

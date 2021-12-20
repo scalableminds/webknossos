@@ -16,7 +16,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import java.io.File
 
-import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiResponse, ApiResponses}
 import play.api.libs.Files
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,9 +36,9 @@ class DataSourceController @Inject()(
     with FoxImplicits {
 
   @ApiOperation(hidden = true, value = "")
-  def list(): Action[AnyContent] = Action.async { implicit request =>
+  def list(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     {
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.listDataSources) {
+      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.listDataSources, token) {
         AllowRemoteOrigin {
           val ds = dataSourceRepository.findAll
           Ok(Json.toJson(ds))
@@ -48,11 +48,15 @@ class DataSourceController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean): Action[AnyContent] =
+  def read(token: Option[String],
+           organizationName: String,
+           dataSetName: String,
+           returnFormatLike: Boolean): Action[AnyContent] =
     Action.async { implicit request =>
       {
         accessTokenService.validateAccessForSyncBlock(
-          UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+          token) {
           AllowRemoteOrigin {
             val dsOption: Option[InboxDataSource] =
               dataSourceRepository.find(DataSourceId(dataSetName, organizationName))
@@ -69,8 +73,8 @@ class DataSourceController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def triggerInboxCheck(): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
+  def triggerInboxCheck(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
       AllowRemoteOrigin {
         dataSourceService.checkInbox(verbose = true)
         Ok
@@ -79,8 +83,8 @@ class DataSourceController @Inject()(
   }
 
   @ApiOperation(hidden = true, value = "")
-  def triggerInboxCheckBlocking(): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+  def triggerInboxCheckBlocking(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
       AllowRemoteOrigin {
         for {
           _ <- dataSourceService.checkInbox(verbose = true)
@@ -88,6 +92,42 @@ class DataSourceController @Inject()(
       }
     }
   }
+
+  @ApiOperation(
+    value =
+      """Reserve an upload for a new dataset
+Expects:
+ - As JSON object body with keys:
+  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
+  - organization (string): owning organization name
+  - name (string): dataset name
+  - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
+  - initialTeams (list of string): names of the webknossos teams dataset should be accessible for
+ - As GET parameter:
+  - token (string): datastore token identifying the uploading user
+""",
+    nickname = "datasetReserveUpload"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "reserveUploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[ReserveUploadInformation],
+                           paramType = "body")))
+  def reserveUpload(token: String): Action[ReserveUploadInformation] =
+    Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
+        AllowRemoteOrigin {
+          for {
+            isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
+            _ <- if (!isKnownUpload) {
+              (remoteWebKnossosClient.validateDataSourceUpload(request.body, Some(token)) ?~> "dataSet.upload.validation.failed")
+                .flatMap(_ => uploadService.reserveUpload(request.body))
+            } else Fox.successful(())
+          } yield Ok
+        }
+      }
+    }
 
   @ApiOperation(
     value = """Upload a byte chunk for a new dataset
@@ -101,6 +141,8 @@ Expects:
   - resumableTotalChunks (string): total chunk count of the upload
   - totalFileCount (string): total file count of the upload
   - resumableIdentifier (string): identifier of the resumable upload and file ("{uploadId}/{filepath}")
+ - As GET parameter:
+  - token (string): datastore token identifying the uploading user
 """,
     nickname = "datasetUploadChunk"
   )
@@ -109,8 +151,8 @@ Expects:
       new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
-  def uploadChunk: Action[MultipartFormData[Files.TemporaryFile]] = Action.async(parse.multipartFormData) {
-    implicit request =>
+  def uploadChunk(token: String): Action[MultipartFormData[Files.TemporaryFile]] =
+    Action.async(parse.multipartFormData) { implicit request =>
       val uploadForm = Form(
         tuple(
           "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
@@ -118,30 +160,27 @@ Expects:
           "resumableChunkNumber" -> number,
           "resumableChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
-          "totalFileCount" -> number,
           "resumableIdentifier" -> nonEmptyText
-        )).fill(("", "", -1, -1, -1, -1, ""))
+        )).fill(("", "", -1, -1, -1, ""))
 
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
         AllowRemoteOrigin {
           uploadForm
             .bindFromRequest(request.body.dataParts)
             .fold(
               hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
               success = {
-                case (name, organization, chunkNumber, chunkSize, totalChunkCount, totalFileCount, uploadId) =>
+                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
                   val id = DataSourceId(name, organization)
-                  val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                   for {
-                    _ <- if (!uploadService.isKnownUpload(uploadId))
-                      remoteWebKnossosClient.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
-                    else Fox.successful(())
+                    isKnownUpload <- uploadService.isKnownUploadByFileId(uploadId)
+                    _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadId,
                                                          id,
-                                                         resumableUploadInformation,
+                                                         chunkSize,
+                                                         totalChunkCount,
                                                          chunkNumber,
-                                                         totalFileCount,
                                                          new File(chunkFile.ref.path.toString))
                   } yield {
                     Ok
@@ -150,7 +189,7 @@ Expects:
             )
         }
       }
-  }
+    }
 
   @ApiOperation(
     value =
@@ -160,89 +199,100 @@ Expects:
   - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
   - organization (string): owning organization name
   - name (string): dataset name
-  - initialTeams (list of string): names of the webknossos teams dataset should be accessible for
   - needsConversion (boolean): mark as true for non-wkw datasets. They are stored differently and a conversion job can later be run.
+ - As GET parameter:
+  - token (string): datastore token identifying the uploading user
 """,
     nickname = "datasetFinishUpload"
   )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "uploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[UploadInformation],
+                           paramType = "body")))
   @ApiResponses(
     Array(
       new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
-  def finishUpload: Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        for {
-          (dataSourceId, initialTeams, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
-          userTokenOpt = accessTokenService.tokenFromRequest(request)
-          _ <- remoteWebKnossosClient
-            .reportUpload(dataSourceId, initialTeams, dataSetSizeBytes, userTokenOpt) ?~> "setInitialTeams.failed"
-        } yield Ok
+  def finishUpload(token: String): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
+        AllowRemoteOrigin {
+          for {
+            (dataSourceId, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
+            _ <- remoteWebKnossosClient.reportUpload(dataSourceId, dataSetSizeBytes, token) ?~> "reportUpload.failed"
+          } yield Ok
+        }
       }
-    }
 
   }
 
   @ApiOperation(hidden = true, value = "")
-  def fetchSampleDataSource(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+  def fetchSampleDataSource(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
         AllowRemoteOrigin {
           for {
-            _ <- sampleDatasetService.initDownload(organizationName, dataSetName)
+            _ <- sampleDatasetService.initDownload(organizationName, dataSetName, token)
           } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
         }
       }
-  }
-
-  @ApiOperation(hidden = true, value = "")
-  def listSampleDataSources(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
-    AllowRemoteOrigin {
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
-        Ok(Json.toJson(sampleDatasetService.listWithStatus(organizationName)))
-      }
     }
-  }
 
   @ApiOperation(hidden = true, value = "")
-  def explore(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
+  def listSampleDataSources(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
+    implicit request =>
       AllowRemoteOrigin {
-        for {
-          previousDataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)) ?~ Messages(
-            "dataSource.notFound") ~> 404
-          (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
-                                                                        previousDataSource.toUsable)
-          previousDataSourceJson = previousDataSource match {
-            case usableDataSource: DataSource => Json.toJson(usableDataSource)
-            case unusableDataSource: UnusableInboxDataSource =>
-              unusableDataSource.existingDataSourceProperties match {
-                case Some(existingConfig) => existingConfig
-                case None                 => Json.toJson(unusableDataSource)
-              }
-          }
-        } yield {
-          Ok(
-            Json.obj(
-              "dataSource" -> dataSource,
-              "previousDataSource" -> previousDataSourceJson,
-              "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
-            ))
+        accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
+          Ok(Json.toJson(sampleDatasetService.listWithStatus(organizationName)))
         }
       }
-    }
+  }
+
+  @ApiOperation(hidden = true, value = "")
+  def explore(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      accessTokenService.validateAccessForSyncBlock(
+        UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName)),
+        token) {
+        AllowRemoteOrigin {
+          for {
+            previousDataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)) ?~ Messages(
+              "dataSource.notFound") ~> 404
+            (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
+                                                                          previousDataSource.toUsable)
+            previousDataSourceJson = previousDataSource match {
+              case usableDataSource: DataSource => Json.toJson(usableDataSource)
+              case unusableDataSource: UnusableInboxDataSource =>
+                unusableDataSource.existingDataSourceProperties match {
+                  case Some(existingConfig) => existingConfig
+                  case None                 => Json.toJson(unusableDataSource)
+                }
+            }
+          } yield {
+            Ok(
+              Json.obj(
+                "dataSource" -> dataSource,
+                "previousDataSource" -> previousDataSourceJson,
+                "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
+              ))
+          }
+        }
+      }
   }
 
   @ApiOperation(hidden = true, value = "")
   def listMappings(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      token) {
       AllowRemoteOrigin {
         Ok(Json.toJson(dataSourceService.exploreMappings(organizationName, dataSetName, dataLayerName)))
       }
@@ -251,12 +301,14 @@ Expects:
 
   @ApiOperation(hidden = true, value = "")
   def listAgglomerates(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+      token) {
       AllowRemoteOrigin {
         Ok(
           Json.toJson(binaryDataServiceHolder.binaryDataService.agglomerateService
@@ -267,13 +319,15 @@ Expects:
 
   @ApiOperation(hidden = true, value = "")
   def generateAgglomerateSkeleton(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String,
       mappingName: String,
       agglomerateId: Long
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           skeleton <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateSkeleton(
@@ -288,22 +342,29 @@ Expects:
   }
 
   @ApiOperation(hidden = true, value = "")
-  def listMeshFiles(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+  def listMeshFiles(token: Option[String],
+                    organizationName: String,
+                    dataSetName: String,
+                    dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
-          Ok(Json.toJson(meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)))
+          for {
+            meshFiles <- meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)
+          } yield Ok(Json.toJson(meshFiles))
         }
       }
     }
 
   @ApiOperation(hidden = true, value = "")
-  def listMeshChunksForSegment(organizationName: String,
+  def listMeshChunksForSegment(token: Option[String],
+                               organizationName: String,
                                dataSetName: String,
                                dataLayerName: String): Action[ListMeshChunksRequest] =
     Action.async(validateJson[ListMeshChunksRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
           for {
             positions <- meshFileService.listMeshChunksForSegment(
@@ -321,11 +382,13 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def readMeshChunk(organizationName: String,
+  def readMeshChunk(token: Option[String],
+                    organizationName: String,
                     dataSetName: String,
                     dataLayerName: String): Action[MeshChunkDataRequest] =
     Action.async(validateJson[MeshChunkDataRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
           for {
             (data, encoding) <- meshFileService.readMeshChunk(organizationName,
@@ -344,9 +407,10 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def update(organizationName: String, dataSetName: String): Action[DataSource] =
+  def update(token: Option[String], organizationName: String, dataSetName: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
           for {
             _ <- Fox.successful(())
@@ -361,23 +425,27 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def createOrganizationDirectory(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        val newOrganizationFolder = dataSourceService.dataBaseDir.resolve(organizationName).toFile
-        newOrganizationFolder.mkdirs()
-        if (newOrganizationFolder.isDirectory)
-          Ok
-        else
-          BadRequest
+  def createOrganizationDirectory(token: Option[String], organizationName: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
+        AllowRemoteOrigin {
+          val newOrganizationFolder = dataSourceService.dataBaseDir.resolve(organizationName).toFile
+          newOrganizationFolder.mkdirs()
+          if (newOrganizationFolder.isDirectory)
+            Ok
+          else
+            BadRequest
+        }
       }
-    }
   }
 
   @ApiOperation(hidden = true, value = "")
-  def reload(organizationName: String, dataSetName: String, layerName: Option[String] = None): Action[AnyContent] =
+  def reload(token: Option[String],
+             organizationName: String,
+             dataSetName: String,
+             layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
         AllowRemoteOrigin {
           val count = binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName, layerName)
           logger.info(
@@ -395,18 +463,18 @@ Expects:
     }
 
   @ApiOperation(hidden = true, value = "")
-  def deleteOnDisk(organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      accessTokenService
-        .validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName))) {
-          AllowRemoteOrigin {
-            for {
-              _ <- uploadService.deleteOnDisk(organizationName,
-                                              dataSetName,
-                                              reason = Some("the user wants to delete the dataset"))
-            } yield Ok
-          }
+  def deleteOnDisk(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName)),
+                                        token) {
+        AllowRemoteOrigin {
+          for {
+            _ <- uploadService.deleteOnDisk(organizationName,
+                                            dataSetName,
+                                            reason = Some("the user wants to delete the dataset"))
+          } yield Ok
         }
-  }
+      }
+    }
 
 }

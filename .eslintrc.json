@@ -72,7 +72,7 @@
     "no-use-before-define": ["error", { "functions": false, "classes": false }],
     "one-var": ["error", "never"],
     "operator-assignment": "warn",
-    "prefer-destructuring": "warn",
+    "prefer-destructuring": "off",
     "quote-props": ["error", "as-needed", { "numbers": true }],
     "quotes": ["error", "double", { "avoidEscape": true }],
     "radix": "off",
@@ -85,6 +85,7 @@
     "react-hooks/rules-of-hooks": "error",
     "import/newline-after-import": "off",
     "flow-header/flow-header": "error",
+    "spaced-comment": "off",
     "react/sort-comp": [
       "error",
       {

@@ -4,12 +4,16 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import { V3 } from "libs/mjs";
 import {
   type StateShape1,
   updateKey,
   updateKey2,
-  updateKey3,
+  updateKey4,
 } from "oxalis/model/helpers/deep_update";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import * as Utils from "libs/utils";
+import { getDisplayedDataExtentInPlaneMode } from "oxalis/model/accessors/view_mode_accessor";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
@@ -22,13 +26,19 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
     },
   };
   // We mirror/sync the user bounding boxes between all tracing objects.
+
+  const newVolumes = state.tracing.volumes.map(volumeTracing => ({
+    ...volumeTracing,
+    userBoundingBoxes,
+  }));
+
   const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
-  const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
+  const maybeVolumeUpdater = { volumes: { $set: newVolumes } };
   const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};
   return update(state, {
     tracing: {
-      ...maybeSkeletonUpdater,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+      ...maybeSkeletonUpdater,
       ...maybeVolumeUpdater,
       ...maybeReadOnlyUpdater,
     },
@@ -55,6 +65,22 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "EDIT_ANNOTATION_LAYER": {
+      const newAnnotationLayers = state.tracing.annotationLayers.map(layer => {
+        if (layer.tracingId !== action.tracingId) {
+          return layer;
+        } else {
+          return {
+            ...layer,
+            ...action.layerProperties,
+          };
+        }
+      });
+      return updateTracing(state, {
+        annotationLayers: newAnnotationLayers,
+      });
+    }
+
     case "SET_ANNOTATION_DESCRIPTION": {
       const { description } = action;
       return updateTracing(state, {
@@ -71,16 +97,64 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, action.userBoundingBoxes);
     }
 
-    case "ADD_USER_BOUNDING_BOXES": {
-      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+    case "CHANGE_USER_BOUNDING_BOX": {
+      const tracing = maybeGetSomeTracing(state.tracing);
       if (tracing == null) {
         return state;
       }
-      let highestBoundingBoxId = Math.max(-1, ...tracing.userBoundingBoxes.map(bb => bb.id));
-      const additionalUserBoundingBoxes = action.userBoundingBoxes.map(bb => {
-        highestBoundingBoxId++;
-        return { ...bb, id: highestBoundingBoxId };
-      });
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.map(bbox =>
+        bbox.id === action.id
+          ? {
+              id: bbox.id,
+              ...bbox,
+              ...action.newProps,
+            }
+          : bbox,
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
+    case "ADD_NEW_USER_BOUNDING_BOX": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const { userBoundingBoxes } = tracing;
+      const highestBoundingBoxId = Math.max(0, ...userBoundingBoxes.map(bb => bb.id));
+      const boundingBoxId = highestBoundingBoxId + 1;
+      let newBoundingBox: UserBoundingBox;
+      if (action.newBoundingBox != null) {
+        newBoundingBox = ({ id: boundingBoxId, ...action.newBoundingBox }: UserBoundingBox);
+      } else {
+        const { min, max, halfBoxExtent } = getDisplayedDataExtentInPlaneMode(state);
+        newBoundingBox = {
+          boundingBox: { min, max },
+          id: boundingBoxId,
+          name: `Bounding box ${boundingBoxId}`,
+          color: Utils.getRandomColor(),
+          isVisible: true,
+        };
+        if (action.center != null) {
+          newBoundingBox.boundingBox = {
+            min: V3.toArray(V3.round(V3.sub(action.center, halfBoxExtent))),
+            max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
+          };
+        }
+      }
+      const updatedUserBoundingBoxes = [...userBoundingBoxes, newBoundingBox];
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
+    case "ADD_USER_BOUNDING_BOXES": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const highestBoundingBoxId = Math.max(0, ...tracing.userBoundingBoxes.map(bb => bb.id));
+      const additionalUserBoundingBoxes = action.userBoundingBoxes.map((bb, index) => ({
+        ...bb,
+        id: highestBoundingBoxId + index + 1,
+      }));
       const mergedUserBoundingBoxes = [
         ...tracing.userBoundingBoxes,
         ...additionalUserBoundingBoxes,
@@ -88,7 +162,17 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
     }
 
-    case "UPDATE_LOCAL_MESH_METADATA":
+    case "DELETE_USER_BOUNDING_BOX": {
+      const tracing = maybeGetSomeTracing(state.tracing);
+      if (tracing == null) {
+        return state;
+      }
+      const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
+        bbox => bbox.id !== action.id,
+      );
+      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+    }
+
     case "UPDATE_REMOTE_MESH_METADATA": {
       const { id, meshShape } = action;
       const newMeshes = state.tracing.meshes.map(mesh => {
@@ -104,7 +188,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, id, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", id, {
         isVisible: visibility,
       });
     }
@@ -122,15 +206,20 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "REMOVE_ISOSURFACE": {
       const { layerName, cellId } = action;
-      return update(state, {
-        isosurfacesByLayer: { [layerName]: { $unset: [cellId] } },
+
+      const { [cellId]: _, ...remainingIsosurfaces } = state.localSegmentationData[
+        layerName
+      ].isosurfaces;
+
+      return updateKey2(state, "localSegmentationData", layerName, {
+        isosurfaces: remainingIsosurfaces,
       });
     }
 
     case "ADD_ISOSURFACE": {
       const { layerName, cellId, seedPosition, isPrecomputed } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
         segmentId: cellId,
         seedPosition,
         isLoading: false,
@@ -142,7 +231,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "STARTED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
         isLoading: true,
       });
     }
@@ -150,19 +239,25 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     case "FINISHED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
       // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey3(state, "isosurfacesByLayer", layerName, cellId, {
+      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
         isLoading: false,
       });
     }
 
     case "UPDATE_MESH_FILE_LIST": {
       const { layerName, meshFiles } = action;
-      return update(state, { availableMeshFilesByLayer: { [layerName]: { $set: meshFiles } } });
+      return updateKey2(state, "localSegmentationData", layerName, {
+        availableMeshFiles: meshFiles,
+      });
     }
 
     case "UPDATE_CURRENT_MESH_FILE": {
-      const { layerName, meshFile } = action;
-      return update(state, { currentMeshFileByLayer: { [layerName]: { $set: meshFile } } });
+      const { layerName, meshFileName } = action;
+      const availableMeshFiles = state.localSegmentationData[layerName].availableMeshFiles;
+      if (availableMeshFiles == null) return state;
+
+      const meshFile = availableMeshFiles.find(el => el.meshFileName === meshFileName);
+      return updateKey2(state, "localSegmentationData", layerName, { currentMeshFile: meshFile });
     }
 
     default:

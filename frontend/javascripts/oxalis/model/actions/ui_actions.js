@@ -3,9 +3,12 @@
 import type { AnnotationTool } from "oxalis/constants";
 import { type BorderOpenStatus, type Theme } from "oxalis/store";
 
-type SetToolAction = { type: "SET_TOOL", tool: AnnotationTool };
+export type SetToolAction = {
+  type: "SET_TOOL",
+  tool: AnnotationTool,
+};
 
-type CycleToolAction = { type: "CYCLE_TOOL" };
+export type CycleToolAction = { type: "CYCLE_TOOL" };
 
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",
@@ -42,18 +45,22 @@ type SetHasOrganizationsAction = {
   value: boolean,
 };
 
-export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
-  type: "SET_TOOL",
-  tool,
-});
-
-export const cycleToolAction = (): CycleToolAction => ({
-  type: "CYCLE_TOOL",
-});
+type SetBusyBlockingInfoAction = {
+  type: "SET_BUSY_BLOCKING_INFO_ACTION",
+  value: {
+    isBusy: boolean,
+    reason?: string,
+  },
+};
 
 type SetThemeAction = {
   type: "SET_THEME",
   value: Theme,
+};
+
+type SetShareModalVisibilityAction = {
+  type: "SET_SHARE_MODAL_VISIBILITY",
+  visible: boolean,
 };
 
 export type UiAction =
@@ -66,7 +73,9 @@ export type UiAction =
   | SetHasOrganizationsAction
   | SetToolAction
   | CycleToolAction
-  | SetThemeAction;
+  | SetThemeAction
+  | SetShareModalVisibilityAction
+  | SetBusyBlockingInfoAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -109,7 +118,32 @@ export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAc
   value,
 });
 
+export const setToolAction = (tool: AnnotationTool): SetToolAction => ({
+  type: "SET_TOOL",
+  tool,
+});
+
+export const cycleToolAction = (): CycleToolAction => ({
+  type: "CYCLE_TOOL",
+});
+
 export const setThemeAction = (value: Theme): SetThemeAction => ({
   type: "SET_THEME",
   value,
+});
+
+export const setShareModalVisibilityAction = (visible: boolean): SetShareModalVisibilityAction => ({
+  type: "SET_SHARE_MODAL_VISIBILITY",
+  visible,
+});
+
+export const setBusyBlockingInfoAction = (
+  isBusy: boolean,
+  reason?: string,
+): SetBusyBlockingInfoAction => ({
+  type: "SET_BUSY_BLOCKING_INFO_ACTION",
+  value: {
+    isBusy,
+    reason,
+  },
 });

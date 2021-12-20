@@ -17,6 +17,8 @@ trait IntervalScheduler {
 
   protected def tickerInterval: FiniteDuration
 
+  protected def tickerInitialDelay: FiniteDuration = 10 seconds
+
   protected def tick(): Unit
 
   private var scheduled: Cancellable = _
@@ -24,7 +26,7 @@ trait IntervalScheduler {
   lifecycle.addStopHook(stop _)
 
   if (enabled) {
-    scheduled = system.scheduler.scheduleWithFixedDelay(10.seconds, tickerInterval)(() => tick())
+    scheduled = system.scheduler.scheduleWithFixedDelay(tickerInitialDelay, tickerInterval)(() => tick())
   }
 
   private def stop(): Future[Unit] = {

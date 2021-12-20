@@ -4,8 +4,8 @@
  */
 
 import { createStore, applyMiddleware, type Dispatch } from "redux";
-import createSagaMiddleware from "redux-saga";
 import { enableBatching } from "redux-batched-actions";
+import createSagaMiddleware from "redux-saga";
 
 import type {
   APIAllowedMode,
@@ -23,17 +23,17 @@ import type {
   APITracingStore,
   APIUser,
   APIUserBase,
+  AnnotationLayerDescriptor,
   MeshMetaData,
+  TracingType,
+  APIMeshFile,
 } from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
-import type { Matrix4x4 } from "libs/mjs";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import {
   type BoundingBoxType,
   type ContourMode,
   type OverwriteMode,
+  type FillMode,
   type ControlMode,
   ControlModeEnum,
   type TDViewDisplayMode,
@@ -43,7 +43,12 @@ import {
   type Vector2,
   type Vector3,
   type AnnotationTool,
+  type MappingStatus,
 } from "oxalis/constants";
+import type { Matrix4x4 } from "libs/mjs";
+import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -111,14 +116,24 @@ export type UserBoundingBoxToServer = {
   isVisible?: boolean,
 };
 
-export type UserBoundingBox = {
-  id: number,
+export type UserBoundingBoxWithoutIdMaybe = {|
+  boundingBox?: BoundingBoxType,
+  name?: string,
+  color?: Vector3,
+  isVisible?: boolean,
+|};
+
+export type UserBoundingBoxWithoutId = {|
   boundingBox: BoundingBoxType,
   name: string,
   color: Vector3,
   isVisible: boolean,
-};
+|};
 
+export type UserBoundingBox = {
+  id: number,
+  ...UserBoundingBoxWithoutId,
+};
 export type MutableTree = {|
   treeId: number,
   groupId: ?number,
@@ -154,12 +169,6 @@ export type TreeGroup = {|
   +children: Array<TreeGroup>,
 |};
 
-export type VolumeCell = {
-  +id: number,
-};
-
-export type VolumeCellMap = { [number]: VolumeCell };
-
 export type DataLayerType = APIDataLayer;
 
 export type Restrictions = APIRestrictions;
@@ -182,6 +191,7 @@ export type Annotation = {|
   +annotationId: string,
   +restrictions: RestrictionsAndSettings,
   +visibility: AnnotationVisibility,
+  +annotationLayers: Array<AnnotationLayerDescriptor>,
   +tags: Array<string>,
   +description: string,
   +name: string,
@@ -219,16 +229,27 @@ export type SkeletonTracing = {|
   +showSkeletons: boolean,
 |};
 
+export type Segment = {
+  id: number,
+  name: ?string,
+  somePosition: Vector3,
+  creationTime: ?number,
+};
+
+export type SegmentMap = DiffableMap<number, Segment>;
+
 export type VolumeTracing = {|
   ...TracingBase,
   +type: "volume",
+  // Note that there are also SegmentMaps in `state.localSegmentationData`
+  // for non-annotation volume layers.
+  +segments: SegmentMap,
   +maxCellId: number,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
   // Stores points of the currently drawn region in global coordinates
   +contourList: Array<Vector3>,
-  +cells: VolumeCellMap,
   +fallbackLayer?: string,
 |};
 
@@ -240,26 +261,31 @@ export type ReadOnlyTracing = {|
 export type HybridTracing = {|
   ...Annotation,
   +skeleton: ?SkeletonTracing,
-  +volume: ?VolumeTracing,
+  +volumes: Array<VolumeTracing>,
   +readOnly: ?ReadOnlyTracing,
 |};
 
 export type Tracing = HybridTracing;
 
 export type TraceOrViewCommand =
-  | {
+  | {|
       +type: typeof ControlModeEnum.VIEW,
       ...$Exact<APIDatasetId>,
-    }
-  | {
+    |}
+  | {|
       +type: typeof ControlModeEnum.TRACE,
       +annotationId: string,
-    };
+    |}
+  | {|
+      +type: typeof ControlModeEnum.SANDBOX,
+      +tracingType: TracingType,
+      ...$Exact<APIDatasetId>,
+    |};
 
 export type DatasetLayerConfiguration = {|
   +color: Vector3,
-  brightness?: number,
-  contrast?: number,
+  +brightness?: number,
+  +contrast?: number,
   +alpha: number,
   +intensityRange: Vector2,
   +min?: number,
@@ -314,6 +340,7 @@ export type UserConfiguration = {|
   // For volume (and hybrid) annotations, this mode specifies
   // how volume annotations overwrite existing voxels.
   +overwriteMode: OverwriteMode,
+  +fillMode: FillMode,
   +useLegacyBindings: boolean,
 |};
 
@@ -336,7 +363,7 @@ export type ActiveMappingInfo = {
   +mappingKeys: ?Array<number>,
   +mappingColors: ?Array<number>,
   +hideUnmappedIds: boolean,
-  +isMappingEnabled: boolean,
+  +mappingStatus: MappingStatus,
   +mappingSize: number,
   +mappingType: MappingType,
 };
@@ -347,7 +374,7 @@ export type TemporaryConfiguration = {
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
-  +hoveredIsosurfaceId: number,
+  +hoveredSegmentId: number,
   +activeMappingByLayer: { [layerName: string]: ActiveMappingInfo },
   +isMergerModeEnabled: boolean,
   +isAutoBrushEnabled: boolean,
@@ -360,13 +387,15 @@ export type TemporaryConfiguration = {
     +initializedGpuFactor: number,
     +maximumLayerCountToRender: number,
   },
+  +preferredQualityForMeshPrecomputation: number,
+  +preferredQualityForMeshAdHocComputation: number,
 };
 
 export type Script = APIScript;
 
 export type Task = APITask;
 
-export type SaveQueueEntry = {
+export type SaveQueueEntry = {|
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
@@ -375,7 +404,7 @@ export type SaveQueueEntry = {
   transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-};
+|};
 
 export type ProgressInfo = {
   +processedActionCount: number,
@@ -391,9 +420,16 @@ export type SaveState = {
   +isBusyInfo: IsBusyInfo,
   +queue: {
     +skeleton: Array<SaveQueueEntry>,
-    +volume: Array<SaveQueueEntry>,
+    +volumes: {
+      [tracingId: string]: Array<SaveQueueEntry>,
+    },
   },
-  +lastSaveTimestamp: number,
+  +lastSaveTimestamp: {|
+    +skeleton: number,
+    +volumes: {
+      [tracingId: string]: number,
+    },
+  |},
   +progressInfo: ProgressInfo,
 };
 
@@ -455,16 +491,23 @@ export type BorderOpenStatus = {
 
 export type Theme = "light" | "dark";
 
+export type BusyBlockingInfo = {
+  isBusy: boolean,
+  reason?: string,
+};
+
 type UiInformation = {
   +showDropzoneModal: boolean,
-  +activeTool: AnnotationTool,
   +showVersionRestore: boolean,
+  +showShareModal: boolean,
+  +activeTool: AnnotationTool,
   +storedLayouts: Object,
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
   +borderOpenStatus: BorderOpenStatus,
   +theme: Theme,
+  +busyBlockingInfo: BusyBlockingInfo,
 };
 
 export type IsosurfaceInformation = {|
@@ -488,11 +531,19 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
-  +isosurfacesByLayer: {
-    [segmentationLayerName: string]: { [segmentId: number]: IsosurfaceInformation },
+  +localSegmentationData: {
+    [segmentationLayerName: string]: {
+      +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
+      +availableMeshFiles: ?Array<APIMeshFile>,
+      +currentMeshFile: ?APIMeshFile,
+      // Note that for a volume tracing, this information should be stored
+      // in state.tracing.volume.segments, as this is also persisted on the
+      // server (i.e., not "local").
+      // The `segments` here should only be used for non-annotation volume
+      // layers.
+      +segments: SegmentMap,
+    },
   },
-  +availableMeshFilesByLayer: { [segmentationLayerName: string]: ?Array<string> },
-  +currentMeshFileByLayer: { [segmentationLayerName: string]: ?string },
 |};
 
 const sagaMiddleware = createSagaMiddleware();

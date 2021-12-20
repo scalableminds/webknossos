@@ -6,25 +6,45 @@ import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store, { type OxalisState } from "oxalis/store";
+import Store, { type OxalisState, type MappingType } from "oxalis/store";
 import * as Utils from "libs/utils";
-import constants, { type ViewMode, ViewModeValues, type Vector3 } from "oxalis/constants";
+import constants, {
+  type ViewMode,
+  ViewModeValues,
+  type Vector3,
+  MappingStatusEnum,
+} from "oxalis/constants";
 import window, { location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
+import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
-export type FullUrlManagerState = {
-  position: Vector3,
-  mode: ViewMode,
-  zoomStep: number,
-  activeNode?: number,
-  rotation?: Vector3,
+export type UrlStateByLayer = {
+  [layerName: string]: {
+    mappingInfo?: {
+      mappingName: string,
+      mappingType: MappingType,
+      agglomerateIdsToImport?: [number],
+    },
+  },
 };
 
-export type PartialUrlManagerState = $Shape<FullUrlManagerState>;
+// If the type of UrlManagerState changes, the following files need to be updated:
+// docs/sharing.md#sharing-link-format
+// frontend/javascripts/types/schemas/url_state.schema.js
+export type UrlManagerState = {|
+  position?: Vector3,
+  mode?: ViewMode,
+  zoomStep?: number,
+  activeNode?: number,
+  rotation?: Vector3,
+  stateByLayer?: UrlStateByLayer,
+|};
+
+export type PartialUrlManagerState = $Shape<UrlManagerState>;
 
 class UrlManager {
   baseUrl: string;
@@ -35,10 +55,17 @@ class UrlManager {
     this.initialState = this.parseUrlHash();
   }
 
-  reset(): void {
+  reset(keepUrlState?: boolean = false): void {
     // don't use location.hash = ""; since it refreshes the page
-    window.history.replaceState({}, null, location.pathname + location.search);
+    if (!keepUrlState) {
+      window.history.replaceState({}, null, location.pathname + location.search);
+    }
     this.initialize();
+  }
+
+  changeBaseUrl(newBaseUrl: string) {
+    this.baseUrl = newBaseUrl;
+    this.updateUnthrottled();
   }
 
   update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
@@ -78,10 +105,10 @@ class UrlManager {
 
   parseUrlHashJson(urlHash: string): PartialUrlManagerState {
     // State json format:
-    // { "position"?: Vector3, "mode"?: number, "zoomStep"?: number, "rotation"?: Vector3, "activeNode"?: number}
+    // { "position": Vector3, "mode": number, "zoomStep": number, ...}
 
     try {
-      return JSON.parse(urlHash);
+      return validateUrlStateJSON(urlHash);
     } catch (e) {
       Toast.error(messages["tracing.invalid_json_url_hash"]);
       console.error(e);
@@ -133,7 +160,7 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  getUrlState(state: OxalisState): FullUrlManagerState {
+  getUrlState(state: OxalisState): UrlManagerState {
     const position: Vector3 = V3.floor(getPosition(state.flycam));
     const { viewMode: mode } = state.temporaryConfiguration;
     const zoomStep = Utils.roundTo(state.flycam.zoomStep, 3);
@@ -146,12 +173,30 @@ class UrlManager {
       .map(node => ({ activeNode: node.id }))
       .getOrElse({});
 
-    // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
-    return { position, mode, zoomStep, ...rotationOptional, ...activeNodeOptional };
+    const stateByLayer = {};
+    for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {
+      const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layerName];
+      if (mappingInfo.mappingStatus === MappingStatusEnum.ENABLED) {
+        const { mappingName, mappingType } = mappingInfo;
+        stateByLayer[layerName] = { mappingInfo: { mappingName, mappingType } };
+      }
+    }
+    const stateByLayerOptional = _.size(stateByLayer) > 0 ? { stateByLayer } : {};
+
+    // $FlowIssue[incompatible-exact] See https://github.com/facebook/flow/issues/2977
+    return {
+      position,
+      mode,
+      zoomStep,
+      ...rotationOptional,
+      ...activeNodeOptional,
+      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
+      ...stateByLayerOptional,
+    };
   }
 
   buildUrlHashCsv(state: OxalisState): string {
-    const { position, mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
+    const { position = [], mode, zoomStep, rotation = [], activeNode } = this.getUrlState(state);
     const viewModeIndex = ViewModeValues.indexOf(mode);
     const activeNodeArray = activeNode != null ? [activeNode] : [];
     return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeArray].join(",");

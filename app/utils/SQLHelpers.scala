@@ -4,9 +4,11 @@ import com.github.ghik.silencer.silent
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
+import oxalis.telemetry.SlackNotificationService
 import play.api.Configuration
 import play.api.libs.json.{Json, JsonValidationError, OFormat, Reads}
 import reactivemongo.bson.BSONObjectID
@@ -14,8 +16,6 @@ import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import javax.inject.Inject
-import oxalis.telemetry.SlackNotificationService
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
@@ -36,6 +36,7 @@ object ObjectId extends FoxImplicits {
     parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
+  def dummyId: ObjectId = ObjectId("dummyObjectId")
 
   def stringObjectIdReads(key: String): Reads[String] =
     Reads.filter[String](JsonValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
@@ -117,6 +118,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     case Some(aString) => "'" + aString + "'"
     case None          => "null"
   }
+
+  def optionLiteralSanitized(aStringOpt: Option[String]): String = optionLiteral(aStringOpt.map(sanitize))
 
 }
 

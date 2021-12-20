@@ -19,8 +19,12 @@ import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_m
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 
-export function setMousePosition(position: Point2): void {
-  Store.dispatch(setMousePositionAction([position.x, position.y]));
+export function setMousePosition(position: ?Point2): void {
+  if (position != null) {
+    Store.dispatch(setMousePositionAction([position.x, position.y]));
+  } else {
+    Store.dispatch(setMousePositionAction(null));
+  }
 }
 
 export function handleOverViewport(planeId: OrthoView): void {
@@ -34,15 +38,15 @@ export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => 
 
 export const handleMovePlane = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
 
-export const moveX = (x: number): void => {
-  movePlane([x, 0, 0]);
+export const moveU = (deltaU: number): void => {
+  movePlane([deltaU, 0, 0]);
 };
 
-export const moveY = (y: number): void => {
-  movePlane([0, y, 0]);
+export const moveV = (deltaV: number): void => {
+  movePlane([0, deltaV, 0]);
 };
 
-export const moveZ = (z: number, oneSlide: boolean): void => {
+export const moveW = (deltaW: number, oneSlide: boolean): void => {
   if (is2dDataset(Store.getState().dataset)) {
     return;
   }
@@ -53,20 +57,28 @@ export const moveZ = (z: number, oneSlide: boolean): void => {
 
   if (oneSlide) {
     const logZoomStep = getRequestLogZoomStep(Store.getState());
-    const w = Dimensions.getIndices(activeViewport)[2];
-    const zStep = getResolutions(Store.getState().dataset)[logZoomStep][w];
+    const wDim = Dimensions.getIndices(activeViewport)[2];
+    const wStep = getResolutions(Store.getState().dataset)[logZoomStep][wDim];
 
     Store.dispatch(
       moveFlycamOrthoAction(
-        Dimensions.transDim([0, 0, (z < 0 ? -1 : 1) * Math.max(1, zStep)], activeViewport),
+        Dimensions.transDim([0, 0, Math.sign(deltaW) * Math.max(1, wStep)], activeViewport),
         activeViewport,
-        true,
       ),
     );
   } else {
-    movePlane([0, 0, z], false);
+    movePlane([0, 0, deltaW], false);
   }
 };
+
+export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, event: MouseEvent) {
+  // Always set the correct mouse position. Otherwise, using alt + mouse move and
+  // alt + scroll won't result in the correct zoomToMouse behavior.
+  setMousePosition(position);
+  if (event.altKey && !event.shiftKey && !event.ctrlKey) {
+    handleMovePlane(delta);
+  }
+}
 
 export const zoom = (value: number, zoomToMouse: boolean) => {
   const { activeViewport } = Store.getState().viewModeData.plane;

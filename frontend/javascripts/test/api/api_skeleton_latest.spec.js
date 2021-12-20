@@ -113,7 +113,7 @@ test("Data Api: getBoundingBox should throw an error if the layer name is not va
 
 test("Data Api: getBoundingBox should get the bounding box of a layer", t => {
   const { api } = t.context;
-  const correctBoundingBox = [[0, 0, 0], [1024, 1024, 1024]];
+  const correctBoundingBox = [[0, 0, 0], [10240, 10240, 10240]];
   const boundingBox = api.data.getBoundingBox("color");
   t.deepEqual(boundingBox, correctBoundingBox);
 });
@@ -153,7 +153,7 @@ test("User Api: setConfiguration should set and get a user configuration value",
 
 test("User Api: setConfiguration should clamp a user configuration value if it is outside of the valid range", t => {
   const { api } = t.context;
-  const MOVE_VALUE = 10;
+  const MOVE_VALUE = 1;
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), userSettings.moveValue.minimum);
 });

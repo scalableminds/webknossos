@@ -1,30 +1,22 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import java.io._
-
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
-import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
-  DataFinder,
-  IsosurfaceRequest,
-  IsosurfaceService,
-  IsosurfaceServiceHolder
-}
-import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TSRemoteWebKnossosClient}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
+import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreRedisStore}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
@@ -32,6 +24,7 @@ import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
 
+import java.io._
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -43,9 +36,9 @@ class VolumeTracingService @Inject()(
     val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val volumeDataCache: TemporaryVolumeDataStore,
-    val handledGroupIdStore: RedisTemporaryStore,
-    val uncommittedUpdatesStore: RedisTemporaryStore,
-    val temporaryTracingIdStore: RedisTemporaryStore,
+    val handledGroupIdStore: TracingStoreRedisStore,
+    val uncommittedUpdatesStore: TracingStoreRedisStore,
+    val temporaryTracingIdStore: TracingStoreRedisStore,
     val temporaryFileCreator: TemporaryFileCreator
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
@@ -88,13 +81,13 @@ class VolumeTracingService @Inject()(
     for {
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
         tracingFox.futureBox.flatMap {
-          case Full(t) =>
+          case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                updateBucket(tracingId, t, a, updateGroup.version)
+                updateBucket(tracingId, tracing, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
-                  t.copy(
+                  tracing.copy(
                     activeSegmentId = Some(a.activeSegmentId),
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
@@ -102,13 +95,10 @@ class VolumeTracingService @Inject()(
                     zoomLevel = a.zoomLevel
                   ))
               case a: RevertToVersionVolumeAction =>
-                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
-              case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
-              case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
-              case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
-              case a: ImportVolumeData                => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
-              case _: UpdateTdCamera                  => Fox.successful(t)
-              case _                                  => Fox.failure("Unknown action.")
+                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing)
+              case _: UpdateTdCamera        => Fox.successful(tracing)
+              case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
+              case _                        => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty
@@ -162,18 +152,6 @@ class VolumeTracingService @Inject()(
           }
     }
     sourceTracing
-  }
-
-  private def updateBoundingBoxVisibility(tracing: VolumeTracing, boundingBoxId: Option[Int], isVisible: Boolean) = {
-    def updateUserBoundingBoxes() =
-      tracing.userBoundingBoxes.map { boundingBox =>
-        if (boundingBoxId.forall(_ == boundingBox.id))
-          boundingBox.copy(isVisible = Some(isVisible))
-        else
-          boundingBox
-      }
-
-    Fox.successful(tracing.withUserBoundingBoxes(updateUserBoundingBoxes()))
   }
 
   def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Point3D]] = {
@@ -510,5 +488,7 @@ class VolumeTracingService @Inject()(
       _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
     } yield mergedVolume.largestSegmentId.toSignedLong
   }
+
+  def dummyTracing: VolumeTracing = ???
 
 }

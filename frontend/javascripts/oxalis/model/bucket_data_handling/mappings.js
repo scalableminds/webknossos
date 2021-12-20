@@ -1,33 +1,20 @@
-/**
- * mappings.js
- * @flow
- */
-
+// @flow
 import * as THREE from "three";
-import _ from "lodash";
+import { message } from "antd";
 
-import type { APIMapping } from "types/api_flow_types";
-import type { ProgressCallback } from "libs/progress_callback";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
-import { doWithToken } from "admin/admin_rest_api";
-import {
-  getMappings,
-  getMappingInfo,
-  getLayerByName,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMappings, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
-import ErrorHandling from "libs/error_handling";
-import Request from "libs/request";
-import Store, { type Mapping, type MappingType } from "oxalis/store";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import Store, { type Mapping } from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
 
-type APIMappings = { [string]: APIMapping };
+export const MAPPING_MESSAGE_KEY = "mappings";
 
 // Remove soon (e.g., October 2021)
 export function setupGlobalMappingsObject() {
@@ -50,179 +37,18 @@ export function setupGlobalMappingsObject() {
   };
 }
 
-const noopProgressCallback = async (_a, _b) => ({ hideFn: () => {} });
-
 class Mappings {
-  baseUrl: string;
   layerName: string;
   mappingTexture: typeof UpdatableTexture;
   mappingLookupTexture: typeof UpdatableTexture;
   mappingColorTexture: typeof UpdatableTexture;
-  progressCallback: ProgressCallback;
 
-  constructor(layerName: string, fallbackLayerName: ?string) {
-    const { dataset } = Store.getState();
-    const organizationName = dataset.owningOrganization;
-    const datasetName = dataset.name;
-    const dataStoreUrl = dataset.dataStore.url;
-    // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-    const mappingLayerName = fallbackLayerName != null ? fallbackLayerName : layerName;
+  constructor(layerName: string) {
     this.layerName = layerName;
-    this.baseUrl = `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${mappingLayerName}/mappings/`;
-    this.progressCallback = noopProgressCallback;
-    setTimeout(() => this.registerReloadHandler(), 5000);
-  }
-
-  registerReloadHandler() {
-    let oldMapping = null;
-    const isAgglomerate = mapping => {
-      if (!mapping) {
-        return false;
-      }
-      return mapping.mappingType === "HDF5";
-    };
-
-    listenToStoreProperty(
-      state => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName),
-      mapping => {
-        const shouldReload = isAgglomerate(oldMapping) || isAgglomerate(mapping);
-        oldMapping = mapping;
-        if (shouldReload) {
-          // We cannot use the internal_api here as this will result in a circular dependency
-          window.webknossos.apiReady().then(api => {
-            api.data.reloadBuckets(this.layerName);
-          });
-        }
-      },
-    );
   }
 
   getMappingNames(): Array<string> {
     return getMappings(Store.getState().dataset, this.layerName);
-  }
-
-  async activateMapping(
-    mappingName: ?string,
-    mappingType: MappingType,
-    _progressCallback?: ProgressCallback,
-  ) {
-    this.progressCallback = _progressCallback || noopProgressCallback;
-    const { progressCallback } = this;
-    if (mappingName == null) {
-      Store.dispatch(setMappingAction(this.layerName, null));
-      return;
-    }
-
-    if (mappingType === "HDF5") {
-      Store.dispatch(
-        setMappingAction(this.layerName, mappingName, null, null, null, false, mappingType),
-      );
-      Store.dispatch(setMappingEnabledAction(this.layerName, true));
-      return;
-    }
-
-    // Handle JSON mapping
-    const fetchedMappings = {};
-    await progressCallback(false, "Downloading mapping...");
-    await this.fetchMappings(mappingName, fetchedMappings);
-    const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
-    // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
-    // class will get the first color, and so on
-    const assignNewIds = mappingColors != null && mappingColors.length > 0;
-    await progressCallback(false, "Building mapping structure...");
-    const [mappingObject, mappingKeys] = this.buildMappingObject(
-      mappingName,
-      fetchedMappings,
-      assignNewIds,
-    );
-    await progressCallback(false, "Applying mapping...");
-    Store.dispatch(
-      setMappingAction(
-        this.layerName,
-        mappingName,
-        mappingObject,
-        mappingKeys,
-        mappingColors,
-        hideUnmappedIds,
-        mappingType,
-      ),
-    );
-  }
-
-  async fetchMappings(mappingName: string, fetchedMappings: APIMappings): Promise<void> {
-    const mapping = await this.fetchMapping(mappingName);
-    if (mapping == null) return Promise.reject(new Error("Mapping was null."));
-    fetchedMappings[mappingName] = mapping;
-    if (mapping.parent != null) {
-      return this.fetchMappings(mapping.parent, fetchedMappings);
-    } else {
-      return Promise.resolve();
-    }
-  }
-
-  fetchMapping(mappingName: string): Promise<APIMapping> {
-    return doWithToken((token: string) => {
-      console.log("Start downloading mapping:", mappingName);
-      return Request.receiveJSON(`${this.baseUrl + mappingName}?token=${token}`).then(
-        (mapping: APIMapping) => {
-          console.log("Done downloading mapping:", mappingName);
-          return mapping;
-        },
-        error => console.error("Error downloading mapping:", mappingName, error),
-      );
-    });
-  }
-
-  getLargestSegmentId(): number {
-    const segmentationLayer = getLayerByName(Store.getState().dataset, this.layerName);
-    if (segmentationLayer.category !== "segmentation") {
-      throw new Error("Mappings class must be instantiated with a segmentation layer.");
-    }
-    return segmentationLayer.largestSegmentId;
-  }
-
-  buildMappingObject(
-    mappingName: string,
-    fetchedMappings: APIMappings,
-    assignNewIds: boolean,
-  ): [Mapping, Array<number>] {
-    const mappingObject: Mapping = {};
-    // Performance optimization: Object.keys(...) is slow for large objects
-    // keeping track of the keys in a separate array is ~5x faster
-    const mappingKeys = [];
-
-    const maxId = this.getLargestSegmentId() + 1;
-    // Initialize to the next multiple of 256 that is larger than maxId
-    let newMappedId = Math.ceil(maxId / 256) * 256;
-    for (const currentMappingName of this.getMappingChain(mappingName, fetchedMappings)) {
-      const mapping = fetchedMappings[currentMappingName];
-      ErrorHandling.assertExists(mapping.classes, "Mappings must have been fetched at this point");
-
-      if (mapping.classes) {
-        for (const mappingClass of mapping.classes) {
-          const minId = assignNewIds ? newMappedId : _.min(mappingClass);
-          const mappedId = mappingObject[minId] || minId;
-          for (const id of mappingClass) {
-            mappingObject[id] = mappedId;
-            mappingKeys.push(id);
-          }
-          newMappedId++;
-        }
-      }
-    }
-    mappingKeys.sort((a, b) => a - b);
-    return [mappingObject, mappingKeys];
-  }
-
-  getMappingChain(mappingName: string, fetchedMappings: APIMappings): Array<string> {
-    const chain = [mappingName];
-    const mapping = fetchedMappings[mappingName];
-    const parentMappingName = mapping.parent;
-
-    if (parentMappingName != null) {
-      return chain.concat(this.getMappingChain(parentMappingName, fetchedMappings));
-    }
-    return chain;
   }
 
   // MAPPING TEXTURES
@@ -292,11 +118,8 @@ class Mappings {
 
   async updateMappingTextures(mapping: ?Mapping, mappingKeys: ?Array<number>): Promise<void> {
     if (mapping == null || mappingKeys == null) return;
-    const progressCallback = this.progressCallback;
 
-    await progressCallback(false, "Create mapping texture...");
     console.time("Time to create mapping texture");
-
     const mappingSize = mappingKeys.length;
     // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
     const paddedLength =
@@ -318,7 +141,6 @@ class Mappings {
       throw new Error(messages["mapping.too_big"]);
     }
 
-    await progressCallback(false, "Copy mapping data to GPU...");
     this.mappingLookupTexture.update(
       uint8Keys,
       0,
@@ -333,12 +155,10 @@ class Mappings {
       MAPPING_TEXTURE_WIDTH,
       uint8Values.length / MAPPING_TEXTURE_WIDTH / 4,
     );
-    await progressCallback(true, "Mapping successfully applied.");
-    Store.dispatch(setMappingEnabledAction(this.layerName, true));
 
-    // Reset progressCallback, so it doesn't trigger when setting mappings
-    // programmatically, later, e.g. in merger mode
-    this.progressCallback = noopProgressCallback;
+    message.destroy(MAPPING_MESSAGE_KEY);
+
+    Store.dispatch(setMappingEnabledAction(this.layerName, true));
   }
 
   getMappingTextures() {

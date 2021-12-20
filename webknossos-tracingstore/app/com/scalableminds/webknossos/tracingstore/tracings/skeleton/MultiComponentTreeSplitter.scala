@@ -10,7 +10,8 @@ object MultiComponentTreeSplitter {
 
   def splitMulticomponentTrees(trees: Seq[Tree], treeGroups: Seq[TreeGroup]): (Seq[Tree], Seq[TreeGroup]) = {
     var largestTreeId = if (trees.isEmpty) 0 else trees.map(_.treeId).max
-    var largestGroupId = if (treeGroups.isEmpty) 0 else treeGroups.map(_.groupId).max
+    val allGroupIds = TreeUtils.getAllTreeGroupIds(treeGroups)
+    var largestGroupId = if (allGroupIds.isEmpty) 0 else allGroupIds.max
     var treeGroupsMutable: Seq[TreeGroup] = treeGroups
     val treeLists = trees.map { tree =>
       val g = new Multigraph[Int, DefaultEdge](classOf[DefaultEdge])

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import { createNanoEvents } from "nanoevents";
 
+import ErrorHandling from "libs/error_handling";
 import { mod } from "libs/utils";
 import {
   bucketPositionToGlobalAddress,
@@ -17,16 +18,14 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, {
-  type Vector2,
-  type Vector3,
-  type Vector4,
-  type BoundingBoxType,
-} from "oxalis/constants";
-import type { DimensionMap } from "oxalis/model/dimensions";
+import Constants, { type Vector3, type Vector4, type BoundingBoxType } from "oxalis/constants";
 import window from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
-import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  addBucketToUndoAction,
+  type MaybeBucketLoadedPromise,
+} from "oxalis/model/actions/volumetracing_actions";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -74,6 +73,10 @@ export class NullBucket {
   getData(): BucketDataArray {
     throw new Error("NullBucket has no data.");
   }
+
+  ensureLoaded(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 export const getConstructorForElementClass = (type: ElementClass) => {
@@ -114,6 +117,7 @@ export class DataBucket {
   elementClass: ElementClass;
   visualizedMesh: ?Object;
   visualizationColor: number;
+  dirtyCount: number = 0;
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -125,6 +129,7 @@ export class DataBucket {
   _fallbackBucket: ?Bucket;
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
+  maybeBucketLoadedPromise: MaybeBucketLoadedPromise;
 
   constructor(
     elementClass: ElementClass,
@@ -133,6 +138,7 @@ export class DataBucket {
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();
+    this.maybeBucketLoadedPromise = null;
 
     this.elementClass = elementClass;
     this.cube = cube;
@@ -180,8 +186,25 @@ export class DataBucket {
     return { min, max };
   }
 
+  getGlobalPosition(): Vector3 {
+    const resolutions = getResolutions(Store.getState().dataset);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+  }
+
+  getTopLeftInMag(): Vector3 {
+    return [
+      this.zoomedAddress[0] * Constants.BUCKET_WIDTH,
+      this.zoomedAddress[1] * Constants.BUCKET_WIDTH,
+      this.zoomedAddress[2] * Constants.BUCKET_WIDTH,
+    ];
+  }
+
   shouldCollect(): boolean {
-    const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
+    const collect =
+      !this.accessed &&
+      !this.dirty &&
+      this.state !== BucketStateEnum.REQUESTED &&
+      this.dirtyCount === 0;
     return collect;
   }
 
@@ -216,7 +239,11 @@ export class DataBucket {
     return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
 
-  is2DVoxelInsideBucket = (voxel: Vector2, dimensionIndices: DimensionMap, zoomStep: number) => {
+  is3DVoxelInsideBucket = (voxel: Vector3, zoomStep: number) => {
+    // Checks whether a given 3D voxel is outside of the bucket it refers to (i.e., a coordinate is negative
+    // or greater than 32). If this is the case, the bucket address of the neighbor which contains the position
+    // is also returned along with the adjusted voxel coordinate in that neighboring bucket.
+
     const neighbourBucketAddress = [
       this.zoomedAddress[0],
       this.zoomedAddress[1],
@@ -224,16 +251,15 @@ export class DataBucket {
       zoomStep,
     ];
     let isVoxelOutside = false;
-    const adjustedVoxel = [voxel[0], voxel[1]];
-    for (const dimensionIndex of [0, 1]) {
-      const dimension = dimensionIndices[dimensionIndex];
+    const adjustedVoxel = [voxel[0], voxel[1], voxel[2]];
+    for (const dimensionIndex of [0, 1, 2]) {
       if (voxel[dimensionIndex] < 0 || voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
         isVoxelOutside = true;
         const sign = Math.sign(voxel[dimensionIndex]);
         const offset = Math.ceil(Math.abs(voxel[dimensionIndex]) / Constants.BUCKET_WIDTH);
         // If the voxel coordinate is below 0, sign is negative and will lower the neighbor
         // bucket address
-        neighbourBucketAddress[dimension] += sign * offset;
+        neighbourBucketAddress[dimensionIndex] += sign * offset;
       }
       adjustedVoxel[dimensionIndex] = mod(adjustedVoxel[dimensionIndex], Constants.BUCKET_WIDTH);
     }
@@ -258,15 +284,26 @@ export class DataBucket {
     this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
-      let maybeBucketLoadedPromise = null;
       const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
       if (triggeredBucketFetch) {
-        maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
-          this.once("bucketLoaded", resolve);
+        this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
+          this.once("bucketLoaded", data => {
+            // Once the bucket was loaded, maybeBucketLoadedPromise can be null'ed
+            this.maybeBucketLoadedPromise = null;
+            resolve(data);
+          });
         });
       }
       Store.dispatch(
-        addBucketToUndoAction(this.zoomedAddress, dataClone, maybeBucketLoadedPromise),
+        // Always use the current state of this.maybeBucketLoadedPromise, since
+        // this bucket could be added to multiple undo batches while it's fetched. All entries
+        // need to have the corresponding promise for the undo to work correctly.
+        addBucketToUndoAction(
+          this.zoomedAddress,
+          dataClone,
+          this.maybeBucketLoadedPromise,
+          this.getTracingId(),
+        ),
       );
     }
   }
@@ -316,7 +353,7 @@ export class DataBucket {
     return { data: this.getData(), triggeredBucketFetch };
   }
 
-  pull(): void {
+  markAsPulled(): void {
     switch (this.state) {
       case BucketStateEnum.UNREQUESTED:
         this.state = BucketStateEnum.REQUESTED;
@@ -349,6 +386,22 @@ export class DataBucket {
             arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
           )
         : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+    if (data.length !== channelCount * Constants.BUCKET_SIZE) {
+      const debugInfo =
+        // Disable this conditional if you need verbose output here.
+        process.env.BABEL_ENV === "test"
+          ? " (<omitted>)"
+          : {
+              arrayBuffer,
+              actual: data.length,
+              expected: channelCount * Constants.BUCKET_SIZE,
+              channelCount,
+            };
+      console.warn("bucket.data has unexpected length", debugInfo);
+      ErrorHandling.notify(
+        new Error(`bucket.data has unexpected length. Details: ${JSON.stringify(debugInfo)}`),
+      );
+    }
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         if (this.dirty) {
@@ -364,9 +417,10 @@ export class DataBucket {
     }
   }
 
-  push(): void {
+  markAsPushed(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
+      case BucketStateEnum.MISSING:
         this.dirty = false;
         break;
       default:
@@ -376,6 +430,10 @@ export class DataBucket {
 
   unexpectedState(): void {
     throw new Error(`Unexpected state: ${this.state}`);
+  }
+
+  getTracingId(): string {
+    return this.cube.layerName;
   }
 
   getFallbackBucket(): Bucket {
@@ -412,7 +470,6 @@ export class DataBucket {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
-
     for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
       // Only overwrite with the new value if the old value was 0
       this.data[i] = this.data[i] || newData[i];
@@ -449,5 +506,25 @@ export class DataBucket {
     if (this.visualizedMesh != null) {
       this.visualizedMesh.material.color = color;
     }
+  }
+
+  async ensureLoaded(): Promise<void> {
+    let needsToAwaitBucket = false;
+    if (this.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (this.needsRequest()) {
+      this.cube.pullQueue.add({
+        bucket: this.zoomedAddress,
+        priority: PullQueueConstants.PRIORITY_HIGHEST,
+      });
+      this.cube.pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
+      await new Promise(resolve => {
+        this.on("bucketLoaded", resolve);
+      });
+    }
+    // Bucket has been loaded by now or was loaded already
   }
 }

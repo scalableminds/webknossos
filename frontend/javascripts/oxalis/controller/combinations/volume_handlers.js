@@ -73,7 +73,7 @@ export function getSegmentIdForPosition(globalPos: Vector3) {
 export function handlePickCellFromGlobalPosition(globalPos: Vector3) {
   const cellId = getSegmentIdForPosition(globalPos);
   if (cellId > 0) {
-    Store.dispatch(setActiveCellAction(cellId));
+    Store.dispatch(setActiveCellAction(cellId, globalPos));
   }
 }
 

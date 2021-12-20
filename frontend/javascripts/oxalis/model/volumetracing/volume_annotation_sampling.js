@@ -152,7 +152,7 @@ function downsampleVoxelMap(
   // are downsampled to the lower resolution bucket. The downsampling uses a kernel to skip
   // checking whether to label a downsampled voxel if already one labeled voxel matching the downsampled voxel is found.
   if (targetZoomStep <= sourceZoomStep) {
-    throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
+    throw new Error("Trying to upsample a LabeledVoxelMap with the downsample function.");
   }
   const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
   const scaleToSource = map3((val, index) => val / sourceResolution[index], targetResolution);
@@ -333,6 +333,7 @@ export function applyVoxelMap(
         continue;
       }
       const { data } = bucket.getOrCreateData();
+
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
@@ -342,14 +343,14 @@ export function applyVoxelMap(
               (voxelToLabel[thirdDimensionIndex] + sliceCount) % constants.BUCKET_WIDTH;
             // The voxelToLabel is already within the bucket and in the correct resolution.
             const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
-            if (shouldOverwrite || (!shouldOverwrite && data[voxelAddress] === overwritableValue)) {
+            const currentSegmentId = data[voxelAddress];
+            if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
               data[voxelAddress] = cellId;
             }
           }
         }
       }
     }
-
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);
   }

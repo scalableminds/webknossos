@@ -129,7 +129,7 @@ test("Voxel Labeling should push buckets after they were pulled", t => {
     },
     () => {
       bucket = cube.getBucket([0, 0, 0, 0]);
-      bucket.pull();
+      bucket.markAsPulled();
       bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
       t.pass();
     },
@@ -142,7 +142,7 @@ test("Voxel Labeling should push buckets after they were pulled", t => {
 test("Voxel Labeling should push buckets immediately if they are pulled already", t => {
   const { cube, pushQueue } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
-  bucket.pull();
+  bucket.markAsPulled();
   bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
 
   cube.labelVoxelInResolution([0, 0, 0], 42, 0);
@@ -180,7 +180,7 @@ test("Voxel Labeling should merge incoming buckets", t => {
 
   cube.labelVoxelInResolution([0, 0, 0], 424242, 0);
 
-  bucket.pull();
+  bucket.markAsPulled();
   bucket.receiveData(new Uint8Array(oldData.buffer));
 
   const newData = bucket.getData();
@@ -227,7 +227,7 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
 
   const b1 = cube.getOrCreateBucket([0, 0, 0, 0]);
-  b1.pull();
+  b1.markAsPulled();
 
   cube.getOrCreateBucket([1, 1, 1, 0]);
   cube.getOrCreateBucket([2, 2, 2, 0]);
@@ -239,15 +239,10 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   t.deepEqual(addresses, [[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
 });
 
-test("Garbage Collection should not throw an exception if no bucket is collectable", t => {
+test("getVoxelIndexByVoxelOffset should return the correct index of a position within a bucket", t => {
   const { cube } = t.context;
-  cube.MAXIMUM_BUCKET_COUNT = 3;
-  cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
-
-  cube.getOrCreateBucket([0, 0, 0, 0]).pull();
-  cube.getOrCreateBucket([1, 1, 1, 0]).pull();
-  cube.getOrCreateBucket([2, 2, 2, 0]).pull();
-
-  cube.getOrCreateBucket([3, 3, 3, 0]);
-  t.true(true);
+  let index = cube.getVoxelIndexByVoxelOffset([0, 0, 0]);
+  t.is(index, 0);
+  index = cube.getVoxelIndexByVoxelOffset([10, 10, 10]);
+  t.is(index, 10570);
 });

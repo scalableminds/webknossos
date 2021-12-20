@@ -1,13 +1,15 @@
 // @flow
 
 import type { OxalisState } from "oxalis/store";
+import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
+import { document } from "libs/window";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
   OverwriteModeEnum,
+  FillModeEnum,
   TDViewDisplayModeEnum,
 } from "oxalis/constants";
-import { document } from "libs/window";
 
 const defaultViewportRect = {
   top: 0,
@@ -45,14 +47,7 @@ const initialAnnotationInfo = {
 const primaryStylesheetElement: ?HTMLLinkElement = document.getElementById("primary-stylesheet");
 
 const defaultState: OxalisState = {
-  datasetConfiguration: {
-    fourBit: false,
-    interpolation: false,
-    layers: {},
-    loadingStrategy: "PROGRESSIVE_QUALITY",
-    segmentationPatternOpacity: 40,
-    renderMissingDataBlack: false,
-  },
+  datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
     autoSaveLayouts: true,
     brushSize: 50,
@@ -80,6 +75,7 @@ const defaultState: OxalisState = {
     tdViewDisplayDatasetBorders: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
+    fillMode: FillModeEnum._2D,
     useLegacyBindings: false,
   },
   temporaryConfiguration: {
@@ -88,7 +84,7 @@ const defaultState: OxalisState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
-    hoveredIsosurfaceId: 0,
+    hoveredSegmentId: 0,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     isAutoBrushEnabled: false,
@@ -98,6 +94,8 @@ const defaultState: OxalisState = {
       initializedGpuFactor: Constants.GPU_FACTOR_MULTIPLIER,
       maximumLayerCountToRender: 32,
     },
+    preferredQualityForMeshPrecomputation: 2,
+    preferredQualityForMeshAdHocComputation: 2,
   },
   task: null,
   dataset: {
@@ -113,6 +111,7 @@ const defaultState: OxalisState = {
       },
     },
     details: null,
+    tags: [],
     isPublic: false,
     isActive: true,
     isEditable: true,
@@ -145,20 +144,24 @@ const defaultState: OxalisState = {
       version: 0,
       tracingId: "",
     },
-    volume: null,
+    volumes: [],
     skeleton: null,
     user: null,
+    annotationLayers: [],
   },
   save: {
     queue: {
       skeleton: [],
-      volume: [],
+      volumes: {},
     },
     isBusyInfo: {
       skeleton: false,
       volume: false,
     },
-    lastSaveTimestamp: 0,
+    lastSaveTimestamp: {
+      skeleton: 0,
+      volumes: {},
+    },
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,
@@ -200,6 +203,7 @@ const defaultState: OxalisState = {
     activeTool: "MOVE",
     showDropzoneModal: false,
     showVersionRestore: false,
+    showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,
     isInAnnotationView: false,
@@ -209,10 +213,11 @@ const defaultState: OxalisState = {
       primaryStylesheetElement != null && primaryStylesheetElement.href.includes("dark.css")
         ? "dark"
         : "light",
+    busyBlockingInfo: {
+      isBusy: false,
+    },
   },
-  isosurfacesByLayer: {},
-  currentMeshFileByLayer: {},
-  availableMeshFilesByLayer: {},
+  localSegmentationData: {},
 };
 
 export default defaultState;

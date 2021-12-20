@@ -11,6 +11,8 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessAnswer,
   UserAccessRequest
 }
+import com.scalableminds.webknossos.tracingstore.tracings.TracingIds
+import io.swagger.annotations._
 import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
@@ -33,6 +35,7 @@ object RpcTokenHolder {
   lazy val webKnossosToken: String = CompactRandomIDGenerator.generateBlocking()
 }
 
+@Api
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataSetService: DataSetService,
                                     annotationDAO: AnnotationDAO,
@@ -48,6 +51,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
+  @ApiOperation(
+    value = "Generates a token that can be used for requests to a datastore. The token is valid for 1 day by default.")
   def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
@@ -56,21 +61,21 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
     for {
       token <- tokenFox
-    } yield {
-      Ok(Json.obj("token" -> token))
-    }
+    } yield Ok(Json.obj("token" -> token))
   }
 
-  def validateAccessViaDatastore(name: String, token: Option[String]): Action[UserAccessRequest] =
+  @ApiOperation(hidden = true, value = "")
+  def validateAccessViaDatastore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      dataStoreService.validateAccess(name) { _ =>
+      dataStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }
     }
 
-  def validateAccessViaTracingstore(name: String, token: Option[String]): Action[UserAccessRequest] =
+  @ApiOperation(hidden = true, value = "")
+  def validateAccessViaTracingstore(name: String, key: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      tracingStoreService.validateAccess(name) { _ =>
+      tracingStoreService.validateAccess(name, key) { _ =>
         validateUserAccess(request.body, token)
       }
     }
@@ -172,6 +177,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case _                => Fox.successful(false)
       }
 
+    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(UserAccessAnswer(granted = true))
     for {
       annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
       restrictions <- annotationInformationProvider.restrictionsFor(

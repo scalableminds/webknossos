@@ -60,7 +60,7 @@ export type APISegmentationLayer = {|
   +fallbackLayer?: ?string,
   // eslint-disable-next-line no-use-before-define
   +fallbackLayerInfo?: APIDataLayer,
-  +isTracingLayer?: boolean,
+  +tracingId?: string,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
@@ -150,6 +150,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   sortingKey: number,
   owningOrganization: string,
   publication: ?APIPublication,
+  tags: Array<string>,
 };
 
 type APIDatasetBase = $ReadOnly<MutableAPIDatasetBase>;
@@ -370,11 +371,16 @@ export type APITask = {
   +directLinks?: Array<string>,
 };
 
+export type AnnotationLayerDescriptor = {
+  name?: ?string,
+  tracingId: string,
+  typ: "Skeleton" | "Volume",
+};
+
+export type EditableLayerProperties = $Shape<{| name: ?string |}>;
+
 export type APIAnnotationCompact = {
-  +tracing: {
-    +skeleton: ?string,
-    +volume: ?string,
-  },
+  +annotationLayers: Array<AnnotationLayerDescriptor>,
   +dataSetName: string,
   +organization: string,
   +description: string,
@@ -635,6 +641,13 @@ export type ServerSkeletonTracingTree = {
   isVisible?: boolean,
 };
 
+type ServerSegment = {|
+  segmentId: number,
+  name: ?string,
+  anchorPosition: Point3,
+  creationTime: ?number,
+|};
+
 export type ServerTracingBase = {|
   id: string,
   userBoundingBoxes: Array<UserBoundingBoxFromServer>,
@@ -650,6 +663,10 @@ export type ServerTracingBase = {|
 
 export type ServerSkeletonTracing = {|
   ...ServerTracingBase,
+  // The following property is added when fetching the
+  // tracing from the back-end (by `getTracingForAnnotationType`)
+  // This is done to simplify the selection for the type.
+  typ: "Skeleton",
   activeNodeId?: number,
   boundingBox?: ServerBoundingBox,
   trees: Array<ServerSkeletonTracingTree>,
@@ -659,10 +676,15 @@ export type ServerSkeletonTracing = {|
 
 export type ServerVolumeTracing = {|
   ...ServerTracingBase,
+  // The following property is added when fetching the
+  // tracing from the back-end (by `getTracingForAnnotationType`)
+  // This is done to simplify the selection for the type.
+  typ: "Volume",
   activeSegmentId?: number,
   boundingBox: ServerBoundingBox,
   elementClass: ElementClass,
   fallbackLayer?: string,
+  segments: Array<ServerSegment>,
   largestSegmentId: number,
   // `resolutions` will be undefined for legacy annotations
   // which were created before the multi-resolution capabilities
@@ -674,9 +696,7 @@ export type ServerVolumeTracing = {|
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
 
-export type HybridServerTracing = {
-  skeleton: ?ServerSkeletonTracing,
-  volume: ?ServerVolumeTracing,
-};
-
-export default {};
+export type APIMeshFile = {|
+  meshFileName: string,
+  mappingName?: ?string,
+|};

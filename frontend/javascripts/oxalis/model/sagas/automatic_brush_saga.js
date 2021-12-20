@@ -16,7 +16,6 @@ import mainThreadPredict from "oxalis/workers/tensorflow.impl";
 import ThreeDMap from "libs/ThreeDMap";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import Shortcut from "libs/shortcut_component";
 import api from "oxalis/api/internal_api";
@@ -41,7 +40,9 @@ const workerPredict = createWorker(TensorFlowWorker);
 const configureTensorFlow = (useWebworker, useGPU) => {
   window.useWebworker = useWebworker;
   window.useGPU = useGPU;
-  console.log("useWebworker set to", useWebworker, "and useGPU set to", useGPU);
+  if (process.env.BABEL_ENV !== "test") {
+    console.log("useWebworker set to", useWebworker, "and useGPU set to", useGPU);
+  }
 };
 
 // $FlowIssue[cannot-resolve-name]
@@ -167,7 +168,12 @@ export default function* inferSegmentInViewport(
     activeViewport,
   );
   const dataset = yield* select(state => state.dataset);
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const activeCellId = yield* select(state => {
+    if (state.tracing.volumes.length === 0) {
+      throw new Error("No volume tracing available.");
+    }
+    return state.tracing.volumes[0].activeCellId;
+  });
 
   let [curX, curY, curZ] = Dimensions.transDim(
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),

@@ -5,6 +5,20 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.11.0](https://github.com/scalableminds/webknossos/releases/tag/21.11.0) - 2021-11-30
+- The docker files now place the webKnossos installation under `/webknossos` instead of `/srv/webknossos`. All mounts, most importantly `/srv/webknossos/binaryData`, need to be changed accordingly.
+- The entrypoint of the docker files have changed. Therefore, any existing `docker-compose.yml` setups need to be adapted. In most cases, only the `entrypoint: bin/webknossos` lines need to be removed (if existant).
+- To receive Slack notifications about slow bucket requests, overwrite `slackNotifications.uri` in the webknossos-datastore config.
+- If your setup includes a webknossos-worker, it needs to be updated to the latest version (PR https://github.com/scalableminds/webknossos-worker/pull/70)
+
+### Postgres Evolutions:
+- [077-workers.sql](conf/evolutions/077-workers.sql)
+
+## [21.10.0](https://github.com/scalableminds/webknossos/releases/tag/21.10.0) - 2021-11-08
+
+### Postgres Evolutions:
+- [076-jobs-enabled-per-datastore.sql](conf/evolutions/076-jobs-enabled-per-datastore.sql)
+
 ## [21.09.0](https://github.com/scalableminds/webknossos/releases/tag/21.09.0) - 2021-10-01
 - For webknossos.org: Change `publicDemoDatasetUrl` in the `features`-block within `application.conf` to be an actionable URL. For example, append `/createExplorative/hybrid?fallbackLayerName=segmentation` to the URL so that a new annotation is created if a user clicks on `Open a Demo Dataset` in the dashboard.
 
@@ -208,8 +222,8 @@ No migrations necessary.
 ## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
 ### Postgres Evolutions:
 - [046-fix-missing-voxel-type.sql](conf/evolutions/046-fix-missing-voxel-type.sql)
-- [047-add-datastore-publicUrl.sql](conf/evolutions/046-add-datastore-publicUrl.sql)
-- [048-add-tracingstore-publicUrl.sql](conf/evolutions/047-add-tracingstore-publicUrl.sql)
+- [047-add-datastore-publicUrl.sql](conf/evolutions/047-add-datastore-publicUrl.sql)
+- [048-add-tracingstore-publicUrl.sql](conf/evolutions/048-add-tracingstore-publicUrl.sql)
 
 ## [19.10.0](https://github.com/scalableminds/webknossos/releases/tag/19.10.0) - 2019-09-30
 ### Postgres Evolutions:

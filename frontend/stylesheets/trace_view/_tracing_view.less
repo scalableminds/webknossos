@@ -352,6 +352,13 @@ img.keyboard-mouse-icon:first-child {
     }
   }
 
+  .ant-btn[disabled],
+  .ant-btn[disabled]:hover {
+    color: fade(@dark-fg, 50%) !important;
+    border-color: @dark-border !important;
+    background-color: @dark-bg !important;
+  }
+
   .ant-select-arrow {
     color: @dark-fg;
   }
@@ -429,7 +436,12 @@ img.keyboard-mouse-icon:first-child {
 .left-border-button,
 .right-border-button {
   border: none;
-  padding: 0px 5px 0px 0px;
+  margin: 0px 5px 0px 0px;
+  padding: 0;
+  // If the z-index is wrong, tapping the collapse/expand buttons
+  // on mobile does not work or the icon bleeds some white background
+  // into the top navbar.
+  z-index: 999;
   color: @text-color-secondary;
   i {
     font-size: 15px !important;

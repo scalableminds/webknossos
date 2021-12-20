@@ -27,7 +27,12 @@ import {
 import { connect } from "react-redux";
 import * as React from "react";
 
-import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "types/api_flow_types";
+import {
+  APIAnnotationTypeEnum,
+  type APIAnnotationType,
+  type APIUser,
+  TracingTypeEnum,
+} from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   type LayoutKeys,
@@ -38,23 +43,44 @@ import {
   downloadNml,
   finishAnnotation,
   reOpenAnnotation,
+  createExplorational,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { undoAction, redoAction, disableSavingAction } from "oxalis/model/actions/save_actions";
+import {
+  setVersionRestoreVisibilityAction,
+  setShareModalVisibilityAction,
+} from "oxalis/model/actions/ui_actions";
+import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import Store, {
+  type BusyBlockingInfo,
+  type OxalisState,
+  type RestrictionsAndSettings,
+  type Task,
+} from "oxalis/store";
+import {
+  dispatchUndoAsync,
+  dispatchRedoAsync,
+  disableSavingAction,
+} from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from "oxalis/store";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
+import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
+import Toast from "libs/toast";
+import UrlManager from "oxalis/controller/url_manager";
+import { withAuthentication } from "admin/auth/authentication_modal";
+
+const AsyncButtonWithAuthentication = withAuthentication(AsyncButton);
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -67,11 +93,12 @@ type StateProps = {|
   task: ?Task,
   activeUser: ?APIUser,
   hasTracing: boolean,
+  isShareModalOpen: boolean,
+  busyBlockingInfo: BusyBlockingInfo,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
-  isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
   isReopenAllowed: boolean,
@@ -201,7 +228,6 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
 
 class TracingActionsView extends React.PureComponent<Props, State> {
   state = {
-    isShareModalOpen: false,
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,
@@ -247,17 +273,13 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     Model.forceSave();
   };
 
-  handleUndo = () => {
-    Store.dispatch(undoAction());
-  };
+  handleUndo = () => dispatchUndoAsync(Store.dispatch);
+
+  handleRedo = () => dispatchRedoAsync(Store.dispatch);
 
   handleRestore = async () => {
     await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(true));
-  };
-
-  handleRedo = () => {
-    Store.dispatch(redoAction());
   };
 
   handleCopyToAccount = async () => {
@@ -266,6 +288,49 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       this.props.annotationType,
     );
     location.href = `/annotations/Explorational/${newAnnotation.id}`;
+  };
+
+  handleCopySandboxToAccount = async () => {
+    const { tracing: sandboxTracing, dataset } = Store.getState();
+    const tracingType = getTracingType(sandboxTracing);
+
+    if (tracingType !== TracingTypeEnum.skeleton) {
+      const message = "Sandbox copying functionality is only implemented for skeleton tracings.";
+      Toast.error(message);
+      throw Error(message);
+    }
+
+    // todo: does this logic make sense at all? the above condition seems to exclude
+    // volume tracings
+    const fallbackLayer =
+      sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
+
+    const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
+    UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
+    await api.tracing.restart(
+      newAnnotation.typ,
+      newAnnotation.id,
+      ControlModeEnum.TRACE,
+      undefined,
+      true,
+    );
+
+    const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    // Update the sandbox tracing with the new tracingId and createdTimestamp
+    const newSkeletonTracing = {
+      ...sandboxSkeletonTracing,
+      tracingId: skeletonTracing.tracingId,
+      createdTimestamp: skeletonTracing.createdTimestamp,
+    };
+    Store.dispatch(setTracingAction(newSkeletonTracing));
+
+    await Model.ensureSavedState();
+
+    // Do a complete page refresh, because the URL changed and the router
+    // would cause a reload the next time the URL hash changes (because the
+    // TracingLayoutView would be remounted).
+    location.reload();
   };
 
   handleFinish = async () => {
@@ -292,11 +357,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleShareOpen = () => {
-    this.setState({ isShareModalOpen: true });
+    Store.dispatch(setShareModalVisibilityAction(true));
   };
 
   handleShareClose = () => {
-    this.setState({ isShareModalOpen: false });
+    Store.dispatch(setShareModalVisibilityAction(false));
   };
 
   handleDownload = async () => {
@@ -357,6 +422,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       annotationId,
       activeUser,
       layoutMenu,
+      busyBlockingInfo,
     } = this.props;
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
 
@@ -364,36 +430,52 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       ? [
           hasTracing
             ? [
-                <ButtonComponent
+                <AsyncButton
                   className="narrow"
                   key="undo-button"
                   title="Undo (Ctrl+Z)"
                   onClick={this.handleUndo}
+                  disabled={busyBlockingInfo.isBusy}
+                  hideContentWhenLoading
                 >
                   <i className="fas fa-undo" aria-hidden="true" />
-                </ButtonComponent>,
-                <ButtonComponent
+                </AsyncButton>,
+                <AsyncButton
                   className="narrow hide-on-small-screen"
                   key="redo-button"
                   title="Redo (Ctrl+Y)"
                   onClick={this.handleRedo}
+                  disabled={busyBlockingInfo.isBusy}
+                  hideContentWhenLoading
                 >
                   <i className="fas fa-redo" aria-hidden="true" />
-                </ButtonComponent>,
+                </AsyncButton>,
               ]
             : null,
           restrictions.allowSave ? (
             <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />
           ) : (
-            <Tooltip
-              placement="bottom"
-              title="This annotation was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
-              key="sandbox-tooltip"
-            >
-              <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
-                <span className="hide-on-small-screen">Sandbox</span>
-              </Button>
-            </Tooltip>
+            [
+              <Tooltip
+                placement="bottom"
+                title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
+                key="sandbox-tooltip"
+              >
+                <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
+                  <span className="hide-on-small-screen">Sandbox</span>
+                </Button>
+              </Tooltip>,
+              <AsyncButtonWithAuthentication
+                activeUser={activeUser}
+                authenticationMessage="Please register or login to copy the sandbox tracing to your account."
+                key="copy-sandbox-button"
+                icon={<FileAddOutlined />}
+                onClick={this.handleCopySandboxToAccount}
+                title="Copy To My Account"
+              >
+                <span className="hide-on-small-screen">Copy To My Account</span>
+              </AsyncButtonWithAuthentication>,
+            ]
           ),
         ]
       : [
@@ -405,15 +487,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           >
             Read only
           </ButtonComponent>,
-          activeUser != null ? (
-            <AsyncButton
-              key="copy-button"
-              icon={<FileAddOutlined />}
-              onClick={this.handleCopyToAccount}
-            >
-              Copy To My Account
-            </AsyncButton>
-          ) : null,
+          <AsyncButtonWithAuthentication
+            activeUser={activeUser}
+            authenticationMessage="Please register or login to copy the tracing to your account."
+            key="copy-button"
+            icon={<FileAddOutlined />}
+            onClick={this.handleCopyToAccount}
+            title="Copy To My Account"
+          >
+            <span className="hide-on-small-screen">Copy To My Account</span>
+          </AsyncButtonWithAuthentication>,
         ];
 
     const finishAndNextTaskButton =
@@ -466,7 +549,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <ShareModalView
         key="share-modal"
-        isVisible={this.state.isShareModalOpen}
+        isVisible={this.props.isShareModalOpen}
         onOk={this.handleShareClose}
         annotationType={annotationType}
         annotationId={annotationId}
@@ -487,7 +570,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       />,
     );
 
-    if (isSkeletonMode && activeUser != null) {
+    if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
       elements.push(
         <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
           <FolderOpenOutlined />
@@ -503,12 +586,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       );
     }
 
-    elements.push(
-      <Menu.Item key="restore-button" onClick={this.handleRestore}>
-        <BarsOutlined />
-        Restore Older Version
-      </Menu.Item>,
-    );
+    if (restrictions.allowSave) {
+      elements.push(
+        <Menu.Item key="restore-button" onClick={this.handleRestore}>
+          <BarsOutlined />
+          Restore Older Version
+        </Menu.Item>,
+      );
+    }
 
     elements.push(layoutMenu);
 
@@ -547,7 +632,9 @@ function mapStateToProps(state: OxalisState): StateProps {
     restrictions: state.tracing.restrictions,
     task: state.task,
     activeUser: state.activeUser,
-    hasTracing: (state.tracing.skeleton || state.tracing.volume) != null,
+    hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
+    isShareModalOpen: state.uiInformation.showShareModal,
+    busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }
 

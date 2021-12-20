@@ -77,7 +77,7 @@
     "retoggle": "^0.3.0",
     "rimraf": "^2.6.2",
     "shelljs": "^0.8.2",
-    "sinon": "^1.17.3",
+    "sinon": "^12.0.1",
     "style-loader": "^0.20.2",
     "terser-webpack-plugin": "^1.1.0",
     "tmp": "0.0.33",
@@ -97,8 +97,8 @@
     "test": "tools/test.sh test --timeout=30s",
     "test-verbose": "xvfb-run -s '-ac -screen 0 1280x1024x24' tools/test.sh test --timeout=60s --verbose",
     "test-only": "tools/test.sh test --timeout=30s",
+    "test-debug": "tools/test.sh test-debug",
     "test-watch": "tools/test.sh test --watch",
-    "test-debug": "tools/test.sh test --debug",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w --verbose",
     "test-e2e": "tools/postgres/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
@@ -119,8 +119,8 @@
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./frontend/javascripts/**/*.js\" -x \"./frontend/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.js frontend/javascripts/oxalis/api/api_latest.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
-    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf",
-    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf",
+    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/set_jobs.sh true",
+    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; ./tools/postgres/set_jobs.sh false",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f frontend/javascripts/test/snapshots/flow-check/*.js",
     "apply-evolutions": "tools/postgres/apply_evolutions.sh",
@@ -164,7 +164,7 @@
     "javascript-natural-sort": "^0.7.1",
     "js-priority-queue": "^0.1.5",
     "jsonschema": "^1.2.4",
-    "jszip": "^3.5.0",
+    "jszip": "^3.7.0",
     "lodash": "^4.17.21",
     "lz4js": "^0.2.0",
     "memoize-one": "^4.0.2",
@@ -204,6 +204,9 @@
   "ava": {
     "files": [
       "./public/test-bundle/**/*.{js,jsx}"
+    ],
+    "ignoredByWatcher": [
+      "./binaryData/**/*.*"
     ],
     "require": [
       "./frontend/javascripts/test/_ava_polyfill_provider.js"

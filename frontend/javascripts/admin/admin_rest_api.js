@@ -1,12 +1,16 @@
 // @flow
+import { saveAs } from "file-saver";
+import ResumableJS from "resumablejs";
 import _ from "lodash";
 
 import {
   type APIActiveUser,
   type APIAnnotation,
   type APIAnnotationCompact,
-  type APIAnnotationWithTask,
+  type APIAnnotationType,
+  APIAnnotationTypeEnum,
   type APIAnnotationVisibility,
+  type APIAnnotationWithTask,
   type APIBuildInfo,
   type APIDataSource,
   type APIDataSourceWithMessages,
@@ -19,6 +23,7 @@ import {
   type APIJobCeleryState,
   type APIJobManualState,
   type APIJobState,
+  type APIMapping,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -38,43 +43,40 @@ import {
   type APITimeInterval,
   type APITimeTracking,
   type APITracingStore,
-  type APIAnnotationType,
-  APIAnnotationTypeEnum,
   type APIUpdateActionBatch,
   type APIUser,
-  type APIUserTheme,
   type APIUserLoggedTime,
+  type APIUserTheme,
+  type AnnotationLayerDescriptor,
+  type EditableLayerProperties,
   type ExperienceDomainList,
-  type HybridServerTracing,
   type MeshMetaData,
   type RemoteMeshMetaData,
-  type ServerSkeletonTracing,
   type ServerTracing,
-  type ServerVolumeTracing,
   type TracingType,
   type WkConnectDatasetConfig,
+  type APIMeshFile,
 } from "types/api_flow_types";
+import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   Tracing,
   TraceOrViewCommand,
   AnnotationType,
+  ActiveMappingInfo,
+  VolumeTracing,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
-import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import DataLayer from "oxalis/model/data_layer";
 import Request, { type RequestOptions } from "libs/request";
 import Toast, { type Message } from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { saveAs } from "file-saver";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import ResumableJS from "resumablejs";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -611,6 +613,21 @@ export function editAnnotation(
   });
 }
 
+export function updateAnnotationLayer(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  tracingId: string,
+  layerProperties: EditableLayerProperties,
+): Promise<{ name: ?string }> {
+  return Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/editLayer/${tracingId}`,
+    {
+      method: "PATCH",
+      data: layerProperties,
+    },
+  );
+}
+
 export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -672,6 +689,19 @@ export function getAnnotationInformation(
   return Request.receiveJSON(infoUrl, options);
 }
 
+export function getEmptySandboxAnnotationInformation(
+  datasetId: APIDatasetId,
+  tracingType: TracingType,
+  sharingToken?: ?string,
+  options?: RequestOptions = {},
+): Promise<APIAnnotation> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
+  const infoUrl = `/api/datasets/${datasetId.owningOrganization}/${
+    datasetId.name
+  }/sandbox/${tracingType}${sharingTokenSuffix}`;
+  return Request.receiveJSON(infoUrl, options);
+}
+
 export function createExplorational(
   datasetId: APIDatasetId,
   typ: TracingType,
@@ -680,39 +710,71 @@ export function createExplorational(
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
-  return Request.sendJSONReceiveJSON(
-    url,
-    Object.assign({}, { data: { typ, fallbackLayerName, resolutionRestrictions } }, options),
-  );
+
+  let layers = [];
+  if (typ === "skeleton") {
+    layers = [{ typ: "Skeleton", name: "Skeleton" }];
+  } else if (typ === "volume") {
+    layers = [
+      { typ: "Volume", name: "Volume", fallbackLayerName, resolutionRestrictions },
+      // { typ: "Volume", name: "Volume 2" },
+    ];
+  } else {
+    layers = [
+      { typ: "Skeleton", name: "Skeleton" },
+      { typ: "Volume", name: "Volume", fallbackLayerName, resolutionRestrictions },
+      // { typ: "Volume", name: "Volume 2" },
+    ];
+  }
+
+  return Request.sendJSONReceiveJSON(url, {
+    ...options,
+    data: layers,
+  });
 }
 
-export async function getTracingForAnnotations(
+export async function getTracingsForAnnotation(
   annotation: APIAnnotation,
   versions?: Versions = {},
-): Promise<HybridServerTracing> {
-  const [_skeleton, _volume] = await Promise.all([
-    getTracingForAnnotationType(annotation, "skeleton", versions.skeleton),
-    getTracingForAnnotationType(annotation, "volume", versions.volume),
-  ]);
+): Promise<Array<ServerTracing>> {
+  const skeletonLayers = annotation.annotationLayers.filter(layer => layer.typ === "Skeleton");
+  const fullAnnotationLayers = await Promise.all(
+    annotation.annotationLayers.map(layer =>
+      getTracingForAnnotationType(annotation, layer, versions),
+    ),
+  );
 
-  const skeleton = ((_skeleton: any): ?ServerSkeletonTracing);
-  const volume = ((_volume: any): ?ServerVolumeTracing);
+  if (skeletonLayers.length > 1) {
+    throw new Error(
+      "Having more than one skeleton layer is currently not supported by webKnossos.",
+    );
+  }
 
-  return {
-    skeleton,
-    volume,
-  };
+  return fullAnnotationLayers;
+}
+
+function extractVersion(
+  versions: Versions,
+  tracingId: string,
+  typ: "Volume" | "Skeleton",
+): ?number {
+  if (typ === "Skeleton") {
+    return versions.skeleton;
+  } else if (versions.volumes != null) {
+    return versions.volumes[tracingId];
+  }
+  return null;
 }
 
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
-  tracingType: "skeleton" | "volume",
-  version?: ?number,
-): Promise<?ServerTracing> {
-  const tracingId = annotation.tracing[tracingType];
-  if (!tracingId) {
-    return null;
-  }
+  annotationLayerDescriptor: AnnotationLayerDescriptor,
+  versions?: Versions = {},
+): Promise<ServerTracing> {
+  const { tracingId, typ } = annotationLayerDescriptor;
+
+  const version = extractVersion(versions, tracingId, typ);
+  const tracingType = typ.toLowerCase();
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
@@ -726,6 +788,12 @@ export async function getTracingForAnnotationType(
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
+
+  // Additionally, we assign the typ property (skeleton vs volume).
+  // Flow complains since we don't doublecheck that we assign the correct type depending
+  // on the tracing's structure.
+  // $FlowIgnore[incompatible-type]
+  tracing.typ = typ;
 
   return tracing;
 }
@@ -742,10 +810,11 @@ export function getUpdateActionLog(
   );
 }
 
-export async function importVolumeTracing(tracing: Tracing, dataFile: File): Promise<number> {
-  const volumeTracing = tracing.volume;
-  if (!volumeTracing) throw new Error("Volume Tracing must exist when importing Volume Tracing.");
-
+export async function importVolumeTracing(
+  tracing: Tracing,
+  volumeTracing: VolumeTracing,
+  dataFile: File,
+): Promise<number> {
   return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(
       `${tracing.tracingStore.url}/tracings/volume/${
@@ -805,10 +874,14 @@ export async function downloadNml(
 export async function unlinkFallbackSegmentation(
   annotationId: string,
   annotationType: APIAnnotationType,
+  tracingId: string,
 ): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/unlinkFallback`, {
-    method: "PATCH",
-  });
+  await Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/unlinkFallback?tracingId=${tracingId}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 // When the annotation is open, please use the corresponding method
@@ -817,10 +890,14 @@ export async function unlinkFallbackSegmentation(
 export async function downsampleSegmentation(
   annotationId: string,
   annotationType: APIAnnotationType,
+  tracingId: string,
 ): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/downsample`, {
-    method: "PATCH",
-  });
+  await Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/downsample?tracingId=${tracingId}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 // ### Datasets
@@ -839,17 +916,17 @@ export async function getJobs(): Promise<Array<APIJob>> {
   return jobs.map(job => ({
     id: job.id,
     type: job.command,
-    datasetName: job.commandArgs.kwargs.dataset_name,
-    organizationName: job.commandArgs.kwargs.organization_name,
-    layerName: job.commandArgs.kwargs.layer_name,
-    boundingBox: job.commandArgs.kwargs.bbox,
-    exportFileName: job.commandArgs.kwargs.export_file_name,
-    tracingId: job.commandArgs.kwargs.volume_tracing_id,
-    annotationId: job.commandArgs.kwargs.annotation_id,
-    annotationType: job.commandArgs.kwargs.annotation_type,
-    state: adaptJobState(job.command, job.celeryInfo.state, job.manualState),
+    datasetName: job.commandArgs.dataset_name,
+    organizationName: job.commandArgs.organization_name,
+    layerName: job.commandArgs.layer_name,
+    boundingBox: job.commandArgs.bbox,
+    exportFileName: job.commandArgs.export_file_name,
+    tracingId: job.commandArgs.volume_tracing_id,
+    annotationId: job.commandArgs.annotation_id,
+    annotationType: job.commandArgs.annotation_type,
+    state: adaptJobState(job.command, job.state, job.manualState),
     manualState: job.manualState,
-    result: job.celeryInfo.result,
+    result: job.returnValue,
     createdAt: job.created,
   }));
 }
@@ -875,9 +952,10 @@ export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,
   scale: Vector3,
+  datastoreName: string,
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}`,
+    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&dataStoreName=${datastoreName}`,
   );
 }
 
@@ -1058,7 +1136,6 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
 export function createResumableUpload(
   datasetId: APIDatasetId,
   datastoreUrl: string,
-  totalFileCount: number,
   uploadId: string,
 ): Promise<*> {
   const generateUniqueIdentifier = file => {
@@ -1073,7 +1150,6 @@ export function createResumableUpload(
 
   const additionalParameters = {
     ...datasetId,
-    totalFileCount,
   };
 
   return doWithToken(
@@ -1084,12 +1160,31 @@ export function createResumableUpload(
         query: additionalParameters,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
-        // Only increase this value when https://github.com/scalableminds/webknossos/issues/5056 is fixed
-        simultaneousUploads: 1,
+        simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
         generateUniqueIdentifier,
       }),
+  );
+}
+
+type ReserveUploadInformation = {
+  uploadId: string,
+  organization: string,
+  name: string,
+  totalFileCount: number,
+  initialTeams: Array<string>,
+};
+
+export function reserveDatasetUpload(
+  datastoreHost: string,
+  reserveUploadInformation: ReserveUploadInformation,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
+      data: reserveUploadInformation,
+      host: datastoreHost,
+    }),
   );
 }
 
@@ -1295,6 +1390,21 @@ export async function getMappingsForDatasetLayer(
   );
 }
 
+export function fetchMapping(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingName: string,
+): Promise<APIMapping> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/mappings/${mappingName}?token=${token}`,
+    ),
+  );
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1493,17 +1603,17 @@ export async function isDatasetAccessibleBySwitching(
   annotationType: AnnotationType,
   commandType: TraceOrViewCommand,
 ): Promise<?APIOrganization> {
-  if (commandType.type === ControlModeEnum.VIEW) {
-    return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${
-        commandType.owningOrganization
-      }&dataSetName=${commandType.name}`,
-    );
-  } else {
+  if (commandType.type === ControlModeEnum.TRACE) {
     return Request.receiveJSON(
       `/api/auth/accessibleBySwitching?annotationTyp=${annotationType}&annotationId=${
         commandType.annotationId
       }`,
+    );
+  } else {
+    return Request.receiveJSON(
+      `/api/auth/accessibleBySwitching?organizationName=${
+        commandType.owningOrganization
+      }&dataSetName=${commandType.name}`,
     );
   }
 }
@@ -1595,7 +1705,7 @@ type IsosurfaceRequest = {
 
 export function computeIsosurface(
   requestUrl: string,
-  layer: DataLayer,
+  mappingInfo: ActiveMappingInfo,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
   const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
@@ -1613,8 +1723,8 @@ export function computeIsosurface(
           // Segment to build mesh for
           segmentId,
           // Name of mapping to apply before building mesh (optional)
-          mapping: layer.activeMapping,
-          mappingType: layer.activeMappingType,
+          mapping: mappingInfo.mappingName,
+          mappingType: mappingInfo.mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
           scale,
@@ -1650,7 +1760,7 @@ export function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-): Promise<Array<string>> {
+): Promise<Array<APIMeshFile>> {
   return doWithToken(token =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${

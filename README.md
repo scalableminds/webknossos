@@ -28,7 +28,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 * [Supported dataset formats: WKW](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
-* [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/guides/mesh_visualization)
+* [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/webknossos/mesh_visualization.html)
 * [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
@@ -44,7 +44,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 ## Installation
 webKnossos is open-source, so you can install it on your own server.
 
-[Check out the documentation](https://docs.webknossos.org/guides/installation) for a tutorial on how to install webKnossos on your own server.
+[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install webKnossos on your own server.
 
 For installations on localhost, please see below.
 
@@ -64,13 +64,13 @@ Now, you are ready to use your local webKnossos instance.
 
 See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
 
-For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/guides/installation).
+For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/webknossos/installation.html).
 
 ### Dependencies
 
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
-* [PostgreSQL 10](https://www.postgresql.org/)
+* [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
 * [node.js 12+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
@@ -105,24 +105,25 @@ git clone git@github.com:scalableminds/webknossos.git
 ```
 
 
-### Ubuntu 16.04 LTS
+### Ubuntu 20.04 LTS
 
 ```bash
-# Adding repositories for sbt, nodejs and yarn
-echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt.list
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
-echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
-curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt install -y curl ca-certificates wget
+# Adding repositories for nodejs, sbt and yarn
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
+echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
+curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo apt-key add
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
-# Installing everything
-sudo apt-get update
-sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn redis-server
+sudo apt update
+sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-8-jdk yarn redis-server build-essential
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+# Clone the git repo to the current directory
+git clone -b master --depth=1 https://github.com/scalableminds/webknossos.git
 ```
 
 If you already have a different Java version installed, set the default version to Java 8:
@@ -153,11 +154,18 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
+
+First, install all frontend dependencies via
 ```bash
 yarn install
+```
+Note: During this installation step, it might happen that the module `gl` cannot be installed correctly. As this module is only used for testing webKnossos, you can safely ignore this error.
+
+To start webKnossos, use
+```bash
 yarn start
 ```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
+This will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 Make sure that the PostgreSQL and Redis services are running before you start the application.
 
 ## Upgrades

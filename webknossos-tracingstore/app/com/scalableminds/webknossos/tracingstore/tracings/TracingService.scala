@@ -1,16 +1,19 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import java.util.UUID
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+
+object TracingIds {
+  val dummyTracingId: String = "dummyTracingId"
+}
 
 trait TracingService[T <: GeneratedMessage]
     extends KeyValueStoreImplicits
@@ -27,13 +30,15 @@ trait TracingService[T <: GeneratedMessage]
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
-  def temporaryTracingIdStore: RedisTemporaryStore
+  def temporaryTracingIdStore: TracingStoreRedisStore
 
   def tracingMigrationService: TracingMigrationService[T]
 
-  val handledGroupIdStore: RedisTemporaryStore
+  def dummyTracing: T
 
-  val uncommittedUpdatesStore: RedisTemporaryStore
+  val handledGroupIdStore: TracingStoreRedisStore
+
+  val uncommittedUpdatesStore: TracingStoreRedisStore
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
@@ -116,6 +121,7 @@ trait TracingService[T <: GeneratedMessage]
            version: Option[Long] = None,
            useCache: Boolean = true,
            applyUpdates: Boolean = false): Fox[T] = {
+    if (tracingId == TracingIds.dummyTracingId) return Fox.successful(dummyTracing)
     val tracingFox = tracingStore.get(tracingId, version)(fromProto[T]).map(_.value)
     tracingFox.flatMap { tracing =>
       val updatedTracing = if (applyUpdates) {

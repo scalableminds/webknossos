@@ -20,7 +20,7 @@ type UpdateDatasetSettingAction = {
   propertyName: $Keys<DatasetConfiguration>,
   value: any,
 };
-type UpdateTemporarySettingAction = {
+export type UpdateTemporarySettingAction = {
   type: "UPDATE_TEMPORARY_SETTING",
   propertyName: $Keys<TemporaryConfiguration>,
   value: any,
@@ -53,12 +53,12 @@ type InitializeGpuSetupAction = {
   gpuFactor: number,
   maximumLayerCountToRender: number,
 };
-type SetMappingEnabledAction = {
+export type SetMappingEnabledAction = {
   type: "SET_MAPPING_ENABLED",
   isMappingEnabled: boolean,
   layerName: string,
 };
-type SetMappingAction = {
+export type SetMappingAction = {
   type: "SET_MAPPING",
   mappingName: ?string,
   mapping: ?Mapping,
@@ -67,6 +67,7 @@ type SetMappingAction = {
   hideUnmappedIds: ?boolean,
   mappingType: MappingType,
   layerName: string,
+  showLoadingIndicator: ?boolean,
 };
 
 type SetHideUnmappedIdsAction = {
@@ -176,23 +177,35 @@ export const setMappingEnabledAction = (
   isMappingEnabled,
 });
 
+export type OptionalMappingProperties = {|
+  mapping?: Mapping,
+  mappingKeys?: Array<number>,
+  mappingColors?: Array<number>,
+  hideUnmappedIds?: boolean,
+  showLoadingIndicator?: boolean,
+|};
+
 export const setMappingAction = (
   layerName: string,
   mappingName: ?string,
-  mapping: ?Mapping,
-  mappingKeys: ?Array<number>,
-  mappingColors: ?Array<number>,
-  hideUnmappedIds: ?boolean,
   mappingType: MappingType = "JSON",
+  {
+    mapping,
+    mappingKeys,
+    mappingColors,
+    hideUnmappedIds,
+    showLoadingIndicator,
+  }: OptionalMappingProperties = {},
 ): SetMappingAction => ({
   type: "SET_MAPPING",
   layerName,
   mappingName,
+  mappingType,
   mapping,
   mappingKeys,
   mappingColors,
   hideUnmappedIds,
-  mappingType,
+  showLoadingIndicator,
 });
 
 export const setHideUnmappedIdsAction = (

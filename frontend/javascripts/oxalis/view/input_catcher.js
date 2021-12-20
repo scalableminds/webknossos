@@ -6,7 +6,7 @@ import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
-import Store from "oxalis/store";
+import Store, { type BusyBlockingInfo } from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import { waitForCondition } from "libs/utils";
 
@@ -21,6 +21,7 @@ type Props = {
   viewportID: Viewport,
   children?: React.Node,
   displayScalebars?: boolean,
+  busyBlockingInfo: BusyBlockingInfo,
 };
 
 function ignoreContextMenu(event: SyntheticInputEvent<>) {
@@ -106,7 +107,10 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           onContextMenu={ignoreContextMenu}
           data-value={viewportID}
           className={`inputcatcher ${viewportID}`}
-          style={{ position: "relative" }}
+          style={{
+            position: "relative",
+            cursor: this.props.busyBlockingInfo.isBusy ? "wait" : "auto",
+          }}
         >
           <ViewportStatusIndicator />
           {this.props.displayScalebars && viewportID !== "arbitraryViewport" ? (

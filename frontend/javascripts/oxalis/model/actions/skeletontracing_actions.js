@@ -18,8 +18,9 @@ import Store, {
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
+import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 
-type InitializeSkeletonTracingAction = {
+export type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",
   tracing: ServerSkeletonTracing,
 };
@@ -124,6 +125,12 @@ type UpdateNavigationListAction = {
   list: Array<number>,
   activeIndex: number,
 };
+export type LoadAgglomerateSkeletonAction = {
+  type: "LOAD_AGGLOMERATE_SKELETON",
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+};
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -167,7 +174,8 @@ export type SkeletonTracingAction =
   | SetTreeGroupAction
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
-  | UpdateNavigationListAction;
+  | UpdateNavigationListAction
+  | LoadAgglomerateSkeletonAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -191,8 +199,6 @@ export const SkeletonTracingSaveRelevantActions = [
   "SHUFFLE_ALL_TREE_COLORS",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
-  "SET_USER_BOUNDING_BOXES",
-  "ADD_USER_BOUNDING_BOXES",
   "SET_TREE_GROUPS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
@@ -203,6 +209,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_TREE_COLOR",
   // Composited actions, only dispatched using `batchActions`
   "DELETE_GROUP_AND_TREES",
+  ...AllUserBoundingBoxActions,
 ];
 
 const noAction = (): NoAction => ({
@@ -543,4 +550,15 @@ export const updateNavigationListAction = (
   type: "UPDATE_NAVIGATION_LIST",
   list,
   activeIndex,
+});
+
+export const loadAgglomerateSkeletonAction = (
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+): LoadAgglomerateSkeletonAction => ({
+  type: "LOAD_AGGLOMERATE_SKELETON",
+  layerName,
+  mappingName,
+  agglomerateId,
 });

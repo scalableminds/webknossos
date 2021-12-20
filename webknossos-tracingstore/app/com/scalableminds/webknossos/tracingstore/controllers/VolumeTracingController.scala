@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TSRemoteWebKnossosClient}
 import play.api.i18n.Messages
@@ -27,7 +27,7 @@ import scala.concurrent.ExecutionContext
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val remoteWebKnossosClient: TSRemoteWebKnossosClient,
                                         val accessTokenService: TracingStoreAccessTokenService,
-                                        val slackNotificationService: SlackNotificationService)(
+                                        val slackNotificationService: TSSlackNotificationService)(
     implicit val ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings] {
@@ -43,11 +43,14 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]): Action[AnyContent] =
+  def initialData(token: Option[String],
+                  tracingId: String,
+                  minResolution: Option[Int],
+                  maxResolution: Option[Int]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
             AllowRemoteOrigin {
               for {
                 initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
@@ -64,10 +67,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
 
-  def mergedFromContents(persist: Boolean): Action[VolumeTracings] = Action.async(validateProto[VolumeTracings]) {
-    implicit request =>
+  def mergedFromContents(token: Option[String], persist: Boolean): Action[VolumeTracings] =
+    Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           AllowRemoteOrigin {
             val tracings: List[Option[VolumeTracing]] = request.body
             val mergedTracing = tracingService.merge(tracings.flatten)
@@ -77,58 +80,61 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           }
         }
       }
+    }
+
+  def initialDataMultiple(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
+            AllowRemoteOrigin {
+              for {
+                initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+                tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+                resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
+                _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
+              } yield Ok(Json.toJson(tracingId))
+            }
+          }
+        }
+      }
   }
 
-  def initialDataMultiple(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+  def allData(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
           AllowRemoteOrigin {
             for {
-              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
-              _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
-            } yield Ok(Json.toJson(tracingId))
+              tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
+            } yield {
+              val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
+              Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
+            }
+          }
+        }
+      }
+  }
+
+  def allDataBlocking(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
+              data <- tracingService.allDataFile(tracingId, tracing)
+              _ = Thread.sleep(5)
+            } yield Ok.sendFile(data)
           }
         }
       }
     }
-  }
 
-  def allData(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
-          for {
-            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-          } yield {
-            val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
-            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
-          }
-        }
-      }
-    }
-  }
-
-  def allDataBlocking(tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
-          for {
-            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-            data <- tracingService.allDataFile(tracingId, tracing)
-            _ = Thread.sleep(5)
-          } yield Ok.sendFile(data)
-        }
-      }
-    }
-  }
-
-  def data(tracingId: String): Action[List[WebKnossosDataRequest]] =
+  def data(token: Option[String], tracingId: String): Action[List[WebKnossosDataRequest]] =
     Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
           AllowRemoteOrigin {
             for {
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
@@ -145,14 +151,15 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(tracingId: String,
+  def duplicate(token: Option[String],
+                tracingId: String,
                 fromTask: Option[Boolean],
                 minResolution: Option[Int],
                 maxResolution: Option[Int],
                 downsample: Option[Boolean]): Action[AnyContent] = Action.async { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
           AllowRemoteOrigin {
             for {
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
@@ -171,11 +178,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def unlinkFallback(tracingId: String): Action[DataSourceLike] = Action.async(validateJson[DataSourceLike]) {
-    implicit request =>
+  def unlinkFallback(token: Option[String], tracingId: String): Action[DataSourceLike] =
+    Action.async(validateJson[DataSourceLike]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos, token) {
             AllowRemoteOrigin {
               for {
                 tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
@@ -186,12 +193,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           }
         }
       }
-  }
+    }
 
-  def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
+  def importVolumeData(token: Option[String], tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), token) {
           AllowRemoteOrigin {
             for {
               tracing <- tracingService.find(tracingId)
@@ -204,9 +211,9 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
 
-  def updateActionLog(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+  def updateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         AllowRemoteOrigin {
           for {
             updateLog <- tracingService.updateActionLog(tracingId)
@@ -216,9 +223,9 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def requestIsosurface(tracingId: String): Action[WebKnossosIsosurfaceRequest] =
+  def requestIsosurface(token: Option[String], tracingId: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
         AllowRemoteOrigin {
           for {
             // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
@@ -241,8 +248,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def findData(tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+  def findData(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
       AllowRemoteOrigin {
         for {
           positionOpt <- tracingService.findData(tracingId)

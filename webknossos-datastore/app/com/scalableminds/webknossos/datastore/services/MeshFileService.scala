@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.io.PathUtils
@@ -86,7 +86,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
    */
   def mappingNameForMeshFile(meshFilePath: Path): Fox[String] =
     for {
-      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(initHDFReader) } ?~> "mesh.file.open.failed"
+      cachedMeshFile <- tryo { meshFileCache.withCache(meshFilePath)(CachedHdf5File.fromPath) } ?~> "mesh.file.open.failed"
       mappingName <- tryo { _: Throwable =>
         cachedMeshFile.finishAccess()
       } { cachedMeshFile.reader.string().getAttr("/", "metadata/mapping_name") } ?~> "mesh.file.readEncoding.failed"

@@ -1,34 +1,20 @@
 // @flow
-import { Tag, Empty, Tree, Tooltip, Popover, Checkbox, Divider, Input, Select } from "antd";
-import { FilterOutlined, SettingOutlined } from "@ant-design/icons";
+import { AutoSizer } from "react-virtualized";
+import { Checkbox, Divider, Empty, Input, Popover, Select, Tag, Tooltip, Tree } from "antd";
 import type { Dispatch } from "redux";
+import { FilterOutlined, SettingOutlined } from "@ant-design/icons";
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
+import Maybe from "data.maybe";
 import React from "react";
-import { AutoSizer } from "react-virtualized";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import Maybe from "data.maybe";
-
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import type { ExtractReturn } from "libs/type_helpers";
 
 import type { APISegmentationLayer, APIDataset, APIConnectomeFile } from "types/api_flow_types";
-import InputComponent from "oxalis/view/components/input_component";
-import ButtonComponent from "oxalis/view/components/button_component";
-import Store, {
-  type OxalisState,
-  type MutableTree,
-  type MutableNode,
-  type MutableTreeMap,
-} from "oxalis/store";
-import Constants, { type Vector3 } from "oxalis/constants";
+import type { ExtractReturn } from "libs/type_helpers";
+import { diffArrays, unique } from "libs/utils";
+import { findTreeByName } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import {
-  updateDatasetSettingAction,
-  setMappingAction,
-} from "oxalis/model/actions/settings_actions";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   getSynapsesOfAgglomerates,
   getSynapseSources,
@@ -37,13 +23,7 @@ import {
   getSynapseTypes,
   getConnectomeFilesForDatasetLayer,
 } from "admin/admin_rest_api";
-import api from "oxalis/api/internal_api";
-import {
-  loadAgglomerateSkeletonAction,
-  removeAgglomerateSkeletonAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByName } from "oxalis/model/accessors/skeletontracing_accessor";
-import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   initializeConnectomeTracingAction,
   deleteConnectomeTreeAction,
@@ -52,11 +32,30 @@ import {
   updateConnectomeFileListAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
+import {
+  loadAgglomerateSkeletonAction,
+  removeAgglomerateSkeletonAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { stringToAntdColorPreset, stringToAntdColorPresetRgb } from "libs/format_utils";
-import { diffArrays, unique } from "libs/utils";
+import {
+  updateDatasetSettingAction,
+  setMappingAction,
+} from "oxalis/model/actions/settings_actions";
+import ButtonComponent from "oxalis/view/components/button_component";
+import Constants, { type Vector3 } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EdgeCollection from "oxalis/model/edge_collection";
+import InputComponent from "oxalis/view/components/input_component";
+import Store, {
+  type OxalisState,
+  type MutableTree,
+  type MutableNode,
+  type MutableTreeMap,
+} from "oxalis/store";
 import Toast from "libs/toast";
+import api from "oxalis/api/internal_api";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const connectomeTabId = "connectome";
 

@@ -368,7 +368,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     return (
       <TextWithDescription
         isEditable
-        value={tracing.name}
+        value={tracing.name ? tracing.name : "Unnamed Annotation"}
         onChange={newName => this.renameTracing(tracing, newName)}
         label="Annotation Name"
         description={tracing.description}

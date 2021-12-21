@@ -48,7 +48,7 @@ function AuthTokenView() {
               <FormItem>
                 <Input.Group compact>
                   <Input value={currentToken} style={{ width: "90%" }} readOnly />
-                  <Button onClick={copyTokenToClipboard} icon={<CopyOutlined />} />
+                  <Button onClick={copyTokenToClipboard} icon={<CopyOutlined style={{ marginRight: "0px"}}/>} />
                 </Input.Group>
               </FormItem>
               <FormItem>

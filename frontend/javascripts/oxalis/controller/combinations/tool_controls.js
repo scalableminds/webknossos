@@ -14,10 +14,7 @@ import {
   enforceActiveVolumeTracing,
   getContourTracingMode,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  handleAgglomerateSkeletonAtClick,
-  handleClickSegment,
-} from "oxalis/controller/combinations/segmentation_handlers";
+import { handleClickSegment } from "oxalis/controller/combinations/segmentation_handlers";
 import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -254,12 +251,6 @@ export class SkeletonTool {
           event,
           showNodeContextMenuAt,
         );
-      },
-
-      middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        if (event.shiftKey) {
-          handleAgglomerateSkeletonAtClick(pos);
-        }
       },
     };
   }

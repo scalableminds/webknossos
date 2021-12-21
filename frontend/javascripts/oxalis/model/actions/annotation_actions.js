@@ -2,6 +2,7 @@
 import type {
   APIAnnotation,
   APIAnnotationVisibility,
+  APIMeshFile,
   EditableLayerProperties,
   LocalMeshMetaData,
   MeshMetaData,
@@ -113,12 +114,9 @@ export type CreateMeshFromBufferAction = {
   name: string,
 };
 
-export type TriggerActiveIsosurfaceDownloadAction = {
-  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
-};
-
 export type TriggerIsosurfaceDownloadAction = {
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellName: string,
   cellId: number,
 };
 
@@ -148,12 +146,12 @@ export type FinishedLoadingIsosurfaceAction = {
 export type UpdateMeshFileListAction = {
   type: "UPDATE_MESH_FILE_LIST",
   layerName: string,
-  meshFiles: Array<string>,
+  meshFiles: Array<APIMeshFile>,
 };
 export type UpdateCurrentMeshFileAction = {
   type: "UPDATE_CURRENT_MESH_FILE",
   layerName: string,
-  meshFile: ?string,
+  meshFileName: ?string,
 };
 
 export type ImportIsosurfaceFromStlAction = {
@@ -195,7 +193,6 @@ export type AnnotationActionTypes =
   | CreateMeshFromBufferAction
   | UpdateLocalMeshMetaDataAction
   | UpdateIsosurfaceVisibilityAction
-  | TriggerActiveIsosurfaceDownloadAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
   | FinishedRefreshingIsosurfacesAction
@@ -357,14 +354,12 @@ export const createMeshFromBufferAction = (
   name,
 });
 
-export const triggerActiveIsosurfaceDownloadAction = (): TriggerActiveIsosurfaceDownloadAction => ({
-  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
-});
-
 export const triggerIsosurfaceDownloadAction = (
+  cellName: string,
   cellId: number,
 ): TriggerIsosurfaceDownloadAction => ({
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellName,
   cellId,
 });
 
@@ -405,7 +400,7 @@ export const finishedLoadingIsosurfaceAction = (
 
 export const updateMeshFileListAction = (
   layerName: string,
-  meshFiles: Array<string>,
+  meshFiles: Array<APIMeshFile>,
 ): UpdateMeshFileListAction => ({
   type: "UPDATE_MESH_FILE_LIST",
   layerName,
@@ -414,11 +409,11 @@ export const updateMeshFileListAction = (
 
 export const updateCurrentMeshFileAction = (
   layerName: string,
-  meshFile: ?string,
+  meshFileName: ?string,
 ): UpdateCurrentMeshFileAction => ({
   type: "UPDATE_CURRENT_MESH_FILE",
   layerName,
-  meshFile,
+  meshFileName,
 });
 
 export const importIsosurfaceFromStlAction = (

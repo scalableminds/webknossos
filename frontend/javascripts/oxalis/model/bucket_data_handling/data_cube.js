@@ -37,6 +37,7 @@ import constants, {
   type Vector4,
   type BoundingBoxType,
   type LabelMasksByBucketAndW,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import { type ElementClass } from "types/api_flow_types";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
@@ -174,7 +175,7 @@ class DataCube {
       Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
-    return this.isSegmentation ? activeMapping.isMappingEnabled : false;
+    return this.isSegmentation ? activeMapping.mappingStatus === MappingStatusEnum.ENABLED : false;
   }
 
   getMapping(): ?Mapping {
@@ -190,7 +191,9 @@ class DataCube {
       Store.getState().temporaryConfiguration.activeMappingByLayer,
       this.layerName,
     );
-    return this.isSegmentation ? activeMapping.hideUnmappedIds : false;
+    return this.isSegmentation && activeMapping.mappingStatus === MappingStatusEnum.ENABLED
+      ? activeMapping.hideUnmappedIds
+      : false;
   }
 
   mapId(idToMap: number): number {

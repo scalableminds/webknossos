@@ -13,13 +13,16 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - Added tagging support for datasets. [#5832](https://github.com/scalableminds/webknossos/pull/5832)
 - Dataset upload back-end now supports linking layers of existing public datasets. [#5863](https://github.com/scalableminds/webknossos/pull/5863)
+- Activate the correct mapping before loading pre-computed meshes if the corresponding mesh file contains that information. [#5859](https://github.com/scalableminds/webknossos/pull/5859)
 
 ### Changed
+-
 
 ### Fixed
 - Fixed a bug where dataset uploads that contained files larger than 2 GB failed. [#5889](https://github.com/scalableminds/webknossos/pull/5889)
 - Fixed that dataset uploads did not survive back-end restarts. [#5831](https://github.com/scalableminds/webknossos/pull/5831)
 - Fixed a bug where NMLs with unconnected trees and nested tree groups could not be uploaded due to wrong tree group IDs. [#5893](https://github.com/scalableminds/webknossos/pull/5893)
+- Fixed a security vulnerability by upgrading log4j to newest version. [#5900](https://github.com/scalableminds/webknossos/pull/5900)
 
 ### Removed
 -

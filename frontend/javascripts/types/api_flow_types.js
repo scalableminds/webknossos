@@ -695,3 +695,8 @@ export type ServerVolumeTracing = {|
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
+
+export type APIMeshFile = {|
+  meshFileName: string,
+  mappingName?: ?string,
+|};

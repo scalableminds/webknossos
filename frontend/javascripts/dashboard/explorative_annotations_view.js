@@ -444,19 +444,23 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             annotation.stats.treeCount != null &&
             annotation.stats.nodeCount != null &&
             annotation.stats.edgeCount != null ? (
-              <div>
-                <span title="Trees">
+              <div style={{ display: "grid", gridTemplateColumns: "30% auto" }}>
+                <span title="Trees" style={{ margin: "auto" }}>
                   <i className="fas fa-sitemap" />
+                </span>
+                <span>
                   {annotation.stats.treeCount}
                 </span>
-                <br />
-                <span title="Nodes">
+                <span title="Nodes" style={{ margin: "auto" }}>
                   <i className="fas fa-circle fa-sm" />
+                </span>
+                <span>
                   {annotation.stats.nodeCount}
                 </span>
-                <br />
-                <span title="Edges">
+                <span title="Edges" style={{ margin: "auto" }}>
                   <i className="fas fa-arrows-alt-h" />
+                </span>
+                <span>
                   {annotation.stats.edgeCount}
                 </span>
               </div>

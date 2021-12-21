@@ -69,6 +69,7 @@ type ConnectomeData = { [number]: Connections };
 
 type ConnectomeFilters = {
   synapseTypes: Array<string>,
+  synapseDirections: { in: boolean, out: boolean },
 };
 
 type SegmentData = { type: "segment", id: number };
@@ -197,18 +198,25 @@ const getFilteredConnectomeData = (
 ): ?ConnectomeData => {
   if (connectomeData == null || filters == null) return connectomeData;
 
-  const { synapseTypes } = filters;
+  const { synapseTypes, synapseDirections } = filters;
 
-  if (synapseTypes.length === 0) return connectomeData;
+  if (synapseTypes.length === 0 && synapseDirections.in && synapseDirections.out) {
+    return connectomeData;
+  }
+
+  // Clone connectomeData because it is modified in-place during filtering
+  const filteredConnectomeData = _.clone(connectomeData);
 
   return removeEmpty(
-    _.mapValues(_.clone(connectomeData), connections =>
-      _.mapValues(connections, partners =>
-        _.mapValues(partners, synapses =>
-          synapses.filter(
-            synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
-          ),
-        ),
+    _.mapValues(filteredConnectomeData, connections =>
+      _.mapValues(connections, (partners, inOrOut) =>
+        synapseDirections[inOrOut]
+          ? _.mapValues(partners, synapses =>
+              synapses.filter(
+                synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
+              ),
+            )
+          : [],
       ),
     ),
   );
@@ -308,6 +316,7 @@ The format should be: \`{
 
 const defaultFilters = {
   synapseTypes: [],
+  synapseDirections: { in: true, out: true },
 };
 
 class ConnectomeView extends React.Component<Props, State> {
@@ -336,7 +345,7 @@ class ConnectomeView extends React.Component<Props, State> {
       prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds ||
       prevProps.currentConnectomeFile !== this.props.currentConnectomeFile
     ) {
-      this.fetchConnections();
+      this.fetchConnections(prevState.synapseTypes);
     }
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
       this.maybeFetchConnectomeFiles();
@@ -375,7 +384,9 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   resetFilters = () => {
-    this.setState({ filters: defaultFilters });
+    this.setState(prevState => ({
+      filters: { ...defaultFilters, synapseTypes: prevState.synapseTypes },
+    }));
   };
 
   initializeSkeleton() {
@@ -433,7 +444,7 @@ class ConnectomeView extends React.Component<Props, State> {
     );
   }
 
-  async fetchConnections() {
+  async fetchConnections(prevSynapseTypes?: Array<string> = []) {
     const { filters } = this.state;
     const {
       dataset,
@@ -531,11 +542,18 @@ class ConnectomeView extends React.Component<Props, State> {
       });
     });
 
-    // Remove selected filters that are no longer valid
-    const newFilters = { ...filters };
-    newFilters.synapseTypes = filters.synapseTypes.filter(synapseType =>
+    // Remove filters for synapse types that are no longer valid
+    const validOldSynapseTypes = filters.synapseTypes.filter(synapseType =>
       typeToString.includes(synapseType),
     );
+    // Add positive filters for synapse types that are new
+    const newlyAddedSynapseTypes = typeToString.filter(
+      synapseType => !prevSynapseTypes.includes(synapseType),
+    );
+    const newFilters = {
+      ...filters,
+      synapseTypes: [...validOldSynapseTypes, ...newlyAddedSynapseTypes],
+    };
 
     // Auto-expand all nodes by default. The antd properties like `defaultExpandAll` only work on the first render
     // but not when switching to another agglomerate, afterwards.
@@ -739,7 +757,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const agglomerateIds = evt.target.value.split(",").map(part => parseInt(part, 10));
 
     Store.dispatch(
-      setActiveConnectomeAgglomerateIdsAction(getVisibleSegmentationLayer.name, agglomerateIds),
+      setActiveConnectomeAgglomerateIdsAction(visibleSegmentationLayer.name, agglomerateIds),
     );
 
     evt.target.blur();
@@ -789,17 +807,39 @@ class ConnectomeView extends React.Component<Props, State> {
     );
   }
 
-  onChangeSynapseTypeFilter = (synapseTypes: Array<string>) => {
-    this.setState({
+  onChangeSynapseDirectionFilter = (synapseDirections: Array<string>) => {
+    const newSynapseDirections = {};
+    synapseDirections.forEach(direction => {
+      newSynapseDirections[direction] = true;
+    });
+
+    this.setState(oldState => ({
       filters: {
+        ...oldState.filters,
+        synapseDirections: newSynapseDirections,
+      },
+    }));
+  };
+
+  onChangeSynapseTypeFilter = (synapseTypes: Array<string>) => {
+    this.setState(oldState => ({
+      filters: {
+        ...oldState.filters,
         synapseTypes,
       },
-    });
+    }));
   };
 
   getFilterSettings = () => {
     const { synapseTypes, filters } = this.state;
 
+    const synapseDirectionOptions = [
+      { label: "Incoming", value: "in" },
+      { label: "Outgoing", value: "out" },
+    ];
+    const checkedSynapseDirections = Object.entries(filters.synapseDirections)
+      .filter(([_direction, value]) => value)
+      .map(([direction, _value]) => direction);
     const synapseTypeOptions = synapseTypes.map(synapseType => ({
       label: synapseType,
       value: synapseType,
@@ -812,6 +852,12 @@ class ConnectomeView extends React.Component<Props, State> {
           Reset
         </ButtonComponent>
         <Divider style={{ margin: "10px 0" }} />
+        <h4>by Synapse Direction</h4>
+        <Checkbox.Group
+          options={synapseDirectionOptions}
+          value={checkedSynapseDirections}
+          onChange={this.onChangeSynapseDirectionFilter}
+        />
         <h4>by Synapse Type</h4>
         <Checkbox.Group
           options={synapseTypeOptions}
@@ -862,8 +908,12 @@ class ConnectomeView extends React.Component<Props, State> {
       ? activeAgglomerateIds.join(",")
       : "";
 
-    const isAnyFilterAvailable = synapseTypes.length;
-    const isAnyFilterActive = filters.synapseTypes.length;
+    const isSynapseTypeFilterAvailable = synapseTypes.length;
+    const isSynapseDirectionFiltered = Object.values(filters.synapseDirections).some(
+      value => !value,
+    );
+    const isAnyFilterActive =
+      filters.synapseTypes.length !== synapseTypes.length || isSynapseDirectionFiltered;
 
     return (
       <Input.Group compact className="compact-icons">
@@ -878,7 +928,7 @@ class ConnectomeView extends React.Component<Props, State> {
         <ButtonComponent onClick={this.reset}>Reset</ButtonComponent>
         <Tooltip title="Configure Filters">
           <Popover content={this.getFilterSettings} trigger="click" placement="bottom">
-            <ButtonComponent disabled={!isAnyFilterAvailable}>
+            <ButtonComponent disabled={!isSynapseTypeFilterAvailable}>
               <FilterOutlined style={isAnyFilterActive ? { color: "red" } : {}} />
             </ButtonComponent>
           </Popover>

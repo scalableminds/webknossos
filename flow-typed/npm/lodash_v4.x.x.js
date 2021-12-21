@@ -707,8 +707,8 @@ declare module "lodash" {
         source: A | B | C | D,
       ) => any | void,
     ): Object;
-    omit(object?: ?Object, ...props: Array<string>): Object;
-    omit(object?: ?Object, props: Array<string>): Object;
+    omit<K>(object: { [K]: any }, ...props: Array<K>): { [K]: any };
+    omit<K>(object: { [K]: any }, props: Array<K>): { [K]: any };
     omitBy<A, T: { [id: string]: A }>(object?: ?T, predicate?: OPredicate<A, T>): Object;
     pick(object?: ?Object, ...props: Array<string>): Object;
     pick(object?: ?Object, props: Array<string>): Object;

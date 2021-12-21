@@ -3,7 +3,6 @@ import { AutoSizer } from "react-virtualized";
 import { Checkbox, Divider, Empty, Input, Popover, Select, Tag, Tooltip, Tree } from "antd";
 import type { Dispatch } from "redux";
 import { FilterOutlined, SettingOutlined } from "@ant-design/icons";
-import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -26,9 +25,9 @@ import {
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   initializeConnectomeTracingAction,
-  deleteConnectomeTreeAction,
+  deleteConnectomeTreesAction,
   addConnectomeTreesAction,
-  setConnectomeTreeVisibilityAction,
+  setConnectomeTreesVisibilityAction,
   updateConnectomeFileListAction,
   updateCurrentConnectomeFileAction,
   setActiveConnectomeAgglomerateIdsAction,
@@ -502,7 +501,6 @@ class ConnectomeView extends React.Component<Props, State> {
       getSynapsePositions(...fetchProperties, allSynapses),
       getSynapseTypes(...fetchProperties, allSynapses),
     ]);
-
     // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file
     const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
@@ -612,30 +610,34 @@ class ConnectomeView extends React.Component<Props, State> {
     const { trees } = skeleton;
 
     if (deletedSynapseIds.length) {
-      const actions = deletedSynapseIds.map(synapseId =>
-        findTreeByName(trees, getTreeNameForSynapse(synapseId))
-          .map(tree =>
-            // Delete synapse tree if it is no longer part of the unfiltered data
-            // and only hide it otherwise
-            unfilteredSynapseIds.includes(synapseId)
-              ? setConnectomeTreeVisibilityAction(tree.treeId, false, layerName)
-              : deleteConnectomeTreeAction(tree.treeId, layerName),
-          )
-          .getOrElse(null),
+      const treeIdsToHide = [];
+      const treeIdsToDelete = [];
+      deletedSynapseIds.forEach(synapseId =>
+        findTreeByName(trees, getTreeNameForSynapse(synapseId)).map(tree =>
+          // Delete synapse tree if it is no longer part of the unfiltered data
+          // and only hide it otherwise
+          unfilteredSynapseIds.includes(synapseId)
+            ? treeIdsToHide.push(tree.treeId)
+            : treeIdsToDelete.push(tree.treeId),
+        ),
       );
-      Store.dispatch(batchActions(actions, "DELETE_OR_HIDE_CONNECTOME_TREES"));
+      if (treeIdsToHide.length) {
+        Store.dispatch(setConnectomeTreesVisibilityAction(treeIdsToHide, false, layerName));
+      }
+      if (treeIdsToDelete.length) {
+        Store.dispatch(deleteConnectomeTreesAction(treeIdsToDelete, layerName));
+      }
     }
 
     if (addedSynapseIds.length) {
       const synapseIdToSynapse = _.keyBy(filteredSynapses, "id");
       const newTrees: MutableTreeMap = {};
-      const visibilityActions = [];
+      const treeIdsToShow = [];
       for (const synapseId of addedSynapseIds) {
         const maybeTree = findTreeByName(trees, getTreeNameForSynapse(synapseId));
         // If the tree was already created, make it visible, otherwise created it
         maybeTree.cata({
-          Just: tree =>
-            visibilityActions.push(setConnectomeTreeVisibilityAction(tree.treeId, true, layerName)),
+          Just: tree => treeIdsToShow.push(tree.treeId),
           Nothing: () => {
             newTrees[synapseId] = synapseTreeCreator(synapseId, synapseIdToSynapse[synapseId].type);
             const synapseNode = synapseNodeCreator(
@@ -647,8 +649,8 @@ class ConnectomeView extends React.Component<Props, State> {
         });
       }
 
-      if (visibilityActions.length) {
-        Store.dispatch(batchActions(visibilityActions, "SET_CONNECTOME_TREES_VISIBILITY"));
+      if (treeIdsToShow.length) {
+        Store.dispatch(setConnectomeTreesVisibilityAction(treeIdsToShow, true, layerName));
       }
       if (_.size(newTrees)) {
         Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
@@ -726,7 +728,7 @@ class ConnectomeView extends React.Component<Props, State> {
         // Hide agglomerates that are no longer visible
         const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
         findTreeByName(trees, treeName).map(tree =>
-          Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, false, layerName)),
+          Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], false, layerName)),
         );
       }
     }
@@ -740,7 +742,7 @@ class ConnectomeView extends React.Component<Props, State> {
         // If the tree was already loaded, make it visible, otherwise load it
         maybeTree.cata({
           Just: tree =>
-            Store.dispatch(setConnectomeTreeVisibilityAction(tree.treeId, true, layerName)),
+            Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], true, layerName)),
           Nothing: () =>
             Store.dispatch(
               loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),

@@ -1,16 +1,16 @@
 // @flow
 
 import Maybe from "data.maybe";
+import _ from "lodash";
 import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
-import { updateKey3 } from "oxalis/model/helpers/deep_update";
+import type { OxalisState, SkeletonTracing, TreeMap } from "oxalis/store";
 import {
   addTreesAndGroups,
-  deleteTree,
+  getMaximumNodeId,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { getTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import { updateKey3 } from "oxalis/model/helpers/deep_update";
 import Constants from "oxalis/constants";
 
 function getSkeletonTracingForConnectome(
@@ -21,6 +21,44 @@ function getSkeletonTracingForConnectome(
     return Maybe.Just(state.localSegmentationData[layerName].connectomeData.skeleton);
   }
   return Maybe.Nothing();
+}
+
+function setConnectomeTreesVisibilityReducer(
+  state: OxalisState,
+  layerName: string,
+  treeIds: Array<number>,
+  visibility: boolean,
+): OxalisState {
+  const updateTreesObject = {};
+  const isVisibleUpdater = {
+    isVisible: { $set: visibility },
+  };
+  treeIds.forEach(treeId => {
+    updateTreesObject[treeId] = isVisibleUpdater;
+  });
+
+  return update(state, {
+    localSegmentationData: {
+      [layerName]: {
+        connectomeData: {
+          skeleton: {
+            trees: updateTreesObject,
+          },
+        },
+      },
+    },
+  });
+}
+
+export function deleteConnectomeTrees(
+  skeletonTracing: SkeletonTracing,
+  treeIds: Array<number>,
+): Maybe<[TreeMap, number]> {
+  // Delete trees
+  const newTrees = _.omit(skeletonTracing.trees, treeIds);
+  const newMaxNodeId = getMaximumNodeId(newTrees);
+
+  return Maybe.Just([newTrees, newMaxNodeId]);
 }
 
 function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
@@ -60,7 +98,7 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
       return getSkeletonTracingForConnectome(state, layerName)
         .map(skeletonTracing =>
           addTreesAndGroups(skeletonTracing, trees, [])
-            .map(([updatedTrees, _, newMaxNodeId]) =>
+            .map(([updatedTrees, _treeGroups, newMaxNodeId]) =>
               update(state, {
                 localSegmentationData: {
                   [layerName]: {
@@ -79,13 +117,12 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
         .getOrElse(state);
     }
 
-    case "DELETE_CONNECTOME_TREE": {
-      const { treeId, layerName } = action;
+    case "DELETE_CONNECTOME_TREES": {
+      const { treeIds, layerName } = action;
       return getSkeletonTracingForConnectome(state, layerName)
         .map(skeletonTracing =>
-          getTree(skeletonTracing, treeId)
-            .chain(tree => deleteTree(skeletonTracing, tree))
-            .map(([trees, _newActiveTreeId, _newActiveNodeId, newMaxNodeId]) =>
+          deleteConnectomeTrees(skeletonTracing, treeIds)
+            .map(([trees, newMaxNodeId]) =>
               update(state, {
                 localSegmentationData: {
                   [layerName]: {
@@ -104,31 +141,11 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
         .getOrElse(state);
     }
 
-    case "SET_CONNECTOME_TREE_VISIBILITY": {
-      const { treeId, isVisible, layerName } = action;
+    case "SET_CONNECTOME_TREES_VISIBILITY": {
+      const { treeIds, isVisible, layerName } = action;
       return getSkeletonTracingForConnectome(state, layerName)
-        .map(skeletonTracing =>
-          getTree(skeletonTracing, treeId)
-            .map(tree =>
-              update(state, {
-                localSegmentationData: {
-                  [layerName]: {
-                    connectomeData: {
-                      skeleton: {
-                        trees: {
-                          [tree.treeId]: {
-                            isVisible: {
-                              $set: isVisible,
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state),
+        .map(_skeletonTracing =>
+          setConnectomeTreesVisibilityReducer(state, layerName, treeIds, isVisible),
         )
         .getOrElse(state);
     }

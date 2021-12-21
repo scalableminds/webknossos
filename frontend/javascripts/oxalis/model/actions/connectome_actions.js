@@ -13,15 +13,15 @@ type AddConnectomeTreesAction = {
   layerName: string,
 };
 
-type DeleteConnectomeTreeAction = {
-  type: "DELETE_CONNECTOME_TREE",
-  treeId: number,
+type DeleteConnectomeTreesAction = {
+  type: "DELETE_CONNECTOME_TREES",
+  treeIds: Array<number>,
   layerName: string,
 };
 
-type SetConnectomeTreeVisibilityAction = {
-  type: "SET_CONNECTOME_TREE_VISIBILITY",
-  treeId: number,
+type SetConnectomeTreesVisibilityAction = {
+  type: "SET_CONNECTOME_TREES_VISIBILITY",
+  treeIds: Array<number>,
   isVisible: boolean,
   layerName: string,
 };
@@ -46,8 +46,8 @@ type SetActiveConnectomeAgglomerateIdsAction = {
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
   | AddConnectomeTreesAction
-  | DeleteConnectomeTreeAction
-  | SetConnectomeTreeVisibilityAction
+  | DeleteConnectomeTreesAction
+  | SetConnectomeTreesVisibilityAction
   | UpdateConnectomeFileListAction
   | UpdateCurrentConnectomeFileAction
   | SetActiveConnectomeAgglomerateIdsAction;
@@ -68,22 +68,22 @@ export const addConnectomeTreesAction = (
   layerName,
 });
 
-export const deleteConnectomeTreeAction = (
-  treeId: number,
+export const deleteConnectomeTreesAction = (
+  treeIds: Array<number>,
   layerName: string,
-): DeleteConnectomeTreeAction => ({
-  type: "DELETE_CONNECTOME_TREE",
-  treeId,
+): DeleteConnectomeTreesAction => ({
+  type: "DELETE_CONNECTOME_TREES",
+  treeIds,
   layerName,
 });
 
-export const setConnectomeTreeVisibilityAction = (
-  treeId: number,
+export const setConnectomeTreesVisibilityAction = (
+  treeIds: Array<number>,
   isVisible: boolean,
   layerName: string,
-): SetConnectomeTreeVisibilityAction => ({
-  type: "SET_CONNECTOME_TREE_VISIBILITY",
-  treeId,
+): SetConnectomeTreesVisibilityAction => ({
+  type: "SET_CONNECTOME_TREES_VISIBILITY",
+  treeIds,
   isVisible,
   layerName,
 });

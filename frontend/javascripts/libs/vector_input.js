@@ -129,6 +129,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     ]);
 
     return (
+      // $FlowIgnore[cannot-spread-inexact] Flow cannot infer the type of props
       <InputComponent
         onChange={this.handleChange}
         onFocus={this.handleFocus}

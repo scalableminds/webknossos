@@ -1,7 +1,7 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal } from "antd";
+import { Spin, Input, Table, Button, Modal, Tooltip } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -9,6 +9,7 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   UploadOutlined,
+  CopyOutlined
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -364,6 +365,25 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
+
+  renderIdAndCopyButton(tracing: APIAnnotationCompact) {
+    const copyIdToClipboard = async () => {
+      await navigator.clipboard.writeText(tracing.id);
+      Toast.success("ID copied to clipboard");
+    };
+    return (
+      <div>
+        {formatHash(tracing.id)}
+        <Tooltip title="Copy long ID" placement="bottom">
+          <Button 
+            onClick={copyIdToClipboard}
+            icon={<CopyOutlined style={{margin: "auto auto auto"}}/>}
+            style={{boxShadow: "none", backgroundColor: "transparent", borderColor: "transparent"}}/>
+        </Tooltip>
+      </div>
+    );
+  }
+
   renderNameWithDescription(tracing: APIAnnotationCompact) {
     return (
       <TextWithDescription
@@ -403,7 +423,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationCompact) => this.renderIdAndCopyButton(tracing)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />

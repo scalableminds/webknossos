@@ -515,6 +515,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           <Menu.Item
             className="node-context-menu-item"
             key="load-agglomerate-skeleton"
+            disabled={() => !hasAgglomerateMapping()}
             onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
           >
             Create Agglomerate Skeleton

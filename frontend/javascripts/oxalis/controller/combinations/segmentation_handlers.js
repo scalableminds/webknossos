@@ -1,5 +1,5 @@
 // @flow
-import type { Point2, Vector3 } from "oxalis/constants";
+import { type Point2, type Vector3, MappingStatusEnum } from "oxalis/constants";
 import Model from "oxalis/model";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -25,11 +25,11 @@ export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
 
   const state = Store.getState();
 
-  const { mappingName, mappingType, isMappingEnabled } = getMappingInfo(
+  const { mappingName, mappingType, mappingStatus } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     segmentation.name,
   );
-  if (mappingName == null || !isMappingEnabled) {
+  if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
     return;
   }

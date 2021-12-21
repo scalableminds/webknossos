@@ -182,6 +182,20 @@ object Fox extends FoxImplicits {
       _ <- bool2Fox(asBoolean)
     } yield ()
 
+  def chainFunctions[T](functions: List[T => Fox[T]])(implicit ec: ExecutionContext): T => Fox[T] = {
+    def runNext(remainingFunctions: List[T => Fox[T]], previousRestult: T): Fox[T] =
+      remainingFunctions match {
+        case head :: tail =>
+          for {
+            currentResult <- head(previousRestult)
+            nextResult <- runNext(tail, currentResult)
+          } yield nextResult
+        case Nil =>
+          Fox.successful(previousRestult)
+      }
+    t =>
+      runNext(functions, t)
+  }
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

@@ -1,51 +1,28 @@
 // @flow
 import { Button, ConfigProvider, List, Tooltip, Select, Popover, Empty } from "antd";
-import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
+import { LoadingOutlined, ReloadOutlined, SettingOutlined, PlusOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import DataLayer from "oxalis/model/data_layer";
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import Toast from "libs/toast";
+import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { ExtractReturn } from "libs/type_helpers";
-
-import type { APISegmentationLayer, APIUser, APIDataset } from "types/api_flow_types";
-import type {
-  OxalisState,
-  Flycam,
-  IsosurfaceInformation,
-  Segment,
-  SegmentMap,
-  ActiveMappingInfo,
-} from "oxalis/store";
-import Store from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import { type Vector3, MappingStatusEnum } from "oxalis/constants";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
   importIsosurfaceFromStlAction,
-  triggerActiveIsosurfaceDownloadAction,
   updateCurrentMeshFileAction,
 } from "oxalis/model/actions/annotation_actions";
-import features from "features";
 import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-  getBaseSegmentationName,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
-import {
-  updateDatasetSettingAction,
-  updateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
-import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
-import { getVisibleSegments } from "oxalis/model/accessors/volumetracing_accessor";
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+  getActiveSegmentationTracing,
+  getVisibleSegments,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getVisibleSegmentationLayer,
   getResolutionInfoOfVisibleSegmentationLayer,
@@ -53,13 +30,35 @@ import {
   ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
+import {
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+  getBaseSegmentationName,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
-import { trackAction } from "oxalis/model/helpers/analytics";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startComputeMeshFileJob, getJobs } from "admin/admin_rest_api";
+import { trackAction } from "oxalis/model/helpers/analytics";
+import {
+  updateDatasetSettingAction,
+  updateTemporarySettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
+import DataLayer from "oxalis/model/data_layer";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import Model from "oxalis/model";
-
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
+import Store, {
+  type ActiveMappingInfo,
+  type Flycam,
+  type IsosurfaceInformation,
+  type OxalisState,
+  type Segment,
+  type SegmentMap,
+} from "oxalis/store";
+import Toast from "libs/toast";
+import features from "features";
 
 const { Option } = Select;
 
@@ -79,15 +78,15 @@ type StateProps = {|
   isJSONMappingEnabled: boolean,
   mappingInfo: ActiveMappingInfo,
   flycam: Flycam,
-  hasVolume: boolean,
+  hasVolumeTracing: boolean,
   hoveredSegmentId: ?number,
   segments: ?SegmentMap,
   visibleSegmentationLayer: ?APISegmentationLayer,
   allowUpdate: boolean,
   organization: string,
   datasetName: string,
-  availableMeshFiles: ?Array<string>,
-  currentMeshFile: ?string,
+  availableMeshFiles: ?Array<APIMeshFile>,
+  currentMeshFile: ?APIMeshFile,
   activeUser: ?APIUser,
   activeCellId: ?number,
   preferredQualityForMeshPrecomputation: number,
@@ -97,21 +96,23 @@ type StateProps = {|
 
 const mapStateToProps = (state: OxalisState): StateProps => {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const activeVolumeTracing = getActiveSegmentationTracing(state);
   const mappingInfo = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
   );
   return {
-    activeCellId: state.tracing.volume != null ? state.tracing.volume.activeCellId : null,
+    activeCellId: activeVolumeTracing != null ? activeVolumeTracing.activeCellId : null,
     isosurfaces:
       visibleSegmentationLayer != null
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces
         : {},
     dataset: state.dataset,
-    isJSONMappingEnabled: mappingInfo.isMappingEnabled && mappingInfo.mappingType === "JSON",
+    isJSONMappingEnabled:
+      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     flycam: state.flycam,
-    hasVolume: state.tracing.volume != null,
+    hasVolumeTracing: state.tracing.volumes.length > 0,
     hoveredSegmentId: state.temporaryConfiguration.hoveredSegmentId,
     segments: getVisibleSegments(state),
     visibleSegmentationLayer,
@@ -157,9 +158,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
     }
   },
-  downloadIsosurface() {
-    dispatch(triggerActiveIsosurfaceDownloadAction());
-  },
   changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3, shouldReload: boolean) {
     if (cellId == null) {
       return;
@@ -172,8 +170,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   setPosition(position: Vector3, shouldRefreshIsosurface?: boolean) {
     dispatch(setPositionAction(position, null, shouldRefreshIsosurface));
   },
-  updateSegment(segmentId: number, segmentShape: $Shape<Segment>) {
-    dispatch(updateSegmentAction(segmentId, segmentShape));
+  updateSegment(segmentId: number, segmentShape: $Shape<Segment>, layerName: string) {
+    dispatch(updateSegmentAction(segmentId, segmentShape, layerName));
   },
 });
 
@@ -198,6 +196,12 @@ const formatMagWithLabel = (mag: Vector3, index: number) => {
   // Use "Very Low" for all low Mags which don't have extra labels
   const clampedIndex = Math.min(labels.length - 1, index);
   return `${labels[clampedIndex]} (Mag ${mag.join("-")})`;
+};
+
+const formatMeshFile = (meshFile: ?APIMeshFile): ?string => {
+  if (meshFile == null) return null;
+  if (meshFile.mappingName == null) return meshFile.meshFileName;
+  return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
 
 function _getMapIdFn(visibleSegmentationLayer: ?DataLayer) {
@@ -230,6 +234,12 @@ class SegmentsView extends React.Component<Props, State> {
     maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
     if (features().jobsEnabled) {
       this.pollJobData();
+    }
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
+      maybeFetchMeshFiles(this.props.visibleSegmentationLayer, this.props.dataset, false);
     }
   }
 
@@ -311,7 +321,7 @@ class SegmentsView extends React.Component<Props, State> {
     } else if (!this.props.dataset.jobsEnabled) {
       title =
         "Meshes Computation is not supported for datasets that are not natively hosted on the server. Upload your dataset directly to weknossos.org to enable this feature.";
-    } else if (this.props.hasVolume) {
+    } else if (this.props.hasVolumeTracing) {
       title =
         this.props.visibleSegmentationLayer != null &&
         this.props.visibleSegmentationLayer.fallbackLayer
@@ -336,10 +346,11 @@ class SegmentsView extends React.Component<Props, State> {
     if (!currentMeshFile || !visibleSegmentationLayer) {
       return;
     }
+
     await loadMeshFromFile(
       segment.id,
       segment.somePosition,
-      currentMeshFile,
+      currentMeshFile.meshFileName,
       visibleSegmentationLayer,
       dataset,
     );
@@ -510,17 +521,19 @@ class SegmentsView extends React.Component<Props, State> {
       <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
         <ConfigProvider renderEmpty={renderEmptyMeshFileSelect}>
           <Select
-            style={{ width: 180, display: "inline-blck" }}
+            style={{ width: 180, display: "inline-block" }}
             placeholder="Select a mesh file"
-            value={this.props.currentMeshFile}
+            value={
+              this.props.currentMeshFile != null ? this.props.currentMeshFile.meshFileName : null
+            }
             onChange={this.handleMeshFileSelected}
             size="small"
             loading={this.props.availableMeshFiles == null}
           >
             {this.props.availableMeshFiles ? (
               this.props.availableMeshFiles.map(meshFile => (
-                <Option key={meshFile} value={meshFile}>
-                  {meshFile}
+                <Option key={meshFile.meshFileName} value={meshFile.meshFileName}>
+                  {formatMeshFile(meshFile)}
                 </Option>
               ))
             ) : (
@@ -590,7 +603,7 @@ class SegmentsView extends React.Component<Props, State> {
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description={`There are no segments yet. ${
-                      this.props.allowUpdate && this.props.hasVolume
+                      this.props.allowUpdate && this.props.hasVolumeTracing
                         ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
                         : "Select or click existing segments to add them to this list."
                     }`}

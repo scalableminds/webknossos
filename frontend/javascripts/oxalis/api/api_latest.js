@@ -1,31 +1,41 @@
-/*
- * api_latest.js
- * @flow
- */
-
+// @flow
+import PriorityQueue from "js-priority-queue";
 import TWEEN from "tween.js";
 import _ from "lodash";
-import { V3 } from "libs/mjs";
 
-import Constants, {
-  type BoundingBoxType,
-  type ControlMode,
-  ControlModeEnum,
-  OrthoViews,
-  type Vector3,
-  type Vector4,
-  type AnnotationTool,
-  AnnotationToolEnum,
-  TDViewDisplayModeEnum,
-} from "oxalis/constants";
-import { InputKeyboardNoLoop } from "libs/input";
 import {
   type Bucket,
   getConstructorForElementClass,
 } from "oxalis/model/bucket_data_handling/bucket";
+import { type ElementClass } from "types/api_flow_types";
+import { InputKeyboardNoLoop } from "libs/input";
+import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
+import {
+  addTreesAndGroupsAction,
+  setActiveNodeAction,
+  createCommentAction,
+  deleteNodeAction,
+  centerActiveNodeAction,
+  deleteTreeAction,
+  resetSkeletonTracingAction,
+  setNodeRadiusAction,
+  setTreeNameAction,
+  setActiveTreeAction,
+  setActiveGroupAction,
+  setActiveTreeByNameAction,
+  setTreeColorIndexAction,
+  setTreeVisibilityAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  bucketPositionToGlobalAddress,
+  globalPositionToBaseBucket,
+} from "oxalis/model/helpers/position_converter";
 import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
@@ -47,9 +57,13 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
+  getNameOfRequestedOrVisibleSegmentationLayer,
+  getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
   getRequestedOrVisibleSegmentationLayerEnforced,
-  getNameOfRequestedOrVisibleSegmentationLayer,
+  getVolumeDescriptors,
+  getVolumeTracings,
+  hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerBoundaries,
@@ -59,40 +73,22 @@ import {
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
-  bucketPositionToGlobalAddress,
-  globalPositionToBaseBucket,
-} from "oxalis/model/helpers/position_converter";
+  loadMeshFromFile,
+  maybeFetchMeshFiles,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  addTreesAndGroupsAction,
-  setActiveNodeAction,
-  createCommentAction,
-  deleteNodeAction,
-  centerActiveNodeAction,
-  deleteTreeAction,
-  resetSkeletonTracingAction,
-  setNodeRadiusAction,
-  setTreeNameAction,
-  setActiveTreeAction,
-  setActiveGroupAction,
-  setActiveTreeByNameAction,
-  setTreeColorIndexAction,
-  setTreeVisibilityAction,
-  setTreeGroupAction,
-  setTreeGroupsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateCurrentMeshFileAction,
   refreshIsosurfacesAction,
   updateIsosurfaceVisibilityAction,
   removeIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
-import { setToolAction } from "oxalis/model/actions/ui_actions";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -101,7 +97,20 @@ import {
   setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
+import Constants, {
+  type BoundingBoxType,
+  type ControlMode,
+  ControlModeEnum,
+  OrthoViews,
+  type Vector3,
+  type Vector4,
+  type AnnotationTool,
+  AnnotationToolEnum,
+  TDViewDisplayModeEnum,
+  MappingStatusEnum,
+} from "oxalis/constants";
 import Model, { type OxalisModel } from "oxalis/model";
+import Request from "libs/request";
 import Store, {
   type AnnotationType,
   type MappingType,
@@ -114,43 +123,46 @@ import Store, {
   type TreeMap,
   type UserConfiguration,
   type VolumeTracing,
+  type OxalisState,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
-import PriorityQueue from "js-priority-queue";
 import UrlManager from "oxalis/controller/url_manager";
-import Request from "libs/request";
+import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass } from "types/api_flow_types";
-import UserLocalStorage from "libs/user_local_storage";
-import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
-function assertExists(value: any, message: string) {
+export function assertExists(value: any, message: string) {
   if (value == null) {
     throw new Error(message);
   }
 }
 
-function assertSkeleton(tracing: Tracing): SkeletonTracing {
+export function assertSkeleton(tracing: Tracing): SkeletonTracing {
   if (tracing.skeleton == null) {
     throw new Error("This api function should only be called in a skeleton annotation.");
   }
   return tracing.skeleton;
 }
 
-function assertVolume(tracing: Tracing): VolumeTracing {
-  if (tracing.volume == null) {
-    throw new Error("This api function should only be called in a volume annotation.");
+export function assertVolume(state: OxalisState): VolumeTracing {
+  if (state.tracing.volumes.length === 0) {
+    throw new Error(
+      "This api function should only be called when a volume annotation layer exists.",
+    );
   }
-  return tracing.volume;
+  const tracing = getRequestedOrDefaultSegmentationTracingLayer(state, null);
+
+  if (tracing == null) {
+    throw new Error(
+      "This api function should only be called when a volume annotation layer is visible.",
+    );
+  }
+
+  return tracing;
 }
 
 /**
@@ -513,7 +525,8 @@ class TracingApi {
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== task.type.id;
-      const involvesVolumeTask = state.tracing.volume != null || annotation.tracing.volume != null;
+      const involvesVolumeTask =
+        state.tracing.volumes.length > 0 || getVolumeDescriptors(annotation).length > 0;
 
       const currentScript = task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
@@ -727,6 +740,7 @@ class TracingApi {
       comparator: ([_first, firstDistance], [_second, secondDistance]) =>
         firstDistance <= secondDistance ? -1 : 1,
     });
+
     priorityQueue.queue([sourceNodeId, 0]);
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
@@ -832,7 +846,7 @@ class TracingApi {
    * _Volume tracing only!_
    */
   getActiveCellId(): ?number {
-    const tracing = assertVolume(Store.getState().tracing);
+    const tracing = assertVolume(Store.getState());
     return getActiveCellId(tracing);
   }
 
@@ -842,7 +856,7 @@ class TracingApi {
    * _Volume tracing only!_
    */
   setActiveCell(id: number) {
-    assertVolume(Store.getState().tracing);
+    assertVolume(Store.getState());
     assertExists(id, "Segment id is missing.");
     Store.dispatch(setActiveCellAction(id));
   }
@@ -892,18 +906,15 @@ class TracingApi {
      Note that this invoking this method will not block the UI. Thus, user actions can be performed during the
      downsampling. The caller should prohibit this (e.g., by showing a not-closable modal during the process).
    */
-  async downsampleSegmentation() {
+  async downsampleSegmentation(volumeTracingId: string) {
     const state = Store.getState();
-    const { annotationId, annotationType, volume } = state.tracing;
+    const { annotationId, annotationType } = state.tracing;
     if (state.task != null) {
       throw new Error("Cannot downsample segmentation for a task.");
     }
-    if (volume == null) {
-      throw new Error("Cannot downsample segmentation for annotation without volume data.");
-    }
 
     await this.save();
-    await downsampleSegmentation(annotationId, annotationType);
+    await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
   }
 }
@@ -932,16 +943,20 @@ class DataApi {
   }
 
   /**
+   * DEPRECATED! Use getSegmentationLayerNames, getVisibleSegmentationLayer or getVolumeTracingLayerIds instead.
+   *
    * Returns the name of the volume tracing layer (only exists for a volume annotation) or the visible
    * segmentation layer.
-   * Use `getSegmentationLayerNames` if you want to get actual segmentation layers (independent of a tracing).
    */
   getVolumeTracingLayerName(): string {
-    const segmentationLayer = this.model.getSegmentationTracingLayer();
+    const segmentationLayer = this.model.getActiveSegmentationTracingLayer();
     if (segmentationLayer != null) {
       return segmentationLayer.name;
     }
     const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+    console.warn(
+      "getVolumeTracingLayerName is deprecated. Please use getVolumeTracingLayerIds instead.",
+    );
     if (visibleLayer != null) {
       console.warn(
         "getVolumeTracingLayerName was called, but there is no volume tracing. Falling back to the visible segmentation layer. Please use getSegmentationLayerNames instead.",
@@ -953,8 +968,29 @@ class DataApi {
     );
   }
 
+  /*
+   * Returns the name of the visible segmentation layer (if it exists). Note that
+   * if the visible layer is a volume tracing layer, the name will be an ID
+   * (and not the name which the user can specify in the UI).
+   */
+  getVisibleSegmentationLayerName(): ?string {
+    const visibleLayer = getVisibleSegmentationLayer(Store.getState());
+    if (visibleLayer != null) {
+      return visibleLayer.name;
+    }
+    return null;
+  }
+
+  /*
+   * Returns the ids of the existing volume tracing layers.
+   */
+  getVolumeTracingLayerIds(): Array<string> {
+    return getVolumeTracings(Store.getState().tracing).map(tracing => tracing.tracingId);
+  }
+
   /**
-   * Return a list of segmentation layer names.
+   * Return a list of segmentation layer names. Note for volume tracing layers,
+   * the name will be an ID (and not the name which the user can specify in the UI).
    */
   getSegmentationLayerNames(): Array<string> {
     return this.model.getSegmentationLayers().map(layer => layer.name);
@@ -967,11 +1003,11 @@ class DataApi {
     await Promise.all(
       Object.keys(this.model.dataLayers).map(async currentLayerName => {
         const dataLayer = this.model.dataLayers[currentLayerName];
-        if (dataLayer.cube.isSegmentation) {
-          await Model.ensureSavedState();
-        }
 
         if (dataLayer.name === layerName) {
+          if (dataLayer.cube.isSegmentation) {
+            await Model.ensureSavedState();
+          }
           dataLayer.cube.collectAllBuckets();
           dataLayer.layerRenderingManager.refresh();
         }
@@ -983,7 +1019,7 @@ class DataApi {
    * Invalidates all downloaded buckets so that they are reloaded.
    */
   async reloadAllBuckets(): Promise<void> {
-    if (this.model.getSegmentationTracingLayer() != null) {
+    if (hasVolumeTracings(Store.getState().tracing)) {
       await Model.ensureSavedState();
     }
     _.forEach(this.model.dataLayers, dataLayer => {
@@ -1110,10 +1146,12 @@ class DataApi {
     if (!effectiveLayerName) {
       return false;
     }
-    return getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      effectiveLayerName,
-    ).isMappingEnabled;
+    return (
+      getMappingInfo(
+        Store.getState().temporaryConfiguration.activeMappingByLayer,
+        effectiveLayerName,
+      ).mappingStatus === MappingStatusEnum.ENABLED
+    );
   }
 
   refreshIsosurfaces() {
@@ -1146,8 +1184,8 @@ class DataApi {
    * @example // Using the await keyword instead of the promise syntax
    * const greyscaleColor = await api.data.getDataValue("binary", position);
    *
-   * @example // Get the segmentation id for a segmentation layer
-   * const segmentId = await api.data.getDataValue("segmentation", position);
+   * @example // Get the segmentation id for the first volume tracing layer
+   * const segmentId = await api.data.getDataValue(api.data.getVolumeTracingLayerIds()[0], position);
    */
   async getDataValue(
     layerName: string,
@@ -1325,7 +1363,7 @@ class DataApi {
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
-    assertVolume(Store.getState().tracing);
+    assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
 
     for (const voxel of voxels) {
@@ -1440,7 +1478,8 @@ class DataApi {
     const state = Store.getState();
     const { dataset } = state;
 
-    return maybeFetchMeshFiles(effectiveLayer, dataset, true, false);
+    const meshFiles = await maybeFetchMeshFiles(effectiveLayer, dataset, true, false);
+    return meshFiles.map(meshFile => meshFile.meshFileName);
   }
 
   /**
@@ -1456,7 +1495,9 @@ class DataApi {
     if (!effectiveLayer) {
       return null;
     }
-    return Store.getState().localSegmentationData[effectiveLayer.name].currentMeshFile;
+
+    const { currentMeshFile } = Store.getState().localSegmentationData[effectiveLayer.name];
+    return currentMeshFile != null ? currentMeshFile.meshFileName : null;
   }
 
   /**
@@ -1469,7 +1510,7 @@ class DataApi {
    *   api.data.setActiveMeshFile(availableMeshFileNames[0]);
    * }
    */
-  setActiveMeshFile(meshFile: ?string, layerName?: string) {
+  setActiveMeshFile(meshFileName: ?string, layerName?: string) {
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
       Store.getState(),
       layerName,
@@ -1478,23 +1519,25 @@ class DataApi {
       return;
     }
 
-    if (meshFile == null) {
-      Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFile));
+    if (meshFileName == null) {
+      Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
       return;
     }
     const state = Store.getState();
     if (
       state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
-      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.includes(meshFile)
+      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
+        el => el.meshFileName === meshFileName,
+      )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(
           state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
         ).join(", ")}`,
       );
     }
 
-    Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFile));
+    Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
   }
 
   /**
@@ -1528,7 +1571,22 @@ class DataApi {
     if (!segmentationLayer) {
       throw new Error("No segmentation layer was found.");
     }
-    await loadMeshFromFile(segmentId, seedPosition, currentMeshFile, segmentationLayer, dataset);
+
+    const { mappingName, meshFileName } = currentMeshFile;
+    if (mappingName != null) {
+      const activeMapping = this.getActiveMapping(effectiveLayerName);
+      if (mappingName !== activeMapping) {
+        const activeMappingWarning =
+          activeMapping != null
+            ? `the currently active mapping is ${activeMapping}`
+            : "currently no mapping is active";
+        console.warn(
+          `The active mesh file ${meshFileName} was computed for mapping ${mappingName} but ${activeMappingWarning}.`,
+        );
+      }
+    }
+
+    await loadMeshFromFile(segmentId, seedPosition, meshFileName, segmentationLayer, dataset);
   }
 
   /**

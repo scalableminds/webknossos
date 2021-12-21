@@ -1,14 +1,13 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import java.util.UUID
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -31,15 +30,15 @@ trait TracingService[T <: GeneratedMessage]
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
-  def temporaryTracingIdStore: RedisTemporaryStore
+  def temporaryTracingIdStore: TracingStoreRedisStore
 
   def tracingMigrationService: TracingMigrationService[T]
 
   def dummyTracing: T
 
-  val handledGroupIdStore: RedisTemporaryStore
+  val handledGroupIdStore: TracingStoreRedisStore
 
-  val uncommittedUpdatesStore: RedisTemporaryStore
+  val uncommittedUpdatesStore: TracingStoreRedisStore
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 

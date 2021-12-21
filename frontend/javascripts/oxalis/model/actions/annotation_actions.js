@@ -1,17 +1,19 @@
 // @flow
 import type {
   APIAnnotation,
+  APIAnnotationVisibility,
+  APIMeshFile,
+  EditableLayerProperties,
   LocalMeshMetaData,
   MeshMetaData,
   RemoteMeshMetaData,
-  APIAnnotationVisibility,
 } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
 import type {
   UserBoundingBox,
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
 
 type InitializeAnnotationAction = {
   type: "INITIALIZE_ANNOTATION",
@@ -26,6 +28,12 @@ type SetAnnotationNameAction = {
 type SetAnnotationVisibilityAction = {
   type: "SET_ANNOTATION_VISIBILITY",
   visibility: APIAnnotationVisibility,
+};
+
+export type EditAnnotationLayerAction = {
+  type: "EDIT_ANNOTATION_LAYER",
+  tracingId: string,
+  layerProperties: EditableLayerProperties,
 };
 
 type SetAnnotationDescriptionAction = {
@@ -106,12 +114,9 @@ export type CreateMeshFromBufferAction = {
   name: string,
 };
 
-export type TriggerActiveIsosurfaceDownloadAction = {
-  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
-};
-
 export type TriggerIsosurfaceDownloadAction = {
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellName: string,
   cellId: number,
 };
 
@@ -141,12 +146,12 @@ export type FinishedLoadingIsosurfaceAction = {
 export type UpdateMeshFileListAction = {
   type: "UPDATE_MESH_FILE_LIST",
   layerName: string,
-  meshFiles: Array<string>,
+  meshFiles: Array<APIMeshFile>,
 };
 export type UpdateCurrentMeshFileAction = {
   type: "UPDATE_CURRENT_MESH_FILE",
   layerName: string,
-  meshFile: ?string,
+  meshFileName: ?string,
 };
 
 export type ImportIsosurfaceFromStlAction = {
@@ -173,6 +178,7 @@ export type AnnotationActionTypes =
   | InitializeAnnotationAction
   | SetAnnotationNameAction
   | SetAnnotationVisibilityAction
+  | EditAnnotationLayerAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
@@ -187,7 +193,6 @@ export type AnnotationActionTypes =
   | CreateMeshFromBufferAction
   | UpdateLocalMeshMetaDataAction
   | UpdateIsosurfaceVisibilityAction
-  | TriggerActiveIsosurfaceDownloadAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
   | FinishedRefreshingIsosurfacesAction
@@ -232,6 +237,15 @@ export const setAnnotationVisibilityAction = (
 ): SetAnnotationVisibilityAction => ({
   type: "SET_ANNOTATION_VISIBILITY",
   visibility,
+});
+
+export const editAnnotationLayerAction = (
+  tracingId: string,
+  layerProperties: EditableLayerProperties,
+): EditAnnotationLayerAction => ({
+  type: "EDIT_ANNOTATION_LAYER",
+  tracingId,
+  layerProperties,
 });
 
 export const setAnnotationDescriptionAction = (
@@ -340,14 +354,12 @@ export const createMeshFromBufferAction = (
   name,
 });
 
-export const triggerActiveIsosurfaceDownloadAction = (): TriggerActiveIsosurfaceDownloadAction => ({
-  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
-});
-
 export const triggerIsosurfaceDownloadAction = (
+  cellName: string,
   cellId: number,
 ): TriggerIsosurfaceDownloadAction => ({
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellName,
   cellId,
 });
 
@@ -388,7 +400,7 @@ export const finishedLoadingIsosurfaceAction = (
 
 export const updateMeshFileListAction = (
   layerName: string,
-  meshFiles: Array<string>,
+  meshFiles: Array<APIMeshFile>,
 ): UpdateMeshFileListAction => ({
   type: "UPDATE_MESH_FILE_LIST",
   layerName,
@@ -397,11 +409,11 @@ export const updateMeshFileListAction = (
 
 export const updateCurrentMeshFileAction = (
   layerName: string,
-  meshFile: ?string,
+  meshFileName: ?string,
 ): UpdateCurrentMeshFileAction => ({
   type: "UPDATE_CURRENT_MESH_FILE",
   layerName,
-  meshFile,
+  meshFileName,
 });
 
 export const importIsosurfaceFromStlAction = (

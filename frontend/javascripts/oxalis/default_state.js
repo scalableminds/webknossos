@@ -111,6 +111,7 @@ const defaultState: OxalisState = {
       },
     },
     details: null,
+    tags: [],
     isPublic: false,
     isActive: true,
     isEditable: true,
@@ -143,20 +144,24 @@ const defaultState: OxalisState = {
       version: 0,
       tracingId: "",
     },
-    volume: null,
+    volumes: [],
     skeleton: null,
     user: null,
+    annotationLayers: [],
   },
   save: {
     queue: {
       skeleton: [],
-      volume: [],
+      volumes: {},
     },
     isBusyInfo: {
       skeleton: false,
       volume: false,
     },
-    lastSaveTimestamp: 0,
+    lastSaveTimestamp: {
+      skeleton: 0,
+      volumes: {},
+    },
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

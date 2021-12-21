@@ -31,6 +31,7 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { hasAgglomerateMapping, loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -509,6 +510,14 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           >
             Create new Tree here{" "}
             {!isVolumeBasedToolActive && !isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
+          </Menu.Item>,
+          
+          <Menu.Item
+            className="node-context-menu-item"
+            key="load-agglomerate-skeleton"
+            onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
+          >
+            Create Agglomerate Skeleton
           </Menu.Item>,
         ]
       : [];

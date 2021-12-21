@@ -11,6 +11,27 @@ import { clickSegmentAction } from "oxalis/model/actions/volumetracing_actions";
 import api from "oxalis/api/internal_api";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 
+export async function hasAgglomerateMapping() {
+  const state = Store.getState();
+  const segmentation = Model.getVisibleSegmentationLayer();
+  if (!segmentation) {
+    return false;
+  }
+  const { mappingName, mappingType, mappingStatus } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    segmentation.name,
+  );
+  if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
+    return false;
+  }
+  if (mappingType !== "HDF5") {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+    return false;
+  }
+  return true;
+}
+
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, clickPosition);
@@ -18,31 +39,23 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
 }
 
 export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
+  const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();
   if (!segmentation) {
     return;
   }
-
-  const state = Store.getState();
-
-  const { mappingName, mappingType, mappingStatus } = getMappingInfo(
+  const { mappingName } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     segmentation.name,
   );
-  if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
-    return;
+
+  if (mappingName && hasAgglomerateMapping()) {
+    const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
+
+    const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
+
+    Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, cellId));
   }
-  if (mappingType !== "HDF5") {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
-    return;
-  }
-
-  const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
-
-  const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
-
-  Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, cellId));
 }
 
 export function handleClickSegment(clickPosition: Point2) {

@@ -9,7 +9,7 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   UploadOutlined,
-  CopyOutlined
+  CopyOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -365,7 +365,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-
   renderIdAndCopyButton(tracing: APIAnnotationCompact) {
     const copyIdToClipboard = async () => {
       await navigator.clipboard.writeText(tracing.id);
@@ -375,10 +374,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       <div>
         {formatHash(tracing.id)}
         <Tooltip title="Copy long ID" placement="bottom">
-          <Button 
+          <Button
             onClick={copyIdToClipboard}
-            icon={<CopyOutlined style={{margin: "auto auto auto"}}/>}
-            style={{boxShadow: "none", backgroundColor: "transparent", borderColor: "transparent"}}/>
+            icon={<CopyOutlined style={{ margin: "auto auto auto" }} />}
+            style={{
+              boxShadow: "none",
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+            }}
+          />
         </Tooltip>
       </div>
     );
@@ -448,21 +452,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 <span title="Trees" style={{ margin: "auto" }}>
                   <i className="fas fa-sitemap" />
                 </span>
-                <span>
-                  {annotation.stats.treeCount}
-                </span>
+                <span>{annotation.stats.treeCount}</span>
                 <span title="Nodes" style={{ margin: "auto" }}>
                   <i className="fas fa-circle fa-sm" />
                 </span>
-                <span>
-                  {annotation.stats.nodeCount}
-                </span>
+                <span>{annotation.stats.nodeCount}</span>
                 <span title="Edges" style={{ margin: "auto" }}>
                   <i className="fas fa-arrows-alt-h" />
                 </span>
-                <span>
-                  {annotation.stats.edgeCount}
-                </span>
+                <span>{annotation.stats.edgeCount}</span>
               </div>
             ) : null
           }

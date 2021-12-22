@@ -211,6 +211,20 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
+    } else if (job.type === "reconstruct_nuclei") {
+      return (
+        <span>
+          {job.state === "SUCCESS" && job.result && this.props.activeUser && (
+            <Link
+              to={`/datasets/${this.props.activeUser.organization}/${job.result}/view`}
+              title="View Segmentation"
+            >
+              <EyeOutlined />
+              View
+            </Link>
+          )}
+        </span>
+      );
     } else return null;
   };
 

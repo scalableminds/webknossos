@@ -1012,6 +1012,16 @@ export function startNucleiInferralJob(
   );
 }
 
+export function startNucleiReconstructionJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/reconstructNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {

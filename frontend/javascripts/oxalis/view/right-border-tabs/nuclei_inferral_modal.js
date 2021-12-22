@@ -1,8 +1,9 @@
 // @flow
-import React, { useEffect, useState } from "react";
-import { type APIDataset } from "types/api_flow_types";
+import _ from "lodash";
+import React, { useEffect, useState, type Node } from "react";
+import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
-import { startNucleiInferralJob } from "admin/admin_rest_api";
+import { startNucleiInferralJob, startNucleiReconstructionJob } from "admin/admin_rest_api";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import { Unicode } from "oxalis/constants";
@@ -13,9 +14,15 @@ type Props = {
   dataset: APIDataset,
   handleClose: () => void,
 };
+type StartingJoblModalProps = {
+  ...Props,
+  jobApiCall: string => Promise<APIJob>,
+  jobName: string,
+  description: Node,
+};
 
-export default function NucleiInferralModal(props: Props) {
-  const { dataset, handleClose } = props;
+function StartingJobModal(props: StartingJoblModalProps) {
+  const { dataset, handleClose, jobName, description, jobApiCall } = props;
   const [selectedColorLayerName, setSelectedColorLayerName] = useState(null);
   const colorLayerNames = getColorLayers(dataset).map(layer => layer.name);
   useEffect(() => {
@@ -36,14 +43,10 @@ export default function NucleiInferralModal(props: Props) {
       return;
     }
     try {
-      await startNucleiInferralJob(
-        dataset.owningOrganization,
-        dataset.name,
-        selectedColorLayerName,
-      );
+      await jobApiCall(selectedColorLayerName);
       Toast.info(
         <>
-          The nuclei inferral job has been started. You can look in the{" "}
+          The {jobName} job has been started. You can look in the{" "}
           <a target="_blank" href="/jobs" rel="noopener noreferrer">
             Processing Jobs
           </a>{" "}
@@ -54,31 +57,26 @@ export default function NucleiInferralModal(props: Props) {
     } catch (error) {
       console.error(error);
       Toast.error(
-        "The nuclei inferral job could not be started. Please contact an administrator or look in the console for more details.",
+        `The ${jobName} job could not be started. Please contact an administrator or look in the console for more details.`,
       );
       handleClose();
     }
   };
 
   return (
-    <Modal title="Start Nuclei Inferral" onCancel={handleClose} visible width={700} footer={null}>
-      <p>
-        Start a job that automatically detects nuclei for this dataset. This job creates a copy of
-        this dataset once it has finished. The new dataset will contain the detected nuclei as a
-        segmentation layer.{" "}
-      </p>
-      <p>
-        <b>
-          Note that this feature is still experimental. Nuclei detection currently works best with
-          EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The inferral process
-          will automatically use the magnification that matches that resolution best.
-        </b>
-      </p>
+    <Modal
+      title={`Start ${_.capitalize(jobName)}`}
+      onCancel={handleClose}
+      visible
+      width={700}
+      footer={null}
+    >
+      {description}
       <br />
       <div style={{ textAlign: "center" }}>
         <img
           src="/assets/images/nuclei_inferral_example.jpg"
-          alt="Nuclei inferral example"
+          alt={`${jobName} example`}
           style={{ width: 400, height: "auto", borderRadius: 3 }}
         />
       </div>
@@ -86,8 +84,8 @@ export default function NucleiInferralModal(props: Props) {
       {colorLayerNames.length > 1 ? (
         <React.Fragment>
           <p>
-            The detection approach uses a single color layer to predict the nuclei. Please select
-            the layer that should be used for detection.
+            The detection approach uses a single color layer. Please select the layer that should be
+            used for detection.
           </p>
           <div style={{ textAlign: "center" }}>
             <Select
@@ -112,9 +110,69 @@ export default function NucleiInferralModal(props: Props) {
       ) : null}
       <div style={{ textAlign: "center" }}>
         <Button type="primary" disabled={selectedColorLayerName == null} onClick={startJob}>
-          Start Nuclei Inferral
+          Start {_.capitalize(jobName)}
         </Button>
       </div>
     </Modal>
+  );
+}
+
+export function NucleiInferralModal({ dataset, handleClose }: Props) {
+  return (
+    <StartingJobModal
+      dataset={dataset}
+      handleClose={handleClose}
+      jobName="nuclei inferral"
+      jobApiCall={colorLayerName =>
+        startNucleiInferralJob(dataset.owningOrganization, dataset.name, colorLayerName)
+      }
+      description={
+        <>
+          <p>
+            Start a job that automatically detects nuclei for this dataset. This job creates a copy
+            of this dataset once it has finished. The new dataset will contain the detected nuclei
+            as a segmentation layer.
+          </p>
+          <p>
+            <b>
+              Note that this feature is still experimental. Nuclei detection currently works best
+              with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
+              inferral process will automatically use the magnification that matches that resolution
+              best.
+            </b>
+          </p>
+        </>
+      }
+    />
+  );
+}
+
+export function NucleiReconstructionModal({ dataset, handleClose }: Props) {
+  return (
+    <StartingJobModal
+      dataset={dataset}
+      handleClose={handleClose}
+      jobName="nuclei reconstruction"
+      jobApiCall={colorLayerName =>
+        startNucleiReconstructionJob(dataset.owningOrganization, dataset.name, colorLayerName)
+      }
+      description={
+        <>
+          <p>
+            Start a job that automatically detects nuclei for this dataset. This job creates a copy
+            of this dataset once it has finished. The new dataset will contain the detected nuclei
+            as a segmentation layer.
+          </p>
+          <p>
+            <b>
+              Note that this feature is still experimental. Nuclei detection currently works best
+              with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
+              inferral process will automatically use the magnification that matches that resolution
+              best.
+            </b>
+          </p>
+        </>
+      }
+    />
   );
 }

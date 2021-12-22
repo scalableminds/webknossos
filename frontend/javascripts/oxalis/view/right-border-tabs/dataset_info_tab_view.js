@@ -32,7 +32,15 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import features from "features";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
-import NucleiInferralModal from "oxalis/view/right-border-tabs/nuclei_inferral_modal";
+import {
+  NucleiInferralModal,
+  NucleiReconstructionModal,
+} from "oxalis/view/right-border-tabs/nuclei_inferral_modal";
+
+const StartableJobsEnum = {
+  NUCLEI_INFERRAL: "nuclei inferral",
+  NUCLEI_RECONSTRUCTION: "nuclei reconstruction",
+};
 
 type StateProps = {|
   tracing: Tracing,
@@ -49,7 +57,7 @@ type DispatchProps = {|
 type Props = {| ...StateProps, ...DispatchProps |};
 
 type State = {
-  showNucleiInferralModal: boolean,
+  showJobsDetailsModal: ?$Values<typeof StartableJobsEnum>,
 };
 
 const shortcuts = [
@@ -134,7 +142,7 @@ export function convertPixelsToNm(
 
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state = {
-    showNucleiInferralModal: false,
+    showJobsDetailsModal: null,
   };
 
   setAnnotationName = (newName: string) => {
@@ -200,7 +208,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getProcessingJobsMenu = () => {
-    if (!this.props.dataset.jobsEnabled) {
+    const { dataset } = this.props;
+    if (!dataset.jobsEnabled) {
       return (
         <tr>
           <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
@@ -218,9 +227,20 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     }
     const overlay = (
       <Menu>
-        <Menu.Item onClick={() => this.setState({ showNucleiInferralModal: true })}>
+        <Menu.Item
+          onClick={() => this.setState({ showJobsDetailsModal: StartableJobsEnum.NUCLEI_INFERRAL })}
+        >
           <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
             Start Nuclei Inferral
+          </Tooltip>
+        </Menu.Item>
+        <Menu.Item
+          onClick={() =>
+            this.setState({ showJobsDetailsModal: StartableJobsEnum.NUCLEI_RECONSTRUCTION })
+          }
+        >
+          <Tooltip title="Start a job that automatically reconstruct nuclei for this dataset.">
+            Start Nuclei Reconstruction
           </Tooltip>
         </Menu.Item>
       </Menu>
@@ -434,6 +454,16 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     return null;
   }
 
+  renderSelectedStartingJobsModal() {
+    const handleClose = () => this.setState({ showJobsDetailsModal: null });
+    if (this.state.showJobsDetailsModal === StartableJobsEnum.NUCLEI_INFERRAL) {
+      return <NucleiInferralModal dataset={this.props.dataset} handleClose={handleClose} />;
+    } else if (this.state.showJobsDetailsModal === StartableJobsEnum.NUCLEI_RECONSTRUCTION) {
+      return <NucleiReconstructionModal dataset={this.props.dataset} handleClose={handleClose} />;
+    }
+    return null;
+  }
+
   render() {
     const { dataset, activeResolution, activeUser } = this.props;
     const isDatasetViewMode =
@@ -523,12 +553,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
                 : null}
             </tbody>
           </table>
-          {this.state.showNucleiInferralModal ? (
-            <NucleiInferralModal
-              dataset={dataset}
-              handleClose={() => this.setState({ showNucleiInferralModal: false })}
-            />
-          ) : null}
+          {this.renderSelectedStartingJobsModal()}
         </div>
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>

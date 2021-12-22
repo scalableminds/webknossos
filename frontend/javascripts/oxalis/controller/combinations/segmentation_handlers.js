@@ -16,7 +16,7 @@ export function hasAgglomerateMapping(state: OxalisState) {
   if (!segmentation) {
     return {
       value: false,
-      reason: "",
+      reason: "A segmentation layer needs to be visible to load an agglomerate skeleton.",
     };
   }
   const { mappingName, mappingType, mappingStatus } = getMappingInfo(
@@ -40,12 +40,6 @@ export function hasAgglomerateMapping(state: OxalisState) {
     value: true,
     reason: "",
   };
-}
-
-export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
-  const state = Store.getState();
-  const globalPosition = calculateGlobalPos(state, clickPosition);
-  loadAgglomerateSkeletonAtPosition(globalPosition);
 }
 
 export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {

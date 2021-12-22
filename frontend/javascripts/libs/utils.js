@@ -163,6 +163,13 @@ export function capitalize(str: string): string {
   return str[0].toUpperCase() + str.slice(1);
 }
 
+export function capitalizeWords(str: string): string {
+  return str
+    .split(" ")
+    .map(capitalize)
+    .join(" ");
+}
+
 function intToHex(int: number, digits: number = 6): string {
   return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
 }

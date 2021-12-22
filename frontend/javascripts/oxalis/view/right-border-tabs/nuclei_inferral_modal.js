@@ -1,5 +1,4 @@
 // @flow
-import _ from "lodash";
 import React, { useEffect, useState, type Node } from "react";
 import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
@@ -7,6 +6,7 @@ import { startNucleiInferralJob, startNucleiReconstructionJob } from "admin/admi
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import { Unicode } from "oxalis/constants";
+import { capitalizeWords } from "libs/utils";
 
 const { ThinSpace } = Unicode;
 
@@ -65,7 +65,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
 
   return (
     <Modal
-      title={`Start ${_.capitalize(jobName)}`}
+      title={`Start ${capitalizeWords(jobName)}`}
       onCancel={handleClose}
       visible
       width={700}
@@ -110,7 +110,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
       ) : null}
       <div style={{ textAlign: "center" }}>
         <Button type="primary" disabled={selectedColorLayerName == null} onClick={startJob}>
-          Start {_.capitalize(jobName)}
+          Start {capitalizeWords(jobName)}
         </Button>
       </div>
     </Modal>

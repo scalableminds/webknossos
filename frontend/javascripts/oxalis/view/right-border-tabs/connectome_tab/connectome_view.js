@@ -22,7 +22,10 @@ import {
   getSynapseTypes,
   getConnectomeFilesForDatasetLayer,
 } from "admin/admin_rest_api";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getVisibleOrLastSegmentationLayer,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   initializeConnectomeTracingAction,
   deleteConnectomeTreesAction,
@@ -42,7 +45,7 @@ import {
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { type Vector3 } from "oxalis/constants";
+import Constants, { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -88,21 +91,24 @@ type TreeData = Array<TreeNode>;
 
 type StateProps = {|
   dataset: APIDataset,
-  visibleSegmentationLayer: ?APISegmentationLayer,
+  // segmentationLayer will be the visible segmentation layer, or if there is none,
+  // the segmentation layer that was last visible. This is done to allow toggling
+  // the segmentation layer while browsing a connectome.
+  segmentationLayer: ?APISegmentationLayer,
   availableConnectomeFiles: ?Array<APIConnectomeFile>,
   currentConnectomeFile: ?APIConnectomeFile,
   activeAgglomerateIds: Array<number>,
 |};
 
 const mapStateToProps = (state: OxalisState): StateProps => {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
   const connectomeData =
-    visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+    segmentationLayer != null
+      ? state.localSegmentationData[segmentationLayer.name].connectomeData
       : null;
   return {
     dataset: state.dataset,
-    visibleSegmentationLayer,
+    segmentationLayer,
     availableConnectomeFiles:
       connectomeData != null ? connectomeData.availableConnectomeFiles : null,
     currentConnectomeFile: connectomeData != null ? connectomeData.currentConnectomeFile : null,
@@ -336,7 +342,7 @@ class ConnectomeView extends React.Component<Props, State> {
   componentDidUpdate(prevProps: Props, prevState: State) {
     if (
       prevProps.currentConnectomeFile !== this.props.currentConnectomeFile ||
-      prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer
+      prevProps.segmentationLayer !== this.props.segmentationLayer
     ) {
       this.activateConnectomeMapping();
     }
@@ -346,7 +352,7 @@ class ConnectomeView extends React.Component<Props, State> {
     ) {
       this.fetchConnections(prevState.synapseTypes);
     }
-    if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
+    if (prevProps.segmentationLayer !== this.props.segmentationLayer) {
       this.maybeFetchConnectomeFiles();
     }
     if (
@@ -389,16 +395,16 @@ class ConnectomeView extends React.Component<Props, State> {
   };
 
   initializeSkeleton() {
-    const { visibleSegmentationLayer } = this.props;
+    const { segmentationLayer } = this.props;
     // TODO: Make sure this works even when switching segmentation layers
-    if (visibleSegmentationLayer == null) return;
+    if (segmentationLayer == null) return;
 
-    Store.dispatch(initializeConnectomeTracingAction(visibleSegmentationLayer.name));
+    Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
 
     getSceneController().addSkeleton(
       state =>
         Maybe.fromNullable(
-          state.localSegmentationData[visibleSegmentationLayer.name].connectomeData.skeleton,
+          state.localSegmentationData[segmentationLayer.name].connectomeData.skeleton,
         ),
       false,
     );
@@ -407,21 +413,21 @@ class ConnectomeView extends React.Component<Props, State> {
   async maybeFetchConnectomeFiles() {
     const {
       dataset,
-      visibleSegmentationLayer,
+      segmentationLayer,
       availableConnectomeFiles,
       currentConnectomeFile,
     } = this.props;
 
     // If availableConnectomeFiles is not null, they have already been fetched
-    if (visibleSegmentationLayer == null || availableConnectomeFiles != null) return;
+    if (segmentationLayer == null || availableConnectomeFiles != null) return;
 
     const connectomeFiles = await getConnectomeFilesForDatasetLayer(
       dataset.dataStore.url,
       dataset,
-      getBaseSegmentationName(visibleSegmentationLayer),
+      getBaseSegmentationName(segmentationLayer),
     );
 
-    const layerName = visibleSegmentationLayer.name;
+    const layerName = segmentationLayer.name;
 
     Store.dispatch(updateConnectomeFileListAction(layerName, connectomeFiles));
     if (currentConnectomeFile == null && connectomeFiles.length > 0) {
@@ -432,29 +438,33 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   activateConnectomeMapping() {
-    const { visibleSegmentationLayer, currentConnectomeFile } = this.props;
+    const { segmentationLayer, currentConnectomeFile } = this.props;
 
-    if (visibleSegmentationLayer == null || currentConnectomeFile == null) return;
+    if (segmentationLayer == null || currentConnectomeFile == null) return;
 
-    Store.dispatch(
-      setMappingAction(visibleSegmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
-        showLoadingIndicator: true,
-      }),
+    const mappingInfo = getMappingInfo(
+      Store.getState().temporaryConfiguration.activeMappingByLayer,
+      segmentationLayer.name,
     );
+
+    if (
+      mappingInfo.mappingName !== currentConnectomeFile.mappingName ||
+      mappingInfo.mappingStatus === MappingStatusEnum.DISABLED
+    )
+      Store.dispatch(
+        setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
+          showLoadingIndicator: true,
+        }),
+      );
   }
 
   async fetchConnections(prevSynapseTypes?: Array<string> = []) {
     const { filters } = this.state;
-    const {
-      dataset,
-      visibleSegmentationLayer,
-      currentConnectomeFile,
-      activeAgglomerateIds,
-    } = this.props;
+    const { dataset, segmentationLayer, currentConnectomeFile, activeAgglomerateIds } = this.props;
 
     if (
       currentConnectomeFile == null ||
-      visibleSegmentationLayer == null ||
+      segmentationLayer == null ||
       activeAgglomerateIds.length === 0
     )
       return;
@@ -465,7 +475,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const fetchProperties = [
       dataset.dataStore.url,
       dataset,
-      getBaseSegmentationName(visibleSegmentationLayer),
+      getBaseSegmentationName(segmentationLayer),
       currentConnectomeFile.connectomeFileName,
     ];
     const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(
@@ -577,10 +587,10 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   updateSynapseTrees(prevFilteredConnectomeData: ?ConnectomeData) {
-    const { visibleSegmentationLayer } = this.props;
+    const { segmentationLayer } = this.props;
     const { filteredConnectomeData, connectomeData } = this.state;
 
-    if (visibleSegmentationLayer == null) return;
+    if (segmentationLayer == null) return;
 
     let prevFilteredSynapses: Array<Synapse> = [];
     let filteredSynapses: Array<Synapse> = [];
@@ -597,7 +607,7 @@ class ConnectomeView extends React.Component<Props, State> {
       );
     }
 
-    const layerName = visibleSegmentationLayer.name;
+    const layerName = segmentationLayer.name;
     // Find out which synapses were deleted and which were added
     const { onlyA: deletedSynapseIds, onlyB: addedSynapseIds } = diffArrays(
       prevFilteredSynapses.map(synapse => synapse.id),
@@ -663,10 +673,10 @@ class ConnectomeView extends React.Component<Props, State> {
     prevFilteredConnectomeData: ?ConnectomeData,
     prevCheckedKeys: Array<string>,
   ) {
-    const { visibleSegmentationLayer, currentConnectomeFile } = this.props;
+    const { segmentationLayer, currentConnectomeFile } = this.props;
     const { connectomeData, filteredConnectomeData, checkedKeys } = this.state;
 
-    if (visibleSegmentationLayer == null || currentConnectomeFile == null) return;
+    if (segmentationLayer == null || currentConnectomeFile == null) return;
 
     let prevFilteredAgglomerateIds: Array<number> = [];
     let filteredAgglomerateIds: Array<number> = [];
@@ -688,7 +698,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const checkedAgglomerateIds = getAgglomerateIdsFromKeys(checkedKeys);
     const prevCheckedAgglomerateIds = getAgglomerateIdsFromKeys(prevCheckedKeys);
 
-    const layerName = visibleSegmentationLayer.name;
+    const layerName = segmentationLayer.name;
     // Find out which agglomerates were deleted
     const { onlyA: deletedAgglomerateIds } = diffArrays(
       prevUnfilteredAgglomerateIds,
@@ -753,24 +763,20 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   handleChangeActiveSegment = (evt: SyntheticInputEvent<>) => {
-    const { visibleSegmentationLayer } = this.props;
-    if (visibleSegmentationLayer == null) return;
+    const { segmentationLayer } = this.props;
+    if (segmentationLayer == null) return;
 
     const agglomerateIds = evt.target.value.split(",").map(part => parseInt(part, 10));
 
-    Store.dispatch(
-      setActiveConnectomeAgglomerateIdsAction(visibleSegmentationLayer.name, agglomerateIds),
-    );
+    Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
 
     evt.target.blur();
   };
 
   handleConnectomeFileSelected = async (connectomeFileName: ?string) => {
-    const { visibleSegmentationLayer } = this.props;
-    if (visibleSegmentationLayer != null && connectomeFileName != null) {
-      Store.dispatch(
-        updateCurrentConnectomeFileAction(visibleSegmentationLayer.name, connectomeFileName),
-      );
+    const { segmentationLayer } = this.props;
+    if (segmentationLayer != null && connectomeFileName != null) {
+      Store.dispatch(updateCurrentConnectomeFileAction(segmentationLayer.name, connectomeFileName));
     }
   };
 
@@ -947,7 +953,7 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   render() {
-    const { visibleSegmentationLayer, availableConnectomeFiles, activeAgglomerateIds } = this.props;
+    const { segmentationLayer, availableConnectomeFiles, activeAgglomerateIds } = this.props;
     const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
 
     return (
@@ -956,7 +962,7 @@ class ConnectomeView extends React.Component<Props, State> {
           {_isVisibleInDom => {
             // if (!isVisibleInDom) return null;
 
-            if (!visibleSegmentationLayer) {
+            if (!segmentationLayer) {
               return (
                 <Empty
                   image={Empty.PRESENTED_IMAGE_SIMPLE}

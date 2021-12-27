@@ -600,6 +600,19 @@ export function getVisibleSegmentationLayer(state: OxalisState): ?APISegmentatio
   return null;
 }
 
+export function getVisibleOrLastSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  if (visibleSegmentationLayer != null) return visibleSegmentationLayer;
+
+  const lastVisibleSegmentationLayerName =
+    state.temporaryConfiguration.lastVisibleSegmentationLayerName;
+  if (lastVisibleSegmentationLayerName != null) {
+    return getSegmentationLayerByName(state.dataset, lastVisibleSegmentationLayerName);
+  }
+
+  return null;
+}
+
 export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegmentationLayer> {
   const { datasetConfiguration } = state;
   const { viewMode } = state.temporaryConfiguration;

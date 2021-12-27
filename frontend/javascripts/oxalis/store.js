@@ -391,6 +391,7 @@ export type TemporaryConfiguration = {
   },
   +preferredQualityForMeshPrecomputation: number,
   +preferredQualityForMeshAdHocComputation: number,
+  +lastVisibleSegmentationLayerName: ?string,
 };
 
 export type Script = APIScript;

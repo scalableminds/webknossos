@@ -132,9 +132,9 @@
     ]
   },
   "dependencies": {
+    "@ant-design/colors": "^6.0.0",
     "@ant-design/compatible": "^1.0.8",
     "@ant-design/icons": "^4.6.2",
-    "@ant-design/colors": "^6.0.0",
     "@fortawesome/fontawesome-free": "^5.14.0",
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.6.1",

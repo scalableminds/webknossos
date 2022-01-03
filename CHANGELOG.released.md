@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [21.11.2](https://github.com/scalableminds/webknossos/releases/tag/21.11.2) - 2021-12-21
+[Commits](https://github.com/scalableminds/webknossos/compare/21.11.1...21.11.2)
+
+### Fixed
+- Fixed a security vulnerability by upgrading log4j to newest version (2.17.0). [#5913](https://github.com/scalableminds/webknossos/pull/5913)
+
+## [21.11.1](https://github.com/scalableminds/webknossos/releases/tag/21.11.1) - 2021-12-16
+[Commits](https://github.com/scalableminds/webknossos/compare/21.11.0...21.11.1)
+
+### Fixed
+- Fixed a security vulnerability by upgrading log4j to newest version (2.15.0). [#5900](https://github.com/scalableminds/webknossos/pull/5900)
+
 ## [21.11.0](https://github.com/scalableminds/webknossos/releases/tag/21.11.0) - 2021-11-30
 [Commits](https://github.com/scalableminds/webknossos/compare/21.10.0...21.11.0)
 

@@ -1,5 +1,6 @@
 // @flow
 import { type MutableTreeMap } from "oxalis/store";
+import { type APIConnectomeFile } from "types/api_flow_types";
 
 export type InitializeConnectomeTracingAction = {
   type: "INITIALIZE_CONNECTOME_TRACING",
@@ -12,24 +13,44 @@ type AddConnectomeTreesAction = {
   layerName: string,
 };
 
-type DeleteConnectomeTreeAction = {
-  type: "DELETE_CONNECTOME_TREE",
-  treeId: number,
+type DeleteConnectomeTreesAction = {
+  type: "DELETE_CONNECTOME_TREES",
+  treeIds: Array<number>,
   layerName: string,
 };
 
-type SetConnectomeTreeVisibilityAction = {
-  type: "SET_CONNECTOME_TREE_VISIBILITY",
-  treeId: number,
+type SetConnectomeTreesVisibilityAction = {
+  type: "SET_CONNECTOME_TREES_VISIBILITY",
+  treeIds: Array<number>,
   isVisible: boolean,
   layerName: string,
+};
+
+export type UpdateConnectomeFileListAction = {
+  type: "UPDATE_CONNECTOME_FILE_LIST",
+  layerName: string,
+  connectomeFiles: Array<APIConnectomeFile>,
+};
+export type UpdateCurrentConnectomeFileAction = {
+  type: "UPDATE_CURRENT_CONNECTOME_FILE",
+  layerName: string,
+  connectomeFileName: ?string,
+};
+
+type SetActiveConnectomeAgglomerateIdsAction = {
+  type: "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS",
+  layerName: string,
+  agglomerateIds: Array<number>,
 };
 
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
   | AddConnectomeTreesAction
-  | DeleteConnectomeTreeAction
-  | SetConnectomeTreeVisibilityAction;
+  | DeleteConnectomeTreesAction
+  | SetConnectomeTreesVisibilityAction
+  | UpdateConnectomeFileListAction
+  | UpdateCurrentConnectomeFileAction
+  | SetActiveConnectomeAgglomerateIdsAction;
 
 export const initializeConnectomeTracingAction = (
   layerName: string,
@@ -47,22 +68,49 @@ export const addConnectomeTreesAction = (
   layerName,
 });
 
-export const deleteConnectomeTreeAction = (
-  treeId: number,
+export const deleteConnectomeTreesAction = (
+  treeIds: Array<number>,
   layerName: string,
-): DeleteConnectomeTreeAction => ({
-  type: "DELETE_CONNECTOME_TREE",
-  treeId,
+): DeleteConnectomeTreesAction => ({
+  type: "DELETE_CONNECTOME_TREES",
+  treeIds,
   layerName,
 });
 
-export const setConnectomeTreeVisibilityAction = (
-  treeId: number,
+export const setConnectomeTreesVisibilityAction = (
+  treeIds: Array<number>,
   isVisible: boolean,
   layerName: string,
-): SetConnectomeTreeVisibilityAction => ({
-  type: "SET_CONNECTOME_TREE_VISIBILITY",
-  treeId,
+): SetConnectomeTreesVisibilityAction => ({
+  type: "SET_CONNECTOME_TREES_VISIBILITY",
+  treeIds,
   isVisible,
   layerName,
+});
+
+export const updateConnectomeFileListAction = (
+  layerName: string,
+  connectomeFiles: Array<APIConnectomeFile>,
+): UpdateConnectomeFileListAction => ({
+  type: "UPDATE_CONNECTOME_FILE_LIST",
+  layerName,
+  connectomeFiles,
+});
+
+export const updateCurrentConnectomeFileAction = (
+  layerName: string,
+  connectomeFileName: ?string,
+): UpdateCurrentConnectomeFileAction => ({
+  type: "UPDATE_CURRENT_CONNECTOME_FILE",
+  layerName,
+  connectomeFileName,
+});
+
+export const setActiveConnectomeAgglomerateIdsAction = (
+  layerName: string,
+  agglomerateIds: Array<number>,
+): SetActiveConnectomeAgglomerateIdsAction => ({
+  type: "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS",
+  layerName,
+  agglomerateIds,
 });

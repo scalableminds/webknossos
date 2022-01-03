@@ -75,7 +75,7 @@ import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import createProgressCallback from "libs/progress_callback";
 import {
   addConnectomeTreesAction,
-  deleteConnectomeTreeAction,
+  deleteConnectomeTreesAction,
 } from "oxalis/model/actions/connectome_actions";
 
 function* centerActiveNode(action: Action): Saga<void> {
@@ -287,7 +287,7 @@ function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction)
 
     yield _all(
       findTreeByName(trees, treeName).map(tree =>
-        put(deleteConnectomeTreeAction(tree.treeId, layerName)),
+        put(deleteConnectomeTreesAction([tree.treeId], layerName)),
       ),
     );
   }

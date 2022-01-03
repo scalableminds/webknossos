@@ -8,7 +8,12 @@ import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store, { type OxalisState, type MappingType } from "oxalis/store";
 import * as Utils from "libs/utils";
-import constants, { type ViewMode, ViewModeValues, type Vector3 } from "oxalis/constants";
+import constants, {
+  type ViewMode,
+  ViewModeValues,
+  type Vector3,
+  MappingStatusEnum,
+} from "oxalis/constants";
 import window, { location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -22,7 +27,11 @@ export type UrlStateByLayer = {
     mappingInfo?: {
       mappingName: string,
       mappingType: MappingType,
-      agglomerateIdsToImport?: [number],
+      agglomerateIdsToImport?: Array<number>,
+    },
+    connectomeInfo?: {
+      connectomeName: string,
+      agglomerateIdsToImport?: Array<number>,
     },
   },
 };
@@ -171,7 +180,7 @@ class UrlManager {
     const stateByLayer = {};
     for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {
       const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layerName];
-      if (mappingInfo.isMappingEnabled) {
+      if (mappingInfo.mappingStatus === MappingStatusEnum.ENABLED) {
         const { mappingName, mappingType } = mappingInfo;
         stateByLayer[layerName] = { mappingInfo: { mappingName, mappingType } };
       }

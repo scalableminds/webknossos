@@ -77,6 +77,10 @@ import * as Utils from "libs/utils";
 import constants, { ControlModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
+import {
+  setActiveConnectomeAgglomerateIdsAction,
+  updateCurrentConnectomeFileAction,
+} from "oxalis/model/actions/connectome_actions";
 
 export const HANDLED_ERROR = "error_was_handled";
 
@@ -605,24 +609,22 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
   for (const layerName of Object.keys(stateByLayer)) {
     const layerState = stateByLayer[layerName];
 
+    let effectiveLayerName;
+    try {
+      const { dataset } = Store.getState();
+      // The name of the layer could have changed if a volume tracing was created from a viewed annotation
+      effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+    } catch (e) {
+      console.error(e);
+      Toast.error(
+        `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
+      );
+      ErrorHandling.notify(e, { urlLayerState: stateByLayer });
+      continue;
+    }
+
     if (layerState.mappingInfo != null) {
       const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
-
-      let effectiveLayerName;
-      try {
-        const { dataset } = Store.getState();
-        // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-        effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
-      } catch (e) {
-        console.error(e);
-        Toast.error(
-          `URL configuration values for the layer "${layerName}" are ignored, because: ${
-            e.message
-          }`,
-        );
-        ErrorHandling.notify(e, { urlLayerState: stateByLayer });
-        continue;
-      }
 
       Store.dispatch(
         setMappingAction(effectiveLayerName, mappingName, mappingType, {
@@ -648,6 +650,18 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
             loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
           );
         }
+      }
+    }
+
+    if (layerState.connectomeInfo != null) {
+      const { connectomeName, agglomerateIdsToImport } = layerState.connectomeInfo;
+
+      Store.dispatch(updateCurrentConnectomeFileAction(effectiveLayerName, connectomeName));
+
+      if (agglomerateIdsToImport != null) {
+        Store.dispatch(
+          setActiveConnectomeAgglomerateIdsAction(effectiveLayerName, agglomerateIdsToImport),
+        );
       }
     }
   }

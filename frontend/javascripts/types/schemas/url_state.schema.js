@@ -31,6 +31,18 @@ export default {
             additionalProperties: false,
             required: ["mappingName", "mappingType"],
           },
+          connectomeInfo: {
+            type: "object",
+            properties: {
+              connectomeName: { type: "string" },
+              agglomerateIdsToImport: {
+                type: "array",
+                items: [{ type: "number" }],
+              },
+            },
+            additionalProperties: false,
+            required: ["connectomeName"],
+          },
         },
         additionalProperties: false,
       },

@@ -209,7 +209,7 @@ declare module "lodash" {
     zip<A, B, C, D>(a1: A[], a2: B[], a3: C[], a4: D[]): Array<[A, B, C, D]>;
     zip<A, B, C, D, E>(a1: A[], a2: B[], a3: C[], a4: D[], a5: E[]): Array<[A, B, C, D, E]>;
 
-    zipObject(props?: Array<any>, values?: Array<any>): Object;
+    zipObject<K, V>(props: Array<K>, values: Array<V>): { [K]: V };
     zipObjectDeep(props?: any[], values?: any): Object;
     //Workaround until (...parameter: T, parameter2: U) works
     zipWith<T>(a1: NestedArray<T>, iteratee?: Iteratee<T>): Array<T>;
@@ -707,8 +707,8 @@ declare module "lodash" {
         source: A | B | C | D,
       ) => any | void,
     ): Object;
-    omit(object?: ?Object, ...props: Array<string>): Object;
-    omit(object?: ?Object, props: Array<string>): Object;
+    omit<K>(object: { [K]: any }, ...props: Array<K>): { [K]: any };
+    omit<K>(object: { [K]: any }, props: Array<K>): { [K]: any };
     omitBy<A, T: { [id: string]: A }>(object?: ?T, predicate?: OPredicate<A, T>): Object;
     pick(object?: ?Object, ...props: Array<string>): Object;
     pick(object?: ?Object, props: Array<string>): Object;

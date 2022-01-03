@@ -111,9 +111,9 @@ export const annotation: APIAnnotation = {
   user: {
     created: 12345678,
     id: "5b1e45faa00000a900abc2c5",
-    email: "scmboy@scalableminds.com",
-    firstName: "SCM",
-    lastName: "Boy",
+    email: "sample@scm.io",
+    firstName: "Sample",
+    lastName: "User",
     isAnonymous: false,
     teams: [
       { id: "5b1e45f9a00000a000abc2c3", isTeamManager: true, name: "Connectomics department" },

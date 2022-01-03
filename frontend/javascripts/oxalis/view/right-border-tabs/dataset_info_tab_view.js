@@ -35,7 +35,7 @@ import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 import {
   NucleiInferralModal,
   NeuronReconstructionModal,
-} from "oxalis/view/right-border-tabs/nuclei_inferral_modal";
+} from "oxalis/view/right-border-tabs/starting_job_modals";
 
 const StartableJobsEnum = {
   NUCLEI_INFERRAL: "nuclei inferral",

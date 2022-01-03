@@ -1019,7 +1019,7 @@ export function startNeuronReconstructionJob(
   layerName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/reconstructNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
+    `/api/jobs/run/reconstructNeurons/${organizationName}/${datasetName}?layerName=${layerName}`,
   );
 }
 

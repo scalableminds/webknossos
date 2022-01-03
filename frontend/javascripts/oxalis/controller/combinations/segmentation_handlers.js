@@ -42,6 +42,12 @@ export function hasAgglomerateMapping(state: OxalisState) {
   };
 }
 
+export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
+  const state = Store.getState();
+  const globalPosition = calculateGlobalPos(state, clickPosition);
+  loadAgglomerateSkeletonAtPosition(globalPosition);
+}
+
 export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
   const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();

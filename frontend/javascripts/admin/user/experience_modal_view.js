@@ -385,9 +385,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             <br />
             {this.state.removedDomains.map((domain: string) => (
               <Tooltip
-                key={domain}
                 placement="top"
-                title="Click here if you don't want to remove this domain from all selected users."
+                title="Select an existing experience domain or create a new one by typing its name in this input field."
               >
                 <Tag
                   style={{ magin: 8, marginTop: 10 }}
@@ -406,15 +405,21 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             ))}
           </div>
         ) : null}
-        <SelectExperienceDomain
-          disabled={false}
-          allowCreation
-          placeholder="New Experience Domain"
-          value={[]}
-          width={50}
-          onSelect={this.addEnteredExperience}
-          alreadyUsedDomains={this.getDomainsOfTable()}
-        />
+        <Tooltip
+          key={domain}
+          placement="top"
+          title="Click here if you don't want to remove this domain from all selected users."
+        >
+          <SelectExperienceDomain
+            disabled={false}
+            allowCreation
+            placeholder="New Experience Domain"
+            value={[]}
+            width={50}
+            onSelect={this.addEnteredExperience}
+            alreadyUsedDomains={this.getDomainsOfTable()}
+          />
+        </Tooltip>
       </Modal>
     );
   }

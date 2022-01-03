@@ -42,9 +42,10 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
       for {
         _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
         jobIdParsed <- ObjectId.parse(id)
-        job <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
+        jobBeforeChange <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
         _ <- jobDAO.updateStatus(jobIdParsed, request.body)
-        _ = jobService.trackStatusChange(job, request.body)
+        jobAfterChange <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
+        _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
       } yield Ok
   }
 

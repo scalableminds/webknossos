@@ -14,6 +14,8 @@ import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Json, OFormat}
 
+import scala.collection.Searching._
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 case class ByAgglomerateIdsRequest(
@@ -41,6 +43,17 @@ case class DirectedSynapseList(
 
 object DirectedSynapseList {
   implicit val jsonFormat: OFormat[DirectedSynapseList] = Json.format[DirectedSynapseList]
+}
+
+case class DirectedSynapseListMutable(
+    in: ListBuffer[Long],
+    out: ListBuffer[Long]
+) {
+  def freeze: DirectedSynapseList = DirectedSynapseList(in.toList, out.toList)
+}
+
+object DirectedSynapseListMutable {
+  def empty: DirectedSynapseListMutable = DirectedSynapseListMutable(ListBuffer(), ListBuffer())
 }
 
 case class SynapseTypesWithLegend(
@@ -119,8 +132,33 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
         outSynapses <- outgoingSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read outgoing synapses"
       } yield List(DirectedSynapseList(inSynapses, outSynapses))
     } else {
-      Fox.failure("Synapses between multiple agglomerates is not yet implemented")
+      val agglomeratePairs = directedPairs(agglomerateIds)
+      for {
+        synapsesPerPair <- Fox.serialCombined(agglomeratePairs)(pair =>
+          synapseIdsForDirectedPair(connectomeFilePath, pair._1, pair._2))
+        synapseListsMap = gatherPairSynapseLists(agglomerateIds, agglomeratePairs, synapsesPerPair)
+        synapseListsOrdered = agglomerateIds.map(id => synapseListsMap(id))
+      } yield synapseListsOrdered
     }
+
+  private def directedPairs(items: List[Long]): List[(Long, Long)] =
+    for { x <- List.range(0, items.length); y <- List.range(x, items.length) } yield (items(x), items(y))
+
+  private def gatherPairSynapseLists(agglomerateIds: List[Long],
+                                     agglomeratePairs: List[(Long, Long)],
+                                     synapsesPerPair: List[List[Long]]): collection.Map[Long, DirectedSynapseList] = {
+    val directedSynapseListsMutable = scala.collection.mutable.Map[Long, DirectedSynapseListMutable]()
+    agglomerateIds.foreach { agglomerateId =>
+      directedSynapseListsMutable(agglomerateId) = DirectedSynapseListMutable.empty
+    }
+    agglomeratePairs.zip(synapsesPerPair).foreach { pairWithSynapses: ((Long, Long), List[Long]) =>
+      val srcAgglomerate = pairWithSynapses._1._1
+      val dstAgglomerate = pairWithSynapses._1._2
+      directedSynapseListsMutable(srcAgglomerate).out ++= pairWithSynapses._2
+      directedSynapseListsMutable(dstAgglomerate).in ++= pairWithSynapses._2
+    }
+    directedSynapseListsMutable.mapValues(_.freeze)
+  }
 
   private def ingoingSynapsesForAgglomerate(connectomeFilePath: Path, agglomerateId: Long): Fox[List[Long]] =
     for {
@@ -224,9 +262,9 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     } else List.empty
   }
 
-  private def synapseIdsForPair(connectomeFilePath: Path,
-                                srcAgglomerateId: Long,
-                                dstAgglomerateId: Long): Fox[List[Long]] =
+  private def synapseIdsForDirectedPair(connectomeFilePath: Path,
+                                        srcAgglomerateId: Long,
+                                        dstAgglomerateId: Long): Fox[List[Long]] =
     for {
       cachedConnectomeFile <- tryo {
         connectomeFileCache.withCache(connectomeFilePath)(CachedHdf5File.fromPath)
@@ -243,7 +281,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
             .uint64()
             .readArrayBlockWithOffset("/CSR_indices", (toPtr - fromPtr).toInt, fromPtr)
         } ?~> "Could not read agglomerate pairs from connectome file"
-      columnOffset = searchSorted(columnValues, dstAgglomerateId)
+      columnOffset <- searchSorted(columnValues, dstAgglomerateId)
       pairIndex = fromPtr + columnOffset
       synapses <- if ((columnOffset >= columnValues.length) || (columnValues(columnOffset) != dstAgglomerateId))
         Fox.successful(List.empty)
@@ -257,7 +295,11 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
         } yield List.range(from, to)
     } yield synapses
 
-  private def searchSorted(haystack: Array[Long], needle: Long): Int = 0
+  private def searchSorted(haystack: Array[Long], needle: Long): Fox[Int] =
+    haystack.search(needle) match {
+      case Found(i)          => Fox.successful(i)
+      case InsertionPoint(i) => Fox.successful(i)
+    }
 
   private def finishAccessOnFailure[T](f: CachedHdf5File)(block: => T): Fox[T] =
     tryo { _: Throwable =>

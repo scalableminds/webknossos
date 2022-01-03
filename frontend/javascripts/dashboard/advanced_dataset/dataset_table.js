@@ -256,7 +256,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               </div>
             ) : (
               <div style={{ color: "@disabled-color" }}>
-                Not tags available for inactive datasets.
+                Tags not available for inactive datasets.
               </div>
             )
           }

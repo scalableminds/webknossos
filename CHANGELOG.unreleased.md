@@ -23,6 +23,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that dataset uploads did not survive back-end restarts. [#5831](https://github.com/scalableminds/webknossos/pull/5831)
 - Fixed a bug where NMLs with unconnected trees and nested tree groups could not be uploaded due to wrong tree group IDs. [#5893](https://github.com/scalableminds/webknossos/pull/5893)
 - Fixed a security vulnerability by upgrading log4j to newest version. [#5900](https://github.com/scalableminds/webknossos/pull/5900)
+- Fixed bug where volume data downloads would sometimes produce invalid zips due to a race condition. [#5926](https://github.com/scalableminds/webknossos/pull/5926)
 
 ### Removed
 -

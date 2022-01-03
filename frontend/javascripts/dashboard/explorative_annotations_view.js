@@ -1,7 +1,7 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal } from "antd";
+import { Spin, Input, Table, Button, Modal, Tooltip } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -9,6 +9,7 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   UploadOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -364,11 +365,34 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
+  renderIdAndCopyButton(tracing: APIAnnotationCompact) {
+    const copyIdToClipboard = async () => {
+      await navigator.clipboard.writeText(tracing.id);
+      Toast.success("ID copied to clipboard");
+    };
+    return (
+      <div>
+        {formatHash(tracing.id)}
+        <Tooltip title="Copy long ID" placement="bottom">
+          <Button
+            onClick={copyIdToClipboard}
+            icon={<CopyOutlined className="without-icon-margin" />}
+            style={{
+              boxShadow: "none",
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+            }}
+          />
+        </Tooltip>
+      </div>
+    );
+  }
+
   renderNameWithDescription(tracing: APIAnnotationCompact) {
     return (
       <TextWithDescription
         isEditable
-        value={tracing.name}
+        value={tracing.name ? tracing.name : "Unnamed Annotation"}
         onChange={newName => this.renameTracing(tracing, newName)}
         label="Annotation Name"
         description={tracing.description}
@@ -403,7 +427,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationCompact) => this.renderIdAndCopyButton(tracing)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
@@ -424,21 +448,19 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             annotation.stats.treeCount != null &&
             annotation.stats.nodeCount != null &&
             annotation.stats.edgeCount != null ? (
-              <div>
-                <span title="Trees">
+              <div style={{ display: "grid", gridTemplateColumns: "30% auto" }}>
+                <span title="Trees" style={{ margin: "auto" }}>
                   <i className="fas fa-sitemap" />
-                  {annotation.stats.treeCount}
                 </span>
-                <br />
-                <span title="Nodes">
+                <span>{annotation.stats.treeCount}</span>
+                <span title="Nodes" style={{ margin: "auto" }}>
                   <i className="fas fa-circle fa-sm" />
-                  {annotation.stats.nodeCount}
                 </span>
-                <br />
-                <span title="Edges">
+                <span>{annotation.stats.nodeCount}</span>
+                <span title="Edges" style={{ margin: "auto" }}>
                   <i className="fas fa-arrows-alt-h" />
-                  {annotation.stats.edgeCount}
                 </span>
+                <span>{annotation.stats.edgeCount}</span>
               </div>
             ) : null
           }

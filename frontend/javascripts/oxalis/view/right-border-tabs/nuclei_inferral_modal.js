@@ -2,7 +2,7 @@
 import React, { useEffect, useState, type Node } from "react";
 import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
-import { startNucleiInferralJob, startNucleiReconstructionJob } from "admin/admin_rest_api";
+import { startNucleiInferralJob, startNeuronReconstructionJob } from "admin/admin_rest_api";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import { Unicode } from "oxalis/constants";
@@ -75,6 +75,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
       <br />
       <div style={{ textAlign: "center" }}>
         <img
+          //TODO: get an image
           src="/assets/images/nuclei_inferral_example.jpg"
           alt={`${jobName} example`}
           style={{ width: 400, height: "auto", borderRadius: 3 }}
@@ -147,26 +148,28 @@ export function NucleiInferralModal({ dataset, handleClose }: Props) {
   );
 }
 
-export function NucleiReconstructionModal({ dataset, handleClose }: Props) {
+export function NeuronReconstructionModal({ dataset, handleClose }: Props) {
   return (
     <StartingJobModal
       dataset={dataset}
       handleClose={handleClose}
-      jobName="nuclei reconstruction"
+      jobName="neuron reconstruction"
       jobApiCall={colorLayerName =>
-        startNucleiReconstructionJob(dataset.owningOrganization, dataset.name, colorLayerName)
+        startNeuronReconstructionJob(dataset.owningOrganization, dataset.name, colorLayerName)
       }
       description={
         <>
           <p>
-            Start a job that automatically detects nuclei for this dataset. This job creates a copy
-            of this dataset once it has finished. The new dataset will contain the detected nuclei
-            as a segmentation layer.
+            Start a job that automatically detects the neurons for this dataset. This job creates a
+            copy of this dataset once it has finished. The new dataset will contain the new
+            segmentation which segments the neurons of the dataset.
           </p>
           <p>
             <b>
-              Note that this feature is still experimental. Nuclei detection currently works best
-              with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
+              {
+                // TODO Note that this feature is still experimental. Nuclei detection currently works
+              }
+              best with EM data and a resolution of approximately 200{ThinSpace}nm per voxel. The
               inferral process will automatically use the magnification that matches that resolution
               best.
             </b>

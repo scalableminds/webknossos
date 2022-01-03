@@ -134,24 +134,26 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runReconstructNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String]): Action[AnyContent] =
+  def runReconstructNeuronsJob(organizationName: String,
+                               dataSetName: String,
+                               layerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.reconstructNuclei.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.reconstructNeurons.notAllowed.organization" ~> FORBIDDEN
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "reconstruct_nuclei"
+          command = "reconstruct_neurons"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiReconstruction"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronReconstruction"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

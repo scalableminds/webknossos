@@ -34,12 +34,12 @@ import features from "features";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 import {
   NucleiInferralModal,
-  NucleiReconstructionModal,
+  NeuronReconstructionModal,
 } from "oxalis/view/right-border-tabs/nuclei_inferral_modal";
 
 const StartableJobsEnum = {
   NUCLEI_INFERRAL: "nuclei inferral",
-  NUCLEI_RECONSTRUCTION: "nuclei reconstruction",
+  NEURON_RECONSTRUCTION: "neuron reconstruction",
 };
 
 type StateProps = {|
@@ -236,11 +236,11 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </Menu.Item>
         <Menu.Item
           onClick={() =>
-            this.setState({ showJobsDetailsModal: StartableJobsEnum.NUCLEI_RECONSTRUCTION })
+            this.setState({ showJobsDetailsModal: StartableJobsEnum.NEURON_RECONSTRUCTION })
           }
         >
-          <Tooltip title="Start a job that automatically reconstruct nuclei for this dataset.">
-            Start Nuclei Reconstruction
+          <Tooltip title="Start a job that automatically reconstructs neurons for this dataset.">
+            Start Neuron Reconstruction
           </Tooltip>
         </Menu.Item>
       </Menu>
@@ -458,8 +458,8 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const handleClose = () => this.setState({ showJobsDetailsModal: null });
     if (this.state.showJobsDetailsModal === StartableJobsEnum.NUCLEI_INFERRAL) {
       return <NucleiInferralModal dataset={this.props.dataset} handleClose={handleClose} />;
-    } else if (this.state.showJobsDetailsModal === StartableJobsEnum.NUCLEI_RECONSTRUCTION) {
-      return <NucleiReconstructionModal dataset={this.props.dataset} handleClose={handleClose} />;
+    } else if (this.state.showJobsDetailsModal === StartableJobsEnum.NEURON_RECONSTRUCTION) {
+      return <NeuronReconstructionModal dataset={this.props.dataset} handleClose={handleClose} />;
     }
     return null;
   }

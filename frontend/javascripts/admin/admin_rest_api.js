@@ -1013,7 +1013,7 @@ export function startNucleiInferralJob(
   );
 }
 
-export function startNucleiReconstructionJob(
+export function startNeuronReconstructionJob(
   organizationName: string,
   datasetName: string,
   layerName: string,

@@ -380,6 +380,11 @@ class ConnectomeView extends React.Component<Props, State> {
   componentWillUnmount() {}
 
   reset = () => {
+    const { segmentationLayer } = this.props;
+    if (segmentationLayer != null) {
+      Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, []));
+    }
+
     this.setState({
       connectomeData: null,
       filteredConnectomeData: null,
@@ -766,7 +771,10 @@ class ConnectomeView extends React.Component<Props, State> {
     const { segmentationLayer } = this.props;
     if (segmentationLayer == null) return;
 
-    const agglomerateIds = evt.target.value.split(",").map(part => parseInt(part, 10));
+    const agglomerateIds = evt.target.value
+      .split(",")
+      .map(part => parseInt(part, 10))
+      .filter(id => !Number.isNaN(id));
 
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
 

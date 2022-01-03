@@ -259,7 +259,7 @@ class JobService @Inject()(wkConf: WkConf,
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       resultLink = jobAfterChange.resultLink(organization.name)
-      resultLinkMrkdwn = resultLink.map(l => s" <${wkConf.Http.uri}$l|Result Link>").getOrElse("")
+      resultLinkMrkdwn = resultLink.map(l => s" <${wkConf.Http.uri}$l|Result>").getOrElse("")
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")

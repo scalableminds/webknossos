@@ -31,7 +31,7 @@ import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
 import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
-import ConnectomeTab from "oxalis/view/right-border-tabs/connectome_tab/connectome_view";
+import ConnectomeView from "oxalis/view/right-border-tabs/connectome_tab/connectome_view";
 import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
 import TDViewControls from "oxalis/view/td_view_controls";
 
@@ -216,7 +216,7 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return <ControlsAndRenderingSettingsTab />;
       }
       case "ConnectomeView": {
-        return <ConnectomeTab />;
+        return <ConnectomeView />;
       }
       default: {
         console.error(`The tab with id ${id} is unknown.`);

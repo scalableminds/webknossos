@@ -66,12 +66,12 @@ const { Option } = Select;
 
 type Synapse = { id: number, position: Vector3, type: string };
 type SynapticPartners = { [number]: Array<Synapse> };
-type Connections = { in: SynapticPartners, out: SynapticPartners };
+type Connections = { in?: SynapticPartners, out?: SynapticPartners };
 type ConnectomeData = { [number]: Connections };
 
 type ConnectomeFilters = {
   synapseTypes: Array<string>,
-  synapseDirections: { in: boolean, out: boolean },
+  synapseDirections: Array<string>,
 };
 
 type SegmentData = { type: "segment", id: number };
@@ -135,6 +135,8 @@ type State = {
   expandedKeys: Array<string>,
 };
 
+const directionCaptions = { in: "Incoming", out: "Outgoing" };
+
 const segmentData = (segmentId: number): SegmentData => ({
   type: "segment",
   id: segmentId,
@@ -150,79 +152,71 @@ const noneData = { type: "none" };
 const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeData => {
   if (connectomeData == null) return null;
 
-  const convertSynapsesForPartner = (partners, partnerId1, inOrOut): Array<TreeNode> =>
-    Object.keys(partners).map(partnerId2 => ({
-      key: `segment-${partnerId1}-${inOrOut}-${partnerId2}`,
+  const convertSynapsesForPartner = (partners, partnerId1, direction): Array<TreeNode> => {
+    if (partners == null) return [];
+
+    return Object.keys(partners).map(partnerId2 => ({
+      key: `segment-${partnerId1}-${direction}-${partnerId2}`,
       title: `Segment ${partnerId2}`,
       data: segmentData(+partnerId2),
       children: partners[+partnerId2].map(synapse => ({
-        key: `synapse-${inOrOut}-${synapse.id}`,
+        key: `synapse-${direction}-${synapse.id}`,
         title: `Synapse ${synapse.id}`,
         data: synapseData(synapse.id, synapse.position, synapse.type),
         children: [],
         checkable: false,
       })),
     }));
+  };
 
   return Object.keys(connectomeData).map(partnerId1 => ({
     key: `segment-${partnerId1}`,
     title: `Segment ${partnerId1}`,
     data: segmentData(+partnerId1),
-    children: [
-      {
-        key: `segment-${partnerId1}-in`,
-        title: "Incoming Synapses",
-        data: noneData,
-        children: convertSynapsesForPartner(connectomeData[+partnerId1].in, partnerId1, "in"),
-        checkable: false,
-        selectable: false,
-      },
-      {
-        key: `segment-${partnerId1}-out`,
-        title: "Outgoing Synapses",
-        data: noneData,
-        children: convertSynapsesForPartner(connectomeData[+partnerId1].out, partnerId1, "out"),
-        checkable: false,
-        selectable: false,
-      },
-    ],
+    children: Object.keys(connectomeData[+partnerId1]).map(direction => ({
+      key: `segment-${partnerId1}-${direction}`,
+      title: `${directionCaptions[direction]} Synapses`,
+      data: noneData,
+      children: convertSynapsesForPartner(
+        connectomeData[+partnerId1][direction],
+        partnerId1,
+        direction,
+      ),
+      checkable: false,
+      selectable: false,
+    })),
   }));
 };
 
-function removeEmpty(obj) {
-  return _.omitBy(obj, (value, key: string) => {
-    const newValue = _.isPlainObject(value) ? removeEmpty(value) : value;
-    obj[key] = newValue;
-    return _.isEmpty(newValue);
-  });
+function filterKeysWithEmptyArray(obj) {
+  return _.omitBy(obj, value => value.length === 0);
 }
 
 const getFilteredConnectomeData = (
   connectomeData: ?ConnectomeData,
   filters: ?ConnectomeFilters,
+  numSynapseTypes: number,
 ): ?ConnectomeData => {
   if (connectomeData == null || filters == null) return connectomeData;
 
   const { synapseTypes, synapseDirections } = filters;
 
-  if (synapseTypes.length === 0 && synapseDirections.in && synapseDirections.out) {
+  if (synapseTypes.length === numSynapseTypes && synapseDirections.length === 2) {
     return connectomeData;
   }
 
-  // Clone connectomeData because it is modified in-place during filtering
-  const filteredConnectomeData = _.clone(connectomeData);
-
-  return removeEmpty(
-    _.mapValues(filteredConnectomeData, connections =>
-      _.mapValues(connections, (partners, inOrOut) =>
-        synapseDirections[inOrOut]
-          ? _.mapValues(partners, synapses =>
-              synapses.filter(
-                synapse => synapseTypes.length === 0 || synapseTypes.includes(synapse.type),
+  return _.mapValues(connectomeData, connections =>
+    _.pick(
+      _.mapValues(connections, (partners, direction) =>
+        synapseDirections.includes(direction)
+          ? filterKeysWithEmptyArray(
+              _.mapValues(partners, synapses =>
+                synapses.filter(synapse => synapseTypes.includes(synapse.type)),
               ),
             )
-          : [],
+          : {},
       ),
+      synapseDirections,
     ),
   );
 };
@@ -231,8 +225,8 @@ const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Sy
   _.flatten(
     // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
     Object.values(connectomeData).map((connections: Connections) => [
-      ..._.flatten(Object.values(connections.in)),
-      ..._.flatten(Object.values(connections.out)),
+      ..._.flatten(Object.values(connections.in || {})),
+      ..._.flatten(Object.values(connections.out || {})),
     ]),
   );
 
@@ -240,8 +234,8 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
   _.flatten(
     Object.keys(connectomeData).map(partnerId1 => [
       +partnerId1,
-      ...Object.keys(connectomeData[+partnerId1].in).map(idString => +idString),
-      ...Object.keys(connectomeData[+partnerId1].out).map(idString => +idString),
+      ...Object.keys(connectomeData[+partnerId1].in || {}).map(idString => +idString),
+      ...Object.keys(connectomeData[+partnerId1].out || {}).map(idString => +idString),
     ]),
   );
 
@@ -321,7 +315,7 @@ The format should be: \`{
 
 const defaultFilters = {
   synapseTypes: [],
-  synapseDirections: { in: true, out: true },
+  synapseDirections: ["in", "out"],
 };
 
 class ConnectomeView extends React.Component<Props, State> {
@@ -586,8 +580,12 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   updateFilteredConnectomeData() {
-    const { connectomeData, filters } = this.state;
-    const filteredConnectomeData = getFilteredConnectomeData(connectomeData, filters);
+    const { connectomeData, filters, synapseTypes } = this.state;
+    const filteredConnectomeData = getFilteredConnectomeData(
+      connectomeData,
+      filters,
+      synapseTypes.length,
+    );
     this.setState({ filteredConnectomeData });
   }
 
@@ -824,15 +822,10 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   onChangeSynapseDirectionFilter = (synapseDirections: Array<string>) => {
-    const newSynapseDirections = {};
-    synapseDirections.forEach(direction => {
-      newSynapseDirections[direction] = true;
-    });
-
     this.setState(oldState => ({
       filters: {
         ...oldState.filters,
-        synapseDirections: newSynapseDirections,
+        synapseDirections,
       },
     }));
   };
@@ -849,13 +842,10 @@ class ConnectomeView extends React.Component<Props, State> {
   getFilterSettings = () => {
     const { synapseTypes, filters } = this.state;
 
-    const synapseDirectionOptions = [
-      { label: "Incoming", value: "in" },
-      { label: "Outgoing", value: "out" },
-    ];
-    const checkedSynapseDirections = Object.entries(filters.synapseDirections)
-      .filter(([_direction, value]) => value)
-      .map(([direction, _value]) => direction);
+    const synapseDirectionOptions = Object.keys(directionCaptions).map(direction => ({
+      label: directionCaptions[direction],
+      value: direction,
+    }));
     const synapseTypeOptions = synapseTypes.map(synapseType => ({
       label: synapseType,
       value: synapseType,
@@ -871,7 +861,7 @@ class ConnectomeView extends React.Component<Props, State> {
         <h4>by Synapse Direction</h4>
         <Checkbox.Group
           options={synapseDirectionOptions}
-          value={checkedSynapseDirections}
+          value={filters.synapseDirections}
           onChange={this.onChangeSynapseDirectionFilter}
         />
         <h4>by Synapse Type</h4>
@@ -925,11 +915,10 @@ class ConnectomeView extends React.Component<Props, State> {
       : "";
 
     const isSynapseTypeFilterAvailable = synapseTypes.length;
-    const isSynapseDirectionFiltered = Object.values(filters.synapseDirections).some(
-      value => !value,
-    );
-    const isAnyFilterActive =
-      filters.synapseTypes.length !== synapseTypes.length || isSynapseDirectionFiltered;
+
+    const isSynapseTypeFiltered = filters.synapseTypes.length !== synapseTypes.length;
+    const isSynapseDirectionFiltered = filters.synapseDirections.length !== 2;
+    const isAnyFilterActive = isSynapseTypeFiltered || isSynapseDirectionFiltered;
 
     return (
       <Input.Group compact className="compact-icons">

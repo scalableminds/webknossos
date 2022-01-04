@@ -947,6 +947,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     state: adaptJobState(job.command, job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
+    resultLink: job.resultLink,
     createdAt: job.created,
   }));
 }

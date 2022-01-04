@@ -406,20 +406,15 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             ))}
           </div>
         ) : null}
-        <Tooltip
-          placement="top"
-          title="Select an existing experience domain or create a new one by typing its name in this input field."
-        >
-          <SelectExperienceDomain
-            disabled={false}
-            allowCreation
-            placeholder="New Experience Domain"
-            value={[]}
-            width={50}
-            onSelect={this.addEnteredExperience}
-            alreadyUsedDomains={this.getDomainsOfTable()}
-          />
-        </Tooltip>
+        <SelectExperienceDomain
+          disabled={false}
+          allowCreation
+          placeholder="New Experience Domain"
+          value={[]}
+          width={50}
+          onSelect={this.addEnteredExperience}
+          alreadyUsedDomains={this.getDomainsOfTable()}
+        />
       </Modal>
     );
   }

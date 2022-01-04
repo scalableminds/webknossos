@@ -72,22 +72,27 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     }
 
     return (
-      <Select
-        showSearch
-        value={value}
-        optionFilterProp="children"
-        notFoundContent={notFoundContent}
-        style={{ width: `${width}%` }}
-        disabled={disabled}
-        placeholder={placeholder}
-        onSelect={onSelect}
-        onChange={onChange}
-        onSearch={this.onSearch}
+      <Tooltip
+        placement="top"
+        title="Select an existing experience domain or create a new one by typing its name in this input field."
       >
-        {options.map(domain => (
-          <Select.Option key={domain}>{domain}</Select.Option>
-        ))}
-      </Select>
+        <Select
+          showSearch
+          value={value}
+          optionFilterProp="children"
+          notFoundContent={notFoundContent}
+          style={{ width: `${width}%` }}
+          disabled={disabled}
+          placeholder={placeholder}
+          onSelect={onSelect}
+          onChange={onChange}
+          onSearch={this.onSearch}
+        >
+          {options.map(domain => (
+            <Select.Option key={domain}>{domain}</Select.Option>
+          ))}
+        </Select>
+      </Tooltip>
     );
   }
 }

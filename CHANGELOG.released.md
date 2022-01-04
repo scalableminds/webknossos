@@ -10,8 +10,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ## [22.01.0](https://github.com/scalableminds/webknossos/releases/tag/22.01.0) - 2022-01-04
 [Commits](https://github.com/scalableminds/webknossos/compare/21.11.2...22.01.0)
 
-### Added
+### Highlights
 - Added tagging support for datasets. [#5832](https://github.com/scalableminds/webknossos/pull/5832)
+
+### Added
 - Dataset upload back-end now supports linking layers of existing public datasets. [#5863](https://github.com/scalableminds/webknossos/pull/5863)
 - Activate the correct mapping before loading pre-computed meshes if the corresponding mesh file contains that information. [#5859](https://github.com/scalableminds/webknossos/pull/5859)
 

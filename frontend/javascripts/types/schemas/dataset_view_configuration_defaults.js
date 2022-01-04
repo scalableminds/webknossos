@@ -69,7 +69,7 @@ export const enforceValidatedDatasetViewConfiguration = (
       } else {
         newLayerConfig[layer.name] = isOptional
           ? {}
-          : _.pickBy(layerConfigDefault, value => value !== null);
+          : _.pickBy(layerConfigDefault, (value: any) => value !== null);
       }
     });
   }

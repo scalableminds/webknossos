@@ -36,11 +36,8 @@ declare module "lodash" {
     | matchesPropertyIterateeShorthand
     | propertyIterateeShorthand;
 
-  declare type OIterateeWithResult<V, O, R> =
-    | Object
-    | string
-    | ((value: V, key: string, object: O) => R);
-  declare type OIteratee<O> = OIterateeWithResult<any, O, any>;
+  declare type OIterateeWithResult<K, V, O, R> = (value: V, key: K, object: O) => R;
+  declare type OIteratee<O> = OIterateeWithResult<any, any, O, any>;
   declare type OFlatMapIteratee<T, O, U> =
     | ((item: T, key: string, object: O) => Array<U>)
     | propertyIterateeShorthand;
@@ -661,7 +658,9 @@ declare module "lodash" {
     invoke(object?: ?Object, path?: ?Array<string> | string, ...args?: Array<any>): any;
     keys(object?: ?Object): Array<string>;
     keysIn(object?: ?Object): Array<string>;
+    mapKeys<K, V, R>(object: { [K]: V }, iteratee: OIterateeWithResult<K, V, *, R>): { [R]: V };
     mapKeys(object?: ?Object, iteratee?: OIteratee<*>): Object;
+    mapValues<K, V, R>(object: { [K]: V }, iteratee: OIterateeWithResult<K, V, *, R>): { [K]: R };
     mapValues(object?: ?Object, iteratee?: OIteratee<*>): Object;
     merge(object?: ?Object, ...sources?: Array<?Object>): Object;
     mergeWith<T: Object, A: Object>(
@@ -710,9 +709,11 @@ declare module "lodash" {
     omit<K>(object: { [K]: any }, ...props: Array<K>): { [K]: any };
     omit<K>(object: { [K]: any }, props: Array<K>): { [K]: any };
     omitBy<A, T: { [id: string]: A }>(object?: ?T, predicate?: OPredicate<A, T>): Object;
-    pick(object?: ?Object, ...props: Array<string>): Object;
-    pick(object?: ?Object, props: Array<string>): Object;
-    pickBy<A, T: { [id: string]: A }>(object?: ?T, predicate?: OPredicate<A, T>): Object;
+    pick<K, V>(object: { [K]: V }, ...props: Array<K>): { [K]: V };
+    pick<K, V>(object: { [K]: V }, props: Array<K>): { [K]: V };
+    pick(object: Object, ...props: Array<string>): Object;
+    pick(object: Object, props: Array<string>): Object;
+    pickBy<K, V>(object: { [K]: V }, predicate: OPredicate<A, T>): { [K]: V };
     result(object?: ?Object, path?: ?Array<string> | string, defaultValue?: any): any;
     set(object?: ?Object, path?: ?Array<string> | string, value: any): Object;
     setWith<T>(

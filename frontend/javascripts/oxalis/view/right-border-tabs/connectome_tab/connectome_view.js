@@ -64,10 +64,16 @@ const connectomeTabId = "connectome";
 
 const { Option } = Select;
 
-type Synapse = { id: number, position: Vector3, type: string };
-type SynapticPartners = { [number]: Array<Synapse> };
-type Connections = { in?: SynapticPartners, out?: SynapticPartners };
-type ConnectomeData = { [number]: Connections };
+type BaseSynapse = {| id: number, position: Vector3, type: string |};
+type SrcSynapse = {| ...BaseSynapse, src: number, dst: void |};
+type DstSynapse = {| ...BaseSynapse, src: void, dst: number |};
+type SrcAndDstSynapse = {| ...BaseSynapse, src: number, dst: number |};
+type Synapse = SrcSynapse | DstSynapse | SrcAndDstSynapse;
+type Agglomerate = { in?: Array<number>, out?: Array<number> };
+type ConnectomeData = {|
+  agglomerates: { [number]: Agglomerate },
+  synapses: { [number]: Synapse },
+|};
 
 type ConnectomeFilters = {
   synapseTypes: Array<string>,
@@ -152,14 +158,22 @@ const noneData = { type: "none" };
 const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeData => {
   if (connectomeData == null) return null;
 
-  const convertSynapsesForPartner = (partners, partnerId1, direction): Array<TreeNode> => {
-    if (partners == null) return [];
+  const { agglomerates, synapses } = connectomeData;
 
-    return Object.keys(partners).map(partnerId2 => ({
+  const convertSynapsesForPartner = (synapseIds, partnerId1, direction): Array<TreeNode> => {
+    if (synapseIds == null) return [];
+
+    const partnerSynapses = synapseIds
+      .map(synapseId => synapses[synapseId])
+      // Some synapses might be filtered out
+      .filter(synapse => synapse != null);
+    const synapsesByPartner = _.groupBy(partnerSynapses, direction === "in" ? "src" : "dst");
+
+    return Object.keys(synapsesByPartner).map(partnerId2 => ({
       key: `segment-${partnerId1}-${direction}-${partnerId2}`,
       title: `Segment ${partnerId2}`,
       data: segmentData(+partnerId2),
-      children: partners[+partnerId2].map(synapse => ({
+      children: synapsesByPartner[+partnerId2].map(synapse => ({
         key: `synapse-${direction}-${synapse.id}`,
         title: `Synapse ${synapse.id}`,
         data: synapseData(synapse.id, synapse.position, synapse.type),
@@ -169,16 +183,16 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
     }));
   };
 
-  return Object.keys(connectomeData).map(partnerId1 => ({
+  return Object.keys(agglomerates).map(partnerId1 => ({
     key: `segment-${partnerId1}`,
     title: `Segment ${partnerId1}`,
     data: segmentData(+partnerId1),
-    children: Object.keys(connectomeData[+partnerId1]).map(direction => ({
+    children: Object.keys(agglomerates[+partnerId1]).map(direction => ({
       key: `segment-${partnerId1}-${direction}`,
       title: `${directionCaptions[direction]} Synapses`,
       data: noneData,
       children: convertSynapsesForPartner(
-        connectomeData[+partnerId1][direction],
+        agglomerates[+partnerId1][direction],
         partnerId1,
         direction,
       ),
@@ -187,10 +201,6 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
     })),
   }));
 };
-
-function filterKeysWithEmptyArray(obj) {
-  return _.omitBy(obj, value => value.length === 0);
-}
 
 const getFilteredConnectomeData = (
   connectomeData: ?ConnectomeData,
@@ -205,37 +215,34 @@ const getFilteredConnectomeData = (
     return connectomeData;
   }
 
-  return _.mapValues(connectomeData, connections =>
-    _.pick(
-      _.mapValues(connections, (partners, direction) =>
-        synapseDirections.includes(direction)
-          ? filterKeysWithEmptyArray(
-              _.mapValues(partners, synapses =>
-                synapses.filter(synapse => synapseTypes.includes(synapse.type)),
-              ),
-            )
-          : {},
-      ),
-      synapseDirections,
-    ),
+  const { agglomerates, synapses } = connectomeData;
+
+  const filteredAgglomerates = _.mapValues(agglomerates, agglomerate =>
+    _.pick(agglomerate, synapseDirections),
   );
+  const filteredSynapses = _.pickBy(synapses, (synapse: Synapse) =>
+    synapseTypes.includes(synapse.type),
+  );
+
+  return { agglomerates: filteredAgglomerates, synapses: filteredSynapses };
 };
 
-const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Synapse> =>
-  _.flatten(
-    // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
-    Object.values(connectomeData).map((connections: Connections) => [
-      ..._.flatten(Object.values(connections.in || {})),
-      ..._.flatten(Object.values(connections.out || {})),
-    ]),
-  );
+const getSynapsesFromConnectomeData = ({ synapses }: ConnectomeData): Array<Synapse> =>
+  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+  Object.values(synapses);
 
-const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> =>
-  _.flatten(
-    Object.keys(connectomeData).map(partnerId1 => [
-      +partnerId1,
-      ...Object.keys(connectomeData[+partnerId1].in || {}).map(idString => +idString),
-      ...Object.keys(connectomeData[+partnerId1].out || {}).map(idString => +idString),
+const getAgglomerateIdsFromConnectomeData = ({
+  agglomerates,
+  synapses,
+}: ConnectomeData): Array<number> =>
+  unique(
+    _.flatten([
+      ...Object.keys(agglomerates).map(agglomerateId => +agglomerateId),
+      // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
+      ...Object.values(synapses).map((synapse: Synapse) =>
+        // $FlowIssue[incompatible-call] Flow doesn't understand that if src == null -> dst != null
+        synapse.src != null ? synapse.src : synapse.dst,
+      ),
     ]),
   );
 
@@ -491,13 +498,13 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     // Uniquify synapses to avoid requesting data multiple times
-    const allInSynapses = unique(
+    const allInSynapseIds = unique(
       _.flatten(synapsesOfAgglomerates.map(connections => connections.in)),
     );
-    const allOutSynapses = unique(
+    const allOutSynapseIds = unique(
       _.flatten(synapsesOfAgglomerates.map(connections => connections.out)),
     );
-    const allSynapses = unique([...allInSynapses, ...allOutSynapses]);
+    const allSynapseIds = unique([...allInSynapseIds, ...allOutSynapseIds]);
 
     const [
       synapseSources,
@@ -505,49 +512,33 @@ class ConnectomeView extends React.Component<Props, State> {
       synapsePositions,
       synapseTypesAndNames,
     ] = await Promise.all([
-      getSynapseSources(...fetchProperties, allInSynapses),
-      getSynapseDestinations(...fetchProperties, allOutSynapses),
-      getSynapsePositions(...fetchProperties, allSynapses),
-      getSynapseTypes(...fetchProperties, allSynapses),
+      getSynapseSources(...fetchProperties, allInSynapseIds),
+      getSynapseDestinations(...fetchProperties, allOutSynapseIds),
+      getSynapsePositions(...fetchProperties, allSynapseIds),
+      getSynapseTypes(...fetchProperties, allSynapseIds),
     ]);
     // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file
     const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
-    const synapseIdToSource = _.zipObject(allInSynapses, synapseSources);
-    const synapseIdToDestination = _.zipObject(allOutSynapses, synapseDestinations);
-    const synapseIdToPosition = _.zipObject(allSynapses, synapsePositions);
-    const synapseIdToType = _.zipObject(allSynapses, synapseTypes);
+    // $FlowIgnore[incompatible-exact] Flow doesn't allow to use exact objects instead of inexact ones.
+    // $FlowIgnore[incompatible-call]
+    const agglomerates = _.zipObject(activeAgglomerateIds, synapsesOfAgglomerates);
+    const synapseIdToSource = _.zipObject(allInSynapseIds, synapseSources);
+    const synapseIdToDestination = _.zipObject(allOutSynapseIds, synapseDestinations);
+    const synapseIdToPosition = _.zipObject(allSynapseIds, synapsePositions);
+    const synapseIdToType = _.zipObject(allSynapseIds, synapseTypes);
 
-    const connectomeData = {};
-    activeAgglomerateIds.forEach((agglomerateId, i) => {
-      connectomeData[agglomerateId] = { in: {}, out: {} };
+    // $FlowIssue[speculation-ambiguous] Flow cannot decide between SrcSynapse | DstSynapse | SrcAndDstSynapse but it doesn't matter
+    const synapseObjects = allSynapseIds.map(synapseId => ({
+      id: synapseId,
+      src: synapseIdToSource[synapseId],
+      dst: synapseIdToDestination[synapseId],
+      position: synapseIdToPosition[synapseId],
+      type: typeToString[synapseIdToType[synapseId]],
+    }));
+    const synapses = _.zipObject(allSynapseIds, synapseObjects);
 
-      const inSynapses = synapsesOfAgglomerates[i].in;
-      const outSynapses = synapsesOfAgglomerates[i].out;
-
-      inSynapses.forEach(synapseId => {
-        const synapticPartnerId = synapseIdToSource[synapseId];
-        if (!(synapticPartnerId in connectomeData[agglomerateId].in)) {
-          connectomeData[agglomerateId].in[synapticPartnerId] = [];
-        }
-        connectomeData[agglomerateId].in[synapticPartnerId].push({
-          id: synapseId,
-          position: synapseIdToPosition[synapseId],
-          type: typeToString[synapseIdToType[synapseId]],
-        });
-      });
-      outSynapses.forEach(synapseId => {
-        const synapticPartnerId = synapseIdToDestination[synapseId];
-        if (!(synapticPartnerId in connectomeData[agglomerateId].out)) {
-          connectomeData[agglomerateId].out[synapticPartnerId] = [];
-        }
-        connectomeData[agglomerateId].out[synapticPartnerId].push({
-          id: synapseId,
-          position: synapseIdToPosition[synapseId],
-          type: typeToString[synapseIdToType[synapseId]],
-        });
-      });
-    });
+    const connectomeData = { agglomerates, synapses };
 
     // Remove filters for synapse types that are no longer valid
     const validOldSynapseTypes = filters.synapseTypes.filter(synapseType =>

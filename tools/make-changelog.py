@@ -195,5 +195,14 @@ def update_migration_guides():
 
 
 if __name__ == "__main__":
+
+    print("Updating changelog files...")
     update_changelogs()
+    print("Updating migration guides...")
     update_migration_guides()
+
+    print("Done.\n")
+
+    print(
+        "#### Please consider adding a Highlights-section to CHANGELOG.released.md and move noteworthy entries there. ####"
+    )

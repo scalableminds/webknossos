@@ -65,7 +65,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
   return `${prefix}${Utils.zeroPad(treeId, 3)}`;
 }
 
-function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
+export function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
   const newMaxNodeId = _.max(_.flatMap(trees, __ => __.nodes.map(n => n.id)));
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
@@ -585,7 +585,7 @@ export function deleteTree(
   tree: Tree,
 ): Maybe<[TreeMap, ?number, ?number, number]> {
   // Delete tree
-  const newTrees = _.omit(skeletonTracing.trees, tree.treeId.toString());
+  const newTrees = _.omit(skeletonTracing.trees, tree.treeId);
 
   let newActiveTreeId = null;
   let newActiveNodeId = null;
@@ -618,7 +618,7 @@ export function mergeTrees(
     target: targetNodeId,
   };
 
-  let newTrees = _.omit(trees, sourceTree.treeId.toString());
+  let newTrees = _.omit(trees, sourceTree.treeId);
 
   const newNodes = targetTree.nodes.clone();
   for (const [id, node] of sourceTree.nodes.entries()) {

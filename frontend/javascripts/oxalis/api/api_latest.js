@@ -107,6 +107,7 @@ import Constants, {
   type AnnotationTool,
   AnnotationToolEnum,
   TDViewDisplayModeEnum,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import Model, { type OxalisModel } from "oxalis/model";
 import Request from "libs/request";
@@ -1145,10 +1146,12 @@ class DataApi {
     if (!effectiveLayerName) {
       return false;
     }
-    return getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      effectiveLayerName,
-    ).isMappingEnabled;
+    return (
+      getMappingInfo(
+        Store.getState().temporaryConfiguration.activeMappingByLayer,
+        effectiveLayerName,
+      ).mappingStatus === MappingStatusEnum.ENABLED
+    );
   }
 
   refreshIsosurfaces() {
@@ -1475,7 +1478,8 @@ class DataApi {
     const state = Store.getState();
     const { dataset } = state;
 
-    return maybeFetchMeshFiles(effectiveLayer, dataset, true, false);
+    const meshFiles = await maybeFetchMeshFiles(effectiveLayer, dataset, true, false);
+    return meshFiles.map(meshFile => meshFile.meshFileName);
   }
 
   /**
@@ -1491,7 +1495,9 @@ class DataApi {
     if (!effectiveLayer) {
       return null;
     }
-    return Store.getState().localSegmentationData[effectiveLayer.name].currentMeshFile;
+
+    const { currentMeshFile } = Store.getState().localSegmentationData[effectiveLayer.name];
+    return currentMeshFile != null ? currentMeshFile.meshFileName : null;
   }
 
   /**
@@ -1504,7 +1510,7 @@ class DataApi {
    *   api.data.setActiveMeshFile(availableMeshFileNames[0]);
    * }
    */
-  setActiveMeshFile(meshFile: ?string, layerName?: string) {
+  setActiveMeshFile(meshFileName: ?string, layerName?: string) {
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(
       Store.getState(),
       layerName,
@@ -1513,23 +1519,25 @@ class DataApi {
       return;
     }
 
-    if (meshFile == null) {
-      Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFile));
+    if (meshFileName == null) {
+      Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
       return;
     }
     const state = Store.getState();
     if (
       state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
-      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.includes(meshFile)
+      !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
+        el => el.meshFileName === meshFileName,
+      )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFile}) is not available for this dataset. Available mesh files are: ${(
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(
           state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
         ).join(", ")}`,
       );
     }
 
-    Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFile));
+    Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
   }
 
   /**
@@ -1563,7 +1571,22 @@ class DataApi {
     if (!segmentationLayer) {
       throw new Error("No segmentation layer was found.");
     }
-    await loadMeshFromFile(segmentId, seedPosition, currentMeshFile, segmentationLayer, dataset);
+
+    const { mappingName, meshFileName } = currentMeshFile;
+    if (mappingName != null) {
+      const activeMapping = this.getActiveMapping(effectiveLayerName);
+      if (mappingName !== activeMapping) {
+        const activeMappingWarning =
+          activeMapping != null
+            ? `the currently active mapping is ${activeMapping}`
+            : "currently no mapping is active";
+        console.warn(
+          `The active mesh file ${meshFileName} was computed for mapping ${mappingName} but ${activeMappingWarning}.`,
+        );
+      }
+    }
+
+    await loadMeshFromFile(segmentId, seedPosition, meshFileName, segmentationLayer, dataset);
   }
 
   /**

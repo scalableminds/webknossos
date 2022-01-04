@@ -10,6 +10,7 @@ import {
   getVisibleSegmentationLayers,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
+import { MappingStatusEnum } from "oxalis/constants";
 
 //
 // Update helpers
@@ -60,15 +61,21 @@ function disableAllSegmentationLayers(state: OxalisState): OxalisState {
 
 function ensureOnlyOneVisibleSegmentationLayer(state: OxalisState): OxalisState {
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
-  if (visibleSegmentationLayers.length <= 1) {
-    // Only one (or zero) segmentation layers are visible.
+  if (visibleSegmentationLayers.length === 0) {
     return state;
   }
+
   const firstSegmentationLayer = visibleSegmentationLayers[0];
-  if (!firstSegmentationLayer) {
-    return state;
+  let newState = updateKey(state, "temporaryConfiguration", {
+    lastVisibleSegmentationLayerName: firstSegmentationLayer.name,
+  });
+
+  if (visibleSegmentationLayers.length === 1) {
+    // Only one segmentation layer is visible, anyways.
+    return newState;
   }
-  const newState = disableAllSegmentationLayers(state);
+
+  newState = disableAllSegmentationLayers(newState);
 
   return updateKey3(newState, "datasetConfiguration", "layers", firstSegmentationLayer.name, {
     isDisabled: false,
@@ -126,6 +133,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         // A segmentation layer is about to be enabled. Disable all (other) segmentation layers
         // so that only the requested layer is enabled.
         newState = disableAllSegmentationLayers(newState);
+        newState = updateKey(newState, "temporaryConfiguration", {
+          lastVisibleSegmentationLayerName: layerName,
+        });
       }
       return updateKey3(newState, "datasetConfiguration", "layers", layerName, {
         // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
@@ -182,7 +192,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       return updateActiveMapping(
         state,
         {
-          isMappingEnabled,
+          mappingStatus: isMappingEnabled ? MappingStatusEnum.ENABLED : MappingStatusEnum.DISABLED,
         },
         layerName,
       );
@@ -214,6 +224,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           mappingType,
           mappingSize: mappingKeys != null ? mappingKeys.length : 0,
           hideUnmappedIds,
+          mappingStatus:
+            mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
         },
         layerName,
       );

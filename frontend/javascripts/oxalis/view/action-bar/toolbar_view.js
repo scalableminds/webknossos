@@ -36,6 +36,7 @@ import Constants, {
   OverwriteModeEnum,
   FillModeEnum,
   VolumeTools,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
@@ -232,9 +233,10 @@ const mapId = (volumeTracing, id) => {
 function CreateCellButton() {
   const volumeTracing = useSelector(state => getActiveSegmentationTracing(state));
   const unmappedActiveCellId = volumeTracing != null ? volumeTracing.activeCellId : 0;
-  const { isMappingEnabled, mappingColors } = useSelector(state =>
+  const { mappingStatus, mappingColors } = useSelector(state =>
     getMappingInfoForVolumeTracing(state, volumeTracing != null ? volumeTracing.tracingId : null),
   );
+  const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;
 
   if (!volumeTracing) {
     return null;

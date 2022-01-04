@@ -132,7 +132,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
         outSynapses <- outgoingSynapsesForAgglomerate(connectomeFilePath, agglomerateId) ?~> "Failed to read outgoing synapses"
       } yield List(DirectedSynapseList(inSynapses, outSynapses))
     } else {
-      val agglomeratePairs = directedPairs(agglomerateIds)
+      val agglomeratePairs = directedPairs(agglomerateIds.toSet.toList)
       for {
         synapsesPerPair <- Fox.serialCombined(agglomeratePairs)(pair =>
           synapseIdsForDirectedPair(connectomeFilePath, pair._1, pair._2))
@@ -142,7 +142,7 @@ class ConnectomeFileService @Inject()(config: DataStoreConfig)(implicit ec: Exec
     }
 
   private def directedPairs(items: List[Long]): List[(Long, Long)] =
-    for { x <- List.range(0, items.length); y <- List.range(x, items.length) } yield (items(x), items(y))
+    (for { x <- items; y <- items } yield (x, y)).filter(pair => pair._1 != pair._2)
 
   private def gatherPairSynapseLists(agglomerateIds: List[Long],
                                      agglomeratePairs: List[(Long, Long)],

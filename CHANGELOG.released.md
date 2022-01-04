@@ -7,6 +7,25 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [22.01.0](https://github.com/scalableminds/webknossos/releases/tag/22.01.0) - 2022-01-04
+[Commits](https://github.com/scalableminds/webknossos/compare/21.11.2...22.01.0)
+
+### Added
+- Added tagging support for datasets. [#5832](https://github.com/scalableminds/webknossos/pull/5832)
+- Dataset upload back-end now supports linking layers of existing public datasets. [#5863](https://github.com/scalableminds/webknossos/pull/5863)
+- Activate the correct mapping before loading pre-computed meshes if the corresponding mesh file contains that information. [#5859](https://github.com/scalableminds/webknossos/pull/5859)
+
+### Fixed
+- Fixed a bug where dataset uploads that contained files larger than 2 GB failed. [#5889](https://github.com/scalableminds/webknossos/pull/5889)
+- Fixed that dataset uploads did not survive back-end restarts. [#5831](https://github.com/scalableminds/webknossos/pull/5831)
+- Fixed a bug where NMLs with unconnected trees and nested tree groups could not be uploaded due to wrong tree group IDs. [#5893](https://github.com/scalableminds/webknossos/pull/5893)
+- Fixed a security vulnerability by upgrading log4j to newest version. [#5900](https://github.com/scalableminds/webknossos/pull/5900)
+
+### Breaking Change
+- When using the front-end API, functions that accept a layer name, such as `api.data.getDataValue`, won't interpret the name "segmentation" as the current volume tracing if it exists. Instead, "segmentation" can only be used if the current dataset has a layer which is named "segmentation". If you want to interact with the volume tracing layer, use `api.data.getVolumeTracingLayerIds()` instead. Also see `api.data.getSegmentationLayerNames` and `api.data.getVisibleSegmentationLayer`. [#5771](https://github.com/scalableminds/webknossos/pull/5771)
+- The datastore server routes `/datasets/reserveUpload` and `/datasets/finishUpload` now expect the additional field `layersToLink`, which should be an empty list by default. [#5863](https://github.com/scalableminds/webknossos/pull/5863
+
+
 ## [21.11.2](https://github.com/scalableminds/webknossos/releases/tag/21.11.2) - 2021-12-21
 [Commits](https://github.com/scalableminds/webknossos/compare/21.11.1...21.11.2)
 
@@ -133,7 +152,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Highlights
 - Several improvements and changes have been implemented for the toolbar, sidebar and status bar. See the full changelog for all details (grouped under #5384). Alternatively, read the corresponding [blog post](https://medium.com/scalableminds/making-the-webknossos-ui-more-intuitive-81dd364ad70e). The most important changes are:
-  - The toolbar now contains dedicated tools for moving, editing skeletons and erasing volume data. 
+  - The toolbar now contains dedicated tools for moving, editing skeletons and erasing volume data.
   - Right click opens a context menu for all tools, unless "Classic Mode" is enabled in the Settings tab (left sidebar).
   - The two tabs in the left sidebar "Annotation" and "Dataset" were renamed and restructured to "Layers" and "Settings". Some elements were also moved to other areas, such as the toolbar (e.g., the merger mode) or to dedicated tabs in the right sidebar (e.g., bounding boxes).
   - The status bar contains additional elements for (editable) information, such as the active tree id (previously positioned in the left sidebar).

@@ -115,7 +115,12 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
             placeholder="Select an existing user script"
             options={this.state.scripts.map(script => ({ value: script.id, label: script.name }))}
           />
-          <TextArea rows={15} onChange={this.handleCodeChange} value={this.state.code} />
+          <TextArea
+            rows={15}
+            onChange={this.handleCodeChange}
+            value={this.state.code}
+            placeholder="Choose an existing user script from the dropdown above or add webKnossos frontend script code here"
+          />
         </Spin>
       </Modal>
     );

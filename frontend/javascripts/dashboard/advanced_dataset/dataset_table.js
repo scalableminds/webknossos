@@ -102,9 +102,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
       });
 
     const filterByQuery = datasets =>
-      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description">(
+      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description" | "tags">(
         datasets,
-        ["name", "description"],
+        ["name", "description", "tags"],
         this.props.searchQuery,
       );
 

@@ -940,15 +940,47 @@ class ConnectomeView extends React.Component<Props, State> {
     );
   }
 
+  getSynapseTree() {
+    const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
+
+    return (
+      <div style={{ flex: "1 1 auto" }}>
+        <AutoSizer>
+          {({ height, width }) => (
+            <div style={{ height, width }}>
+              <Tree
+                checkable
+                checkStrictly
+                defaultExpandAll
+                height={height}
+                showLine={{ showLeafIcon: false }}
+                onSelect={this.handleSelect}
+                onCheck={this.handleCheck}
+                onExpand={this.handleExpand}
+                checkedKeys={checkedKeys}
+                expandedKeys={expandedKeys}
+                titleRender={this.renderNode}
+                treeData={convertConnectomeToTreeData(filteredConnectomeData)}
+              />
+            </div>
+          )}
+        </AutoSizer>
+      </div>
+    );
+  }
+
   render() {
     const { segmentationLayer, availableConnectomeFiles, activeAgglomerateIds } = this.props;
-    const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
+    const { filteredConnectomeData } = this.state;
 
     return (
       <div id={connectomeTabId} className="padded-tab-content">
         <DomVisibilityObserver targetId={connectomeTabId}>
-          {_isVisibleInDom => {
-            // if (!isVisibleInDom) return null;
+          {(_isVisibleInDom, wasEverVisibleInDom) => {
+            // Render the tab in the background to avoid rebuilding the tree when switching tabs. The rebuild
+            // often times is rather performance intensive and the scroll position is lost as well.
+            // However, only render it after the tab was visible for the first time (lazy-loading).
+            if (!wasEverVisibleInDom) return null;
 
             if (!segmentationLayer) {
               return (
@@ -971,36 +1003,14 @@ class ConnectomeView extends React.Component<Props, State> {
             return (
               <>
                 {this.getConnectomeHeader()}
-                {activeAgglomerateIds.length === 0 ? (
+                {activeAgglomerateIds.length === 0 || filteredConnectomeData == null ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description="No segment selected. Use the input field above to enter a segment ID."
                   />
-                ) : null}
-                {filteredConnectomeData != null ? (
-                  <div style={{ flex: "1 1 auto" }}>
-                    <AutoSizer>
-                      {({ height, width }) => (
-                        <div style={{ height, width }}>
-                          <Tree
-                            checkable
-                            checkStrictly
-                            defaultExpandAll
-                            height={height}
-                            showLine={{ showLeafIcon: false }}
-                            onSelect={this.handleSelect}
-                            onCheck={this.handleCheck}
-                            onExpand={this.handleExpand}
-                            checkedKeys={checkedKeys}
-                            expandedKeys={expandedKeys}
-                            titleRender={this.renderNode}
-                            treeData={convertConnectomeToTreeData(filteredConnectomeData)}
-                          />
-                        </div>
-                      )}
-                    </AutoSizer>
-                  </div>
-                ) : null}
+                ) : (
+                  this.getSynapseTree()
+                )}
               </>
             );
           }}

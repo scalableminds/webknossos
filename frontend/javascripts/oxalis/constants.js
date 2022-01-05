@@ -141,6 +141,11 @@ export const BorderTabs = {
     id: "ConnectomeView",
     name: "Connectome",
     description: "Explore Connectomes of the Dataset",
+    // Always render the connectome tab in the background, to allow to use its functionality even
+    // if the tab is not visible. For example, when opening a link where agglomerates and synapses
+    // should be loaded automatically. During normal tracing, the performance impact is negligible, because
+    // the connectome tab doesn't do anything, then.
+    enableRenderOnDemand: false,
   },
 };
 

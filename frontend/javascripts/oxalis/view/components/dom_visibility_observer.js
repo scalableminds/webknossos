@@ -3,15 +3,17 @@ import * as React from "react";
 
 // This component uses an IntersectionObserver to find out if the element with the id targetId
 // is visible in the current viewport or not. It then calls its children render function with that value.
-// This allows to not render performance-heavy components or to disable shortcuts if their golden layout tab is not visible.
+// This allows to not render performance-heavy components or to disable shortcuts if their flex layout tab is not visible.
 
 type Props = {
   targetId: string,
-  children: (isVisibleInDom: boolean) => React.Node,
+  children: (isVisibleInDom: boolean, wasEverVisibleInDom: boolean) => React.Node,
 };
 
 type State = {
   isVisibleInDom: boolean,
+  // This property allows to implement lazy loading, only rendering a component after it was visible once
+  wasEverVisibleInDom: boolean,
 };
 
 export default class DomVisibilityObserver extends React.Component<Props, State> {
@@ -21,6 +23,7 @@ export default class DomVisibilityObserver extends React.Component<Props, State>
 
   state = {
     isVisibleInDom: true,
+    wasEverVisibleInDom: false,
   };
 
   componentDidMount() {
@@ -42,8 +45,13 @@ export default class DomVisibilityObserver extends React.Component<Props, State>
   attachObserver = () => {
     const target = document.getElementById(this.props.targetId);
     if (target != null) {
-      const callback = interactionEntries =>
-        this.setState({ isVisibleInDom: interactionEntries[0].isIntersecting });
+      const callback = interactionEntries => {
+        const isVisibleInDom = interactionEntries[0].isIntersecting;
+        this.setState(oldState => ({
+          isVisibleInDom,
+          wasEverVisibleInDom: oldState.wasEverVisibleInDom || isVisibleInDom,
+        }));
+      };
       this.observer = new IntersectionObserver(callback, {});
       this.observer.observe(target);
       this.target = target;
@@ -53,6 +61,6 @@ export default class DomVisibilityObserver extends React.Component<Props, State>
   };
 
   render() {
-    return this.props.children(this.state.isVisibleInDom);
+    return this.props.children(this.state.isVisibleInDom, this.state.wasEverVisibleInDom);
   }
 }

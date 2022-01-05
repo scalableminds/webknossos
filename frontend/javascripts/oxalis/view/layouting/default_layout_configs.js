@@ -69,12 +69,18 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
-function Tab(name: string, id: string, component: string): TabNode {
+function Tab(
+  name: string,
+  id: string,
+  component: string,
+  enableRenderOnDemand: boolean = true,
+): TabNode {
   return {
     type: "tab",
     name,
     component,
     id,
+    enableRenderOnDemand,
   };
 }
 
@@ -99,8 +105,8 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
 
 const borderTabs: { [$Keys<typeof BorderTabs>]: Object } = {};
 // Flow does not understand that the values must have a name and an id.
-Object.entries(BorderTabs).forEach(([tabKey, { name, id }]: any) => {
-  borderTabs[tabKey] = Tab(name, id, "border-tab");
+Object.entries(BorderTabs).forEach(([tabKey, { name, id, enableRenderOnDemand = true }]: any) => {
+  borderTabs[tabKey] = Tab(name, id, "border-tab", enableRenderOnDemand);
 });
 
 const OrthoViewports: { [$Keys<typeof OrthoViews>]: Object } = {};

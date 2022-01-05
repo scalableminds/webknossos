@@ -66,7 +66,8 @@ case class Job(
           }
         case "export_tiff" =>
           (commandArgs \ "export_file_name").toOption.flatMap(_.asOpt[String]).map { exportFileName =>
-            s"/api/jobs/${_id.id}/downloadExport/$exportFileName"
+            val exportFilePath = s"$organizationName/.export/$exportFileName"
+            s"DATASTORE_URL/exports/${_id.id}/download?filePath=$exportFilePath"
           }
         case "infer_nuclei" =>
           returnValue.map { resultDatasetName =>

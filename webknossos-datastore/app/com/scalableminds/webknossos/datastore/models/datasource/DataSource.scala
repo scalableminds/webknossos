@@ -4,11 +4,12 @@ import com.github.ghik.silencer.silent
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
+import com.scalableminds.webknossos.datastore.services.AccessResourceId
 import play.api.libs.json._
 
 package object datasource {
 
-  case class DataSourceId(name: String, team: String) // here team is not (yet) renamed to organization to avoid migrating all jsons
+  case class DataSourceId(name: String, team: String) extends AccessResourceId // here team is not (yet) renamed to organization to avoid migrating all jsons
 
   object DataSourceId {
     implicit val dataSourceIdFormat: Format[DataSourceId] = Json.format[DataSourceId]

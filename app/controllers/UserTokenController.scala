@@ -8,6 +8,8 @@ import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
 import com.scalableminds.webknossos.datastore.services.{
   AccessMode,
   AccessResourceType,
+  JobExportId,
+  TracingAccessId,
   UserAccessAnswer,
   UserAccessRequest
 }
@@ -95,15 +97,26 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
-            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
+            accessRequest.resourceId match {
+              case dataSourceId: DataSourceId =>
+                handleDataSourceAccess(dataSourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
+              case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access request.")))
+            }
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+            accessRequest.resourceId match {
+              case TracingAccessId(tracingId) =>
+                handleTracingAccess(tracingId, accessRequest.mode, userBox)
+              case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access request.")))
+            }
+          case AccessResourceType.jobExport =>
+            accessRequest.resourceId match {
+              case jobExportId: JobExportId => handleJobExportAccess(jobExportId, accessRequest.mode, userBox)
+              case _                        => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access request.")))
+            }
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
-      } yield {
-        Ok(Json.toJson(answer))
-      }
+      } yield Ok(Json.toJson(answer))
     }
 
   private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
@@ -188,4 +201,9 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
+
+  private def handleJobExportAccess(jobExportId: JobExportId,
+                                    mode: AccessMode,
+                                    userBox: Box[User]): Fox[UserAccessAnswer] =
+    Fox.successful(UserAccessAnswer(granted = true))
 }

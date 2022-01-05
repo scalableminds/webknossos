@@ -102,9 +102,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
       });
 
     const filterByQuery = datasets =>
-      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description">(
+      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description" | "tags">(
         datasets,
-        ["name", "description"],
+        ["name", "description", "tags"],
         this.props.searchQuery,
       );
 
@@ -256,7 +256,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               </div>
             ) : (
               <div style={{ color: "@disabled-color" }}>
-                Not tags available for inactive datasets.
+                Tags not available for inactive datasets.
               </div>
             )
           }

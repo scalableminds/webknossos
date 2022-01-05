@@ -272,7 +272,7 @@ jobs:
             wait
       - run:
           name: Refresh datasets
-          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
+          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretSampleUserToken
       - run:
           name: Run screenshot-tests
           command: |

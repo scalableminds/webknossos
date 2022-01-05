@@ -203,6 +203,16 @@ function shortcutBuilder(shortcuts: Array<string>): Node {
           />
         );
       }
+      case "middleMouse": {
+        return (
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-wheel.svg"
+            alt="Mouse Wheel"
+            style={{ margin: 0 }}
+          />
+        );
+      }
       default: {
         return (
           <span className="keyboard-key-icon-small" style={{ borderColor: lineColor }}>
@@ -523,9 +533,9 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
             onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
           >
             {isAgglomerateMappingEnabled.value ? (
-              "Create Agglomerate Skeleton"
+              ["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]
             ) : (
-              <Tooltip title="Requires an active ID Mapping">Create Agglomerate Skeleton</Tooltip>
+              <Tooltip title="Requires an active ID Mapping">{["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]}</Tooltip>
             )}
           </Menu.Item>,
         ]

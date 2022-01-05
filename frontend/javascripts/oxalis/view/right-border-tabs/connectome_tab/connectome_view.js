@@ -1,6 +1,19 @@
 // @flow
 import { AutoSizer } from "react-virtualized";
-import { Alert, Checkbox, Divider, Empty, Input, Popover, Select, Tag, Tooltip, Tree } from "antd";
+import {
+  Alert,
+  Checkbox,
+  Divider,
+  Dropdown,
+  Empty,
+  Input,
+  Menu,
+  Popover,
+  Select,
+  Tag,
+  Tooltip,
+  Tree,
+} from "antd";
 import type { Dispatch } from "redux";
 import { FilterOutlined, SettingOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -82,7 +95,7 @@ type ConnectomeFilters = {
   synapseDirections: Array<string>,
 };
 
-type SegmentData = { type: "segment", id: number };
+type SegmentData = { type: "segment", id: number, level: 0 | 1 };
 type SynapseData = { type: "synapse", id: number, position: Vector3, synapseType: string };
 type NoneData = { type: "none" };
 type TreeNodeData = SegmentData | SynapseData | NoneData;
@@ -147,13 +160,15 @@ type State = {
   filters: ConnectomeFilters,
   checkedKeys: Array<string>,
   expandedKeys: Array<string>,
+  activeSegmentDropdownKey: ?string,
 };
 
 const directionCaptions = { in: "Incoming", out: "Outgoing" };
 
-const segmentData = (segmentId: number): SegmentData => ({
+const segmentData = (segmentId: number, level: 0 | 1): SegmentData => ({
   type: "segment",
   id: segmentId,
+  level,
 });
 const synapseData = (synapseId: number, position: Vector3, type: string): SynapseData => ({
   type: "synapse",
@@ -180,7 +195,7 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
     return Object.keys(synapsesByPartner).map(partnerId2 => ({
       key: `segment-${partnerId1}-${direction}-${partnerId2}`,
       title: `Segment ${partnerId2}`,
-      data: segmentData(+partnerId2),
+      data: segmentData(+partnerId2, 1),
       children: synapsesByPartner[+partnerId2].map(synapse => ({
         key: `synapse-${direction}-${synapse.id}`,
         title: `Synapse ${synapse.id}`,
@@ -194,7 +209,7 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
   return Object.keys(agglomerates).map(partnerId1 => ({
     key: `segment-${partnerId1}`,
     title: `Segment ${partnerId1}`,
-    data: segmentData(+partnerId1),
+    data: segmentData(+partnerId1, 0),
     children: Object.keys(agglomerates[+partnerId1]).map(direction => ({
       key: `segment-${partnerId1}-${direction}`,
       title: `${directionCaptions[direction]} Synapses`,
@@ -342,6 +357,7 @@ class ConnectomeView extends React.Component<Props, State> {
     filters: defaultFilters,
     checkedKeys: [],
     expandedKeys: [],
+    activeSegmentDropdownKey: null,
   };
 
   componentDidMount() {
@@ -833,9 +849,57 @@ class ConnectomeView extends React.Component<Props, State> {
     this.setState({ expandedKeys });
   };
 
-  renderNode(node: TreeNode) {
-    const { data } = node;
-    if (data.type === "segment" || data.type === "none") return node.title;
+  handleSegmentDropdownMenuVisibility = (key: string, isVisible: boolean) => {
+    if (isVisible) {
+      this.setState({ activeSegmentDropdownKey: key });
+      return;
+    }
+    this.setState({ activeSegmentDropdownKey: null });
+  };
+
+  createSegmentDropdownMenu = (agglomerateId: number) => {
+    const { segmentationLayer } = this.props;
+    if (segmentationLayer == null) return null;
+
+    return (
+      <Menu>
+        <Menu.Item
+          key="setActiveAgglomerateId"
+          onClick={() =>
+            Store.dispatch(
+              setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, [agglomerateId]),
+            )
+          }
+          title="Show All Synapses of This Segment"
+        >
+          Show All Synapses of This Segment
+        </Menu.Item>
+      </Menu>
+    );
+  };
+
+  renderNode = (node: TreeNode) => {
+    const { data, key } = node;
+    if (data.type === "none") return node.title;
+
+    if (data.type === "segment") {
+      // Do not show a dropdown menu for top-level segments
+      if (data.level === 0) return node.title;
+
+      return (
+        <Dropdown
+          // Lazily create the dropdown menu and destroy it again, afterwards
+          overlay={() => this.createSegmentDropdownMenu(data.id)}
+          autoDestroy
+          placement="bottomCenter"
+          visible={this.state.activeSegmentDropdownKey === key}
+          onVisibleChange={isVisible => this.handleSegmentDropdownMenuVisibility(key, isVisible)}
+          trigger={["contextMenu"]}
+        >
+          <span>{node.title}</span>
+        </Dropdown>
+      );
+    }
 
     return (
       <>
@@ -848,7 +912,7 @@ class ConnectomeView extends React.Component<Props, State> {
         </Tag>
       </>
     );
-  }
+  };
 
   onChangeSynapseDirectionFilter = (synapseDirections: Array<string>) => {
     this.setState(oldState => ({

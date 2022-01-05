@@ -165,13 +165,13 @@ class MappingSettingsView extends React.Component<Props, State> {
 
     // Only show the option to import a skeleton from an agglomerate file if an agglomerate file mapping is activated.
     const shouldRender = this.props.isMappingEnabled && mappingName != null && isAgglomerateMapping;
-    const isDisabled = !this.props.allowUpdate;
-    const disabledMessage = "Skeletons cannot be imported in view mode or read-only tracings.";
+    const isDisabled = true
+    const disabledMessage = "Agglomerate Skeletons can now be imported through the context menu or with Shift + Middle Click.";
 
     return shouldRender ? (
       <Tooltip title={isDisabled ? disabledMessage : null}>
         {/* Workaround to fix antd bug, see https://github.com/react-component/tooltip/issues/18#issuecomment-650864750 */}
-        <span style={{ cursor: isDisabled ? "not-allowed" : "pointer" }}>
+        <span style={{ cursor: "help" }}>
           <AsyncButton
             onClick={() => loadAgglomerateSkeletonAtPosition(this.props.position)}
             disabled={isDisabled}

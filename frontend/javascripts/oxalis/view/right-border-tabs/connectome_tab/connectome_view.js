@@ -520,9 +520,6 @@ class ConnectomeView extends React.Component<Props, State> {
     )
       return;
 
-    // TODO: Check which activeAgglomerateIds were removed and added
-    // to avoid requesting data that is already present
-
     const fetchProperties = [
       dataset.dataStore.url,
       dataset,
@@ -543,12 +540,8 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     // Uniquify synapses to avoid requesting data multiple times
-    const allInSynapseIds = unique(
-      _.flatten(synapsesOfAgglomerates.map(connections => connections.in)),
-    );
-    const allOutSynapseIds = unique(
-      _.flatten(synapsesOfAgglomerates.map(connections => connections.out)),
-    );
+    const allInSynapseIds = unique(synapsesOfAgglomerates.flatMap(connections => connections.in));
+    const allOutSynapseIds = unique(synapsesOfAgglomerates.flatMap(connections => connections.out));
     const allSynapseIds = unique([...allInSynapseIds, ...allOutSynapseIds]);
 
     const [

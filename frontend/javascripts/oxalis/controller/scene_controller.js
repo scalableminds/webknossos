@@ -50,7 +50,7 @@ import { setSceneController } from "./scene_controller_provider";
 const CUBE_COLOR = 0x999999;
 
 class SceneController {
-  skeletons: Array<Skeleton> = [];
+  skeletons: { [number]: Skeleton } = {};
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
@@ -329,10 +329,22 @@ class SceneController {
   addSkeleton(
     skeletonTracingSelector: OxalisState => Maybe<SkeletonTracing>,
     supportsPicking: boolean,
-  ): void {
+  ): number {
     const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
-    this.skeletons.push(skeleton);
-    this.rootNode.add(skeleton.getRootGroup());
+    const skeletonGroup = skeleton.getRootGroup();
+
+    this.skeletons[skeletonGroup.id] = skeleton;
+    this.rootNode.add(skeletonGroup);
+    return skeletonGroup.id;
+  }
+
+  removeSkeleton(skeletonId: number) {
+    const skeleton = this.skeletons[skeletonId];
+    const skeletonGroup = skeleton.getRootGroup();
+
+    skeleton.destroy();
+    delete this.skeletons[skeletonId];
+    this.rootNode.remove(skeletonGroup);
   }
 
   buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
@@ -506,7 +518,8 @@ class SceneController {
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
-    this.skeletons.forEach(skeleton => {
+    // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
+    Object.values(this.skeletons).forEach((skeleton: Skeleton) => {
       skeleton.getRootGroup().visible = isVisible;
     });
   }

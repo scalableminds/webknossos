@@ -28,6 +28,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   initializeConnectomeTracingAction,
+  removeConnectomeTracingAction,
   deleteConnectomeTreesAction,
   addConnectomeTreesAction,
   setConnectomeTreesVisibilityAction,
@@ -333,6 +334,7 @@ const defaultFilters = {
 };
 
 class ConnectomeView extends React.Component<Props, State> {
+  skeletonId: ?number;
   state = {
     connectomeData: null,
     filteredConnectomeData: null,
@@ -356,6 +358,7 @@ class ConnectomeView extends React.Component<Props, State> {
     }
     if (prevProps.segmentationLayer !== this.props.segmentationLayer) {
       this.maybeFetchConnectomeFiles();
+      this.maybeUpdateSkeleton(prevProps.segmentationLayer);
     }
     if (
       prevState.connectomeData !== this.state.connectomeData ||
@@ -379,10 +382,18 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   }
 
-  componentWillUnmount() {}
-
-  reset = () => {
+  componentWillUnmount() {
     const { segmentationLayer } = this.props;
+    if (segmentationLayer == null) return;
+
+    this.removeSkeleton(segmentationLayer);
+    this.reset();
+  }
+
+  reset(segmentationLayer?: ?APISegmentationLayer) {
+    if (segmentationLayer == null) {
+      segmentationLayer = this.props.segmentationLayer;
+    }
     if (segmentationLayer != null) {
       Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, []));
     }
@@ -393,7 +404,7 @@ class ConnectomeView extends React.Component<Props, State> {
       checkedKeys: [],
       expandedKeys: [],
     });
-  };
+  }
 
   resetFilters = () => {
     this.setState(prevState => ({
@@ -403,18 +414,46 @@ class ConnectomeView extends React.Component<Props, State> {
 
   initializeSkeleton() {
     const { segmentationLayer } = this.props;
-    // TODO: Make sure this works even when switching segmentation layers
     if (segmentationLayer == null) return;
 
     Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
-
-    getSceneController().addSkeleton(
+    this.skeletonId = getSceneController().addSkeleton(
       state =>
         Maybe.fromNullable(
           state.localSegmentationData[segmentationLayer.name].connectomeData.skeleton,
         ),
       false,
     );
+  }
+
+  removeSkeleton(segmentationLayer: APISegmentationLayer) {
+    const { skeletonId } = this;
+    if (skeletonId != null) {
+      Store.dispatch(removeConnectomeTracingAction(segmentationLayer.name));
+      getSceneController().removeSkeleton(skeletonId);
+      this.skeletonId = null;
+    }
+  }
+
+  maybeUpdateSkeleton(prevSegmentationLayer?: ?APISegmentationLayer) {
+    const { segmentationLayer } = this.props;
+    if (
+      prevSegmentationLayer != null &&
+      segmentationLayer != null &&
+      prevSegmentationLayer.name === segmentationLayer.name
+    ) {
+      // Although the segmentation layer object identity changed, it is the same layer. This happens
+      // when mapping information is fetched and added to the layer, for example.
+      return;
+    }
+
+    if (prevSegmentationLayer != null) {
+      this.removeSkeleton(prevSegmentationLayer);
+      // Reset the state if the segmentation layer is switched
+      this.reset(prevSegmentationLayer);
+    }
+
+    this.initializeSkeleton();
   }
 
   async maybeFetchConnectomeFiles() {
@@ -948,7 +987,7 @@ class ConnectomeView extends React.Component<Props, State> {
               style={{ width: 220 }}
             />
           </Tooltip>
-          <ButtonComponent onClick={this.reset}>Reset</ButtonComponent>
+          <ButtonComponent onClick={() => this.reset()}>Reset</ButtonComponent>
           <Tooltip title="Configure Filters">
             <Popover content={this.getFilterSettings} trigger="click" placement="bottom">
               <ButtonComponent disabled={!isSynapseTypeFilterAvailable}>

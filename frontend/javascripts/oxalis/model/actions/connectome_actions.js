@@ -7,6 +7,11 @@ export type InitializeConnectomeTracingAction = {
   layerName: string,
 };
 
+type RemoveConnectomeTracingAction = {
+  type: "REMOVE_CONNECTOME_TRACING",
+  layerName: string,
+};
+
 type AddConnectomeTreesAction = {
   type: "ADD_CONNECTOME_TREES",
   trees: MutableTreeMap,
@@ -45,6 +50,7 @@ type SetActiveConnectomeAgglomerateIdsAction = {
 
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
+  | RemoveConnectomeTracingAction
   | AddConnectomeTreesAction
   | DeleteConnectomeTreesAction
   | SetConnectomeTreesVisibilityAction
@@ -56,6 +62,13 @@ export const initializeConnectomeTracingAction = (
   layerName: string,
 ): InitializeConnectomeTracingAction => ({
   type: "INITIALIZE_CONNECTOME_TRACING",
+  layerName,
+});
+
+export const removeConnectomeTracingAction = (
+  layerName: string,
+): RemoveConnectomeTracingAction => ({
+  type: "REMOVE_CONNECTOME_TRACING",
   layerName,
 });
 

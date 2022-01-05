@@ -178,6 +178,13 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "REMOVE_CONNECTOME_TRACING": {
+      const { layerName } = action;
+      return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+        skeleton: null,
+      });
+    }
+
     default:
       return state;
   }

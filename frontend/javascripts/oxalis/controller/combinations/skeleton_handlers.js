@@ -11,6 +11,7 @@ import {
   type ShowContextMenuFunction,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
+import _ from "lodash";
 
 import { enforce } from "libs/utils";
 import {
@@ -269,7 +270,10 @@ export function maybeGetNodeIdFromPosition(
   const SceneController = getSceneController();
   const { skeletons } = SceneController;
 
-  const skeletonsWhichSupportPicking = skeletons.filter(skeleton => skeleton.supportsPicking);
+  // Unfortunately, we cannot import the Skeleton class here to set the correct type, due to cyclic dependencies
+  const skeletonsWhichSupportPicking = _.values(skeletons).filter(
+    skeleton => skeleton.supportsPicking,
+  );
   if (skeletonsWhichSupportPicking.length === 0) {
     return null;
   } else if (skeletonsWhichSupportPicking.length > 1) {

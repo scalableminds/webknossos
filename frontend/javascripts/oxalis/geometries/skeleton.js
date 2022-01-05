@@ -99,6 +99,7 @@ class Skeleton {
   edges: BufferCollection;
   treeColorTexture: typeof THREE.DataTexture;
   supportsPicking: boolean;
+  stopStoreListening: () => void;
 
   constructor(
     skeletonTracingSelectorFn: OxalisState => Maybe<SkeletonTracing>,
@@ -112,7 +113,7 @@ class Skeleton {
       this.reset(skeletonTracing);
     });
 
-    Store.subscribe(() => {
+    this.stopStoreListening = Store.subscribe(() => {
       skeletonTracingSelectorFn(Store.getState()).map(skeletonTracing => {
         if (skeletonTracing.tracingId !== this.prevTracing.tracingId) {
           this.reset(skeletonTracing);
@@ -121,6 +122,10 @@ class Skeleton {
         }
       });
     });
+  }
+
+  destroy() {
+    this.stopStoreListening();
   }
 
   reset(skeletonTracing: SkeletonTracing) {

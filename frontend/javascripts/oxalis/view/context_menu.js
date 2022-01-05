@@ -535,7 +535,9 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
             {isAgglomerateMappingEnabled.value ? (
               ["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]
             ) : (
-              <Tooltip title="Requires an active ID Mapping">{["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]}</Tooltip>
+              <Tooltip title="Requires an active ID Mapping">
+                {["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]}
+              </Tooltip>
             )}
           </Menu.Item>,
         ]

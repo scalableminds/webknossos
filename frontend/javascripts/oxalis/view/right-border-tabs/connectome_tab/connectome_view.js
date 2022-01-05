@@ -1,6 +1,6 @@
 // @flow
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Divider, Empty, Input, Popover, Select, Tag, Tooltip, Tree } from "antd";
+import { Alert, Checkbox, Divider, Empty, Input, Popover, Select, Tag, Tooltip, Tree } from "antd";
 import type { Dispatch } from "redux";
 import { FilterOutlined, SettingOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -55,6 +55,7 @@ import Store, {
   type MutableTree,
   type MutableNode,
   type MutableTreeMap,
+  type ActiveMappingInfo,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import api from "oxalis/api/internal_api";
@@ -104,6 +105,7 @@ type StateProps = {|
   availableConnectomeFiles: ?Array<APIConnectomeFile>,
   currentConnectomeFile: ?APIConnectomeFile,
   activeAgglomerateIds: Array<number>,
+  mappingInfo: ?ActiveMappingInfo,
 |};
 
 const mapStateToProps = (state: OxalisState): StateProps => {
@@ -112,6 +114,10 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     segmentationLayer != null
       ? state.localSegmentationData[segmentationLayer.name].connectomeData
       : null;
+  const mappingInfo =
+    segmentationLayer != null
+      ? getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, segmentationLayer.name)
+      : null;
   return {
     dataset: state.dataset,
     segmentationLayer,
@@ -119,6 +125,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       connectomeData != null ? connectomeData.availableConnectomeFiles : null,
     currentConnectomeFile: connectomeData != null ? connectomeData.currentConnectomeFile : null,
     activeAgglomerateIds: connectomeData != null ? connectomeData.activeAgglomerateIds : [],
+    mappingInfo,
   };
 };
 
@@ -342,12 +349,6 @@ class ConnectomeView extends React.Component<Props, State> {
 
   componentDidUpdate(prevProps: Props, prevState: State) {
     if (
-      prevProps.currentConnectomeFile !== this.props.currentConnectomeFile ||
-      prevProps.segmentationLayer !== this.props.segmentationLayer
-    ) {
-      this.activateConnectomeMapping();
-    }
-    if (
       prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds ||
       prevProps.currentConnectomeFile !== this.props.currentConnectomeFile
     ) {
@@ -443,25 +444,30 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   }
 
+  isConnectomeMappingActive(): boolean {
+    const { mappingInfo, currentConnectomeFile } = this.props;
+
+    if (mappingInfo == null || currentConnectomeFile == null) return false;
+
+    if (
+      mappingInfo.mappingName !== currentConnectomeFile.mappingName ||
+      mappingInfo.mappingStatus === MappingStatusEnum.DISABLED
+    ) {
+      return false;
+    }
+    return true;
+  }
+
   activateConnectomeMapping() {
     const { segmentationLayer, currentConnectomeFile } = this.props;
 
     if (segmentationLayer == null || currentConnectomeFile == null) return;
 
-    const mappingInfo = getMappingInfo(
-      Store.getState().temporaryConfiguration.activeMappingByLayer,
-      segmentationLayer.name,
+    Store.dispatch(
+      setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
+        showLoadingIndicator: true,
+      }),
     );
-
-    if (
-      mappingInfo.mappingName !== currentConnectomeFile.mappingName ||
-      mappingInfo.mappingStatus === MappingStatusEnum.DISABLED
-    )
-      Store.dispatch(
-        setMappingAction(segmentationLayer.name, currentConnectomeFile.mappingName, "HDF5", {
-          showLoadingIndicator: true,
-        }),
-      );
   }
 
   async fetchConnections(prevSynapseTypes?: Array<string> = []) {
@@ -898,6 +904,26 @@ class ConnectomeView extends React.Component<Props, State> {
     );
   };
 
+  getConnectomeMappingActivationAlert() {
+    const isConnectomeMappingActive = this.isConnectomeMappingActive();
+
+    return isConnectomeMappingActive ? null : (
+      <Alert
+        message={
+          <>
+            The mapping this connectome was computed for is not active.{" "}
+            <a href="#" onClick={() => this.activateConnectomeMapping()}>
+              Click to activate.
+            </a>
+          </>
+        }
+        type="info"
+        showIcon
+        style={{ marginBottom: 10 }}
+      />
+    );
+  }
+
   getConnectomeHeader() {
     const { filters, synapseTypes } = this.state;
     const { activeAgglomerateIds } = this.props;
@@ -912,31 +938,34 @@ class ConnectomeView extends React.Component<Props, State> {
     const isAnyFilterActive = isSynapseTypeFiltered || isSynapseDirectionFiltered;
 
     return (
-      <Input.Group compact className="compact-icons">
-        <Tooltip title="Show Synaptic Connections for Segment ID(s)">
-          <InputComponent
-            value={activeAgglomerateIdString}
-            onPressEnter={this.handleChangeActiveSegment}
-            placeholder="Segment ID 1[, Segment ID 2, ...]"
-            style={{ width: 220 }}
-          />
-        </Tooltip>
-        <ButtonComponent onClick={this.reset}>Reset</ButtonComponent>
-        <Tooltip title="Configure Filters">
-          <Popover content={this.getFilterSettings} trigger="click" placement="bottom">
-            <ButtonComponent disabled={!isSynapseTypeFilterAvailable}>
-              <FilterOutlined style={isAnyFilterActive ? { color: "red" } : {}} />
-            </ButtonComponent>
-          </Popover>
-        </Tooltip>
-        <Tooltip title="Configure Connectome File Settings" placement="left">
-          <Popover content={this.getConnectomeFileSettings} trigger="click" placement="bottom">
-            <ButtonComponent>
-              <SettingOutlined />
-            </ButtonComponent>
-          </Popover>
-        </Tooltip>
-      </Input.Group>
+      <>
+        <Input.Group compact className="compact-icons" style={{ marginBottom: 10 }}>
+          <Tooltip title="Show Synaptic Connections for Segment ID(s)">
+            <InputComponent
+              value={activeAgglomerateIdString}
+              onPressEnter={this.handleChangeActiveSegment}
+              placeholder="Segment ID 1[, Segment ID 2, ...]"
+              style={{ width: 220 }}
+            />
+          </Tooltip>
+          <ButtonComponent onClick={this.reset}>Reset</ButtonComponent>
+          <Tooltip title="Configure Filters">
+            <Popover content={this.getFilterSettings} trigger="click" placement="bottom">
+              <ButtonComponent disabled={!isSynapseTypeFilterAvailable}>
+                <FilterOutlined style={isAnyFilterActive ? { color: "red" } : {}} />
+              </ButtonComponent>
+            </Popover>
+          </Tooltip>
+          <Tooltip title="Configure Connectome File Settings" placement="left">
+            <Popover content={this.getConnectomeFileSettings} trigger="click" placement="bottom">
+              <ButtonComponent>
+                <SettingOutlined />
+              </ButtonComponent>
+            </Popover>
+          </Tooltip>
+        </Input.Group>
+        {this.getConnectomeMappingActivationAlert()}
+      </>
     );
   }
 

@@ -8,7 +8,7 @@ import {
   HomeOutlined,
   QuestionCircleOutlined,
   UserOutlined,
-  MailOutlined,
+  BellOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
 import classnames from "classnames";
@@ -357,7 +357,7 @@ function NotificationIcon({ activeUser }) {
           <Button
             onClick={handleShowWhatsNewView}
             shape="circle"
-            icon={<MailOutlined className="without-icon-margin" />}
+            icon={<BellOutlined className="without-icon-margin" />}
           />
         </Badge>
       </Tooltip>

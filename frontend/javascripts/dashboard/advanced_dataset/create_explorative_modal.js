@@ -1,23 +1,65 @@
 // @flow
-import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
-import type { APIDatasetId } from "types/api_flow_types";
 import { Link } from "react-router-dom";
-import { useFetch } from "libs/react_helpers";
-import { getDataset } from "admin/admin_rest_api";
+import { Modal, Radio, Button, Tooltip, Slider, Spin } from "antd";
+import React, { useState } from "react";
 
+import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
   getDatasetResolutionInfo,
   getSegmentationLayers,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getDataset } from "admin/admin_rest_api";
+import { useFetch } from "libs/react_helpers";
 
 type Props = {
   datasetId: APIDatasetId,
   onClose: () => void,
 };
+
+export const NewVolumeLayerSelection = ({
+  segmentationLayers,
+  dataset,
+  selectedSegmentationLayerIndex,
+  setSelectedSegmentationLayerIndex,
+}: {
+  segmentationLayers: Array<APISegmentationLayer>,
+  dataset: APIDataset,
+  selectedSegmentationLayerIndex: ?number,
+  setSelectedSegmentationLayerIndex: (?number) => void,
+}) => (
+  <div style={{ marginBottom: 16 }}>
+    Base Volume Annotation On{" "}
+    <Tooltip
+      title="Base your volume annotation on an existing segmentation layer of this dataset or create a new (empty) layer for the annotation."
+      placement="right"
+    >
+      <InfoCircleOutlined />
+    </Tooltip>
+    <Radio.Group
+      onChange={e => {
+        const index = parseInt(e.target.value);
+        setSelectedSegmentationLayerIndex(index !== -1 ? index : null);
+      }}
+      value={selectedSegmentationLayerIndex != null ? selectedSegmentationLayerIndex : -1}
+    >
+      <Radio key={-1} value={-1}>
+        Create empty layer
+      </Radio>
+      {segmentationLayers.map((segmentationLayer, index) => (
+        <Radio
+          key={segmentationLayer.name}
+          value={index}
+          disabled={!doesSupportVolumeWithFallback(dataset, segmentationLayer)}
+        >
+          {segmentationLayer.name}
+        </Radio>
+      ))}
+    </Radio.Group>
+  </div>
+);
 
 const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
@@ -108,35 +150,12 @@ const CreateExplorativeModal = ({ datasetId, onClose }: Props) => {
         </div>
 
         {annotationType !== "skeleton" && segmentationLayers.length > 0 ? (
-          <div style={{ marginBottom: 16 }}>
-            Base Volume Annotation On{" "}
-            <Tooltip
-              title="Base your volume annotation on an existing segmentation layer of this dataset or create a new (empty) layer for the annotation."
-              placement="right"
-            >
-              <InfoCircleOutlined />
-            </Tooltip>
-            <Radio.Group
-              onChange={e => {
-                const index = parseInt(e.target.value);
-                setSelectedSegmentationLayerIndex(index !== -1 ? index : null);
-              }}
-              value={selectedSegmentationLayerIndex != null ? selectedSegmentationLayerIndex : -1}
-            >
-              <Radio key={-1} value={-1}>
-                Create empty layer
-              </Radio>
-              {segmentationLayers.map((segmentationLayer, index) => (
-                <Radio
-                  key={segmentationLayer.name}
-                  value={index}
-                  disabled={!doesSupportVolumeWithFallback(dataset, segmentationLayer)}
-                >
-                  {segmentationLayer.name}
-                </Radio>
-              ))}
-            </Radio.Group>
-          </div>
+          <NewVolumeLayerSelection
+            segmentationLayers={segmentationLayers}
+            dataset={dataset}
+            selectedSegmentationLayerIndex={selectedSegmentationLayerIndex}
+            setSelectedSegmentationLayerIndex={setSelectedSegmentationLayerIndex}
+          />
         ) : null}
 
         {lowestResolutionIndex < highestResolutionIndex ? resolutionSlider : null}

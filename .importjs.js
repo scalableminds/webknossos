@@ -13,4 +13,7 @@ module.exports = {
     }
     return moduleName;
   },
+  importStatementFormatter({ importStatement }) {
+    return importStatement.replace(/'/g, '"');
+  },
 };

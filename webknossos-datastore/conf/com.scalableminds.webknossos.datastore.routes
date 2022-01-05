@@ -54,3 +54,6 @@ GET         /triggers/checkInbox                                                
 GET         /triggers/checkInboxBlocking                                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(token: Option[String])
 GET         /triggers/newOrganizationFolder                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(token: Option[String], organizationName: String)
 GET         /triggers/reload/:organizationName/:dataSetName                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(token: Option[String], organizationName: String, dataSetName: String, layerName: Option[String])
+
+# Exports
+GET         /exports/:jobId/download                                                                                              @com.scalableminds.webknossos.datastore.controllers.ExportsController.download(token: Option[String], jobId: String, filePath: String)

@@ -1,9 +1,15 @@
-/**
- * volumetracing_accessor.js
- * @flow
- */
+// @flow
 import memoizeOne from "memoize-one";
 
+import type {
+  APIAnnotation,
+  APIAnnotationCompact,
+  APIDataset,
+  APISegmentationLayer,
+  AnnotationLayerDescriptor,
+  ServerTracing,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
 import type {
   ActiveMappingInfo,
   HybridTracing,
@@ -24,16 +30,9 @@ import {
   getMappingInfo,
   getResolutionInfo,
   getSegmentationLayerByName,
+  getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import type {
-  ServerTracing,
-  ServerVolumeTracing,
-  APIAnnotation,
-  AnnotationLayerDescriptor,
-  APIAnnotationCompact,
-  APISegmentationLayer,
-} from "types/api_flow_types";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
@@ -50,6 +49,11 @@ export function getVolumeTracingById(tracing: Tracing, tracingId: string): Volum
   }
 
   return volumeTracing;
+}
+
+export function getVolumeTracingLayers(dataset: APIDataset): Array<APISegmentationLayer> {
+  const layers = getSegmentationLayers(dataset);
+  return layers.filter(layer => layer.tracingId != null);
 }
 
 export function getVolumeTracingByLayerName(tracing: Tracing, layerName: string): ?VolumeTracing {

@@ -167,7 +167,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     const shouldRender = this.props.isMappingEnabled && mappingName != null && isAgglomerateMapping;
     const isDisabled = true;
     const disabledMessage =
-      "Agglomerate Skeletons can now be imported through the context menu or with Shift + Middle Click.";
+      "Agglomerate Skeletons should now be imported through the context menu or with Shift + Middle Click.";
 
     return shouldRender ? (
       <Tooltip title={isDisabled ? disabledMessage : null}>

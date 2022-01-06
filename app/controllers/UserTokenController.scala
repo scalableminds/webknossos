@@ -8,8 +8,6 @@ import com.scalableminds.webknossos.datastore.services.AccessMode.AccessMode
 import com.scalableminds.webknossos.datastore.services.{
   AccessMode,
   AccessResourceType,
-  JobExportId,
-  TracingAccessId,
   UserAccessAnswer,
   UserAccessRequest
 }
@@ -18,12 +16,13 @@ import io.swagger.annotations._
 import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
+import models.job.JobDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -46,6 +45,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
+                                    jobDAO: JobDAO,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                     conf: WkConf,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -97,26 +97,17 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
-            accessRequest.resourceId match {
-              case dataSourceId: DataSourceId =>
-                handleDataSourceAccess(dataSourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
-              case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access request.")))
-            }
+            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            accessRequest.resourceId match {
-              case TracingAccessId(tracingId) =>
-                handleTracingAccess(tracingId, accessRequest.mode, userBox)
-              case _ => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access request.")))
-            }
+            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case AccessResourceType.jobExport =>
-            accessRequest.resourceId match {
-              case jobExportId: JobExportId => handleJobExportAccess(jobExportId, accessRequest.mode, userBox)
-              case _                        => Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access request.")))
-            }
+            handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
-      } yield Ok(Json.toJson(answer))
+      } yield {
+        Ok(Json.toJson(answer))
+      }
     }
 
   private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode, userBox: Box[User])(
@@ -202,8 +193,17 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  private def handleJobExportAccess(jobExportId: JobExportId,
-                                    mode: AccessMode,
-                                    userBox: Box[User]): Fox[UserAccessAnswer] =
-    Fox.successful(UserAccessAnswer(granted = true))
+  private def handleJobExportAccess(jobId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] =
+    if (mode != AccessMode.read)
+      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
+    else {
+      for {
+        jobIdValidated <- ObjectId.parse(jobId)
+        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
+        answer = jobBox match {
+          case Full(_) => UserAccessAnswer(granted = true)
+          case _       => UserAccessAnswer(granted = false, Some(s"No ${mode} access to job export"))
+        }
+      } yield answer
+    }
 }

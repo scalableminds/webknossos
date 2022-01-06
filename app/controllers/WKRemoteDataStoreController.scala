@@ -2,6 +2,7 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.{
@@ -13,14 +14,16 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.binary._
+import models.job.JobDAO
 import models.organization.OrganizationDAO
-import models.user.User
+import models.user.{User, UserDAO}
 import net.liftweb.common.Full
 import oxalis.mail.{MailchimpClient, MailchimpTag}
 import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsError, JsSuccess, JsValue}
+import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,6 +34,8 @@ class WKRemoteDataStoreController @Inject()(
     analyticsService: AnalyticsService,
     organizationDAO: OrganizationDAO,
     dataSetDAO: DataSetDAO,
+    userDAO: UserDAO,
+    jobDAO: JobDAO,
     mailchimpClient: MailchimpClient,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -152,6 +157,21 @@ class WKRemoteDataStoreController @Inject()(
         }
       } yield Ok
     }
-
   }
+
+  def jobExportProperties(name: String, key: String, jobId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          jobIdValidated <- ObjectId.parse(jobId)
+          job <- jobDAO.findOne(jobIdValidated)(GlobalAccessContext)
+          jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
+          organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)
+          latestRunId <- job.latestRunId.toFox ?~> "job.notRun"
+          exportFileName <- job.exportFileName.toFox ?~> "job.noExportFileName"
+          jobExportProperties = JobExportProperties(jobId, latestRunId, organization.name, exportFileName)
+        } yield Ok(Json.toJson(jobExportProperties))
+      }
+  }
+
 }

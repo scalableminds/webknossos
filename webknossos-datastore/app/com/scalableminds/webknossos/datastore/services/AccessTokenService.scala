@@ -22,14 +22,7 @@ object AccessResourceType extends ExtendedEnumeration {
   val datasource, tracing, webknossos, jobExport = Value
 }
 
-trait AccessResourceId {}
-
-case class JobExportId(jobId: String, filePath: String) extends AccessResourceId
-case class TracingAccessId(tracingId: String) extends AccessResourceId
-
-case class UserAccessRequest(resourceId: AccessResourceId,
-                             resourceType: AccessResourceType.Value,
-                             mode: AccessMode.Value) {
+case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
   def toCacheKey(token: Option[String]) = s"$token#$resourceId#$resourceType#$mode"
 }
 
@@ -50,13 +43,13 @@ object UserAccessRequest {
   def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 
-  def downloadJobExport(jobId: String, filePath: String): UserAccessRequest =
-    UserAccessRequest(JobExportId(jobId, filePath), AccessResourceType.jobExport, AccessMode.read)
-
   def readTracing(tracingId: String): UserAccessRequest =
-    UserAccessRequest(TracingAccessId(tracingId), AccessResourceType.tracing, AccessMode.read)
+    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
   def writeTracing(tracingId: String): UserAccessRequest =
-    UserAccessRequest(TracingAccessId(tracingId), AccessResourceType.tracing, AccessMode.write)
+    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
+
+  def downloadJobExport(jobId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId(jobId, ""), AccessResourceType.jobExport, AccessMode.read)
 
   def webknossos: UserAccessRequest =
     UserAccessRequest(DataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)

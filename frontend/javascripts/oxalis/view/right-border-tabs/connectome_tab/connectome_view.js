@@ -164,6 +164,7 @@ type State = {
 };
 
 const directionCaptions = { in: "Incoming", out: "Outgoing" };
+const contextMenuTrigger = ["contextMenu"];
 
 const segmentData = (segmentId: number, level: 0 | 1): SegmentData => ({
   type: "segment",
@@ -250,15 +251,23 @@ const getFilteredConnectomeData = (
   return { agglomerates: filteredAgglomerates, synapses: filteredSynapses };
 };
 
-const getSynapsesFromConnectomeData = ({ synapses }: ConnectomeData): Array<Synapse> =>
-  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
-  Object.values(synapses);
+const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Synapse> => {
+  const { synapses, agglomerates } = connectomeData;
+  const synapseIds = unique(
+    Object.values(agglomerates).flatMap(
+      // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
+      ({ in: inSynapses = [], out: outSynapses = [] }: Agglomerate) => [
+        ...inSynapses,
+        ...outSynapses,
+      ],
+    ),
+  );
+  return synapseIds.map(synapseId => synapses[synapseId]);
+};
 
-const getAgglomerateIdsFromConnectomeData = ({
-  agglomerates,
-  synapses,
-}: ConnectomeData): Array<number> =>
-  unique(
+const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> => {
+  const { synapses, agglomerates } = connectomeData;
+  return unique(
     _.flatten([
       ...Object.keys(agglomerates).map(agglomerateId => +agglomerateId),
       // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
@@ -268,6 +277,7 @@ const getAgglomerateIdsFromConnectomeData = ({
       ),
     ]),
   );
+};
 
 const getTreeNameForAgglomerateSkeleton = (agglomerateId: number, mappingName: string): string =>
   `agglomerate ${agglomerateId} (${mappingName})`;
@@ -687,8 +697,8 @@ class ConnectomeView extends React.Component<Props, State> {
       }
     }
 
-    if (addedSynapseIds.length) {
-      const synapseIdToSynapse = _.keyBy(filteredSynapses, "id");
+    if (addedSynapseIds.length > 0 && filteredConnectomeData != null) {
+      const { synapses } = filteredConnectomeData;
       const newTrees: MutableTreeMap = {};
       const treeIdsToShow = [];
       for (const synapseId of addedSynapseIds) {
@@ -697,11 +707,8 @@ class ConnectomeView extends React.Component<Props, State> {
         maybeTree.cata({
           Just: tree => treeIdsToShow.push(tree.treeId),
           Nothing: () => {
-            newTrees[synapseId] = synapseTreeCreator(synapseId, synapseIdToSynapse[synapseId].type);
-            const synapseNode = synapseNodeCreator(
-              synapseId,
-              synapseIdToSynapse[synapseId].position,
-            );
+            newTrees[synapseId] = synapseTreeCreator(synapseId, synapses[synapseId].type);
+            const synapseNode = synapseNodeCreator(synapseId, synapses[synapseId].position);
             newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
           },
         });
@@ -894,7 +901,7 @@ class ConnectomeView extends React.Component<Props, State> {
           placement="bottomCenter"
           visible={this.state.activeSegmentDropdownKey === key}
           onVisibleChange={isVisible => this.handleSegmentDropdownMenuVisibility(key, isVisible)}
-          trigger={["contextMenu"]}
+          trigger={contextMenuTrigger}
         >
           <span>{node.title}</span>
         </Dropdown>
@@ -1070,13 +1077,14 @@ class ConnectomeView extends React.Component<Props, State> {
 
     return (
       <div style={{ flex: "1 1 auto" }}>
-        <AutoSizer>
+        {/* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
+          This has a major performance impact. */}
+        <AutoSizer defaultHeight={500}>
           {({ height, width }) => (
             <div style={{ height, width }}>
               <Tree
                 checkable
                 checkStrictly
-                defaultExpandAll
                 height={height}
                 showLine={{ showLeafIcon: false }}
                 onSelect={this.handleSelect}

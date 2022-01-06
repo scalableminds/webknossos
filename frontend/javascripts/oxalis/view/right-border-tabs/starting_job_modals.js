@@ -2,7 +2,7 @@
 import React, { useEffect, useState, type Node } from "react";
 import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
-import { startNucleiInferralJob, startNeuronReconstructionJob } from "admin/admin_rest_api";
+import { startNucleiInferralJob, startNeuronInferralJob } from "admin/admin_rest_api";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import { Unicode } from "oxalis/constants";
@@ -148,14 +148,14 @@ export function NucleiInferralModal({ dataset, handleClose }: Props) {
   );
 }
 
-export function NeuronReconstructionModal({ dataset, handleClose }: Props) {
+export function NeuronInferralModal({ dataset, handleClose }: Props) {
   return (
     <StartingJobModal
       dataset={dataset}
       handleClose={handleClose}
-      jobName="neuron reconstruction"
+      jobName="neuron inferral"
       jobApiCall={colorLayerName =>
-        startNeuronReconstructionJob(dataset.owningOrganization, dataset.name, colorLayerName)
+        startNeuronInferralJob(dataset.owningOrganization, dataset.name, colorLayerName)
       }
       description={
         <>

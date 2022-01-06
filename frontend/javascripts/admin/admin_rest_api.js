@@ -1013,13 +1013,13 @@ export function startNucleiInferralJob(
   );
 }
 
-export function startNeuronReconstructionJob(
+export function startNeuronInferralJob(
   organizationName: string,
   datasetName: string,
   layerName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/reconstructNeurons/${organizationName}/${datasetName}?layerName=${layerName}`,
+    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}`,
   );
 }
 

@@ -134,7 +134,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runReconstructNeuronsJob(organizationName: String,
+  def runInferNeuronsJob(organizationName: String,
                                dataSetName: String,
                                layerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -142,18 +142,18 @@ class JobsController @Inject()(jobDAO: JobDAO,
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
-          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.reconstructNeurons.notAllowed.organization" ~> FORBIDDEN
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
-          command = "reconstruct_neurons"
+          command = "infer_neurons"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronReconstruction"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronInferral"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

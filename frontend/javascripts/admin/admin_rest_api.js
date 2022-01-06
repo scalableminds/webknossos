@@ -1822,26 +1822,18 @@ export function getMeshfileChunkData(
 
 // ### Connectomes
 
-const USE_CONNECTOME_MOCK_DATA = false;
-
 export function getConnectomeFilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<Array<APIConnectomeFile>> {
-  if (USE_CONNECTOME_MOCK_DATA) {
-    return new Promise(resolve =>
-      resolve([{ connectomeFileName: "connectome", mappingName: "agglomerate_view_90" }]),
-    );
-  } else {
-    return doWithToken(token =>
-      Request.receiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-          datasetId.name
-        }/layers/${layerName}/connectomes?token=${token}`,
-      ),
-    );
-  }
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes?token=${token}`,
+    ),
+  );
 }
 
 export function getSynapsesOfAgglomerates(
@@ -1851,30 +1843,19 @@ export function getSynapsesOfAgglomerates(
   connectomeFile: string,
   agglomerateIds: Array<number>,
 ): Promise<Array<{| in: Array<number>, out: Array<number> |}>> {
-  if (USE_CONNECTOME_MOCK_DATA) {
-    return new Promise(resolve =>
-      resolve([
-        {
-          in: [64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84],
-          out: [85, 86, 87, 88, 89, 90, 91, 92],
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          agglomerateIds,
         },
-      ]),
-    );
-  } else {
-    return doWithToken(token =>
-      Request.sendJSONReceiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-          datasetId.name
-        }/layers/${layerName}/connectomes/synapses?token=${token}`,
-        {
-          data: {
-            connectomeFile,
-            agglomerateIds,
-          },
-        },
-      ),
-    );
-  }
+      },
+    ),
+  );
 }
 
 function getSynapseSourcesOrDestinations(
@@ -1885,29 +1866,19 @@ function getSynapseSourcesOrDestinations(
   synapseIds: Array<number>,
   srcOrDst: "src" | "dst",
 ): Promise<Array<number>> {
-  if (USE_CONNECTOME_MOCK_DATA) {
-    if (srcOrDst === "src") {
-      return new Promise(resolve =>
-        resolve([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]),
-      );
-    } else {
-      return new Promise(resolve => resolve([8, 9, 16, 19, 19, 23, 29, 43]));
-    }
-  } else {
-    return doWithToken(token =>
-      Request.sendJSONReceiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-          datasetId.name
-        }/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
-        {
-          data: {
-            connectomeFile,
-            synapseIds,
-          },
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          synapseIds,
         },
-      ),
-    );
-  }
+      },
+    ),
+  );
 }
 
 export function getSynapseSources(...args: *): Promise<Array<number>> {
@@ -1918,38 +1889,6 @@ export function getSynapseDestinations(...args: *): Promise<Array<number>> {
   return getSynapseSourcesOrDestinations(...args, "dst");
 }
 
-const synapsePositionsMock = [
-  [122, 218, 103],
-  [124, 254, 112],
-  [104, 256, 110],
-  [256, 110, 64],
-  [112, 138, 88],
-  [168, 156, 96],
-  [254, 136, 61],
-  [262, 188, 90],
-  [148, 158, 96],
-  [242, 174, 89],
-  [144, 232, 104],
-  [198, 140, 90],
-  [210, 180, 98],
-  [248, 254, 101],
-  [254, 170, 71],
-  [254, 234, 98],
-  [254, 176, 85],
-  [212, 286, 108],
-  [266, 176, 63],
-  [258, 222, 96],
-  [258, 248, 99],
-  [252, 122, 63],
-  [254, 126, 62],
-  [254, 136, 61],
-  [198, 250, 105],
-  [228, 290, 108],
-  [254, 252, 99],
-  [130, 294, 112],
-  [272, 188, 64],
-];
-
 export function getSynapsePositions(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
@@ -1957,56 +1896,20 @@ export function getSynapsePositions(
   connectomeFile: string,
   synapseIds: Array<number>,
 ): Promise<Array<Vector3>> {
-  if (USE_CONNECTOME_MOCK_DATA) {
-    return new Promise(resolve => resolve(synapsePositionsMock));
-  } else {
-    return doWithToken(token =>
-      Request.sendJSONReceiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-          datasetId.name
-        }/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
-        {
-          data: {
-            connectomeFile,
-            synapseIds,
-          },
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          synapseIds,
         },
-      ),
-    );
-  }
+      },
+    ),
+  );
 }
-
-const synapseTypesMock = [
-  0,
-  0,
-  0,
-  1,
-  2,
-  0,
-  2,
-  2,
-  1,
-  2,
-  0,
-  0,
-  0,
-  1,
-  2,
-  0,
-  2,
-  2,
-  1,
-  2,
-  0,
-  0,
-  0,
-  1,
-  2,
-  0,
-  2,
-  2,
-  1,
-];
 
 export function getSynapseTypes(
   dataStoreUrl: string,
@@ -2015,26 +1918,17 @@ export function getSynapseTypes(
   connectomeFile: string,
   synapseIds: Array<number>,
 ): Promise<{| synapseTypes: Array<number>, typeToString: Array<string> |}> {
-  if (USE_CONNECTOME_MOCK_DATA) {
-    return new Promise(resolve =>
-      resolve({
-        synapseTypes: synapseTypesMock,
-        typeToString: ["dendritic-shaft-synapse", "spine-head-synapse", "soma-synapse"],
-      }),
-    );
-  } else {
-    return doWithToken(token =>
-      Request.sendJSONReceiveJSON(
-        `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
-          datasetId.name
-        }/layers/${layerName}/connectomes/synapses/types?token=${token}`,
-        {
-          data: {
-            connectomeFile,
-            synapseIds,
-          },
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses/types?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          synapseIds,
         },
-      ),
-    );
-  }
+      },
+    ),
+  );
 }

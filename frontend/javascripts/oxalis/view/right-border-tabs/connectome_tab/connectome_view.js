@@ -251,9 +251,9 @@ const getFilteredConnectomeData = (
   return { agglomerates: filteredAgglomerates, synapses: filteredSynapses };
 };
 
-const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Synapse> => {
+const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> => {
   const { synapses, agglomerates } = connectomeData;
-  const synapseIds = unique(
+  return unique(
     Object.values(agglomerates).flatMap(
       // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
       ({ in: inSynapses = [], out: outSynapses = [] }: Agglomerate) => [
@@ -261,8 +261,7 @@ const getSynapsesFromConnectomeData = (connectomeData: ConnectomeData): Array<Sy
         ...outSynapses,
       ],
     ),
-  );
-  return synapseIds.map(synapseId => synapses[synapseId]);
+  ).filter(synapseId => synapses[synapseId]);
 };
 
 const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> => {
@@ -650,26 +649,24 @@ class ConnectomeView extends React.Component<Props, State> {
 
     if (segmentationLayer == null) return;
 
-    let prevFilteredSynapses: Array<Synapse> = [];
-    let filteredSynapses: Array<Synapse> = [];
+    let prevFilteredSynapseIds: Array<number> = [];
+    let filteredSynapseIds: Array<number> = [];
     let unfilteredSynapseIds: Array<number> = [];
     if (prevFilteredConnectomeData != null) {
-      prevFilteredSynapses = getSynapsesFromConnectomeData(prevFilteredConnectomeData);
+      prevFilteredSynapseIds = getSynapseIdsFromConnectomeData(prevFilteredConnectomeData);
     }
     if (filteredConnectomeData != null) {
-      filteredSynapses = getSynapsesFromConnectomeData(filteredConnectomeData);
+      filteredSynapseIds = getSynapseIdsFromConnectomeData(filteredConnectomeData);
     }
     if (connectomeData != null) {
-      unfilteredSynapseIds = getSynapsesFromConnectomeData(connectomeData).map(
-        synapse => synapse.id,
-      );
+      unfilteredSynapseIds = getSynapseIdsFromConnectomeData(connectomeData);
     }
 
     const layerName = segmentationLayer.name;
     // Find out which synapses were deleted and which were added
     const { onlyA: deletedSynapseIds, onlyB: addedSynapseIds } = diffArrays(
-      prevFilteredSynapses.map(synapse => synapse.id),
-      filteredSynapses.map(synapse => synapse.id),
+      prevFilteredSynapseIds,
+      filteredSynapseIds,
     );
 
     const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;

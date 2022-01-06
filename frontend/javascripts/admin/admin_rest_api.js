@@ -628,6 +628,26 @@ export function updateAnnotationLayer(
   );
 }
 
+type AnnotationLayerCreateDescriptor = {
+  typ: "Skeleton" | "Volume",
+  fallbackLayerName?: ?string,
+  resolutionRestrictions?: ?APIResolutionRestrictions,
+};
+
+export function addAnnotationLayer(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  newAnnotationLayer: AnnotationLayerCreateDescriptor,
+): Promise<APIAnnotation> {
+  return Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
+    {
+      method: "PATCH",
+      data: newAnnotationLayer,
+    },
+  );
+}
+
 export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -711,7 +731,7 @@ export function createExplorational(
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
 
-  let layers = [];
+  let layers: Array<AnnotationLayerCreateDescriptor> = [];
   if (typ === "skeleton") {
     layers = [{ typ: "Skeleton", name: "Skeleton" }];
   } else if (typ === "volume") {
@@ -927,6 +947,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     state: adaptJobState(job.command, job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
+    resultLink: job.resultLink,
     createdAt: job.created,
   }));
 }

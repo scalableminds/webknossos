@@ -91,7 +91,6 @@
   },
   "scripts": {
     "start": "node tools/proxy/proxy.js",
-    "stop": "killall java && killall node",
     "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env.production",
     "build-dev": "node_modules/.bin/webpack",
     "build-watch": "node_modules/.bin/webpack -w",

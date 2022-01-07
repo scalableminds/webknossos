@@ -402,7 +402,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
               type="primary"
               onClick={applySuggestedSettings}
             >
-              Apply Suggestion
+              Apply Suggestions
             </Button>
             <Button
               size="small"

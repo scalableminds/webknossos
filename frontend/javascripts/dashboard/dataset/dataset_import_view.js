@@ -391,31 +391,41 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
-          A datasource-properties.json file was found for this dataset. However, webKnossos found
-          additional information about the dataset that could be inferred. The original
-          datasource-properties.json settings can be seen below in the advanced version. The
-          JSON-encoded difference between the current and the suggested version can be inspected{" "}
-          <LinkButton
-            onClick={() =>
-              showJSONModal(
-                "Difference to suggested datasource-properties.json",
-                differenceBetweenDataSources,
-              )
-            }
-          >
-            here
-          </LinkButton>
-          .<br />
-          Click <LinkButton onClick={applySuggestedSettings}>here</LinkButton> to set the suggested
-          JSON settings. This will replace the current settings in the form with{" "}
-          <LinkButton
-            onClick={() =>
-              showJSONModal("Suggested datasource-properties.json", inferredDataSource)
-            }
-          >
-            these settings
-          </LinkButton>
-          .
+          A datasource-properties.json file was found for this dataset. However, webKnossos could
+          infer additional information. The original datasource-properties.json settings can be seen
+          below in the advanced view. Feel free to apply or preview the suggestions or to inspect
+          the JSON-encoded difference between the current properties and the inferred properties.
+          <div style={{ marginTop: 8 }}>
+            <Button
+              size="small"
+              style={{ marginRight: 6 }}
+              type="primary"
+              onClick={applySuggestedSettings}
+            >
+              Apply Suggestion
+            </Button>
+            <Button
+              size="small"
+              style={{ marginRight: 6 }}
+              onClick={() =>
+                showJSONModal("Suggested datasource-properties.json", inferredDataSource)
+              }
+            >
+              Preview Suggestions
+            </Button>
+            <Button
+              size="small"
+              style={{ marginRight: 6 }}
+              onClick={() =>
+                showJSONModal(
+                  "Difference (JSON-encoded) to suggested datasource-properties.json",
+                  differenceBetweenDataSources,
+                )
+              }
+            >
+              Inspect Difference
+            </Button>
+          </div>
         </div>
       );
     }

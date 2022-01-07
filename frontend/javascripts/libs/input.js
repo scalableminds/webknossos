@@ -151,6 +151,7 @@ export class InputKeyboard {
   }
 
   attach(key: KeyboardKey, callback: KeyboardLoopHandler) {
+    let delayTimeoutId = null;
     const binding = [
       key,
       event => {
@@ -190,7 +191,7 @@ export class InputKeyboard {
           this.delay +
           (callback.customAdditionalDelayFn != null ? callback.customAdditionalDelayFn() : 0);
         if (totalDelay >= 0) {
-          setTimeout(() => {
+          delayTimeoutId = setTimeout(() => {
             callback.delayed = false;
             callback.lastTime = new Date().getTime();
           }, totalDelay);
@@ -204,6 +205,10 @@ export class InputKeyboard {
         if (this.keyCallbackMap[key] != null) {
           this.keyPressedCount--;
           delete this.keyCallbackMap[key];
+        }
+        if (delayTimeoutId != null) {
+          clearTimeout(delayTimeoutId);
+          delayTimeoutId = null;
         }
       },
     ];

@@ -102,6 +102,9 @@ type State = {
 };
 
 const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> => {
+  // Since the synapse direction filter filters the agglomerates' in/out keys and the synapse type filter
+  // filters the synapses object, the two effectively need to be unioned and only the synapse ids
+  // that occur in one of the agglomerates' in/out arrays as well as in the synapses object need to be returned.
   const { synapses, agglomerates } = connectomeData;
   return unique(
     Object.values(agglomerates).flatMap(
@@ -115,17 +118,22 @@ const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<
 };
 
 const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> => {
+  // In order to find all existing agglomerate ids, the top level agglomerate ids (Object.keys(agglomerates)) need to be merged
+  // with the synaptic partner agglomerate ids. The synaptic partner agglomerate ids can be found by looking at the
+  // filtered set of all synapses and picking the src/dst key, depending on whether the partner is pre- or postsynaptic
+  // (the other key will usually be undefined). For synapses that occur for both directions it doesn't matter, because that
+  // implicates that the associated agglomerated ids both need to be top level agglomerate ids as well.
   const { synapses, agglomerates } = connectomeData;
-  return unique(
-    _.flatten([
-      ...Object.keys(agglomerates).map(agglomerateId => +agglomerateId),
-      // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
-      ...Object.values(synapses).map((synapse: Synapse) =>
-        // $FlowIssue[incompatible-call] Flow doesn't understand that if src == null -> dst != null
-        synapse.src != null ? synapse.src : synapse.dst,
-      ),
-    ]),
+  const topLevelAgglomerateIds = Object.keys(agglomerates).map(agglomerateId => +agglomerateId);
+  const filteredSynapseIds = getSynapseIdsFromConnectomeData(connectomeData);
+  const partnerAgglomerateIds = filteredSynapseIds.map(
+    (synapseId): number => {
+      const synapse = synapses[synapseId];
+      // $FlowIssue[incompatible-return] Flow doesn't understand that if src == null -> dst != null
+      return synapse.src != null ? synapse.src : synapse.dst;
+    },
   );
+  return unique([...topLevelAgglomerateIds, ...partnerAgglomerateIds]);
 };
 
 const getTreeNameForAgglomerateSkeleton = (agglomerateId: number, mappingName: string): string =>

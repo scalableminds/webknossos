@@ -36,6 +36,7 @@ export type TreeNode = {
 type TreeData = Array<TreeNode>;
 
 export const directionCaptions = { in: "Incoming", out: "Outgoing" };
+const showLine = { showLeafIcon: false };
 const contextMenuTrigger = ["contextMenu"];
 
 const segmentData = (segmentId: number, level: 0 | 1): SegmentData => ({
@@ -198,7 +199,7 @@ class SynapseTree extends React.Component<Props, State> {
                 checkable
                 checkStrictly
                 height={height}
-                showLine={{ showLeafIcon: false }}
+                showLine={showLine}
                 onSelect={this.handleSelect}
                 onCheck={onCheck}
                 onExpand={onExpand}

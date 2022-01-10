@@ -31,9 +31,11 @@ const getFilteredConnectomeData = (
 
   const { agglomerates, synapses } = connectomeData;
 
+  // Filter by synapse direction by potentially filtering the in/out keys of the agglomerates
   const filteredAgglomerates = _.mapValues(agglomerates, agglomerate =>
     _.pick(agglomerate, synapseDirections),
   );
+  // Filter by synapse type by removing all synapses that are not of the selected type(s)
   const filteredSynapses = _.pickBy(synapses, (synapse: Synapse) =>
     synapseTypes.includes(synapse.type),
   );

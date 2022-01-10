@@ -347,11 +347,12 @@ Expects:
                     dataSetName: String,
                     dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
-        token) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
-          Ok(Json.toJson(meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)))
+          for {
+            meshFiles <- meshFileService.exploreMeshFiles(organizationName, dataSetName, dataLayerName)
+          } yield Ok(Json.toJson(meshFiles))
         }
       }
     }

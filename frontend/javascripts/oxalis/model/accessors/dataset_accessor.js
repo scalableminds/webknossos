@@ -26,6 +26,7 @@ import constants, {
   type Vector3,
   type ViewMode,
   Vector3Indicies,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
@@ -610,41 +611,22 @@ export function getVisibleSegmentationLayers(state: OxalisState): Array<APISegme
 }
 
 export function getSegmentationLayerWithMappingSupport(state: OxalisState): ?APISegmentationLayer {
-  // If there are zero or one segmentation layers, the selection is trivial.
-  const segmentationLayers = getSegmentationLayers(state.dataset);
-  if (segmentationLayers.length === 0) {
-    return null;
-  } else if (segmentationLayers.length === 1) {
-    return segmentationLayers[0];
-  }
-
-  // There are multiple segmentation layers. From the visible segmentation layers,
-  // return the first layer which has enabled mappings.
-  // If no layer has enabled mappings, pick a layer which has some mappings (this is important
-  // for the initialization of the mapping textures, since isMappingEnabled will be set to true
-  // after all mapping data was copied to the GPU, but getSegmentationLayerWithMappingSupport is
-  // already used before that to prepare the mapping for the correct layer).
-  // This handling should be refactored. See https://github.com/scalableminds/webknossos/issues/5695.
   // Currently, webKnossos only supports one active mapping at a given time. The UI should ensure
   // that not more than one mapping is enabled (currently, this is achieved by only allowing one
   // visible segmentation layer, anyway).
 
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
 
-  const layersWithEnabledMapping = visibleSegmentationLayers.filter(layer => {
+  // Find the visible layer with an enabled or activating mapping
+  const layersWithoutDisabledMapping = visibleSegmentationLayers.filter(layer => {
     const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layer.name];
-    return mappingInfo && mappingInfo.isMappingEnabled;
+    return mappingInfo && mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED;
   });
 
-  if (layersWithEnabledMapping.length > 0) {
-    return layersWithEnabledMapping[0];
+  if (layersWithoutDisabledMapping.length > 0) {
+    return layersWithoutDisabledMapping[0];
   }
-  const layersWithMappings = visibleSegmentationLayers.filter(
-    layer => layer.mappings && layer.mappings.length > 0,
-  );
-  if (layersWithMappings.length > 0) {
-    return layersWithMappings[0];
-  }
+
   return null;
 }
 
@@ -833,6 +815,17 @@ export function is2dDataset(dataset: APIDataset): boolean {
   return getDatasetExtentInVoxel(dataset).depth === 1;
 }
 
+const dummyMapping = {
+  mappingName: null,
+  mapping: null,
+  mappingKeys: null,
+  mappingColors: null,
+  hideUnmappedIds: false,
+  mappingStatus: MappingStatusEnum.DISABLED,
+  mappingSize: 0,
+  mappingType: "JSON",
+};
+
 export function getMappingInfo(
   activeMappingInfos: { [layerName: string]: ActiveMappingInfo },
   layerName: ?string,
@@ -843,16 +836,7 @@ export function getMappingInfo(
 
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  return {
-    mappingName: null,
-    mapping: null,
-    mappingKeys: null,
-    mappingColors: null,
-    hideUnmappedIds: false,
-    isMappingEnabled: false,
-    mappingSize: 0,
-    mappingType: "JSON",
-  };
+  return dummyMapping;
 }
 
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {

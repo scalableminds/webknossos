@@ -86,7 +86,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SQLClient)(implicit ec: ExecutionC
   def findAnnotationLayersFor(annotationId: ObjectId): Fox[List[AnnotationLayer]] =
     for {
       rows <- run(
-        sql"select _annotation, tracingId, typ, name from webknossos.annotation_layers where _annotation = $annotationId"
+        sql"select _annotation, tracingId, typ, name from webknossos.annotation_layers where _annotation = $annotationId order by tracingId"
           .as[AnnotationLayersRow])
       parsed <- Fox.serialCombined(rows.toList)(parse)
     } yield parsed

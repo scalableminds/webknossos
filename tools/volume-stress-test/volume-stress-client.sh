@@ -1,6 +1,6 @@
 #!/bin/bash
 
-authtoken=secretScmBoyToken
+authtoken=secretSampleUserToken
 host=http://localhost:9000
 datastorehost=http://localhost:9000
 dataset=sample_organization/e2006-x4y1z1

@@ -391,10 +391,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
-          A datasource-properties.json file was found for this dataset. However, webKnossos could
-          infer additional information. The original datasource-properties.json settings can be seen
-          below in the advanced view. Feel free to apply or preview the suggestions or to inspect
-          the JSON-encoded difference between the current properties and the inferred properties.
+          webKnossos detected additional information not yet present in the dataset’s <em>datasource-properties.json</em> file:
           <div style={{ marginTop: 8 }}>
             <Button
               size="small"

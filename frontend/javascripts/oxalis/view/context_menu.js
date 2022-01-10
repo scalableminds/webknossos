@@ -14,7 +14,7 @@ import type { OxalisState, SkeletonTracing, VolumeTracing, ActiveMappingInfo } f
 import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { Dispatch } from "redux";
-import { connect, useDispatch } from "react-redux";
+import { connect, useDispatch, useSelector } from "react-redux";
 import { V3 } from "libs/mjs";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import {
@@ -31,6 +31,10 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  hasAgglomerateMapping,
+  loadAgglomerateSkeletonAtPosition,
+} from "oxalis/controller/combinations/segmentation_handlers";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -195,6 +199,16 @@ function shortcutBuilder(shortcuts: Array<string>): Node {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-right.svg"
             alt="Mouse Right Click"
+            style={{ margin: 0 }}
+          />
+        );
+      }
+      case "middleMouse": {
+        return (
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-wheel.svg"
+            alt="Mouse Wheel"
             style={{ margin: 0 }}
           />
         );
@@ -446,6 +460,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   } = props;
 
   const dispatch = useDispatch();
+  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
@@ -509,6 +524,21 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           >
             Create new Tree here{" "}
             {!isVolumeBasedToolActive && !isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
+          </Menu.Item>,
+
+          <Menu.Item
+            className="node-context-menu-item"
+            key="load-agglomerate-skeleton"
+            disabled={!isAgglomerateMappingEnabled.value}
+            onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
+          >
+            {isAgglomerateMappingEnabled.value ? (
+              ["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]
+            ) : (
+              <Tooltip title="Requires an active ID Mapping">
+                {["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]}
+              </Tooltip>
+            )}
           </Menu.Item>,
         ]
       : [];

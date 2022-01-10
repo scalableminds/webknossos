@@ -580,6 +580,7 @@ export type APIJob = {
   +state: string,
   +manualState: string,
   +result: ?string,
+  +resultLink: ?string,
   +createdAt: number,
 };
 

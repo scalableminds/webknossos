@@ -83,7 +83,10 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import { maybeGetSomeTracing, selectTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getUserBoundingBoxesFromState,
+  selectTracing,
+} from "oxalis/model/accessors/tracing_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import Date from "libs/date";
@@ -170,11 +173,6 @@ function unpackRelevantActionForUndo(action): RelevantActionsForUndoRedo {
 
   throw new Error("Could not unpack redux action from channel");
 }
-
-const getUserBoundingBoxesFromState = state => {
-  const maybeSomeTracing = maybeGetSomeTracing(state.tracing);
-  return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
-};
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];

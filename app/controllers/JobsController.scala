@@ -5,6 +5,7 @@ import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.DataSetDAO
@@ -134,7 +135,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: Option[String]): Action[AnyContent] =
+  def runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String,   bbox: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -150,6 +151,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "dataset_name" -> dataSetName,
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+            "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronInferral"
           js <- jobService.publicWrites(job)

@@ -455,9 +455,9 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   renderSelectedStartingJobsModal() {
     const handleClose = () => this.setState({ showJobsDetailsModal: null });
     if (this.state.showJobsDetailsModal === StartableJobsEnum.NUCLEI_INFERRAL) {
-      return <NucleiInferralModal dataset={this.props.dataset} handleClose={handleClose} />;
+      return <NucleiInferralModal handleClose={handleClose} />;
     } else if (this.state.showJobsDetailsModal === StartableJobsEnum.NEURON_INFERRAL) {
-      return <NeuronInferralModal dataset={this.props.dataset} handleClose={handleClose} />;
+      return <NeuronInferralModal handleClose={handleClose} />;
     }
     return null;
   }

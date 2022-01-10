@@ -134,9 +134,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runInferNeuronsJob(organizationName: String,
-                               dataSetName: String,
-                               layerName: Option[String]): Action[AnyContent] =
+  def runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {

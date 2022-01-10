@@ -23,12 +23,12 @@ const COLOR_MAP: Array<string> = [
 const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
 
 export function stringToColor(string: string): string {
-  const hash = hashString(string);
+  const hash = hashString(string, COLOR_MAP.length);
   return COLOR_MAP[hash];
 }
 
 export function stringToAntdColorPreset(string: string): string {
-  const hash = hashString(string);
+  const hash = hashString(string, COLOR_MAP_ANTD.length);
   return COLOR_MAP_ANTD[hash];
 }
 
@@ -38,12 +38,12 @@ export function stringToAntdColorPresetRgb(string: string): Vector3 {
   return Utils.hexToRgb(presetPalettes[presetString].primary);
 }
 
-function hashString(string: string): number {
+function hashString(string: string, max: number): number {
   let hash = 0;
   for (let i = 0; i < string.length; i++) {
     hash += string.charCodeAt(i);
   }
-  return hash % COLOR_MAP.length;
+  return hash % max;
 }
 
 export function formatTuple(tuple: ?(Array<number> | Vector3 | Vector6)) {

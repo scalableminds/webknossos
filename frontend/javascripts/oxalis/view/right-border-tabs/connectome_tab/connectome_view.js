@@ -75,7 +75,7 @@ import Toast from "libs/toast";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 
-const connectomeTabId = "connectome";
+const connectomeTabId = "connectome-view";
 
 const { Option } = Select;
 

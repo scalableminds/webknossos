@@ -1,29 +1,12 @@
 // @flow
-import { AutoSizer } from "react-virtualized";
-import {
-  Alert,
-  Checkbox,
-  Divider,
-  Dropdown,
-  Empty,
-  Input,
-  Menu,
-  Popover,
-  Select,
-  Tag,
-  Tooltip,
-  Tree,
-} from "antd";
-import type { Dispatch } from "redux";
+import { Alert, Checkbox, Divider, Empty, Input, Popover, Select, Tooltip } from "antd";
 import { FilterOutlined, SettingOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
 import _ from "lodash";
-import memoizeOne from "memoize-one";
 
 import type { APISegmentationLayer, APIDataset, APIConnectomeFile } from "types/api_flow_types";
-import type { ExtractReturn } from "libs/type_helpers";
 import { diffArrays, unique } from "libs/utils";
 import { findTreeByName } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -53,11 +36,8 @@ import {
   loadAgglomerateSkeletonAction,
   removeAgglomerateSkeletonAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { stringToAntdColorPreset, stringToAntdColorPresetRgb } from "libs/format_utils";
-import {
-  updateDatasetSettingAction,
-  setMappingAction,
-} from "oxalis/model/actions/settings_actions";
+import { stringToAntdColorPresetRgb } from "libs/format_utils";
+import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
@@ -72,43 +52,24 @@ import Store, {
   type ActiveMappingInfo,
 } from "oxalis/store";
 import Toast from "libs/toast";
-import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import SynapseTree, {
+  type ConnectomeData,
+  type Synapse,
+  type Agglomerate,
+  type TreeNode,
+  convertConnectomeToTreeData,
+  directionCaptions,
+} from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 
 const connectomeTabId = "connectome-view";
 
 const { Option } = Select;
 
-type BaseSynapse = {| id: number, position: Vector3, type: string |};
-type SrcSynapse = {| ...BaseSynapse, src: number, dst: void |};
-type DstSynapse = {| ...BaseSynapse, src: void, dst: number |};
-type SrcAndDstSynapse = {| ...BaseSynapse, src: number, dst: number |};
-type Synapse = SrcSynapse | DstSynapse | SrcAndDstSynapse;
-type Agglomerate = { in?: Array<number>, out?: Array<number> };
-type ConnectomeData = {|
-  agglomerates: { [number]: Agglomerate },
-  synapses: { [number]: Synapse },
-|};
-
 type ConnectomeFilters = {
   synapseTypes: Array<string>,
   synapseDirections: Array<string>,
 };
-
-type SegmentData = { type: "segment", id: number, level: 0 | 1 };
-type SynapseData = { type: "synapse", id: number, position: Vector3, synapseType: string };
-type NoneData = { type: "none" };
-type TreeNodeData = SegmentData | SynapseData | NoneData;
-type TreeNode = {
-  key: string,
-  title: string,
-  children: Array<TreeNode>,
-  disabled?: boolean,
-  selectable?: boolean,
-  checkable?: boolean,
-  data: TreeNodeData,
-};
-type TreeData = Array<TreeNode>;
 
 type StateProps = {|
   dataset: APIDataset,
@@ -143,15 +104,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   };
 };
 
-const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
-  onChangeDatasetSettings(propertyName, value) {
-    dispatch(updateDatasetSettingAction(propertyName, value));
-  },
-});
-
-type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
-
-type Props = {| ...DispatchProps, ...StateProps |};
+type Props = StateProps;
 
 type State = {
   connectomeData: ?ConnectomeData,
@@ -160,70 +113,6 @@ type State = {
   filters: ConnectomeFilters,
   checkedKeys: Array<string>,
   expandedKeys: Array<string>,
-  activeSegmentDropdownKey: ?string,
-};
-
-const directionCaptions = { in: "Incoming", out: "Outgoing" };
-const contextMenuTrigger = ["contextMenu"];
-
-const segmentData = (segmentId: number, level: 0 | 1): SegmentData => ({
-  type: "segment",
-  id: segmentId,
-  level,
-});
-const synapseData = (synapseId: number, position: Vector3, type: string): SynapseData => ({
-  type: "synapse",
-  id: synapseId,
-  position,
-  synapseType: type,
-});
-const noneData = { type: "none" };
-
-const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeData => {
-  if (connectomeData == null) return null;
-
-  const { agglomerates, synapses } = connectomeData;
-
-  const convertSynapsesForPartner = (synapseIds, partnerId1, direction): Array<TreeNode> => {
-    if (synapseIds == null) return [];
-
-    const partnerSynapses = synapseIds
-      .map(synapseId => synapses[synapseId])
-      // Some synapses might be filtered out
-      .filter(synapse => synapse != null);
-    const synapsesByPartner = _.groupBy(partnerSynapses, direction === "in" ? "src" : "dst");
-
-    return Object.keys(synapsesByPartner).map(partnerId2 => ({
-      key: `segment-${partnerId1}-${direction}-${partnerId2}`,
-      title: `Segment ${partnerId2}`,
-      data: segmentData(+partnerId2, 1),
-      children: synapsesByPartner[+partnerId2].map(synapse => ({
-        key: `synapse-${direction}-${synapse.id}`,
-        title: `Synapse ${synapse.id}`,
-        data: synapseData(synapse.id, synapse.position, synapse.type),
-        children: [],
-        checkable: false,
-      })),
-    }));
-  };
-
-  return Object.keys(agglomerates).map(partnerId1 => ({
-    key: `segment-${partnerId1}`,
-    title: `Segment ${partnerId1}`,
-    data: segmentData(+partnerId1, 0),
-    children: Object.keys(agglomerates[+partnerId1]).map(direction => ({
-      key: `segment-${partnerId1}-${direction}`,
-      title: `${directionCaptions[direction]} Synapses`,
-      data: noneData,
-      children: convertSynapsesForPartner(
-        agglomerates[+partnerId1][direction],
-        partnerId1,
-        direction,
-      ),
-      checkable: false,
-      selectable: false,
-    })),
-  }));
 };
 
 const getFilteredConnectomeData = (
@@ -320,8 +209,6 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   interpolation: false,
 });
 
-const convertConnectomeToTreeData = memoizeOne(_convertConnectomeToTreeData);
-
 function* mapTreeData<R>(
   nodes: Array<TreeNode>,
   callback: TreeNode => R,
@@ -366,7 +253,6 @@ class ConnectomeView extends React.Component<Props, State> {
     filters: defaultFilters,
     checkedKeys: [],
     expandedKeys: [],
-    activeSegmentDropdownKey: null,
   };
 
   componentDidMount() {
@@ -815,17 +701,21 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   handleChangeActiveSegment = (evt: SyntheticInputEvent<>) => {
-    const { segmentationLayer } = this.props;
-    if (segmentationLayer == null) return;
-
     const agglomerateIds = evt.target.value
       .split(",")
       .map(part => parseInt(part, 10))
       .filter(id => !Number.isNaN(id));
 
-    Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
+    this.setActiveConnectomeAgglomerateIds(agglomerateIds);
 
     evt.target.blur();
+  };
+
+  setActiveConnectomeAgglomerateIds = (agglomerateIds: Array<number>) => {
+    const { segmentationLayer } = this.props;
+    if (segmentationLayer == null) return;
+
+    Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
   };
 
   handleConnectomeFileSelected = async (connectomeFileName: ?string) => {
@@ -835,87 +725,12 @@ class ConnectomeView extends React.Component<Props, State> {
     }
   };
 
-  handleSelect = (
-    selectedKeys: Array<string>,
-    evt: { selected: boolean, selectedNodes: Array<TreeNode>, node: TreeNode, event: string },
-  ) => {
-    const { data } = evt.node;
-    if (data.type === "synapse" && evt.selected) {
-      api.tracing.setCameraPosition(data.position);
-    }
-  };
-
   handleCheck = ({ checked }: { checked: Array<string> }) => {
     this.setState({ checkedKeys: checked });
   };
 
   handleExpand = (expandedKeys: Array<string>) => {
     this.setState({ expandedKeys });
-  };
-
-  handleSegmentDropdownMenuVisibility = (key: string, isVisible: boolean) => {
-    if (isVisible) {
-      this.setState({ activeSegmentDropdownKey: key });
-      return;
-    }
-    this.setState({ activeSegmentDropdownKey: null });
-  };
-
-  createSegmentDropdownMenu = (agglomerateId: number) => {
-    const { segmentationLayer } = this.props;
-    if (segmentationLayer == null) return null;
-
-    return (
-      <Menu>
-        <Menu.Item
-          key="setActiveAgglomerateId"
-          onClick={() =>
-            Store.dispatch(
-              setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, [agglomerateId]),
-            )
-          }
-          title="Show All Synapses of This Segment"
-        >
-          Show All Synapses of This Segment
-        </Menu.Item>
-      </Menu>
-    );
-  };
-
-  renderNode = (node: TreeNode) => {
-    const { data, key } = node;
-    if (data.type === "none") return node.title;
-
-    if (data.type === "segment") {
-      // Do not show a dropdown menu for top-level segments
-      if (data.level === 0) return node.title;
-
-      return (
-        <Dropdown
-          // Lazily create the dropdown menu and destroy it again, afterwards
-          overlay={() => this.createSegmentDropdownMenu(data.id)}
-          autoDestroy
-          placement="bottomCenter"
-          visible={this.state.activeSegmentDropdownKey === key}
-          onVisibleChange={isVisible => this.handleSegmentDropdownMenuVisibility(key, isVisible)}
-          trigger={contextMenuTrigger}
-        >
-          <span>{node.title}</span>
-        </Dropdown>
-      );
-    }
-
-    return (
-      <>
-        {node.title}
-        <Tag
-          style={{ marginLeft: 10, marginBottom: 0 }}
-          color={stringToAntdColorPreset(data.synapseType)}
-        >
-          {data.synapseType}
-        </Tag>
-      </>
-    );
   };
 
   onChangeSynapseDirectionFilter = (synapseDirections: Array<string>) => {
@@ -1069,39 +884,9 @@ class ConnectomeView extends React.Component<Props, State> {
     );
   }
 
-  getSynapseTree() {
-    const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
-
-    return (
-      <div style={{ flex: "1 1 auto" }}>
-        {/* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
-          This has a major performance impact. */}
-        <AutoSizer defaultHeight={500}>
-          {({ height, width }) => (
-            <div style={{ height, width }}>
-              <Tree
-                checkable
-                checkStrictly
-                height={height}
-                showLine={{ showLeafIcon: false }}
-                onSelect={this.handleSelect}
-                onCheck={this.handleCheck}
-                onExpand={this.handleExpand}
-                checkedKeys={checkedKeys}
-                expandedKeys={expandedKeys}
-                titleRender={this.renderNode}
-                treeData={convertConnectomeToTreeData(filteredConnectomeData)}
-              />
-            </div>
-          )}
-        </AutoSizer>
-      </div>
-    );
-  }
-
   render() {
     const { segmentationLayer, availableConnectomeFiles, activeAgglomerateIds } = this.props;
-    const { filteredConnectomeData } = this.state;
+    const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
 
     return (
       <div id={connectomeTabId} className="padded-tab-content">
@@ -1139,7 +924,14 @@ class ConnectomeView extends React.Component<Props, State> {
                     description="No segment selected. Use the input field above to enter a segment ID."
                   />
                 ) : (
-                  this.getSynapseTree()
+                  <SynapseTree
+                    checkedKeys={checkedKeys}
+                    expandedKeys={expandedKeys}
+                    onCheck={this.handleCheck}
+                    onExpand={this.handleExpand}
+                    onChangeActiveAgglomerateIds={this.setActiveConnectomeAgglomerateIds}
+                    connectomeData={filteredConnectomeData}
+                  />
                 )}
               </>
             );
@@ -1150,7 +942,4 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 }
 
-export default connect<Props, {||}, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(ConnectomeView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ConnectomeView);

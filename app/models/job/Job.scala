@@ -154,6 +154,14 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  def findAllCancellingByWorker(workerId: ObjectId): Fox[List[Job]] =
+    for {
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}"
+          .as[JobsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def isOwnedBy(_id: String, _user: ObjectId): Fox[Boolean] =
     for {
       results: Seq[String] <- run(
@@ -175,8 +183,6 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                           #${optionLiteral(j.ended.map(_.toString))},
                           ${new java.sql.Timestamp(j.created)}, ${j.isDeleted})""")
     } yield ()
-
-
 
   def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

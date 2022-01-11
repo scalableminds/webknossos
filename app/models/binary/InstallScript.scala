@@ -13,6 +13,9 @@ object InstallScript {
        |set -euo pipefail
        |
        |retry() {
+       |  # ask user repeatedly for something.
+       |  # arg 1: passed condition that is eval'd. if true, ask user again
+       |  # arg 2: message to show user when asking them again
        |	read -r variable
        |
        |	if eval "$$1"; then
@@ -52,13 +55,13 @@ object InstallScript {
        |config_values[webKnossos]=$webKnossosUrl
        |config_values[single_org_datastore]="true"
        |config_values[org_name]=$organizationName
-       |config_values[ephemeral_key_size]="2048"
+       |config_values[ephemeral_key_size]="2048" # https key setting
        |config_values[reject_client_renegotiation]="true"
        |
        |update_script=$updateScriptURL
        |jar=$jarURL
        |
-       |echo "This script helps you to install a webKnossos datastore on your machine. In the progress some commands may need root permissions, but these are not required. If you have to abort the installation, you can simply restart process and all necessary files will be overwritten."
+       |echo "This script helps you install a webKnossos datastore on your machine. In the progress some commands may need root permissions, but these are not required. If you have to abort the installation, you can simply restart process and all necessary files will be overwritten."
        |
        |echo "Please enter the installation path and press [ENTER] or simply press [ENTER] if the datastore should be installed in the current directory: "
        |
@@ -70,14 +73,14 @@ object InstallScript {
        | install_path=$$(make_file_path_absolute "$$install_path")
        |fi
        |
-       |echo "Downloading the necessary files..."
+       |echo "Downloading files..."
        |curl -L -H "Accept: application/octet-stream" -o "$$install_path/webknossos-datastore.jar" $$jar
        |curl -L -H "Accept: application/octet-stream" -o "$$install_path/run.sh" $$update_script
        |chmod +x "$$install_path/run.sh"
        |
-       |echo "Downloaded all necessary files."
+       |echo "Download complete."
        |
-       |echo "Creating initial config. We will ask for some of the most important config fields, but there are more configuration options. Please consult the documentation at TODO to learn more."
+       |echo "Creating initial config..."
        |echo "Please enter the path where the datasets are located and press [ENTER]:"
        |base_dir=$$(retry "[[ ! -d \\$$variable ]]" "The provided dataset path does not exist or is not a directory.")
        |

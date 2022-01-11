@@ -88,6 +88,7 @@ PATCH         /datastores/:name/status                                         c
 POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
 POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteErroneous                                controllers.WKRemoteDataStoreController.deleteErroneous(name: String, key: String)
+GET           /datastores/:name/jobExportProperties                            controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create
 DELETE        /datastores/:name                                                controllers.DataStoreController.delete(name: String)
@@ -207,5 +208,4 @@ GET           /jobs/run/exportTiff/:organizationName/:dataSetName              c
 GET           /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                 controllers.JobsController.cancel(id: String)
-GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
 POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

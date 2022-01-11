@@ -16,12 +16,13 @@ import io.swagger.annotations._
 import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreService}
+import models.job.JobDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -44,6 +45,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
+                                    jobDAO: JobDAO,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                     conf: WkConf,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -98,6 +100,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
+          case AccessResourceType.jobExport =>
+            handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
@@ -188,4 +192,18 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
+
+  private def handleJobExportAccess(jobId: String, mode: AccessMode, userBox: Box[User]): Fox[UserAccessAnswer] =
+    if (mode != AccessMode.read)
+      Fox.successful(UserAccessAnswer(granted = false, Some(s"Unsupported acces mode for job exports: $mode")))
+    else {
+      for {
+        jobIdValidated <- ObjectId.parse(jobId)
+        jobBox <- jobDAO.findOne(jobIdValidated)(DBAccessContext(userBox)).futureBox
+        answer = jobBox match {
+          case Full(_) => UserAccessAnswer(granted = true)
+          case _       => UserAccessAnswer(granted = false, Some(s"No ${mode} access to job export"))
+        }
+      } yield answer
+    }
 }

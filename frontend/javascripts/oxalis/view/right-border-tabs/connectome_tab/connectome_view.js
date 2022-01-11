@@ -51,7 +51,6 @@ import Toast from "libs/toast";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import SynapseTree, {
   type ConnectomeData,
-  type Synapse,
   type Agglomerate,
   type TreeNode,
   convertConnectomeToTreeData,

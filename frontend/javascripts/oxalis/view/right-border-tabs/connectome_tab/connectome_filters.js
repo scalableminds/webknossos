@@ -18,10 +18,10 @@ type ConnectomeFiltersType = {
 
 const getFilteredConnectomeData = (
   connectomeData: ?ConnectomeData,
-  filters: ?ConnectomeFiltersType,
+  filters: ConnectomeFiltersType,
   numSynapseTypes: number,
 ): ?ConnectomeData => {
-  if (connectomeData == null || filters == null) return connectomeData;
+  if (connectomeData == null) return connectomeData;
 
   const { synapseTypes, synapseDirections } = filters;
 
@@ -65,14 +65,16 @@ class ConnectomeFilters extends React.Component<Props, State> {
   };
 
   componentDidUpdate(prevProps: Props, prevState: State) {
+    let { filters } = this.state;
+    if (prevProps.availableSynapseTypes !== this.props.availableSynapseTypes) {
+      // Avoid using outdated filters in the call to updateFilteredConnectomeData
+      filters = this.updateFilters(prevProps.availableSynapseTypes);
+    }
     if (
       prevProps.connectomeData !== this.props.connectomeData ||
       prevState.filters !== this.state.filters
     ) {
-      this.updateFilteredConnectomeData();
-    }
-    if (prevProps.availableSynapseTypes !== this.props.availableSynapseTypes) {
-      this.updateFilters(prevProps.availableSynapseTypes);
+      this.updateFilteredConnectomeData(filters);
     }
   }
 
@@ -98,11 +100,11 @@ class ConnectomeFilters extends React.Component<Props, State> {
       synapseTypes: [...validOldSynapseTypes, ...newlyAddedSynapseTypes],
     };
     this.setState({ filters: newFilters });
+    return newFilters;
   }
 
-  updateFilteredConnectomeData() {
+  updateFilteredConnectomeData(filters: ConnectomeFiltersType) {
     const { connectomeData, availableSynapseTypes } = this.props;
-    const { filters } = this.state;
     const filteredConnectomeData = getFilteredConnectomeData(
       connectomeData,
       filters,

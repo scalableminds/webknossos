@@ -17,6 +17,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Changed
 
 ### Fixed
+- Fixed bug where volume data downloads would sometimes produce invalid zips due to a race condition. [#5926](https://github.com/scalableminds/webknossos/pull/5926)
+- Fixed a bug which caused that the keyboard delay wasn't respected properly when rapidly pressing a key. [#5947](https://github.com/scalableminds/webknossos/pull/5947)
+- Fixed a bug where an organization would be created for an already existing email address. [#5949](https://github.com/scalableminds/webknossos/pull/5949)
+- Fixed a bug where the paths of uploaded files were not checked correctly. [#5950](https://github.com/scalableminds/webknossos/pull/5950)
 
 ### Removed
 

@@ -96,6 +96,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
+  def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
+    uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")
+
   def handleUploadChunk(uploadFileId: String,
                         datasourceId: DataSourceId,
                         chunkSize: Long,
@@ -106,6 +109,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     val uploadDir = uploadDirectory(datasourceId.team, uploadId)
     val filePathRaw = uploadFileId.split("/").tail.mkString("/")
     val filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
+
+    if (isOutsideUploadDir(uploadDir, filePath)) return Fox.failure(s"Invalid file path: $filePath")
 
     val isNewChunk = for {
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))

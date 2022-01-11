@@ -180,18 +180,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   handleSubmit = async formValues => {
     const { activeUser } = this.props;
-    const pathNameAtSubmit = window.location.pathname;
 
     if (activeUser != null) {
       Toast.info("Uploading dataset");
       this.setState({
         isUploading: true,
       });
-      const beforeUnload = action => {
+      const beforeUnload = newLocation => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
-        if (action === undefined || pathNameAtSubmit !== window.location.pathname) {
+        if (newLocation === undefined || newLocation.pathname !== window.location.pathname) {
           const { isUploading } = this.state;
           if (isUploading) {
             window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event

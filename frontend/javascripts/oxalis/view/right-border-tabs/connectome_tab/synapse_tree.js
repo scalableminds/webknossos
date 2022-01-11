@@ -22,7 +22,7 @@ export type ConnectomeData = {|
 
 type SegmentData = {| type: "segment", id: number, level: 0 | 1 |};
 type SynapseData = {| type: "synapse", id: number, position: Vector3, synapseType: string |};
-type NoneData = {| type: "none" |};
+type NoneData = {| type: "none", id: 0 |};
 type TreeNodeData = SegmentData | SynapseData | NoneData;
 export type TreeNode = {
   key: string,
@@ -50,7 +50,7 @@ const synapseData = (synapseId: number, position: Vector3, type: string): Synaps
   position,
   synapseType: type,
 });
-const noneData = { type: "none" };
+const noneData = { type: "none", id: 0 };
 
 const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeData => {
   if (connectomeData == null) return null;
@@ -67,11 +67,11 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
     const synapsesByPartner = _.groupBy(partnerSynapses, direction === "in" ? "src" : "dst");
 
     return Object.keys(synapsesByPartner).map(partnerId2 => ({
-      key: `segment-${partnerId1}-${direction}-${partnerId2}`,
+      key: `segment;${partnerId2};${direction};${partnerId1};`,
       title: `Segment ${partnerId2}`,
       data: segmentData(+partnerId2, 1),
       children: synapsesByPartner[+partnerId2].map(synapse => ({
-        key: `synapse-${direction}-${synapse.id}`,
+        key: `synapse;${synapse.id};${direction};`,
         title: `Synapse ${synapse.id}`,
         data: synapseData(synapse.id, synapse.position, synapse.type),
         children: [],
@@ -81,11 +81,11 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
   };
 
   return Object.keys(agglomerates).map(partnerId1 => ({
-    key: `segment-${partnerId1}`,
+    key: `segment;${partnerId1};`,
     title: `Segment ${partnerId1}`,
     data: segmentData(+partnerId1, 0),
     children: Object.keys(agglomerates[+partnerId1]).map(direction => ({
-      key: `segment-${partnerId1}-${direction}`,
+      key: `${direction};segment;${partnerId1};`,
       title: `${directionCaptions[direction]} Synapses`,
       data: noneData,
       children: convertSynapsesForPartner(
@@ -108,7 +108,7 @@ type State = {
 type Props = {
   checkedKeys: Array<string>,
   expandedKeys: Array<string>,
-  onCheck: ({ checked: Array<string> }) => void,
+  onCheck: ({ checked: Array<string> }, { node: TreeNode, checked: boolean }) => void,
   onExpand: (Array<string>) => void,
   onChangeActiveAgglomerateIds: (Array<number>) => void,
   connectomeData: ?ConnectomeData,

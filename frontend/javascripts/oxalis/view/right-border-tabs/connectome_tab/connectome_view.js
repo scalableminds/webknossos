@@ -141,15 +141,8 @@ const getTreeNameForAgglomerateSkeleton = (agglomerateId: number, mappingName: s
 const getTreeNameForSynapse = (synapseId: number): string => `synapse-${synapseId}`;
 
 const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
-  keys
-    .map(key => {
-      const parts = key.split("-");
-      // The id identifying the respective agglomerate is at the very end if at all
-      const lastPart = parts[parts.length - 1];
-      // $FlowIssue[incompatible-return] For some reason flow ignores that the null values are filtered out, later
-      return isNaN(lastPart) ? null : +lastPart;
-    })
-    .filter(val => val != null);
+  // The id identifying the respective agglomerate is at the second position (pattern is segment;xxx;[...])
+  unique(keys.map(key => +key.split(";")[1]));
 
 const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree => ({
   name: getTreeNameForSynapse(synapseId),
@@ -393,8 +386,15 @@ class ConnectomeView extends React.Component<Props, State> {
       mapAndFilterTreeData(treeData, node => node.key, node => node.data.type !== "synapse"),
     );
 
-    // Auto-load the skeletons of the active agglomerates
-    const checkedKeys = treeData.map(topLevelTreeNode => topLevelTreeNode.key);
+    // Auto-load the skeletons of the active agglomerates and check all occurences of the same agglomerate
+    const topLevelCheckedKeys = treeData.map(topLevelTreeNode => topLevelTreeNode.key);
+    const checkedKeys = Array.from(
+      mapAndFilterTreeData(
+        treeData,
+        node => node.key,
+        node => topLevelCheckedKeys.some(topLevelKey => node.key.startsWith(topLevelKey)),
+      ),
+    );
 
     this.setState({
       connectomeData,
@@ -597,8 +597,28 @@ class ConnectomeView extends React.Component<Props, State> {
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
   };
 
-  handleCheck = ({ checked }: { checked: Array<string> }) => {
-    this.setState({ checkedKeys: checked });
+  handleCheck = (
+    { checked }: { checked: Array<string> },
+    { node, checked: isChecked }: { node: TreeNode, checked: boolean },
+  ) => {
+    // The trailing ; is important to avoid matching 1234 if the id is 12
+    const checkedNodeKeyPrefix = `segment;${node.data.id};`;
+    if (isChecked) {
+      // Find out which keys should also be checked, because they represent the same agglomerate
+      const treeData = convertConnectomeToTreeData(this.state.connectomeData) || [];
+      const additionalCheckedKeys = Array.from(
+        mapAndFilterTreeData(
+          treeData,
+          treeNode => treeNode.key,
+          treeNode => treeNode.key.startsWith(checkedNodeKeyPrefix),
+        ),
+      );
+      this.setState({ checkedKeys: [...checked, ...additionalCheckedKeys] });
+    } else {
+      // Find out which keys should also be unchecked, because they represent the same agglomerate
+      const checkedKeys = checked.filter(key => !key.startsWith(checkedNodeKeyPrefix));
+      this.setState({ checkedKeys });
+    }
   };
 
   handleExpand = (expandedKeys: Array<string>) => {

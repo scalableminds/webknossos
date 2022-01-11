@@ -177,14 +177,17 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   interpolation: false,
 });
 
-function* mapTreeData<R>(
+function* mapAndFilterTreeData<R>(
   nodes: Array<TreeNode>,
   callback: TreeNode => R,
+  condition: TreeNode => boolean = () => true,
 ): Generator<R, void, void> {
   for (const node of nodes) {
-    yield callback(node);
+    if (condition(node)) {
+      yield callback(node);
+    }
     if (node.children) {
-      yield* mapTreeData(node.children, callback);
+      yield* mapAndFilterTreeData(node.children, callback, condition);
     }
   }
 }
@@ -386,7 +389,9 @@ class ConnectomeView extends React.Component<Props, State> {
     // Auto-expand all nodes by default. The antd properties like `defaultExpandAll` only work on the first render
     // but not when switching to another agglomerate, afterwards.
     const treeData = convertConnectomeToTreeData(connectomeData) || [];
-    const allKeys = Array.from(mapTreeData(treeData, node => node.key));
+    const expandedKeys = Array.from(
+      mapAndFilterTreeData(treeData, node => node.key, node => node.data.type !== "synapse"),
+    );
 
     // Auto-load the skeletons of the active agglomerates
     const checkedKeys = treeData.map(topLevelTreeNode => topLevelTreeNode.key);
@@ -395,7 +400,7 @@ class ConnectomeView extends React.Component<Props, State> {
       connectomeData,
       availableSynapseTypes: typeToString,
       checkedKeys,
-      expandedKeys: allKeys,
+      expandedKeys,
     });
   }
 

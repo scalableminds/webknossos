@@ -12,12 +12,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 - Added the possibility to add additional volume layers to an existing annotation via the left sidebar. [#5881](https://github.com/scalableminds/webknossos/pull/5881)
+- Added a warning when navigating away from editing the dataset's properties without having saved. [#5948](https://github.com/scalableminds/webknossos/pull/5948)
 
 ### Changed
+- Improved the UI for automatic suggestions to the datasource properties when editing a dataset. [#5948](https://github.com/scalableminds/webknossos/pull/5948)
 
 ### Fixed
 - Fixed bug where volume data downloads would sometimes produce invalid zips due to a race condition. [#5926](https://github.com/scalableminds/webknossos/pull/5926)
 - Fixed a bug which caused that the keyboard delay wasn't respected properly when rapidly pressing a key. [#5947](https://github.com/scalableminds/webknossos/pull/5947)
+- Fixed that navigating away from uploading a dataset properly warns the user that there is unsaved state. [#5948](https://github.com/scalableminds/webknossos/pull/5948)
 
 ### Removed
 

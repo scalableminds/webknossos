@@ -580,6 +580,7 @@ export type APIJob = {
   +state: string,
   +manualState: string,
   +result: ?string,
+  +resultLink: ?string,
   +createdAt: number,
 };
 
@@ -695,3 +696,8 @@ export type ServerVolumeTracing = {|
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
+
+export type APIMeshFile = {|
+  meshFileName: string,
+  mappingName?: ?string,
+|};

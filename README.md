@@ -28,7 +28,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 * [Supported dataset formats: WKW](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
-* [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/guides/mesh_visualization)
+* [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/webknossos/mesh_visualization.html)
 * [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
@@ -44,7 +44,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 ## Installation
 webKnossos is open-source, so you can install it on your own server.
 
-[Check out the documentation](https://docs.webknossos.org/guides/installation) for a tutorial on how to install webKnossos on your own server.
+[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install webKnossos on your own server.
 
 For installations on localhost, please see below.
 
@@ -64,7 +64,7 @@ Now, you are ready to use your local webKnossos instance.
 
 See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
 
-For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/guides/installation).
+For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/webknossos/installation.html).
 
 ### Dependencies
 

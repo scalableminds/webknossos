@@ -55,6 +55,7 @@ import {
   type ServerTracing,
   type TracingType,
   type WkConnectDatasetConfig,
+  type APIMeshFile,
 } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
@@ -627,6 +628,26 @@ export function updateAnnotationLayer(
   );
 }
 
+type AnnotationLayerCreateDescriptor = {
+  typ: "Skeleton" | "Volume",
+  fallbackLayerName?: ?string,
+  resolutionRestrictions?: ?APIResolutionRestrictions,
+};
+
+export function addAnnotationLayer(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  newAnnotationLayer: AnnotationLayerCreateDescriptor,
+): Promise<APIAnnotation> {
+  return Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/addAnnotationLayer`,
+    {
+      method: "PATCH",
+      data: newAnnotationLayer,
+    },
+  );
+}
+
 export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -710,7 +731,7 @@ export function createExplorational(
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
 
-  let layers = [];
+  let layers: Array<AnnotationLayerCreateDescriptor> = [];
   if (typ === "skeleton") {
     layers = [{ typ: "Skeleton", name: "Skeleton" }];
   } else if (typ === "volume") {
@@ -926,6 +947,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     state: adaptJobState(job.command, job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
+    resultLink: job.resultLink,
     createdAt: job.created,
   }));
 }
@@ -1772,7 +1794,7 @@ export function getMeshfilesForDatasetLayer(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-): Promise<Array<string>> {
+): Promise<Array<APIMeshFile>> {
   return doWithToken(token =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${

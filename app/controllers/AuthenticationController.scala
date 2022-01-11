@@ -457,7 +457,7 @@ class AuthenticationController @Inject()(
               errors ::= Messages("user.lastName.invalid")
               ""
             }
-            multiUserDAO.findOneByEmail(email).toFox.futureBox.flatMap {
+            multiUserDAO.findOneByEmail(email)(GlobalAccessContext).toFox.futureBox.flatMap {
               case Full(_) =>
                 errors ::= Messages("user.email.alreadyInUse")
                 Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))

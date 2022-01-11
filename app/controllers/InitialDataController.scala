@@ -83,8 +83,8 @@ Samplecountry
     userId,
     multiUserId,
     defaultOrganization._id,
-    "SCM",
-    "Boy",
+    "Sample",
+    "User",
     System.currentTimeMillis(),
     Json.obj(),
     userService.createLoginInfo(userId),
@@ -144,7 +144,7 @@ Samplecountry
             _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser, Map("sampleExp" -> 10))
             _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
                                                        TeamMembership(organizationTeam._id, isTeamManager = true))
-            _ = logger.info("Inserted default user scmboy")
+            _ = logger.info("Inserted default user")
           } yield ()
       }
       .toFox

@@ -19,7 +19,7 @@ import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Store, { type DataLayerType, type VolumeTracing } from "oxalis/store";
-import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import constants, { type Vector3, type Vector4, MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
@@ -146,7 +146,8 @@ export async function requestFromStore(
   const applyAgglomerates =
     isSegmentation &&
     activeMapping != null &&
-    activeMapping.isMappingEnabled &&
+    // Start to request mapped data during mapping activation phase already
+    activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
     activeMapping.mappingType === "HDF5"
       ? activeMapping.mappingName
       : null;

@@ -1,15 +1,46 @@
 // @flow
-import type { Point2, Vector3 } from "oxalis/constants";
+import { type Point2, type Vector3, MappingStatusEnum } from "oxalis/constants";
 import Model from "oxalis/model";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { loadAgglomerateSkeletonAction } from "oxalis/model/actions/skeletontracing_actions";
-import Store from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import { clickSegmentAction } from "oxalis/model/actions/volumetracing_actions";
 import api from "oxalis/api/internal_api";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
+
+export function hasAgglomerateMapping(state: OxalisState) {
+  const segmentation = Model.getVisibleSegmentationLayer();
+  if (!segmentation) {
+    return {
+      value: false,
+      reason: "A segmentation layer needs to be visible to load an agglomerate skeleton.",
+    };
+  }
+  const { mappingName, mappingType, mappingStatus } = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    segmentation.name,
+  );
+  if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
+    return {
+      value: false,
+      reason: messages["tracing.agglomerate_skeleton.no_mapping"],
+    };
+  }
+
+  if (mappingType !== "HDF5") {
+    return {
+      value: false,
+      reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file"],
+    };
+  }
+  return {
+    value: true,
+    reason: "",
+  };
+}
 
 export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const state = Store.getState();
@@ -18,31 +49,27 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
 }
 
 export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
+  const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();
   if (!segmentation) {
     return;
   }
-
-  const state = Store.getState();
-
-  const { mappingName, mappingType, isMappingEnabled } = getMappingInfo(
+  const { mappingName } = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
     segmentation.name,
   );
-  if (mappingName == null || !isMappingEnabled) {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
-    return;
+
+  const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
+
+  if (mappingName && isAgglomerateMappingEnabled.value) {
+    const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
+
+    const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
+
+    Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, cellId));
+  } else {
+    Toast.error(isAgglomerateMappingEnabled.reason);
   }
-  if (mappingType !== "HDF5") {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
-    return;
-  }
-
-  const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
-
-  const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
-
-  Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, cellId));
 }
 
 export function handleClickSegment(clickPosition: Point2) {

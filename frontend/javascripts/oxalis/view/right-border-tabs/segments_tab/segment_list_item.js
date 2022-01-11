@@ -12,7 +12,7 @@ import Checkbox from "antd/lib/checkbox/Checkbox";
 import React from "react";
 import classnames from "classnames";
 
-import type { APISegmentationLayer } from "types/api_flow_types";
+import type { APISegmentationLayer, APIMeshFile } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
@@ -23,6 +23,7 @@ import {
   refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import Store, {
   type ActiveMappingInfo,
   type IsosurfaceInformation,
@@ -46,30 +47,37 @@ function getColoredDotIconForSegment(segmentId: number, mappingColors) {
   );
 }
 
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
+
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile,
   loadPrecomputedMeshForSegment,
   andCloseContextMenu,
+  layerName,
+  mappingInfo,
 ) => {
   const hasCurrentMeshFile = currentMeshFile != null;
 
   return (
-    <Menu.Item
+    <MenuItemWithMappingActivationConfirmation
       onClick={() => andCloseContextMenu(loadPrecomputedMeshForSegment(segment))}
       disabled={!hasCurrentMeshFile}
+      currentMeshFile={currentMeshFile}
+      layerName={layerName}
+      mappingInfo={mappingInfo}
     >
       <Tooltip
         key="tooltip"
         title={
           currentMeshFile != null
-            ? `Load mesh for centered segment from file ${currentMeshFile}`
+            ? `Load mesh for centered segment from file ${currentMeshFile.meshFileName}`
             : "There is no mesh file."
         }
       >
         Load Mesh (precomputed)
       </Tooltip>
-    </Menu.Item>
+    </MenuItemWithMappingActivationConfirmation>
   );
 };
 
@@ -112,7 +120,7 @@ type Props = {
   isosurface: ?IsosurfaceInformation,
   setPosition: (Vector3, boolean) => void,
   loadPrecomputedMeshForSegment: Segment => Promise<void>,
-  currentMeshFile: ?string,
+  currentMeshFile: ?APIMeshFile,
 };
 
 function getSegmentTooltip(segment: Segment) {
@@ -158,6 +166,8 @@ function _SegmentListItem({
         currentMeshFile,
         loadPrecomputedMeshForSegment,
         andCloseContextMenu,
+        visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+        mappingInfo,
       )}
       {getComputeMeshAdHocMenuItem(
         segment,
@@ -311,7 +321,11 @@ function _MeshInfoItem(props: {
     <Tooltip title="Download Mesh">
       <VerticalAlignBottomOutlined
         key="download-button"
-        onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segment.id))}
+        onClick={() =>
+          Store.dispatch(
+            triggerIsosurfaceDownloadAction(segment.name ? segment.name : "mesh", segment.id),
+          )
+        }
       />
     </Tooltip>
   );

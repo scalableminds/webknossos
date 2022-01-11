@@ -88,6 +88,7 @@ PATCH         /datastores/:name/status                                         c
 POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
 POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteErroneous                                controllers.WKRemoteDataStoreController.deleteErroneous(name: String, key: String)
+GET           /datastores/:name/jobExportProperties                            controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create
 DELETE        /datastores/:name                                                controllers.DataStoreController.delete(name: String)
@@ -119,6 +120,7 @@ GET           /annotations/:typ/:id/info                                       c
 PATCH         /annotations/:typ/:id/makeHybrid                                 controllers.AnnotationController.makeHybrid(typ: String, id: String, fallbackLayerName: Option[String])
 PATCH         /annotations/:typ/:id/downsample                                 controllers.AnnotationController.downsample(typ: String, id: String, tracingId: String)
 PATCH         /annotations/:typ/:id/unlinkFallback                             controllers.AnnotationController.unlinkFallback(typ: String, id: String, tracingId: String)
+PATCH         /annotations/:typ/:id/addAnnotationLayer                         controllers.AnnotationController.addAnnotationLayer(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                            controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                 controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:typ/:id/download                                   controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
@@ -206,5 +208,4 @@ GET           /jobs/run/exportTiff/:organizationName/:dataSetName              c
 GET           /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
 GET           /jobs/run/globalizeFloodfills/:organizationName/:dataSetName     controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, newDataSetName: Option[String], layerName: Option[String], annotationId: Option[String], annotationType: Option[String])
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
-GET           /jobs/:id/downloadExport/:exportFileName                         controllers.JobsController.downloadExport(id: String, exportFileName: String)
 POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

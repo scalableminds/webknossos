@@ -152,9 +152,6 @@ function ensureValidScaleOnInferredDataSource(
 class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<typeof FormInstance>();
   unblock: ?Function;
-  static defaultProps = {
-    isEditingMode: false,
-  };
 
   state = {
     hasUnsavedChanges: false,

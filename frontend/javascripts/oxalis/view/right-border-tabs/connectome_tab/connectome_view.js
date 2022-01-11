@@ -548,6 +548,7 @@ class ConnectomeView extends React.Component<Props, State> {
     if (deletedAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);
       for (const agglomerateId of deletedAgglomerateIds) {
+        // The check whether these skeleton were actually loaded and need to be removed is done by the saga
         Store.dispatch(
           removeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
         );
@@ -710,17 +711,13 @@ class ConnectomeView extends React.Component<Props, State> {
           <ButtonComponent onClick={() => this.reset()} disabled={disabled}>
             Reset
           </ButtonComponent>
-          <Tooltip title="Configure Filters">
-            <ConnectomeFilters
-              availableSynapseTypes={availableSynapseTypes}
-              connectomeData={connectomeData}
-              onUpdateFilteredConnectomeData={this.onUpdateFilteredConnectomeData}
-              disabled={disabled}
-            />
-          </Tooltip>
-          <Tooltip title="Configure Connectome Settings" placement="left">
-            <ConnectomeSettings segmentationLayer={segmentationLayer} />
-          </Tooltip>
+          <ConnectomeFilters
+            availableSynapseTypes={availableSynapseTypes}
+            connectomeData={connectomeData}
+            onUpdateFilteredConnectomeData={this.onUpdateFilteredConnectomeData}
+            disabled={disabled}
+          />
+          <ConnectomeSettings segmentationLayer={segmentationLayer} />
         </Input.Group>
         {this.getConnectomeMappingActivationAlert()}
       </>

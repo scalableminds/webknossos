@@ -132,11 +132,13 @@ class ConnectomeFilters extends React.Component<Props> {
 
   render() {
     return (
-      <Popover content={this.getConnectomeFileSettings} trigger="click" placement="bottomRight">
-        <ButtonComponent>
-          <SettingOutlined />
-        </ButtonComponent>
-      </Popover>
+      <Tooltip title="Configure Connectome Settings">
+        <Popover content={this.getConnectomeFileSettings} trigger="click" placement="bottomRight">
+          <ButtonComponent>
+            <SettingOutlined />
+          </ButtonComponent>
+        </Popover>
+      </Tooltip>
     );
   }
 }

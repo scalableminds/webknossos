@@ -1,5 +1,5 @@
 // @flow
-import { Checkbox, Divider, Popover } from "antd";
+import { Checkbox, Divider, Popover, Tooltip } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import React from "react";
 import _ from "lodash";
@@ -177,11 +177,13 @@ class ConnectomeFilters extends React.Component<Props, State> {
     const isAnyFilterActive = isSynapseTypeFiltered || isSynapseDirectionFiltered;
 
     return (
-      <Popover content={this.getFilterSettings} trigger="click">
-        <ButtonComponent disabled={disabled || !isSynapseTypeFilterAvailable}>
-          <FilterOutlined style={isAnyFilterActive ? { color: "red" } : {}} />
-        </ButtonComponent>
-      </Popover>
+      <Tooltip title="Configure Filters">
+        <Popover content={this.getFilterSettings} trigger="click">
+          <ButtonComponent disabled={disabled || !isSynapseTypeFilterAvailable}>
+            <FilterOutlined style={isAnyFilterActive ? { color: "red" } : {}} />
+          </ButtonComponent>
+        </Popover>
+      </Tooltip>
     );
   }
 }

@@ -82,6 +82,11 @@ const _convertConnectomeToTreeData = (connectomeData: ?ConnectomeData): ?TreeDat
     }));
   };
 
+  // Build a nested tree structure with 4 levels.
+  // First level are the active agglomerates, the user entered.
+  // Second level is the distinction between Incoming and Outgoing synapses.
+  // Third level are the respective partner agglomerates.
+  // Fourth level are the respective synapses.
   return Object.keys(agglomerates).map(partnerId1 => ({
     key: `segment;${partnerId1};`,
     title: `Segment ${partnerId1}`,
@@ -174,6 +179,7 @@ class SynapseTree extends React.Component<Props, State> {
       );
     }
 
+    // data.type === "synapse"
     return (
       <>
         {node.title}

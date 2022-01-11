@@ -469,7 +469,7 @@ class ConnectomeView extends React.Component<Props, State> {
       const treeIdsToShow = [];
       for (const synapseId of addedSynapseIds) {
         const maybeTree = findTreeByName(trees, getTreeNameForSynapse(synapseId));
-        // If the tree was already created, make it visible, otherwise created it
+        // If the tree was already created, make it visible, otherwise create it
         maybeTree.cata({
           Just: tree => treeIdsToShow.push(tree.treeId),
           Nothing: () => {

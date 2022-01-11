@@ -153,6 +153,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     selectedTeams: [],
   };
 
+  unblock: ?Function;
   formRef = React.createRef<typeof FormInstance>();
 
   componentDidMount() {
@@ -174,6 +175,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   }
 
+  componentWillUnmount() {
+    this.unblockHistory();
+  }
+
+  unblockHistory() {
+    window.onbeforeunload = null;
+    if (this.unblock != null) {
+      this.unblock();
+    }
+  }
+
   isDatasetManagerOrAdmin = () =>
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
@@ -186,11 +198,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       this.setState({
         isUploading: true,
       });
-      const beforeUnload = newLocation => {
+      const beforeUnload = (newLocation, action) => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
-        if (newLocation === undefined || newLocation.pathname !== window.location.pathname) {
+        if (action === undefined || newLocation.pathname !== window.location.pathname) {
           const { isUploading } = this.state;
           if (isUploading) {
             window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
@@ -204,7 +216,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         return null;
       };
 
-      this.props.history.block(beforeUnload);
+      this.unblock = this.props.history.block(beforeUnload);
       window.onbeforeunload = beforeUnload;
 
       const datasetId: APIDatasetId = {

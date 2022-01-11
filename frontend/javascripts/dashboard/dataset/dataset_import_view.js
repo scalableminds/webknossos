@@ -180,11 +180,11 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
     });
 
-    const beforeUnload = newLocation => {
+    const beforeUnload = (newLocation, action) => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (newLocation === undefined || newLocation.pathname !== window.location.pathname) {
+      if (action === undefined || newLocation.pathname !== window.location.pathname) {
         const { hasUnsavedChanges } = this.state;
         if (hasUnsavedChanges) {
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event

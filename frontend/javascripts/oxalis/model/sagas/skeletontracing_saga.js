@@ -49,6 +49,7 @@ import {
   getBranchPoints,
   enforceSkeletonTracing,
   findTreeByName,
+  getTreeNameForAgglomerateSkeleton,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -271,8 +272,7 @@ function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction)
 
   const { layerName, mappingName, agglomerateId, destination } = action;
 
-  // This is the pattern for the automatically assigned names for agglomerate skeletons
-  const treeName = `agglomerate ${agglomerateId} (${mappingName})`;
+  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
 
   if (destination === "tracing") {
     const trees = yield* select(state => enforceSkeletonTracing(state.tracing).trees);

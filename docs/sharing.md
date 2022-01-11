@@ -138,6 +138,10 @@ type UrlStateByLayer = {
       mappingType: MappingType,
       agglomerateIdsToImport?: Array<number>,
     },
+    connectomeInfo?: {
+      connectomeName: string,
+      agglomerateIdsToImport?: Array<number>,
+    },
   },
 };
 

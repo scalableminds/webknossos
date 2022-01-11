@@ -208,3 +208,9 @@ export function getTreeGroupsMap(
 ): { [key: number]: TreeGroupTypeFlat } {
   return _.keyBy(getFlatTreeGroups(skeletonTracing), "groupId");
 }
+
+// This is the pattern for the automatically assigned names for agglomerate skeletons
+export const getTreeNameForAgglomerateSkeleton = (
+  agglomerateId: number,
+  mappingName: string,
+): string => `agglomerate ${agglomerateId} (${mappingName})`;

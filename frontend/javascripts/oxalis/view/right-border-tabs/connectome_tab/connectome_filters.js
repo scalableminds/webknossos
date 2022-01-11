@@ -29,7 +29,7 @@ const getFilteredConnectomeData = (
     return connectomeData;
   }
 
-  const { agglomerates, synapses } = connectomeData;
+  const { agglomerates, synapses, connectomeFile } = connectomeData;
 
   // Filter by synapse direction by potentially filtering the in/out keys of the agglomerates
   const filteredAgglomerates = _.mapValues(agglomerates, agglomerate =>
@@ -40,7 +40,7 @@ const getFilteredConnectomeData = (
     synapseTypes.includes(synapse.type),
   );
 
-  return { agglomerates: filteredAgglomerates, synapses: filteredSynapses };
+  return { agglomerates: filteredAgglomerates, synapses: filteredSynapses, connectomeFile };
 };
 
 const defaultFilters = {

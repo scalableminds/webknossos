@@ -8,6 +8,7 @@ import memoizeOne from "memoize-one";
 import { stringToAntdColorPreset } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 import { type Vector3 } from "oxalis/constants";
+import type { APIConnectomeFile } from "types/api_flow_types";
 
 type BaseSynapse = {| id: number, position: Vector3, type: string |};
 type SrcSynapse = {| ...BaseSynapse, src: number, dst: void |};
@@ -18,6 +19,7 @@ export type Agglomerate = { in?: Array<number>, out?: Array<number> };
 export type ConnectomeData = {|
   agglomerates: { [number]: Agglomerate },
   synapses: { [number]: Synapse },
+  connectomeFile: APIConnectomeFile,
 |};
 
 type SegmentData = {| type: "segment", id: number, level: 0 | 1 |};

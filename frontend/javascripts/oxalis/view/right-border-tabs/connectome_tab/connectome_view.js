@@ -7,7 +7,10 @@ import _ from "lodash";
 
 import type { APISegmentationLayer, APIDataset, APIConnectomeFile } from "types/api_flow_types";
 import { diffArrays, unique } from "libs/utils";
-import { findTreeByName } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  findTreeByName,
+  getTreeNameForAgglomerateSkeleton,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   getSynapsesOfAgglomerates,
@@ -135,9 +138,6 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
   return unique([...topLevelAgglomerateIds, ...partnerAgglomerateIds]);
 };
 
-const getTreeNameForAgglomerateSkeleton = (agglomerateId: number, mappingName: string): string =>
-  `agglomerate ${agglomerateId} (${mappingName})`;
-
 const getTreeNameForSynapse = (synapseId: number): string => `synapse-${synapseId}`;
 
 const getAgglomerateIdsFromKeys = (keys: Array<string>): Array<number> =>
@@ -218,11 +218,11 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    if (
-      prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds ||
-      prevProps.currentConnectomeFile !== this.props.currentConnectomeFile
-    ) {
+    if (prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds) {
       this.fetchConnections();
+    }
+    if (prevProps.currentConnectomeFile !== this.props.currentConnectomeFile) {
+      this.reset();
     }
     if (prevProps.segmentationLayer !== this.props.segmentationLayer) {
       this.maybeUpdateSkeleton(prevProps.segmentationLayer);
@@ -288,6 +288,14 @@ class ConnectomeView extends React.Component<Props, State> {
       getSceneController().removeSkeleton(skeletonId);
       this.skeletonId = null;
     }
+  }
+
+  resetSkeleton() {
+    const { segmentationLayer } = this.props;
+    if (segmentationLayer == null) return;
+
+    Store.dispatch(removeConnectomeTracingAction(segmentationLayer.name));
+    Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
   }
 
   maybeUpdateSkeleton(prevSegmentationLayer?: ?APISegmentationLayer) {
@@ -377,7 +385,7 @@ class ConnectomeView extends React.Component<Props, State> {
     }));
     const synapses = _.zipObject(allSynapseIds, synapseObjects);
 
-    const connectomeData = { agglomerates, synapses };
+    const connectomeData = { agglomerates, synapses, connectomeFile: currentConnectomeFile };
 
     // Auto-expand all nodes by default. The antd properties like `defaultExpandAll` only work on the first render
     // but not when switching to another agglomerate, afterwards.
@@ -486,10 +494,10 @@ class ConnectomeView extends React.Component<Props, State> {
     prevFilteredConnectomeData: ?ConnectomeData,
     prevCheckedKeys: Array<string>,
   ) {
-    const { segmentationLayer, currentConnectomeFile } = this.props;
+    const { segmentationLayer } = this.props;
     const { connectomeData, filteredConnectomeData, checkedKeys } = this.state;
 
-    if (segmentationLayer == null || currentConnectomeFile == null) return;
+    if (segmentationLayer == null) return;
 
     let prevFilteredAgglomerateIds: Array<number> = [];
     let filteredAgglomerateIds: Array<number> = [];
@@ -531,9 +539,14 @@ class ConnectomeView extends React.Component<Props, State> {
       visibleAgglomerateIds,
     );
 
-    const { mappingName } = currentConnectomeFile;
+    const getMappingNameFromConnectomeDataEnforced = (connectome: ?ConnectomeData) => {
+      // This should never be the case, but it's not straightforward for Flow to infer
+      if (connectome == null) throw new Error("Connectome data was null.");
+      return connectome.connectomeFile.mappingName;
+    };
 
     if (deletedAgglomerateIds.length) {
+      const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);
       for (const agglomerateId of deletedAgglomerateIds) {
         Store.dispatch(
           removeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
@@ -547,6 +560,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const { trees } = skeleton;
 
     if (hiddenAgglomerateIds.length) {
+      const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);
       for (const agglomerateId of hiddenAgglomerateIds) {
         // Hide agglomerates that are no longer visible
         const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
@@ -557,6 +571,7 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     if (addedAgglomerateIds.length) {
+      const mappingName = getMappingNameFromConnectomeDataEnforced(connectomeData);
       for (const agglomerateId of addedAgglomerateIds) {
         // Show agglomerates that were made visible
         const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);

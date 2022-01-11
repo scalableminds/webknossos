@@ -17,7 +17,6 @@ Store.subscribe(() => {
   if (state !== prevState) {
     prevState = state;
     waitForUpdate.resolve();
-    waitForUpdate = new Deferred();
   }
 });
 
@@ -25,6 +24,7 @@ async function go() {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     await waitForUpdate.promise();
+    waitForUpdate = new Deferred();
     await Utils.animationFrame(MAXIMUM_STORE_UPDATE_DELAY);
     for (const listener of listeners) {
       listener();

@@ -1218,6 +1218,15 @@ export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}
   );
 }
 
+export function cancelDatasetUpload(datastoreHost: string, cancelUploadInformation: {}): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`/data/datasets/cancelUpload?token=${token}`, {
+      data: cancelUploadInformation,
+      host: datastoreHost,
+    }),
+  );
+}
+
 export function addWkConnectDataset(
   datastoreHost: string,
   datasetConfig: WkConnectDatasetConfig,

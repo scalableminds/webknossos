@@ -229,6 +229,18 @@ Expects:
 
   }
 
+  def cancelUpload(token: String): Action[CancelUploadInformation] =
+    Action.async(validateJson[CancelUploadInformation]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
+        AllowRemoteOrigin {
+          for {
+            _ <- remoteWebKnossosClient.deleteDataSource(DataSourceId(request.body.name, request.body.organization))
+            _ <- uploadService.cancelUpload(request.body)
+          } yield Ok
+        }
+      }
+    }
+
   @ApiOperation(hidden = true, value = "")
   def fetchSampleDataSource(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>

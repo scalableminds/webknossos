@@ -28,6 +28,7 @@ import type { OxalisState } from "oxalis/store";
 import {
   reserveDatasetUpload,
   finishDatasetUpload,
+  cancelDatasetUpload,
   createResumableUpload,
   startConvertToWkwJob,
   sendAnalyticsEvent,
@@ -79,6 +80,10 @@ type State = {
   isRetrying: boolean,
   uploadProgress: number,
   selectedTeams: APITeam | Array<APITeam>,
+  uploadId: string,
+  resumableUpload: any,
+  datasetId: any,
+  datastoreUrl: string,
 };
 
 function WkwExample() {
@@ -151,6 +156,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
+    uploadId: "",
+    resumableUpload: {},
+    datasetId: {},
+    datastoreUrl: "",
   };
 
   formRef = React.createRef<typeof FormInstance>();
@@ -230,13 +239,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         initialTeams: formValues.initialTeams.map(team => team.id),
       };
 
-      await reserveDatasetUpload(formValues.datastore.url, reserveUploadInformation);
+      const datastoreUrl = formValues.datastore.url;
+
+      await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
 
       const resumableUpload = await createResumableUpload(
         datasetId,
         formValues.datastore.url,
         uploadId,
       );
+
+      this.setState({ uploadId, resumableUpload, datasetId, datastoreUrl });
 
       resumableUpload.on("complete", () => {
         const newestForm = this.formRef.current;
@@ -336,6 +349,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   };
 
+  cancelUpload = async () => {
+    const { uploadId, resumableUpload, datasetId, datastoreUrl } = this.state;
+    resumableUpload.cancel();
+    await cancelDatasetUpload(datastoreUrl, {
+      uploadId,
+      organization: datasetId.owningOrganization,
+      name: datasetId.name,
+    });
+  };
+
   getUploadModal = () => {
     const form = this.formRef.current;
     if (!form) {
@@ -346,12 +369,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     return (
       <Modal
         visible={isUploading}
-        closable={false}
         keyboard={false}
         maskClosable={false}
         className="no-footer-modal"
-        cancelButtonProps={{ style: { display: "none" } }}
         okButtonProps={{ style: { display: "none" } }}
+        onCancel={this.cancelUpload}
       >
         <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
           <FolderOutlined style={{ fontSize: 50 }} />

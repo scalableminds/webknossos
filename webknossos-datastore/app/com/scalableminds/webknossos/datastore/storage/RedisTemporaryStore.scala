@@ -59,9 +59,9 @@ trait RedisTemporaryStore extends LazyLogging {
       r.exists(id)
     }
 
-  def remove(id: String): Fox[Unit] =
+  def remove(id: String): Fox[Boolean] =
     withExceptionHandler {
-      r.del(id)
+      r.del(id).getOrElse(0L) > 0
     }
 
   def checkHealth(implicit ec: ExecutionContext): Fox[Unit] =

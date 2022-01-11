@@ -50,6 +50,11 @@ object UploadInformation {
   implicit val jsonFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
 }
 
+case class CancelUploadInformation(uploadId: String, name: String, organization: String)
+object CancelUploadInformation {
+  implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
+}
+
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               dataSourceService: DataSourceService,
                               runningUploadMetadataStore: DataStoreRedisStore)
@@ -62,7 +67,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   /* Redis stores different information for each upload, with different prefixes in the keys:
    *  uploadId -> fileCount
-   *  uploadId -> set(fileName),
+   *  uploadId -> set(fileName)
    *  uploadId#fileName -> totalChunkCount
    *  uploadId#fileName -> set(chunkIndices)
    * Note that Redis synchronizes all db accesses, so we do not need to do it
@@ -147,6 +152,18 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
             return Fox.failure(errorMsg)
         }
       case false => ()
+    }
+  }
+
+  def cancelUpload(cancelUploadInformation: CancelUploadInformation): Fox[Unit] = {
+    val uploadId = cancelUploadInformation.uploadId
+    runningUploadMetadataStore.contains(redisKeyForFileCount(uploadId)).flatMap {
+      case false => Fox.failure(s"Unknown upload")
+      case true =>
+        logger.info(
+          f"Canceling dataset upload of ${cancelUploadInformation.organization}/${cancelUploadInformation.name} with id ${uploadId}...")
+        PathUtils.deleteDirectoryRecursively(uploadDirectory(cancelUploadInformation.organization, uploadId))
+        cleanUpRedis(uploadId)
     }
   }
 
@@ -353,6 +370,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     this.synchronized {
       PathUtils.deleteDirectoryRecursively(uploadDir)
     }
+    cleanUpRedis(uploadId)
+  }
+
+  private def cleanUpRedis(uploadId: String): Fox[Unit] =
     for {
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- Fox.serialCombined(fileNames.toList) { fileName =>
@@ -363,7 +384,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- runningUploadMetadataStore.remove(redisKeyForFileCount(uploadId))
       _ <- runningUploadMetadataStore.remove(redisKeyForFileNameSet(uploadId))
     } yield ()
-  }
 
   private def cleanUpOrphanUploads(): Fox[Unit] =
     for {

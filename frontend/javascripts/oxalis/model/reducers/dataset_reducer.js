@@ -31,6 +31,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           connectomeData: {
             availableConnectomeFiles: null,
             currentConnectomeFile: null,
+            prendingConnectomeFileName: null,
             activeAgglomerateIds: [],
             skeleton: null,
           },

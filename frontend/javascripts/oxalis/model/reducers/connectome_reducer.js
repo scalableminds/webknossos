@@ -161,13 +161,20 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
       const { layerName, connectomeFileName } = action;
       const availableConnectomeFiles =
         state.localSegmentationData[layerName].connectomeData.availableConnectomeFiles;
-      if (availableConnectomeFiles == null) return state;
+      if (availableConnectomeFiles == null) {
+        // Connectome files have not been fetched yet, temporarily save the connectome file name
+        // so it can be activated once the files have been fetched
+        return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
+          prendingConnectomeFileName: connectomeFileName,
+        });
+      }
 
       const connectomeFile = availableConnectomeFiles.find(
         el => el.connectomeFileName === connectomeFileName,
       );
       return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
         currentConnectomeFile: connectomeFile,
+        prendingConnectomeFileName: null,
       });
     }
 

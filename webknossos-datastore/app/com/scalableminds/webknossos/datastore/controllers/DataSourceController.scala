@@ -213,7 +213,7 @@ Expects:
                            paramType = "body")))
   @ApiResponses(
     Array(
-      new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
+      new ApiResponse(code = 200, message = "Empty body, upload was successfully finished"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
   def finishUpload(token: String): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
@@ -229,12 +229,36 @@ Expects:
 
   }
 
+  @ApiOperation(
+    value = """Cancel a running dataset upload
+Expects:
+ - As JSON object body with keys:
+  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
+  - organization (string): owning organization name
+  - name (string): dataset name
+ - As GET parameter:
+  - token (string): datastore token identifying the uploading user
+""",
+    nickname = "datasetCancelUpload"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "cancelUploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[CancelUploadInformation],
+                           paramType = "body")))
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "Empty body, upload was cancelled"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
   def cancelUpload(token: String): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
+      val dataSourceId = DataSourceId(request.body.name, request.body.organization)
+      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), Some(token)) {
         AllowRemoteOrigin {
           for {
-            _ <- remoteWebKnossosClient.deleteDataSource(DataSourceId(request.body.name, request.body.organization))
+            _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId)
             _ <- uploadService.cancelUpload(request.body)
           } yield Ok
         }
@@ -475,14 +499,15 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   def deleteOnDisk(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+      val dataSourceId = DataSourceId(dataSetName, organizationName)
+      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), token) {
         AllowRemoteOrigin {
           for {
             _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName,
                                                                         dataSetName,
                                                                         reason =
                                                                           Some("the user wants to delete the dataset"))
+            _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also removes the name of the wK DB
           } yield Ok
         }
       }

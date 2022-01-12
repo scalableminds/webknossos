@@ -90,7 +90,7 @@ class DSRemoteWebKnossosClient @Inject()(
     } yield ()
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/delete").addQueryString("key" -> dataStoreKey).post(id)
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteDatasource").addQueryString("key" -> dataStoreKey).post(id)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/jobExportProperties")

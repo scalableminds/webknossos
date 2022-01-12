@@ -218,11 +218,11 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    if (prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds) {
+    if (
+      prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds ||
+      prevProps.currentConnectomeFile !== this.props.currentConnectomeFile
+    ) {
       this.fetchConnections();
-    }
-    if (prevProps.currentConnectomeFile !== this.props.currentConnectomeFile) {
-      this.reset();
     }
     if (prevProps.segmentationLayer !== this.props.segmentationLayer) {
       this.maybeUpdateSkeleton(prevProps.segmentationLayer);
@@ -414,50 +414,53 @@ class ConnectomeView extends React.Component<Props, State> {
 
   updateSynapseTrees(prevFilteredConnectomeData: ?ConnectomeData) {
     const { segmentationLayer } = this.props;
-    const { filteredConnectomeData, connectomeData } = this.state;
+    const { filteredConnectomeData } = this.state;
 
     if (segmentationLayer == null) return;
 
     let prevFilteredSynapseIds: Array<number> = [];
     let filteredSynapseIds: Array<number> = [];
-    let unfilteredSynapseIds: Array<number> = [];
     if (prevFilteredConnectomeData != null) {
       prevFilteredSynapseIds = getSynapseIdsFromConnectomeData(prevFilteredConnectomeData);
     }
     if (filteredConnectomeData != null) {
       filteredSynapseIds = getSynapseIdsFromConnectomeData(filteredConnectomeData);
     }
-    if (connectomeData != null) {
-      unfilteredSynapseIds = getSynapseIdsFromConnectomeData(connectomeData);
+
+    const reset =
+      prevFilteredConnectomeData != null &&
+      filteredConnectomeData != null &&
+      prevFilteredConnectomeData.connectomeFile !== filteredConnectomeData.connectomeFile;
+
+    let deletedSynapseIds;
+    let addedSynapseIds;
+    if (reset) {
+      // If the data needs to be reset, because the connectome file has changed, all existing trees need to be removed
+      // and all non-existing trees need to be newly added. Otherwise, IDs of one connectome file would get mixed up
+      // with IDs from the other.
+      deletedSynapseIds = prevFilteredSynapseIds;
+      addedSynapseIds = filteredSynapseIds;
+    } else {
+      // Find out which synapses were deleted and which were added
+      ({ onlyA: deletedSynapseIds, onlyB: addedSynapseIds } = diffArrays(
+        prevFilteredSynapseIds,
+        filteredSynapseIds,
+      ));
     }
 
     const layerName = segmentationLayer.name;
-    // Find out which synapses were deleted and which were added
-    const { onlyA: deletedSynapseIds, onlyB: addedSynapseIds } = diffArrays(
-      prevFilteredSynapseIds,
-      filteredSynapseIds,
-    );
-
     const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
     if (skeleton == null) return;
 
     const { trees } = skeleton;
 
-    if (deletedSynapseIds.length) {
-      const treeIdsToHide = [];
+    if (deletedSynapseIds.length > 0) {
       const treeIdsToDelete = [];
       deletedSynapseIds.forEach(synapseId =>
         findTreeByName(trees, getTreeNameForSynapse(synapseId)).map(tree =>
-          // Delete synapse tree if it is no longer part of the unfiltered data
-          // and only hide it otherwise
-          unfilteredSynapseIds.includes(synapseId)
-            ? treeIdsToHide.push(tree.treeId)
-            : treeIdsToDelete.push(tree.treeId),
+          treeIdsToDelete.push(tree.treeId),
         ),
       );
-      if (treeIdsToHide.length) {
-        Store.dispatch(setConnectomeTreesVisibilityAction(treeIdsToHide, false, layerName));
-      }
       if (treeIdsToDelete.length) {
         Store.dispatch(deleteConnectomeTreesAction(treeIdsToDelete, layerName));
       }
@@ -466,26 +469,13 @@ class ConnectomeView extends React.Component<Props, State> {
     if (addedSynapseIds.length > 0 && filteredConnectomeData != null) {
       const { synapses } = filteredConnectomeData;
       const newTrees: MutableTreeMap = {};
-      const treeIdsToShow = [];
       for (const synapseId of addedSynapseIds) {
-        const maybeTree = findTreeByName(trees, getTreeNameForSynapse(synapseId));
-        // If the tree was already created, make it visible, otherwise create it
-        maybeTree.cata({
-          Just: tree => treeIdsToShow.push(tree.treeId),
-          Nothing: () => {
-            newTrees[synapseId] = synapseTreeCreator(synapseId, synapses[synapseId].type);
-            const synapseNode = synapseNodeCreator(synapseId, synapses[synapseId].position);
-            newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
-          },
-        });
+        newTrees[synapseId] = synapseTreeCreator(synapseId, synapses[synapseId].type);
+        const synapseNode = synapseNodeCreator(synapseId, synapses[synapseId].position);
+        newTrees[synapseId].nodes.mutableSet(synapseId, synapseNode);
       }
 
-      if (treeIdsToShow.length) {
-        Store.dispatch(setConnectomeTreesVisibilityAction(treeIdsToShow, true, layerName));
-      }
-      if (_.size(newTrees)) {
-        Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
-      }
+      Store.dispatch(addConnectomeTreesAction(newTrees, layerName));
     }
   }
 
@@ -517,27 +507,44 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     const checkedAgglomerateIds = getAgglomerateIdsFromKeys(checkedKeys);
-    const prevCheckedAgglomerateIds = getAgglomerateIdsFromKeys(prevCheckedKeys);
-
-    const layerName = segmentationLayer.name;
-    // Find out which agglomerates were deleted
-    const { onlyA: deletedAgglomerateIds } = diffArrays(
-      prevUnfilteredAgglomerateIds,
-      unfilteredAgglomerateIds,
-    );
-
-    const prevVisibleAgglomerateIds = prevCheckedAgglomerateIds.filter(agglomerateId =>
-      prevFilteredAgglomerateIds.includes(agglomerateId),
-    );
     const visibleAgglomerateIds = checkedAgglomerateIds.filter(agglomerateId =>
       filteredAgglomerateIds.includes(agglomerateId),
     );
 
-    // Find out which agglomerates were hidden or added by filtering/checking
-    const { onlyA: hiddenAgglomerateIds, onlyB: addedAgglomerateIds } = diffArrays(
-      prevVisibleAgglomerateIds,
-      visibleAgglomerateIds,
-    );
+    const reset =
+      prevConnectomeData != null &&
+      connectomeData != null &&
+      prevConnectomeData.connectomeFile.mappingName !== connectomeData.connectomeFile.mappingName;
+
+    let deletedAgglomerateIds;
+    let hiddenAgglomerateIds;
+    let addedAgglomerateIds;
+    if (reset) {
+      // If the agglomerate skeletons need to be reset, because the connectome file mapping has changed,
+      // all existing trees need to be removed and all non-existing trees need to be newly added.
+      // Otherwise, IDs of one connectome file would get mixed up with IDs from the other.
+      deletedAgglomerateIds = prevUnfilteredAgglomerateIds;
+      hiddenAgglomerateIds = [];
+      addedAgglomerateIds = visibleAgglomerateIds;
+    } else {
+      const prevCheckedAgglomerateIds = getAgglomerateIdsFromKeys(prevCheckedKeys);
+
+      // Find out which agglomerates were deleted
+      ({ onlyA: deletedAgglomerateIds } = diffArrays(
+        prevUnfilteredAgglomerateIds,
+        unfilteredAgglomerateIds,
+      ));
+
+      const prevVisibleAgglomerateIds = prevCheckedAgglomerateIds.filter(agglomerateId =>
+        prevFilteredAgglomerateIds.includes(agglomerateId),
+      );
+
+      // Find out which agglomerates were hidden or added by filtering/checking
+      ({ onlyA: hiddenAgglomerateIds, onlyB: addedAgglomerateIds } = diffArrays(
+        prevVisibleAgglomerateIds,
+        visibleAgglomerateIds,
+      ));
+    }
 
     const getMappingNameFromConnectomeDataEnforced = (connectome: ?ConnectomeData) => {
       // This should never be the case, but it's not straightforward for Flow to infer
@@ -545,6 +552,7 @@ class ConnectomeView extends React.Component<Props, State> {
       return connectome.connectomeFile.mappingName;
     };
 
+    const layerName = segmentationLayer.name;
     if (deletedAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);
       for (const agglomerateId of deletedAgglomerateIds) {

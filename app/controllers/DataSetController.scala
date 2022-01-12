@@ -332,7 +332,7 @@ class DataSetController @Inject()(userService: UserService,
     Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
   }
 
-  @ApiOperation(value = "Check whether a new dataset name is valid", nickname = "newDatasetNameisValid")
+  @ApiOperation(value = "Check whether a new dataset name is valid", nickname = "newDatasetNameIsValid")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "Name is valid. Empty message."),
           new ApiResponse(code = 400, message = badRequestLabel)))

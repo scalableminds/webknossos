@@ -9,7 +9,6 @@ WORKDIR /webknossos-datastore
 VOLUME /webknossos-datastore/binaryData /tmp
 
 COPY target/universal/stage .
-COPY lib/native target/universal/stage/lib/native
 
 RUN chown -R webknossos . \
   && chmod go+x bin/webknossos-datastore \

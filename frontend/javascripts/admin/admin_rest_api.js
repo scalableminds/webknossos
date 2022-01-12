@@ -61,6 +61,7 @@ import {
 import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
   DatasetConfiguration,
+  PartialDatasetConfiguration,
   Tracing,
   TraceOrViewCommand,
   AnnotationType,
@@ -1115,7 +1116,7 @@ export async function getDatasetViewConfiguration(
 
 export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
-  datasetConfig: DatasetConfiguration,
+  datasetConfig: PartialDatasetConfiguration,
   options?: RequestOptions = {},
 ): Object {
   return Request.sendJSONReceiveJSON(

@@ -40,7 +40,6 @@ import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
-import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EdgeCollection from "oxalis/model/edge_collection";
 import InputComponent from "oxalis/view/components/input_component";
 import Store, {
@@ -215,6 +214,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
   componentDidMount() {
     this.initializeSkeleton();
+    this.fetchConnections();
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
@@ -762,32 +762,20 @@ class ConnectomeView extends React.Component<Props, State> {
   render() {
     const { segmentationLayer } = this.props;
 
+    // Render the tab in the background to avoid rebuilding the tree when switching tabs.
     return (
       <div id={connectomeTabId} className="padded-tab-content">
-        <DomVisibilityObserver targetId={connectomeTabId}>
-          {(_isVisibleInDom, wasEverVisibleInDom) => {
-            // Render the tab in the background to avoid rebuilding the tree when switching tabs. The rebuild
-            // often times is rather performance intensive and the scroll position is lost as well.
-            // However, only render it after the tab was visible for the first time (lazy-loading).
-            if (!wasEverVisibleInDom) return null;
-
-            if (!segmentationLayer) {
-              return (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="No segmentation layer visible."
-                />
-              );
-            }
-
-            return (
-              <>
-                {this.getConnectomeHeader()}
-                {this.getSynapseTree()}
-              </>
-            );
-          }}
-        </DomVisibilityObserver>
+        {segmentationLayer == null ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="No segmentation layer visible."
+          />
+        ) : (
+          <>
+            {this.getConnectomeHeader()}
+            {this.getSynapseTree()}
+          </>
+        )}
       </div>
     );
   }

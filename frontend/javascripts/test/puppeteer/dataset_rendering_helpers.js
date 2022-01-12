@@ -2,7 +2,7 @@
 /* eslint no-await-in-loop: 0 */
 import urljoin from "url-join";
 
-import type { DatasetConfiguration } from "oxalis/store";
+import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
@@ -36,7 +36,7 @@ export async function screenshotDataset(
   baseUrl: string,
   datasetId: APIDatasetId,
   optionalViewOverride: ?string,
-  optionalDatasetConfigOverride: ?DatasetConfiguration,
+  optionalDatasetConfigOverride: ?PartialDatasetConfiguration,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(
@@ -147,9 +147,10 @@ async function openTracingView(
   optionalViewOverride: ?string,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`), {
-    timeout: 0,
-  });
+  const url = urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`);
+
+  console.log(`\nOpening ${url}\n`);
+  await page.goto(url, { timeout: 0 });
 
   await waitForTracingViewLoad(page);
   await waitForRenderingFinish(page);

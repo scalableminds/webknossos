@@ -313,6 +313,13 @@ export type DatasetConfiguration = {|
   +segmentationPatternOpacity: number,
 |};
 
+export type PartialDatasetConfiguration = $Shape<{
+  ...DatasetConfiguration,
+  +layers: {
+    [name: string]: $Shape<DatasetLayerConfiguration>,
+  },
+}>;
+
 export type UserConfiguration = {|
   +autoSaveLayouts: boolean,
   +brushSize: number,

@@ -136,6 +136,8 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    debugger;
+    console.log("startEditingAction");
     if (startEditingAction.type !== "START_EDITING") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
@@ -150,6 +152,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
     if (isZoomStepTooHighForAnnotating) {
+      continue;
+    }
+    if (activeTool === AnnotationToolEnum.MOVE) {
+      // This warning can be helpful when debugging tests.
+      console.warn("Volume actions are ignored since current tool is the move tool.");
       continue;
     }
 
@@ -182,6 +189,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
     if (isBrushTool(activeTool)) {
+      console.log("labelWithVoxelBuffer2D");
       yield* call(
         labelWithVoxelBuffer2D,
         currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
@@ -397,6 +405,7 @@ function* labelWithVoxelBuffer2D(
   // thirdDimensionOfSlice needs to be provided in global coordinates
   const thirdDimensionOfSlice =
     topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+  console.log("applyLabeledVoxelMapToAllMissingResolutions");
   applyLabeledVoxelMapToAllMissingResolutions(
     currentLabeledVoxelMap,
     labeledZoomStep,

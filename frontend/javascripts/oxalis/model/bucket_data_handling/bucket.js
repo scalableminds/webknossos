@@ -3,29 +3,29 @@
  * @flow
  */
 
+import { createNanoEvents } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
-import { createNanoEvents } from "nanoevents";
 
-import ErrorHandling from "libs/error_handling";
-import { mod } from "libs/utils";
+import { type ElementClass } from "types/api_flow_types";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import {
+  addBucketToUndoAction,
+  type MaybeBucketLoadedPromise,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   bucketPositionToGlobalAddress,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { mod } from "libs/utils";
+import Constants, { type BoundingBoxType, type Vector3, type Vector4 } from "oxalis/constants";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, { type Vector3, type Vector4, type BoundingBoxType } from "oxalis/constants";
 import window from "libs/window";
-import { type ElementClass } from "types/api_flow_types";
-import {
-  addBucketToUndoAction,
-  type MaybeBucketLoadedPromise,
-} from "oxalis/model/actions/volumetracing_actions";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -118,6 +118,7 @@ export class DataBucket {
   visualizedMesh: ?Object;
   visualizationColor: number;
   dirtyCount: number = 0;
+  pendingOperations: Array<() => void> = [];
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -346,11 +347,73 @@ export class DataBucket {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
+        // todo: is it problematic that the same bucket can be added twice to
+        // the temporal_bucket_manager if getOrCreateData is called twice?
         triggeredBucketFetch = true;
         this.temporalBucketManager.addBucket(this);
       }
     }
     return { data: this.getData(), triggeredBucketFetch };
+  }
+
+  applyVoxelMap(
+    voxelMap: Uint8Array,
+    cellId: number,
+    get3DAddress: (number, number, Vector3 | Float32Array) => void,
+    sliceCount: number,
+    thirdDimensionIndex: 0 | 1 | 2,
+    // if shouldOverwrite is false, a voxel is only overwritten if
+    // its old value is equal to overwritableValue.
+    shouldOverwrite: boolean = true,
+    overwritableValue: number = 0,
+  ) {
+    const out = new Float32Array(3);
+    const { data, triggeredBucketFetch } = this.getOrCreateData();
+
+    console.log("triggeredBucketFetch", triggeredBucketFetch);
+    if (this.isRequested() || triggeredBucketFetch) {
+      debugger;
+      this.pendingOperations.push(() =>
+        this.applyVoxelMap(
+          voxelMap,
+          cellId,
+          get3DAddress,
+          sliceCount,
+          thirdDimensionIndex,
+          shouldOverwrite,
+          overwritableValue,
+        ),
+      );
+    }
+
+    for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+      for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+        if (voxelMap[firstDim * Constants.BUCKET_WIDTH + secondDim] === 1) {
+          get3DAddress(firstDim, secondDim, out);
+          const voxelToLabel = out;
+          voxelToLabel[thirdDimensionIndex] =
+            (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
+          // The voxelToLabel is already within the bucket and in the correct resolution.
+          const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
+          const currentSegmentId = data[voxelAddress];
+          if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
+            // console.log("overwriting...");
+            // console.log("shouldOverwrite", shouldOverwrite);
+            // console.log(
+            //   "currentSegmentId === overwritableValue",
+            //   currentSegmentId === overwritableValue,
+            // );
+            if (currentSegmentId > 0) {
+              console.log(
+                "################################################### non-zero value: ",
+                currentSegmentId,
+              );
+            }
+            data[voxelAddress] = cellId;
+          }
+        }
+      }
+    }
   }
 
   markAsPulled(): void {
@@ -404,13 +467,13 @@ export class DataBucket {
     }
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
+        this.state = BucketStateEnum.LOADED;
         if (this.dirty) {
           this.merge(data);
         } else {
           this.data = data;
         }
         this.trigger("bucketLoaded", data);
-        this.state = BucketStateEnum.LOADED;
         break;
       default:
         this.unexpectedState();
@@ -466,13 +529,33 @@ export class DataBucket {
     return fallbackBucket;
   }
 
-  merge(newData: BucketDataArray): void {
+  merge(fetchedData: BucketDataArray): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
-    for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-      // Only overwrite with the new value if the old value was 0
-      this.data[i] = this.data[i] || newData[i];
+
+    console.log("Bucket.merge() was called");
+    if (this.pendingOperations.length > 0) {
+      console.log("##################################### apply pendingOperations");
+
+      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
+        // Only overwrite with the new value if the old value was 0
+        this.data = fetchedData;
+      }
+
+      for (const op of this.pendingOperations) {
+        op();
+      }
+      this.pendingOperations = [];
+    } else {
+      // todo: this is a dummy heuristic. ideally everything should be handled
+      // via the pendingOperations.
+
+      console.log("apply old merge algorithm");
+      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
+        // Only overwrite with the new value if the old value was 0
+        this.data[i] = this.data[i] || fetchedData[i];
+      }
     }
   }
 
@@ -522,7 +605,7 @@ export class DataBucket {
     }
     if (needsToAwaitBucket) {
       await new Promise(resolve => {
-        this.on("bucketLoaded", resolve);
+        this.once("bucketLoaded", resolve);
       });
     }
     // Bucket has been loaded by now or was loaded already

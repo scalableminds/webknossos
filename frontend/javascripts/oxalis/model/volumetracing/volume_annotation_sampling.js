@@ -303,6 +303,7 @@ export function applyVoxelMap(
     }
     dataCube.pushQueue.insert(bucket);
     bucket.trigger("bucketLabeled");
+    console.log("labeled bucket", bucket.zoomedAddress);
   }
 
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
@@ -332,24 +333,16 @@ export function applyVoxelMap(
       if (bucket.type === "null") {
         continue;
       }
-      const { data } = bucket.getOrCreateData();
 
-      for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
-        for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
-          if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
-            get3DAddress(firstDim, secondDim, out);
-            const voxelToLabel = out;
-            voxelToLabel[thirdDimensionIndex] =
-              (voxelToLabel[thirdDimensionIndex] + sliceCount) % constants.BUCKET_WIDTH;
-            // The voxelToLabel is already within the bucket and in the correct resolution.
-            const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
-            const currentSegmentId = data[voxelAddress];
-            if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
-              data[voxelAddress] = cellId;
-            }
-          }
-        }
-      }
+      bucket.applyVoxelMap(
+        voxelMap,
+        cellId,
+        get3DAddress,
+        sliceCount,
+        thirdDimensionIndex,
+        shouldOverwrite,
+        overwritableValue,
+      );
     }
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);

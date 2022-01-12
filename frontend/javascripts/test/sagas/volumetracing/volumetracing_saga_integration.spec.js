@@ -1,26 +1,25 @@
 // @flow
 /* eslint-disable no-await-in-loop */
 
-import test from "ava";
-import mockRequire from "mock-require";
-
 import "test/sagas/saga_integration.mock";
+
+import { AnnotationToolEnum, FillModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
 import {
   __setupOxalis,
   createBucketResponseFunction,
   getFirstVolumeTracingOrFail,
 } from "test/helpers/apiHelpers";
-import { OrthoViews, FillModeEnum, AnnotationToolEnum } from "oxalis/constants";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import Store from "oxalis/store";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Store from "oxalis/store";
+import mockRequire from "mock-require";
+import test from "ava";
 
-const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
-const { setPositionAction, setZoomStepAction } = mockRequire.reRequire(
-  "oxalis/model/actions/flycam_actions",
+const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
+  "oxalis/model/actions/save_actions",
 );
-
 const {
   setActiveCellAction,
   addToLayerAction,
@@ -29,9 +28,10 @@ const {
   startEditingAction,
   finishEditingAction,
 } = mockRequire.reRequire("oxalis/model/actions/volumetracing_actions");
-const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
-  "oxalis/model/actions/save_actions",
+const { setPositionAction, setZoomStepAction } = mockRequire.reRequire(
+  "oxalis/model/actions/flycam_actions",
 );
+const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
 
 test.beforeEach(async t => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
@@ -555,4 +555,115 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
+});
+
+// test.serial.only("Brushing/Tracing with upsampling to unloaded data (I)", async t => {
+//   const oldCellId = 11;
+//   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+//     Uint16Array,
+//     oldCellId,
+//     500,
+//   );
+//   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+//   // function.
+//   await t.context.api.data.reloadAllBuckets();
+//   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+
+//   const paintCenter = [0, 0, 0];
+//   const brushSize = 128;
+
+//   const newCellId = 2;
+
+//   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
+
+//   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+//   Store.dispatch(setPositionAction([0, 0, 0]));
+//   Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+
+//   Store.dispatch(setActiveCellAction(newCellId));
+//   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+//   Store.dispatch(addToLayerAction(paintCenter));
+//   Store.dispatch(finishEditingAction());
+
+//   Store.dispatch(updateUserSettingAction("brushSize", 2 * brushSize));
+//   Store.dispatch(setActiveCellAction(newCellId + 1));
+//   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+//   Store.dispatch(addToLayerAction(paintCenter));
+//   Store.dispatch(finishEditingAction());
+
+//   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+//     console.log("zoomStep", zoomStep);
+//     t.is(
+//       await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep),
+//       newCellId,
+//       `Center should keep old value at zoomstep=${zoomStep}`,
+//     );
+//     t.is(
+//       await t.context.api.data.getDataValue(
+//         volumeTracingLayerName,
+//         [(brushSize / 2) * 1.5, 0, 0],
+//         zoomStep,
+//       ),
+//       newCellId + 1,
+//       `Off-center should get new value at zoomstep=${zoomStep}`,
+//     );
+
+//     // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0], zoomStep), oldCellId);
+//   }
+// });
+
+test.serial.only("Brushing/Tracing with upsampling to unloaded data (II)", async t => {
+  const oldCellId = 11;
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    oldCellId,
+    500,
+  );
+
+  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
+  Store.dispatch(setZoomStepAction(4));
+  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
+
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+
+  const paintCenter = [0, 0, 0];
+  const brushSize = 16;
+  const newCellId = 2;
+
+  // for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+  //   console.log("request at zoomStep", zoomStep);
+  //   t.is(
+  //     await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
+  //     oldCellId,
+  //     `Center should have old value at zoomstep=${zoomStep}`,
+  //   );
+  // }
+
+  console.log("Set overwriteMode to OVERWRITE_EMPTY");
+  Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
+
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 0]));
+  Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
+
+  Store.dispatch(setActiveCellAction(newCellId));
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+
+  await t.context.api.tracing.save();
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    console.log("request at zoomStep", zoomStep);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
+      oldCellId,
+      `Center should still have old value at zoomstep=${zoomStep}`,
+    );
+
+    // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0], zoomStep), oldCellId);
+  }
 });

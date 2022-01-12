@@ -1219,8 +1219,28 @@ class DataApi {
     return bucket;
   }
 
-  async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType) {
+  async getDataFor2DBoundingBox(
+    layerName: string,
+    bbox: BoundingBoxType,
+    _zoomStep: ?number = null,
+  ) {
+    let zoomStep;
+    if (_zoomStep != null) {
+      zoomStep = _zoomStep;
+    } else {
+      const layer = getLayerByName(Store.getState().dataset, layerName);
+      const resolutionInfo = getResolutionInfo(layer.resolutions);
+      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+    }
+
+    console.warn("todo: use zoomStep", zoomStep);
+
     const bucketAddresses = this.getBucketAddressesInCuboid(bbox);
+    if (bucketAddresses.length > 15000) {
+      console.warn(
+        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another resolution.",
+      );
+    }
     const buckets = await Promise.all(
       bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
     );
@@ -1292,8 +1312,11 @@ class DataApi {
           const rz = z - bbox.min[2];
 
           const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
-          const data =
-            bucket.type !== "null" ? bucket.getData() : new TypedArrayClass(Constants.BUCKET_SIZE);
+          // Checking for bucket.type !== "null" is not enough, since the bucket
+          // could also be MISSING.
+          const data = bucket.hasData()
+            ? bucket.getData()
+            : new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;

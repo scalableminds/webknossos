@@ -1,18 +1,21 @@
 // @flow
 
-import { Slider, Row, Col, InputNumber, Tooltip, Button } from "antd";
-import * as _ from "lodash";
-import * as React from "react";
 import type { Dispatch } from "redux";
-import api from "oxalis/api/internal_api";
+import { Slider, Row, Col, InputNumber, Tooltip, Button } from "antd";
 import { connect } from "react-redux";
-import Store, { type DatasetLayerConfiguration } from "oxalis/store";
-import { OrthoViews } from "oxalis/constants";
-import { getPosition, getAreasFromState } from "oxalis/model/accessors/flycam_accessor";
-import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import * as React from "react";
+import * as _ from "lodash";
+
 import type { APIHistogramData, ElementClass } from "types/api_flow_types";
-import type { Vector3, Vector2 } from "oxalis/constants";
+import { OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
+import { getPosition, getAreasFromState } from "oxalis/model/accessors/flycam_accessor";
 import { roundTo } from "libs/utils";
+import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import Dimensions from "oxalis/model/dimensions";
+import Store, { type DatasetLayerConfiguration } from "oxalis/store";
+import api from "oxalis/api/internal_api";
+import { V3 } from "libs/mjs";
 
 type OwnProps = {|
   data: APIHistogramData,
@@ -189,29 +192,47 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   );
 
   getEqualizedMinMaxValues = async (layerName: string) => {
-
     const state = Store.getState();
 
-    const areas = getAreasFromState(state);
-    const xyPlane = areas[OrthoViews.PLANE_XY];
-    const pos = getPosition(state.flycam);
-    const min = [xyPlane.left, xyPlane.top, pos[2]]
-    const max = [xyPlane.right, xyPlane.bottom, pos[2]+1]
+    // const areas = getAreasFromState(state);
+    // const xyPlane = areas[OrthoViews.PLANE_XY];
+    // const pos = getPosition(state.flycam);
+    // const min = [xyPlane.left, xyPlane.top, pos[2]];
+    // const max = [xyPlane.right, xyPlane.bottom, pos[2] + 1];
+
+    const viewport = OrthoViews.PLANE_XY;
+    const [curX, curY, curZ] = Dimensions.transDim(
+      Dimensions.roundCoordinate(getPosition(state.flycam)),
+      viewport,
+    );
+    const [halfViewportExtentX, halfViewportExtentY] = getHalfViewportExtentsFromState(
+      state,
+      viewport,
+    );
+
+    const min = Dimensions.transDim(
+      V3.sub([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 0]),
+      viewport,
+    );
+    const max = Dimensions.transDim(
+      V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
+      viewport,
+    );
 
     const cuboidData = await api.data.getDataFor2DBoundingBox(layerName, {
       min,
       max,
     });
-    console.log({cuboidData, min, max});
+    console.log({ cuboidData, min, max });
 
     return [20, 140];
-  }
+  };
 
   autoScaleHistogram = async (isInEditMode: boolean, layerName: string) => {
     const [firstVal, secVal] = await this.getEqualizedMinMaxValues(layerName);
 
     if (!isInEditMode) {
-    this.onThresholdChange([firstVal, secVal]);
+      this.onThresholdChange([firstVal, secVal]);
     } else {
       this.onThresholdChange([firstVal, secVal]);
 

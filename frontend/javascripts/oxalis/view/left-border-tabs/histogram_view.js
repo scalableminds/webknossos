@@ -1,11 +1,14 @@
 // @flow
 
-import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
+import { Slider, Row, Col, InputNumber, Tooltip, Button } from "antd";
 import * as _ from "lodash";
 import * as React from "react";
 import type { Dispatch } from "redux";
+import api from "oxalis/api/internal_api";
 import { connect } from "react-redux";
-import { type DatasetLayerConfiguration } from "oxalis/store";
+import Store, { type DatasetLayerConfiguration } from "oxalis/store";
+import { OrthoViews } from "oxalis/constants";
+import { getPosition, getAreasFromState } from "oxalis/model/accessors/flycam_accessor";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { APIHistogramData, ElementClass } from "types/api_flow_types";
 import type { Vector3, Vector2 } from "oxalis/constants";
@@ -185,6 +188,39 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
+  getEqualizedMinMaxValues = async (layerName: string) => {
+
+    const state = Store.getState();
+
+    const areas = getAreasFromState(state);
+    const xyPlane = areas[OrthoViews.PLANE_XY];
+    const pos = getPosition(state.flycam);
+    const min = [xyPlane.left, xyPlane.top, pos[2]]
+    const max = [xyPlane.right, xyPlane.bottom, pos[2]+1]
+
+    const cuboidData = await api.data.getDataFor2DBoundingBox(layerName, {
+      min,
+      max,
+    });
+    console.log({cuboidData, min, max});
+
+    return [20, 140];
+  }
+
+  autoScaleHistogram = async (isInEditMode: boolean, layerName: string) => {
+    const [firstVal, secVal] = await this.getEqualizedMinMaxValues(layerName);
+
+    if (!isInEditMode) {
+    this.onThresholdChange([firstVal, secVal]);
+    } else {
+      this.onThresholdChange([firstVal, secVal]);
+
+      this.setState({ currentMin: firstVal, currentMax: secVal });
+      this.updateMinimumDebounced(firstVal, layerName);
+      this.updateMaximumDebounced(secVal, layerName);
+    }
+  };
+
   render() {
     const {
       intensityRangeMin,
@@ -209,20 +245,32 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           width={canvasWidth}
           height={canvasHeight}
         />
-        <Slider
-          range
-          value={[intensityRangeMin, intensityRangeMax]}
-          min={minRange}
-          max={maxRange}
-          defaultValue={[minRange, maxRange]}
-          onChange={this.onThresholdChange}
-          onAfterChange={this.onThresholdChange}
-          step={(maxRange - minRange) / 255}
-          tipFormatter={this.tipFormatter}
-          style={{ width: canvasWidth, margin: 0, marginBottom: 6 }}
-        />
+        <div style={{ display: "grid", gridTemplateColumns: "75% auto" }}>
+          <Slider
+            range
+            value={[intensityRangeMin, intensityRangeMax]}
+            min={minRange}
+            max={maxRange}
+            defaultValue={[minRange, maxRange]}
+            onChange={this.onThresholdChange}
+            onAfterChange={this.onThresholdChange}
+            step={(maxRange - minRange) / 255}
+            tipFormatter={this.tipFormatter}
+            style={{ width: 0.75*canvasWidth, margin: 0, marginTop: 6 }}
+          />
+          <Tooltip title="Cool Tip">
+            <Button
+            size="small"
+            type="info"
+            style={{ width: 0.27*canvasWidth}}
+            onClick={() => this.autoScaleHistogram(isInEditMode, layerName)}
+            >
+              Auto Scale
+            </Button>
+          </Tooltip>
+        </div>
         {isInEditMode ? (
-          <Row type="flex" align="middle">
+          <Row type="flex" align="middle" style={{ marginTop: 6 }}>
             <Col span={4}>
               <label className="setting-label">Min:</label>
             </Col>

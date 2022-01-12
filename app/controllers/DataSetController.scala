@@ -338,7 +338,7 @@ class DataSetController @Inject()(userService: UserService,
           new ApiResponse(code = 400, message = badRequestLabel)))
   def isValidNewName(@ApiParam(value = "The url-safe name of the organization owning the dataset",
                                example = "sample_organization") organizationName: String,
-                     @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
+            @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"

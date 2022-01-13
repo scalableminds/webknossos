@@ -117,7 +117,6 @@ class PullQueue {
         if (bucketBuffer == null && !renderMissingDataBlack) {
           bucket.markAsFailed(true);
         } else {
-          console.log("receive", { bucketAddress });
           this.handleBucket(bucketAddress, bucketBuffer);
         }
       }

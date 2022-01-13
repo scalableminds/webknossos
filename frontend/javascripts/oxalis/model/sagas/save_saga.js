@@ -801,14 +801,15 @@ function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: str
   }
 }
 
-export function toggleErrorHighlighting(state: boolean): void {
+export function toggleErrorHighlighting(state: boolean, permanentError: boolean = false): void {
   if (document.body != null) {
     document.body.classList.toggle("save-error", state);
   }
+  const message = permanentError ? messages["save.failed.permanent"] : messages["save.failed"];
   if (state) {
-    Toast.error(messages["save.failed"], { sticky: true });
+    Toast.error(message, { sticky: true });
   } else {
-    Toast.close(messages["save.failed"]);
+    Toast.close(message);
   }
 }
 

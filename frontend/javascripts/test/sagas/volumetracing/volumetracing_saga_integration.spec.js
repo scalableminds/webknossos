@@ -3,7 +3,15 @@
 
 import "test/sagas/saga_integration.mock";
 
-import { AnnotationToolEnum, FillModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
+import _ from "lodash";
+
+import {
+  AnnotationToolEnum,
+  ContourModeEnum,
+  FillModeEnum,
+  OrthoViews,
+  OverwriteModeEnum,
+} from "oxalis/constants";
 import {
   __setupOxalis,
   createBucketResponseFunction,
@@ -12,6 +20,7 @@ import {
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import { sleep } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import mockRequire from "mock-require";
@@ -27,6 +36,7 @@ const {
   copySegmentationLayerAction,
   startEditingAction,
   finishEditingAction,
+  setContourTracingModeAction,
 } = mockRequire.reRequire("oxalis/model/actions/volumetracing_actions");
 const { setPositionAction, setZoomStepAction } = mockRequire.reRequire(
   "oxalis/model/actions/flycam_actions",
@@ -557,62 +567,7 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 });
 
-// test.serial.only("Brushing/Tracing with upsampling to unloaded data (I)", async t => {
-//   const oldCellId = 11;
-//   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
-//     Uint16Array,
-//     oldCellId,
-//     500,
-//   );
-//   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
-//   // function.
-//   await t.context.api.data.reloadAllBuckets();
-//   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
-
-//   const paintCenter = [0, 0, 0];
-//   const brushSize = 128;
-
-//   const newCellId = 2;
-
-//   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
-
-//   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
-//   Store.dispatch(setPositionAction([0, 0, 0]));
-//   Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
-
-//   Store.dispatch(setActiveCellAction(newCellId));
-//   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-//   Store.dispatch(addToLayerAction(paintCenter));
-//   Store.dispatch(finishEditingAction());
-
-//   Store.dispatch(updateUserSettingAction("brushSize", 2 * brushSize));
-//   Store.dispatch(setActiveCellAction(newCellId + 1));
-//   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-//   Store.dispatch(addToLayerAction(paintCenter));
-//   Store.dispatch(finishEditingAction());
-
-//   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-//     console.log("zoomStep", zoomStep);
-//     t.is(
-//       await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, zoomStep),
-//       newCellId,
-//       `Center should keep old value at zoomstep=${zoomStep}`,
-//     );
-//     t.is(
-//       await t.context.api.data.getDataValue(
-//         volumeTracingLayerName,
-//         [(brushSize / 2) * 1.5, 0, 0],
-//         zoomStep,
-//       ),
-//       newCellId + 1,
-//       `Off-center should get new value at zoomstep=${zoomStep}`,
-//     );
-
-//     // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0], zoomStep), oldCellId);
-//   }
-// });
-
-test.serial.only("Brushing/Tracing with upsampling to unloaded data (II)", async t => {
+test.serial("Brushing/Tracing with upsampling to unloaded data (I)", async t => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -632,15 +587,6 @@ test.serial.only("Brushing/Tracing with upsampling to unloaded data (II)", async
   const paintCenter = [0, 0, 0];
   const brushSize = 16;
   const newCellId = 2;
-
-  // for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-  //   console.log("request at zoomStep", zoomStep);
-  //   t.is(
-  //     await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
-  //     oldCellId,
-  //     `Center should have old value at zoomstep=${zoomStep}`,
-  //   );
-  // }
 
   console.log("Set overwriteMode to OVERWRITE_EMPTY");
   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
@@ -663,7 +609,88 @@ test.serial.only("Brushing/Tracing with upsampling to unloaded data (II)", async
       oldCellId,
       `Center should still have old value at zoomstep=${zoomStep}`,
     );
+  }
+});
+
+test.serial.only("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
+  const oldCellId = 11;
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    oldCellId,
+    500,
+  );
+
+  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
+  Store.dispatch(setZoomStepAction(4));
+  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
+
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+
+  const paintCenter = [0, 0, 0];
+  const brushSize = 263;
+  // bad: 263
+  // good: 262
+  // const brushSize = 300;
+  const newCellId = 2;
+
+  // this seems to change the spot where the wrong data is found?
+  // await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+  //   min: [0, 0, 0],
+  //   max: [1350, 1, 1],
+  // });
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    console.log("request at zoomStep", zoomStep);
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
+      oldCellId,
+      `Center should have old value at zoomstep=${zoomStep}`,
+    );
+  }
+
+  console.log("Set overwriteMode to OVERWRITE_EMPTY");
+  Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+  Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
+
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 0]));
+  Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+
+  // const strokeCount = 10;
+  const strokeCount = 1;
+  for (let i = 0; i < 1; i++) {
+    const currentPaintCenter = [(i * brushSize) / 2, 0, 0];
+    Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+    Store.dispatch(addToLayerAction(paintCenter));
+    Store.dispatch(finishEditingAction());
+  }
+
+  console.log("Save");
+  await t.context.api.tracing.save();
+
+  console.log("Load");
+  const data = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
+    min: [0, 0, 0],
+    max: [35, 1, 1], // 1350
+  });
+
+  console.log("data", data);
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    const readValue = await t.context.api.data.getDataValue(
+      volumeTracingLayerName,
+      [32, 0, 0],
+      zoomStep,
+    );
+    console.log("request at zoomStep", zoomStep, "readValue", readValue);
+    t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
 
     // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0], zoomStep), oldCellId);
   }
+  const incorrectIndex = data.indexOf(11);
+  console.log("incorrectIndex", incorrectIndex);
+  t.is(_.max(data), 0, "All the data should be 0 (== erased).");
 });

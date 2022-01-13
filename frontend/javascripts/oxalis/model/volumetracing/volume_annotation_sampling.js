@@ -303,7 +303,6 @@ export function applyVoxelMap(
     }
     dataCube.pushQueue.insert(bucket);
     bucket.trigger("bucketLabeled");
-    console.log("labeled bucket", bucket.zoomedAddress);
   }
 
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {

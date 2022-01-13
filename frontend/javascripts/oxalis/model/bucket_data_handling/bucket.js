@@ -236,6 +236,16 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
+  isUnsynced(): boolean {
+    /*
+    Unsynced means that the front-end has not received any data for this bucket, yet.
+    The return value does
+      - not tell whether the data fetching was already initiated (does not differentiate between UNREQUESTED and REQUESTED)
+      - not tell whether the backend has data for the address (does not differentiate between LOADED and MISSING)
+    */
+    return this.state === BucketStateEnum.UNREQUESTED || this.state === BucketStateEnum.REQUESTED;
+  }
+
   getAddress(): Vector3 {
     return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
@@ -370,9 +380,7 @@ export class DataBucket {
     const out = new Float32Array(3);
     const { data, triggeredBucketFetch } = this.getOrCreateData();
 
-    console.log("triggeredBucketFetch", triggeredBucketFetch);
-    if (this.isRequested() || triggeredBucketFetch) {
-      debugger;
+    if (this.isUnsynced()) {
       this.pendingOperations.push(() =>
         this.applyVoxelMap(
           voxelMap,
@@ -397,18 +405,6 @@ export class DataBucket {
           const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
           const currentSegmentId = data[voxelAddress];
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
-            // console.log("overwriting...");
-            // console.log("shouldOverwrite", shouldOverwrite);
-            // console.log(
-            //   "currentSegmentId === overwritableValue",
-            //   currentSegmentId === overwritableValue,
-            // );
-            if (currentSegmentId > 0) {
-              console.log(
-                "################################################### non-zero value: ",
-                currentSegmentId,
-              );
-            }
             data[voxelAddress] = cellId;
           }
         }
@@ -529,15 +525,19 @@ export class DataBucket {
     return fallbackBucket;
   }
 
+  logMaybe = (...args) => {
+    if (this.zoomedAddress.join(",") === [1, 0, 0, 0].join(",")) {
+      debugger;
+      console.log(...args);
+    }
+  };
+
   merge(fetchedData: BucketDataArray): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
 
-    console.log("Bucket.merge() was called");
     if (this.pendingOperations.length > 0) {
-      console.log("##################################### apply pendingOperations");
-
       for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
         // Only overwrite with the new value if the old value was 0
         this.data = fetchedData;
@@ -551,7 +551,6 @@ export class DataBucket {
       // todo: this is a dummy heuristic. ideally everything should be handled
       // via the pendingOperations.
 
-      console.log("apply old merge algorithm");
       for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
         // Only overwrite with the new value if the old value was 0
         this.data[i] = this.data[i] || fetchedData[i];

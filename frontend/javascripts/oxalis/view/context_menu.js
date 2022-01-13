@@ -165,7 +165,7 @@ function getMaybeHoveredCellMenuItem(globalPosition: Vector3) {
     : hoveredCellInfo.id;
 
   return (
-    <div className="node-context-menu-item">
+    <div key="hovered-info" className="node-context-menu-item">
       <i className="fas fa-ruler" /> Hovered Segment: {cellIdAsString}
       {copyIconWithTooltip(
         hoveredCellInfo.id,
@@ -533,10 +533,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
             onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
           >
             {isAgglomerateMappingEnabled.value ? (
-              ["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]
+              <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
             ) : (
               <Tooltip title="Requires an active ID Mapping">
-                {["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]}
+                <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
               </Tooltip>
             )}
           </Menu.Item>,

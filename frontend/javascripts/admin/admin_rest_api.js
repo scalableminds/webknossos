@@ -1037,9 +1037,12 @@ export function startNeuronInferralJob(
   organizationName: string,
   datasetName: string,
   layerName: string,
+  bbox: Vector6,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}`,
+    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?layerName=${layerName}&bbox=${bbox.join(
+      ",",
+    )}`,
   );
 }
 

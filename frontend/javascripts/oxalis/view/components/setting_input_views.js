@@ -503,15 +503,9 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
     style = style || {};
     return (
       <div
-        id="color-picker-wrapper"
+        className="color-display-wrapper"
         style={{
           backgroundColor: value,
-          display: "inline-block",
-          width: 16,
-          height: 16,
-          borderRadius: 3,
-          boxShadow: "0px 0px 3px #cacaca",
-          verticalAlign: "middle",
           ...style,
         }}
       >

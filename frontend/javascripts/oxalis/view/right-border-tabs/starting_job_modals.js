@@ -8,8 +8,8 @@ import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
 import { type OxalisState, type UserBoundingBox } from "oxalis/store";
-import { Unicode } from "oxalis/constants";
-import { capitalizeWords, computeArrayFromBoundingBox } from "libs/utils";
+import { Unicode, type Vector3 } from "oxalis/constants";
+import { capitalizeWords, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 
 const { ThinSpace } = Unicode;
 
@@ -27,7 +27,7 @@ type Props = {
 };
 type StartingJoblModalProps = {
   ...Props,
-  jobApiCall: string => Promise<APIJob>,
+  jobApiCall: (string, ?UserBoundingBox) => Promise<?APIJob>,
   jobName: string,
   description: Node,
   isBoundingBoxConfigurable?: boolean,
@@ -36,7 +36,8 @@ type StartingJoblModalProps = {
 function StartingJobModal(props: StartingJoblModalProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const { dataset, handleClose, jobName, description, jobApiCall } = props;
-  const [selectedColorLayerName, setSelectedColorLayerName] = useState(null);
+  const [selectedColorLayerName, setSelectedColorLayerName] = useState<?string>(null);
+  const [selectedBoundingBox, setSelectedBoundingBox] = useState(null);
   const { userBoundingBoxes } = props;
   const colorLayerNames = getColorLayers(dataset).map(layer => layer.name);
   useEffect(() => {
@@ -47,17 +48,26 @@ function StartingJobModal(props: StartingJoblModalProps) {
   if (colorLayerNames.length < 1) {
     return null;
   }
-
-  const onColorLayerNameChange = selectedLayerName => {
-    setSelectedColorLayerName(selectedLayerName);
+  const onChangeBoundingBox = (selectedBBoxId: number) => {
+    const selectedBBox = userBoundingBoxes.find(bbox => bbox.id === selectedBBoxId);
+    if (selectedBBox) {
+      setSelectedBoundingBox(selectedBBox);
+    }
   };
-
   const startJob = async () => {
     if (selectedColorLayerName == null) {
       return;
     }
     try {
-      await jobApiCall(selectedColorLayerName);
+      let apiJob;
+      if (isBoundingBoxConfigurable) {
+        apiJob = await jobApiCall(selectedColorLayerName, selectedBoundingBox);
+      } else {
+        apiJob = await jobApiCall(selectedColorLayerName);
+      }
+      if (!apiJob) {
+        return;
+      }
       Toast.info(
         <>
           The {jobName} job has been started. You can look in the{" "}
@@ -90,7 +100,8 @@ function StartingJobModal(props: StartingJoblModalProps) {
             style={{ width: 300 }}
             placeholder="Select a color layer"
             optionFilterProp="children"
-            onChange={onColorLayerNameChange}
+            value={selectedColorLayerName}
+            onChange={setSelectedColorLayerName}
             filterOption={(input, option) =>
               option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
@@ -107,6 +118,27 @@ function StartingJobModal(props: StartingJoblModalProps) {
     ) : null;
 
   // TODO: Use user bounding boxes as suggestion!
+
+  const renderUserBoundingBox = (bbox: ?UserBoundingBox) => {
+    if (!bbox) {
+      return null;
+    }
+    const upscaledColor = ((bbox.color.map(colorPart => colorPart * 255): any): Vector3);
+    const colorAsHexString = rgbToHex(upscaledColor);
+    return (
+      <>
+        {bbox.name}{" "}
+        <div
+          className="color-display-or-picker-wrapper"
+          style={{
+            backgroundColor: colorAsHexString,
+            marginTop: -2,
+          }}
+        />{" "}
+        - {computeArrayFromBoundingBox(bbox.boundingBox).join(", ")}
+      </>
+    );
+  };
   const BoundingBoxSelection = (): Node =>
     isBoundingBoxConfigurable ? (
       <React.Fragment>
@@ -124,14 +156,15 @@ function StartingJobModal(props: StartingJoblModalProps) {
             style={{ width: 300 }}
             placeholder="Select a bounding box"
             optionFilterProp="children"
-            onChange={(...val) => console.log("selected bbox", ...val)}
+            value={renderUserBoundingBox(selectedBoundingBox)}
+            onChange={onChangeBoundingBox}
             filterOption={(input, option) =>
               option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
           >
             {userBoundingBoxes.map(userBB => (
               <Select.Option key={userBB.id} value={userBB.id}>
-                {userBB.name} - {computeArrayFromBoundingBox(userBB.boundingBox).join(" ,")}
+                {renderUserBoundingBox(userBB)}
               </Select.Option>
             ))}
           </Select>
@@ -139,6 +172,9 @@ function StartingJobModal(props: StartingJoblModalProps) {
         <br />
       </React.Fragment>
     ) : null;
+
+  const hasUnselectedOptions =
+    selectedColorLayerName == null || (isBoundingBoxConfigurable && selectedBoundingBox == null);
 
   return (
     <Modal
@@ -162,7 +198,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
       <ColorLayerSelection />
       <BoundingBoxSelection />
       <div style={{ textAlign: "center" }}>
-        <Button type="primary" disabled={selectedColorLayerName == null} onClick={startJob}>
+        <Button type="primary" disabled={hasUnselectedOptions} onClick={startJob}>
           Start {capitalizeWords(jobName)}
         </Button>
       </div>
@@ -209,9 +245,18 @@ function _NeuronInferralModal({ dataset, handleClose, userBoundingBoxes }: Props
       userBoundingBoxes={userBoundingBoxes}
       jobName="neuron inferral"
       isBoundingBoxConfigurable
-      jobApiCall={colorLayerName =>
-        startNeuronInferralJob(dataset.owningOrganization, dataset.name, colorLayerName)
-      }
+      jobApiCall={async (colorLayerName, boundingBox) => {
+        if (!boundingBox) {
+          return Promise.resolve();
+        }
+        const bbox = computeArrayFromBoundingBox(boundingBox.boundingBox);
+        return startNeuronInferralJob(
+          dataset.owningOrganization,
+          dataset.name,
+          colorLayerName,
+          bbox,
+        );
+      }}
       description={
         <>
           <p>

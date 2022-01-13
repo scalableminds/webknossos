@@ -155,13 +155,11 @@ Expects:
     Action.async(parse.multipartFormData) { implicit request =>
       val uploadForm = Form(
         tuple(
-          "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-          "owningOrganization" -> nonEmptyText,
           "resumableChunkNumber" -> number,
           "resumableChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
           "resumableIdentifier" -> nonEmptyText
-        )).fill(("", "", -1, -1, -1, ""))
+        )).fill((-1, -1, -1, ""))
 
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
         AllowRemoteOrigin {
@@ -170,14 +168,12 @@ Expects:
             .fold(
               hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
               success = {
-                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
-                  val id = DataSourceId(name, organization)
+                case (chunkNumber, chunkSize, totalChunkCount, uploadId) =>
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadId)
                     _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadId,
-                                                         id,
                                                          chunkSize,
                                                          totalChunkCount,
                                                          chunkNumber,

@@ -1154,11 +1154,7 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function createResumableUpload(
-  datasetId: APIDatasetId,
-  datastoreUrl: string,
-  uploadId: string,
-): Promise<*> {
+export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<*> {
   const generateUniqueIdentifier = file => {
     if (file.path == null) {
       // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -1169,16 +1165,11 @@ export function createResumableUpload(
     return `${uploadId}/${file.path || file.name}`;
   };
 
-  const additionalParameters = {
-    ...datasetId,
-  };
-
   return doWithToken(
     token =>
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        query: additionalParameters,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         simultaneousUploads: 3,

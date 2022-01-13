@@ -232,11 +232,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       await reserveDatasetUpload(formValues.datastore.url, reserveUploadInformation);
 
-      const resumableUpload = await createResumableUpload(
-        datasetId,
-        formValues.datastore.url,
-        uploadId,
-      );
+      const resumableUpload = await createResumableUpload(formValues.datastore.url, uploadId);
 
       resumableUpload.on("complete", () => {
         const newestForm = this.formRef.current;
@@ -246,9 +242,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
         const uploadInfo = {
           uploadId,
-          organization: datasetId.owningOrganization,
-          name: datasetId.name,
-          layersToLink: [],
           needsConversion: this.state.needsConversion,
         };
 

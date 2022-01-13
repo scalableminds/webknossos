@@ -49,21 +49,18 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
     searchQuery: "",
   };
 
-  componentWillMount() {
+  componentDidMount() {
     this.setState(persistence.load(this.props.history));
     if (this.props.initialSearchValue && this.props.initialSearchValue !== "") {
       this.setState({
         searchQuery: this.props.initialSearchValue,
       });
     }
-  }
-
-  componentDidMount() {
     this.fetchData();
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   async fetchData(): Promise<void> {

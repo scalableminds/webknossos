@@ -23,7 +23,8 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
       jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)
       // make sure that the jobs to run have not already just been cancelled
-      assignedUnfinishedJobsFiltered = assignedUnfinishedJobs.filter(j => !jobsToCancel.map(_._id).toSet.contains(j._id))
+      assignedUnfinishedJobsFiltered = assignedUnfinishedJobs.filter(j =>
+        !jobsToCancel.map(_._id).toSet.contains(j._id))
       assignedUnfinishedJs = assignedUnfinishedJobsFiltered.map(jobService.parameterWrites)
       toCancelJs = jobsToCancel.map(jobService.parameterWrites)
     } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))

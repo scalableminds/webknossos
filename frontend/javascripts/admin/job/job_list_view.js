@@ -17,7 +17,7 @@ import {
 import * as React from "react";
 
 import type { APIJob } from "types/api_flow_types";
-import { getJobs } from "admin/admin_rest_api";
+import { getJobs, doWithToken } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import FormattedDate from "components/formatted_date";
@@ -64,6 +64,7 @@ type State = {
   isLoading: boolean,
   jobs: Array<APIJob>,
   searchQuery: string,
+  token: string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -78,6 +79,7 @@ class JobListView extends React.PureComponent<Props, State> {
     isLoading: true,
     jobs: [],
     searchQuery: "",
+    token: "",
   };
 
   componentWillMount() {
@@ -100,10 +102,12 @@ class JobListView extends React.PureComponent<Props, State> {
 
   async fetchData(): Promise<void> {
     const jobs = await getJobs();
+    const token = await doWithToken(async t => t);
     this.setState(
       {
         isLoading: false,
         jobs,
+        token,
       },
       // refresh jobs according to the refresh interval
       () => {
@@ -182,7 +186,7 @@ class JobListView extends React.PureComponent<Props, State> {
       return (
         <span>
           {job.resultLink && (
-            <a href={job.resultLink} title="Download">
+            <a href={`${job.resultLink}?token=${this.state.token}`} title="Download">
               <DownOutlined />
               Download
             </a>

@@ -127,7 +127,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
       <>
         {bbox.name}{" "}
         <div
-          className="color-display-or-picker-wrapper"
+          className="color-display-wrapper"
           style={{
             backgroundColor: colorAsHexString,
             marginTop: -2,

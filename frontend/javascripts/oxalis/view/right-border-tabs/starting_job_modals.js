@@ -117,8 +117,6 @@ function StartingJobModal(props: StartingJoblModalProps) {
       </React.Fragment>
     ) : null;
 
-  // TODO: Use user bounding boxes as suggestion!
-
   const renderUserBoundingBox = (bbox: ?UserBoundingBox) => {
     if (!bbox) {
       return null;

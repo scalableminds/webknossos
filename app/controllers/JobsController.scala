@@ -4,7 +4,6 @@ import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.DataSetDAO

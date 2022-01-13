@@ -62,6 +62,8 @@ class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[Agglo
 }
 
 class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extends LRUConcurrentCache[Long, Long] {
+  // On cache miss, reads whole blocks of IDs (number of elements is standardBlockSize)
+
   def withCache(segmentId: ULong, reader: IHDF5Reader, dataSet: HDF5DataSet)(
       readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long]): Long = {
 
@@ -98,13 +100,14 @@ case class BoundingBoxFinder(
 }
 
 // This bounding box cache uses the cumsum.json to speed up the agglomerate mapping. The cumsum.json contains information about all bounding boxes of the dataset and the contained segment ids.
-// Thus, we can load the correct part from the AgglomerateFile without having to maintain a cache because we can translate the whole input array.
+// The typical query for the agglomerate file is to map a complete bucket/bbox, not to translate individual IDs.
+// Thus, we can load the correct part from the AgglomerateFile without having to maintain an ID cache because we can translate the whole input array.
 // One special case is an input value of 0, which is automatically mapped to 0.
 
 class BoundingBoxCache(
     val cache: mutable.HashMap[(Long, Long, Long), BoundingBoxValues], // maps bounding box top left to range and bb dimensions
     val boundingBoxFinder: BoundingBoxFinder, // saves the bb top left positions
-    val maxReaderRange: ULong) // config value for maximum amount of elements which are allowed to be read as once
+    val maxReaderRange: ULong) // config value for maximum amount of elements that are allowed to be read as once
     extends LazyLogging {
   private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
     val res = cuboid.resolution
@@ -115,6 +118,7 @@ class BoundingBoxCache(
            cuboid.depth * res.z)
   }
 
+  // get the segment ID range for one cuboid
   private def getReaderRange(request: DataServiceDataRequest): (ULong, ULong) = {
     // convert cuboid to global coordinates (in res 1)
     val globalCuboid = getGlobalCuboid(request.cuboid)

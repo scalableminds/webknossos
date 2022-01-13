@@ -49,7 +49,7 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
-import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
+import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 
@@ -351,12 +351,30 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   cancelUpload = async () => {
     const { uploadId, resumableUpload, datasetId, datastoreUrl } = this.state;
+    resumableUpload.pause();
+    const shouldCancel = await confirmAsync({
+      title:
+        "Cancelling the running upload will delete all already uploaded files on the server and cannot be undone. Are you certain to cancel the upload?",
+      okText: "Yes, Cancel the upload.",
+    });
+    if (!shouldCancel) {
+      resumableUpload.upload();
+      return;
+    }
+
     resumableUpload.cancel();
     await cancelDatasetUpload(datastoreUrl, {
       uploadId,
       organization: datasetId.owningOrganization,
       name: datasetId.name,
     });
+    this.setState({
+      isUploading: false,
+      isFinishing: false,
+      isRetrying: false,
+      uploadProgress: 0,
+    });
+    Toast.success(messages["dataset.upload_cancel"]);
   };
 
   getUploadModal = () => {
@@ -373,6 +391,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         maskClosable={false}
         className="no-footer-modal"
         okButtonProps={{ style: { display: "none" } }}
+        cancelButtonProps={{ style: { display: "none" } }}
         onCancel={this.cancelUpload}
       >
         <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>

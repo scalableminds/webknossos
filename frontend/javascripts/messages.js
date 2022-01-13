@@ -245,6 +245,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
+  "dataset.upload_cancel": "The dataset upload was cancelled.",
   "dataset.unsupported_file_type":
     "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
   "dataset.upload_invalid_zip":

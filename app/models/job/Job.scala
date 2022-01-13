@@ -157,7 +157,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def findAllCancellingByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}"
+        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}'"
           .as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -187,7 +187,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.jobs set manualState = state = '#${manualState.toString}' where _id = $id""")
+      _ <- run(sqlu"""update webknossos.jobs set manualState = '#${manualState.toString}' where _id = $id""")
     } yield ()
 
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] = {
@@ -196,7 +196,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     val endedTimestamp = s.ended.map(ended => format.format(new Timestamp(ended)))
     for {
       _ <- run(sqlu"""update webknossos.jobs set
-              latestRunId = ${s.latestRunId},
+              latestRunId = #${optionLiteralSanitized(s.latestRunId)},
               state = '#${s.state.toString}',
               returnValue = #${optionLiteralSanitized(s.returnValue)},
               started = #${optionLiteralSanitized(startedTimestamp)},

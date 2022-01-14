@@ -643,7 +643,7 @@ class DataCube {
     };
   }
 
-  setBucketData(zoomedAddress: Vector4, data: Uint8Array) {
+  setBucketData(zoomedAddress: Vector4, data: BucketDataArray) {
     const bucket = this.getOrCreateBucket(zoomedAddress);
     if (bucket.type === "null") {
       return;

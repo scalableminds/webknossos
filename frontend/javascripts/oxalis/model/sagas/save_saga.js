@@ -71,6 +71,7 @@ import {
 import {
   bucketsAlreadyInUndoState,
   type BucketDataArray,
+  DataBucket,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
@@ -100,7 +101,28 @@ import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
-const byteArrayToLz4Array = createWorker(compressLz4Block);
+const _byteArrayToLz4Array = createWorker(compressLz4Block);
+const decompressToTypedArray = (
+  bucket: DataBucket,
+  compressedData: Uint8Array,
+): ?BucketDataArray => {
+  const decompressedBackendData = _byteArrayToLz4Array(compressedData, false);
+  if (decompressedBackendData == null) {
+    // Can this happen?
+    return null;
+  }
+
+  return bucket.uint8ToTypedBuffer(decompressedBackendData);
+};
+const compressTypedArray = (bucketData: BucketDataArray): Uint8Array => {
+  const bucketDataAsByteArray = new Uint8Array(
+    bucketData.buffer,
+    bucketData.byteOffset,
+    bucketData.byteLength,
+  );
+  const compressedBucketData = _byteArrayToLz4Array(bucketDataAsByteArray, true);
+  return compressedBucketData;
+};
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   action => action !== "SET_USER_BOUNDING_BOXES",
@@ -405,12 +427,7 @@ function* compressBucketAndAddToList(
   // and appended to the passed VolumeAnnotationBatch.
   // If backend data is being downloaded (MaybeBucketLoadedPromise exists),
   // the backend data will also be compressed and attached to the UndoBucket.
-  const bucketDataAsByteArray = new Uint8Array(
-    bucketData.buffer,
-    bucketData.byteOffset,
-    bucketData.byteLength,
-  );
-  const compressedBucketData = yield* call(byteArrayToLz4Array, bucketDataAsByteArray, true);
+  const compressedBucketData = yield* call(compressTypedArray, bucketData);
   if (compressedBucketData != null) {
     const volumeUndoPart: UndoBucket = {
       zoomedBucketAddress,
@@ -422,12 +439,7 @@ function* compressBucketAndAddToList(
         // Once the backend data is fetched, do not directly merge it with the already saved undo data
         // as this operation is only needed, when the volume action is undone. Additionally merging is more
         // expensive than saving the backend data. Thus the data is only merged upon an undo action / when it is needed.
-        const backendDataAsByteArray = new Uint8Array(
-          backendBucketData.buffer,
-          backendBucketData.byteOffset,
-          backendBucketData.byteLength,
-        );
-        const compressedBackendData = await byteArrayToLz4Array(backendDataAsByteArray, true);
+        const compressedBackendData = await compressTypedArray(backendBucketData);
         volumeUndoPart.backendData = compressedBackendData;
       });
     }
@@ -523,6 +535,11 @@ function mergeDataWithBackendDataInPlace(
   originalData: BucketDataArray,
   backendData: BucketDataArray,
 ) {
+  if (originalData.length !== backendData.length) {
+    throw new Error("Cannot merge data arrays with differing lengths");
+  }
+  // todo: don't use || because this won't work for erasure
+  console.log("mergeDataWithBackendDataInPlace", originalData, backendData);
   for (let i = 0; i < originalData.length; ++i) {
     originalData[i] = originalData[i] || backendData[i];
   }
@@ -562,9 +579,9 @@ function* applyAndGetRevertingVolumeBatch(
         // If the backend data for the bucket has been fetched in the meantime,
         // we can first merge the data with the current data and then add this to the undo batch.
         const decompressedBackendData = yield* call(
-          byteArrayToLz4Array,
+          decompressToTypedArray,
+          bucket,
           compressedBackendData,
-          false,
         );
         if (decompressedBackendData) {
           mergeDataWithBackendDataInPlace(bucketData, decompressedBackendData);
@@ -595,14 +612,14 @@ function* applyAndGetRevertingVolumeBatch(
     if (compressedBackendData != null) {
       let decompressedBackendData;
       [decompressedBucketData, decompressedBackendData] = yield _all([
-        _call(byteArrayToLz4Array, compressedBucketData, false),
-        _call(byteArrayToLz4Array, compressedBackendData, false),
+        _call(decompressToTypedArray, bucket, compressedBucketData),
+        _call(decompressToTypedArray, bucket, compressedBackendData),
       ]);
       if (decompressedBucketData && decompressedBackendData) {
         mergeDataWithBackendDataInPlace(decompressedBucketData, decompressedBackendData);
       }
     } else {
-      decompressedBucketData = yield* call(byteArrayToLz4Array, compressedBucketData, false);
+      decompressedBucketData = yield* call(decompressToTypedArray, bucket, compressedBucketData);
     }
     if (decompressedBucketData) {
       // Set the new bucket data to add the bucket directly to the pushqueue.

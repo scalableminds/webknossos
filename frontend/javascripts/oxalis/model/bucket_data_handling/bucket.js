@@ -332,15 +332,21 @@ export class DataBucket {
     return data;
   }
 
-  setData(newData: Uint8Array) {
-    const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
-    this.data = new TypedArrayClass(
-      newData.buffer,
-      newData.byteOffset,
-      newData.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-    );
+  setData(newData: BucketDataArray) {
+    this.data = newData;
     this.dirty = true;
     this.trigger("bucketLabeled");
+  }
+
+  uint8ToTypedBuffer(arrayBuffer: ?Uint8Array) {
+    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
+    return arrayBuffer != null
+      ? new TypedArrayClass(
+          arrayBuffer.buffer,
+          arrayBuffer.byteOffset,
+          arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+        )
+      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
   markAsNeeded(): void {
@@ -436,15 +442,10 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: ?Uint8Array): void {
-    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-    const data =
-      arrayBuffer != null
-        ? new TypedArrayClass(
-            arrayBuffer.buffer,
-            arrayBuffer.byteOffset,
-            arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-          )
-        : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+    const data = this.uint8ToTypedBuffer(arrayBuffer);
+    const [, channelCount] = getConstructorForElementClass(this.elementClass);
+
+    console.log("receiveData for", this.zoomedAddress);
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo =
         // Disable this conditional if you need verbose output here.

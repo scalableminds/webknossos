@@ -247,11 +247,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
 
-      const resumableUpload = await createResumableUpload(
-        datasetId,
-        datastoreUrl,
-        uploadId,
-      );
+      const resumableUpload = await createResumableUpload(datasetId, datastoreUrl, uploadId);
 
       this.setState({ uploadId, resumableUpload, datasetId, datastoreUrl });
 
@@ -363,7 +359,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     resumableUpload.pause();
     const shouldCancel = await confirmAsync({
       title:
-        "Cancelling the running upload will delete all already uploaded files on the server and cannot be undone. Are you certain to cancel the upload?",
+        "Cancelling the running upload will delete already uploaded files on the server and cannot be undone. Are you sure you want to cancel the upload?",
       okText: "Yes, Cancel the upload.",
     });
     if (!shouldCancel) {

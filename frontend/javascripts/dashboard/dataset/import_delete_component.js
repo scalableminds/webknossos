@@ -53,10 +53,8 @@ const ImportDeleteComponent = ({ datasetId, history }: Props) => {
       }),
     );
     setIsDeleting(false);
-    // Trigger dataset check to make sure the dataset list is up-to-date
-    // but also make sure that the toast can be read
-    // TODO it is no longer necessary to recheck the datasets since the delete call now removes the db from its cache
-    await Promise.all([datasetContext.checkDatasets(), Utils.sleep(2000)]);
+    // Refresh the dataset list to exclude the deleted dataset
+    await datasetContext.fetchDatasets();
     history.push("/dashboard");
   }
 

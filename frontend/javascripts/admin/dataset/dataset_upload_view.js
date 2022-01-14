@@ -172,13 +172,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const uploadableDatastores = this.props.datastores.filter(datastore => datastore.allowsUpload);
     const currentFormRef = this.formRef.current;
     if (currentFormRef != null) {
-      const selectedDataStore = currentFormRef.getFieldValue("datastore");
+      const selectedDataStoreUrl = currentFormRef.getFieldValue("datastoreUrl");
       if (
         prevProps.datastores.length === 0 &&
         uploadableDatastores.length > 0 &&
-        (selectedDataStore == null || selectedDataStore.url !== uploadableDatastores[0].url)
+        (selectedDataStoreUrl == null || selectedDataStoreUrl !== uploadableDatastores[0].url)
       ) {
-        currentFormRef.setFieldsValue({ datastore: uploadableDatastores[0] });
+        currentFormRef.setFieldsValue({ datastoreUrl: uploadableDatastores[0].url });
       }
     }
   }
@@ -186,6 +186,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   isDatasetManagerOrAdmin = () =>
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
+
+  getDatastoreForUrl(url: string): ?APIDataStore {
+    const uploadableDatastores = this.props.datastores.filter(datastore => datastore.allowsUpload);
+    return uploadableDatastores.find(ds => ds.url === url);
+  }
 
   handleSubmit = async formValues => {
     const { activeUser } = this.props;
@@ -239,13 +244,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         initialTeams: formValues.initialTeams.map(team => team.id),
       };
 
-      const datastoreUrl = formValues.datastore.url;
-
+      const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
 
       const resumableUpload = await createResumableUpload(
         datasetId,
-        formValues.datastore.url,
+        datastoreUrl,
         uploadId,
       );
 
@@ -267,7 +271,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
         this.setState({ isFinishing: true });
 
-        finishDatasetUpload(formValues.datastore.url, uploadInfo).then(
+        finishDatasetUpload(datastoreUrl, uploadInfo).then(
           async () => {
             trackAction("Upload dataset");
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
@@ -275,11 +279,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             let maybeError;
             if (this.state.needsConversion) {
               try {
+                const datastore = this.getDatastoreForUrl(datastoreUrl);
+                if (!datastore) {
+                  throw new Error("Selected datastore does not match available datastores");
+                }
+
                 await startConvertToWkwJob(
                   formValues.name,
                   activeUser.organization,
                   formValues.scale,
-                  formValues.datastore.name,
+                  datastore.name,
                 );
               } catch (error) {
                 maybeError = error;

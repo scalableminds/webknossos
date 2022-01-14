@@ -2,7 +2,6 @@
 
 import { Button } from "antd";
 import React, { useState, useEffect, useContext } from "react";
-import * as Utils from "libs/utils";
 
 import type { APIDataset, APIDatasetId } from "types/api_flow_types";
 import { getDataset, deleteDatasetOnDisk } from "admin/admin_rest_api";

@@ -234,7 +234,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const valueCounts = {};
     let maxCount = 0;
     for (let i = 0; i < cuboidData.length; i++) {
-      if (cuboidData[i] in valueCounts) {
+      if (cuboidData[i] !== 0 && cuboidData[i] in valueCounts) {
         valueCounts[cuboidData[i]] += 1;
         if (maxCount < valueCounts[cuboidData[i]]) maxCount = valueCounts[cuboidData[i]];
       } else valueCounts[cuboidData[i]] = 1;
@@ -245,7 +245,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const threshValue = (threshold * maxCount).toFixed();
     for (let i = 0; i < cuboidData.length; i++) {
       if (valueCounts[cuboidData[i]] > threshValue) {
-        if (cuboidData[i] < lowClip && cuboidData[i] !== 0) lowClip = cuboidData[i];
+        if (cuboidData[i] !== 0 && cuboidData[i] < lowClip) lowClip = cuboidData[i];
         if (cuboidData[i] > highClip) highClip = cuboidData[i];
       }
     }

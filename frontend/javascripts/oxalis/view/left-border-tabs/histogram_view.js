@@ -7,9 +7,11 @@ import * as React from "react";
 import * as _ from "lodash";
 
 import type { APIHistogramData, ElementClass } from "types/api_flow_types";
-import { OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
+import { OrthoViews, type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
+import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
-import { getPosition, getAreasFromState } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import Dimensions from "oxalis/model/dimensions";
@@ -46,7 +48,7 @@ type HistogramState = {
 
 const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
-const canvasWidth = 300;
+const canvasWidth = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
@@ -191,16 +193,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
-  getEqualizedMinMaxValues = async (layerName: string) => {
+  getCuboidForViewport = async (viewport: OrthoView, layerName: string) => {
     const state = Store.getState();
 
-    // const areas = getAreasFromState(state);
-    // const xyPlane = areas[OrthoViews.PLANE_XY];
-    // const pos = getPosition(state.flycam);
-    // const min = [xyPlane.left, xyPlane.top, pos[2]];
-    // const max = [xyPlane.right, xyPlane.bottom, pos[2] + 1];
-
-    const viewport = OrthoViews.PLANE_XY;
     const [curX, curY, curZ] = Dimensions.transDim(
       Dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
@@ -219,27 +214,50 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       viewport,
     );
 
-    const cuboidData = await api.data.getDataFor2DBoundingBox(layerName, {
-      min,
-      max,
-    });
-    console.log({ cuboidData, min, max });
-
-    return [20, 140];
+    const cuboid = await api.data.getDataFor2DBoundingBox(layerName, { min, max });
+    return cuboid;
   };
 
-  autoScaleHistogram = async (isInEditMode: boolean, layerName: string) => {
-    const [firstVal, secVal] = await this.getEqualizedMinMaxValues(layerName);
+  getClippingValues = async (layerName: string, threshold: number = 0.05) => {
+    const cuboidXY = await this.getCuboidForViewport(OrthoViews.PLANE_XY, layerName);
+    const cuboidXZ = await this.getCuboidForViewport(OrthoViews.PLANE_XZ, layerName);
+    const cuboidYZ = await this.getCuboidForViewport(OrthoViews.PLANE_YZ, layerName);
 
-    if (!isInEditMode) {
-      this.onThresholdChange([firstVal, secVal]);
-    } else {
-      this.onThresholdChange([firstVal, secVal]);
+    const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
+    const [TypedArrayClass] = getConstructorForElementClass(elementClass);
+    const cuboidData = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
 
-      this.setState({ currentMin: firstVal, currentMax: secVal });
-      this.updateMinimumDebounced(firstVal, layerName);
-      this.updateMaximumDebounced(secVal, layerName);
+    cuboidData.set(cuboidXY);
+    cuboidData.set(cuboidXZ, cuboidXY.length);
+    cuboidData.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
+
+    const valueCounts = {};
+    let maxCount = 0;
+    for (let i = 0; i < cuboidData.length; i++) {
+      if (cuboidData[i] in valueCounts) {
+        valueCounts[cuboidData[i]] += 1;
+        if (maxCount < valueCounts[cuboidData[i]]) maxCount = valueCounts[cuboidData[i]];
+      } else valueCounts[cuboidData[i]] = 1;
     }
+
+    let lowClip = 255;
+    let highClip = 1;
+    const threshValue = (threshold * maxCount).toFixed();
+    for (let i = 0; i < cuboidData.length; i++) {
+      if (valueCounts[cuboidData[i]] > threshValue) {
+        if (cuboidData[i] < lowClip && cuboidData[i] !== 0) lowClip = cuboidData[i];
+        if (cuboidData[i] > highClip) highClip = cuboidData[i];
+      }
+    }
+
+    if (lowClip > highClip)
+      return [highClip, lowClip];
+    return [lowClip, highClip];
+  };
+
+  clipHistogram = async (isInEditMode: boolean, layerName: string) => {
+    const [lowClip, highClip] = await this.getClippingValues(layerName);
+    this.onThresholdChange([lowClip, highClip]);
   };
 
   render() {
@@ -264,32 +282,34 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
             this.canvasRef = ref;
           }}
           width={canvasWidth}
-          height={canvasHeight}
-        />
-        <div style={{ display: "grid", gridTemplateColumns: "75% auto" }}>
-          <Slider
-            range
-            value={[intensityRangeMin, intensityRangeMax]}
-            min={minRange}
-            max={maxRange}
-            defaultValue={[minRange, maxRange]}
-            onChange={this.onThresholdChange}
-            onAfterChange={this.onThresholdChange}
-            step={(maxRange - minRange) / 255}
-            tipFormatter={this.tipFormatter}
-            style={{ width: 0.75*canvasWidth, margin: 0, marginTop: 6 }}
-          />
-          <Tooltip title="Cool Tip">
-            <Button
+          height={canvasHeight}/>
+        <Tooltip title="Automatically clip the histogram to enhance contrast.">
+          <Button
+            id="mine"
             size="small"
             type="info"
-            style={{ width: 0.27*canvasWidth}}
-            onClick={() => this.autoScaleHistogram(isInEditMode, layerName)}
-            >
-              Auto Scale
-            </Button>
-          </Tooltip>
-        </div>
+            style={{
+              width: 40,
+              top: 40,
+              right: 20,
+              position: "absolute",
+            }}
+            onClick={() => this.clipHistogram(isInEditMode, layerName)}>
+            Clip
+          </Button>
+        </Tooltip>
+        <Slider
+          range
+          value={[intensityRangeMin, intensityRangeMax]}
+          min={minRange}
+          max={maxRange}
+          defaultValue={[minRange, maxRange]}
+          onChange={this.onThresholdChange}
+          onAfterChange={this.onThresholdChange}
+          step={(maxRange - minRange) / 255}
+          tipFormatter={this.tipFormatter}
+          style={{ width: canvasWidth, margin: 0, marginTop: 6 }}
+        />
         {isInEditMode ? (
           <Row type="flex" align="middle" style={{ marginTop: 6 }}>
             <Col span={4}>

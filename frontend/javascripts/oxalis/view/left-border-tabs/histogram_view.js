@@ -257,7 +257,14 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
 
   clipHistogram = async (isInEditMode: boolean, layerName: string) => {
     const [lowClip, highClip] = await this.getClippingValues(layerName);
-    this.onThresholdChange([lowClip, highClip]);
+    if (!isInEditMode) {
+      this.onThresholdChange([lowClip, highClip]);
+    } else {
+      this.onThresholdChange([lowClip, highClip]);
+      this.setState({ currentMin: lowClip, currentMax: highClip });
+      this.updateMinimumDebounced(lowClip, layerName);
+      this.updateMaximumDebounced(highClip, layerName);
+    }
   };
 
   render() {
@@ -283,7 +290,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           }}
           width={canvasWidth}
           height={canvasHeight}/>
-        <Tooltip title="Automatically clip the histogram to enhance contrast.">
+        <Tooltip title="Clip the histogram to enhance contrast. In Edit Mode this also adjusts the histogram's range.">
           <Button
             id="mine"
             size="small"

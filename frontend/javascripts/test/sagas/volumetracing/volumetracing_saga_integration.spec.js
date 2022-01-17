@@ -694,3 +694,81 @@ test.serial.only("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
   console.log("incorrectIndex", incorrectIndex);
   t.is(_.max(data), 0, "All the data should be 0 (== erased).");
 });
+
+test.serial("Provoke undo bug (I)", async t => {
+  const oldCellId = 11;
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    oldCellId,
+    500,
+  );
+
+  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
+  Store.dispatch(setZoomStepAction(4));
+  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
+
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+
+  const paintCenter = [0, 0, 0];
+  const brushSize = 10;
+  const newCellId = 2;
+
+  // for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+  //   console.log("request at zoomStep", zoomStep);
+  //   t.is(
+  //     await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
+  //     oldCellId,
+  //     `Center should have old value at zoomstep=${zoomStep}`,
+  //   );
+  // }
+
+  // await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], 2)
+
+  const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
+
+  console.log("call getOrCreateBucket");
+  // const problematicBucket = cube.getOrCreateBucket([0, 0, 0, 2]).getOrCreateData();
+
+  Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+  Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
+
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 0]));
+  Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+
+  const currentPaintCenter = [brushSize / 2, 0, 0];
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+
+  console.log("Save");
+  // await t.context.api.tracing.save();
+
+  console.log("Load");
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    const readValue = await t.context.api.data.getDataValue(
+      volumeTracingLayerName,
+      [0, 0, 0],
+      zoomStep,
+    );
+    console.log("request at zoomStep", zoomStep, "readValue", readValue);
+    t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
+  }
+
+  console.log("Undo");
+  await dispatchUndoAsync(Store.dispatch);
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    const readValue = await t.context.api.data.getDataValue(
+      volumeTracingLayerName,
+      [0, 0, 0],
+      zoomStep,
+    );
+    console.log("request at zoomStep", zoomStep, "readValue", readValue);
+    t.is(readValue, oldCellId, `After undo, voxel should have old value at zoomstep=${zoomStep}`);
+  }
+});

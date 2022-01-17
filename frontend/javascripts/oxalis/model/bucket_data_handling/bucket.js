@@ -296,9 +296,14 @@ export class DataBucket {
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
       const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
-      if (triggeredBucketFetch) {
+      if (triggeredBucketFetch || this.isUnsynced()) {
+        console.log(
+          ">>>>>>> triggeredBucketFetch is true, which is why maybeBucketLoadedPromise is set",
+          this.zoomedAddress,
+        );
         this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
-          this.once("bucketLoaded", data => {
+          this.once("unmergedBucketDataLoaded", data => {
+            console.log("bucketLoaded event");
             // Once the bucket was loaded, maybeBucketLoadedPromise can be null'ed
             this.maybeBucketLoadedPromise = null;
             resolve(data);
@@ -363,8 +368,10 @@ export class DataBucket {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
-        // todo: is it problematic that the same bucket can be added twice to
-        // the temporal_bucket_manager if getOrCreateData is called twice?
+        // todo: triggeredBucketFetch should not be used ideally, since it's not guaranteed
+        // that the first caller of getOrCreateData does something reasonable with it.
+        // the second caller will receive triggeredBucketFetch == false, even though
+        // the bucket might be not fetched. use isUnsynced() instead?
         triggeredBucketFetch = true;
         this.temporalBucketManager.addBucket(this);
       }
@@ -465,6 +472,11 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         this.state = BucketStateEnum.LOADED;
+
+        const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+        const dataClone = new TypedArrayClass(data);
+
+        this.trigger("unmergedBucketDataLoaded", dataClone);
         if (this.dirty) {
           this.merge(data);
         } else {

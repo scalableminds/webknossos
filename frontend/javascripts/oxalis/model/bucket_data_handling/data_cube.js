@@ -527,6 +527,8 @@ class DataCube {
       // Add the bucket to the current volume undo batch, if it isn't already part of it.
       currentBucket.markAndAddBucketForUndo();
       // Mark the initial voxel.
+      // Todo: This should probably act on a LabeledVoxelMap? Or is it alright, since
+      // the operation awaits the bucket, anyway?
       bucketData[initialVoxelIndex] = cellId;
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
@@ -643,15 +645,20 @@ class DataCube {
     };
   }
 
-  setBucketData(zoomedAddress: Vector4, data: BucketDataArray) {
+  setBucketData(
+    zoomedAddress: Vector4,
+    data: BucketDataArray,
+    newPendingOperations: Array<(BucketDataArray) => void>,
+  ) {
     const bucket = this.getOrCreateBucket(zoomedAddress);
     if (bucket.type === "null") {
       return;
     }
     bucket.setData(data);
-    bucket.logMaybe("Clear pending operations");
-    // todo: these operations should probably be attached to the undo stack
-    bucket.pendingOperations = [];
+
+    bucket.logMaybe("Setting pending operations to", newPendingOperations);
+    bucket.pendingOperations = newPendingOperations;
+
     this.pushQueue.insert(bucket);
   }
 

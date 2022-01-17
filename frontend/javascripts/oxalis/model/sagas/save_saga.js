@@ -130,9 +130,10 @@ const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
 
 type UndoBucket = {
   zoomedBucketAddress: Vector4,
-  data: Uint8Array,
-  backendData?: Uint8Array,
+  data: Uint8Array, // it's Uint8Array because it's compressed
+  backendData?: Uint8Array, // it's Uint8Array because it's compressed
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
 };
 type VolumeUndoBuckets = Array<UndoBucket>;
 type VolumeAnnotationBatch = {
@@ -278,6 +279,7 @@ export function* collectUndoStates(): Saga<void> {
           zoomedBucketAddress,
           bucketData,
           maybeBucketLoadedPromise,
+          pendingOperations,
           tracingId,
         } = addBucketToUndoAction;
         pendingCompressions.push(
@@ -286,6 +288,7 @@ export function* collectUndoStates(): Saga<void> {
             zoomedBucketAddress,
             bucketData,
             maybeBucketLoadedPromise,
+            pendingOperations,
             volumeInfoById[tracingId].currentVolumeUndoBuckets,
           ),
         );
@@ -421,6 +424,7 @@ function* compressBucketAndAddToList(
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
   undoBucketList: VolumeUndoBuckets,
 ): Saga<void> {
   // The given bucket data is compressed, wrapped into a UndoBucket instance
@@ -433,6 +437,7 @@ function* compressBucketAndAddToList(
       zoomedBucketAddress,
       data: compressedBucketData,
       maybeBucketLoadedPromise,
+      pendingOperations: pendingOperations.slice(),
     };
     if (maybeBucketLoadedPromise != null) {
       maybeBucketLoadedPromise.then(async backendBucketData => {
@@ -534,20 +539,44 @@ function* applyStateOfStack(
 function mergeDataWithBackendDataInPlace(
   originalData: BucketDataArray,
   backendData: BucketDataArray,
+  pendingOperations: Array<(BucketDataArray) => void>,
+  log: boolean,
 ) {
   if (originalData.length !== backendData.length) {
     throw new Error("Cannot merge data arrays with differing lengths");
   }
-  console.log(
-    "mergeDataWithBackendDataInPlace input:",
-    originalData.slice(0, 10),
-    backendData.slice(0, 10),
-  );
-  // todo: don't use || because this won't work for erasure
-  for (let i = 0; i < originalData.length; ++i) {
-    originalData[i] = originalData[i] || backendData[i];
+
+  if (log)
+    console.log(
+      "mergeDataWithBackendDataInPlace inputs. originalData:",
+      originalData.slice(0, 10),
+      "backendData: ",
+      backendData.slice(0, 10),
+    );
+
+  const useNew = true;
+
+  if (!useNew) {
+    // old
+    // todo: don't use || because this won't work for erasure
+    for (let i = 0; i < originalData.length; ++i) {
+      originalData[i] = originalData[i] || backendData[i];
+    }
+  } else {
+    // Transfer backend to originalData
+    for (let i = 0; i < originalData.length; ++i) {
+      originalData[i] = backendData[i];
+    }
+
+    if (log) {
+      console.log("apply pendingOperations", pendingOperations.length);
+    }
+    for (const op of pendingOperations) {
+      op(originalData);
+    }
   }
-  console.log("mergeDataWithBackendDataInPlace result:", originalData.slice(0, 10));
+
+  if (log) console.log("mergeDataWithBackendDataInPlace result:", originalData.slice(0, 10));
 }
 
 function* applyAndGetRevertingVolumeBatch(
@@ -578,21 +607,36 @@ function* applyAndGetRevertingVolumeBatch(
     // Prepare a snapshot of the bucket's current data so that it can be
     // saved in an VolumeUndoState.
     let bucketData = null;
+    let currentPendingOperations = bucket.pendingOperations.slice();
     if (bucket.hasData()) {
       // The bucket's data is currently available.
       bucketData = bucket.getData();
       if (compressedBackendData != null) {
+        // Old:
+        // // If the backend data for the bucket has been fetched in the meantime,
+        // // we can first merge the data with the current data and then add this to the undo batch.
+        // const decompressedBackendData = yield* call(
+        //   decompressToTypedArray,
+        //   bucket,
+        //   compressedBackendData,
+        // );
+        // if (decompressedBackendData) {
+        //   const log = zoomedBucketAddress.join(",") === [93, 0, 0, 0].join(",");
+        //   if (log) console.log("mergeDataWithBackendDataInPlace I", zoomedBucketAddress);
+        //   mergeDataWithBackendDataInPlace(
+        //     bucketData,
+        //     decompressedBackendData,
+        //     currentPendingOperations,
+        //     log,
+        //   );
+        //   currentPendingOperations = [];
+        // }
+
+        // New:
         // If the backend data for the bucket has been fetched in the meantime,
-        // we can first merge the data with the current data and then add this to the undo batch.
-        const decompressedBackendData = yield* call(
-          decompressToTypedArray,
-          bucket,
-          compressedBackendData,
-        );
-        if (decompressedBackendData) {
-          console.log("mergeDataWithBackendDataInPlace I", zoomedBucketAddress);
-          mergeDataWithBackendDataInPlace(bucketData, decompressedBackendData);
-        }
+        // the previous getData() call already returned the newest (merged) data.
+        // There should be no need to await the data from the backend.
+        bucket.logMaybe("########## New: Skipping merge action");
         maybeBucketLoadedPromise = null;
       }
     } else {
@@ -611,11 +655,13 @@ function* applyAndGetRevertingVolumeBatch(
       zoomedBucketAddress,
       bucketData,
       maybeBucketLoadedPromise,
+      currentPendingOperations,
       allCompressedBucketsOfCurrentState,
     );
 
     // Decompress the bucket data which should be applied.
     let decompressedBucketData = null;
+    let newPendingOperations = volumeUndoBucket.pendingOperations;
     if (compressedBackendData != null) {
       let decompressedBackendData;
       [decompressedBucketData, decompressedBackendData] = yield _all([
@@ -623,22 +669,30 @@ function* applyAndGetRevertingVolumeBatch(
         _call(decompressToTypedArray, bucket, compressedBackendData),
       ]);
       if (decompressedBucketData && decompressedBackendData) {
-        console.log("mergeDataWithBackendDataInPlace II", zoomedBucketAddress);
-        mergeDataWithBackendDataInPlace(decompressedBucketData, decompressedBackendData);
+        const log = zoomedBucketAddress.join(",") === [93, 0, 0, 0].join(",");
+
+        if (log) console.log("mergeDataWithBackendDataInPlace II", zoomedBucketAddress);
+        mergeDataWithBackendDataInPlace(
+          decompressedBucketData,
+          decompressedBackendData,
+          volumeUndoBucket.pendingOperations,
+          log,
+        );
+        newPendingOperations = [];
       }
     } else {
       decompressedBucketData = yield* call(decompressToTypedArray, bucket, compressedBucketData);
     }
     if (decompressedBucketData) {
       // Set the new bucket data to add the bucket directly to the pushqueue.
-      cube.setBucketData(zoomedBucketAddress, decompressedBucketData);
+      cube.setBucketData(zoomedBucketAddress, decompressedBucketData, newPendingOperations);
     }
   }
-  // The SegmentMap is immutable. So, no need to copy.
 
   const activeVolumeTracing = yield* select(state =>
     getVolumeTracingById(state.tracing, volumeAnnotationBatch.tracingId),
   );
+  // The SegmentMap is immutable. So, no need to copy.
   const currentSegments = activeVolumeTracing.segments;
 
   yield* put(setSegmentsActions(volumeAnnotationBatch.segments, volumeAnnotationBatch.tracingId));

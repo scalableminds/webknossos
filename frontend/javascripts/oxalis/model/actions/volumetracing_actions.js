@@ -50,6 +50,7 @@ export type AddBucketToUndoAction = {
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
   tracingId: string,
 };
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
@@ -220,12 +221,14 @@ export const addBucketToUndoAction = (
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
   tracingId: string,
 ): AddBucketToUndoAction => ({
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress,
   bucketData,
   maybeBucketLoadedPromise,
+  pendingOperations: pendingOperations.slice(),
   tracingId,
 });
 

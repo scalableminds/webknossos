@@ -189,7 +189,6 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
     if (isBrushTool(activeTool)) {
-      console.log("labelWithVoxelBuffer2D");
       yield* call(
         labelWithVoxelBuffer2D,
         currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
@@ -405,7 +404,7 @@ function* labelWithVoxelBuffer2D(
   // thirdDimensionOfSlice needs to be provided in global coordinates
   const thirdDimensionOfSlice =
     topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-  console.log("applyLabeledVoxelMapToAllMissingResolutions");
+
   applyLabeledVoxelMapToAllMissingResolutions(
     currentLabeledVoxelMap,
     labeledZoomStep,

@@ -118,7 +118,7 @@ export class DataBucket {
   visualizedMesh: ?Object;
   visualizationColor: number;
   dirtyCount: number = 0;
-  pendingOperations: Array<() => void> = [];
+  pendingOperations: Array<(BucketDataArray) => void> = [];
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -296,7 +296,7 @@ export class DataBucket {
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
       const { dataClone } = this.getCopyOfData();
-      if (this.isUnsynced()) {
+      if (this.isUnsynced() && this.maybeBucketLoadedPromise == null) {
         this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
           this.once("unmergedBucketDataLoaded", data => {
             this.logMaybe("unmergedBucketDataLoaded event");
@@ -314,6 +314,7 @@ export class DataBucket {
           this.zoomedAddress,
           dataClone,
           this.maybeBucketLoadedPromise,
+          this.pendingOperations,
           this.getTracingId(),
         ),
       );
@@ -380,12 +381,12 @@ export class DataBucket {
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
   ) {
-    const out = new Float32Array(3);
     const { data } = this.getOrCreateData();
 
     if (this.isUnsynced()) {
-      this.pendingOperations.push(() =>
-        this.applyVoxelMap(
+      this.pendingOperations.push(data =>
+        this._applyVoxelMapInPlace(
+          data,
           voxelMap,
           cellId,
           get3DAddress,
@@ -397,6 +398,32 @@ export class DataBucket {
       );
     }
 
+    this._applyVoxelMapInPlace(
+      data,
+      voxelMap,
+      cellId,
+      get3DAddress,
+      sliceCount,
+      thirdDimensionIndex,
+      shouldOverwrite,
+      overwritableValue,
+    );
+  }
+
+  _applyVoxelMapInPlace(
+    data: BucketDataArray,
+    voxelMap: Uint8Array,
+    cellId: number,
+    get3DAddress: (number, number, Vector3 | Float32Array) => void,
+    sliceCount: number,
+    thirdDimensionIndex: 0 | 1 | 2,
+    // if shouldOverwrite is false, a voxel is only overwritten if
+    // its old value is equal to overwritableValue.
+    shouldOverwrite: boolean = true,
+    overwritableValue: number = 0,
+  ) {
+    this.logMaybe("_applyVoxelMapInPlace", { cellId, shouldOverwrite, overwritableValue });
+    const out = new Float32Array(3);
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
         if (voxelMap[firstDim * Constants.BUCKET_WIDTH + secondDim] === 1) {
@@ -542,24 +569,19 @@ export class DataBucket {
 
     if (this.pendingOperations.length > 0) {
       this.logMaybe("merge: new with pendingOperations");
-      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-        // Only overwrite with the new value if the old value was 0
-        this.data = fetchedData;
-      }
-
       for (const op of this.pendingOperations) {
-        op();
+        op(fetchedData);
       }
+      this.data = fetchedData;
       this.pendingOperations = [];
     } else {
-      this.logMaybe("merge: old approach");
-      // todo: this is a dummy heuristic. ideally everything should be handled
-      // via the pendingOperations.
-
-      for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-        // Only overwrite with the new value if the old value was 0
-        this.data[i] = this.data[i] || fetchedData[i];
-      }
+      // this.logMaybe("merge: old approach");
+      // // todo: this is a dummy heuristic. ideally everything should be handled
+      // // via the pendingOperations.
+      // for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
+      //   // Only overwrite with the new value if the old value was 0
+      //   this.data[i] = this.data[i] || fetchedData[i];
+      // }
     }
   }
 

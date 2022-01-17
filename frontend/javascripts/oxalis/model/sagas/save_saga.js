@@ -538,11 +538,16 @@ function mergeDataWithBackendDataInPlace(
   if (originalData.length !== backendData.length) {
     throw new Error("Cannot merge data arrays with differing lengths");
   }
+  console.log(
+    "mergeDataWithBackendDataInPlace input:",
+    originalData.slice(0, 10),
+    backendData.slice(0, 10),
+  );
   // todo: don't use || because this won't work for erasure
-  console.log("mergeDataWithBackendDataInPlace", originalData, backendData);
   for (let i = 0; i < originalData.length; ++i) {
     originalData[i] = originalData[i] || backendData[i];
   }
+  console.log("mergeDataWithBackendDataInPlace result:", originalData.slice(0, 10));
 }
 
 function* applyAndGetRevertingVolumeBatch(
@@ -568,6 +573,7 @@ function* applyAndGetRevertingVolumeBatch(
     if (bucket.type === "null") {
       continue;
     }
+    bucket.logMaybe("applyAndGetRevertingVolumeBatch");
 
     // Prepare a snapshot of the bucket's current data so that it can be
     // saved in an VolumeUndoState.
@@ -584,6 +590,7 @@ function* applyAndGetRevertingVolumeBatch(
           compressedBackendData,
         );
         if (decompressedBackendData) {
+          console.log("mergeDataWithBackendDataInPlace I", zoomedBucketAddress);
           mergeDataWithBackendDataInPlace(bucketData, decompressedBackendData);
         }
         maybeBucketLoadedPromise = null;
@@ -616,6 +623,7 @@ function* applyAndGetRevertingVolumeBatch(
         _call(decompressToTypedArray, bucket, compressedBackendData),
       ]);
       if (decompressedBucketData && decompressedBackendData) {
+        console.log("mergeDataWithBackendDataInPlace II", zoomedBucketAddress);
         mergeDataWithBackendDataInPlace(decompressedBucketData, decompressedBackendData);
       }
     } else {

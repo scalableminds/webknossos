@@ -649,6 +649,9 @@ class DataCube {
       return;
     }
     bucket.setData(data);
+    bucket.logMaybe("Clear pending operations");
+    // todo: these operations should probably be attached to the undo stack
+    bucket.pendingOperations = [];
     this.pushQueue.insert(bucket);
   }
 

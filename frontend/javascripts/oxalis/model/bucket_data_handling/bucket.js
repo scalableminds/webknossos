@@ -299,14 +299,13 @@ export class DataBucket {
       if (this.isUnsynced()) {
         this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
           this.once("unmergedBucketDataLoaded", data => {
-            console.log("bucketLoaded event");
+            this.logMaybe("unmergedBucketDataLoaded event");
             // Once the bucket was loaded, maybeBucketLoadedPromise can be null'ed
             this.maybeBucketLoadedPromise = null;
             resolve(data);
           });
         });
       }
-      console.log("dataClone", dataClone);
       Store.dispatch(
         // Always use the current state of this.maybeBucketLoadedPromise, since
         // this bucket could be added to multiple undo batches while it's fetched. All entries
@@ -443,7 +442,7 @@ export class DataBucket {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [, channelCount] = getConstructorForElementClass(this.elementClass);
 
-    console.log("receiveData for", this.zoomedAddress);
+    this.logMaybe("receiveData for", this.zoomedAddress);
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo =
         // Disable this conditional if you need verbose output here.
@@ -530,7 +529,7 @@ export class DataBucket {
   }
 
   logMaybe = (...args) => {
-    if (this.zoomedAddress.join(",") === [1, 0, 0, 0].join(",")) {
+    if (this.zoomedAddress.join(",") === [0, 0, 0, 0].join(",")) {
       debugger;
       console.log(...args);
     }
@@ -542,6 +541,7 @@ export class DataBucket {
     }
 
     if (this.pendingOperations.length > 0) {
+      this.logMaybe("merge: new with pendingOperations");
       for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
         // Only overwrite with the new value if the old value was 0
         this.data = fetchedData;
@@ -552,6 +552,7 @@ export class DataBucket {
       }
       this.pendingOperations = [];
     } else {
+      this.logMaybe("merge: old approach");
       // todo: this is a dummy heuristic. ideally everything should be handled
       // via the pendingOperations.
 

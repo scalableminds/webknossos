@@ -10,7 +10,7 @@ import type { APIHistogramData, ElementClass } from "types/api_flow_types";
 import { OrthoViews, type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
@@ -214,7 +214,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       viewport,
     );
 
-    const cuboid = await api.data.getDataFor2DBoundingBox(layerName, { min, max });
+    const resolutionIndex = getRequestLogZoomStep(state);
+    const cuboid = await api.data.getDataFor2DBoundingBox(layerName, { min, max }, resolutionIndex);
     return cuboid;
   };
 
@@ -250,8 +251,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       }
     }
 
-    if (lowClip > highClip)
-      return [highClip, lowClip];
+    if (lowClip > highClip) return [highClip, lowClip];
     return [lowClip, highClip];
   };
 
@@ -289,7 +289,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
             this.canvasRef = ref;
           }}
           width={canvasWidth}
-          height={canvasHeight}/>
+          height={canvasHeight}
+        />
         <Tooltip title="Clip the histogram to enhance contrast. In Edit Mode this also adjusts the histogram's range.">
           <Button
             id="mine"
@@ -301,7 +302,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               right: 20,
               position: "absolute",
             }}
-            onClick={() => this.clipHistogram(isInEditMode, layerName)}>
+            onClick={() => this.clipHistogram(isInEditMode, layerName)}
+          >
             Clip
           </Button>
         </Tooltip>

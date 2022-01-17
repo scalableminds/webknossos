@@ -9,6 +9,8 @@ import { stringToAntdColorPreset } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 import { type Vector3 } from "oxalis/constants";
 import type { APIConnectomeFile } from "types/api_flow_types";
+import Store from "oxalis/store";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 
 type BaseSynapse = {| id: number, position: Vector3, type: string |};
 type SrcSynapse = {| ...BaseSynapse, src: number, dst: void |};
@@ -144,6 +146,10 @@ class SynapseTree extends React.Component<Props, State> {
     this.setState({ activeSegmentDropdownKey: null });
   };
 
+  setHoveredSegmentId(agglomerateId: ?number) {
+    Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", agglomerateId));
+  }
+
   createSegmentDropdownMenu = (agglomerateId: number) => (
     <Menu>
       <Menu.Item
@@ -161,21 +167,37 @@ class SynapseTree extends React.Component<Props, State> {
     if (data.type === "none") return node.title;
 
     if (data.type === "segment") {
+      let title;
       // Do not show a dropdown menu for top-level segments
-      if (data.level === 0) return node.title;
+      if (data.level === 0) {
+        title = node.title;
+      } else {
+        title = (
+          <Dropdown
+            // Lazily create the dropdown menu and destroy it again, afterwards
+            overlay={() => this.createSegmentDropdownMenu(data.id)}
+            autoDestroy
+            placement="bottomCenter"
+            visible={this.state.activeSegmentDropdownKey === key}
+            onVisibleChange={isVisible => this.handleSegmentDropdownMenuVisibility(key, isVisible)}
+            trigger={contextMenuTrigger}
+          >
+            <span>{node.title}</span>
+          </Dropdown>
+        );
+      }
 
       return (
-        <Dropdown
-          // Lazily create the dropdown menu and destroy it again, afterwards
-          overlay={() => this.createSegmentDropdownMenu(data.id)}
-          autoDestroy
-          placement="bottomCenter"
-          visible={this.state.activeSegmentDropdownKey === key}
-          onVisibleChange={isVisible => this.handleSegmentDropdownMenuVisibility(key, isVisible)}
-          trigger={contextMenuTrigger}
+        <span
+          onMouseEnter={() => {
+            this.setHoveredSegmentId(data.id);
+          }}
+          onMouseLeave={() => {
+            this.setHoveredSegmentId(null);
+          }}
         >
-          <span>{node.title}</span>
-        </Dropdown>
+          {title}
+        </span>
       );
     }
 

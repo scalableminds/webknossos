@@ -110,10 +110,8 @@ const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<
   return unique(
     Object.values(agglomerates).flatMap(
       // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
-      ({ in: inSynapses = [], out: outSynapses = [] }: Agglomerate) => [
-        ...inSynapses,
-        ...outSynapses,
-      ],
+      ({ in: inSynapses = [], out: outSynapses = [] }: Agglomerate) =>
+        inSynapses.concat(outSynapses),
     ),
   ).filter(synapseId => synapses[synapseId]);
 };
@@ -134,7 +132,7 @@ const getAgglomerateIdsFromConnectomeData = (connectomeData: ConnectomeData): Ar
       return synapse.src != null ? synapse.src : synapse.dst;
     },
   );
-  return unique([...topLevelAgglomerateIds, ...partnerAgglomerateIds]);
+  return unique(topLevelAgglomerateIds.concat(partnerAgglomerateIds));
 };
 
 const getTreeNameForSynapse = (synapseId: number): string => `synapse-${synapseId}`;
@@ -271,6 +269,12 @@ class ConnectomeView extends React.Component<Props, State> {
     const { segmentationLayer } = this.props;
     if (segmentationLayer == null) return;
 
+    if (this.skeletonId != null) {
+      throw new Error(
+        "Did not expect skeletonId to exist when initializing a new skeleton. Call removeSkeleton before to properly clean up.",
+      );
+    }
+
     Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
     this.skeletonId = getSceneController().addSkeleton(
       state =>
@@ -364,7 +368,10 @@ class ConnectomeView extends React.Component<Props, State> {
       getSynapsePositions(...fetchProperties, allSynapseIds),
       getSynapseTypes(...fetchProperties, allSynapseIds),
     ]);
-    // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file
+    // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file.
+    // Currently, the used jhdf5 library seems to have a bug which makes it impossible to read
+    // hdf5 array attributes which is why this information is read from a json file, instead.
+    // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
     const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
 
     // $FlowIgnore[incompatible-exact] Flow doesn't allow to use exact objects instead of inexact ones.

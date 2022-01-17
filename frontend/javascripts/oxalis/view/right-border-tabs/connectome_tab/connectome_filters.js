@@ -11,9 +11,11 @@ import {
 } from "oxalis/view/right-border-tabs/connectome_tab/synapse_tree";
 import ButtonComponent from "oxalis/view/components/button_component";
 
+type SynapseDirection = "in" | "out";
+
 type ConnectomeFiltersType = {
   synapseTypes: Array<string>,
-  synapseDirections: Array<string>,
+  synapseDirections: Array<SynapseDirection>,
 };
 
 const getFilteredConnectomeData = (
@@ -113,7 +115,7 @@ class ConnectomeFilters extends React.Component<Props, State> {
     this.props.onUpdateFilteredConnectomeData(filteredConnectomeData);
   }
 
-  onChangeSynapseDirectionFilter = (synapseDirections: Array<string>) => {
+  onChangeSynapseDirectionFilter = (synapseDirections: Array<SynapseDirection>) => {
     this.setState(oldState => ({
       filters: {
         ...oldState.filters,
@@ -173,7 +175,8 @@ class ConnectomeFilters extends React.Component<Props, State> {
     const isSynapseTypeFilterAvailable = availableSynapseTypes.length;
 
     const isSynapseTypeFiltered = filters.synapseTypes.length !== availableSynapseTypes.length;
-    const isSynapseDirectionFiltered = filters.synapseDirections.length !== 2;
+    const isSynapseDirectionFiltered =
+      filters.synapseDirections.length !== defaultFilters.synapseDirections.length;
     const isAnyFilterActive = isSynapseTypeFiltered || isSynapseDirectionFiltered;
 
     return (

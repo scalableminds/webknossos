@@ -250,8 +250,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       }
     }
 
-    if (lowClip > highClip)
-      return [highClip, lowClip];
+    if (lowClip > highClip) return [highClip, lowClip];
     return [lowClip, highClip];
   };
 
@@ -289,7 +288,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
             this.canvasRef = ref;
           }}
           width={canvasWidth}
-          height={canvasHeight}/>
+          height={canvasHeight}
+        />
         <Tooltip title="Clip the histogram to enhance contrast. In Edit Mode this also adjusts the histogram's range.">
           <Button
             id="mine"
@@ -301,7 +301,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               right: 20,
               position: "absolute",
             }}
-            onClick={() => this.clipHistogram(isInEditMode, layerName)}>
+            onClick={() => this.clipHistogram(isInEditMode, layerName)}
+          >
             Clip
           </Button>
         </Tooltip>

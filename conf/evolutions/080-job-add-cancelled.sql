@@ -1,0 +1,7 @@
+START TRANSACTION;
+
+ALTER TYPE webknossos.JOB_STATE ADD VALUE 'CANCELELD';
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 80;
+
+COMMIT TRANSACTION;

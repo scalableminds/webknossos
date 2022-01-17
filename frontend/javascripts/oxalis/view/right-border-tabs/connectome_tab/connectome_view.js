@@ -6,11 +6,8 @@ import React from "react";
 import _ from "lodash";
 
 import type { APISegmentationLayer, APIDataset, APIConnectomeFile } from "types/api_flow_types";
-import { diffArrays, unique } from "libs/utils";
-import {
-  findTreeByName,
-  getTreeNameForAgglomerateSkeleton,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { diffArrays, unique, map3 } from "libs/utils";
+import { getTreeNameForAgglomerateSkeleton } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import {
   getSynapsesOfAgglomerates,
@@ -146,8 +143,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   treeId: synapseId,
   nodes: new DiffableMap(),
   timestamp: Date.now(),
-  // $FlowIssue[invalid-tuple-arity] Flow has troubles with understanding that mapping a tuple, returns another tuple
-  color: stringToAntdColorPresetRgb(synapseType).map(el => el / 255),
+  color: map3(el => el / 255, stringToAntdColorPresetRgb(synapseType)),
   branchPoints: [],
   edges: new EdgeCollection(),
   comments: [],
@@ -463,11 +459,14 @@ class ConnectomeView extends React.Component<Props, State> {
 
     if (deletedSynapseIds.length > 0) {
       const treeIdsToDelete = [];
-      deletedSynapseIds.forEach(synapseId =>
-        findTreeByName(trees, getTreeNameForSynapse(synapseId)).map(tree =>
-          treeIdsToDelete.push(tree.treeId),
-        ),
-      );
+      const treeNameToTree = _.keyBy(trees, "name");
+      deletedSynapseIds.forEach(synapseId => {
+        const tree = treeNameToTree[getTreeNameForSynapse(synapseId)];
+        if (tree != null) {
+          treeIdsToDelete.push(tree.treeId);
+        }
+      });
+
       if (treeIdsToDelete.length) {
         Store.dispatch(deleteConnectomeTreesAction(treeIdsToDelete, layerName));
       }
@@ -574,15 +573,17 @@ class ConnectomeView extends React.Component<Props, State> {
     if (skeleton == null) return;
 
     const { trees } = skeleton;
+    const treeNameToTree = _.keyBy(trees, "name");
 
     if (hiddenAgglomerateIds.length) {
       const mappingName = getMappingNameFromConnectomeDataEnforced(prevConnectomeData);
       for (const agglomerateId of hiddenAgglomerateIds) {
         // Hide agglomerates that are no longer visible
         const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-        findTreeByName(trees, treeName).map(tree =>
-          Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], false, layerName)),
-        );
+        const tree = treeNameToTree[treeName];
+        if (tree != null) {
+          Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], false, layerName));
+        }
       }
     }
 
@@ -591,17 +592,16 @@ class ConnectomeView extends React.Component<Props, State> {
       for (const agglomerateId of addedAgglomerateIds) {
         // Show agglomerates that were made visible
         const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-        const maybeTree = findTreeByName(trees, treeName);
+        const tree = treeNameToTree[treeName];
 
         // If the tree was already loaded, make it visible, otherwise load it
-        maybeTree.cata({
-          Just: tree =>
-            Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], true, layerName)),
-          Nothing: () =>
-            Store.dispatch(
-              loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
-            ),
-        });
+        if (tree != null) {
+          Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], true, layerName));
+        } else {
+          Store.dispatch(
+            loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
+          );
+        }
       }
     }
   }
@@ -718,7 +718,7 @@ class ConnectomeView extends React.Component<Props, State> {
             <InputComponent
               value={activeAgglomerateIdString}
               onPressEnter={this.handleChangeActiveSegment}
-              placeholder="Segment ID 1[, Segment ID 2, ...]"
+              placeholder="Enter Segment ID(s)"
               style={{ width: 220 }}
               disabled={disabled}
             />
@@ -749,7 +749,7 @@ class ConnectomeView extends React.Component<Props, State> {
       return (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No segment selected. Use the input field above to enter a segment ID."
+          description="No segment selected. Use the input field above to enter segment IDs."
         />
       );
     } else {
@@ -769,7 +769,6 @@ class ConnectomeView extends React.Component<Props, State> {
   render() {
     const { segmentationLayer } = this.props;
 
-    // Render the tab in the background to avoid rebuilding the tree when switching tabs.
     return (
       <div id={connectomeTabId} className="padded-tab-content">
         {segmentationLayer == null ? (

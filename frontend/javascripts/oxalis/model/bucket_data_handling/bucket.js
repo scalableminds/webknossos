@@ -277,11 +277,11 @@ export class DataBucket {
     return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
   };
 
-  getCopyOfData(): { dataClone: BucketDataArray, triggeredBucketFetch: boolean } {
-    const { data: bucketData, triggeredBucketFetch } = this.getOrCreateData();
+  getCopyOfData(): { dataClone: BucketDataArray } {
+    const { data: bucketData } = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
     const dataClone = new TypedArrayClass(bucketData);
-    return { dataClone, triggeredBucketFetch };
+    return { dataClone };
   }
 
   label(labelFunc: BucketDataArray => void) {
@@ -295,12 +295,8 @@ export class DataBucket {
     this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
-      const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
-      if (triggeredBucketFetch || this.isUnsynced()) {
-        console.log(
-          ">>>>>>> triggeredBucketFetch is true, which is why maybeBucketLoadedPromise is set",
-          this.zoomedAddress,
-        );
+      const { dataClone } = this.getCopyOfData();
+      if (this.isUnsynced()) {
         this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
           this.once("unmergedBucketDataLoaded", data => {
             console.log("bucketLoaded event");
@@ -310,6 +306,7 @@ export class DataBucket {
           });
         });
       }
+      console.log("dataClone", dataClone);
       Store.dispatch(
         // Always use the current state of this.maybeBucketLoadedPromise, since
         // this bucket could be added to multiple undo batches while it's fetched. All entries
@@ -362,21 +359,15 @@ export class DataBucket {
     this.accessed = false;
   }
 
-  getOrCreateData(): { data: BucketDataArray, triggeredBucketFetch: boolean } {
-    let triggeredBucketFetch = false;
+  getOrCreateData(): { data: BucketDataArray } {
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
-        // todo: triggeredBucketFetch should not be used ideally, since it's not guaranteed
-        // that the first caller of getOrCreateData does something reasonable with it.
-        // the second caller will receive triggeredBucketFetch == false, even though
-        // the bucket might be not fetched. use isUnsynced() instead?
-        triggeredBucketFetch = true;
         this.temporalBucketManager.addBucket(this);
       }
     }
-    return { data: this.getData(), triggeredBucketFetch };
+    return { data: this.getData() };
   }
 
   applyVoxelMap(
@@ -391,7 +382,7 @@ export class DataBucket {
     overwritableValue: number = 0,
   ) {
     const out = new Float32Array(3);
-    const { data, triggeredBucketFetch } = this.getOrCreateData();
+    const { data } = this.getOrCreateData();
 
     if (this.isUnsynced()) {
       this.pendingOperations.push(() =>

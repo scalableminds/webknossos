@@ -1,6 +1,5 @@
 package controllers
 
-import java.nio.file.{Files, Paths}
 import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
@@ -177,18 +176,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
-    }
-
-  def downloadExport(jobId: String, exportFileName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        jobIdValidated <- ObjectId.parse(jobId)
-        job <- jobDAO.findOne(jobIdValidated)
-        latestRunId <- job.latestRunId.toFox
-        organization <- organizationDAO.findOne(request.identity._organization)
-        filePath = Paths.get("binaryData", organization.name, ".export", latestRunId, exportFileName)
-        _ <- bool2Fox(Files.exists(filePath)) ?~> "job.export.fileNotFound"
-      } yield Ok.sendPath(filePath, inline = false)
     }
 
 }

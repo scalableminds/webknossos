@@ -332,15 +332,19 @@ class DataSetController @Inject()(userService: UserService,
     Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
   }
 
-  @ApiOperation(hidden = true, value = "")
-  def isValidNewName(organizationName: String, dataSetName: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
+  @ApiOperation(value = "Check whether a new dataset name is valid", nickname = "newDatasetNameIsValid")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "Name is valid. Empty message."),
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def isValidNewName(@ApiParam(value = "The url-safe name of the organization owning the dataset",
+                               example = "sample_organization") organizationName: String,
+                     @ApiParam(value = "The name of the dataset") dataSetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService
-          .assertNewDataSetName(dataSetName, request.identity._organization) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService.assertNewDataSetName(dataSetName, request.identity._organization) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
-  }
+    }
 
   @ApiOperation(hidden = true, value = "")
   def getOrganizationForDataSet(dataSetName: String): Action[AnyContent] = sil.UserAwareAction.async {

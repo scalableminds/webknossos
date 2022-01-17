@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
+import models.binary.DataStoreDAO
 import models.job.JobState.JobState
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO}
@@ -24,7 +25,6 @@ import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
-
 import scala.concurrent.duration._
 
 case class Job(
@@ -56,18 +56,22 @@ case class Job(
 
   def effectiveState: JobState = manualState.getOrElse(state)
 
-  def resultLink(organizationName: String): Option[String] =
+  def exportFileName: Option[String] = argAsStringOpt("export_file_name")
+
+  def datasetName: Option[String] = argAsStringOpt("dataset_name")
+
+  private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
+
+  def resultLink(organizationName: String, dataStorePublicUrl: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
         case "convert_to_wkw" =>
-          (commandArgs \ "dataset_name").toOption.flatMap(_.asOpt[String]).map { dataSetName =>
-            s"/datasets/$organizationName/$dataSetName/view"
+          datasetName.map { dsName =>
+            s"/datasets/$organizationName/$dsName/view"
           }
         case "export_tiff" =>
-          (commandArgs \ "export_file_name").toOption.flatMap(_.asOpt[String]).map { exportFileName =>
-            s"/api/jobs/${_id.id}/downloadExport/$exportFileName"
-          }
+          Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
         case "infer_nuclei" =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
@@ -92,7 +96,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       Job(
         ObjectId(r._Id),
         ObjectId(r._Owner),
-        r._Datastore,
+        r._Datastore.trim,
         r.command,
         Json.parse(r.commandargs).as[JsObject],
         state,
@@ -115,6 +119,13 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       accessQuery <- readAccessQuery
       r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery order by created".as[JobsRow])
       parsed <- parseAll(r)
+    } yield parsed
+
+  override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery and _id = $jobId".as[JobsRow])
+      parsed <- parseFirst(r, jobId)
     } yield parsed
 
   def countUnassignedPendingForDataStore(_dataStore: String): Fox[Int] =
@@ -221,6 +232,7 @@ class JobService @Inject()(wkConf: WkConf,
                            userDAO: UserDAO,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
+                           dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
                            analyticsService: AnalyticsService,
                            slackNotificationService: SlackNotificationService,
@@ -258,7 +270,8 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLink(organization.name)
+      dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
+      resultLink = jobAfterChange.resultLink(organization.name, dataStore.publicUrl)
       resultLinkMrkdwn = resultLink.map(l => s" <${wkConf.Http.uri}$l|Result>").getOrElse("")
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
@@ -277,7 +290,8 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      resultLink = job.resultLink(organization.name)
+      dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
+      resultLink = job.resultLink(organization.name, dataStore.publicUrl)
     } yield {
       Json.obj(
         "id" -> job._id.id,

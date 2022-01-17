@@ -532,7 +532,7 @@ export type IsosurfaceInformation = {|
 export type ConnectomeData = {|
   +availableConnectomeFiles: ?Array<APIConnectomeFile>,
   +currentConnectomeFile: ?APIConnectomeFile,
-  +prendingConnectomeFileName: ?string,
+  +pendingConnectomeFileName: ?string,
   +activeAgglomerateIds: Array<number>,
   +skeleton: ?SkeletonTracing,
 |};

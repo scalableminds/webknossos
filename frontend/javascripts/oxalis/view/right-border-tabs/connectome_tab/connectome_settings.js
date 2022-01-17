@@ -24,7 +24,7 @@ type StateProps = {|
   dataset: APIDataset,
   availableConnectomeFiles: ?Array<APIConnectomeFile>,
   currentConnectomeFile: ?APIConnectomeFile,
-  prendingConnectomeFileName: ?string,
+  pendingConnectomeFileName: ?string,
 |};
 
 type Props = {| ...OwnProps, ...StateProps |};
@@ -40,8 +40,8 @@ const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => 
     availableConnectomeFiles:
       connectomeData != null ? connectomeData.availableConnectomeFiles : null,
     currentConnectomeFile: connectomeData != null ? connectomeData.currentConnectomeFile : null,
-    prendingConnectomeFileName:
-      connectomeData != null ? connectomeData.prendingConnectomeFileName : null,
+    pendingConnectomeFileName:
+      connectomeData != null ? connectomeData.pendingConnectomeFileName : null,
   };
 };
 
@@ -62,7 +62,7 @@ class ConnectomeFilters extends React.Component<Props> {
       segmentationLayer,
       availableConnectomeFiles,
       currentConnectomeFile,
-      prendingConnectomeFileName,
+      pendingConnectomeFileName,
     } = this.props;
 
     // If availableConnectomeFiles is not null, they have already been fetched
@@ -80,8 +80,8 @@ class ConnectomeFilters extends React.Component<Props> {
     if (currentConnectomeFile == null && connectomeFiles.length > 0) {
       // If there was a pending connectome file name, use it, otherwise select the first one
       const connectomeFileName =
-        prendingConnectomeFileName != null
-          ? prendingConnectomeFileName
+        pendingConnectomeFileName != null
+          ? pendingConnectomeFileName
           : connectomeFiles[0].connectomeFileName;
       Store.dispatch(updateCurrentConnectomeFileAction(layerName, connectomeFileName));
     }

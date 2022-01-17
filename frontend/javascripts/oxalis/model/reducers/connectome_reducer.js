@@ -165,7 +165,7 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
         // Connectome files have not been fetched yet, temporarily save the connectome file name
         // so it can be activated once the files have been fetched
         return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
-          prendingConnectomeFileName: connectomeFileName,
+          pendingConnectomeFileName: connectomeFileName,
         });
       }
 
@@ -174,7 +174,7 @@ function ConnectomeReducer(state: OxalisState, action: Action): OxalisState {
       );
       return updateKey3(state, "localSegmentationData", layerName, "connectomeData", {
         currentConnectomeFile: connectomeFile,
-        prendingConnectomeFileName: null,
+        pendingConnectomeFileName: null,
       });
     }
 

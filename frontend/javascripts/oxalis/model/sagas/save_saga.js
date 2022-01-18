@@ -102,11 +102,11 @@ import window, { alert, document, location } from "libs/window";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const _byteArrayToLz4Array = createWorker(compressLz4Block);
-const decompressToTypedArray = (
+const decompressToTypedArray = async (
   bucket: DataBucket,
   compressedData: Uint8Array,
-): ?BucketDataArray => {
-  const decompressedBackendData = _byteArrayToLz4Array(compressedData, false);
+): Promise<?BucketDataArray> => {
+  const decompressedBackendData = await _byteArrayToLz4Array(compressedData, false);
   if (decompressedBackendData == null) {
     // Can this happen?
     return null;
@@ -114,13 +114,13 @@ const decompressToTypedArray = (
 
   return bucket.uint8ToTypedBuffer(decompressedBackendData);
 };
-const compressTypedArray = (bucketData: BucketDataArray): Uint8Array => {
+const compressTypedArray = async (bucketData: BucketDataArray): Promise<Uint8Array> => {
   const bucketDataAsByteArray = new Uint8Array(
     bucketData.buffer,
     bucketData.byteOffset,
     bucketData.byteLength,
   );
-  const compressedBucketData = _byteArrayToLz4Array(bucketDataAsByteArray, true);
+  const compressedBucketData = await _byteArrayToLz4Array(bucketDataAsByteArray, true);
   return compressedBucketData;
 };
 

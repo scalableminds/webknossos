@@ -489,9 +489,11 @@ export class DataBucket {
     }
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
+        // Clone the data for the unmergedBucketDataLoaded event,
+        // as the following merge operation is done in-place.
         const dataClone = new TypedArrayClass(data);
-
         this.trigger("unmergedBucketDataLoaded", dataClone);
+
         if (this.dirty) {
           this.merge(data);
         } else {

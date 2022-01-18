@@ -130,8 +130,9 @@ const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
 
 type UndoBucket = {
   zoomedBucketAddress: Vector4,
-  data: Uint8Array, // it's Uint8Array because it's compressed
-  backendData?: Uint8Array, // it's Uint8Array because it's compressed
+  // The following arrays are Uint8Array due to the compression
+  compressedData: Uint8Array,
+  compressedBackendData?: Uint8Array,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
   pendingOperations: Array<(BucketDataArray) => void>,
 };
@@ -431,11 +432,11 @@ function* compressBucketAndAddToList(
   // and appended to the passed VolumeAnnotationBatch.
   // If backend data is being downloaded (MaybeBucketLoadedPromise exists),
   // the backend data will also be compressed and attached to the UndoBucket.
-  const compressedBucketData = yield* call(compressTypedArray, bucketData);
-  if (compressedBucketData != null) {
+  const compressedData = yield* call(compressTypedArray, bucketData);
+  if (compressedData != null) {
     const volumeUndoPart: UndoBucket = {
       zoomedBucketAddress,
-      data: compressedBucketData,
+      compressedData,
       maybeBucketLoadedPromise,
       pendingOperations: pendingOperations.slice(),
     };
@@ -444,8 +445,7 @@ function* compressBucketAndAddToList(
         // Once the backend data is fetched, do not directly merge it with the already saved undo data
         // as this operation is only needed, when the volume action is undone. Additionally merging is more
         // expensive than saving the backend data. Thus the data is only merged upon an undo action / when it is needed.
-        const compressedBackendData = await compressTypedArray(backendBucketData);
-        volumeUndoPart.backendData = compressedBackendData;
+        volumeUndoPart.compressedBackendData = await compressTypedArray(backendBucketData);
       });
     }
     undoBucketList.push(volumeUndoPart);
@@ -570,8 +570,8 @@ function* applyAndGetRevertingVolumeBatch(
   for (const volumeUndoBucket of volumeAnnotationBatch.buckets) {
     const {
       zoomedBucketAddress,
-      data: compressedBucketData,
-      backendData: compressedBackendData,
+      compressedData: compressedBucketData,
+      compressedBackendData,
     } = volumeUndoBucket;
     let { maybeBucketLoadedPromise } = volumeUndoBucket;
     const bucket = cube.getOrCreateBucket(zoomedBucketAddress);

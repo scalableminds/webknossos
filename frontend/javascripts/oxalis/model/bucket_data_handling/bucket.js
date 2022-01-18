@@ -488,8 +488,6 @@ export class DataBucket {
     }
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
-        this.state = BucketStateEnum.LOADED;
-
         const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
         const dataClone = new TypedArrayClass(data);
 
@@ -499,6 +497,7 @@ export class DataBucket {
         } else {
           this.data = data;
         }
+        this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
         break;
       default:

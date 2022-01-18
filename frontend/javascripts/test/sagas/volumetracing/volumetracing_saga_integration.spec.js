@@ -55,6 +55,11 @@ test.beforeEach(async t => {
   Store.dispatch(wkReadyAction());
 });
 
+test.afterEach(async t => {
+  await t.context.api.tracing.save();
+  t.false(hasRootSagaCrashed());
+});
+
 test.serial("Executing a floodfill in mag 1", async t => {
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -343,7 +348,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async t => {
 
 test.serial(
   "Executing copySegmentationLayer with a new segment id should update the maxCellId",
-  t => {
+  async t => {
     const newCellId = 13371338;
     Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(copySegmentationLayerAction());
@@ -549,6 +554,14 @@ test.serial("Brushing/Tracing with undo (Ia)", async t => {
 });
 
 test.serial("Brushing/Tracing with undo (Ib)", async t => {
+  await testBrushingWithUndo(t, true);
+});
+
+test.serial("Brushing/Tracing with undo (Ic)", async t => {
+  await testBrushingWithUndo(t, false);
+});
+
+async function testBrushingWithUndo(t, assertBeforeRedo) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -625,8 +638,6 @@ test.serial("Brushing/Tracing with undo (Ib)", async t => {
   const problematicBucket = cube.getOrCreateBucket([93, 0, 0, 0]);
   t.true(problematicBucket.isUnsynced());
 
-  const assertBeforeRedo = false;
-
   if (assertBeforeRedo) {
     t.is(
       await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
@@ -669,7 +680,7 @@ test.serial("Brushing/Tracing with undo (Ib)", async t => {
     oldCellId,
     "After erase + undo + redo",
   );
-});
+}
 
 test.serial("Brushing/Tracing with undo (II)", async t => {
   const oldCellId = 11;

@@ -612,32 +612,35 @@ function* applyAndGetRevertingVolumeBatch(
       // The bucket's data is currently available.
       bucketData = bucket.getData();
       if (compressedBackendData != null) {
-        // Old:
-        // // If the backend data for the bucket has been fetched in the meantime,
-        // // we can first merge the data with the current data and then add this to the undo batch.
-        // const decompressedBackendData = yield* call(
-        //   decompressToTypedArray,
-        //   bucket,
-        //   compressedBackendData,
-        // );
-        // if (decompressedBackendData) {
-        //   const log = zoomedBucketAddress.join(",") === [93, 0, 0, 0].join(",");
-        //   if (log) console.log("mergeDataWithBackendDataInPlace I", zoomedBucketAddress);
-        //   mergeDataWithBackendDataInPlace(
-        //     bucketData,
-        //     decompressedBackendData,
-        //     currentPendingOperations,
-        //     log,
-        //   );
-        //   currentPendingOperations = [];
-        // }
-
-        // New:
-        // If the backend data for the bucket has been fetched in the meantime,
-        // the previous getData() call already returned the newest (merged) data.
-        // There should be no need to await the data from the backend.
-        bucket.logMaybe("########## New: Skipping merge action");
-        maybeBucketLoadedPromise = null;
+        const useOld = true;
+        if (useOld) {
+          // Old:
+          // If the backend data for the bucket has been fetched in the meantime,
+          // we can first merge the data with the current data and then add this to the undo batch.
+          const decompressedBackendData = yield* call(
+            decompressToTypedArray,
+            bucket,
+            compressedBackendData,
+          );
+          if (decompressedBackendData) {
+            const log = zoomedBucketAddress.join(",") === [93, 0, 0, 0].join(",");
+            if (log) console.log("mergeDataWithBackendDataInPlace I", zoomedBucketAddress);
+            mergeDataWithBackendDataInPlace(
+              bucketData,
+              decompressedBackendData,
+              currentPendingOperations,
+              log,
+            );
+            currentPendingOperations = [];
+          }
+        } else {
+          // New:
+          // If the backend data for the bucket has been fetched in the meantime,
+          // the previous getData() call already returned the newest (merged) data.
+          // There should be no need to await the data from the backend.
+          // bucket.logMaybe("########## New: Skipping merge action");
+          maybeBucketLoadedPromise = null;
+        }
       }
     } else {
       // The bucket's data is not available, since it was gc'ed in the meantime (which
@@ -787,6 +790,7 @@ export function* sendRequestToServer(
 
   let retryCount = 0;
   while (true) {
+    let exceptionDuringMarkBucketsAsNotDirty = false;
     try {
       const startTime = Date.now();
       yield* call(
@@ -814,11 +818,21 @@ export function* sendRequestToServer(
       yield* put(setLastSaveTimestampAction(tracingType, tracingId));
       yield* put(shiftSaveQueueAction(saveQueue.length, tracingType, tracingId));
       if (tracingType === "volume") {
-        yield _call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
+        try {
+          yield _call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
+        } catch (error) {
+          // The error will reappear
+          console.warn("Error when marking buckets as clean. No retry possible. Error:", error);
+          exceptionDuringMarkBucketsAsNotDirty = true;
+          throw error;
+        }
       }
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {
+      if (exceptionDuringMarkBucketsAsNotDirty) {
+        throw error;
+      }
       console.warn("Error during saving. Will retry. Error:", error);
       const controlMode = yield* select(state => state.temporaryConfiguration.controlMode);
       const isViewOrSandboxMode =

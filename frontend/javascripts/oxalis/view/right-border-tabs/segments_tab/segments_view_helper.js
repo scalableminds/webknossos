@@ -131,7 +131,8 @@ export async function loadMeshFromFile(
 }
 
 type MappingActivationConfirmationProps<R> = {|
-  currentMeshFile: ?APIMeshFile,
+  mappingName: ?string,
+  descriptor: string,
   layerName: ?string,
   mappingInfo: ActiveMappingInfo,
   onClick: Function,
@@ -144,19 +145,26 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
   return function ComponentWithMappingActivationConfirmation(
     props: MappingActivationConfirmationProps<P>,
   ) {
-    const { currentMeshFile, layerName, mappingInfo, onClick: originalOnClick, ...rest } = props;
+    const {
+      mappingName,
+      descriptor,
+      layerName,
+      mappingInfo,
+      onClick: originalOnClick,
+      ...rest
+    } = props;
     const [isConfirmVisible, setConfirmVisible] = useState(false);
 
-    // If the mesh file mapping name is undefined, the mesh file doesn't contain that information
-    // because it is too old. In that case never show the activation modal.
-    if (currentMeshFile == null || currentMeshFile.mappingName === undefined || layerName == null) {
+    // If the mapping name is undefined, no mapping is specified. In that case never show the activation modal.
+    // In contrast, if the mapping name is null, this indicates that all mappings should be specifically disabled.
+    if (mappingName === undefined || layerName == null) {
       return <WrappedComponent {...rest} onClick={originalOnClick} />;
     }
 
     const isMappingEnabled = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
     const enabledMappingName = isMappingEnabled ? mappingInfo.mappingName : null;
     const checkWhetherConfirmIsNeeded = () => {
-      if (currentMeshFile.mappingName !== enabledMappingName) {
+      if (mappingName !== enabledMappingName) {
         setConfirmVisible(true);
       } else {
         originalOnClick();
@@ -164,23 +172,19 @@ export function withMappingActivationConfirmation<P, C: ComponentType<P>>(
     };
 
     const mappingString =
-      currentMeshFile.mappingName != null
-        ? `for the mapping "${
-            currentMeshFile.mappingName
-          }" which is not active. The mapping will be activated`
+      mappingName != null
+        ? `for the mapping "${mappingName}" which is not active. The mapping will be activated`
         : "without a mapping but a mapping is active. The mapping will be deactivated";
 
     return (
       <Popconfirm
-        title={`The currently active mesh file "${
-          currentMeshFile.meshFileName
-        }" was computed ${mappingString} when clicking OK.`}
+        title={`The currently active ${descriptor} was computed ${mappingString} when clicking OK.`}
         overlayStyle={{ maxWidth: 500 }}
         visible={isConfirmVisible}
         onConfirm={async () => {
           setConfirmVisible(false);
-          if (currentMeshFile.mappingName != null) {
-            Store.dispatch(setMappingAction(layerName, currentMeshFile.mappingName, "HDF5"));
+          if (mappingName != null) {
+            Store.dispatch(setMappingAction(layerName, mappingName, "HDF5"));
             await waitForCondition(
               () =>
                 getMappingInfo(

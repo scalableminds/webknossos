@@ -197,7 +197,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.agglomerate_skeleton.no_cell":
     "Clicked on the background. Please click on a segment to load a skeleton.",
   "tracing.agglomerate_skeleton.no_mapping":
-    "Please activate an agglomerate file mapping to load a skeleton for a segment.",
+    "Activate an agglomerate file mapping to load a skeleton for a segment.",
   "tracing.agglomerate_skeleton.no_agglomerate_file":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
   "tracing.agglomerate_skeleton.no_skeleton_tracing":

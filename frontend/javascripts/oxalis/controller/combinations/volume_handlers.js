@@ -56,6 +56,9 @@ export function handlePickCell(pos: Point2) {
 }
 
 export function getSegmentIdForPosition(globalPos: Vector3) {
+  // This function will return the currently loaded segment ID for a given position.
+  // If the corresponding bucket is not loaded at the moment, the return value will be 0.
+  // See getSegmentIdForPositionAsync if the bucket loading should be awaited before returning the ID.
   const layer = Model.getVisibleSegmentationLayer();
   if (!layer) {
     return 0;
@@ -67,6 +70,28 @@ export function getSegmentIdForPosition(globalPos: Vector3) {
     segmentationLayerName,
     globalPos,
   );
+  return segmentationCube.getMappedDataValue(globalPos, renderedZoomStepForCameraPosition);
+}
+
+export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
+  // This function will return the segment ID for a given position, awaiting the loading
+  // of the corresponding bucket.
+  // See getSegmentIdForPosition if the bucket loading should not be awaited.
+  const layer = Model.getVisibleSegmentationLayer();
+  if (!layer) {
+    return 0;
+  }
+  const segmentationCube = layer.cube;
+  const segmentationLayerName = layer.name;
+
+  const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+    segmentationLayerName,
+    globalPos,
+  );
+
+  // Make sure the corresponding bucket is loaded
+  await api.data.getDataValue(segmentationLayerName, globalPos, renderedZoomStepForCameraPosition);
+
   return segmentationCube.getMappedDataValue(globalPos, renderedZoomStepForCameraPosition);
 }
 

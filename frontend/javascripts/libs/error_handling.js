@@ -2,7 +2,7 @@
  * error_handling.js
  * @flow
  */
-import AirbrakeClient from "airbrake-js";
+import { Notifier } from "@airbrake/browser";
 import _ from "lodash";
 
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
@@ -61,7 +61,7 @@ export function handleGenericError(error: { ...Error, messages?: mixed }) {
 class ErrorHandling {
   throwAssertions: boolean;
   commitHash: ?string;
-  airbrake: typeof AirbrakeClient;
+  airbrake: typeof Notifier;
   numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {
@@ -86,7 +86,7 @@ class ErrorHandling {
     const projectKey = scriptTag.dataset.airbrakeProjectKey;
     const envName = scriptTag.dataset.airbrakeEnvironmentName;
 
-    this.airbrake = new AirbrakeClient({
+    this.airbrake = new Notifier({
       projectId,
       projectKey,
     });

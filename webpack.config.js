@@ -6,7 +6,6 @@ module.exports = function(env = {}) {
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
-  // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
   const CopyWebpackPlugin = require("copy-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "frontend/javascripts/");
@@ -18,23 +17,29 @@ module.exports = function(env = {}) {
   const plugins = [
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": env.production ? '"production"' : '"development"',
+      "process.env.BABEL_ENV": process.env.BABEL_ENV,
     }),
-    new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+    new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/ }),
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-    new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
-      dot: true,
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: "./public/tf-models/**",
+          to: "tf-models/[name][ext]",
+          globOptions: {
+            dot: true,
+          },
+        },
+      ],
     }),
   ];
 
   if (env.production) {
     plugins.push(
       new TerserPlugin({
-        cache: true,
-        parallel: true,
-        sourceMap: true,
         terserOptions: {
           // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
           // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
@@ -43,6 +48,19 @@ module.exports = function(env = {}) {
       }),
     );
   }
+
+  const cssLoaderUrlFilter = {
+    filter: (url, resourcePath) => {
+      // resourcePath - path to css file
+
+      // Don't handle `img.png` urls
+      if (url.startsWith("/assets")) {
+        return false;
+      }
+
+      return true;
+    },
+  };
 
   return {
     entry: {
@@ -64,7 +82,7 @@ module.exports = function(env = {}) {
           use: {
             loader: "worker-loader",
             options: {
-              name: "[name].[hash].worker.js",
+              filename: "[name].[contenthash].worker.js",
             },
           },
         },
@@ -77,11 +95,14 @@ module.exports = function(env = {}) {
           test: /\.less$/,
           use: [
             MiniCssExtractPlugin.loader,
-            "css-loader",
+            { loader: "css-loader", options: { url: cssLoaderUrlFilter } },
             {
               loader: "less-loader",
               options: {
-                javascriptEnabled: true,
+                lessOptions: {
+                  javascriptEnabled: true,
+                  rewriteUrls: "local",
+                },
               },
             },
           ],
@@ -90,61 +111,70 @@ module.exports = function(env = {}) {
           test: /\.css$/,
           use: [
             MiniCssExtractPlugin.loader,
-            "css-loader",
+            { loader: "css-loader", options: { url: cssLoaderUrlFilter } },
             {
               loader: "less-loader",
               options: {
-                javascriptEnabled: true,
+                lessOptions: {
+                  javascriptEnabled: true,
+                  rewriteUrls: "local",
+                },
               },
             },
           ],
         },
         {
           test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-          use: {
-            loader: "url-loader",
-            options: {
-              limit: 10000,
-              mimetype: "application/font-woff",
-            },
-          },
+          type: "asset",
+          parser: { dataUrlCondition: { maxSize: 10000 } },
+          // generator: { mimetype: "application/font-woff" },
         },
         {
           test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-          use: "file-loader",
+          type: "asset/resource",
         },
-        { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
-        { test: /\.jpg$/, use: "file-loader" },
-        { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
+        {
+          test: /\.png$/,
+          type: "asset",
+          parser: { dataUrlCondition: { maxSize: 10000 } },
+        },
+        { test: /\.jpg$/, type: "asset/resource" },
+        { test: /\.proto$/, use: ["json-loader", "proto-loader6"] },
       ],
-    },
-    externals: {
-      // fs, tls and net are needed so that airbrake-js can be compiled by webpack
-      fs: "{}",
-      tls: "{}",
-      net: "{}",
     },
     resolve: {
       modules: [srcPath, nodePath, protoPath],
       alias: {
         react: path.resolve("./node_modules/react"),
       },
+      fallback: { url: require.resolve("url/") },
     },
     optimization: {
       minimize: false,
       splitChunks: {
-        chunks: "initial",
+        chunks: "all",
+        // Use a consistent name for the vendors chunk
+        name: "vendors~main",
       },
     },
     // See https://webpack.js.org/configuration/devtool/
     devtool: env.production ? "source-map" : "eval-source-map",
     plugins,
     devServer: {
-      contentBase: `${__dirname}/public`,
-      publicPath: "/assets/bundle/",
+      static: {
+        directory: `${__dirname}/public`,
+      },
+      devMiddleware: {
+        publicPath: "/assets/bundle/",
+      },
       port: env.PORT != null ? env.PORT : 9002,
       hot: false,
-      inline: false,
+      client: {
+        overlay: {
+          warnings: false,
+          errors: true,
+        },
+      },
     },
   };
 };

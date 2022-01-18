@@ -602,45 +602,19 @@ function* applyAndGetRevertingVolumeBatch(
     if (bucket.type === "null") {
       continue;
     }
-    bucket.logMaybe("applyAndGetRevertingVolumeBatch");
 
     // Prepare a snapshot of the bucket's current data so that it can be
     // saved in an VolumeUndoState.
     let bucketData = null;
-    let currentPendingOperations = bucket.pendingOperations.slice();
+    const currentPendingOperations = bucket.pendingOperations.slice();
     if (bucket.hasData()) {
       // The bucket's data is currently available.
       bucketData = bucket.getData();
       if (compressedBackendData != null) {
-        const useOld = true;
-        if (useOld) {
-          // Old:
-          // If the backend data for the bucket has been fetched in the meantime,
-          // we can first merge the data with the current data and then add this to the undo batch.
-          const decompressedBackendData = yield* call(
-            decompressToTypedArray,
-            bucket,
-            compressedBackendData,
-          );
-          if (decompressedBackendData) {
-            const log = zoomedBucketAddress.join(",") === [93, 0, 0, 0].join(",");
-            if (log) console.log("mergeDataWithBackendDataInPlace I", zoomedBucketAddress);
-            mergeDataWithBackendDataInPlace(
-              bucketData,
-              decompressedBackendData,
-              currentPendingOperations,
-              log,
-            );
-            currentPendingOperations = [];
-          }
-        } else {
-          // New:
-          // If the backend data for the bucket has been fetched in the meantime,
-          // the previous getData() call already returned the newest (merged) data.
-          // There should be no need to await the data from the backend.
-          // bucket.logMaybe("########## New: Skipping merge action");
-          maybeBucketLoadedPromise = null;
-        }
+        // If the backend data for the bucket has been fetched in the meantime,
+        // the previous getData() call already returned the newest (merged) data.
+        // There should be no need to await the data from the backend.
+        maybeBucketLoadedPromise = null;
       }
     } else {
       // The bucket's data is not available, since it was gc'ed in the meantime (which

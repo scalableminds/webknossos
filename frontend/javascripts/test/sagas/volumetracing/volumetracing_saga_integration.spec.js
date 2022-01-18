@@ -20,7 +20,6 @@ import {
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import { sleep } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import mockRequire from "mock-require";
@@ -492,8 +491,19 @@ test.serial("Brushing/Tracing with already existing backend data", async t => {
   );
 });
 
-// Undo problem
-test.serial("Brushing/Tracing with undo (Ia)", async t => {
+// The binary parameters control whether the test will assert additional
+// constraints inbetween. Since getDataValue() has the side effect of awaiting
+// the loaded bucket, the test hits different execution paths. For example,
+// older code failed for test ii and and iv.
+test.serial("Brushing/Tracing with undo (Ia i)", undoTestHelper, false, false);
+test.serial("Brushing/Tracing with undo (Ia ii)", undoTestHelper, true, false);
+test.serial("Brushing/Tracing with undo (Ia iii)", undoTestHelper, false, true);
+test.serial("Brushing/Tracing with undo (Ia iv)", undoTestHelper, true, true);
+
+test.serial("Brushing/Tracing with undo (Ib)", testBrushingWithUndo, true);
+test.serial("Brushing/Tracing with undo (Ic)", testBrushingWithUndo, false);
+
+async function undoTestHelper(t, assertBeforeUndo, assertAfterUndo) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -524,42 +534,38 @@ test.serial("Brushing/Tracing with undo (Ia)", async t => {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
-  //   newCellId + 1,
-  //   "Before undo, there should be newCellId + 1",
-  // );
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]),
-  //   newCellId + 1,
-  //   "Before undo, there should be newCellId + 1",
-  // );
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]),
-  //   oldCellId,
-  //   "Before undo, there should be oldCellId",
-  // );
+  if (assertBeforeUndo) {
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
+      newCellId + 1,
+      "Before undo, there should be newCellId + 1",
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]),
+      newCellId + 1,
+      "Before undo, there should be newCellId + 1",
+    );
+    t.is(
+      await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]),
+      oldCellId,
+      "Before undo, there should be oldCellId",
+    );
+  }
 
   await dispatchUndoAsync(Store.dispatch);
 
-  // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
-  // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId);
-  // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
+  if (assertAfterUndo) {
+    t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId);
+    t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId);
+    t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
+  }
 
   await dispatchRedoAsync(Store.dispatch);
 
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), newCellId + 1);
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
-});
-
-test.serial("Brushing/Tracing with undo (Ib)", async t => {
-  await testBrushingWithUndo(t, true);
-});
-
-test.serial("Brushing/Tracing with undo (Ic)", async t => {
-  await testBrushingWithUndo(t, false);
-});
+}
 
 async function testBrushingWithUndo(t, assertBeforeRedo) {
   const oldCellId = 11;
@@ -595,43 +601,15 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
-  //   newCellId + 1,
-  //   "Before erase",
-  // );
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]),
-  //   newCellId + 1,
-  //   "Before erase",
-  // );
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]),
-  //   oldCellId,
-  //   "Before erase",
-  // );
-
   // Erase
-  console.log(`Erase everything\n`);
+  console.log("Erase everything\n");
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter),
-  //   0,
-  //   "After erase",
-  // );
-  // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [1, 0, 0]), 0, "After erase");
-  // t.is(
-  //   await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]),
-  //   oldCellId,
-  //   "After erase",
-  // );
-
-  console.log(`Undo erasure\n`);
+  console.log("Undo erasure\n");
   await dispatchUndoAsync(Store.dispatch);
 
   const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
@@ -657,7 +635,7 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
     );
   }
 
-  console.log(`Redo erasure\n`);
+  console.log("Redo erasure\n");
   await dispatchRedoAsync(Store.dispatch);
   if (assertBeforeRedo) {
     t.false(problematicBucket.isUnsynced());
@@ -778,9 +756,7 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
     500,
   );
 
-  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
   Store.dispatch(setZoomStepAction(4));
-  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
 
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
@@ -788,17 +764,8 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
 
   const paintCenter = [0, 0, 0];
+  // This particular brushSize used to trigger a bug. It should not be changed.
   const brushSize = 263;
-  // bad: 263
-  // good: 262
-  // const brushSize = 300;
-  const newCellId = 2;
-
-  // this seems to change the spot where the wrong data is found?
-  // await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
-  //   min: [0, 0, 0],
-  //   max: [1350, 1, 1],
-  // });
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     console.log("request at zoomStep", zoomStep);
@@ -817,14 +784,9 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
   Store.dispatch(setPositionAction([0, 0, 0]));
   Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
 
-  // const strokeCount = 10;
-  const strokeCount = 1;
-  for (let i = 0; i < 1; i++) {
-    const currentPaintCenter = [(i * brushSize) / 2, 0, 0];
-    Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
-    Store.dispatch(addToLayerAction(paintCenter));
-    Store.dispatch(finishEditingAction());
-  }
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
 
   console.log("Save");
   await t.context.api.tracing.save();
@@ -845,11 +807,7 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
     );
     console.log("request at zoomStep", zoomStep, "readValue", readValue);
     t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
-
-    // t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0], zoomStep), oldCellId);
   }
-  const incorrectIndex = data.indexOf(11);
-  console.log("incorrectIndex", incorrectIndex);
   t.is(_.max(data), 0, "All the data should be 0 (== erased).");
 });
 
@@ -861,9 +819,7 @@ test.serial("Provoke undo bug (I)", async t => {
     500,
   );
 
-  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
   Store.dispatch(setZoomStepAction(4));
-  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
 
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
@@ -872,23 +828,6 @@ test.serial("Provoke undo bug (I)", async t => {
 
   const paintCenter = [0, 0, 0];
   const brushSize = 10;
-  const newCellId = 2;
-
-  // for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-  //   console.log("request at zoomStep", zoomStep);
-  //   t.is(
-  //     await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
-  //     oldCellId,
-  //     `Center should have old value at zoomstep=${zoomStep}`,
-  //   );
-  // }
-
-  // await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], 2)
-
-  const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
-
-  console.log("call getOrCreateBucket");
-  // const problematicBucket = cube.getOrCreateBucket([0, 0, 0, 2]).getOrCreateData();
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
@@ -897,13 +836,9 @@ test.serial("Provoke undo bug (I)", async t => {
   Store.dispatch(setPositionAction([0, 0, 0]));
   Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
 
-  const currentPaintCenter = [brushSize / 2, 0, 0];
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
-
-  console.log("Save");
-  // await t.context.api.tracing.save();
 
   console.log("Load");
 

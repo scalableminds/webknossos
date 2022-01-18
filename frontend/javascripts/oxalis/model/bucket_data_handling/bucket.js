@@ -299,7 +299,6 @@ export class DataBucket {
       if (this.isUnsynced() && this.maybeBucketLoadedPromise == null) {
         this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
           this.once("unmergedBucketDataLoaded", data => {
-            this.logMaybe("unmergedBucketDataLoaded event");
             // Once the bucket was loaded, maybeBucketLoadedPromise can be null'ed
             this.maybeBucketLoadedPromise = null;
             resolve(data);
@@ -384,9 +383,9 @@ export class DataBucket {
     const { data } = this.getOrCreateData();
 
     if (this.isUnsynced()) {
-      this.pendingOperations.push(data =>
+      this.pendingOperations.push(_data =>
         this._applyVoxelMapInPlace(
-          data,
+          _data,
           voxelMap,
           cellId,
           get3DAddress,
@@ -422,7 +421,6 @@ export class DataBucket {
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
   ) {
-    this.logMaybe("_applyVoxelMapInPlace", { cellId, shouldOverwrite, overwritableValue });
     const out = new Float32Array(3);
     for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
       for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
@@ -469,7 +467,6 @@ export class DataBucket {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [, channelCount] = getConstructorForElementClass(this.elementClass);
 
-    this.logMaybe("receiveData for", this.zoomedAddress);
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo =
         // Disable this conditional if you need verbose output here.
@@ -487,7 +484,7 @@ export class DataBucket {
       );
     }
     switch (this.state) {
-      case BucketStateEnum.REQUESTED:
+      case BucketStateEnum.REQUESTED: {
         const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
         const dataClone = new TypedArrayClass(data);
 
@@ -500,6 +497,7 @@ export class DataBucket {
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
         break;
+      }
       default:
         this.unexpectedState();
     }
@@ -554,33 +552,21 @@ export class DataBucket {
     return fallbackBucket;
   }
 
-  logMaybe = (...args) => {
-    if (this.zoomedAddress.join(",") === [0, 0, 0, 0].join(",")) {
-      debugger;
-      console.log(...args);
-    }
-  };
-
   merge(fetchedData: BucketDataArray): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
 
     if (this.pendingOperations.length > 0) {
-      this.logMaybe("merge: new with pendingOperations");
       for (const op of this.pendingOperations) {
         op(fetchedData);
       }
       this.data = fetchedData;
       this.pendingOperations = [];
     } else {
-      // this.logMaybe("merge: old approach");
-      // // todo: this is a dummy heuristic. ideally everything should be handled
-      // // via the pendingOperations.
-      // for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-      //   // Only overwrite with the new value if the old value was 0
-      //   this.data[i] = this.data[i] || fetchedData[i];
-      // }
+      // todo: ensure that everything is handled via pendingOperations.
+      // in theory, pendingOperations.length should never be 0 when merge
+      // is called.
     }
   }
 
@@ -615,6 +601,14 @@ export class DataBucket {
       this.visualizedMesh.material.color = color;
     }
   }
+
+  // This is a debugging function to enable logging specific
+  // to a certain bucket.
+  _logMaybe = (...args) => {
+    if (this.zoomedAddress.join(",") === [93, 0, 0, 0].join(",")) {
+      console.log(...args);
+    }
+  };
 
   async ensureLoaded(): Promise<void> {
     let needsToAwaitBucket = false;

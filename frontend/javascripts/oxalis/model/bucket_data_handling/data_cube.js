@@ -655,8 +655,6 @@ class DataCube {
       return;
     }
     bucket.setData(data);
-
-    bucket.logMaybe("Setting pending operations to", newPendingOperations);
     bucket.pendingOperations = newPendingOperations;
 
     this.pushQueue.insert(bucket);

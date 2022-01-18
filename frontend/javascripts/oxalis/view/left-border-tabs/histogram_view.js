@@ -229,7 +229,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       this.getDataForViewport(OrthoViews.PLANE_XZ, layerName),
       this.getDataForViewport(OrthoViews.PLANE_YZ, layerName),
     ]);
-    const dataForAllViewports = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
+    const dataForAllViewports = new TypedArrayClass(
+      cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
+    );
 
     dataForAllViewports.set(cuboidXY);
     dataForAllViewports.set(cuboidXZ, cuboidXY.length);
@@ -269,7 +271,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   clipHistogram = async (isInEditMode: boolean, layerName: string) => {
     const [lowClip, highClip] = await this.getClippingValues(layerName);
     if (lowClip === -1 || highClip === -1) {
-      Toast.warning("Clipping the histogram failed. The data did not contain any brightness values greater than 0.");
+      Toast.warning(
+        "Clipping the histogram failed. The data did not contain any brightness values greater than 0.",
+      );
       return;
     }
     if (!isInEditMode) {

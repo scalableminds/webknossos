@@ -18,6 +18,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Store, { type DatasetLayerConfiguration } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 
 type OwnProps = {|
   data: APIHistogramData,
@@ -193,7 +194,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
-  getCuboidForViewport = async (viewport: OrthoView, layerName: string) => {
+  getDataForViewport = async (viewport: OrthoView, layerName: string) => {
     const state = Store.getState();
 
     const [curX, curY, curZ] = Dimensions.transDim(
@@ -220,50 +221,64 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   };
 
   getClippingValues = async (layerName: string, threshold: number = 0.05) => {
-    const cuboidXY = await this.getCuboidForViewport(OrthoViews.PLANE_XY, layerName);
-    const cuboidXZ = await this.getCuboidForViewport(OrthoViews.PLANE_XZ, layerName);
-    const cuboidYZ = await this.getCuboidForViewport(OrthoViews.PLANE_YZ, layerName);
-
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     const [TypedArrayClass] = getConstructorForElementClass(elementClass);
-    const cuboidData = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
 
-    cuboidData.set(cuboidXY);
-    cuboidData.set(cuboidXZ, cuboidXY.length);
-    cuboidData.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
+    const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
+      this.getDataForViewport(OrthoViews.PLANE_XY, layerName),
+      this.getDataForViewport(OrthoViews.PLANE_XZ, layerName),
+      this.getDataForViewport(OrthoViews.PLANE_YZ, layerName),
+    ]);
+    const dataForAllViewports = new TypedArrayClass(cuboidXY.length + cuboidXZ.length + cuboidYZ.length);
+
+    dataForAllViewports.set(cuboidXY);
+    dataForAllViewports.set(cuboidXZ, cuboidXY.length);
+    dataForAllViewports.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
 
     const valueCounts = {};
     let maxCount = 0;
-    for (let i = 0; i < cuboidData.length; i++) {
-      if (cuboidData[i] !== 0 && cuboidData[i] in valueCounts) {
-        valueCounts[cuboidData[i]] += 1;
-        if (maxCount < valueCounts[cuboidData[i]]) maxCount = valueCounts[cuboidData[i]];
-      } else valueCounts[cuboidData[i]] = 1;
-    }
-
-    let lowClip = 255;
-    let highClip = 1;
-    const threshValue = (threshold * maxCount).toFixed();
-    for (let i = 0; i < cuboidData.length; i++) {
-      if (valueCounts[cuboidData[i]] > threshValue) {
-        if (cuboidData[i] !== 0 && cuboidData[i] < lowClip) lowClip = cuboidData[i];
-        if (cuboidData[i] > highClip) highClip = cuboidData[i];
+    for (let i = 0; i < dataForAllViewports.length; i++) {
+      if (dataForAllViewports[i] !== 0 && dataForAllViewports[i] in valueCounts) {
+        valueCounts[dataForAllViewports[i]] += 1;
+        if (maxCount < valueCounts[dataForAllViewports[i]]) {
+          maxCount = valueCounts[dataForAllViewports[i]];
+        }
+      } else {
+        valueCounts[dataForAllViewports[i]] = 1;
       }
     }
 
-    if (lowClip > highClip) return [highClip, lowClip];
+    let lowClip = -1;
+    let highClip = -1;
+    const threshValue = (threshold * maxCount).toFixed();
+    for (let i = 0; i < dataForAllViewports.length; i++) {
+      if (valueCounts[dataForAllViewports[i]] > threshValue) {
+        if (dataForAllViewports[i] !== 0) {
+          if (dataForAllViewports[i] < lowClip || lowClip === -1) {
+            lowClip = dataForAllViewports[i];
+          }
+          if (dataForAllViewports[i] > highClip || highClip === -1) {
+            highClip = dataForAllViewports[i];
+          }
+        }
+      }
+    }
     return [lowClip, highClip];
   };
 
   clipHistogram = async (isInEditMode: boolean, layerName: string) => {
     const [lowClip, highClip] = await this.getClippingValues(layerName);
+    if (lowClip === -1 || highClip === -1) {
+      Toast.warning("Clipping the histogram failed. The data did not contain any brightness values greater than 0.");
+      return;
+    }
     if (!isInEditMode) {
       this.onThresholdChange([lowClip, highClip]);
     } else {
       this.onThresholdChange([lowClip, highClip]);
       this.setState({ currentMin: lowClip, currentMax: highClip });
-      this.updateMinimumDebounced(lowClip, layerName);
-      this.updateMaximumDebounced(highClip, layerName);
+      this.props.onChangeLayer(layerName, "min", lowClip);
+      this.props.onChangeLayer(layerName, "max", highClip);
     }
   };
 
@@ -293,7 +308,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
         />
         <Tooltip title="Clip the histogram to enhance contrast. In Edit Mode this also adjusts the histogram's range.">
           <Button
-            id="mine"
             size="small"
             type="info"
             style={{

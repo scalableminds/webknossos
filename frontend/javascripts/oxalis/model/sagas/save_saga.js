@@ -540,43 +540,19 @@ function mergeDataWithBackendDataInPlace(
   originalData: BucketDataArray,
   backendData: BucketDataArray,
   pendingOperations: Array<(BucketDataArray) => void>,
-  log: boolean,
 ) {
   if (originalData.length !== backendData.length) {
     throw new Error("Cannot merge data arrays with differing lengths");
   }
 
-  if (log)
-    console.log(
-      "mergeDataWithBackendDataInPlace inputs. originalData:",
-      originalData.slice(0, 10),
-      "backendData: ",
-      backendData.slice(0, 10),
-    );
-
-  const useNew = true;
-
-  if (!useNew) {
-    // old
-    // todo: don't use || because this won't work for erasure
-    for (let i = 0; i < originalData.length; ++i) {
-      originalData[i] = originalData[i] || backendData[i];
-    }
-  } else {
-    // Transfer backend to originalData
-    for (let i = 0; i < originalData.length; ++i) {
-      originalData[i] = backendData[i];
-    }
-
-    if (log) {
-      console.log("apply pendingOperations", pendingOperations.length);
-    }
-    for (const op of pendingOperations) {
-      op(originalData);
-    }
+  // Transfer backend to originalData
+  for (let i = 0; i < originalData.length; ++i) {
+    originalData[i] = backendData[i];
   }
 
-  if (log) console.log("mergeDataWithBackendDataInPlace result:", originalData.slice(0, 10));
+  for (const op of pendingOperations) {
+    op(originalData);
+  }
 }
 
 function* applyAndGetRevertingVolumeBatch(
@@ -646,14 +622,10 @@ function* applyAndGetRevertingVolumeBatch(
         _call(decompressToTypedArray, bucket, compressedBackendData),
       ]);
       if (decompressedBucketData && decompressedBackendData) {
-        const log = zoomedBucketAddress.join(",") === [93, 0, 0, 0].join(",");
-
-        if (log) console.log("mergeDataWithBackendDataInPlace II", zoomedBucketAddress);
         mergeDataWithBackendDataInPlace(
           decompressedBucketData,
           decompressedBackendData,
           volumeUndoBucket.pendingOperations,
-          log,
         );
         newPendingOperations = [];
       }
@@ -795,7 +767,7 @@ export function* sendRequestToServer(
         try {
           yield _call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
         } catch (error) {
-          // The error will reappear
+          // If markBucketsAsNotDirty fails some reason, wk cannot recover from this error.
           console.warn("Error when marking buckets as clean. No retry possible. Error:", error);
           exceptionDuringMarkBucketsAsNotDirty = true;
           throw error;

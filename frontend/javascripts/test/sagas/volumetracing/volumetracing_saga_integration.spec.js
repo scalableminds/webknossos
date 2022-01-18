@@ -55,6 +55,9 @@ test.beforeEach(async t => {
 });
 
 test.afterEach(async t => {
+  // Saving after each test and checking that the root saga didn't crash,
+  // ensures that each test is cleanly exited. Without it weird output can
+  // occur (e.g., a promise gets resolved which interferes with the next text).
   await t.context.api.tracing.save();
   t.false(hasRootSagaCrashed());
 });
@@ -703,7 +706,7 @@ test.serial("Brushing/Tracing with undo (II)", async t => {
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 });
 
-test.serial("Brushing/Tracing with upsampling to unloaded data (I)", async t => {
+test.serial("Brushing/Tracing with upsampling to unloaded data", async t => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -748,7 +751,7 @@ test.serial("Brushing/Tracing with upsampling to unloaded data (I)", async t => 
   }
 });
 
-test.serial("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
+test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -811,7 +814,7 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded (I)", async t => {
   t.is(_.max(data), 0, "All the data should be 0 (== erased).");
 });
 
-test.serial("Provoke undo bug (I)", async t => {
+test.serial("Undo erasing in mag 4", async t => {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -848,7 +851,6 @@ test.serial("Provoke undo bug (I)", async t => {
       [0, 0, 0],
       zoomStep,
     );
-    console.log("request at zoomStep", zoomStep, "readValue", readValue);
     t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
   }
 
@@ -861,7 +863,6 @@ test.serial("Provoke undo bug (I)", async t => {
       [0, 0, 0],
       zoomStep,
     );
-    console.log("request at zoomStep", zoomStep, "readValue", readValue);
     t.is(readValue, oldCellId, `After undo, voxel should have old value at zoomstep=${zoomStep}`);
   }
 });

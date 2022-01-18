@@ -465,7 +465,7 @@ export class DataBucket {
 
   receiveData(arrayBuffer: ?Uint8Array): void {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
-    const [, channelCount] = getConstructorForElementClass(this.elementClass);
+    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo =
@@ -485,7 +485,6 @@ export class DataBucket {
     }
     switch (this.state) {
       case BucketStateEnum.REQUESTED: {
-        const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
         const dataClone = new TypedArrayClass(data);
 
         this.trigger("unmergedBucketDataLoaded", dataClone);

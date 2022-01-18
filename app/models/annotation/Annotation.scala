@@ -27,6 +27,7 @@ case class Annotation(
     description: String = "",
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
     name: String = "",
+    viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = Active,
     statistics: JsObject = Json.obj(),
     tags: Set[String] = Set.empty,

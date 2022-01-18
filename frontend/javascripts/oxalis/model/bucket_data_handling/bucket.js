@@ -383,6 +383,10 @@ export class DataBucket {
     const { data } = this.getOrCreateData();
 
     if (this.isUnsynced()) {
+      // If the frontend does not yet have the backend's data
+      // for this bucket, we apply the voxel map, but also
+      // save it in this.pendingOperations. See Bucket.merge()
+      // for more details.
       this.pendingOperations.push(_data =>
         this._applyVoxelMapInPlace(
           _data,
@@ -557,6 +561,11 @@ export class DataBucket {
     }
 
     if (this.pendingOperations.length > 0) {
+      // The frontend just received the backend's data for this bucket.
+      // We apply all pendingOperations on the backends data
+      // and set it to this.data.
+      // The old this.data is discarded/overwritten, since it was only
+      // a preliminary version of the data.
       for (const op of this.pendingOperations) {
         op(fetchedData);
       }

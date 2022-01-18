@@ -1,12 +1,13 @@
 // @flow
 import { withRouter } from "react-router-dom";
 import { Form, Button, Card, Input, Row } from "antd";
-import { MailOutlined, TagOutlined } from "@ant-design/icons";
+import { MailOutlined, TagOutlined, CopyOutlined, KeyOutlined } from "@ant-design/icons";
 import React from "react";
 import { FormInstance } from "antd/lib/form";
 
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { getOrganization, deleteOrganization, updateOrganization } from "admin/admin_rest_api";
+import Toast from "libs/toast";
 import Enum from "Enumjs";
 
 const FormItem = Form.Item;
@@ -106,6 +107,11 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
     }
   };
 
+  handleCopyNameButtonClicked = async (): Promise<void> => {
+    await navigator.clipboard.writeText(this.props.organizationName);
+    Toast.success("Organization name copied to clipboard");
+  };
+
   render() {
     return (
       <div className="container" style={{ paddingTop: 20 }}>
@@ -122,6 +128,20 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
               newUserMailingList: this.state.newUserMailingList,
             }}
           >
+            <FormItem label="ID" readOnly>
+              <Input.Group compact>
+                <Input
+                  prefix={<KeyOutlined />}
+                  value={this.props.organizationName}
+                  style={{ width: "calc(100% - 31px)" }}
+                  readOnly
+                />
+                <Button
+                  onClick={this.handleCopyNameButtonClicked}
+                  icon={<CopyOutlined className="without-icon-margin" />}
+                />
+              </Input.Group>
+            </FormItem>
             <FormItem
               label="Display Name"
               name="displayName"
@@ -140,9 +160,9 @@ class OrganizationEditView extends React.PureComponent<Props, State> {
                 disabled={this.state.isFetchingData}
                 placeholder="Display Name"
               />
-            </FormItem>{" "}
+            </FormItem>
             <FormItem
-              label="Notify About New Users Via:"
+              label="Email Address for New-User Notifications"
               name="newUserMailingList"
               rules={[
                 {

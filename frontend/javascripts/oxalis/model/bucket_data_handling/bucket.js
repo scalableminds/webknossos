@@ -277,15 +277,15 @@ export class DataBucket {
     return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
   };
 
-  getCopyOfData(): { dataClone: BucketDataArray } {
-    const { data: bucketData } = this.getOrCreateData();
+  getCopyOfData(): BucketDataArray {
+    const bucketData = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
     const dataClone = new TypedArrayClass(bucketData);
-    return { dataClone };
+    return dataClone;
   }
 
   label(labelFunc: BucketDataArray => void) {
-    const { data: bucketData } = this.getOrCreateData();
+    const bucketData = this.getOrCreateData();
     this.markAndAddBucketForUndo();
     labelFunc(bucketData);
     this.throttledTriggerLabeled();
@@ -295,7 +295,7 @@ export class DataBucket {
     this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
-      const { dataClone } = this.getCopyOfData();
+      const dataClone = this.getCopyOfData();
       if (this.isUnsynced() && this.maybeUnmergedBucketLoadedPromise == null) {
         this.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
           this.once("unmergedBucketDataLoaded", data => {
@@ -358,7 +358,7 @@ export class DataBucket {
     this.accessed = false;
   }
 
-  getOrCreateData(): { data: BucketDataArray } {
+  getOrCreateData(): BucketDataArray {
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
@@ -366,7 +366,7 @@ export class DataBucket {
         this.temporalBucketManager.addBucket(this);
       }
     }
-    return { data: this.getData() };
+    return this.getData();
   }
 
   applyVoxelMap(
@@ -380,7 +380,7 @@ export class DataBucket {
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
   ) {
-    const { data } = this.getOrCreateData();
+    const data = this.getOrCreateData();
 
     if (this.isUnsynced()) {
       // If the frontend does not yet have the backend's data

@@ -459,7 +459,7 @@ class DataCube {
       );
     }
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
-    const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
+    const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
     if (sourceCellId === cellId) {
       return {
         bucketsWithLabeledVoxelsMap,
@@ -518,7 +518,7 @@ class DataCube {
       }
       // eslint-disable-next-line no-await-in-loop
       await currentBucket.ensureLoaded();
-      const { data: bucketData } = currentBucket.getOrCreateData();
+      const bucketData = currentBucket.getOrCreateData();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.

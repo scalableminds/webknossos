@@ -598,7 +598,7 @@ function* applyAndGetRevertingVolumeBatch(
       // persist an essentially empty data array (which is created by getOrCreateData)
       // and passing maybeUnmergedBucketLoadedPromise around so that
       // the back-end data is fetched upon undo/redo.
-      bucketData = bucket.getOrCreateData().data;
+      bucketData = bucket.getOrCreateData();
       maybeUnmergedBucketLoadedPromise = bucket.maybeUnmergedBucketLoadedPromise;
     }
 

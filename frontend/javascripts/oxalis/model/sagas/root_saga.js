@@ -6,10 +6,7 @@ import VolumetracingSagas from "oxalis/model/sagas/volumetracing_saga";
 import SaveSagas, { toggleErrorHighlighting } from "oxalis/model/sagas/save_saga";
 import AnnotationSagas from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
-import {
-  watchSkeletonTracingAsync,
-  watchAgglomerateLoading,
-} from "oxalis/model/sagas/skeletontracing_saga";
+import SkeletontracingSagas from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
@@ -39,7 +36,7 @@ function* restartableSaga(): Saga<void> {
     yield _all([
       _call(warnAboutMagRestriction),
       _call(SettingsSaga),
-      _call(watchSkeletonTracingAsync),
+      ...SkeletontracingSagas.map(saga => _call(saga)),
       _call(HistogramSaga),
       _call(watchDataRelevantChanges),
       _call(isosurfaceSaga),
@@ -47,7 +44,6 @@ function* restartableSaga(): Saga<void> {
       _call(handleMeshChanges),
       _call(watchMaximumRenderableLayers),
       _call(MappingSaga),
-      _call(watchAgglomerateLoading),
       _call(watchToolDeselection),
       ...AnnotationSagas.map(saga => _call(saga)),
       ...SaveSagas.map(saga => _call(saga)),

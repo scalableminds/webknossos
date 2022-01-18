@@ -27,11 +27,9 @@ import {
   addConnectomeTreesAction,
   setConnectomeTreesVisibilityAction,
   setActiveConnectomeAgglomerateIdsAction,
+  loadConnectomeAgglomerateSkeletonAction,
+  removeConnectomeAgglomerateSkeletonAction,
 } from "oxalis/model/actions/connectome_actions";
-import {
-  loadAgglomerateSkeletonAction,
-  removeAgglomerateSkeletonAction,
-} from "oxalis/model/actions/skeletontracing_actions";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -564,7 +562,7 @@ class ConnectomeView extends React.Component<Props, State> {
       for (const agglomerateId of deletedAgglomerateIds) {
         // The check whether these skeleton were actually loaded and need to be removed is done by the saga
         Store.dispatch(
-          removeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
+          removeConnectomeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId),
         );
       }
     }
@@ -599,7 +597,7 @@ class ConnectomeView extends React.Component<Props, State> {
           Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], true, layerName));
         } else {
           Store.dispatch(
-            loadAgglomerateSkeletonAction(layerName, mappingName, agglomerateId, "connectome"),
+            loadConnectomeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId),
           );
         }
       }

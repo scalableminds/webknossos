@@ -66,7 +66,7 @@ import Store, {
   type Tree,
   type TreeMap,
 } from "oxalis/store";
-import Toast from "libs/toast";
+import Toast, { type Message } from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
@@ -78,6 +78,7 @@ import {
   addConnectomeTreesAction,
   deleteConnectomeTreesAction,
 } from "oxalis/model/actions/connectome_actions";
+import type { ServerSkeletonTracing } from "types/api_flow_types";
 
 function* centerActiveNode(action: Action): Saga<void> {
   if (["DELETE_NODE", "DELETE_BRANCHPOINT"].includes(action.type)) {
@@ -203,28 +204,28 @@ export function* watchAgglomerateLoading(): Saga<void> {
   yield _takeEvery("REMOVE_AGGLOMERATE_SKELETON", removeAgglomerateSkeletonWithId);
 }
 
-function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
-  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
+export function* watchConnectomeAgglomerateLoading(): Saga<void> {
+  // Buffer actions since they might be dispatched before WK_READY
+  const actionChannel = yield _actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
+  // The order of these two actions is not guaranteed, but they both need to be dispatched
+  yield _all([_take("INITIALIZE_CONNECTOME_TRACING"), _take("WK_READY")]);
+  yield _takeEvery(actionChannel, loadConnectomeAgglomerateSkeletonWithId);
+  yield _takeEvery(
+    "REMOVE_CONNECTOME_AGGLOMERATE_SKELETON",
+    removeConnectomeAgglomerateSkeletonWithId,
+  );
+}
 
-  const { layerName, mappingName, agglomerateId, destination } = action;
-  if (agglomerateId === 0) {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
-    return;
-  }
-
+function* getAgglomerateSkeletonTracing(
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+): Saga<ServerSkeletonTracing> {
   const dataset = yield* select(state => state.dataset);
 
   const layerInfo = getLayerByName(dataset, layerName);
   // If there is a fallbackLayer, request the agglomerate for that instead of the tracing segmentation layer
   const effectiveLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
-
-  const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
-  const { hideFn } = yield* call(
-    progressCallback,
-    false,
-    `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
-  );
 
   try {
     const nmlProtoBuffer = yield* call(
@@ -236,61 +237,139 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
       agglomerateId,
     );
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
-
     if (!parsedTracing.trees) {
       // This check is only for flow to realize that we have a skeleton tracing
       // on our hands.
       throw new Error("Skeleton tracing doesn't contain trees");
     }
 
-    if (destination === "tracing") {
-      yield* put(
-        addTreesAndGroupsAction(
-          createMutableTreeMapFromTreeArray(parsedTracing.trees),
-          parsedTracing.treeGroups,
-        ),
+    return parsedTracing;
+  } catch (e) {
+    if (e.messages != null) {
+      // Enhance the error message for agglomerates that are too large
+      const agglomerateTooLargeMessages = e.messages.filter(message =>
+        message.chain != null ? message.chain.includes("too many nodes") : false,
       );
-    } else {
-      yield* put(
-        addConnectomeTreesAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
-      );
+      if (agglomerateTooLargeMessages.length > 0) {
+        // eslint-disable-next-line no-throw-literal
+        throw {
+          ...e,
+          messages: [
+            { error: "Agglomerate is too large to be loaded" },
+            ...agglomerateTooLargeMessages,
+          ],
+        };
+      }
     }
+    throw e;
+  }
+}
+
+function handleAgglomerateLoadingError(e: { messages: Array<Message> } | Error) {
+  if (!(e instanceof Error)) {
+    Toast.messages(e.messages);
+  } else {
+    Toast.error(e.message);
+  }
+  console.error(e);
+  ErrorHandling.notify(e);
+}
+
+function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
+  const { layerName, mappingName, agglomerateId } = action;
+  if (agglomerateId === 0) {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
+    return;
+  }
+
+  const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
+  const { hideFn } = yield* call(
+    progressCallback,
+    false,
+    `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
+  );
+
+  try {
+    const parsedTracing = yield* call(
+      getAgglomerateSkeletonTracing,
+      layerName,
+      mappingName,
+      agglomerateId,
+    );
+
+    yield* put(
+      addTreesAndGroupsAction(
+        createMutableTreeMapFromTreeArray(parsedTracing.trees),
+        parsedTracing.treeGroups,
+      ),
+    );
   } catch (e) {
     // Hide the progress notification and handle the error
     hideFn();
-    console.error(e);
-    ErrorHandling.notify(e);
+    handleAgglomerateLoadingError(e);
     return;
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");
 }
 
+function* loadConnectomeAgglomerateSkeletonWithId(
+  action: LoadAgglomerateSkeletonAction,
+): Saga<void> {
+  const { layerName, mappingName, agglomerateId } = action;
+  if (agglomerateId === 0) {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
+    return;
+  }
+
+  try {
+    const parsedTracing = yield* call(
+      getAgglomerateSkeletonTracing,
+      layerName,
+      mappingName,
+      agglomerateId,
+    );
+
+    yield* put(
+      addConnectomeTreesAction(createMutableTreeMapFromTreeArray(parsedTracing.trees), layerName),
+    );
+  } catch (e) {
+    handleAgglomerateLoadingError(e);
+  }
+}
+
 function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const { layerName, mappingName, agglomerateId, destination } = action;
+  const { mappingName, agglomerateId } = action;
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+  const trees = yield* select(state => enforceSkeletonTracing(state.tracing).trees);
 
-  if (destination === "tracing") {
-    const trees = yield* select(state => enforceSkeletonTracing(state.tracing).trees);
+  yield _all(findTreeByName(trees, treeName).map(tree => put(deleteTreeAction(tree.treeId))));
+}
 
-    yield _all(findTreeByName(trees, treeName).map(tree => put(deleteTreeAction(tree.treeId))));
-  } else {
-    const skeleton = yield* select(
-      state => state.localSegmentationData[layerName].connectomeData.skeleton,
-    );
-    if (skeleton == null) return;
-    const { trees } = skeleton;
+function* removeConnectomeAgglomerateSkeletonWithId(
+  action: LoadAgglomerateSkeletonAction,
+): Saga<void> {
+  const { layerName, mappingName, agglomerateId } = action;
 
-    yield _all(
-      findTreeByName(trees, treeName).map(tree =>
-        put(deleteConnectomeTreesAction([tree.treeId], layerName)),
-      ),
-    );
-  }
+  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+  const skeleton = yield* select(
+    state => state.localSegmentationData[layerName].connectomeData.skeleton,
+  );
+  if (skeleton == null) return;
+  const { trees } = skeleton;
+
+  yield _all(
+    findTreeByName(trees, treeName).map(tree =>
+      put(deleteConnectomeTreesAction([tree.treeId], layerName)),
+    ),
+  );
 }
 
 export function* watchSkeletonTracingAsync(): Saga<void> {
@@ -459,3 +538,9 @@ export function* diffSkeletonTracing(
     yield updateUserBoundingBoxes(skeletonTracing.userBoundingBoxes);
   }
 }
+
+export default [
+  watchSkeletonTracingAsync,
+  watchAgglomerateLoading,
+  watchConnectomeAgglomerateLoading,
+];

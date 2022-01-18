@@ -48,6 +48,19 @@ type SetActiveConnectomeAgglomerateIdsAction = {
   agglomerateIds: Array<number>,
 };
 
+export type LoadConnectomeAgglomerateSkeletonAction = {
+  type: "LOAD_CONNECTOME_AGGLOMERATE_SKELETON",
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+};
+export type RemoveConnectomeAgglomerateSkeletonAction = {
+  type: "REMOVE_CONNECTOME_AGGLOMERATE_SKELETON",
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+};
+
 export type ConnectomeAction =
   | InitializeConnectomeTracingAction
   | RemoveConnectomeTracingAction
@@ -56,7 +69,9 @@ export type ConnectomeAction =
   | SetConnectomeTreesVisibilityAction
   | UpdateConnectomeFileListAction
   | UpdateCurrentConnectomeFileAction
-  | SetActiveConnectomeAgglomerateIdsAction;
+  | SetActiveConnectomeAgglomerateIdsAction
+  | LoadConnectomeAgglomerateSkeletonAction
+  | RemoveConnectomeAgglomerateSkeletonAction;
 
 export const initializeConnectomeTracingAction = (
   layerName: string,
@@ -126,4 +141,26 @@ export const setActiveConnectomeAgglomerateIdsAction = (
   type: "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS",
   layerName,
   agglomerateIds,
+});
+
+export const loadConnectomeAgglomerateSkeletonAction = (
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+): LoadConnectomeAgglomerateSkeletonAction => ({
+  type: "LOAD_CONNECTOME_AGGLOMERATE_SKELETON",
+  layerName,
+  mappingName,
+  agglomerateId,
+});
+
+export const removeConnectomeAgglomerateSkeletonAction = (
+  layerName: string,
+  mappingName: string,
+  agglomerateId: number,
+): RemoveConnectomeAgglomerateSkeletonAction => ({
+  type: "REMOVE_CONNECTOME_AGGLOMERATE_SKELETON",
+  layerName,
+  mappingName,
+  agglomerateId,
 });

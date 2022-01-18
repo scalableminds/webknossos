@@ -1774,7 +1774,7 @@ export function getAgglomerateSkeleton(
       }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
-      { useWebworkerForArrayBuffer: false },
+      { useWebworkerForArrayBuffer: false, showErrorToast: false },
     ),
   );
 }

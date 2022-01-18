@@ -6,7 +6,7 @@ import {
   type AddBucketToUndoAction,
   type FinishAnnotationStrokeAction,
   type ImportVolumeTracingAction,
-  type MaybeBucketLoadedPromise,
+  type MaybeUnmergedBucketLoadedPromise,
   type UpdateSegmentAction,
   VolumeTracingSaveRelevantActions,
   type InitializeVolumeTracingAction,
@@ -133,7 +133,7 @@ type UndoBucket = {
   // The following arrays are Uint8Array due to the compression
   compressedData: Uint8Array,
   compressedBackendData?: Uint8Array,
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
   pendingOperations: Array<(BucketDataArray) => void>,
 };
 type VolumeUndoBuckets = Array<UndoBucket>;
@@ -279,7 +279,7 @@ export function* collectUndoStates(): Saga<void> {
         const {
           zoomedBucketAddress,
           bucketData,
-          maybeBucketLoadedPromise,
+          maybeUnmergedBucketLoadedPromise,
           pendingOperations,
           tracingId,
         } = addBucketToUndoAction;
@@ -288,7 +288,7 @@ export function* collectUndoStates(): Saga<void> {
             compressBucketAndAddToList,
             zoomedBucketAddress,
             bucketData,
-            maybeBucketLoadedPromise,
+            maybeUnmergedBucketLoadedPromise,
             pendingOperations,
             volumeInfoById[tracingId].currentVolumeUndoBuckets,
           ),
@@ -424,24 +424,24 @@ function getBoundingBoxToUndoState(
 function* compressBucketAndAddToList(
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
   pendingOperations: Array<(BucketDataArray) => void>,
   undoBucketList: VolumeUndoBuckets,
 ): Saga<void> {
   // The given bucket data is compressed, wrapped into a UndoBucket instance
   // and appended to the passed VolumeAnnotationBatch.
-  // If backend data is being downloaded (MaybeBucketLoadedPromise exists),
+  // If backend data is being downloaded (MaybeUnmergedBucketLoadedPromise exists),
   // the backend data will also be compressed and attached to the UndoBucket.
   const compressedData = yield* call(compressTypedArray, bucketData);
   if (compressedData != null) {
     const volumeUndoPart: UndoBucket = {
       zoomedBucketAddress,
       compressedData,
-      maybeBucketLoadedPromise,
+      maybeUnmergedBucketLoadedPromise,
       pendingOperations: pendingOperations.slice(),
     };
-    if (maybeBucketLoadedPromise != null) {
-      maybeBucketLoadedPromise.then(async backendBucketData => {
+    if (maybeUnmergedBucketLoadedPromise != null) {
+      maybeUnmergedBucketLoadedPromise.then(async backendBucketData => {
         // Once the backend data is fetched, do not directly merge it with the already saved undo data
         // as this operation is only needed, when the volume action is undone. Additionally merging is more
         // expensive than saving the backend data. Thus the data is only merged upon an undo action / when it is needed.
@@ -573,7 +573,7 @@ function* applyAndGetRevertingVolumeBatch(
       compressedData: compressedBucketData,
       compressedBackendData,
     } = volumeUndoBucket;
-    let { maybeBucketLoadedPromise } = volumeUndoBucket;
+    let { maybeUnmergedBucketLoadedPromise } = volumeUndoBucket;
     const bucket = cube.getOrCreateBucket(zoomedBucketAddress);
     if (bucket.type === "null") {
       continue;
@@ -590,16 +590,16 @@ function* applyAndGetRevertingVolumeBatch(
         // If the backend data for the bucket has been fetched in the meantime,
         // the previous getData() call already returned the newest (merged) data.
         // There should be no need to await the data from the backend.
-        maybeBucketLoadedPromise = null;
+        maybeUnmergedBucketLoadedPromise = null;
       }
     } else {
       // The bucket's data is not available, since it was gc'ed in the meantime (which
       // means its state must have been persisted to the server). Thus, it's enough to
       // persist an essentially empty data array (which is created by getOrCreateData)
-      // and passing maybeBucketLoadedPromise around so that
+      // and passing maybeUnmergedBucketLoadedPromise around so that
       // the back-end data is fetched upon undo/redo.
       bucketData = bucket.getOrCreateData().data;
-      maybeBucketLoadedPromise = bucket.maybeBucketLoadedPromise;
+      maybeUnmergedBucketLoadedPromise = bucket.maybeUnmergedBucketLoadedPromise;
     }
 
     // Append the compressed snapshot to allCompressedBucketsOfCurrentState.
@@ -607,7 +607,7 @@ function* applyAndGetRevertingVolumeBatch(
       compressBucketAndAddToList,
       zoomedBucketAddress,
       bucketData,
-      maybeBucketLoadedPromise,
+      maybeUnmergedBucketLoadedPromise,
       currentPendingOperations,
       allCompressedBucketsOfCurrentState,
     );

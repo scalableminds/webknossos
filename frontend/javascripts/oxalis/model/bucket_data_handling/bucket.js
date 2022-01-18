@@ -11,7 +11,7 @@ import { type ElementClass } from "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import {
   addBucketToUndoAction,
-  type MaybeBucketLoadedPromise,
+  type MaybeUnmergedBucketLoadedPromise,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   bucketPositionToGlobalAddress,
@@ -130,7 +130,7 @@ export class DataBucket {
   _fallbackBucket: ?Bucket;
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise;
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
 
   constructor(
     elementClass: ElementClass,
@@ -139,7 +139,7 @@ export class DataBucket {
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();
-    this.maybeBucketLoadedPromise = null;
+    this.maybeUnmergedBucketLoadedPromise = null;
 
     this.elementClass = elementClass;
     this.cube = cube;
@@ -296,23 +296,23 @@ export class DataBucket {
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
       const { dataClone } = this.getCopyOfData();
-      if (this.isUnsynced() && this.maybeBucketLoadedPromise == null) {
-        this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
+      if (this.isUnsynced() && this.maybeUnmergedBucketLoadedPromise == null) {
+        this.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
           this.once("unmergedBucketDataLoaded", data => {
-            // Once the bucket was loaded, maybeBucketLoadedPromise can be null'ed
-            this.maybeBucketLoadedPromise = null;
+            // Once the bucket was loaded, maybeUnmergedBucketLoadedPromise can be null'ed
+            this.maybeUnmergedBucketLoadedPromise = null;
             resolve(data);
           });
         });
       }
       Store.dispatch(
-        // Always use the current state of this.maybeBucketLoadedPromise, since
+        // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
         // this bucket could be added to multiple undo batches while it's fetched. All entries
         // need to have the corresponding promise for the undo to work correctly.
         addBucketToUndoAction(
           this.zoomedAddress,
           dataClone,
-          this.maybeBucketLoadedPromise,
+          this.maybeUnmergedBucketLoadedPromise,
           this.pendingOperations,
           this.getTracingId(),
         ),

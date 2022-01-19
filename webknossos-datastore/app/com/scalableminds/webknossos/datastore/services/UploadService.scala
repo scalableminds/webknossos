@@ -40,11 +40,12 @@ object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
-case class UploadInformation(uploadId: String,
-                             name: String,
-                             organization: String,
-                             layersToLink: Option[List[LinkedLayerIdentifier]],
-                             needsConversion: Option[Boolean])
+case class CompleteLinkedLayerIdentifier(layersToLink: Option[List[LinkedLayerIdentifier]])
+object CompleteLinkedLayerIdentifier {
+  implicit val jsonFormat: OFormat[CompleteLinkedLayerIdentifier] = Json.format[CompleteLinkedLayerIdentifier]
+}
+
+case class UploadInformation(uploadId: String, needsConversion: Option[Boolean])
 
 object UploadInformation {
   implicit val jsonFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
@@ -68,6 +69,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   /* Redis stores different information for each upload, with different prefixes in the keys:
    *  uploadId -> fileCount
    *  uploadId -> set(fileName)
+   *  uploadId -> dataSourceId
+   *  uploadId -> linkedLayerIdentifier
    *  uploadId#fileName -> totalChunkCount
    *  uploadId#fileName -> set(chunkIndices)
    * Note that Redis synchronizes all db accesses, so we do not need to do it
@@ -76,6 +79,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     s"upload___${uploadId}___fileCount"
   private def redisKeyForFileNameSet(uploadId: String): String =
     s"upload___${uploadId}___fileNameSet"
+  private def redisKeyForDataSourceId(uploadId: String): String =
+    s"upload___${uploadId}___dataSourceId"
+  private def redisKeyForLinkedLayerIdentifier(uploadId: String): String =
+    s"upload___${uploadId}___linkedLayerIdentifier"
   private def redisKeyForFileChunkCount(uploadId: String, fileName: String): String =
     s"upload___${uploadId}___file___${fileName}___chunkCount"
   private def redisKeyForFileChunkSet(uploadId: String, fileName: String): String =
@@ -97,6 +104,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInformation.uploadId),
                                              String.valueOf(reserveUploadInformation.totalFileCount))
+      _ <- runningUploadMetadataStore.insert(
+        redisKeyForDataSourceId(reserveUploadInformation.uploadId),
+        Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)))
+      )
+      _ <- runningUploadMetadataStore.insert(
+        redisKeyForLinkedLayerIdentifier(reserveUploadInformation.uploadId),
+        Json.stringify(Json.toJson(CompleteLinkedLayerIdentifier(reserveUploadInformation.layersToLink)))
+      )
       _ = logger.info(
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
@@ -105,35 +120,30 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")
 
   def handleUploadChunk(uploadFileId: String,
-                        datasourceId: DataSourceId,
                         chunkSize: Long,
                         totalChunkCount: Long,
                         currentChunkNumber: Long,
                         chunkFile: File): Fox[Unit] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
-    val uploadDir = uploadDirectory(datasourceId.team, uploadId)
-    val filePathRaw = uploadFileId.split("/").tail.mkString("/")
-    val filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
-
-    if (isOutsideUploadDir(uploadDir, filePath)) return Fox.failure(s"Invalid file path: $filePath")
-
-    val isNewChunk = for {
+    for {
+      dataSourceIdStringOption <- runningUploadMetadataStore.find(redisKeyForDataSourceId(uploadId))
+      dataSourceId <- dataSourceIdStringOption.toFox.flatMap(ds => Json.fromJson[DataSourceId](Json.parse(ds)).asOpt)
+      uploadDir = uploadDirectory(dataSourceId.team, uploadId)
+      filePathRaw = uploadFileId.split("/").tail.mkString("/")
+      filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
+      _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
-      _ <- if (isFileKnown) Fox.successful(())
-      else {
+      _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore
           .insertIntoSet(redisKeyForFileNameSet(uploadId), filePath)
-          .flatMap(
-            _ =>
-              runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
-                                                String.valueOf(totalChunkCount)))
+          .flatMap(_ =>
+            runningUploadMetadataStore.insert(redisKeyForFileChunkCount(uploadId, filePath),
+                                              String.valueOf(totalChunkCount)))
       }
       isNewChunk <- runningUploadMetadataStore.insertIntoSet(redisKeyForFileChunkSet(uploadId, filePath),
                                                              String.valueOf(currentChunkNumber))
-    } yield isNewChunk
-
-    isNewChunk map {
-      case true =>
+    } yield
+      if (isNewChunk) {
         try {
           val bytes = Files.readAllBytes(chunkFile.toPath)
           this.synchronized {
@@ -143,16 +153,16 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
             tempFile.write(bytes)
             tempFile.close()
           }
+          Fox.successful(())
         } catch {
           case e: Exception =>
             runningUploadMetadataStore.removeFromSet(redisKeyForFileChunkSet(uploadId, filePath),
                                                      String.valueOf(currentChunkNumber))
-            val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${datasourceId.name}: ${e.getMessage}"
+            val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${dataSourceId.name}: ${e.getMessage}"
             logger.warn(errorMsg)
-            return Fox.failure(errorMsg)
+            Fox.failure(errorMsg)
         }
-      case false => ()
-    }
+      } else Fox.successful(())
   }
 
   def cancelUpload(cancelUploadInformation: CancelUploadInformation): Fox[Unit] = {
@@ -169,15 +179,15 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def finishUpload(uploadInformation: UploadInformation, checkCompletion: Boolean = true): Fox[(DataSourceId, Long)] = {
     val uploadId = uploadInformation.uploadId
-    val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
-    val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
-    val uploadDir = uploadDirectory(uploadInformation.organization, uploadId)
-    val unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
-
-    logger.info(
-      s"Finishing dataset upload of ${uploadInformation.organization}/${uploadInformation.name} with id $uploadId...")
 
     for {
+      dataSourceIdStringOption <- runningUploadMetadataStore.find(redisKeyForDataSourceId(uploadId))
+      dataSourceId <- dataSourceIdStringOption.toFox.flatMap(ds => Json.fromJson[DataSourceId](Json.parse(ds)).asOpt)
+      datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
+      uploadDir = uploadDirectory(dataSourceId.team, uploadId)
+      unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
+
+      _ = logger.info(s"Finishing dataset upload of ${dataSourceId.team}/${dataSourceId.name} with id $uploadId...")
       _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataSet.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
@@ -186,12 +196,19 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
-      postProcessingResult <- postProcessUploadedDataSource(datasetNeedsConversion, unpackToDir, uploadInformation).futureBox
+
+      linkedLayerInfoStringOption <- runningUploadMetadataStore.find(redisKeyForLinkedLayerIdentifier(uploadId))
+      linkedLayerInfo <- linkedLayerInfoStringOption.toFox.flatMap(l =>
+        Json.fromJson[CompleteLinkedLayerIdentifier](Json.parse(l)).asOpt)
+      postProcessingResult <- postProcessUploadedDataSource(datasetNeedsConversion,
+                                                            unpackToDir,
+                                                            dataSourceId,
+                                                            linkedLayerInfo.layersToLink).futureBox
       _ <- cleanUpOnFailure(postProcessingResult,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"processing to dataset at $unpackToDir")
-      dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, uploadInformation.organization)
+      dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team)
       _ <- dataSourceRepository.updateDataSource(dataSource)
       dataSetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
     } yield (dataSourceId, dataSetSizeBytes)
@@ -199,16 +216,15 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
                                             unpackToDir: Path,
-                                            uploadInformation: UploadInformation) =
+                                            dataSourceId: DataSourceId,
+                                            layersToLink: Option[List[LinkedLayerIdentifier]]) =
     if (datasetNeedsConversion)
       Fox.successful(())
     else {
       for {
         _ <- tryo(addLayerAndResolutionDirIfMissing(unpackToDir)).toFox
-        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, uploadInformation.layersToLink.getOrElse(List.empty))
-        _ <- addLinkedLayersToDataSourceProperties(unpackToDir,
-                                                   uploadInformation.organization,
-                                                   uploadInformation.layersToLink.getOrElse(List.empty))
+        _ <- addSymlinksToOtherDatasetLayers(unpackToDir, layersToLink.getOrElse(List.empty))
+        _ <- addLinkedLayersToDataSourceProperties(unpackToDir, dataSourceId.team, layersToLink.getOrElse(List.empty))
       } yield ()
     }
 

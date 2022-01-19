@@ -247,7 +247,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
 
-      const resumableUpload = await createResumableUpload(datasetId, datastoreUrl, uploadId);
+      const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
 
       this.setState({ uploadId, resumableUpload, datasetId, datastoreUrl });
 
@@ -259,9 +259,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
         const uploadInfo = {
           uploadId,
-          organization: datasetId.owningOrganization,
-          name: datasetId.name,
-          layersToLink: [],
           needsConversion: this.state.needsConversion,
         };
 

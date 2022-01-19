@@ -7,7 +7,7 @@ import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
+import com.scalableminds.webknossos.datastore.helpers.{DataSetDeleter, DirectoryConstants}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
@@ -60,10 +60,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                               runningUploadMetadataStore: DataStoreRedisStore)
     extends LazyLogging
     with DataSetDeleter
+    with DirectoryConstants
     with FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
-  private val uploadingDir: String = ".uploading"
 
   /* Redis stores different information for each upload, with different prefixes in the keys:
    *  uploadId -> fileCount
@@ -266,7 +266,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
     val dataSourceDir =
       if (datasetNeedsConversion)
-        dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
+        dataBaseDir.resolve(dataSourceId.team).resolve(forConversionDir).resolve(dataSourceId.name)
       else
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     dataSourceDir

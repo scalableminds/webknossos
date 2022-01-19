@@ -39,15 +39,7 @@ module.exports = function(env = {}) {
   ];
 
   if (env.production) {
-    plugins.push(
-      new TerserPlugin({
-        terserOptions: {
-          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
-          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
-          compress: false,
-        },
-      }),
-    );
+    plugins.push(new TerserPlugin());
   }
 
   const cssLoaderUrlFilter = {

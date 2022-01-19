@@ -289,7 +289,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def cleanUpIfFailed(job: Job): Fox[Unit] =
     if (job.state == JobState.FAILURE && job.command == "convert_to_wkw") {
-      logger.info(s"Job ${job._id} failed. Deleting Dataset...")
+      logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
       val commandArgs = job.commandArgs.value
       for {
         datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox

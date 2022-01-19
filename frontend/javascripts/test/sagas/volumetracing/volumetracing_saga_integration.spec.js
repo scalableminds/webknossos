@@ -745,7 +745,10 @@ test.serial("Brushing/Tracing with upsampling to unloaded data", async t => {
   }
 });
 
-test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
+test.serial("Erasing on mag 4 where mag 1 is unloaded", eraseInMag4Helper, false);
+test.serial("Erasing on mag 4 where mag 1 is loaded", eraseInMag4Helper, true);
+
+async function eraseInMag4Helper(t, loadDataAtBeginning) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -764,12 +767,14 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
   // This particular brushSize used to trigger a bug. It should not be changed.
   const brushSize = 263;
 
-  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    t.is(
-      await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
-      oldCellId,
-      `Center should have old value at zoomstep=${zoomStep}`,
-    );
+  if (loadDataAtBeginning) {
+    for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+      t.is(
+        await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
+        oldCellId,
+        `Center should have old value at zoomstep=${zoomStep}`,
+      );
+    }
   }
 
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
@@ -787,7 +792,7 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
 
   const data = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
     min: [0, 0, 0],
-    max: [35, 1, 1], // 1350
+    max: [35, 1, 1],
   });
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
@@ -799,7 +804,7 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
     t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
   }
   t.is(_.max(data), 0, "All the data should be 0 (== erased).");
-});
+}
 
 test.serial("Undo erasing in mag 4", async t => {
   const oldCellId = 11;

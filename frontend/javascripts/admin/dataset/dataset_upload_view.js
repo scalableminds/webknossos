@@ -360,7 +360,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const shouldCancel = await confirmAsync({
       title:
         "Cancelling the running upload will delete already uploaded files on the server and cannot be undone. Are you sure you want to cancel the upload?",
-      okText: "Yes, Cancel the upload.",
+      okText: "Yes, Cancel the upload",
+      cancelText: "No, keep it running",
     });
     if (!shouldCancel) {
       resumableUpload.upload();

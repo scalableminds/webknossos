@@ -145,7 +145,7 @@ class WKRemoteDataStoreController @Inject()(
     }
   }
 
-  def deleteDatasource(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+  def deleteDataset(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name, key) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"

@@ -550,9 +550,7 @@ function mergeDataWithBackendDataInPlace(
   }
 
   // Transfer backend to originalData
-  for (let i = 0; i < originalData.length; ++i) {
-    originalData[i] = backendData[i];
-  }
+  originalData.set(backendData);
 
   for (const op of pendingOperations) {
     op(originalData);

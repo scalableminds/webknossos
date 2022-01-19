@@ -349,6 +349,7 @@ function DatasetView(props: Props) {
                 <ReloadOutlined />
               )
             }
+            disabled={(context.datasets.length === 0 && context.isLoading) || context.isChecking}
             style={margin}
             onClick={context.checkDatasets}
           >

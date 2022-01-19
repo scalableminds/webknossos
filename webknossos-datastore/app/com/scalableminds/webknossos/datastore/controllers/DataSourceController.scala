@@ -250,13 +250,18 @@ Expects:
     ))
   def cancelUpload(token: String): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
-      val dataSourceId = DataSourceId(request.body.name, request.body.organization)
-      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), Some(token)) {
-        AllowRemoteOrigin {
-          for {
-            _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId)
-            _ <- uploadService.cancelUpload(request.body)
-          } yield Ok
+      val dataSourceIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
+        case false => Fox.failure("dataSet.upload.validation.failed")
+        case true  => uploadService.getDataSourceIdByUploadId(request.body.uploadId)
+      }
+      dataSourceIdFox.flatMap { dataSourceId =>
+        accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), Some(token)) {
+          AllowRemoteOrigin {
+            for {
+              _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId)
+              _ <- uploadService.cancelUpload(request.body)
+            } yield Ok
+          }
         }
       }
     }

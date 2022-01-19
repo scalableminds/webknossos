@@ -82,7 +82,6 @@ type State = {
   selectedTeams: APITeam | Array<APITeam>,
   uploadId: string,
   resumableUpload: any,
-  datasetId: any,
   datastoreUrl: string,
 };
 
@@ -158,7 +157,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     selectedTeams: [],
     uploadId: "",
     resumableUpload: {},
-    datasetId: {},
     datastoreUrl: "",
   };
 
@@ -249,7 +247,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
 
-      this.setState({ uploadId, resumableUpload, datasetId, datastoreUrl });
+      this.setState({ uploadId, resumableUpload, datastoreUrl });
 
       resumableUpload.on("complete", () => {
         const newestForm = this.formRef.current;
@@ -352,7 +350,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   cancelUpload = async () => {
-    const { uploadId, resumableUpload, datasetId, datastoreUrl } = this.state;
+    const { uploadId, resumableUpload, datastoreUrl } = this.state;
     resumableUpload.pause();
     const shouldCancel = await confirmAsync({
       title:
@@ -366,11 +364,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
 
     resumableUpload.cancel();
-    await cancelDatasetUpload(datastoreUrl, {
-      uploadId,
-      organization: datasetId.owningOrganization,
-      name: datasetId.name,
-    });
+    await cancelDatasetUpload(datastoreUrl, { uploadId });
     this.setState({
       isUploading: false,
       isFinishing: false,

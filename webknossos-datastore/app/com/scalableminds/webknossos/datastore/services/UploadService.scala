@@ -370,7 +370,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     this.synchronized {
       PathUtils.deleteDirectoryRecursively(uploadDir)
     }
-    cleanUpRedis(uploadId)
+    removeFromRedis(uploadId)
   }
 
   private def cleanUpRedis(uploadId: String): Fox[Unit] =

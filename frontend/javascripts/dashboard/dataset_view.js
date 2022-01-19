@@ -342,7 +342,13 @@ function DatasetView(props: Props) {
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <React.Fragment>
           <Button
-            icon={context.isLoading ? <LoadingOutlined /> : <ReloadOutlined />}
+            icon={
+              (context.datasets.length === 0 && context.isLoading) || context.isChecking ? (
+                <LoadingOutlined />
+              ) : (
+                <ReloadOutlined />
+              )
+            }
             style={margin}
             onClick={context.checkDatasets}
           >

@@ -17,7 +17,6 @@ import {
   createBucketResponseFunction,
   getFirstVolumeTracingOrFail,
 } from "test/helpers/apiHelpers";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";

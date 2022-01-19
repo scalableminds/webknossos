@@ -507,7 +507,7 @@ Expects:
                                                                         dataSetName,
                                                                         reason =
                                                                           Some("the user wants to delete the dataset"))
-            _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also removes the name of the wK DB
+            _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
           } yield Ok
         }
       }

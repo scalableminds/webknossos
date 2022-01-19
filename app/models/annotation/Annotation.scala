@@ -1,7 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import javax.inject.Inject
@@ -148,6 +148,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
+      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseJsonToFox[JsObject](_))
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
     } yield {
@@ -161,6 +162,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
         r.description,
         visibility,
         r.name,
+        viewconfigurationOpt,
         state,
         Json.parse(r.statistics).as[JsObject],
         parseArrayTuple(r.tags).toSet,
@@ -320,11 +322,13 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
   // update operations
 
   def insertOne(a: Annotation): Fox[Unit] = {
+    val viewConfigurationStr: Option[String] = a.viewConfiguration.map(Json.toJson(_).toString)
     val insertAnnotationQuery = sqlu"""
         insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, description, visibility,
-                                           name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+                                           name, viewConfiguration, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
         values(${a._id.id}, ${a._dataSet.id}, ${a._task.map(_.id)}, ${a._team.id},
          ${a._user.id}, ${a.description}, '#${a.visibility.toString}', ${a.name},
+         #${optionLiteral(viewConfigurationStr.map(sanitize))},
          '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
          '#${writeArrayTuple(a.tags.toList.map(sanitize))}', ${a.tracingTime}, '#${a.typ.toString}',
          ${new java.sql.Timestamp(a.created)}, ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
@@ -337,6 +341,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
 
   // Task only, thus hard replacing tracing ids
   def updateInitialized(a: Annotation): Fox[Unit] = {
+    val viewConfigurationStr: Option[String] = a.viewConfiguration.map(Json.toJson(_).toString)
     val updateAnnotationQuery = sqlu"""
              update webknossos.annotations
              set
@@ -346,6 +351,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
                description = ${a.description},
                visibility = '#${a.visibility.toString}',
                name = ${a.name},
+               viewConfiguration = #${optionLiteral(viewConfigurationStr.map(sanitize))},
                state = '#${a.state.toString}',
                statistics = '#${sanitize(a.statistics.toString)}',
                tags = '#${writeArrayTuple(a.tags.toList.map(sanitize))}',
@@ -445,6 +451,16 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient, annotationLayerDAO: Annotati
 
   def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateObjectIdCol(id, _._User, userId)
+
+  def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(
+      implicit ctx: DBAccessContext): Fox[Unit] = {
+    val viewConfigurationStr: Option[String] = viewConfiguration.map(Json.toJson(_).toString)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"update webknossos.annotations set viewConfiguration = #${optionLiteral(
+        viewConfigurationStr.map(sanitize))} where _id = ${id.id}")
+    } yield ()
+  }
 }
 
 class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext)

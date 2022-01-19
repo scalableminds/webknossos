@@ -1,16 +1,17 @@
 module.exports = function(env = {}) {
-  /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
-  var webpack = require("webpack");
-  var fs = require("fs");
-  var path = require("path");
+  /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
+  const webpack = require("webpack");
+  const fs = require("fs");
+  const path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
   const CopyWebpackPlugin = require("copy-webpack-plugin");
 
-  var srcPath = path.resolve(__dirname, "frontend/javascripts/");
-  var nodePath = "node_modules";
-  var protoPath = path.join(__dirname, "webknossos-datastore/proto/");
+  const srcPath = path.resolve(__dirname, "frontend/javascripts/");
+  const nodePath = "node_modules";
+  const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
+  const publicPath = "/assets/bundle/";
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), String(process.pid), "utf8");
 
@@ -50,16 +51,8 @@ module.exports = function(env = {}) {
   }
 
   const cssLoaderUrlFilter = {
-    filter: (url, resourcePath) => {
-      // resourcePath - path to css file
-
-      // Don't handle `img.png` urls
-      if (url.startsWith("/assets")) {
-        return false;
-      }
-
-      return true;
-    },
+    // Don't try to handle urls that already point to the assets directory
+    filter: url => !url.startsWith("/assets/"),
   };
 
   return {
@@ -73,7 +66,7 @@ module.exports = function(env = {}) {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      publicPath: "/assets/bundle/",
+      publicPath,
     },
     module: {
       rules: [
@@ -165,7 +158,7 @@ module.exports = function(env = {}) {
         directory: `${__dirname}/public`,
       },
       devMiddleware: {
-        publicPath: "/assets/bundle/",
+        publicPath,
       },
       port: env.PORT != null ? env.PORT : 9002,
       hot: false,

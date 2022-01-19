@@ -102,7 +102,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
   );
   return {
-    activeCellId: activeVolumeTracing != null ? activeVolumeTracing.activeCellId : null,
+    activeCellId: activeVolumeTracing?.activeCellId,
     isosurfaces:
       visibleSegmentationLayer != null
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces

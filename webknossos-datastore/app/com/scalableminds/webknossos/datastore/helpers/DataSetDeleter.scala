@@ -16,7 +16,7 @@ trait DataSetDeleter extends LazyLogging {
                    isInConversion: Boolean = false,
                    reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
     @tailrec
-    def deleter(sourcePath: Path, targetPath: Path, retryCount: Int = 0): Fox[Unit] =
+    def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0): Fox[Unit] =
       try {
         val deduplicatedTargetPath =
           if (retryCount == 0) targetPath else targetPath.resolveSibling(targetPath.getFileName + s"($retryCount)")

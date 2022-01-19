@@ -109,8 +109,13 @@ export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 export type Bucket = DataBucket | NullBucket;
 
 // This set saves whether a bucket is already added to the current undo volume batch
-// and gets cleared by the save saga after an annotation step has finished.
+// and gets cleared when a volume transaction is ended (marked by the action
+// FINISH_ANNOTATION_STROKE).
 export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
+
+export function markVolumeTransactionEnd() {
+  bucketsAlreadyInUndoState.clear();
+}
 
 export class DataBucket {
   type: "data" = "data";
@@ -292,32 +297,41 @@ export class DataBucket {
   }
 
   markAndAddBucketForUndo() {
+    // This method adds a snapshot of the current bucket to the undo stack.
+    // Note that the method may be called multiple times during a volume
+    // transaction (e.g., when moving the brush over the same buckets for
+    // multiple frames). Since a snapshot of the "old" data should be
+    // saved to the undo stack, the snapshot only has to be created once
+    // for each transaction.
+    // This is ensured by checking bucketsAlreadyInUndoState.
     this.dirty = true;
-    if (!bucketsAlreadyInUndoState.has(this)) {
-      bucketsAlreadyInUndoState.add(this);
-      const dataClone = this.getCopyOfData();
-      if (this.isUnsynced() && this.maybeUnmergedBucketLoadedPromise == null) {
-        this.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
-          this.once("unmergedBucketDataLoaded", data => {
-            // Once the bucket was loaded, maybeUnmergedBucketLoadedPromise can be null'ed
-            this.maybeUnmergedBucketLoadedPromise = null;
-            resolve(data);
-          });
-        });
-      }
-      Store.dispatch(
-        // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
-        // this bucket could be added to multiple undo batches while it's fetched. All entries
-        // need to have the corresponding promise for the undo to work correctly.
-        addBucketToUndoAction(
-          this.zoomedAddress,
-          dataClone,
-          this.maybeUnmergedBucketLoadedPromise,
-          this.pendingOperations,
-          this.getTracingId(),
-        ),
-      );
+    if (bucketsAlreadyInUndoState.has(this)) {
+      return;
     }
+
+    bucketsAlreadyInUndoState.add(this);
+    const dataClone = this.getCopyOfData();
+    if (this.isUnsynced() && this.maybeUnmergedBucketLoadedPromise == null) {
+      this.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
+        this.once("unmergedBucketDataLoaded", data => {
+          // Once the bucket was loaded, maybeUnmergedBucketLoadedPromise can be null'ed
+          this.maybeUnmergedBucketLoadedPromise = null;
+          resolve(data);
+        });
+      });
+    }
+    Store.dispatch(
+      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
+      // this bucket could be added to multiple undo batches while it's fetched. All entries
+      // need to have the corresponding promise for the undo to work correctly.
+      addBucketToUndoAction(
+        this.zoomedAddress,
+        dataClone,
+        this.maybeUnmergedBucketLoadedPromise,
+        this.pendingOperations,
+        this.getTracingId(),
+      ),
+    );
   }
 
   hasData(): boolean {
@@ -613,7 +627,12 @@ export class DataBucket {
   }
 
   // This is a debugging function to enable logging specific
-  // to a certain bucket.
+  // to a certain bucket. When drilling down on a specific bucket
+  // you can adapt the if-condition (e.g. for only printing logs
+  // for a specific bucket address).
+  //
+  // Example usage:
+  // bucket._logMaybe("Data of problematic bucket", bucket.data)
   _logMaybe = (...args) => {
     if (this.zoomedAddress.join(",") === [93, 0, 0, 0].join(",")) {
       console.log(...args);

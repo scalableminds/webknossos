@@ -45,6 +45,7 @@ import {
   addUserBoundingBoxAction,
   type AddIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
+import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
 import {
@@ -971,6 +972,17 @@ function* maintainContourGeometry(): Saga<void> {
   }
 }
 
+function* maintainVolumeTransactionEnds(): Saga<void> {
+  // When FINISH_ANNOTATION_STROKE is dispatched, the current volume
+  // transaction has ended. All following UI actions which
+  // mutate buckets should operate on a fresh `bucketsAlreadyInUndoState` set.
+  // Therefore, `markVolumeTransactionEnd` should be called immediately
+  // when FINISH_ANNOTATION_STROKE is dispatched. There should be no waiting
+  // on other operations (such as pending compressions) as it has been the case
+  // before. Otherwise, different undo states would "bleed" into each other.
+  yield _takeEvery("FINISH_ANNOTATION_STROKE", markVolumeTransactionEnd);
+}
+
 export default [
   editVolumeLayerAsync,
   ensureToolIsAllowedInResolution,
@@ -979,4 +991,5 @@ export default [
   maintainSegmentsMap,
   maintainHoveredSegmentId,
   maintainContourGeometry,
+  maintainVolumeTransactionEnds,
 ];

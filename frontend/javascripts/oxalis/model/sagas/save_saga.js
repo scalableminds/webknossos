@@ -68,11 +68,7 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import {
-  bucketsAlreadyInUndoState,
-  type BucketDataArray,
-  DataBucket,
-} from "oxalis/model/bucket_data_handling/bucket";
+import { type BucketDataArray, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
@@ -283,6 +279,10 @@ export function* collectUndoStates(): Saga<void> {
           pendingOperations,
           tracingId,
         } = addBucketToUndoAction;
+        // The bucket's (old) state should be added to the undo
+        // stack so that we can revert to its previous version.
+        // bucketData is compressed asynchronously, which is why
+        // the corresponding "task" is added to `pendingCompressions`.
         pendingCompressions.push(
           yield* fork(
             compressBucketAndAddToList,
@@ -294,12 +294,17 @@ export function* collectUndoStates(): Saga<void> {
           ),
         );
       } else if (finishAnnotationStrokeAction) {
+        // FINISH_ANNOTATION_STROKE was dispatched which marks the end
+        // of a volume transaction.
+        // All compression tasks (see `pendingCompressions`) need to be
+        // awaited to add the proper entry to the undo stack.
         shouldClearRedoState = true;
         const activeVolumeTracing = yield* select(state =>
           getVolumeTracingById(state.tracing, finishAnnotationStrokeAction.tracingId),
         );
-        yield* join([...pendingCompressions]);
-        bucketsAlreadyInUndoState.clear();
+        yield* join(pendingCompressions);
+        pendingCompressions = [];
+
         const volumeInfo = volumeInfoById[activeVolumeTracing.tracingId];
         undoStack.push({
           type: "volume",
@@ -312,7 +317,6 @@ export function* collectUndoStates(): Saga<void> {
         // The SegmentMap is immutable. So, no need to copy.
         volumeInfo.prevSegments = activeVolumeTracing.segments;
         volumeInfo.currentVolumeUndoBuckets = [];
-        pendingCompressions = [];
       } else if (userBoundingBoxAction) {
         const boundingBoxUndoState = getBoundingBoxToUndoState(
           userBoundingBoxAction,

@@ -592,27 +592,26 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
   Store.dispatch(setPositionAction([0, 0, 0]));
   Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
 
-  console.log(`Brush with ${newCellId}\n`);
+  // Brush with ${newCellId}
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  console.log(`Brush with ${newCellId + 1}\n`);
+  // Brush with ${newCellId + 1}
   Store.dispatch(setActiveCellAction(newCellId + 1));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  // Erase
-  console.log("Erase everything\n");
+  // Erase everything
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  console.log("Undo erasure\n");
+  // Undo erasure
   await dispatchUndoAsync(Store.dispatch);
 
   const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
@@ -638,7 +637,7 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
     );
   }
 
-  console.log("Redo erasure\n");
+  // Redo erasure
   await dispatchRedoAsync(Store.dispatch);
   if (assertBeforeRedo) {
     t.false(problematicBucket.isUnsynced());
@@ -714,9 +713,7 @@ test.serial("Brushing/Tracing with upsampling to unloaded data", async t => {
     500,
   );
 
-  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
   Store.dispatch(setZoomStepAction(4));
-  console.log("zoom step:", getRequestLogZoomStep(Store.getState()));
 
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
@@ -727,7 +724,6 @@ test.serial("Brushing/Tracing with upsampling to unloaded data", async t => {
   const brushSize = 16;
   const newCellId = 2;
 
-  console.log("Set overwriteMode to OVERWRITE_EMPTY");
   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
 
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -742,7 +738,6 @@ test.serial("Brushing/Tracing with upsampling to unloaded data", async t => {
   await t.context.api.tracing.save();
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    console.log("request at zoomStep", zoomStep);
     t.is(
       await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
       oldCellId,
@@ -771,7 +766,6 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
   const brushSize = 263;
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    console.log("request at zoomStep", zoomStep);
     t.is(
       await t.context.api.data.getDataValue(volumeTracingLayerName, [0, 0, 0], zoomStep),
       oldCellId,
@@ -779,7 +773,6 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
     );
   }
 
-  console.log("Set overwriteMode to OVERWRITE_EMPTY");
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
 
@@ -791,16 +784,12 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  console.log("Save");
   await t.context.api.tracing.save();
 
-  console.log("Load");
   const data = await t.context.api.data.getDataFor2DBoundingBox(volumeTracingLayerName, {
     min: [0, 0, 0],
     max: [35, 1, 1], // 1350
   });
-
-  console.log("data", data);
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     const readValue = await t.context.api.data.getDataValue(
@@ -808,7 +797,6 @@ test.serial("Erasing on mag 4 where mag 1 is unloaded", async t => {
       [32, 0, 0],
       zoomStep,
     );
-    console.log("request at zoomStep", zoomStep, "readValue", readValue);
     t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
   }
   t.is(_.max(data), 0, "All the data should be 0 (== erased).");
@@ -843,8 +831,6 @@ test.serial("Undo erasing in mag 4", async t => {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  console.log("Load");
-
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
     const readValue = await t.context.api.data.getDataValue(
       volumeTracingLayerName,
@@ -854,7 +840,6 @@ test.serial("Undo erasing in mag 4", async t => {
     t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
   }
 
-  console.log("Undo");
   await dispatchUndoAsync(Store.dispatch);
 
   for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {

@@ -89,6 +89,7 @@ class ErrorHandling {
     this.airbrake = new Notifier({
       projectId,
       projectKey,
+      remoteConfig: false,
     });
 
     this.airbrake.addFilter(notice => {

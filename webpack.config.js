@@ -94,7 +94,6 @@ module.exports = function(env = {}) {
               options: {
                 lessOptions: {
                   javascriptEnabled: true,
-                  rewriteUrls: "local",
                 },
               },
             },
@@ -110,7 +109,6 @@ module.exports = function(env = {}) {
               options: {
                 lessOptions: {
                   javascriptEnabled: true,
-                  rewriteUrls: "local",
                 },
               },
             },
@@ -162,12 +160,26 @@ module.exports = function(env = {}) {
       },
       port: env.PORT != null ? env.PORT : 9002,
       hot: false,
+      liveReload: false,
       client: {
         overlay: {
           warnings: false,
           errors: true,
         },
+        logging: "error",
       },
     },
+    cache: {
+      type: "filesystem",
+      name: env.production ? "production" : "development",
+      buildDependencies: {
+        config: [__filename],
+      },
+    },
+    stats: {
+      preset: "minimal",
+    },
+    // Ignore the lengthy warning considering STLExporter which is added to the exports dynamically
+    ignoreWarnings: [/export 'STLExporter'/],
   };
 };

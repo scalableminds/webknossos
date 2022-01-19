@@ -388,8 +388,8 @@ CREATE TABLE webknossos.jobs(
   _dataStore CHAR(256) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
-  state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING',
-  manualState webknossos.JOB_STATE,
+  state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
+  manualState webknossos.JOB_STATE, -- set by the user or admin
   _worker CHAR(24),
   latestRunId VARCHAR(1024),
   returnValue Text,

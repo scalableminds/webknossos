@@ -154,6 +154,12 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  /*
+   * Jobs that are cancelled by the user (manualState set to cancelled)
+   * but not yet cancelled in the worker (state not yet set to cancelled)
+   * are sent to the worker in to_cancel list. These are gathered here.
+   * Compare the note on the job cancelling protocol in JobsController
+   */
   def findAllCancellingByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(

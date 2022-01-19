@@ -58,6 +58,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
+  /*
+   * Job cancelling protocol:
+   * When a user cancels a job, the manualState is immediately set. Thus, the job looks cancelled to the user
+   * The worker-written “state” field is later updated by the worker when it has successfully cancelled the job run.
+   * When both fields are set, the cancelling is complete and wk no longer includes the job in the to_cancel list sent to worker
+   */
   def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"

@@ -74,7 +74,7 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotation, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
@@ -104,6 +104,7 @@ import Constants, {
   type ControlMode,
   ControlModeEnum,
   OrthoViews,
+  type OrthoView,
   type Vector3,
   type Vector4,
   type AnnotationTool,
@@ -127,6 +128,7 @@ import Store, {
   type VolumeTracing,
   type OxalisState,
 } from "oxalis/store";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import UserLocalStorage from "libs/user_local_storage";
@@ -1249,6 +1251,32 @@ class DataApi {
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
+
+  async getDataForViewport(viewport: OrthoView, layerName: string) {
+    const state = Store.getState();
+
+    const [curX, curY, curZ] = dimensions.transDim(
+      dimensions.roundCoordinate(getPosition(state.flycam)),
+      viewport,
+    );
+    const [halfViewportExtentX, halfViewportExtentY] = getHalfViewportExtentsFromState(
+      state,
+      viewport,
+    );
+
+    const min = dimensions.transDim(
+      V3.sub([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 0]),
+      viewport,
+    );
+    const max = dimensions.transDim(
+      V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
+      viewport,
+    );
+
+    const resolutionIndex = getRequestLogZoomStep(state);
+    const cuboid = await this.getDataFor2DBoundingBox(layerName, { min, max }, resolutionIndex);
+    return cuboid;
+  };
 
   getBucketAddressesInCuboid(
     bbox: BoundingBoxType,

@@ -7,17 +7,13 @@ import * as React from "react";
 import * as _ from "lodash";
 
 import type { APIHistogramData, ElementClass } from "types/api_flow_types";
-import { OrthoViews, type OrthoView, type Vector2, type Vector3 } from "oxalis/constants";
+import { OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
-import Dimensions from "oxalis/model/dimensions";
 import Store, { type DatasetLayerConfiguration } from "oxalis/store";
 import api from "oxalis/api/internal_api";
-import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 
 type OwnProps = {|
@@ -194,40 +190,14 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
-  getDataForViewport = async (viewport: OrthoView, layerName: string) => {
-    const state = Store.getState();
-
-    const [curX, curY, curZ] = Dimensions.transDim(
-      Dimensions.roundCoordinate(getPosition(state.flycam)),
-      viewport,
-    );
-    const [halfViewportExtentX, halfViewportExtentY] = getHalfViewportExtentsFromState(
-      state,
-      viewport,
-    );
-
-    const min = Dimensions.transDim(
-      V3.sub([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 0]),
-      viewport,
-    );
-    const max = Dimensions.transDim(
-      V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
-      viewport,
-    );
-
-    const resolutionIndex = getRequestLogZoomStep(state);
-    const cuboid = await api.data.getDataFor2DBoundingBox(layerName, { min, max }, resolutionIndex);
-    return cuboid;
-  };
-
   getClippingValues = async (layerName: string, threshold: number = 0.05) => {
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 
     const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-      this.getDataForViewport(OrthoViews.PLANE_XY, layerName),
-      this.getDataForViewport(OrthoViews.PLANE_XZ, layerName),
-      this.getDataForViewport(OrthoViews.PLANE_YZ, layerName),
+      api.data.getDataForViewport(OrthoViews.PLANE_XY, layerName),
+      api.data.getDataForViewport(OrthoViews.PLANE_XZ, layerName),
+      api.data.getDataForViewport(OrthoViews.PLANE_YZ, layerName),
     ]);
     const dataForAllViewports = new TypedArrayClass(
       cuboidXY.length + cuboidXZ.length + cuboidYZ.length,

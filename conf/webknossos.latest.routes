@@ -87,7 +87,7 @@ PUT           /datastores/:name/datasources                                    c
 PATCH         /datastores/:name/status                                         controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
 POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
-POST          /datastores/:name/deleteDatasource                               controllers.WKRemoteDataStoreController.deleteDatasource(name: String, key: String)
+POST          /datastores/:name/deleteDataset                                  controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                            controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create

@@ -163,7 +163,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         logger.info(
           f"Canceling dataset upload of ${cancelUploadInformation.organization}/${cancelUploadInformation.name} with id ${uploadId}...")
         PathUtils.deleteDirectoryRecursively(uploadDirectory(cancelUploadInformation.organization, uploadId))
-        cleanUpRedis(uploadId)
+        removeFromRedis(uploadId)
     }
   }
 
@@ -373,7 +373,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     removeFromRedis(uploadId)
   }
 
-  private def cleanUpRedis(uploadId: String): Fox[Unit] =
+  private def removeFromRedis(uploadId: String): Fox[Unit] =
     for {
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId))
       _ <- Fox.serialCombined(fileNames.toList) { fileName =>

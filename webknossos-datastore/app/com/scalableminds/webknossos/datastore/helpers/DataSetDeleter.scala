@@ -27,7 +27,7 @@ trait DataSetDeleter extends LazyLogging {
         logger.info(s"Successfully moved dataset from $sourcePath to $targetPath...")
         Fox.successful(())
       } catch {
-        case _: java.nio.file.FileAlreadyExistsException => deleter(sourcePath, targetPath, retryCount + 1)
+        case _: java.nio.file.FileAlreadyExistsException => deleteWithRetry(sourcePath, targetPath, retryCount + 1)
         case e: Exception                                => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
       }
 
@@ -41,6 +41,6 @@ trait DataSetDeleter extends LazyLogging {
     logger.info(
       s"Deleting dataset by moving it from $dataSourcePath to $targetPath${if (reason.isDefined) s" because ${reason.getOrElse("")}"
       else "..."}")
-    deleter(dataSourcePath, targetPath)
+    deleteWithRetry(dataSourcePath, targetPath)
   }
 }

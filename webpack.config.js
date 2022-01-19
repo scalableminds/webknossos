@@ -3,7 +3,6 @@ module.exports = function(env = {}) {
   const webpack = require("webpack");
   const fs = require("fs");
   const path = require("path");
-  const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
   const CopyWebpackPlugin = require("copy-webpack-plugin");
@@ -37,10 +36,6 @@ module.exports = function(env = {}) {
       ],
     }),
   ];
-
-  if (env.production) {
-    plugins.push(new TerserPlugin());
-  }
 
   const cssLoaderUrlFilter = {
     // Don't try to handle urls that already point to the assets directory
@@ -133,7 +128,7 @@ module.exports = function(env = {}) {
       fallback: { url: require.resolve("url/") },
     },
     optimization: {
-      minimize: false,
+      minimize: env.production,
       splitChunks: {
         chunks: "all",
         // Use a consistent name for the vendors chunk
@@ -163,7 +158,6 @@ module.exports = function(env = {}) {
     },
     cache: {
       type: "filesystem",
-      name: env.production ? "production" : "development",
       buildDependencies: {
         config: [__filename],
       },

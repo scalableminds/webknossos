@@ -74,7 +74,11 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRotation,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
@@ -1276,7 +1280,7 @@ class DataApi {
     const resolutionIndex = getRequestLogZoomStep(state);
     const cuboid = await this.getDataFor2DBoundingBox(layerName, { min, max }, resolutionIndex);
     return cuboid;
-  };
+  }
 
   getBucketAddressesInCuboid(
     bbox: BoundingBoxType,

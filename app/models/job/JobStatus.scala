@@ -4,7 +4,7 @@ import models.job.JobState.JobState
 import play.api.libs.json.{Json, OFormat}
 
 case class JobStatus(
-    latestRunId: String,
+    latestRunId: Option[String],
     state: JobState,
     returnValue: Option[String],
     started: Option[Long],

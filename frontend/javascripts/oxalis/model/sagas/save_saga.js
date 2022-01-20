@@ -101,13 +101,8 @@ const _byteArrayToLz4Array = createWorker(compressLz4Block);
 const decompressToTypedArray = async (
   bucket: DataBucket,
   compressedData: Uint8Array,
-): Promise<?BucketDataArray> => {
+): Promise<BucketDataArray> => {
   const decompressedBackendData = await _byteArrayToLz4Array(compressedData, false);
-  if (decompressedBackendData == null) {
-    // Can this happen?
-    return null;
-  }
-
   return bucket.uint8ToTypedBuffer(decompressedBackendData);
 };
 const compressTypedArray = async (bucketData: BucketDataArray): Promise<Uint8Array> => {
@@ -588,6 +583,9 @@ function* applyAndGetRevertingVolumeBatch(
     if (bucket.hasData()) {
       // The bucket's data is currently available.
       bucketData = bucket.getData();
+      // todo: clarify whether getData could already return the merged data
+      // but compressedBackendData is still null, since the compression hasn't
+      // finished yet.
       if (compressedBackendData != null) {
         // If the backend data for the bucket has been fetched in the meantime,
         // the previous getData() call already returned the newest (merged) data.
@@ -623,21 +621,19 @@ function* applyAndGetRevertingVolumeBatch(
         _call(decompressToTypedArray, bucket, compressedBucketData),
         _call(decompressToTypedArray, bucket, compressedBackendData),
       ]);
-      if (decompressedBucketData && decompressedBackendData) {
-        mergeDataWithBackendDataInPlace(
-          decompressedBucketData,
-          decompressedBackendData,
-          volumeUndoBucket.pendingOperations,
-        );
-        newPendingOperations = [];
-      }
+
+      mergeDataWithBackendDataInPlace(
+        decompressedBucketData,
+        decompressedBackendData,
+        volumeUndoBucket.pendingOperations,
+      );
+      newPendingOperations = [];
     } else {
       decompressedBucketData = yield* call(decompressToTypedArray, bucket, compressedBucketData);
     }
-    if (decompressedBucketData) {
-      // Set the new bucket data to add the bucket directly to the pushqueue.
-      cube.setBucketData(zoomedBucketAddress, decompressedBucketData, newPendingOperations);
-    }
+
+    // Set the new bucket data to add the bucket directly to the pushqueue.
+    cube.setBucketData(zoomedBucketAddress, decompressedBucketData, newPendingOperations);
   }
 
   const activeVolumeTracing = yield* select(state =>

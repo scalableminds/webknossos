@@ -208,32 +208,39 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     dataForAllViewports.set(cuboidXZ, cuboidXY.length);
     dataForAllViewports.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
 
-    const valueCounts = {};
-    let maxCount = 0;
+    const localHist = {};
     for (let i = 0; i < dataForAllViewports.length; i++) {
-      if (dataForAllViewports[i] !== 0 && dataForAllViewports[i] in valueCounts) {
-        valueCounts[dataForAllViewports[i]] += 1;
-        if (maxCount < valueCounts[dataForAllViewports[i]]) {
-          maxCount = valueCounts[dataForAllViewports[i]];
-        }
+      if (dataForAllViewports[i] !== 0 && dataForAllViewports[i] in localHist) {
+        localHist[dataForAllViewports[i]] += 1;
       } else {
-        valueCounts[dataForAllViewports[i]] = 1;
+        localHist[dataForAllViewports[i]] = 1;
       }
     }
 
+    const accumulator = {};
+    let area = 0;
+    let lastKey = 0;
+    for (const key of Object.keys(localHist)) {
+      accumulator[key] = localHist[key] + area;
+      area += localHist[key];
+      lastKey = key;
+    }
+    const maximum = accumulator[lastKey];
+    const thresholdValue = (threshold * maximum) / 2.0;
+
     let lowClip = -1;
+    for (const key of Object.keys(accumulator)) {
+      if (accumulator[key] >= thresholdValue) {
+        lowClip = Number(key);
+        break;
+      }
+    }
+
     let highClip = -1;
-    const threshValue = (threshold * maxCount).toFixed();
-    for (let i = 0; i < dataForAllViewports.length; i++) {
-      if (valueCounts[dataForAllViewports[i]] > threshValue) {
-        if (dataForAllViewports[i] !== 0) {
-          if (dataForAllViewports[i] < lowClip || lowClip === -1) {
-            lowClip = dataForAllViewports[i];
-          }
-          if (dataForAllViewports[i] > highClip || highClip === -1) {
-            highClip = dataForAllViewports[i];
-          }
-        }
+    for (const key of Object.keys(accumulator).reverse()) {
+      if (accumulator[key] < maximum - thresholdValue) {
+        highClip = Number(key);
+        break;
       }
     }
     return [lowClip, highClip];

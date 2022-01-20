@@ -152,6 +152,7 @@ function ensureValidScaleOnInferredDataSource(
 class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<typeof FormInstance>();
   unblock: ?Function;
+  blockTimeoutId: ?TimeoutID;
 
   state = {
     hasUnsavedChanges: false,
@@ -181,17 +182,23 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
+      console.log("beforeUnload");
       if (action === undefined || newLocation.pathname !== window.location.pathname) {
+        console.log("beforeUnload: condition met");
         const { hasUnsavedChanges } = this.state;
         if (hasUnsavedChanges) {
+          console.log("beforeUnload: hasUnsavedChanges");
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-          window.setTimeout(() => {
+          this.blockTimeoutId = window.setTimeout(() => {
             // restore the event handler in case a user chose to stay on the page
+            console.log("beforeUnload: window.onbeforeunload = beforeUnload");
             window.onbeforeunload = beforeUnload;
           }, 500);
+          console.log("beforeUnload: return string");
           return messages["dataset.leave_with_unsaved_changes"];
         }
       }
+      console.log("beforeUnload: return null");
       return null;
     };
 
@@ -200,13 +207,19 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
   }
 
   componentWillUnmount() {
+    console.log("componentWillUnmount");
     this.unblockHistory();
   }
 
   unblockHistory() {
     window.onbeforeunload = null;
+    if (this.blockTimeoutId != null) {
+      clearTimeout(this.blockTimeoutId);
+      this.blockTimeoutId = null;
+    }
     if (this.unblock != null) {
       this.unblock();
+      console.log("this.unblock();");
     }
   }
 

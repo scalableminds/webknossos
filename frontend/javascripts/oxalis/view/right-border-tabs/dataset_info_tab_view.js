@@ -225,30 +225,34 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </tr>
       );
     }
-    const overlay = (
-      <Menu>
+    const jobMenuItems = [
+      <Menu.Item
+        key="start_nuclei_inferal"
+        onClick={() => this.setState({ showJobsDetailsModal: StartableJobsEnum.NUCLEI_INFERRAL })}
+      >
+        <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
+          Start Nuclei Inferral
+        </Tooltip>
+      </Menu.Item>,
+    ];
+    if (this.props.activeUser != null && this.props.activeUser.isAdmin) {
+      jobMenuItems.push(
         <Menu.Item
-          onClick={() => this.setState({ showJobsDetailsModal: StartableJobsEnum.NUCLEI_INFERRAL })}
-        >
-          <Tooltip title="Start a job that automatically detects nuclei for this dataset.">
-            Start Nuclei Inferral
-          </Tooltip>
-        </Menu.Item>
-        <Menu.Item
+          key="start_neuron_inferral"
           onClick={() => this.setState({ showJobsDetailsModal: StartableJobsEnum.NEURON_INFERRAL })}
         >
           <Tooltip title="Start a job that automatically reconstructs neurons for this dataset.">
             Start Neuron Inferral
           </Tooltip>
-        </Menu.Item>
-      </Menu>
-    );
+        </Menu.Item>,
+      );
+    }
     return (
       <tr>
         <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
           <StarOutlined className="info-tab-icon" style={{ fontSize: 18 }} />
         </td>
-        <Dropdown overlay={overlay} overlayStyle={{ minWidth: "unset" }}>
+        <Dropdown overlay={<Menu>{jobMenuItems}</Menu>} overlayStyle={{ minWidth: "unset" }}>
           <td>
             <Button type="link" style={{ padding: 0 }}>
               Process Dataset

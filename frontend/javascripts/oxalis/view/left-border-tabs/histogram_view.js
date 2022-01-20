@@ -1,7 +1,8 @@
 // @flow
 
 import type { Dispatch } from "redux";
-import { Slider, Row, Col, InputNumber, Tooltip, Button } from "antd";
+import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
+import { VerticalAlignMiddleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
@@ -270,6 +271,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
 
     const minMaxInputStyle = { width: "100%" };
+    const tooltipText = isInEditMode
+      ? "Clipping in Edit Mode will also adjust the histogram's range."
+      : "Automatically clip the histogram to enhance contrast.";
 
     return (
       <React.Fragment>
@@ -280,20 +284,17 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           width={canvasWidth}
           height={canvasHeight}
         />
-        <Tooltip title="Clip the histogram to enhance contrast. In Edit Mode this also adjusts the histogram's range.">
-          <Button
-            size="small"
-            type="info"
+        <Tooltip title={tooltipText}>
+          <VerticalAlignMiddleOutlined
             style={{
-              width: 40,
-              top: 40,
-              right: 20,
               position: "absolute",
+              transform: "rotate(90deg)",
+              top: 14,
+              right: 82,
+              cursor: "pointer",
             }}
             onClick={() => this.clipHistogram(isInEditMode, layerName)}
-          >
-            Clip
-          </Button>
+          />
         </Tooltip>
         <Slider
           range

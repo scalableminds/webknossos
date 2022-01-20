@@ -733,13 +733,19 @@ function ContextMenu(props: Props) {
           evt.preventDefault();
           hideContextMenu();
         }}
-      >
+      />
+      {/* This div serves as a "prison" for the sticky context menu. The above div
+      cannot be used since the context menu would then be closed on every click.
+      Since both divs are absolutely positioned and cover the whole page,
+      avoid blocking click events by temporarily disabling them for this "prison" div. */}
+      <div className="node-context-menu-overlay" style={{ pointerEvents: "none" }}>
         <div
           style={{
             position: "sticky",
             left: contextMenuPosition[0],
             top: contextMenuPosition[1],
             width: "fit-content",
+            pointerEvents: "all",
           }}
           className="node-context-menu"
           tabIndex={-1}

@@ -73,7 +73,7 @@
     "replace-in-file": "1.1.3",
     "retoggle": "^0.3.0",
     "rimraf": "^2.6.2",
-    "shelljs": "^0.8.2",
+    "shelljs": "^0.8.5",
     "sinon": "^12.0.1",
     "tmp": "0.0.33",
     "webpack": "^5.66.0",

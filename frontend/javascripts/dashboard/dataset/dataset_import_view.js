@@ -754,7 +754,7 @@ class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, Stat
           bordered={false}
           title={
             <h3>
-              {titleString} Dataset: {this.props.datasetId.name} (hasUnsavedChanges:{" "}
+              {titleString} Dataset: {this.props.datasetId.name}
             </h3>
           }
         >

@@ -341,20 +341,27 @@ function DatasetView(props: Props) {
     <div className="pull-right" style={{ display: "flex" }}>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <React.Fragment>
-          <Button
-            icon={
-              (context.datasets.length === 0 && context.isLoading) || context.isChecking ? (
-                <LoadingOutlined />
-              ) : (
-                <ReloadOutlined />
-              )
+          <Tooltip
+            title={
+              context.isChecking
+                ? "Refreshing the list of cached datasets."
+                : "Search for new datasets on disk."
             }
-            disabled={(context.datasets.length === 0 && context.isLoading) || context.isChecking}
-            style={margin}
-            onClick={context.checkDatasets}
           >
-            Refresh
-          </Button>
+            <Button
+              icon={
+                (context.datasets.length === 0 && context.isLoading) || context.isChecking ? (
+                  <LoadingOutlined />
+                ) : (
+                  <ReloadOutlined />
+                )
+              }
+              style={margin}
+              onClick={context.checkDatasets}
+            >
+              Refresh
+            </Button>
+          </Tooltip>
           <Link to="/datasets/upload" style={margin}>
             <Button type="primary" icon={<PlusOutlined />}>
               Add Dataset

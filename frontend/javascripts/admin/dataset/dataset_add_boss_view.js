@@ -61,7 +61,7 @@ function DatasetAddBossView(props: Props) {
     };
 
     trackAction("Add BossDB dataset");
-    await addWkConnectDataset(formValues.datastore.url, datasetConfig);
+    await addWkConnectDataset(formValues.datastoreUrl, datasetConfig);
 
     Toast.success(messages["dataset.add_success"]);
     await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing

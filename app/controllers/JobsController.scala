@@ -1,6 +1,5 @@
 package controllers
 
-import java.nio.file.{Files, Paths}
 import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
@@ -8,7 +7,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.job.{JobDAO, JobService, WorkerDAO, WorkerService}
+import models.job.{JobDAO, JobService, JobState, WorkerDAO, WorkerService}
 import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
@@ -33,12 +32,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.successful(())
-      jobCountsByStatus <- jobDAO.countByStatus
+      jobCountsByState <- jobDAO.countByState
       workers <- workerDAO.findAll
       workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
         "workers" -> workersJson,
-        "jobsByStatus" -> Json.toJson(jobCountsByStatus)
+        "jobsByState" -> Json.toJson(jobCountsByState)
       )
     } yield Ok(jsStatus)
   }
@@ -55,6 +54,22 @@ class JobsController @Inject()(jobDAO: JobDAO,
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       job <- jobDAO.findOne(ObjectId(id))
+      js <- jobService.publicWrites(job)
+    } yield Ok(js)
+  }
+
+  /*
+   * Job cancelling protocol:
+   * When a user cancels a job, the manualState is immediately set. Thus, the job looks cancelled to the user
+   * The worker-written “state” field is later updated by the worker when it has successfully cancelled the job run.
+   * When both fields are set, the cancelling is complete and wk no longer includes the job in the to_cancel list sent to worker
+   */
+  def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      jobIdValidated <- ObjectId.parse(id)
+      job <- jobDAO.findOne(jobIdValidated)
+      _ <- jobDAO.updateManualState(jobIdValidated, JobState.CANCELLED)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -177,18 +192,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
-    }
-
-  def downloadExport(jobId: String, exportFileName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        jobIdValidated <- ObjectId.parse(jobId)
-        job <- jobDAO.findOne(jobIdValidated)
-        latestRunId <- job.latestRunId.toFox
-        organization <- organizationDAO.findOne(request.identity._organization)
-        filePath = Paths.get("binaryData", organization.name, ".export", latestRunId, exportFileName)
-        _ <- bool2Fox(Files.exists(filePath)) ?~> "job.export.fileNotFound"
-      } yield Ok.sendPath(filePath, inline = false)
     }
 
 }

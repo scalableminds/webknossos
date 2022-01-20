@@ -18,11 +18,16 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       worker <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+      _ = workerDAO.updateHeartBeat(worker._id)
       _ <- reserveNextJobs(worker)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
-      _ = workerDAO.updateHeartBeat(worker._id)
-      js = assignedUnfinishedJobs.map(jobService.parameterWrites)
-    } yield Ok(Json.toJson(js))
+      jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)
+      // make sure that the jobs to run have not already just been cancelled
+      assignedUnfinishedJobsFiltered = assignedUnfinishedJobs.filter(j =>
+        !jobsToCancel.map(_._id).toSet.contains(j._id))
+      assignedUnfinishedJs = assignedUnfinishedJobsFiltered.map(jobService.parameterWrites)
+      toCancelJs = jobsToCancel.map(jobService.parameterWrites)
+    } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))
   }
 
   private def reserveNextJobs(worker: Worker): Fox[Unit] =

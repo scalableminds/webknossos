@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(79);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(80);
 COMMIT TRANSACTION;
 
 
@@ -380,7 +380,7 @@ CREATE TABLE webknossos.workers(
 );
 
 
-CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE');
+CREATE TYPE webknossos.JOB_STATE AS ENUM ('PENDING', 'STARTED', 'SUCCESS', 'FAILURE', 'CANCELLED');
 
 CREATE TABLE webknossos.jobs(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
@@ -388,8 +388,8 @@ CREATE TABLE webknossos.jobs(
   _dataStore CHAR(256) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
-  state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING',
-  manualState webknossos.JOB_STATE,
+  state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
+  manualState webknossos.JOB_STATE, -- set by the user or admin
   _worker CHAR(24),
   latestRunId VARCHAR(1024),
   returnValue Text,

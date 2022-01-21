@@ -208,4 +208,5 @@ GET           /jobs/run/exportTiff/:organizationName/:dataSetName              c
 GET           /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
 GET           /jobs/run/globalizeFloodfills/:organizationName/:dataSetName     controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, newDataSetName: Option[String], layerName: Option[String], annotationId: Option[String], annotationType: Option[String])
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
+PATCH         /jobs/:id/cancel                                                 controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

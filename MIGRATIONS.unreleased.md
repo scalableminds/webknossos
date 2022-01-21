@@ -10,4 +10,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 
-- [080-annotation-viewconfiguration.sql](conf/evolutions/080-annotation-viewconfiguration.sql)
+- [080-job-add-cancelled.sql](conf/evolutions/080-job-add-cancelled.sql)
+- [081-annotation-viewconfiguration.sql](conf/evolutions/081-annotation-viewconfiguration.sql)

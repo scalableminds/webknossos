@@ -3,11 +3,14 @@ import React, { useState, useEffect } from "react";
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
 import { Input, Button, Col, Row, Spin, Form } from "antd";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
+import { type OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
+import { useSelector } from "react-redux";
 
 const FormItem = Form.Item;
 
 function AuthTokenView() {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentToken, setCurrentToken] = useState<string>("");
   const [form] = Form.useForm();
@@ -38,6 +41,13 @@ function AuthTokenView() {
     Toast.success("Token copied to clipboard");
   };
 
+  const copyOrganizationNameToClipboard = async () => {
+    if (activeUser != null) {
+      await navigator.clipboard.writeText(activeUser.organization);
+      Toast.success("Organization ID copied to clipboard");
+    }
+  };
+
   return (
     <div>
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
@@ -60,19 +70,38 @@ function AuthTokenView() {
                 </Button>
               </FormItem>
             </Form>
+            {activeUser != null && (
+              <>
+                <h4>Organization ID</h4>
+                <Form>
+                  <FormItem>
+                    <Input.Group compact>
+                      <Input value={activeUser.organization} style={{ width: "90%" }} readOnly />
+                      <Button
+                        onClick={copyOrganizationNameToClipboard}
+                        icon={<CopyOutlined className="without-icon-margin" />}
+                      />
+                    </Input.Group>
+                  </FormItem>
+                </Form>
+              </>
+            )}
           </Spin>
         </Col>
       </Row>
       <Row type="flex" justify="center" align="middle">
         <Col span={8}>
-          An Auth Token is a series of symbols that serves to authenticate you. It is used in
-          communication with the backend API and sent with every request to verify your identity.
-          <br />
-          You should revoke it if somebody else has acquired your token or you have the suspicion
-          this has happened.{" "}
-          <a href="https://docs.webknossos.org/webknossos/rest_api.html#authentication">
-            Read more
-          </a>
+          <p>
+            An Auth Token is a series of symbols that serves to authenticate you. It is used in
+            communication with the backend API and sent with every request to verify your identity.
+          </p>
+          <p>
+            You should revoke it if somebody else has acquired your token or you have the suspicion
+            this has happened.{" "}
+            <a href="https://docs.webknossos.org/webknossos/rest_api.html#authentication">
+              Read more
+            </a>
+          </p>
         </Col>
       </Row>
     </div>

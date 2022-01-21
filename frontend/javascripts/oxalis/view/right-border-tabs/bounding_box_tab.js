@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 
-import Toast from "libs/toast";
+import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
 import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
 import {
@@ -13,14 +13,15 @@ import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { hasVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { startGlobalizeFloodfillsJob } from "admin/admin_rest_api";
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import features from "features";
-import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 
 const GLOBALIZE_FLOODFILL_REGEX = /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
 
@@ -93,6 +94,7 @@ export default function BoundingBoxTab() {
   const tracing = useSelector(state => state.tracing);
   const dataset = useSelector(state => state.dataset);
   const activeUser = useSelector(state => state.activeUser);
+  const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
   const dispatch = useDispatch();
@@ -131,19 +133,23 @@ export default function BoundingBoxTab() {
   const showGlobalizeFloodfillsButton =
     features().jobsEnabled &&
     activeUser != null &&
-    hasVolumeTracings(tracing) != null &&
+    activeSegmentationTracingLayer != null &&
     userBoundingBoxes.some(bbox => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null);
 
-  const onGlobalizeFloodfills = newName =>
+  const onGlobalizeFloodfills = newName => {
+    if (activeSegmentationTracingLayer == null) {
+      return;
+    }
+    const baseSegmentationName = getBaseSegmentationName(activeSegmentationTracingLayer);
     startGlobalizeFloodfillsJob(
       dataset.owningOrganization,
       dataset.name,
       newName,
-      "segmentation",
+      baseSegmentationName,
       tracing.annotationId,
       tracing.annotationType,
     );
-
+  };
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {showGlobalizeFloodfillsButton ? (

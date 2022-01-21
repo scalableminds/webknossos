@@ -153,21 +153,18 @@ export default function BoundingBoxTab() {
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {showGlobalizeFloodfillsButton ? (
-        <Tooltip title="For this annotation some floodfill operations were aborted prematurely, because they covered a too large volume. webKnossos can finish these operations via a long-running job.">
-          <Button
-            size="small"
-            style={{ marginBottom: 4 }}
-            onClick={() => setIsGlobalizeFloodfillsModalVisible(true)}
-          >
-            <i
-              className="fas fa-fill-drip"
-              style={{
-                opacity: false ? 0.5 : 1,
-              }}
-            />
-            Globalize Flood-Fills
-          </Button>
-        </Tooltip>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Tooltip title="For this annotation some floodfill operations were aborted prematurely, because they covered a too large volume. webKnossos can finish these operations via a long-running job.">
+            <Button
+              size="small"
+              style={{ marginBottom: 8 }}
+              onClick={() => setIsGlobalizeFloodfillsModalVisible(true)}
+            >
+              <i className="fas fa-fill-drip" />
+              Globalize Flood-Fills
+            </Button>
+          </Tooltip>
+        </div>
       ) : null}
       {userBoundingBoxes.length > 0 ? (
         userBoundingBoxes.map(bb => (

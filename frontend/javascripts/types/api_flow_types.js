@@ -415,11 +415,19 @@ export type MeshMetaData = {|
   ...RemoteMeshMetaData,
 |};
 
+export type AnnotationViewConfiguration = {
+  layers: {
+    [layerName: string]: {
+      visibility: boolean,
+    },
+  },
+};
+
 type APIAnnotationBase = APIAnnotationCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
-  +viewConfiguration?: string,
+  +viewConfiguration?: AnnotationViewConfiguration,
   +settings: APISettings,
   +user?: APIUserBase,
   +meshes: Array<MeshMetaData>,

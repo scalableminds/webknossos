@@ -9,6 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/22.01.0...HEAD)
 
 ### Postgres Evolutions:
-
 - [080-job-add-cancelled.sql](conf/evolutions/080-job-add-cancelled.sql)
 - [081-annotation-viewconfiguration.sql](conf/evolutions/081-annotation-viewconfiguration.sql)

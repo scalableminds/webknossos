@@ -25,6 +25,7 @@ import {
   type APIJobState,
   type APIMapping,
   type APIMaybeUnimportedDataset,
+  type APIMeshFile,
   type APIOpenTasksReport,
   type APIOrganization,
   type APIProject,
@@ -48,6 +49,7 @@ import {
   type APIUserLoggedTime,
   type APIUserTheme,
   type AnnotationLayerDescriptor,
+  type AnnotationViewConfiguration,
   type EditableLayerProperties,
   type ExperienceDomainList,
   type MeshMetaData,
@@ -55,7 +57,6 @@ import {
   type ServerTracing,
   type TracingType,
   type WkConnectDatasetConfig,
-  type APIMeshFile,
 } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
@@ -600,6 +601,7 @@ export type EditableAnnotation = {
   description: string,
   visibility: APIAnnotationVisibility,
   tags: Array<string>,
+  viewConfiguration?: AnnotationViewConfiguration,
 };
 
 export function editAnnotation(

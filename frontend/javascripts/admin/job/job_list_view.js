@@ -89,16 +89,13 @@ class JobListView extends React.PureComponent<Props, State> {
     token: "",
   };
 
-  componentWillMount() {
-    this.setState(persistence.load(this.props.history));
-  }
-
   componentDidMount() {
+    this.setState(persistence.load(this.props.history));
     this.fetchData();
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   componentWillUnmount() {

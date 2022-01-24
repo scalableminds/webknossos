@@ -5,6 +5,12 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [22.02.0](https://github.com/scalableminds/webknossos/releases/tag/22.02.0) - 2022-01-24
+[Commits](https://github.com/scalableminds/webknossos/compare/22.01.0...22.02.0)
+
+### Postgres Evolutions:
+- [080-job-add-cancelled.sql](conf/evolutions/080-job-add-cancelled.sql)
+
 ## [22.01.0](https://github.com/scalableminds/webknossos/releases/tag/22.01.0) - 2022-01-04
 [Commits](https://github.com/scalableminds/webknossos/compare/21.11.0...22.01.0)
 - The datastore now also needs access to a Redis database. New config fields `datastore.redis.address` and `datastore.redis.port` are required. Note that this Redis instance may be the same one the tracingstore uses, but does not have to be.
@@ -12,7 +18,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ### Postgres Evolutions:
 - [078-annotation-layers.sql](conf/evolutions/078-annotation-layers.sql)
 - [079-add-dataset-tags.sql](conf/evolutions/079-add-dataset-tags.sql)
-
 
 ## [21.11.0](https://github.com/scalableminds/webknossos/releases/tag/21.11.0) - 2021-11-30
 - The docker files now place the webKnossos installation under `/webknossos` instead of `/srv/webknossos`. All mounts, most importantly `/srv/webknossos/binaryData`, need to be changed accordingly.

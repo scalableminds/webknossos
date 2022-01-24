@@ -36,7 +36,11 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
     isLoading: true,
   };
 
-  componentWillMount() {
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  fetchData() {
     Request.receiveJSON("/api/scripts", { showErrorToast: false })
       .then(scripts => {
         this.setState({ isLoading: false });

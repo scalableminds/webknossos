@@ -45,7 +45,6 @@ import {
   addUserBoundingBoxAction,
   type AddIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
-import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
 import {
@@ -67,6 +66,7 @@ import {
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
+import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   updateTemporarySettingAction,
@@ -95,7 +95,7 @@ import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
 import createProgressCallback from "libs/progress_callback";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
@@ -470,7 +470,6 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {
-        cube.labelVoxelInResolution(voxelTargetAddress, templateLabelValue, labeledZoomStep);
         const bucket = cube.getOrCreateBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
         );
@@ -511,6 +510,19 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
       );
     }
   }
+
+  const thirdDim = dimensionIndices[2];
+  applyVoxelMap(
+    labeledVoxelMapOfCopiedVoxel,
+    cube,
+    activeCellId,
+    getFast3DCoordinateHelper(activeViewport, z),
+    1,
+    thirdDim,
+    false,
+    0,
+  );
+
   applyLabeledVoxelMapToAllMissingResolutions(
     labeledVoxelMapOfCopiedVoxel,
     labeledZoomStep,

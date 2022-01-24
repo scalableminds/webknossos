@@ -46,8 +46,11 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     this.setState({ value: this.props.value });
   }
 
-  componentWillReceiveProps(newProps: EditableTextLabelProp) {
-    if (this.props.value !== newProps.value) this.setState({ value: newProps.value });
+  componentDidUpdate(prevProps: EditableTextLabelProp) {
+    if (prevProps.value !== this.props.value) {
+      // eslint-disable-next-line react/no-did-update-set-state
+      this.setState({ value: this.props.value });
+    }
   }
 
   handleInputChange = (event: SyntheticInputEvent<>) => {

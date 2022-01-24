@@ -28,16 +28,13 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
     isLoading: false,
   };
 
-  componentWillMount() {
-    this.setState(persistence.load(this.props.history));
-  }
-
   componentDidMount = () => {
+    this.setState(persistence.load(this.props.history));
     this.fetchData();
   };
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   fetchData = async () => {

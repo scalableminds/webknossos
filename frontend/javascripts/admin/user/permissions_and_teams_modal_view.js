@@ -66,13 +66,19 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     this.fetchData();
   }
 
-  componentWillReceiveProps(newProps: TeamRoleModalProp) {
-    // If a single user is selected, pre-select his teams
-    const singleUserMaybe = getSingleUserMaybe(newProps);
-    if (singleUserMaybe) {
-      const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
-      const userPermission = getPermissionGroupOfUser(singleUserMaybe);
-      this.setState({ selectedTeams: newSelectedTeams, selectedPermission: userPermission });
+  componentDidUpdate(prevProps: TeamRoleModalProp) {
+    if (
+      prevProps.selectedUserIds !== this.props.selectedUserIds ||
+      prevProps.users !== this.props.users
+    ) {
+      // If a single user is selected, pre-select his teams
+      const singleUserMaybe = getSingleUserMaybe(this.props);
+      if (singleUserMaybe) {
+        const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
+        const userPermission = getPermissionGroupOfUser(singleUserMaybe);
+        // eslint-disable-next-line react/no-did-update-set-state
+        this.setState({ selectedTeams: newSelectedTeams, selectedPermission: userPermission });
+      }
     }
   }
 

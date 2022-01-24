@@ -16,9 +16,7 @@ type OwnProps = {|
   layerName: string,
   intensityRangeMin: number,
   intensityRangeMax: number,
-  // eslint-disable-next-line react/no-unused-prop-types
   min?: number,
-  // eslint-disable-next-line react/no-unused-prop-types
   max?: number,
   isInEditMode: boolean,
   defaultMinMax: Vector2,
@@ -82,12 +80,16 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     this.updateCanvas();
   }
 
-  componentWillReceiveProps(newProps: HistogramProps) {
-    const { min, max } = getMinAndMax(newProps);
-    this.setState({ currentMin: min, currentMax: max });
-  }
-
-  componentDidUpdate() {
+  componentDidUpdate(prevProps: HistogramProps) {
+    if (
+      prevProps.min !== this.props.min ||
+      prevProps.max !== this.props.max ||
+      prevProps.data !== this.props.data
+    ) {
+      const { min, max } = getMinAndMax(this.props);
+      // eslint-disable-next-line react/no-did-update-set-state
+      this.setState({ currentMin: min, currentMax: max });
+    }
     this.updateCanvas();
   }
 

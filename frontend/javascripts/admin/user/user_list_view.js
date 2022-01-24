@@ -83,11 +83,8 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     domainToEdit: null,
   };
 
-  componentWillMount() {
-    this.setState(persistence.load(this.props.history));
-  }
-
   componentDidMount() {
+    this.setState(persistence.load(this.props.history));
     this.fetchData();
 
     if (location.hash === "#invite") {
@@ -95,8 +92,8 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     }
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   async fetchData(): Promise<void> {

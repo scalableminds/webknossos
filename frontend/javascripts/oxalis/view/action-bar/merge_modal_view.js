@@ -90,18 +90,20 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     isFetchingData: false,
   };
 
-  componentWillMount() {
-    (async () => {
-      this.setState({ isFetchingData: true });
-      const projects = await Request.receiveJSON("/api/projects", { showErrorToast: false });
-      this.setState({
-        projects: projects.map(project => ({
-          id: project.id,
-          label: project.name,
-        })),
-        isFetchingData: false,
-      });
-    })();
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  async fetchData() {
+    this.setState({ isFetchingData: true });
+    const projects = await Request.receiveJSON("/api/projects", { showErrorToast: false });
+    this.setState({
+      projects: projects.map(project => ({
+        id: project.id,
+        label: project.name,
+      })),
+      isFetchingData: false,
+    });
   }
 
   async merge(url: string) {

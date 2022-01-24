@@ -552,7 +552,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       menuItems.push(getTimeTrackingMenu({ collapse: collapseAllNavItems }));
     }
 
-    trailingNavItems.push(<NotificationIcon activeUser={loggedInUser} />);
+    trailingNavItems.push(<NotificationIcon key="notification-icon" activeUser={loggedInUser} />);
 
     trailingNavItems.push(
       <LoggedInAvatar

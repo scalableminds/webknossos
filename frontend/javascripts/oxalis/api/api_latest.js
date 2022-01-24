@@ -1256,7 +1256,7 @@ class DataApi {
     return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
 
-  async getDataForViewport(viewport: OrthoView, layerName: string) {
+  async getViewportData(viewport: OrthoView, layerName: string) {
     const state = Store.getState();
 
     const [curX, curY, curZ] = dimensions.transDim(

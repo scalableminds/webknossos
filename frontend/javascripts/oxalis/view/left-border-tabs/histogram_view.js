@@ -193,14 +193,14 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
-  getClippingValues = async (layerName: string, thresholdRatio: number = 0.05) => {
+  getClippingValues = async (layerName: string/*, thresholdRatio: number = 0.05*/) => {
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 
     const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
-      api.data.getDataForViewport(OrthoViews.PLANE_XY, layerName),
-      api.data.getDataForViewport(OrthoViews.PLANE_XZ, layerName),
-      api.data.getDataForViewport(OrthoViews.PLANE_YZ, layerName),
+      api.data.getViewportData(OrthoViews.PLANE_XY, layerName),
+      api.data.getViewportData(OrthoViews.PLANE_XZ, layerName),
+      api.data.getViewportData(OrthoViews.PLANE_YZ, layerName),
     ]);
     const dataForAllViewports = new TypedArrayClass(
       cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
@@ -280,7 +280,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
 
     const minMaxInputStyle = { width: "100%" };
-    const editModeAddendum = isInEditMode ?  "In Edit Mode, the histogram's range will be adjusted, too." : "";
+    const editModeAddendum = isInEditMode
+      ? "In Edit Mode, the histogram's range will be adjusted, too."
+      : "";
     const tooltipText = `Automatically clip the histogram to enhance contrast.${editModeAddendum}`;
     return (
       <React.Fragment>

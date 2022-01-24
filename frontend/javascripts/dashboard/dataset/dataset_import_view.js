@@ -7,6 +7,7 @@ import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
+import { type RouterHistory, withRouter } from "react-router-dom";
 
 import type {
   APIDataSource,
@@ -64,6 +65,10 @@ type StateProps = {|
 |};
 
 type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithFormAndRouter = {|
+  ...Props,
+  history: RouterHistory,
+|};
 
 type TabKey = "data" | "general" | "defaultConfig";
 
@@ -85,6 +90,7 @@ type DataSourceSettingsStatus = {
 };
 
 type State = {
+  hasUnsavedChanges: boolean,
   dataset: ?APIDataset,
   datasetDefaultConfiguration: ?DatasetConfiguration,
   messages: Array<APIMessage>,
@@ -143,13 +149,13 @@ function ensureValidScaleOnInferredDataSource(
   return inferredDataSourceClone;
 }
 
-class DatasetImportView extends React.PureComponent<Props, State> {
+class DatasetImportView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<typeof FormInstance>();
-  static defaultProps = {
-    isEditingMode: false,
-  };
+  unblock: ?Function;
+  blockTimeoutId: ?TimeoutID;
 
   state = {
+    hasUnsavedChanges: false,
     dataset: null,
     datasetDefaultConfiguration: null,
     isLoading: true,
@@ -171,6 +177,42 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     sendAnalyticsEvent("open_dataset_settings", {
       datasetName: this.state.dataset ? this.state.dataset.name : "Not found dataset",
     });
+
+    const beforeUnload = (newLocation, action) => {
+      // Only show the prompt if this is a proper beforeUnload event from the browser
+      // or the pathname changed
+      // This check has to be done because history.block triggers this function even if only the url hash changed
+      if (action === undefined || newLocation.pathname !== window.location.pathname) {
+        const { hasUnsavedChanges } = this.state;
+        if (hasUnsavedChanges) {
+          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+          this.blockTimeoutId = window.setTimeout(() => {
+            // restore the event handler in case a user chose to stay on the page
+            window.onbeforeunload = beforeUnload;
+          }, 500);
+          return messages["dataset.leave_with_unsaved_changes"];
+        }
+      }
+      return null;
+    };
+
+    this.unblock = this.props.history.block(beforeUnload);
+    window.onbeforeunload = beforeUnload;
+  }
+
+  componentWillUnmount() {
+    this.unblockHistory();
+  }
+
+  unblockHistory() {
+    window.onbeforeunload = null;
+    if (this.blockTimeoutId != null) {
+      clearTimeout(this.blockTimeoutId);
+      this.blockTimeoutId = null;
+    }
+    if (this.unblock != null) {
+      this.unblock();
+    }
   }
 
   async fetchData(): Promise<void> {
@@ -327,7 +369,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             ...currentState.dataSourceSettingsStatus,
             appliedSuggestions: AppliedSuggestionsEnum.Yes,
           };
-          return { dataSourceSettingsStatus: updatedStatus };
+          return { dataSourceSettingsStatus: updatedStatus, hasUnsavedChanges: true };
         },
         // Enforce validation as antd does not do this automatically.
         () => {
@@ -391,31 +433,39 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
-          A datasource-properties.json file was found for this dataset. However, webKnossos found
-          additional information about the dataset that could be inferred. The original
-          datasource-properties.json settings can be seen below in the advanced version. The
-          JSON-encoded difference between the current and the suggested version can be inspected{" "}
-          <LinkButton
-            onClick={() =>
-              showJSONModal(
-                "Difference to suggested datasource-properties.json",
-                differenceBetweenDataSources,
-              )
-            }
-          >
-            here
-          </LinkButton>
-          .<br />
-          Click <LinkButton onClick={applySuggestedSettings}>here</LinkButton> to set the suggested
-          JSON settings. This will replace the current settings in the form with{" "}
-          <LinkButton
-            onClick={() =>
-              showJSONModal("Suggested datasource-properties.json", inferredDataSource)
-            }
-          >
-            these settings
-          </LinkButton>
-          .
+          webKnossos detected additional information not yet present in the dataset’s{" "}
+          <em>datasource-properties.json</em> file:
+          <div style={{ marginTop: 8 }}>
+            <Button
+              size="small"
+              style={{ marginRight: 6 }}
+              type="primary"
+              onClick={applySuggestedSettings}
+            >
+              Apply Suggestions
+            </Button>
+            <Button
+              size="small"
+              style={{ marginRight: 6 }}
+              onClick={() =>
+                showJSONModal("Suggested datasource-properties.json", inferredDataSource)
+              }
+            >
+              Preview Suggestions
+            </Button>
+            <Button
+              size="small"
+              style={{ marginRight: 6 }}
+              onClick={() =>
+                showJSONModal(
+                  "Difference (JSON-encoded) to suggested datasource-properties.json",
+                  differenceBetweenDataSources,
+                )
+              }
+            >
+              Inspect Difference
+            </Button>
+          </div>
         </div>
       );
     }
@@ -560,6 +610,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     const verb = this.props.isEditingMode ? "updated" : "imported";
     Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
+    this.setState({
+      hasUnsavedChanges: false,
+    });
     datasetCache.clear();
     trackAction(`Dataset ${verb}`);
     this.props.onComplete();
@@ -661,7 +714,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   onValuesChange = (changedValues: FormData, allValues: FormData) => {
     const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
-    this.setState({ hasNoAllowedTeams });
+    this.setState({ hasNoAllowedTeams, hasUnsavedChanges: true });
+  };
+
+  onCancel = () => {
+    this.unblockHistory();
+    this.props.onCancel();
   };
 
   render() {
@@ -796,7 +854,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 {confirmString}
               </Button>
               {Unicode.NonBreakingSpace}
-              <Button onClick={this.props.onCancel}>Cancel</Button>
+              <Button onClick={this.onCancel}>Cancel</Button>
             </FormItem>
           </Spin>
         </Card>
@@ -809,4 +867,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetImportView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(DatasetImportView));

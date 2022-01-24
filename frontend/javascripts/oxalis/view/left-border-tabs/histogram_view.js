@@ -193,7 +193,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
-  getClippingValues = async (layerName: string, threshold: number = 0.05) => {
+  getClippingValues = async (layerName: string, thresholdRatio: number = 0.05) => {
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 
@@ -228,7 +228,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       lastKey = key;
     }
     const maximum = accumulator[lastKey];
-    const thresholdValue = (threshold * maximum) / 2.0;
+    const thresholdValue = (thresholdRatio * maximum) / 2.0;
 
     let lowClip = -1;
     for (const key of Object.keys(accumulator)) {
@@ -280,10 +280,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
 
     const minMaxInputStyle = { width: "100%" };
-    const tooltipText = isInEditMode
-      ? "Clipping in Edit Mode will also adjust the histogram's range."
-      : "Automatically clip the histogram to enhance contrast.";
-
+    const editModeAddendum = isInEditMode ?  "In Edit Mode, the histogram's range will be adjusted, too." : "";
+    const tooltipText = `Automatically clip the histogram to enhance contrast.${editModeAddendum}`;
     return (
       <React.Fragment>
         <canvas

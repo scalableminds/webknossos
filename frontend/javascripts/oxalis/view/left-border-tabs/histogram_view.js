@@ -252,7 +252,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const [lowClip, highClip] = await this.getClippingValues(layerName);
     if (lowClip === -1 || highClip === -1) {
       Toast.warning(
-        "Clipping the histogram failed. The data did not contain any brightness values greater than 0.",
+        "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
       );
       return;
     }

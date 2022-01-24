@@ -37,7 +37,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const { dataset, handleClose, jobName, description, jobApiCall } = props;
   const [selectedColorLayerName, setSelectedColorLayerName] = useState<?string>(null);
-  const [selectedBoundingBox, setSelectedBoundingBox] = useState(null);
+  const [selectedBoundingBox, setSelectedBoundingBox] = useState<?UserBoundingBox>(null);
   const { userBoundingBoxes } = props;
   const colorLayerNames = getColorLayers(dataset).map(layer => layer.name);
   useEffect(() => {
@@ -204,7 +204,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
   );
 }
 
-export function _NucleiInferralModal({ dataset, handleClose, userBoundingBoxes }: Props) {
+function _NucleiInferralModal({ dataset, handleClose, userBoundingBoxes }: Props) {
   return (
     <StartingJobModal
       dataset={dataset}

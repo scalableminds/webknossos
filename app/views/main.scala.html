@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <title>@(conf.WebKnossos.tabTitle)</title>
     @if(conf.Features.isDemoInstance){
@@ -22,7 +22,7 @@
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/vendors~dark~light.css?nocache=@(webknossos.BuildInfo.commitHash)"
+      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     <link
       rel="stylesheet"
@@ -33,23 +33,26 @@
     <script>
       let initialTheme = "@(selectedTheme)";
       if (initialTheme === "auto") {
-        initialTheme = 
-          window.matchMedia('(prefers-color-scheme: dark)').media !== "not all" && 
-          window.matchMedia('(prefers-color-scheme: dark)').matches ? 
-            "dark" : 
-            "light";
+        initialTheme =
+          window.matchMedia("(prefers-color-scheme: dark)").media !== "not all" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
       }
-      document.documentElement.style.display = 'none';
+      document.documentElement.style.display = "none";
       document.head.insertAdjacentHTML(
-        'beforeend',
-        '<link ' +
+        "beforeend",
+        "<link " +
           'id="primary-stylesheet" ' +
           'rel="stylesheet" ' +
           'type="text/css" ' +
           'media="screen" ' +
-          'href="/assets/bundle/' + initialTheme + '.css?nocache=@(webknossos.BuildInfo.commitHash)" ' +
-          'onload="document.documentElement.style.display = \'\'" ' + 
-        '/>');
+          'href="/assets/bundle/' +
+          initialTheme +
+          '.css?nocache=@(webknossos.BuildInfo.commitHash)" ' +
+          "onload=\"document.documentElement.style.display = ''\" " +
+          "/>",
+      );
     </script>
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"

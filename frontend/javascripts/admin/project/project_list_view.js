@@ -81,28 +81,20 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     taskTypeName: "",
   };
 
-  componentWillMount() {
-    this.setState({
-      ...persistence.load(this.props.history),
-    });
+  componentDidMount() {
+    this.setState(persistence.load(this.props.history));
     if (this.props.initialSearchValue != null && this.props.initialSearchValue !== "") {
       // Only override the persisted value if the provided initialSearchValue is not empty
       this.setState({
         searchQuery: this.props.initialSearchValue,
       });
     }
-  }
-
-  componentDidMount() {
     this.fetchData();
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
-  }
-
-  componentDidUpdate(preProps) {
-    if (preProps.taskTypeId !== this.props.taskTypeId) {
+  componentDidUpdate(prevProps) {
+    persistence.persist(this.props.history, this.state);
+    if (prevProps.taskTypeId !== this.props.taskTypeId) {
       this.fetchData();
     }
   }

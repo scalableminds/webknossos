@@ -99,10 +99,10 @@ const mapStateToProps = (state: OxalisState): StateProps => {
   const activeVolumeTracing = getActiveSegmentationTracing(state);
   const mappingInfo = getMappingInfo(
     state.temporaryConfiguration.activeMappingByLayer,
-    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+    visibleSegmentationLayer?.name,
   );
   return {
-    activeCellId: activeVolumeTracing != null ? activeVolumeTracing.activeCellId : null,
+    activeCellId: activeVolumeTracing?.activeCellId,
     isosurfaces:
       visibleSegmentationLayer != null
         ? state.localSegmentationData[visibleSegmentationLayer.name].isosurfaces

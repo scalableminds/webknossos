@@ -72,12 +72,12 @@ export function DatastoreFormItem({
 }) {
   return (
     <FormItem
-      name="datastore"
+      name="datastoreUrl"
       label="Datastore"
       hasFeedback
       hidden={hidden || false}
       rules={[{ required: true, message: messages["dataset.import.required.datastore"] }]}
-      initialValue={datastores.length ? datastores[0] : null}
+      initialValue={datastores.length ? datastores[0].url : null}
     >
       <Select
         showSearch
@@ -86,7 +86,7 @@ export function DatastoreFormItem({
         style={{ width: "100%" }}
         options={datastores.map((datastore: APIDataStore) => ({
           label: datastore.name,
-          value: datastore,
+          value: datastore.url,
         }))}
       />
     </FormItem>

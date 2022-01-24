@@ -2,12 +2,14 @@
 import _ from "lodash";
 
 import { PropTypes } from "@scalableminds/prop-types";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { Table, Spin, Input, Tooltip } from "antd";
 import {
   CheckCircleTwoTone,
   ClockCircleTwoTone,
   CloseCircleTwoTone,
+  CloseCircleOutlined,
   DownOutlined,
   EyeOutlined,
   LoadingOutlined,
@@ -17,10 +19,11 @@ import {
 import * as React from "react";
 
 import type { APIJob } from "types/api_flow_types";
-import { getJobs, doWithToken } from "admin/admin_rest_api";
+import { getJobs, doWithToken, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import FormattedDate from "components/formatted_date";
+import { AsyncLink } from "components/async_clickables";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -43,6 +46,10 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
     tooltip:
       "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
     icon: <CloseCircleTwoTone twoToneColor="#a61d24" />,
+  },
+  CANCELLED: {
+    tooltip: "This job was cancelled.",
+    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" />,
   },
   MANUAL: {
     tooltip:
@@ -82,16 +89,13 @@ class JobListView extends React.PureComponent<Props, State> {
     token: "",
   };
 
-  componentWillMount() {
-    this.setState(persistence.load(this.props.history));
-  }
-
   componentDidMount() {
+    this.setState(persistence.load(this.props.history));
     this.fetchData();
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   componentWillUnmount() {
@@ -111,6 +115,9 @@ class JobListView extends React.PureComponent<Props, State> {
       },
       // refresh jobs according to the refresh interval
       () => {
+        if (this.intervalID != null) {
+          clearTimeout(this.intervalID);
+        }
         this.intervalID = setTimeout(this.fetchData.bind(this), refreshInterval);
       },
     );
@@ -171,7 +178,26 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderActions = (__: any, job: APIJob) => {
-    if (job.type === "convert_to_wkw") {
+    if (job.state === "PENDING" || job.state === "STARTED") {
+      return (
+        <AsyncLink
+          href="#"
+          onClick={async () => {
+            const isDeleteConfirmed = await confirmAsync({
+              title: <p>Are you sure you want to cancel job {job.id}?</p>,
+              okText: "Yes, cancel job",
+              cancelText: "No, keep it",
+            });
+            if (isDeleteConfirmed) {
+              cancelJob(job.id).then(() => this.fetchData());
+            }
+          }}
+          icon={<CloseCircleOutlined key="cancel" />}
+        >
+          Cancel
+        </AsyncLink>
+      );
+    } else if (job.type === "convert_to_wkw") {
       return (
         <span>
           {job.resultLink && (

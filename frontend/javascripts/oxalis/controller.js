@@ -140,11 +140,11 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   modelFetchDone() {
-    const beforeUnload = (evt, action) => {
+    const beforeUnload = (newLocation, action) => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
       // This check has to be done because history.block triggers this function even if only the url hash changed
-      if (action === undefined || evt.pathname !== location.pathname) {
+      if (action === undefined || newLocation.pathname !== location.pathname) {
         const stateSaved = Model.stateSaved();
         if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event

@@ -320,14 +320,18 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     };
   }
 
-  componentWillReceiveProps(newProps: UserBoundingBoxInputProps) {
-    if (!this.state.isEditing) {
+  componentDidUpdate(prevProps: UserBoundingBoxInputProps) {
+    if (!this.state.isEditing && prevProps.value !== this.props.value) {
+      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         isValid: true,
-        text: this.computeText(newProps.value),
+        text: this.computeText(this.props.value),
       });
     }
-    this.setState({ name: newProps.name });
+    if (prevProps.name !== this.props.name) {
+      // eslint-disable-next-line react/no-did-update-set-state
+      this.setState({ name: this.props.name });
+    }
   }
 
   computeText(vector: Vector6) {

@@ -341,39 +341,34 @@ class DataCube {
     }
   }
 
-  labelTestShape(): void {
-    // draw a sphere, centered at (100, 100, 100) with radius 50
-
-    for (let x = 80; x <= 120; x++) {
-      for (let y = 80; y <= 120; y++) {
-        for (let z = 80; z <= 120; z++) {
-          if (
-            Math.sqrt((x - 100) * (x - 100) + (y - 100) * (y - 100) + (z - 100) * (z - 100)) <= 20
-          ) {
-            this.labelVoxelInResolution([x, y, z], 0, 5);
-          }
-        }
-      }
-    }
-  }
-
-  labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
+  // eslint-disable-next-line camelcase
+  async labelVoxelInAllResolutions_DEPRECATED(
+    voxel: Vector3,
+    label: number,
+    activeCellId: ?number,
+  ): Promise<void> {
     // This function is only provided for the wK front-end api and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized.
     // Please make use of a LabeledVoxelsMap instead.
+    const promises = [];
     for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
-      this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
+      promises.push(
+        this._labelVoxelInResolution_DEPRECATED(voxel, label, resolutionIndex, activeCellId),
+      );
     }
+
+    await Promise.all(promises);
 
     this.triggerPushQueue();
   }
 
-  labelVoxelInResolution(
+  // eslint-disable-next-line camelcase
+  async _labelVoxelInResolution_DEPRECATED(
     voxel: Vector3,
     label: number,
     zoomStep: number,
     activeCellId: ?number,
-  ): void {
+  ): Promise<void> {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
@@ -394,13 +389,7 @@ class DataCube {
           const labelFunc = (data: BucketDataArray): void => {
             data[voxelIndex] = label;
           };
-          bucket.label(labelFunc);
-
-          // Push bucket if it's loaded or missing (i.e., not existent on the server),
-          // otherwise, TemporalBucketManager will push it once it is available.
-          if (bucket.isLoaded() || bucket.isMissing()) {
-            this.pushQueue.insert(bucket);
-          }
+          await bucket.label_DEPRECATED(labelFunc);
         }
       }
     }

@@ -99,9 +99,9 @@ test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
   t.is(cube.bucketCount, 1);
 });
 
-test("Voxel Labeling should request buckets when temporal buckets are created", t => {
+test("Voxel Labeling should request buckets when temporal buckets are created", async t => {
   const { cube, pullQueue } = t.context;
-  cube.labelVoxelInResolution([1, 1, 1], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 42, 0);
 
   t.plan(2);
   return runAsync([
@@ -117,9 +117,9 @@ test("Voxel Labeling should request buckets when temporal buckets are created", 
   ]);
 });
 
-test("Voxel Labeling should push buckets after they were pulled", t => {
+test("Voxel Labeling should push buckets after they were pulled", async t => {
   const { cube, pushQueue } = t.context;
-  cube.labelVoxelInResolution([1, 1, 1], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 42, 0);
 
   t.plan(3);
   let bucket;
@@ -139,13 +139,13 @@ test("Voxel Labeling should push buckets after they were pulled", t => {
   ]);
 });
 
-test("Voxel Labeling should push buckets immediately if they are pulled already", t => {
+test("Voxel Labeling should push buckets immediately if they are pulled already", async t => {
   const { cube, pushQueue } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
   bucket.markAsPulled();
   bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
 
-  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
 
   t.plan(1);
   return runAsync([
@@ -155,12 +155,12 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   ]);
 });
 
-test("Voxel Labeling should only create one temporal bucket", t => {
+test("Voxel Labeling should only create one temporal bucket", async t => {
   const { cube } = t.context;
   // Creates temporal bucket
-  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
   // Uses existing temporal bucket
-  cube.labelVoxelInResolution([1, 0, 0], 43, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([1, 0, 0], 43, 0);
 
   const data = cube.getBucket([0, 0, 0, 0]).getData();
 
@@ -168,18 +168,18 @@ test("Voxel Labeling should only create one temporal bucket", t => {
   t.is(data[1], 43);
 });
 
-test("getDataValue() should return the raw value without a mapping", t => {
+test("getDataValue() should return the raw value without a mapping", async t => {
   const { cube } = t.context;
   const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
-  cube.labelVoxelInResolution([0, 0, 0], value, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], value, 0);
 
   t.is(cube.getDataValue([0, 0, 0]), value);
 });
 
-test("getDataValue() should return the mapping value if available", t => {
+test("getDataValue() should return the mapping value if available", async t => {
   const { cube } = t.context;
-  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
-  cube.labelVoxelInResolution([1, 1, 1], 43, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 43, 0);
 
   const mapping = [];
   mapping[42] = 1;

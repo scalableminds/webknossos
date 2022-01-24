@@ -54,6 +54,11 @@ type Emitter = {
   emit: Function,
 };
 
+const WARNING_THROTTLE_THRESHOLD = 10000;
+const warnMergeWithoutPendingOperations = _.throttle(() => {
+  ErrorHandling.notify(new Error(""));
+}, WARNING_THROTTLE_THRESHOLD);
+
 export class NullBucket {
   type: "null" = "null";
   isOutOfBoundingBox: boolean;
@@ -289,11 +294,17 @@ export class DataBucket {
     return dataClone;
   }
 
-  label(labelFunc: BucketDataArray => void) {
-    const bucketData = this.getOrCreateData();
-    this._markAndAddBucketForUndo();
+  // eslint-disable-next-line camelcase
+  async label_DEPRECATED(labelFunc: BucketDataArray => void): Promise<void> {
+    /*
+    Don't use this method. It is slow and only works reliably
+    if the bucket was already downloaded.
+    See Bucket.getDataForMutation() instead.
+    */
+    const bucketData = await this.getDataForMutation();
+    this.startDataMutation();
     labelFunc(bucketData);
-    this.throttledTriggerLabeled();
+    this.endDataMutation();
   }
 
   _markAndAddBucketForUndo() {
@@ -622,9 +633,7 @@ export class DataBucket {
       this.data = fetchedData;
       this.pendingOperations = [];
     } else {
-      // todo: ensure that everything is handled via pendingOperations.
-      // in theory, pendingOperations.length should never be 0 when merge
-      // is called.
+      warnMergeWithoutPendingOperations();
     }
   }
 

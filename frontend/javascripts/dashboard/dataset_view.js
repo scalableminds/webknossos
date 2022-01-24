@@ -337,25 +337,21 @@ function DatasetView(props: Props) {
     searchBox
   );
 
+  const showLoadingIndicator =
+    (context.datasets.length === 0 && context.isLoading) || context.isChecking;
   const adminHeader = (
     <div className="pull-right" style={{ display: "flex" }}>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <React.Fragment>
           <Tooltip
             title={
-              context.isChecking
-                ? "Refreshing the list of cached datasets."
+              showLoadingIndicator
+                ? "Refreshing the dataset list."
                 : "Search for new datasets on disk."
             }
           >
             <Button
-              icon={
-                (context.datasets.length === 0 && context.isLoading) || context.isChecking ? (
-                  <LoadingOutlined />
-                ) : (
-                  <ReloadOutlined />
-                )
-              }
+              icon={showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />}
               style={margin}
               onClick={context.checkDatasets}
             >

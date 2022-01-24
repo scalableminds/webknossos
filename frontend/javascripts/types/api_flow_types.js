@@ -427,7 +427,7 @@ type APIAnnotationBase = APIAnnotationCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
-  +viewConfiguration?: AnnotationViewConfiguration,
+  +viewConfiguration?: ?AnnotationViewConfiguration,
   +settings: APISettings,
   +user?: APIUserBase,
   +meshes: Array<MeshMetaData>,

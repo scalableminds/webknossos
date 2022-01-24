@@ -170,7 +170,8 @@ class DataSetController @Inject()(userService: UserService,
   }
 
   private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(
-      implicit ctx: DBAccessContext): Fox[List[JsObject]] =
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[List[JsObject]] =
     for {
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
         userService.teamManagerMembershipsFor(user._id))
@@ -183,12 +184,13 @@ class DataSetController @Inject()(userService: UserService,
             for {
               dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(GlobalAccessContext)
               resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
-                dataSetService.publicWrites(d,
-                                            requestingUser,
-                                            organization,
-                                            dataStore,
-                                            skipResolutions = true,
-                                            requestingUserTeamManagerMemberships)
+                dataSetService.publicWrites(
+                  d,
+                  requestingUser,
+                  organization,
+                  dataStore,
+                  skipResolutions = true,
+                  requestingUserTeamManagerMemberships) ?~> Messages("dataset.list.writesFailed", d.name)
               }
             } yield resultByDataStore
           }
@@ -234,7 +236,7 @@ class DataSetController @Inject()(userService: UserService,
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
-          js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore) ?~> "hi?" ?~> Messages("dataset.list.writesFailed", dataSet.name)
+          js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
           _ = request.identity.map { user =>
             analyticsService.track(OpenDatasetEvent(user, dataSet))
             if (dataSet.isPublic) {

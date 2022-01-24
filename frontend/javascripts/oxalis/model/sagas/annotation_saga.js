@@ -32,7 +32,7 @@ const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export function* pushAnnotationUpdateAsync(): Saga<void> {
   const tracing = yield* select(state => state.tracing);
-  if (tracing.readOnly != null) {
+  if (!tracing.restrictions.allowUpdate) {
     return;
   }
 

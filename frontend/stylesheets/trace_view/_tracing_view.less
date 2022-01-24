@@ -535,5 +535,7 @@ img.keyboard-mouse-icon:first-child {
      the overlay serves as the container for the css-sticky context menu. */
   height: calc(100% - @navbar-height - @footer-height);
   position: absolute;
-  z-index: 99;
+  /* The context menu needs a higher z-value than flexlayout__tab_button_content.
+     Otherwise the tab title covers the context menu. */
+  z-index: 110;
 }

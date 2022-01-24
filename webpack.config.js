@@ -20,6 +20,11 @@ module.exports = function(env = {}) {
       "process.env.BABEL_ENV": process.env.BABEL_ENV,
     }),
     new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/ }),
+    new webpack.ProvidePlugin({
+      // Needed for saxophone, i.e. readable-stream, since it is used without importing
+      // Corresponding issue: https://github.com/nodejs/readable-stream/issues/450
+      process: "process/browser",
+    }),
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
@@ -139,7 +144,10 @@ module.exports = function(env = {}) {
       alias: {
         react: path.resolve("./node_modules/react"),
       },
-      fallback: { url: require.resolve("url/") },
+      fallback: {
+        // Needed for jsonschema
+        url: require.resolve("url/"),
+      },
     },
     optimization: {
       minimize: env.production,

@@ -291,12 +291,12 @@ export class DataBucket {
 
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
-    this.markAndAddBucketForUndo();
+    this._markAndAddBucketForUndo();
     labelFunc(bucketData);
     this.throttledTriggerLabeled();
   }
 
-  markAndAddBucketForUndo() {
+  _markAndAddBucketForUndo() {
     // This method adds a snapshot of the current bucket to the undo stack.
     // Note that the method may be called multiple times during a volume
     // transaction (e.g., when moving the brush over the same buckets for
@@ -373,6 +373,16 @@ export class DataBucket {
   }
 
   getOrCreateData(): BucketDataArray {
+    /*
+    Don't use this method to get the bucket's data, if you want to mutate it.
+    Instead, use
+      1) the preferred VoxelMap primitive (via applyVoxelMap) which works for not
+         loaded buckets
+      2) or the async method getDataForMutation(), which ensures that the bucket is
+         loaded before mutation (therefore, no async merge operations have to be
+         defined).
+    */
+
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
@@ -381,6 +391,30 @@ export class DataBucket {
       }
     }
     return this.getData();
+  }
+
+  async getDataForMutation(): Promise<BucketDataArray> {
+    /*
+    You can use the returned data to inspect it. If you decide to mutate the data,
+    please call startDataMutation() before the mutation and endDataMutation() afterwards.
+    Example:
+
+    const data = await bucket.getDataForMutation();
+    bucket.startDataMutation();
+    data[...] = ...;
+    bucket.endDataMutation();
+    */
+    await this.ensureLoaded();
+    return this.getOrCreateData();
+  }
+
+  startDataMutation(): void {
+    this._markAndAddBucketForUndo();
+  }
+
+  endDataMutation(): void {
+    this.cube.pushQueue.insert(this);
+    this.trigger("bucketLabeled");
   }
 
   applyVoxelMap(

@@ -294,15 +294,14 @@ export function applyVoxelMap(
     if (bucket.type === "null") {
       return;
     }
-    bucket.markAndAddBucketForUndo();
+    bucket.startDataMutation();
   }
 
   function postprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
     }
-    dataCube.pushQueue.insert(bucket);
-    bucket.trigger("bucketLabeled");
+    bucket.endDataMutation();
   }
 
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {

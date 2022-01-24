@@ -516,19 +516,22 @@ class DataCube {
       if (shouldIgnoreBucket) {
         continue;
       }
+
+      // Since the floodfill operation needs to read the existing bucket data, we need to
+      // load (await) the data first. This means that we don't have to define LabeledVoxelMaps
+      // for the current magnification. This simplifies things, too, since the floodfill also
+      // uses the bucket's data array to mark visited voxels (which would not be possible with
+      // LabeledVoxelMaps).
       // eslint-disable-next-line no-await-in-loop
-      await currentBucket.ensureLoaded();
-      const bucketData = currentBucket.getOrCreateData();
+      const bucketData = await currentBucket.getDataForMutation();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
         continue;
       }
       // Add the bucket to the current volume undo batch, if it isn't already part of it.
-      currentBucket.markAndAddBucketForUndo();
+      currentBucket.startDataMutation();
       // Mark the initial voxel.
-      // Todo: This should probably act on a LabeledVoxelMap? Or is it alright, since
-      // the operation awaits the bucket, anyway?
       bucketData[initialVoxelIndex] = cellId;
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
       const currentLabeledVoxelMap =
@@ -631,8 +634,7 @@ class DataCube {
       if (bucket.type === "null") {
         continue;
       }
-      this.pushQueue.insert(bucket);
-      bucket.trigger("bucketLabeled");
+      bucket.endDataMutation();
     }
 
     return {

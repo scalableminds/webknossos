@@ -56,7 +56,11 @@ type Emitter = {
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 const warnMergeWithoutPendingOperations = _.throttle(() => {
-  ErrorHandling.notify(new Error(""));
+  const error = new Error("Bucket.merge() was called with an empty list of pending operations.");
+  if (process.env.BABEL_ENV === "test") {
+    throw error;
+  }
+  ErrorHandling.notify(error);
 }, WARNING_THROTTLE_THRESHOLD);
 
 export class NullBucket {
@@ -626,20 +630,27 @@ export class DataBucket {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
 
-    if (this.pendingOperations.length > 0) {
-      // The frontend just received the backend's data for this bucket.
-      // We apply all pendingOperations on the backends data
-      // and set it to this.data.
-      // The old this.data is discarded/overwritten, since it was only
-      // a preliminary version of the data.
-      for (const op of this.pendingOperations) {
-        op(fetchedData);
-      }
-      this.data = fetchedData;
-      this.pendingOperations = [];
-    } else {
+    // The frontend just received the backend's data for this bucket.
+    // We apply all pendingOperations on the backends data
+    // and set it to this.data.
+    // The old this.data is discarded/overwritten, since it was only
+    // a preliminary version of the data.
+    for (const op of this.pendingOperations) {
+      console.log("execute merge operation");
+      op(fetchedData);
+    }
+    this.data = fetchedData;
+
+    if (this.pendingOperations.length === 0) {
+      // This can happen when mutating an unloaded bucket and then
+      // undoing it. The bucket is still marked as dirty, even though,
+      // no pending operations are necessary (since the bucket was restored
+      // to an untouched version).
+      // See this refactoring issue: https://github.com/scalableminds/webknossos/issues/5973
       warnMergeWithoutPendingOperations();
     }
+
+    this.pendingOperations = [];
   }
 
   // The following three methods can be used for debugging purposes.

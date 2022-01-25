@@ -808,7 +808,10 @@ async function eraseInMag4Helper(t, loadDataAtBeginning) {
   t.is(_.max(data), 0, "All the data should be 0 (== erased).");
 }
 
-test.serial("Undo erasing in mag 4", async t => {
+test.serial("Undo erasing in mag 4 (load before undo)", undoEraseInMag4Helper, false);
+test.serial("Undo erasing in mag 4 (load after undo)", undoEraseInMag4Helper, true);
+
+async function undoEraseInMag4Helper(t, loadBeforeUndo) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -837,13 +840,15 @@ test.serial("Undo erasing in mag 4", async t => {
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
-  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
-    const readValue = await t.context.api.data.getDataValue(
-      volumeTracingLayerName,
-      [0, 0, 0],
-      zoomStep,
-    );
-    t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
+  if (loadBeforeUndo) {
+    for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+      const readValue = await t.context.api.data.getDataValue(
+        volumeTracingLayerName,
+        [0, 0, 0],
+        zoomStep,
+      );
+      t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
+    }
   }
 
   await dispatchUndoAsync(Store.dispatch);
@@ -856,4 +861,4 @@ test.serial("Undo erasing in mag 4", async t => {
     );
     t.is(readValue, oldCellId, `After undo, voxel should have old value at zoomstep=${zoomStep}`);
   }
-});
+}

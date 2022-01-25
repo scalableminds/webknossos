@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
+import models.binary.DataStoreDAO
 import models.job.JobState.JobState
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO}
@@ -24,7 +25,6 @@ import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
-
 import scala.concurrent.duration._
 
 case class Job(
@@ -56,18 +56,22 @@ case class Job(
 
   def effectiveState: JobState = manualState.getOrElse(state)
 
-  def resultLink(organizationName: String): Option[String] =
+  def exportFileName: Option[String] = argAsStringOpt("export_file_name")
+
+  def datasetName: Option[String] = argAsStringOpt("dataset_name")
+
+  private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
+
+  def resultLink(organizationName: String, dataStorePublicUrl: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
         case "convert_to_wkw" =>
-          (commandArgs \ "dataset_name").toOption.flatMap(_.asOpt[String]).map { dataSetName =>
-            s"/datasets/$organizationName/$dataSetName/view"
+          datasetName.map { dsName =>
+            s"/datasets/$organizationName/$dsName/view"
           }
         case "export_tiff" =>
-          (commandArgs \ "export_file_name").toOption.flatMap(_.asOpt[String]).map { exportFileName =>
-            s"/api/jobs/${_id.id}/downloadExport/$exportFileName"
-          }
+          Some(s"$dataStorePublicUrl/data/exports/${_id.id}/download")
         case "infer_nuclei" =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
@@ -92,7 +96,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       Job(
         ObjectId(r._Id),
         ObjectId(r._Owner),
-        r._Datastore,
+        r._Datastore.trim,
         r.command,
         Json.parse(r.commandargs).as[JsObject],
         state,
@@ -117,10 +121,18 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery and _id = $jobId".as[JobsRow])
+      parsed <- parseFirst(r, jobId)
+    } yield parsed
+
   def countUnassignedPendingForDataStore(_dataStore: String): Fox[Int] =
     for {
       r <- run(sql"""select count(_id) from #$existingCollectionName
               where state = '#${JobState.PENDING}'
+              and manualState is null
               and _dataStore = ${_dataStore}
               and _worker is null""".as[Int])
       head <- r.headOption
@@ -129,7 +141,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
     for {
       r <- run(
-        sql"select count(_id) from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}')"
+        sql"select count(_id) from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null"
           .as[Int])
       head <- r.headOption
     } yield head
@@ -137,7 +149,21 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') order by created"
+        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null order by created"
+          .as[JobsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  /*
+   * Jobs that are cancelled by the user (manualState set to cancelled)
+   * but not yet cancelled in the worker (state not yet set to cancelled)
+   * are sent to the worker in to_cancel list. These are gathered here.
+   * Compare the note on the job cancelling protocol in JobsController
+   */
+  def findAllCancellingByWorker(workerId: ObjectId): Fox[List[Job]] =
+    for {
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}'"
           .as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -164,13 +190,19 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                           ${new java.sql.Timestamp(j.created)}, ${j.isDeleted})""")
     } yield ()
 
+  def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"""update webknossos.jobs set manualState = '#${manualState.toString}' where _id = $id""")
+    } yield ()
+
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] = {
     val format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
     val startedTimestamp = s.started.map(started => format.format(new Timestamp(started)))
     val endedTimestamp = s.ended.map(ended => format.format(new Timestamp(ended)))
     for {
       _ <- run(sqlu"""update webknossos.jobs set
-              latestRunId = ${s.latestRunId},
+              latestRunId = #${optionLiteralSanitized(s.latestRunId)},
               state = '#${s.state.toString}',
               returnValue = #${optionLiteralSanitized(s.returnValue)},
               started = #${optionLiteralSanitized(startedTimestamp)},
@@ -188,6 +220,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
             where
               state = '#${JobState.PENDING}'
               and _dataStore = ${worker._dataStore}
+              and manualState is NULL
               and _worker is NULL
             order by created
             limit 1
@@ -206,10 +239,11 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def countByStatus: Fox[Map[String, Int]] =
+  def countByState: Fox[Map[String, Int]] =
     for {
       result <- run(sql"""select state, count(_id)
                            from webknossos.jobs_
+                           where manualState is null
                            group by state
                            order by state
                            """.as[(String, Int)])
@@ -221,6 +255,7 @@ class JobService @Inject()(wkConf: WkConf,
                            userDAO: UserDAO,
                            multiUserDAO: MultiUserDAO,
                            jobDAO: JobDAO,
+                           dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
                            analyticsService: AnalyticsService,
                            slackNotificationService: SlackNotificationService,
@@ -258,7 +293,8 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
-      resultLink = jobAfterChange.resultLink(organization.name)
+      dataStore <- dataStoreDAO.findOneByName(jobBeforeChange._dataStore)(GlobalAccessContext)
+      resultLink = jobAfterChange.resultLink(organization.name, dataStore.publicUrl)
       resultLinkMrkdwn = resultLink.map(l => s" <${wkConf.Http.uri}$l|Result>").getOrElse("")
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
@@ -277,7 +313,8 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      resultLink = job.resultLink(organization.name)
+      dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
+      resultLink = job.resultLink(organization.name, dataStore.publicUrl)
     } yield {
       Json.obj(
         "id" -> job._id.id,

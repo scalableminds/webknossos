@@ -34,10 +34,11 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     this.fetchData();
   }
 
-  componentWillReceiveProps(newProps: Props) {
-    if (newProps.value) {
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.value !== this.props.value) {
+      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
-        selectedTeams: _.flatten([newProps.value]),
+        selectedTeams: this.props.value ? _.flatten([this.props.value]) : [],
       });
     }
   }

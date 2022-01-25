@@ -1,7 +1,6 @@
 // @flow
 import { type BucketDataArray, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { sleep } from "libs/utils";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 
 const _byteArrayToLz4Array = createWorker(compressLz4Block);

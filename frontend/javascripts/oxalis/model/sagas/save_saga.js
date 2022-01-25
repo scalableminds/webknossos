@@ -17,7 +17,7 @@ import {
   setUserBoundingBoxesAction,
   type UserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { type BucketDataArray, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { type BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   PUSH_THROTTLE_TIME,
@@ -86,7 +86,6 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import { maybeGetSomeTracing, selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
-import { sleep } from "libs/utils";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";

@@ -248,7 +248,7 @@ function* getAgglomerateSkeletonTracing(
     if (e.messages != null) {
       // Enhance the error message for agglomerates that are too large
       const agglomerateTooLargeMessages = e.messages.filter(message =>
-        message.chain != null ? message.chain.includes("too many nodes") : false,
+        message.chain != null ? message.chain.includes("too many") : false,
       );
       if (agglomerateTooLargeMessages.length > 0) {
         // eslint-disable-next-line no-throw-literal

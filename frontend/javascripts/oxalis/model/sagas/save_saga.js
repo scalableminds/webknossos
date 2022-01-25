@@ -17,6 +17,7 @@ import {
   setUserBoundingBoxesAction,
   type UserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
+import { type BucketDataArray, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   PUSH_THROTTLE_TIME,
@@ -68,21 +69,24 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import { type BucketDataArray, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
+import {
+  compressTypedArray,
+  decompressToTypedArray,
+} from "oxalis/model/helpers/bucket_compression";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { doWithToken } from "admin/admin_rest_api";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTracingById,
   getVolumeTracingByLayerName,
   getVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { maybeGetSomeTracing, selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import { sleep } from "libs/utils";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
@@ -90,30 +94,11 @@ import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
-import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import createProgressCallback from "libs/progress_callback";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
-
-const _byteArrayToLz4Array = createWorker(compressLz4Block);
-const decompressToTypedArray = async (
-  bucket: DataBucket,
-  compressedData: Uint8Array,
-): Promise<BucketDataArray> => {
-  const decompressedBackendData = await _byteArrayToLz4Array(compressedData, false);
-  return bucket.uint8ToTypedBuffer(decompressedBackendData);
-};
-const compressTypedArray = async (bucketData: BucketDataArray): Promise<Uint8Array> => {
-  const bucketDataAsByteArray = new Uint8Array(
-    bucketData.buffer,
-    bucketData.byteOffset,
-    bucketData.byteLength,
-  );
-  const compressedBucketData = await _byteArrayToLz4Array(bucketDataAsByteArray, true);
-  return compressedBucketData;
-};
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   action => action !== "SET_USER_BOUNDING_BOXES",
@@ -121,9 +106,11 @@ const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
 
 type UndoBucket = {
   zoomedBucketAddress: Vector4,
+
   // The following arrays are Uint8Array due to the compression
   compressedData: Uint8Array,
-  compressedBackendData?: Uint8Array,
+  compressedBackendData?: Promise<Uint8Array>,
+
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
   pendingOperations: Array<(BucketDataArray) => void>,
 };
@@ -440,11 +427,11 @@ function* compressBucketAndAddToList(
       pendingOperations: pendingOperations.slice(),
     };
     if (maybeUnmergedBucketLoadedPromise != null) {
-      maybeUnmergedBucketLoadedPromise.then(async backendBucketData => {
+      maybeUnmergedBucketLoadedPromise.then(backendBucketData => {
         // Once the backend data is fetched, do not directly merge it with the already saved undo data
         // as this operation is only needed, when the volume action is undone. Additionally merging is more
         // expensive than saving the backend data. Thus the data is only merged upon an undo action / when it is needed.
-        volumeUndoPart.compressedBackendData = await compressTypedArray(backendBucketData);
+        volumeUndoPart.compressedBackendData = compressTypedArray(backendBucketData);
       });
     }
     undoBucketList.push(volumeUndoPart);
@@ -552,6 +539,10 @@ function mergeDataWithBackendDataInPlace(
   }
 }
 
+function unpackPromise<T>(p: Promise<T>): Promise<T> {
+  return p;
+}
+
 function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
 ): Saga<VolumeUndoState> {
@@ -568,7 +559,7 @@ function* applyAndGetRevertingVolumeBatch(
     const {
       zoomedBucketAddress,
       compressedData: compressedBucketData,
-      compressedBackendData,
+      compressedBackendData: compressedBackendDataPromise,
     } = volumeUndoBucket;
     let { maybeUnmergedBucketLoadedPromise } = volumeUndoBucket;
     const bucket = cube.getOrCreateBucket(zoomedBucketAddress);
@@ -583,10 +574,7 @@ function* applyAndGetRevertingVolumeBatch(
     if (bucket.hasData()) {
       // The bucket's data is currently available.
       bucketData = bucket.getData();
-      // todo: clarify whether getData could already return the merged data
-      // but compressedBackendData is still null, since the compression hasn't
-      // finished yet.
-      if (compressedBackendData != null) {
+      if (compressedBackendDataPromise != null) {
         // If the backend data for the bucket has been fetched in the meantime,
         // the previous getData() call already returned the newest (merged) data.
         // There should be no need to await the data from the backend.
@@ -615,7 +603,10 @@ function* applyAndGetRevertingVolumeBatch(
     // Decompress the bucket data which should be applied.
     let decompressedBucketData = null;
     let newPendingOperations = volumeUndoBucket.pendingOperations;
-    if (compressedBackendData != null) {
+
+    if (compressedBackendDataPromise != null) {
+      const compressedBackendData = yield* call(unpackPromise, compressedBackendDataPromise);
+
       let decompressedBackendData;
       [decompressedBucketData, decompressedBackendData] = yield _all([
         _call(decompressToTypedArray, bucket, compressedBucketData),

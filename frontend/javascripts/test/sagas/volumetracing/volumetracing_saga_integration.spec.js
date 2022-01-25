@@ -49,6 +49,10 @@ test.beforeEach(async t => {
 
   await __setupOxalis(t, "volume");
 
+  // Ensure the slow compression is disabled by default. Tests may change
+  // this individually.
+  t.context.enableSlowCompression(false);
+
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });
@@ -862,3 +866,65 @@ async function undoEraseInMag4Helper(t, loadBeforeUndo) {
     t.is(readValue, oldCellId, `After undo, voxel should have old value at zoomstep=${zoomStep}`);
   }
 }
+
+test.serial("Provoke race condition when bucket compression is very slow", async t => {
+  t.context.enableSlowCompression(true);
+  const oldCellId = 11;
+  t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
+    Uint16Array,
+    oldCellId,
+    500,
+  );
+
+  Store.dispatch(setZoomStepAction(4));
+
+  // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
+  // function.
+  await t.context.api.data.reloadAllBuckets();
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+
+  const paintCenter = [0, 0, 0];
+  const brushSize = 10;
+
+  Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
+  Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
+
+  Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+  Store.dispatch(setPositionAction([0, 0, 0]));
+  Store.dispatch(setToolAction(AnnotationToolEnum.ERASE_BRUSH));
+
+  Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
+  Store.dispatch(addToLayerAction(paintCenter));
+  Store.dispatch(finishEditingAction());
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    const readValue = await t.context.api.data.getDataValue(
+      volumeTracingLayerName,
+      [0, 0, 0],
+      zoomStep,
+    );
+    t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
+  }
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    const readValue = await t.context.api.data.getDataValue(
+      volumeTracingLayerName,
+      [0, 0, 0],
+      zoomStep,
+    );
+    t.is(readValue, oldCellId, `After undo, voxel should have old value at zoomstep=${zoomStep}`);
+  }
+
+  await dispatchRedoAsync(Store.dispatch);
+
+  for (let zoomStep = 0; zoomStep <= 5; zoomStep++) {
+    const readValue = await t.context.api.data.getDataValue(
+      volumeTracingLayerName,
+      [0, 0, 0],
+      zoomStep,
+    );
+    t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
+  }
+});

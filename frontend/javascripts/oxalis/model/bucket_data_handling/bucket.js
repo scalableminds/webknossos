@@ -56,11 +56,9 @@ type Emitter = {
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 const warnMergeWithoutPendingOperations = _.throttle(() => {
-  const error = new Error("Bucket.merge() was called with an empty list of pending operations.");
-  if (process.env.BABEL_ENV === "test") {
-    throw error;
-  }
-  ErrorHandling.notify(error);
+  ErrorHandling.notify(
+    new Error("Bucket.merge() was called with an empty list of pending operations."),
+  );
 }, WARNING_THROTTLE_THRESHOLD);
 
 export class NullBucket {
@@ -636,7 +634,6 @@ export class DataBucket {
     // The old this.data is discarded/overwritten, since it was only
     // a preliminary version of the data.
     for (const op of this.pendingOperations) {
-      console.log("execute merge operation");
       op(fetchedData);
     }
     this.data = fetchedData;

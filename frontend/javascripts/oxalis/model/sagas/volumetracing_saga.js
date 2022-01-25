@@ -690,7 +690,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   segmentationCube: DataCube,
   cellId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
-  // if shouldOverwrite is false, a voxel is only overwritten if
+  // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean,
   overwritableValue: number = 0,

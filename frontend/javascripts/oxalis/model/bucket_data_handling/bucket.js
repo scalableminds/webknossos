@@ -246,12 +246,12 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
-  isUnsynced(): boolean {
+  needsBackendData(): boolean {
     /*
-    Unsynced means that the front-end has not received any data for this bucket, yet.
+    "Needs backend data" means that the front-end has not received any data (nor "missing" reply) for this bucket, yet.
     The return value does
       - not tell whether the data fetching was already initiated (does not differentiate between UNREQUESTED and REQUESTED)
-      - not tell whether the backend has data for the address (does not differentiate between LOADED and MISSING)
+      - not tell whether the backend actually has data for the address (does not differentiate between LOADED and MISSING)
     */
     return this.state === BucketStateEnum.UNREQUESTED || this.state === BucketStateEnum.REQUESTED;
   }
@@ -321,7 +321,7 @@ export class DataBucket {
 
     bucketsAlreadyInUndoState.add(this);
     const dataClone = this.getCopyOfData();
-    if (this.isUnsynced() && this.maybeUnmergedBucketLoadedPromise == null) {
+    if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
       this.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
         this.once("unmergedBucketDataLoaded", data => {
           // Once the bucket was loaded, maybeUnmergedBucketLoadedPromise can be null'ed
@@ -439,14 +439,14 @@ export class DataBucket {
     get3DAddress: (number, number, Vector3 | Float32Array) => void,
     sliceCount: number,
     thirdDimensionIndex: 0 | 1 | 2,
-    // if shouldOverwrite is false, a voxel is only overwritten if
+    // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
   ) {
     const data = this.getOrCreateData();
 
-    if (this.isUnsynced()) {
+    if (this.needsBackendData()) {
       // If the frontend does not yet have the backend's data
       // for this bucket, we apply the voxel map, but also
       // save it in this.pendingOperations. See Bucket.merge()
@@ -484,7 +484,7 @@ export class DataBucket {
     get3DAddress: (number, number, Vector3 | Float32Array) => void,
     sliceCount: number,
     thirdDimensionIndex: 0 | 1 | 2,
-    // if shouldOverwrite is false, a voxel is only overwritten if
+    // If shouldOverwrite is false, a voxel is only overwritten if
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,

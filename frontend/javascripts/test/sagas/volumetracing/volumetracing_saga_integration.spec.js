@@ -526,11 +526,13 @@ async function undoTestHelper(t, assertBeforeUndo, assertAfterUndo) {
   Store.dispatch(setPositionAction([0, 0, 0]));
   Store.dispatch(setToolAction(AnnotationToolEnum.BRUSH));
 
+  // Brush with ${newCellId}
   Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
   Store.dispatch(finishEditingAction());
 
+  // Brush with ${newCellId + 1}
   Store.dispatch(setActiveCellAction(newCellId + 1));
   Store.dispatch(startEditingAction(paintCenter, OrthoViews.PLANE_XY));
   Store.dispatch(addToLayerAction(paintCenter));
@@ -615,7 +617,7 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
 
   const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
   const problematicBucket = cube.getOrCreateBucket([93, 0, 0, 0]);
-  t.true(problematicBucket.isUnsynced());
+  t.true(problematicBucket.needsBackendData());
 
   if (assertBeforeRedo) {
     t.is(
@@ -639,9 +641,9 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
   // Redo erasure
   await dispatchRedoAsync(Store.dispatch);
   if (assertBeforeRedo) {
-    t.false(problematicBucket.isUnsynced());
+    t.false(problematicBucket.needsBackendData());
   } else {
-    t.true(problematicBucket.isUnsynced());
+    t.true(problematicBucket.needsBackendData());
   }
 
   t.is(

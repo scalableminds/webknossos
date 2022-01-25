@@ -285,7 +285,7 @@ export function applyVoxelMap(
   get3DAddress: (number, number, Vector3 | Float32Array) => void,
   numberOfSlicesToApply: number,
   thirdDimensionIndex: 0 | 1 | 2,
-  // if shouldOverwrite is false, a voxel is only overwritten if
+  // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,

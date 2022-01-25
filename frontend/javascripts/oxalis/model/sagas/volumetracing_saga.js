@@ -137,6 +137,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+    if (busyBlockingInfo.isBusy) {
+      console.warn(`Ignoring brush request (reason: ${busyBlockingInfo.reason || "null"})`);
+      continue;
+    }
     if (startEditingAction.type !== "START_EDITING") {
       throw new Error("Unexpected action. Satisfy flow.");
     }

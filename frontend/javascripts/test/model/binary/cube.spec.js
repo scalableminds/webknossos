@@ -1,16 +1,14 @@
-/*
- * cube.spec.js
- * @flow
- */
+// @flow
 import _ from "lodash";
 
+import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
+import { sleep } from "libs/utils";
 import anyTest, { type TestInterface } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 
 mockRequire.stopAll();
 
@@ -58,10 +56,33 @@ test.beforeEach(t => {
   };
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
   const cube = new Cube([100, 100, 100], resolutionInfo, "uint32", false);
-  const pullQueue = {
-    add: sinon.stub(),
-    pull: sinon.stub(),
-  };
+
+  class PullQueueMock {
+    queue = [];
+    processedQueue = [];
+    add(item) {
+      this.queue.push(item);
+    }
+
+    async pull() {
+      // If the pull happens synchronously, the bucketLoaded promise
+      // in Bucket.ensureLoaded() is created too late. Therefore,
+      // we put a small sleep in here (this mirrors the behavior when
+      // actually downloading data).
+      await sleep(10);
+      for (const item of this.queue) {
+        const bucket = cube.getBucket(item.bucket, true);
+        if (bucket.type === "data") {
+          bucket.markAsPulled();
+          bucket.receiveData(new Uint8Array(4 * 32 ** 3));
+        }
+      }
+      this.processedQueue = this.queue;
+      this.queue = [];
+    }
+  }
+
+  const pullQueue = new PullQueueMock();
   const pushQueue = {
     insert: sinon.stub(),
     push: sinon.stub(),
@@ -99,20 +120,18 @@ test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
   t.is(cube.bucketCount, 1);
 });
 
-test("Voxel Labeling should request buckets when temporal buckets are created", async t => {
+test("Voxel Labeling should request buckets when temporal buckets are created", t => {
   const { cube, pullQueue } = t.context;
-  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 42, 0);
 
-  t.plan(2);
+  cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 42, 0);
+
+  t.plan(1);
   return runAsync([
     () => {
-      t.true(
-        pullQueue.add.calledWith({
-          bucket: [0, 0, 0, 0],
-          priority: -1,
-        }),
-      );
-      t.true(pullQueue.pull.called);
+      t.deepEqual(pullQueue.processedQueue[0], {
+        bucket: [0, 0, 0, 0],
+        priority: -1,
+      });
     },
   ]);
 });
@@ -121,18 +140,10 @@ test("Voxel Labeling should push buckets after they were pulled", async t => {
   const { cube, pushQueue } = t.context;
   await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 42, 0);
 
-  t.plan(3);
-  let bucket;
+  t.plan(1);
+  const bucket = cube.getBucket([0, 0, 0, 0]);
+
   return runAsync([
-    () => {
-      t.is(pushQueue.insert.called, false);
-    },
-    () => {
-      bucket = cube.getBucket([0, 0, 0, 0]);
-      bucket.markAsPulled();
-      bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
-      t.pass();
-    },
     () => {
       t.true(pushQueue.insert.calledWith(bucket));
     },
@@ -143,7 +154,7 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   const { cube, pushQueue } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
   bucket.markAsPulled();
-  bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
+  bucket.receiveData(new Uint8Array(4 * 32 ** 3));
 
   await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
 
@@ -155,11 +166,11 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   ]);
 });
 
-test("Voxel Labeling should only create one temporal bucket", async t => {
+test("Voxel Labeling should only instantiate one bucket when labelling the same bucket twice", async t => {
   const { cube } = t.context;
-  // Creates temporal bucket
+  // Creates bucket
   await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
-  // Uses existing temporal bucket
+  // Uses existing bucket
   await cube._labelVoxelInResolution_DEPRECATED([1, 0, 0], 43, 0);
 
   const data = cube.getBucket([0, 0, 0, 0]).getData();

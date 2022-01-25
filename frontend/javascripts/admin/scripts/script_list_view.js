@@ -42,16 +42,13 @@ class ScriptListView extends React.PureComponent<Props, State> {
     searchQuery: "",
   };
 
-  componentWillMount() {
-    this.setState(persistence.load(this.props.history));
-  }
-
   componentDidMount() {
+    this.setState(persistence.load(this.props.history));
     this.fetchData();
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   async fetchData(): Promise<void> {

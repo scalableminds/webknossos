@@ -971,6 +971,12 @@ function isManualPassJobType(command: string) {
   return ["convert_to_wkw"].includes(command);
 }
 
+export async function cancelJob(jobId: string): Promise<Array<APIJob>> {
+  return Request.receiveJSON(`/api/jobs/${jobId}/cancel`, {
+    method: "PATCH",
+  });
+}
+
 export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,

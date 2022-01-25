@@ -37,11 +37,12 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     };
   }
 
-  componentWillReceiveProps(newProps: BaseProps<T>) {
-    if (!this.state.isEditing) {
+  componentDidUpdate(prevProps: BaseProps<T>) {
+    if (!this.state.isEditing && prevProps.value !== this.props.value) {
+      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
         isValid: true,
-        text: this.getText(newProps.value),
+        text: this.getText(this.props.value),
       });
     }
   }

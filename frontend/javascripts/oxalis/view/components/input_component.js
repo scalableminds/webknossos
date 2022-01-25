@@ -47,9 +47,10 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
     currentValue: this.props.value,
   };
 
-  componentWillReceiveProps = (nextProps: InputComponentProp) => {
-    if (!this.state.isFocused) {
-      this.setState({ currentValue: nextProps.value });
+  componentDidUpdate = (prevProps: InputComponentProp) => {
+    if (!this.state.isFocused && prevProps.value !== this.props.value) {
+      // eslint-disable-next-line react/no-did-update-set-state
+      this.setState({ currentValue: this.props.value });
     }
   };
 

@@ -171,7 +171,7 @@ function getMaybeHoveredCellMenuItem(globalPosition: Vector3) {
     : hoveredCellInfo.id;
 
   return (
-    <div className="node-context-menu-item">
+    <div key="hovered-info" className="node-context-menu-item">
       <i className="fas fa-ruler" /> Hovered Segment: {cellIdAsString}
       {copyIconWithTooltip(
         hoveredCellInfo.id,
@@ -538,10 +538,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
             onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
           >
             {isAgglomerateMappingEnabled.value ? (
-              ["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]
+              <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
             ) : (
               <Tooltip title={isAgglomerateMappingEnabled.reason}>
-                {["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]}
+                <span>Import Agglomerate Skeleton {shortcutBuilder(["SHIFT", "middleMouse"])}</span>
               </Tooltip>
             )}
           </Menu.Item>,
@@ -768,23 +768,31 @@ function ContextMenu(props: Props) {
           hideContextMenu();
         }}
       />
-      <div
-        style={{
-          position: "absolute",
-          left: contextMenuPosition[0],
-          top: contextMenuPosition[1],
-        }}
-        className="node-context-menu"
-        tabIndex={-1}
-        ref={inputRef}
-      >
-        <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-        {clickedNodeId != null
-          ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ activeTool, segmentIdAtPosition, ...props })}
+      {/* This div serves as a "prison" for the sticky context menu. The above div
+      cannot be used since the context menu would then be closed on every click.
+      Since both divs are absolutely positioned and cover the whole page,
+      avoid blocking click events by temporarily disabling them for this "prison" div. */}
+      <div className="node-context-menu-overlay" style={{ pointerEvents: "none" }}>
+        <div
+          style={{
+            position: "sticky",
+            left: contextMenuPosition[0],
+            top: contextMenuPosition[1],
+            width: "fit-content",
+            pointerEvents: "all",
+          }}
+          className="node-context-menu"
+          tabIndex={-1}
+          ref={inputRef}
+        >
+          <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+          {clickedNodeId != null
+            ? NodeContextMenuOptions({ ...props, clickedNodeId })
+            : NoNodeContextMenuOptions({ activeTool, segmentIdAtPosition, ...props })}
 
-        <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
-        {infoRows}
+          <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
+          {infoRows}
+        </div>
       </div>
     </React.Fragment>
   );

@@ -342,7 +342,7 @@ class DataCube {
   }
 
   // eslint-disable-next-line camelcase
-  async labelVoxelInAllResolutions_DEPRECATED(
+  async _labelVoxelInAllResolutions_DEPRECATED(
     voxel: Vector3,
     label: number,
     activeCellId: ?number,
@@ -508,7 +508,7 @@ class DataCube {
 
       // Since the floodfill operation needs to read the existing bucket data, we need to
       // load (await) the data first. This means that we don't have to define LabeledVoxelMaps
-      // for the current magnification. This simplifies things, too, since the floodfill also
+      // for the current magnification. This simplifies the algorithm, too, since the floodfill also
       // uses the bucket's data array to mark visited voxels (which would not be possible with
       // LabeledVoxelMaps).
       // eslint-disable-next-line no-await-in-loop

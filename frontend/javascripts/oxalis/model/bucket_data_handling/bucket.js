@@ -297,10 +297,9 @@ export class DataBucket {
   // eslint-disable-next-line camelcase
   async label_DEPRECATED(labelFunc: BucketDataArray => void): Promise<void> {
     /*
-    Don't use this method. It is slow and only works reliably
-    if the bucket was already downloaded.
-    See Bucket.getDataForMutation() instead.
-    */
+     * It's not recommended to use this method (repeatedly), as it can be
+     * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
+     */
     const bucketData = await this.getDataForMutation();
     this.startDataMutation();
     labelFunc(bucketData);

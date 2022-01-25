@@ -657,7 +657,7 @@ class DataApi {
 
     await Promise.all(
       voxels.map(voxel =>
-        segmentationLayer.cube.labelVoxelInAllResolutions_DEPRECATED(voxel, label),
+        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(voxel, label),
       ),
     );
 

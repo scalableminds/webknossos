@@ -49,7 +49,10 @@ export class RetryingErrorBoundary extends React.Component<
     this.state = { error: null };
   }
 
-  componentWillReceiveProps() {
+  // This cannot be changed to componentDidUpdate, because we cannot distinguish whether the parent
+  // component actually changed
+  // eslint-disable-next-line camelcase
+  UNSAFE_componentWillReceiveProps() {
     this.setState({ error: null });
   }
 

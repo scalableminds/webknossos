@@ -66,12 +66,12 @@ class TaskListView extends React.PureComponent<Props, State> {
     isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
   };
 
-  componentWillMount() {
+  componentDidMount() {
     this.setState(persistence.load(this.props.history));
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   async fetchData(queryObject: QueryObject) {

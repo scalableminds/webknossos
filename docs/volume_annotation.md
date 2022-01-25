@@ -18,13 +18,16 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 
 When using the trace or brush tool, a label can be added with *Left Mouse Drag*.
 Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left Mouse Drag*.
-If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
 
-In the `Segmentation` tab on the right-hand side, you can see the cell IDs which are active, below your cursor, or in the middle of the viewport.
+If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
+
+In the `Segmentation` tab on the right-hand sidepanel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
+
+The active segment ID under the cursor can be found in the status bar at the bottom of the screen or through the context-sensitive menu on right-click.
 
 ### Proof-Reading and Merging Segments
 

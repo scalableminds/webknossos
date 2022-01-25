@@ -3,7 +3,7 @@
 webKnossos uses the WKW format for voxel datasets and NML for skeleton annotations.
 If your image data isn't available as WKW, yet, you can either:
 - convert it automatically on [webknossos.org](https://webknossos.org) or
-- manually convert it using [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber)
+- manually convert it using [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html)
 
 Read more about how to convert your data [here](#tools).
 

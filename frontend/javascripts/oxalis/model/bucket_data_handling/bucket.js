@@ -385,14 +385,14 @@ export class DataBucket {
 
   getOrCreateData(): BucketDataArray {
     /*
-    Don't use this method to get the bucket's data, if you want to mutate it.
-    Instead, use
-      1) the preferred VoxelMap primitive (via applyVoxelMap) which works for not
-         loaded buckets
-      2) or the async method getDataForMutation(), which ensures that the bucket is
-         loaded before mutation (therefore, no async merge operations have to be
-         defined).
-    */
+     * Don't use this method to get the bucket's data, if you want to mutate it.
+     * Instead, use
+     *   1) the preferred VoxelMap primitive (via applyVoxelMap) which works for not
+     *      (yet) loaded buckets
+     *   2) or the async method getDataForMutation(), which ensures that the bucket is
+     *      loaded before mutation (therefore, no async merge operations have to be
+     *      defined). See DataCube.floodFill() for an example usage of this pattern.
+     */
 
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
@@ -406,24 +406,30 @@ export class DataBucket {
 
   async getDataForMutation(): Promise<BucketDataArray> {
     /*
-    You can use the returned data to inspect it. If you decide to mutate the data,
-    please call startDataMutation() before the mutation and endDataMutation() afterwards.
-    Example:
-
-    const data = await bucket.getDataForMutation();
-    bucket.startDataMutation();
-    data[...] = ...;
-    bucket.endDataMutation();
-    */
+     * You can use the returned data to inspect it. If you decide to mutate the data,
+     * please call startDataMutation() before the mutation and endDataMutation() afterwards.
+     * Example:
+     *
+     * const data = await bucket.getDataForMutation();
+     * bucket.startDataMutation();
+     * data[...] = ...;
+     * bucket.endDataMutation();
+     */
     await this.ensureLoaded();
     return this.getOrCreateData();
   }
 
   startDataMutation(): void {
+    /*
+     * See Bucket.getDataForMutation() for a safe way of using this method.
+     */
     this._markAndAddBucketForUndo();
   }
 
   endDataMutation(): void {
+    /*
+     * See Bucket.getDataForMutation() for a safe way of using this method.
+     */
     this.cube.pushQueue.insert(this);
     this.trigger("bucketLabeled");
   }

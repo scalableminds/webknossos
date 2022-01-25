@@ -1,10 +1,10 @@
 # Managing Tasks and Projects
 
-webKnossos has a task system that is useful for efficiently managing large annotation projects. 
+webKnossos includes a powerful task and project management system to efficiently annotate large datasets. Large annotations can be broken down into smaller work pieces and distributed to members of your organization. 
 
 ## Concepts
 
-- `Task`: Is an assignment for a small piece of work. A Team Manager or Admin creates Tasks with information about the Task Type, the referenced dataset, starting positions and advanced options. These tasks will be distributed to eligible users. 
+- `Task`: Is an assignment for a small piece of work. A `Team Manager` or `Admin` creates Tasks with information about the Task Type, the referenced dataset, starting positions and advanced options. These tasks will be distributed to eligible users. 
 - `Task Instance`: Some Tasks need to be completed redundantly by multiple users in order to assure quality. The single assignments of the tasks are called Instances.
 - `Task Type`: Contains a blue print for Tasks. Includes information such as a description with instructions, allowed annotation modes, and advanced options.
 - `Project`: A group of many related Tasks is called a Project. Projects have a priority assigned to them which affects the order of assignment to users. Projects may be paused and resumed in order to manage the user workloads.

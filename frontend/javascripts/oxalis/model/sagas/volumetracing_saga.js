@@ -1004,6 +1004,7 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborId) {
 }
 
 function* performMinCut(): Saga<void> {
+  yield call([Model, Model.ensureSavedState]);
   yield* put(disableSavingAction());
 
   const skeleton = yield* select(store => store.tracing.skeleton);
@@ -1069,6 +1070,7 @@ function* performMinCut(): Saga<void> {
 
   const segmentId = inputData[ll(seedA)];
 
+  console.time("total min-cut");
   console.time("populate data");
   for (let x = 0; x < size[0]; x++) {
     for (let y = 0; y < size[1]; y++) {
@@ -1139,7 +1141,7 @@ function* performMinCut(): Saga<void> {
       directionField[currVoxelIdx] = usedEdgeIdx;
 
       if (currVoxel[0] === seedB[0] && currVoxel[1] === seedB[1] && currVoxel[2] === seedB[2]) {
-        console.log("found target seed");
+        // console.log("found target seed");
         foundTarget = true;
         break;
       }
@@ -1303,7 +1305,7 @@ function* performMinCut(): Saga<void> {
 
   console.time("find & delete paths");
   for (let loopBuster = 0; loopBuster < 2000; loopBuster++) {
-    console.log("populate distance field", loopBuster);
+    // console.log("populate distance field", loopBuster);
     const { foundTarget, distanceField, directionField } = populateDistanceField();
     if (foundTarget) {
       removeShortestPath(distanceField, directionField);
@@ -1353,6 +1355,7 @@ function* performMinCut(): Saga<void> {
   console.time("labelDeletedEdges");
   labelDeletedEdges();
   console.timeEnd("labelDeletedEdges");
+  console.timeEnd("total min-cut");
   console.log({ seedA, seedB, boundingBox, inputData, edgeBuffer });
 }
 

@@ -69,7 +69,6 @@ export function CategorizationSearch({ searchTags, setTags, localStorageSavingKe
           onClose={() => {
             removeTag(tag);
           }}
-          style={{ cursor: "pointer" }}
           closable
         >
           {tag}

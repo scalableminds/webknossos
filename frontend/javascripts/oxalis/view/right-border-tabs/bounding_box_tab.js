@@ -23,7 +23,19 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import features from "features";
 
+// NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
+// That way, bboxes created by the floodfill can be detected as such and
+// a job for globalizing floodfills can be started.
 const GLOBALIZE_FLOODFILL_REGEX = /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
+export function getBBoxNameForPartialFloodfill(
+  oldSegmentIdAtSeed: number,
+  activeCellId: number,
+  seedPosition: Vector3,
+) {
+  return `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+    ",",
+  )}, timestamp=${new Date().getTime()})`;
+}
 
 function StartGlobalizeFloodfillsModal({
   onStartGlobalization,
@@ -70,11 +82,7 @@ function StartGlobalizeFloodfillsModal({
         floodfill operations (i.e., &quot;globalize&quot; them).
       </p>
 
-      <Form
-        onFinish={handleSubmit}
-        layout="vertical"
-        initialValues={{ initialTeams: [], scale: [0, 0, 0], zipFile: [] }}
-      >
+      <Form onFinish={handleSubmit} layout="vertical">
         <DatasetNameFormItem activeUser={activeUser} initialName={initialName} />
 
         <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>

@@ -6,7 +6,11 @@ import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store, { type OxalisState, type MappingType } from "oxalis/store";
+import Store, {
+  type OxalisState,
+  type MappingType,
+  type IsosurfaceInformation,
+} from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, {
   type ViewMode,
@@ -22,12 +26,22 @@ import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
+type Mesh = {|
+  +segmentId: number,
+  +seedPosition: Vector3,
+  +isPrecomputed: boolean,
+|};
+
 export type UrlStateByLayer = {
   [layerName: string]: {
+    meshInfo?: {
+      meshFileName: string,
+      meshes?: Array<Mesh>,
+    },
     mappingInfo?: {
       mappingName: string,
       mappingType: MappingType,
-      agglomerateIdsToImport?: [number],
+      agglomerateIdsToImport?: Array<number>,
     },
   },
 };
@@ -179,6 +193,20 @@ class UrlManager {
       if (mappingInfo.mappingStatus === MappingStatusEnum.ENABLED) {
         const { mappingName, mappingType } = mappingInfo;
         stateByLayer[layerName] = { mappingInfo: { mappingName, mappingType } };
+      }
+    }
+    for (const layerName of Object.keys(state.localSegmentationData)) {
+      const { isosurfaces, currentMeshFile } = state.localSegmentationData[layerName];
+      if (currentMeshFile != null) {
+        const { meshFileName } = currentMeshFile;
+        const meshes = Utils.values(isosurfaces)
+          .filter(({ isVisible }: IsosurfaceInformation) => isVisible)
+          .map(({ segmentId, seedPosition, isPrecomputed }: IsosurfaceInformation) => ({
+            segmentId,
+            seedPosition,
+            isPrecomputed,
+          }));
+        stateByLayer[layerName] = { meshInfo: { meshFileName, meshes } };
       }
     }
     const stateByLayerOptional = _.size(stateByLayer) > 0 ? { stateByLayer } : {};

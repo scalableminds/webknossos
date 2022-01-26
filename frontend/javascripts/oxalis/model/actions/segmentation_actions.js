@@ -6,7 +6,7 @@ export type ChangeActiveIsosurfaceCellAction = {
   type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
   cellId: number,
   seedPosition: Vector3,
-  shouldReload: boolean,
+  layerName?: string,
 };
 
 export type IsosurfaceAction = ChangeActiveIsosurfaceCellAction;
@@ -14,10 +14,10 @@ export type IsosurfaceAction = ChangeActiveIsosurfaceCellAction;
 export const changeActiveIsosurfaceCellAction = (
   cellId: number,
   seedPosition: Vector3,
-  shouldReload: boolean,
+  layerName?: string,
 ): ChangeActiveIsosurfaceCellAction => ({
   type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
   cellId,
   seedPosition,
-  shouldReload,
+  layerName,
 });

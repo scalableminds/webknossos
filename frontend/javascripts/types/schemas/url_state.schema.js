@@ -11,6 +11,18 @@ export default {
       enum: ["orthogonal", "oblique", "flight", "volume"],
     },
     "types::MappingType": { enum: ["JSON", "HDF5"] },
+    "types::Mesh": {
+      type: "object",
+      properties: {
+        segmentId: { type: "number" },
+        seedPosition: {
+          $ref: "#/definitions/types::Vector3",
+        },
+        isPrecomputed: { type: "boolean" },
+      },
+      additionalProperties: false,
+      required: ["segmentId", "seedPosition", "isPrecomputed"],
+    },
     "types::UrlStateByLayer": {
       type: "object",
       additionalProperties: {
@@ -30,6 +42,22 @@ export default {
             },
             additionalProperties: false,
             required: ["mappingName", "mappingType"],
+          },
+          meshInfo: {
+            type: "object",
+            properties: {
+              meshFileName: { type: "string" },
+              meshes: {
+                type: "array",
+                items: [
+                  {
+                    $ref: "#/definitions/types::Mesh",
+                  },
+                ],
+              },
+            },
+            additionalProperties: false,
+            required: ["meshFileName"],
           },
         },
         additionalProperties: false,

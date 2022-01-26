@@ -29,6 +29,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
+  _actionChannel,
   _takeEvery,
   call,
   _call,
@@ -145,9 +146,14 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-  if (action.shouldReload) {
-    yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
-  }
+  yield* call(
+    ensureSuitableIsosurface,
+    null,
+    action.seedPosition,
+    action.cellId,
+    false,
+    action.layerName,
+  );
 }
 
 // This function either returns the activeCellId of the current volume tracing
@@ -166,21 +172,21 @@ function* ensureSuitableIsosurface(
   seedPosition?: Vector3,
   cellId?: number,
   removeExistingIsosurface: boolean = false,
+  layerName?: ?string,
 ): Saga<void> {
   const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
-  const layer = Model.getVisibleSegmentationLayer();
-  if (!layer) {
-    return;
-  }
+  const layer =
+    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
 
-  // we need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
-  if (maybeFlycamAction && !maybeFlycamAction.shouldRefreshIsosurface) {
-    return;
-  }
   if (segmentId === 0 || layer == null) {
     return;
   }
-  yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
+  // We need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
+  if (maybeFlycamAction && !maybeFlycamAction.shouldRefreshIsosurface) {
+    return;
+  }
+
+  yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface, layer);
 }
 
 function* getInfoForIsosurfaceLoading(
@@ -203,12 +209,9 @@ function* getInfoForIsosurfaceLoading(
 function* loadIsosurfaceForSegmentId(
   segmentId: number,
   seedPosition: ?Vector3,
-  removeExistingIsosurface: boolean = false,
+  removeExistingIsosurface: boolean,
+  layer: DataLayer,
 ): Saga<void> {
-  const layer = Model.getVisibleSegmentationLayer();
-  if (!layer) {
-    return;
-  }
   const { dataset, zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading, layer);
 
   batchCounterPerSegment[segmentId] = 0;
@@ -422,7 +425,7 @@ function* removeIsosurface(
   if (cellId === currentCellId) {
     // Clear the active cell id to avoid that the isosurface is immediately reconstructed
     // when the position changes.
-    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0], false));
+    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0]));
   }
 }
 
@@ -505,9 +508,11 @@ function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAct
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
+  // Buffer actions since they might be dispatched before WK_READY
+  const isosurfaceActionChannel = yield _actionChannel("CHANGE_ACTIVE_ISOSURFACE_CELL");
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
-  yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
+  yield _takeEvery(isosurfaceActionChannel, changeActiveIsosurfaceCell);
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);

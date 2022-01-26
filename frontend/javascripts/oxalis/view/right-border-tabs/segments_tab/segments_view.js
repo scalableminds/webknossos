@@ -158,11 +158,11 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
     }
   },
-  changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3, shouldReload: boolean) {
+  changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3) {
     if (cellId == null) {
       return;
     }
-    dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
+    dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition));
   },
   setCurrentMeshFile(layerName: string, fileName: string) {
     dispatch(updateCurrentMeshFileAction(layerName, fileName));

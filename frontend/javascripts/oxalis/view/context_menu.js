@@ -498,7 +498,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
       Toast.info("No segment found at the clicked position");
       return;
     }
-    dispatch(changeActiveIsosurfaceCellAction(id, globalPosition, true));
+    dispatch(changeActiveIsosurfaceCellAction(id, globalPosition));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);

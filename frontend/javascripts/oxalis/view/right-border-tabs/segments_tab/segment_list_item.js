@@ -91,7 +91,7 @@ const getComputeMeshAdHocMenuItem = (
   return (
     <Menu.Item
       onClick={() =>
-        andCloseContextMenu(changeActiveIsosurfaceId(segment.id, segment.somePosition, true))
+        andCloseContextMenu(changeActiveIsosurfaceId(segment.id, segment.somePosition))
       }
       disabled={disabled}
     >
@@ -116,7 +116,7 @@ type Props = {
   updateSegment: (number, $Shape<Segment>, string) => void,
   onSelectSegment: Segment => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
-  changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
+  changeActiveIsosurfaceId: (?number, Vector3) => void,
   isosurface: ?IsosurfaceInformation,
   setPosition: (Vector3, boolean) => void,
   loadPrecomputedMeshForSegment: Segment => Promise<void>,
@@ -288,7 +288,7 @@ function _MeshInfoItem(props: {
   isosurface: ?IsosurfaceInformation,
   handleSegmentDropdownMenuVisibility: (number, boolean) => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
-  changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
+  changeActiveIsosurfaceId: (?number, Vector3) => void,
   setPosition: (Vector3, boolean) => void,
 }) {
   const dispatch = useDispatch();
@@ -339,8 +339,8 @@ function _MeshInfoItem(props: {
             return;
           }
           Store.dispatch(removeIsosurfaceAction(props.visibleSegmentationLayer.name, segment.id));
-          // reset the active mesh id so the deleted one is not reloaded immediately
-          props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
+          // Reset the active mesh id so the deleted one is not reloaded immediately
+          props.changeActiveIsosurfaceId(0, [0, 0, 0]);
         }}
       />
     </Tooltip>
@@ -383,7 +383,8 @@ function _MeshInfoItem(props: {
           {toggleVisibilityCheckbox}
           <span
             onClick={() => {
-              props.changeActiveIsosurfaceId(segment.id, seedPosition, !isPrecomputed);
+              // Reset the current active isosurface id if a precomputed isosurface is activated
+              props.changeActiveIsosurfaceId(isPrecomputed ? 0 : segment.id, seedPosition);
               props.setPosition(seedPosition, false);
             }}
             style={{ ...textStyle, marginLeft: 8 }}

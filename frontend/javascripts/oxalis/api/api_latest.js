@@ -1665,7 +1665,7 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
+    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition));
   }
 
   /**

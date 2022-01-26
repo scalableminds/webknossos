@@ -224,7 +224,7 @@ Expects:
   @ApiResponses(
     Array(
       new ApiResponse(code = 200,
-                      message = "NML or Zip file containing skeleton and/or volume data of this annotation."),
+                      message = "NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip"),
       new ApiResponse(code = 400, message = badRequestLabel)
     ))
   def download(

@@ -352,8 +352,11 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def annotationsForTask(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  @ApiOperation(value = "Information about all annotations for a specific task", nickname = "annotationInfo")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON list of objects containing information about the selected annotations."),
+      new ApiResponse(code = 400, message = badRequestLabel)))
+  def annotationsForTask(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId)
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND

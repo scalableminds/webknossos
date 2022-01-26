@@ -42,6 +42,7 @@ class TaskService @Inject()(conf: WkConf,
       Json.obj(
         "id" -> task._id.toString,
         "formattedHash" -> Formatter.formatHash(task._id.toString),
+        "projectId" -> project._id.id,
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,

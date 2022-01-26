@@ -1,30 +1,32 @@
 // @flow
-import * as tf from "@tensorflow/tfjs";
-import memoizeOne from "memoize-one";
 import React from "react";
-import { type Saga, call, fork, select, take, _cancel } from "oxalis/model/sagas/effect-generators";
-import floodfill from "libs/floodfill";
+import memoizeOne from "memoize-one";
+import * as tf from "@tensorflow/tfjs";
+
+import type { APIDataset } from "types/api_flow_types";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { type InferSegmentationInViewportAction } from "oxalis/model/actions/volumetracing_actions";
-import { sleep } from "libs/utils";
+import type { OxalisState } from "oxalis/store";
+import { type Saga, call, fork, select, take, _cancel } from "oxalis/model/sagas/effect-generators";
+import { V2 } from "libs/mjs";
 import { type Vector2, type Vector3, type OrthoView, OrthoViews } from "oxalis/constants";
-import { getMeanAndStdDevFromDataset } from "admin/admin_rest_api";
-import type { APIDataset } from "types/api_flow_types";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import TensorFlowWorker from "oxalis/workers/tensorflow.worker";
-import mainThreadPredict from "oxalis/workers/tensorflow.impl";
-import ThreeDMap from "libs/ThreeDMap";
-import Model from "oxalis/model";
-import Toast from "libs/toast";
-import Dimensions from "oxalis/model/dimensions";
-import Shortcut from "libs/shortcut_component";
-import api from "oxalis/api/internal_api";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getMeanAndStdDevFromDataset } from "admin/admin_rest_api";
 import {
   getPosition,
   getPlaneExtentInVoxelFromStore,
 } from "oxalis/model/accessors/flycam_accessor";
-import { V2 } from "libs/mjs";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { sleep } from "libs/utils";
+import Dimensions from "oxalis/model/dimensions";
+import Model from "oxalis/model";
+import Shortcut from "libs/shortcut_component";
+import TensorFlowWorker from "oxalis/workers/tensorflow.worker";
+import ThreeDMap from "libs/ThreeDMap";
+import Toast from "libs/toast";
+import api from "oxalis/api/internal_api";
+import floodfill from "libs/floodfill";
+import mainThreadPredict from "oxalis/workers/tensorflow.impl";
 import window from "libs/window";
 
 const outputExtent = 100;
@@ -274,6 +276,22 @@ export function* getHalfViewportExtents(activeViewport: OrthoView): Saga<Vector2
   const viewportExtents = yield* select(state =>
     getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
   );
+  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
+
+  const halfViewportExtents = scaledViewportExtents.map(extent => Math.round(extent / 2));
+  return halfViewportExtents;
+}
+
+export function getHalfViewportExtentsFromState(
+  state: OxalisState,
+  activeViewport: OrthoView,
+): Vector2 {
+  const zoom = state.flycam.zoomStep;
+  const baseVoxelFactors = Dimensions.transDim(
+    getBaseVoxelFactors(state.dataset.dataSource.scale),
+    activeViewport,
+  );
+  const viewportExtents = getPlaneExtentInVoxelFromStore(state, zoom, activeViewport);
   const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
 
   const halfViewportExtents = scaledViewportExtents.map(extent => Math.round(extent / 2));

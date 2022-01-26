@@ -1019,19 +1019,12 @@ function* performMinCut(): Saga<void> {
     return;
   }
 
-  // activeTree.
-
-  const segmentId = yield* select(state => enforceActiveVolumeTracing(state).activeCellId);
-
   const boundingBoxes = skeleton.userBoundingBoxes;
   if (boundingBoxes.length === 0) {
     console.log("no bounding box defined for min-cut");
     return;
   }
-  // const boundingBoxObj = {
-  //   min: [3079, 3075, 1024],
-  //   max: [3079 + 20, 3075 + 19, 1024 + 1],
-  // };
+
   const boundingBoxObj = boundingBoxes[0].boundingBox;
   const boundingBox = new BoundingBox(boundingBoxObj);
 
@@ -1045,8 +1038,11 @@ function* performMinCut(): Saga<void> {
   const globalSeedA = Utils.floor3(nodes[0].position);
   const globalSeedB = Utils.floor3(nodes[1].position);
 
-  // const globalSeedA = [3084, 3080, 1024];
-  // const globalSeedB = [3093, 3088, 1024];
+  const MIN_DIST_TO_SEED = 30;
+
+  if (V3.length(V3.sub(globalSeedA, globalSeedB)) < 2 * MIN_DIST_TO_SEED) {
+    console.warn(`Nodes are closer than ${MIN_DIST_TO_SEED} vx apart.`);
+  }
 
   const seedA = V3.sub(globalSeedA, boundingBox.min);
   const seedB = V3.sub(globalSeedB, boundingBox.min);
@@ -1066,6 +1062,13 @@ function* performMinCut(): Saga<void> {
   const l = (x, y, z) => z * size[1] * size[0] + y * size[0] + x;
   const ll = ([x, y, z]) => z * size[1] * size[0] + y * size[0] + x;
   const edgeBuffer = new Uint16Array(boundingBox.getVolume()); // .fill(2 ** 12 - 1);
+
+  if (inputData[ll(seedA)] !== inputData[ll(seedB)]) {
+    console.warn("Given seeds are not placed on same segment");
+    return;
+  }
+
+  const segmentId = inputData[ll(seedA)];
 
   console.time("populate data");
   for (let x = 0; x < size[0]; x++) {
@@ -1168,7 +1171,7 @@ function* performMinCut(): Saga<void> {
     while (voxelStack.length > 0) {
       const currentVoxel = voxelStack.pop();
       if (i > 1000) {
-        console.log("loopBusted!");
+        console.warn("loopBusted!");
         break;
       }
       i++;
@@ -1226,7 +1229,7 @@ function* performMinCut(): Saga<void> {
 
       const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
 
-      if (distToSeed > 30) {
+      if (distToSeed > MIN_DIST_TO_SEED) {
         path.unshift(neighborPos);
 
         // Remove ingoing

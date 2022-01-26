@@ -193,7 +193,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
-  getClippingValues = async (layerName: string/*, thresholdRatio: number = 0.05*/) => {
+  getClippingValues = async (layerName: string, thresholdRatio: number = 0.05) => {
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 
@@ -210,59 +210,58 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     dataForAllViewports.set(cuboidXZ, cuboidXY.length);
     dataForAllViewports.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
 
-    const localHist = {};
+    const localHist = new Map();
     for (let i = 0; i < dataForAllViewports.length; i++) {
-      if (dataForAllViewports[i] !== 0 && dataForAllViewports[i] in localHist) {
-        localHist[dataForAllViewports[i]] += 1;
-      } else {
-        localHist[dataForAllViewports[i]] = 1;
+      if (dataForAllViewports[i] !== 0) {
+        const value = localHist.get(dataForAllViewports[i]);
+        localHist.set(dataForAllViewports[i], value != null ? value + 1 : 1);
       }
     }
 
-    const accumulator = {};
+    const sortedHistKeys = Array.from(localHist.keys()).sort((a, b) => a - b);
+    const accumulator = new Map();
     let area = 0;
-    let lastKey = 0;
-    for (const key of Object.keys(localHist)) {
-      accumulator[key] = localHist[key] + area;
-      area += localHist[key];
-      lastKey = key;
+    for (const key of sortedHistKeys) {
+      const value = localHist.get(key);
+      area += value != null ? value : 0;
+      accumulator.set(key, area);
     }
-    const maximum = accumulator[lastKey];
-    const thresholdValue = (thresholdRatio * maximum) / 2.0;
+    const thresholdValue = (thresholdRatio * area) / 2.0;
 
-    let lowClip = -1;
-    for (const key of Object.keys(accumulator)) {
-      if (accumulator[key] >= thresholdValue) {
-        lowClip = Number(key);
+    let lowerClip = -1;
+    for (const key of sortedHistKeys) {
+      const value = accumulator.get(key);
+      if (value != null && value >= thresholdValue) {
+        lowerClip = key;
         break;
       }
     }
-
-    let highClip = -1;
-    for (const key of Object.keys(accumulator).reverse()) {
-      if (accumulator[key] < maximum - thresholdValue) {
-        highClip = Number(key);
+    let upperClip = -1;
+    for (const key of sortedHistKeys.reverse()) {
+      const value = accumulator.get(key);
+      if (value != null && value < area - thresholdValue) {
+        upperClip = key;
         break;
       }
     }
-    return [lowClip, highClip];
+    return [lowerClip, upperClip];
   };
 
   clipHistogram = async (isInEditMode: boolean, layerName: string) => {
-    const [lowClip, highClip] = await this.getClippingValues(layerName);
-    if (lowClip === -1 || highClip === -1) {
+    const [lowerClip, upperClip] = await this.getClippingValues(layerName);
+    if (lowerClip === -1 || upperClip === -1) {
       Toast.warning(
         "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
       );
       return;
     }
     if (!isInEditMode) {
-      this.onThresholdChange([lowClip, highClip]);
+      this.onThresholdChange([lowerClip, upperClip]);
     } else {
-      this.onThresholdChange([lowClip, highClip]);
-      this.setState({ currentMin: lowClip, currentMax: highClip });
-      this.props.onChangeLayer(layerName, "min", lowClip);
-      this.props.onChangeLayer(layerName, "max", highClip);
+      this.onThresholdChange([lowerClip, upperClip]);
+      this.setState({ currentMin: lowerClip, currentMax: upperClip });
+      this.props.onChangeLayer(layerName, "min", lowerClip);
+      this.props.onChangeLayer(layerName, "max", upperClip);
     }
   };
 
@@ -283,7 +282,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const editModeAddendum = isInEditMode
       ? "In Edit Mode, the histogram's range will be adjusted, too."
       : "";
-    const tooltipText = `Automatically clip the histogram to enhance contrast.${editModeAddendum}`;
+    const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <React.Fragment>
         <canvas

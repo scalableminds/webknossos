@@ -337,17 +337,27 @@ function DatasetView(props: Props) {
     searchBox
   );
 
+  const showLoadingIndicator =
+    (context.datasets.length === 0 && context.isLoading) || context.isChecking;
   const adminHeader = (
     <div className="pull-right" style={{ display: "flex" }}>
       {isUserAdminOrDatasetManagerOrTeamManager ? (
         <React.Fragment>
-          <Button
-            icon={context.isLoading ? <LoadingOutlined /> : <ReloadOutlined />}
-            style={margin}
-            onClick={context.checkDatasets}
+          <Tooltip
+            title={
+              showLoadingIndicator
+                ? "Refreshing the dataset list."
+                : "Search for new datasets on disk."
+            }
           >
-            Refresh
-          </Button>
+            <Button
+              icon={showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />}
+              style={margin}
+              onClick={context.checkDatasets}
+            >
+              Refresh
+            </Button>
+          </Tooltip>
           <Link to="/datasets/upload" style={margin}>
             <Button type="primary" icon={<PlusOutlined />}>
               Add Dataset

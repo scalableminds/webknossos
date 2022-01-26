@@ -8,6 +8,7 @@ import update from "immutability-helper";
 import type { APIUser, APITeam, APITeamMembership } from "types/api_flow_types";
 import { updateUser, getEditableTeams } from "admin/admin_rest_api";
 import messages from "messages";
+import * as Utils from "libs/utils";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -129,7 +130,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
   setPermissionsAndTeams = () => {
     const newUserPromises = this.props.users.map(user => {
       if (this.props.selectedUserIds.includes(user.id)) {
-        const newTeams = ((Object.values(this.state.selectedTeams): any): Array<APITeamMembership>);
+        const newTeams = Utils.values(this.state.selectedTeams);
         const newUser = Object.assign({}, user, { teams: newTeams });
         if (this.props.activeUser.isAdmin && this.props.selectedUserIds.length === 1) {
           // If the current user is admin and only one user is edited we also update the permissions.

@@ -88,8 +88,7 @@ export class OxalisModel {
   }
 
   getAllLayers(): Array<DataLayer> {
-    // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
-    return Object.values(this.dataLayers);
+    return Utils.values(this.dataLayers);
   }
 
   getColorLayers(): Array<DataLayer> {
@@ -100,22 +99,18 @@ export class OxalisModel {
   }
 
   getSegmentationLayers(): Array<DataLayer> {
-    return Object.keys(this.dataLayers)
-      .map(k => this.dataLayers[k])
-      .filter(
-        dataLayer =>
-          getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
-      );
+    return Utils.values(this.dataLayers).filter(
+      dataLayer =>
+        getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
+    );
   }
 
   getSegmentationTracingLayers(): Array<DataLayer> {
-    return Object.keys(this.dataLayers)
-      .map(k => this.dataLayers[k])
-      .filter(dataLayer => {
-        const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
+    return Utils.values(this.dataLayers).filter(dataLayer => {
+      const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
 
-        return layer.category === "segmentation" && layer.tracingId != null;
-      });
+      return layer.category === "segmentation" && layer.tracingId != null;
+    });
   }
 
   getSomeSegmentationLayer(): ?DataLayer {

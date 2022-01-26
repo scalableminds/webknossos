@@ -140,6 +140,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import DataLayer from "oxalis/model/data_layer";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -1009,9 +1010,7 @@ class DataApi {
    */
   async reloadBuckets(layerName: string): Promise<void> {
     await Promise.all(
-      Object.keys(this.model.dataLayers).map(async currentLayerName => {
-        const dataLayer = this.model.dataLayers[currentLayerName];
-
+      Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
             await Model.ensureSavedState();
@@ -1030,7 +1029,7 @@ class DataApi {
     if (hasVolumeTracings(Store.getState().tracing)) {
       await Model.ensureSavedState();
     }
-    _.forEach(this.model.dataLayers, dataLayer => {
+    _.forEach(this.model.dataLayers, (dataLayer: DataLayer) => {
       dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });

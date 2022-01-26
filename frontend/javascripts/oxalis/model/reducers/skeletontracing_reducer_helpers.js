@@ -490,8 +490,7 @@ export function getOrCreateTree(
 
 export function ensureTreeNames(state: OxalisState, trees: MutableTreeMap) {
   // Assign a new tree name for trees without a name
-  // $FlowIssue[incompatible-type] remove once https://github.com/facebook/flow/issues/2221 is fixed
-  for (const tree: MutableTree of Object.values(trees)) {
+  for (const tree of Utils.values(trees)) {
     if (tree.name === "") {
       tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
     }
@@ -594,7 +593,6 @@ export function deleteTree(
   if (_.size(newTrees) > 0) {
     // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
     newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
-    // Object.keys returns strings and the newActiveNodeId should be an integer
     newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
   }
   const newMaxNodeId = getMaximumNodeId(newTrees);

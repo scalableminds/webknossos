@@ -27,7 +27,11 @@ import type {
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
-import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
+import {
+  computeArrayFromBoundingBox,
+  computeBoundingBoxFromBoundingBoxObject,
+  values,
+} from "libs/utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
@@ -116,10 +120,7 @@ export function serializeToNml(
   buildInfo: APIBuildInfo,
 ): string {
   // Only visible trees will be serialized!
-  // _.filter throws flow errors here, because the type definitions are wrong and I'm not able to fix them
-  const visibleTrees = Object.keys(tracing.trees)
-    .filter(treeId => tracing.trees[Number(treeId)].isVisible)
-    .map(treeId => tracing.trees[Number(treeId)]);
+  const visibleTrees = values(tracing.trees).filter(tree => tree.isVisible);
   return [
     "<things>",
     ...indent(
@@ -793,10 +794,9 @@ export function parseNml(
       })
       .on("finish", () => {
         // Split potentially unconnected trees
-        const originalTreeIds = Object.keys(trees);
+        const originalTrees = values(trees);
         let maxTreeId = getMaximumTreeId(trees);
-        for (const treeId of originalTreeIds) {
-          const tree = trees[Number(treeId)];
+        for (const tree of originalTrees) {
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
           const newTreesSize = _.size(newTrees);
           if (newTreesSize > 1) {

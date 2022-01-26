@@ -49,7 +49,7 @@ test.before(t => {
   getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
     const trees = skeletonTracing.trees;
     t.is(_.size(trees), 20);
-    for (const tree of Object.values(trees)) {
+    for (const tree of Utils.values(trees)) {
       t.is(tree.nodes.size(), 100);
     }
   });
@@ -75,7 +75,7 @@ test.serial("Skeleton should initialize correctly using the store's state", t =>
     const edgeTreeIds = [];
     let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
-    for (const tree of Object.values(trees)) {
+    for (const tree of Utils.values(trees)) {
       treeColors = treeColors.concat(skeleton.getTreeRGBA(tree.color, tree.isVisible));
       for (const node of Array.from(tree.nodes.values())) {
         nodePositions = nodePositions.concat(node.position);

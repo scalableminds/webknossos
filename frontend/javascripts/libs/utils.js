@@ -24,6 +24,11 @@ export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
 
+export function values<K, V>(o: { [K]: V }): Array<V> {
+  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+  return Object.values(o);
+}
+
 export function map2<A, B>(fn: (A, number) => B, tuple: [A, A]): [B, B] {
   const [x, y] = tuple;
   return [fn(x, 0), fn(y, 1)];
@@ -514,8 +519,8 @@ export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
       _.some(properties, fieldName => {
         const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
         if (value != null && (typeof value === "string" || value instanceof Object)) {
-          const values = getRecursiveValues(value);
-          return _.some(values, v => v != null && v.toString().match(regexp));
+          const recursiveValues = getRecursiveValues(value);
+          return _.some(recursiveValues, v => v != null && v.toString().match(regexp));
         } else {
           return false;
         }
@@ -545,8 +550,8 @@ export function filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
         _.some(properties, fieldName => {
           const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
           if (value !== null && (typeof value === "string" || value instanceof Object)) {
-            const values = getRecursiveValues(value);
-            return _.some(values, v => v != null && v.toString().match(pattern));
+            const recursiveValues = getRecursiveValues(value);
+            return _.some(recursiveValues, v => v != null && v.toString().match(pattern));
           } else {
             return false;
           }

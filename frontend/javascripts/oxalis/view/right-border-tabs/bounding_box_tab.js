@@ -154,7 +154,7 @@ export default function BoundingBoxTab() {
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
       {showGlobalizeFloodfillsButton ? (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <Tooltip title="For this annotation some floodfill operations were aborted prematurely, because they covered a too large volume. webKnossos can finish these operations via a long-running job.">
+          <Tooltip title="For this annotation some floodfill operations have not run to completion, because they covered a too large volume. webKnossos can finish these operations via a long-running job.">
             <Button
               size="small"
               style={{ marginBottom: 8 }}

@@ -69,19 +69,16 @@ class TaskSearchForm extends React.Component<Props, State> {
     isFetchingData: false,
   };
 
-  componentWillMount() {
-    this.setState(persistence.load(this.props.history));
-  }
-
   componentDidMount() {
     this.fetchData();
 
     // initialize form with default values when navigating from
     // project / taskType list views or when restoring values from persisted state
+    const persistedState = persistence.load(this.props.history);
+    const persistedFieldValues =
+      persistedState.fieldValues != null ? persistedState.fieldValues : {};
     const fieldValues =
-      this.props.initialFieldValues != null
-        ? this.props.initialFieldValues
-        : this.state.fieldValues;
+      this.props.initialFieldValues != null ? this.props.initialFieldValues : persistedFieldValues;
     if (_.size(fieldValues) > 0) {
       const form = this.formRef.current;
       if (!form) {
@@ -93,8 +90,8 @@ class TaskSearchForm extends React.Component<Props, State> {
     }
   }
 
-  componentWillUpdate(nextProps, nextState) {
-    persistence.persist(this.props.history, nextState);
+  componentDidUpdate() {
+    persistence.persist(this.props.history, this.state);
   }
 
   async fetchData() {

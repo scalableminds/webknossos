@@ -25,6 +25,7 @@ import com.scalableminds.webknossos.datastore.models.{
   _
 }
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import io.swagger.annotations.{Api, ApiOperation, ApiParam, ApiResponse, ApiResponses}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
@@ -32,6 +33,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, ResponseHeader, Result}
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
 @Api(tags = Array("datastore"))
@@ -41,6 +43,7 @@ class BinaryDataController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
+    slackNotificationService: DSSlackNotificationService,
     isosurfaceServiceHolder: IsosurfaceServiceHolder,
     findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -56,25 +59,29 @@ class BinaryDataController @Inject()(
     */
   @ApiOperation(hidden = true, value = "")
   def requestViaWebKnossos(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String
   ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
-        val t = System.currentTimeMillis()
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-          (data, indices) <- requestData(dataSource, dataLayer, request.body)
-          duration = System.currentTimeMillis() - t
-          _ = if (duration > 10000)
-            logger.info(
-              s"Complete data request took $duration ms.\n"
-                + s"  dataSource: $organizationName/$dataSetName\n"
-                + s"  dataLayer: $dataLayerName\n"
-                + s"  requestCount: ${request.body.size}"
-                + s"  requestHead: ${request.body.headOption}")
-        } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+        logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 30 seconds) {
+          val t = System.currentTimeMillis()
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            (data, indices) <- requestData(dataSource, dataLayer, request.body)
+            duration = System.currentTimeMillis() - t
+            _ = if (duration > 10000)
+              logger.info(
+                s"Complete data request took $duration ms.\n"
+                  + s"  dataSource: $organizationName/$dataSetName\n"
+                  + s"  dataLayer: $dataLayerName\n"
+                  + s"  requestCount: ${request.body.size}"
+                  + s"  requestHead: ${request.body.headOption}")
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+        }
       }
     }
   }
@@ -95,6 +102,7 @@ class BinaryDataController @Inject()(
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
   def requestRawCuboid(
+      @ApiParam(value = "Datastore token identifying the requesting user") token: Option[String],
       @ApiParam(value = "Name of the dataset’s organization", required = true) organizationName: String,
       @ApiParam(value = "Dataset name", required = true) dataSetName: String,
       @ApiParam(value = "Layer name of the dataset", required = true) dataLayerName: String,
@@ -107,7 +115,8 @@ class BinaryDataController @Inject()(
       @ApiParam(value = "Exponent of the dataset mag (e.g. 4 for mag 16-16-8)", required = true) resolution: Int,
       @ApiParam(value = "If true, use lossy compression by sending only half-bytes of the data") halfByte: Boolean
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -129,6 +138,7 @@ class BinaryDataController @Inject()(
     */
   @ApiOperation(hidden = true, value = "")
   def requestViaAjaxDebug(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String,
@@ -139,7 +149,8 @@ class BinaryDataController @Inject()(
       resolution: Int,
       halfByte: Boolean
   ): Action[AnyContent] =
-    requestRawCuboid(organizationName,
+    requestRawCuboid(token,
+                     organizationName,
                      dataSetName,
                      dataLayerName,
                      x,
@@ -155,7 +166,8 @@ class BinaryDataController @Inject()(
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
   @ApiOperation(hidden = true, value = "")
-  def requestViaKnossos(organizationName: String,
+  def requestViaKnossos(token: Option[String],
+                        organizationName: String,
                         dataSetName: String,
                         dataLayerName: String,
                         resolution: Int,
@@ -163,7 +175,8 @@ class BinaryDataController @Inject()(
                         y: Int,
                         z: Int,
                         cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -187,6 +200,7 @@ class BinaryDataController @Inject()(
     */
   @ApiOperation(hidden = true, value = "")
   def requestSpriteSheet(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String,
@@ -198,7 +212,8 @@ class BinaryDataController @Inject()(
       resolution: Int,
       halfByte: Boolean
   ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -228,7 +243,8 @@ class BinaryDataController @Inject()(
     * Handles requests for data images.
     */
   @ApiOperation(hidden = true, value = "")
-  def requestImage(organizationName: String,
+  def requestImage(token: Option[String],
+                   organizationName: String,
                    dataSetName: String,
                    dataLayerName: String,
                    width: Int,
@@ -239,7 +255,8 @@ class BinaryDataController @Inject()(
                    resolution: Int,
                    halfByte: Boolean,
                    blackAndWhite: Boolean): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -265,7 +282,8 @@ class BinaryDataController @Inject()(
     * Handles requests for dataset thumbnail images as JPEG.
     */
   @ApiOperation(hidden = true, value = "")
-  def requestImageThumbnailJpeg(organizationName: String,
+  def requestImageThumbnailJpeg(token: Option[String],
+                                organizationName: String,
                                 dataSetName: String,
                                 dataLayerName: String,
                                 width: Int,
@@ -274,7 +292,8 @@ class BinaryDataController @Inject()(
                                 centerY: Option[Int],
                                 centerZ: Option[Int],
                                 zoom: Option[Double]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           thumbnailProvider <- respondWithImageThumbnail(organizationName,
@@ -303,6 +322,7 @@ class BinaryDataController @Inject()(
     */
   @ApiOperation(hidden = true, value = "")
   def requestImageThumbnailJson(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String,
@@ -313,7 +333,8 @@ class BinaryDataController @Inject()(
       centerZ: Option[Int],
       zoom: Option[Double]
   ): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           thumbnailProvider <- respondWithImageThumbnail(organizationName,
@@ -339,12 +360,14 @@ class BinaryDataController @Inject()(
     */
   @ApiOperation(hidden = true, value = "")
   def requestMapping(
+      token: Option[String],
       organizationName: String,
       dataSetName: String,
       dataLayerName: String,
       mappingName: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                      token) {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -360,11 +383,13 @@ class BinaryDataController @Inject()(
     * Handles isosurface requests.
     */
   @ApiOperation(hidden = true, value = "")
-  def requestIsosurface(organizationName: String,
+  def requestIsosurface(token: Option[String],
+                        organizationName: String,
                         dataSetName: String,
                         dataLayerName: String): Action[WebKnossosIsosurfaceRequest] =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -400,9 +425,13 @@ class BinaryDataController @Inject()(
     "[" + neighbors.mkString(", ") + "]"
 
   @ApiOperation(hidden = true, value = "")
-  def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+  def colorStatistics(token: Option[String],
+                      organizationName: String,
+                      dataSetName: String,
+                      dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -416,9 +445,13 @@ class BinaryDataController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def findData(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+  def findData(token: Option[String],
+               organizationName: String,
+               dataSetName: String,
+               dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
@@ -432,9 +465,13 @@ class BinaryDataController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String): Action[AnyContent] =
+  def createHistogram(token: Option[String],
+                      organizationName: String,
+                      dataSetName: String,
+                      dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(

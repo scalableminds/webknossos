@@ -53,7 +53,7 @@ type InitializeGpuSetupAction = {
   gpuFactor: number,
   maximumLayerCountToRender: number,
 };
-type SetMappingEnabledAction = {
+export type SetMappingEnabledAction = {
   type: "SET_MAPPING_ENABLED",
   isMappingEnabled: boolean,
   layerName: string,

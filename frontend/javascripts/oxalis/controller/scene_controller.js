@@ -19,7 +19,9 @@ import {
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import Cube from "oxalis/geometries/cube";
@@ -41,7 +43,6 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 
-import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
@@ -54,6 +55,7 @@ class SceneController {
   datasetBoundingBox: Cube;
   userBoundingBoxGroup: typeof THREE.Group;
   userBoundingBoxes: Array<Cube>;
+  highlightedBBoxId: ?number;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
   planes: OrthoViewMap<Plane>;
@@ -99,6 +101,7 @@ class SceneController {
     this.rootGroup.add(this.getRootNode());
     this.isosurfacesRootGroup = new THREE.Group();
     this.meshesRootGroup = new THREE.Group();
+    this.highlightedBBoxId = null;
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
@@ -285,13 +288,14 @@ class SceneController {
       max: upperBoundary,
       color: CUBE_COLOR,
       showCrossSections: true,
+      isHighlighted: false,
     });
     this.datasetBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
     const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (Store.getState().tracing.volume != null) {
+    if (Store.getState().tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
@@ -331,6 +335,7 @@ class SceneController {
         max: taskBoundingBox.max,
         color: 0x00ff00,
         showCrossSections: true,
+        isHighlighted: false,
       });
       this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
       if (constants.MODES_ARBITRARY.includes(viewMode)) {
@@ -449,7 +454,7 @@ class SceneController {
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     const newUserBoundingBoxGroup = new THREE.Group();
-    this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color }) => {
+    this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color, id }) => {
       const { min, max } = boundingBox;
       const bbColor = [color[0] * 255, color[1] * 255, color[2] * 255];
       const bbCube = new Cube({
@@ -457,6 +462,8 @@ class SceneController {
         max,
         color: Utils.rgbToInt(bbColor),
         showCrossSections: true,
+        id,
+        isHighlighted: this.highlightedBBoxId === id,
       });
       bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach(mesh => newUserBoundingBoxGroup.add(mesh));
@@ -465,6 +472,25 @@ class SceneController {
     this.rootNode.remove(this.userBoundingBoxGroup);
     this.userBoundingBoxGroup = newUserBoundingBoxGroup;
     this.rootNode.add(this.userBoundingBoxGroup);
+  }
+
+  highlightUserBoundingBox(bboxId: ?number): void {
+    if (this.highlightedBBoxId === bboxId) {
+      return;
+    }
+    const setIsHighlighted = (id: number, isHighlighted: boolean) => {
+      const bboxToChangeHighlighting = this.userBoundingBoxes.find(bbCube => bbCube.id === id);
+      if (bboxToChangeHighlighting != null) {
+        bboxToChangeHighlighting.setIsHighlighted(isHighlighted);
+      }
+    };
+    if (this.highlightedBBoxId != null) {
+      setIsHighlighted(this.highlightedBBoxId, false);
+    }
+    if (bboxId != null) {
+      setIsHighlighted(bboxId, true);
+    }
+    this.highlightedBBoxId = bboxId;
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
@@ -535,6 +561,7 @@ export function initializeSceneController() {
   const controller = new SceneController();
   setSceneController(controller);
   controller.initialize();
+  Store.dispatch(sceneControllerReadyAction());
 }
 
 // Please use scene_controller_provider to get a reference to SceneController. This avoids

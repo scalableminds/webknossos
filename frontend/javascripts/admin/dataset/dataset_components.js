@@ -72,7 +72,7 @@ export function DatastoreFormItem({
 }) {
   return (
     <FormItem
-      name="datastore"
+      name="datastoreUrl"
       label="Datastore"
       hasFeedback
       hidden={hidden || false}

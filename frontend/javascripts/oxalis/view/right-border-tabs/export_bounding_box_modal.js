@@ -1,15 +1,17 @@
 // @flow
 import { Button, Modal, Alert } from "antd";
-import React, { useState } from "react";
-import type { BoundingBoxType } from "oxalis/constants";
-import type { Tracing, AnnotationType } from "oxalis/store";
-import type { APIDataset, APIDataLayer } from "types/api_flow_types";
-import { startExportTiffJob } from "admin/admin_rest_api";
-import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
-import Model from "oxalis/model";
-import features from "features";
-import * as Utils from "libs/utils";
 import { useSelector } from "react-redux";
+import React, { useState } from "react";
+
+import type { APIDataset, APIDataLayer } from "types/api_flow_types";
+import { type BoundingBoxType, MappingStatusEnum } from "oxalis/constants";
+import type { Tracing, AnnotationType } from "oxalis/store";
+import { getResolutionInfo, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import { startExportTiffJob } from "admin/admin_rest_api";
+import Model from "oxalis/model";
+import * as Utils from "libs/utils";
+import features from "features";
 
 type Props = {
   handleClose: () => void,
@@ -34,7 +36,6 @@ type LayerInfos = {
 
 const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: Props) => {
   const [startedExports, setStartedExports] = useState([]);
-  const volumeTracing = tracing != null ? tracing.volume : null;
   const annotationId = tracing != null ? tracing.annotationId : null;
   const annotationType = tracing != null ? tracing.annotationType : null;
   const activeMappingInfos = useSelector(
@@ -69,13 +70,14 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
   const hasMag1 = (layer: APIDataLayer) => getResolutionInfo(layer.resolutions).hasIndex(0);
 
   const allLayerInfos = dataset.dataSource.dataLayers.map(layer => {
-    const { isMappingEnabled, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
+    const { mappingStatus, hideUnmappedIds, mappingName, mappingType } = getMappingInfo(
       activeMappingInfos,
       layer.name,
     );
-    const existsActivePersistentMapping = isMappingEnabled && !isMergerModeEnabled;
+    const existsActivePersistentMapping =
+      mappingStatus === MappingStatusEnum.ENABLED && !isMergerModeEnabled;
     const isColorLayer = layer.category === "color";
-    if (layer.category === "color" || !layer.isTracingLayer) {
+    if (layer.category === "color" || !layer.tracingId) {
       return {
         displayName: layer.name,
         layerName: layer.name,
@@ -90,12 +92,13 @@ const ExportBoundingBoxModal = ({ handleClose, dataset, boundingBox, tracing }: 
         isColorLayer,
       };
     }
-    // The layer is a volume tracing layer, since isTracingLayer is true. Therefore, a volumeTracing
+    // The layer is a volume tracing layer, since tracingId exists. Therefore, a tracing
     // must exist.
-    if (volumeTracing == null) {
+    if (tracing == null) {
       // Satisfy flow.
-      throw new Error("Volume tracing is null, but layer.isTracingLayer === true.");
+      throw new Error("Tracing is null, but layer.tracingId is defined.");
     }
+    const volumeTracing = getVolumeTracingById(tracing, layer.tracingId);
     if (layer.fallbackLayerInfo != null) {
       return {
         displayName: "Volume annotation with fallback segmentation",

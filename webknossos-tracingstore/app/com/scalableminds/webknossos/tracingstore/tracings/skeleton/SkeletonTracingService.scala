@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
@@ -14,11 +14,12 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
-                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
-                                       val handledGroupIdStore: RedisTemporaryStore,
-                                       val temporaryTracingIdStore: RedisTemporaryStore,
-                                       val uncommittedUpdatesStore: RedisTemporaryStore)(implicit ec: ExecutionContext)
+class SkeletonTracingService @Inject()(
+    tracingDataStore: TracingDataStore,
+    val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
+    val handledGroupIdStore: TracingStoreRedisStore,
+    val temporaryTracingIdStore: TracingStoreRedisStore,
+    val uncommittedUpdatesStore: TracingStoreRedisStore)(implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits

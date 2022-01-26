@@ -2,27 +2,28 @@
 import _ from "lodash";
 
 import { PropTypes } from "@scalableminds/prop-types";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { Table, Spin, Input, Tooltip } from "antd";
 import {
   CheckCircleTwoTone,
   ClockCircleTwoTone,
   CloseCircleTwoTone,
+  CloseCircleOutlined,
   DownOutlined,
   EyeOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
   ToolTwoTone,
 } from "@ant-design/icons";
-import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIJob, APIUser } from "types/api_flow_types";
-import { getJobs } from "admin/admin_rest_api";
+import type { APIJob } from "types/api_flow_types";
+import { getJobs, doWithToken, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
-import type { OxalisState } from "oxalis/store";
 import FormattedDate from "components/formatted_date";
+import { AsyncLink } from "components/async_clickables";
 
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
@@ -46,6 +47,10 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
       "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
     icon: <CloseCircleTwoTone twoToneColor="#a61d24" />,
   },
+  CANCELLED: {
+    tooltip: "This job was cancelled.",
+    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" />,
+  },
   MANUAL: {
     tooltip:
       "The job will be handled by an admin shortly, since it could not be finished automatically. Please check back here soon.",
@@ -60,15 +65,13 @@ const { Search } = Input;
 
 const typeHint: APIJob[] = [];
 
-type StateProps = {|
-  activeUser: ?APIUser,
-|};
-type Props = { ...StateProps, history: RouterHistory };
+type Props = { history: RouterHistory };
 
 type State = {
   isLoading: boolean,
   jobs: Array<APIJob>,
   searchQuery: string,
+  token: string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -83,6 +86,7 @@ class JobListView extends React.PureComponent<Props, State> {
     isLoading: true,
     jobs: [],
     searchQuery: "",
+    token: "",
   };
 
   componentWillMount() {
@@ -105,13 +109,18 @@ class JobListView extends React.PureComponent<Props, State> {
 
   async fetchData(): Promise<void> {
     const jobs = await getJobs();
+    const token = await doWithToken(async t => t);
     this.setState(
       {
         isLoading: false,
         jobs,
+        token,
       },
       // refresh jobs according to the refresh interval
       () => {
+        if (this.intervalID != null) {
+          clearTimeout(this.intervalID);
+        }
         this.intervalID = setTimeout(this.fetchData.bind(this), refreshInterval);
       },
     );
@@ -172,14 +181,30 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderActions = (__: any, job: APIJob) => {
-    if (job.type === "convert_to_wkw") {
+    if (job.state === "PENDING" || job.state === "STARTED") {
+      return (
+        <AsyncLink
+          href="#"
+          onClick={async () => {
+            const isDeleteConfirmed = await confirmAsync({
+              title: <p>Are you sure you want to cancel job {job.id}?</p>,
+              okText: "Yes, cancel job",
+              cancelText: "No, keep it",
+            });
+            if (isDeleteConfirmed) {
+              cancelJob(job.id).then(() => this.fetchData());
+            }
+          }}
+          icon={<CloseCircleOutlined key="cancel" />}
+        >
+          Cancel
+        </AsyncLink>
+      );
+    } else if (job.type === "convert_to_wkw") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
-            <Link
-              to={`/datasets/${this.props.activeUser.organization}/${job.datasetName}/view`}
-              title="View Dataset"
-            >
+          {job.resultLink && (
+            <Link to={job.resultLink} title="View Dataset">
               <EyeOutlined />
               View
             </Link>
@@ -189,8 +214,8 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "export_tiff") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.exportFileName && this.props.activeUser && (
-            <a href={`/api/jobs/${job.id}/downloadExport/${job.exportFileName}`} title="Download">
+          {job.resultLink && (
+            <a href={`${job.resultLink}?token=${this.state.token}`} title="Download">
               <DownOutlined />
               Download
             </a>
@@ -200,11 +225,8 @@ class JobListView extends React.PureComponent<Props, State> {
     } else if (job.type === "infer_nuclei") {
       return (
         <span>
-          {job.state === "SUCCESS" && job.result && this.props.activeUser && (
-            <Link
-              to={`/datasets/${this.props.activeUser.organization}/${job.result}/view`}
-              title="View Segmentation"
-            >
+          {job.resultLink && (
+            <Link to={job.resultLink} title="View Segmentation">
               <EyeOutlined />
               View
             </Link>
@@ -287,8 +309,4 @@ class JobListView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-export default connect<StateProps, {||}, _, _, _, _>(mapStateToProps)(withRouter(JobListView));
+export default withRouter(JobListView);

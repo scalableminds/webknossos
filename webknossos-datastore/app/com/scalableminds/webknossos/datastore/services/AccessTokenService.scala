@@ -6,8 +6,8 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.cache.SyncCacheApi
 import play.api.libs.json.{Json, OFormat}
+import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
-import play.api.mvc.{Request, Result}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -19,7 +19,7 @@ object AccessMode extends ExtendedEnumeration {
 
 object AccessResourceType extends ExtendedEnumeration {
   type AccessResourceType = Value
-  val datasource, tracing, webknossos = Value
+  val datasource, tracing, webknossos, jobExport = Value
 }
 
 case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
@@ -48,6 +48,9 @@ object UserAccessRequest {
   def writeTracing(tracingId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
 
+  def downloadJobExport(jobId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId(jobId, ""), AccessResourceType.jobExport, AccessMode.read)
+
   def webknossos: UserAccessRequest =
     UserAccessRequest(DataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)
 }
@@ -58,26 +61,18 @@ trait AccessTokenService {
 
   val AccessExpiration: FiniteDuration = 2.minutes
 
-  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest)(
-      block: => Result)(implicit request: Request[A], ec: ExecutionContext): Fox[Result] =
-    validateAccess(accessRequest) {
+  def validateAccessForSyncBlock(accessRequest: UserAccessRequest, token: Option[String])(block: => Result)(
+      implicit ec: ExecutionContext): Fox[Result] =
+    validateAccess(accessRequest, token) {
       Future.successful(block)
     }
 
-  def validateAccess[A](accessRequest: UserAccessRequest)(block: => Future[Result])(implicit request: Request[A],
-                                                                                    ec: ExecutionContext): Fox[Result] =
+  def validateAccess[A](accessRequest: UserAccessRequest, token: Option[String])(block: => Future[Result])(
+      implicit ec: ExecutionContext): Fox[Result] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest, request) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(accessRequest, token) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
-
-  private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A]): Fox[UserAccessAnswer] = {
-    val tokenOpt = tokenFromRequest(request)
-    hasUserAccess(accessRequest, tokenOpt)
-  }
-
-  def tokenFromRequest[A](request: Request[A]): Option[String] =
-    request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
 
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String]): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)

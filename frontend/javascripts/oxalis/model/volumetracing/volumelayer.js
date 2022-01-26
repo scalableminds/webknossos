@@ -6,8 +6,8 @@
 import _ from "lodash";
 
 import { V2, V3 } from "libs/mjs";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
   scaleGlobalPositionWithResolution,
@@ -124,6 +124,7 @@ class VolumeLayer {
   `activeResolution`.
   */
 
+  volumeTracingId: string;
   plane: OrthoView;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
@@ -131,7 +132,13 @@ class VolumeLayer {
   minCoord: ?Vector3;
   activeResolution: Vector3;
 
-  constructor(plane: OrthoView, thirdDimensionValue: number, activeResolution: Vector3) {
+  constructor(
+    volumeTracingId: string,
+    plane: OrthoView,
+    thirdDimensionValue: number,
+    activeResolution: Vector3,
+  ) {
+    this.volumeTracingId = volumeTracingId;
     this.plane = plane;
     this.maxCoord = null;
     this.minCoord = null;
@@ -173,8 +180,8 @@ class VolumeLayer {
   }
 
   getContourList(useGlobalCoords: boolean = false) {
-    const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
-    const globalContourList = volumeTracing.contourList;
+    const globalContourList = getVolumeTracingById(Store.getState().tracing, this.volumeTracingId)
+      .contourList;
 
     if (useGlobalCoords) {
       return globalContourList;

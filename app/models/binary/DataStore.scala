@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsObject, Json}
-import play.api.mvc.{Request, Result, Results}
+import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -23,8 +23,7 @@ case class DataStore(
     isForeign: Boolean = false,
     isConnector: Boolean = false,
     allowsUpload: Boolean = true,
-    onlyAllowedOrganization: Option[ObjectId] = None,
-    jobsEnabled: Boolean = false
+    onlyAllowedOrganization: Option[ObjectId] = None
 )
 
 object DataStore {
@@ -76,11 +75,10 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
         "allowsUpload" -> dataStore.allowsUpload
       ))
 
-  def validateAccess[A](name: String)(block: DataStore => Future[Result])(implicit request: Request[A],
-                                                                          m: MessagesProvider): Fox[Result] =
+  def validateAccess[A](name: String, key: String)(block: DataStore => Future[Result])(
+      implicit m: MessagesProvider): Fox[Result] =
     (for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
-      key <- request.getQueryString("key").toFox
       _ <- bool2Fox(key == dataStore.key)
       result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
@@ -109,8 +107,7 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isforeign,
         r.isconnector,
         r.allowsupload,
-        r.onlyallowedorganization.map(ObjectId(_)),
-        r.jobsenabled
+        r.onlyallowedorganization.map(ObjectId(_))
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
@@ -142,8 +139,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload, jobsEnabled)
-                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload}, ${d.jobsEnabled})""")
+        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload)
+                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload})""")
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =

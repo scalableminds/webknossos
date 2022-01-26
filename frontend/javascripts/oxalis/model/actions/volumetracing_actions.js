@@ -8,8 +8,9 @@ import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import type { Segment, SegmentMap } from "oxalis/store";
 import Deferred from "libs/deferred";
 import { type Dispatch } from "redux";
+import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 
-type InitializeVolumeTracingAction = {
+export type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
   tracing: ServerVolumeTracing,
 };
@@ -54,10 +55,11 @@ export type AddBucketToUndoAction = {
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  tracingId: string,
 };
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourAction = { type: "RESET_CONTOUR" };
-export type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE" };
+export type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE", tracingId: string };
 type SetMousePositionAction = { type: "SET_MOUSE_POSITION", position: ?Vector2 };
 type HideBrushAction = { type: "HIDE_BRUSH" };
 type SetContourTracingModeAction = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourMode };
@@ -70,14 +72,14 @@ export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 export type SetSegmentsAction = {
   type: "SET_SEGMENTS",
   segments: SegmentMap,
-  layerName?: string,
+  layerName: string,
 };
 
 export type UpdateSegmentAction = {
   type: "UPDATE_SEGMENT",
   segmentId: number,
   segment: $Shape<Segment>,
-  layerName?: string,
+  layerName: string,
   timestamp: number,
 };
 
@@ -108,11 +110,10 @@ export type VolumeTracingAction =
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
-  "SET_USER_BOUNDING_BOXES",
-  "ADD_USER_BOUNDING_BOXES",
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
   "SET_SEGMENTS",
+  ...AllUserBoundingBoxActions,
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -173,10 +174,7 @@ export const clickSegmentAction = (cellId: number, somePosition: Vector3): Click
   somePosition,
 });
 
-export const setSegmentsActions = (
-  segments: SegmentMap,
-  layerName?: string,
-): SetSegmentsAction => ({
+export const setSegmentsActions = (segments: SegmentMap, layerName: string): SetSegmentsAction => ({
   type: "SET_SEGMENTS",
   segments,
   layerName,
@@ -185,7 +183,7 @@ export const setSegmentsActions = (
 export const updateSegmentAction = (
   segmentId: number,
   segment: $Shape<Segment>,
-  layerName?: string,
+  layerName: string,
   timestamp: number = Date.now(),
 ): UpdateSegmentAction => ({
   type: "UPDATE_SEGMENT",
@@ -209,8 +207,9 @@ export const resetContourAction = (): ResetContourAction => ({
   type: "RESET_CONTOUR",
 });
 
-export const finishAnnotationStrokeAction = (): FinishAnnotationStrokeAction => ({
+export const finishAnnotationStrokeAction = (tracingId: string): FinishAnnotationStrokeAction => ({
   type: "FINISH_ANNOTATION_STROKE",
+  tracingId,
 });
 
 export const setMousePositionAction = (position: ?Vector2): SetMousePositionAction => ({
@@ -231,11 +230,13 @@ export const addBucketToUndoAction = (
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
   maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  tracingId: string,
 ): AddBucketToUndoAction => ({
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress,
   bucketData,
   maybeBucketLoadedPromise,
+  tracingId,
 });
 
 export const inferSegmentationInViewportAction = (

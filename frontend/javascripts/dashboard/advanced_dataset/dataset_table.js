@@ -2,20 +2,29 @@
 
 import { Table, Tag } from "antd";
 import * as React from "react";
-import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, CloseCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import _ from "lodash";
 import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
+import update from "immutability-helper";
 
-import type { APITeam, APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
+import EditableTextIcon from "oxalis/view/components/editable_text_icon";
+import type {
+  APITeam,
+  APIMaybeUnimportedDataset,
+  APIDatasetId,
+  APIDataset,
+} from "types/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
+import { trackAction } from "oxalis/model/helpers/analytics";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
+import CategorizationLabel from "oxalis/view/components/categorization_label";
 
 const { Column } = Table;
 
@@ -25,11 +34,14 @@ const useLruRank = true;
 type Props = {
   datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
+  searchTags: Array<string>,
   isUserAdmin: boolean,
   isUserTeamManager: boolean,
   isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
-  updateDataset: (APIDatasetId, Array<APIMaybeUnimportedDataset>) => Promise<void>,
+  reloadDataset: (APIDatasetId, Array<APIMaybeUnimportedDataset>) => Promise<void>,
+  updateDataset: APIDataset => Promise<void>,
+  addTagToSearch: (tag: string) => void,
 };
 
 type State = {
@@ -68,8 +80,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
     });
   };
 
-  updateSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
-    this.props.updateDataset(datasetId, this.props.datasets);
+  reloadSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
+    this.props.reloadDataset(datasetId, this.props.datasets);
 
   getFilteredDatasets() {
     const filterByMode = datasets => {
@@ -83,10 +95,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
       }
     };
 
+    const filteredByTags = datasets =>
+      datasets.filter(dataset => {
+        const notIncludedTags = _.difference(this.props.searchTags, dataset.tags);
+        return notIncludedTags.length === 0;
+      });
+
     const filterByQuery = datasets =>
-      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description">(
+      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description" | "tags">(
         datasets,
-        ["name", "description"],
+        ["name", "description", "tags"],
         this.props.searchQuery,
       );
 
@@ -95,8 +113,32 @@ class DatasetTable extends React.PureComponent<Props, State> {
         ? datasets
         : datasets.filter(dataset => dataset.isActive && dataset.dataSource.dataLayers.length > 0);
 
-    return filterByQuery(filterByMode(filterByHasLayers(this.props.datasets)));
+    return filterByQuery(filteredByTags(filterByMode(filterByHasLayers(this.props.datasets))));
   }
+
+  editTagFromDataset = (
+    dataset: APIMaybeUnimportedDataset,
+    shouldAddTag: boolean,
+    tag: string,
+    event: SyntheticInputEvent<>,
+  ): void => {
+    event.stopPropagation(); // prevent the onClick event
+    if (!dataset.isActive) {
+      console.error(`Tags can only be added to active datasets. ${dataset.name} is not active.`);
+      return;
+    }
+    let updatedDataset = dataset;
+    if (shouldAddTag) {
+      if (!dataset.tags.includes(tag)) {
+        updatedDataset = update(dataset, { tags: { $push: [tag] } });
+      }
+    } else {
+      const newTags = _.without(dataset.tags, tag);
+      updatedDataset = update(dataset, { tags: { $set: newTags } });
+    }
+    trackAction("Edit dataset tag");
+    this.props.updateDataset(updatedDataset);
+  };
 
   renderEmptyText() {
     const maybeWarning =
@@ -189,6 +231,37 @@ class DatasetTable extends React.PureComponent<Props, State> {
           )}
         />
         <Column
+          title="Tags"
+          dataIndex="tags"
+          key="tags"
+          width={280}
+          sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
+          render={(tags: Array<string>, dataset: APIMaybeUnimportedDataset) =>
+            dataset.isActive ? (
+              <div>
+                {tags.map(tag => (
+                  <CategorizationLabel
+                    tag={tag}
+                    key={tag}
+                    kind="datasets"
+                    onClick={_.partial(this.props.addTagToSearch, tag)}
+                    onClose={_.partial(this.editTagFromDataset, dataset, false, tag)}
+                    closable
+                  />
+                ))}
+                <EditableTextIcon
+                  icon={<PlusOutlined />}
+                  onChange={_.partial(this.editTagFromDataset, dataset, true)}
+                />
+              </div>
+            ) : (
+              <div style={{ color: "@disabled-color" }}>
+                Tags not available for inactive datasets.
+              </div>
+            )
+          }
+        />
+        <Column
           title="Voxel Size & Extent"
           dataIndex="scale"
           key="scale"
@@ -276,7 +349,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView dataset={dataset} updateDataset={this.updateSingleDataset} />
+            <DatasetActionView dataset={dataset} reloadDataset={this.reloadSingleDataset} />
           )}
         />
       </FixedExpandableTable>

@@ -4,7 +4,7 @@
  */
 import type { Dispatch } from "redux";
 import { Tooltip, Button, Dropdown, Menu } from "antd";
-import { EditOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
+import { SettingOutlined, InfoCircleOutlined, StarOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -248,17 +248,21 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       description: datasetDescription,
       owningOrganization,
     } = this.props.dataset;
-    const getEditSettingsIcon = () => (
-      <Tooltip title="Edit dataset settings">
-        <Button
-          type="text"
-          icon={<EditOutlined />}
-          href={`/datasets/${owningOrganization}/${datasetName}/edit`}
-          className="transparent-background-on-hover"
-          target="_blank"
-        />
-      </Tooltip>
-    );
+    const { activeUser } = this.props;
+    const getEditSettingsIcon = () =>
+      activeUser != null &&
+      activeUser.organization === owningOrganization &&
+      (activeUser.isAdmin || activeUser.isDatasetManager) ? (
+        <Tooltip title="Edit dataset settings">
+          <Button
+            type="text"
+            icon={<SettingOutlined />}
+            href={`/datasets/${owningOrganization}/${datasetName}/edit`}
+            className="transparent-background-on-hover"
+            target="_blank"
+          />
+        </Tooltip>
+      ) : null;
 
     if (isDatasetViewMode) {
       return (
@@ -376,7 +380,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     if (isDatasetViewMode) return null;
 
     const isSkeleton = this.props.tracing.skeleton != null;
-    const isVolume = this.props.tracing.volume != null;
+    const isVolume = this.props.tracing.volumes.length > 0;
     const isHybrid = isSkeleton && isVolume;
     const { allowUpdate } = this.props.tracing.restrictions;
     const isExplorational =

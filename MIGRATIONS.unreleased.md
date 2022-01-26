@@ -6,9 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-
-- 
+[Commits](https://github.com/scalableminds/webknossos/compare/22.01.0...HEAD)
 
 ### Postgres Evolutions:
-
-- [076-jobs-enabled-per-datastore.sql](conf/evolutions/076-jobs-enabled-per-datastore.sql)
+- [080-job-add-cancelled.sql](conf/evolutions/080-job-add-cancelled.sql)

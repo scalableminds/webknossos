@@ -8,23 +8,24 @@ import _ from "lodash";
 
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerWithMappingSupport,
   getLayerByName,
   isLayerVisible,
-  getSegmentationTracingLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getTotalSaveQueueLength } from "oxalis/model/reducers/save_reducer";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
+import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
 import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import * as Utils from "libs/utils";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 import { initialize } from "./model_initialization";
 
@@ -107,6 +108,16 @@ export class OxalisModel {
       );
   }
 
+  getSegmentationTracingLayers(): Array<DataLayer> {
+    return Object.keys(this.dataLayers)
+      .map(k => this.dataLayers[k])
+      .filter(dataLayer => {
+        const layer = getLayerByName(Store.getState().dataset, dataLayer.name);
+
+        return layer.category === "segmentation" && layer.tracingId != null;
+      });
+  }
+
   getSomeSegmentationLayer(): ?DataLayer {
     // Prefer the visible segmentation layer. If that does not exist,
     // simply use one of the available segmentation layers.
@@ -142,9 +153,13 @@ export class OxalisModel {
     return this.getSegmentationLayers().length > 0;
   }
 
-  getSegmentationTracingLayer(): ?DataLayer {
-    const { dataset } = Store.getState();
-    const layer = getSegmentationTracingLayer(dataset);
+  getSegmentationTracingLayer(tracingId: string): DataLayer {
+    return this.getLayerByName(tracingId);
+  }
+
+  getActiveSegmentationTracingLayer(): ?DataLayer {
+    const state = Store.getState();
+    const layer = getActiveSegmentationTracingLayer(state);
     if (layer == null) {
       return null;
     }
@@ -153,7 +168,7 @@ export class OxalisModel {
   }
 
   getEnforcedSegmentationTracingLayer(): DataLayer {
-    const layer = this.getSegmentationTracingLayer();
+    const layer = this.getActiveSegmentationTracingLayer();
     if (layer == null) {
       // The function should never be called if no segmentation layer exists.
       throw new Error("No segmentation layer found.");
@@ -240,8 +255,7 @@ export class OxalisModel {
   stateSaved() {
     const state = Store.getState();
     const storeStateSaved =
-      !isBusy(state.save.isBusyInfo) &&
-      state.save.queue.skeleton.length + state.save.queue.volume.length === 0;
+      !isBusy(state.save.isBusyInfo) && getTotalSaveQueueLength(state.save.queue) === 0;
     const pushQueuesSaved = _.reduce(
       this.dataLayers,
       (saved, dataLayer) => saved && dataLayer.pushQueue.stateSaved(),

@@ -1,7 +1,7 @@
 package oxalis.telemetry
 
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackClient
+import com.scalableminds.webknossos.datastore.slacknotification.SlackClient
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import utils.WkConf
@@ -27,6 +27,12 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
 
   def info(title: String, msg: String): Unit =
     slackClient.info(
+      title = title,
+      msg = msg
+    )
+
+  def success(title: String, msg: String): Unit =
+    slackClient.success(
       title = title,
       msg = msg
     )

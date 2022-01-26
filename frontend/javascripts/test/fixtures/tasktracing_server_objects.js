@@ -2,6 +2,7 @@
 import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
 
 export const tracing: ServerSkeletonTracing = {
+  typ: "Skeleton",
   trees: [
     {
       nodes: [
@@ -80,7 +81,13 @@ export const annotation: APIAnnotation = {
   stats: {},
   restrictions: { allowAccess: true, allowUpdate: true, allowFinish: true, allowDownload: true },
   formattedHash: "9c67ee",
-  tracing: { skeleton: "e90133de-b2db-4912-8261-8b6f84f7edab", volume: null },
+  annotationLayers: [
+    {
+      name: "Skeleton",
+      tracingId: "e90133de-b2db-4912-8261-8b6f84f7edab",
+      typ: "Skeleton",
+    },
+  ],
   dataSetName: "ROI2017_wkw",
   organization: "Connectomics Department",
   dataStore: {
@@ -104,9 +111,9 @@ export const annotation: APIAnnotation = {
   user: {
     created: 12345678,
     id: "5b1e45faa00000a900abc2c5",
-    email: "scmboy@scalableminds.com",
-    firstName: "SCM",
-    lastName: "Boy",
+    email: "sample@scm.io",
+    firstName: "Sample",
+    lastName: "User",
     isAnonymous: false,
     teams: [
       { id: "5b1e45f9a00000a000abc2c3", isTeamManager: true, name: "Connectomics department" },

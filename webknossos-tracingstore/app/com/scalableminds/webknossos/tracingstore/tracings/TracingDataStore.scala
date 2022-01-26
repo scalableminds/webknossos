@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.inject.Inject
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 
@@ -10,7 +10,7 @@ import scala.concurrent.Future
 
 class TracingDataStore @Inject()(config: TracingStoreConfig,
                                  lifecycle: ApplicationLifecycle,
-                                 slackNotificationService: SlackNotificationService)
+                                 slackNotificationService: TSSlackNotificationService)
     extends LazyLogging {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)

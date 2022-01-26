@@ -26,6 +26,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
+  reserveDatasetUpload,
   finishDatasetUpload,
   createResumableUpload,
   startConvertToWkwJob,
@@ -152,6 +153,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     selectedTeams: [],
   };
 
+  unblock: ?Function;
+  blockTimeoutId: ?TimeoutID;
   formRef = React.createRef<typeof FormInstance>();
 
   componentDidMount() {
@@ -160,14 +163,31 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
     const uploadableDatastores = this.props.datastores.filter(datastore => datastore.allowsUpload);
-    if (this.formRef.current != null) {
+    const currentFormRef = this.formRef.current;
+    if (currentFormRef != null) {
+      const selectedDataStoreUrl = currentFormRef.getFieldValue("datastoreUrl");
       if (
         prevProps.datastores.length === 0 &&
         uploadableDatastores.length > 0 &&
-        this.formRef.current.getFieldValue("datastore") !== uploadableDatastores[0].url
+        (selectedDataStoreUrl == null || selectedDataStoreUrl !== uploadableDatastores[0].url)
       ) {
-        this.formRef.current.setFieldsValue({ datastore: uploadableDatastores[0].url });
+        currentFormRef.setFieldsValue({ datastoreUrl: uploadableDatastores[0].url });
       }
+    }
+  }
+
+  componentWillUnmount() {
+    this.unblockHistory();
+  }
+
+  unblockHistory() {
+    window.onbeforeunload = null;
+    if (this.blockTimeoutId != null) {
+      clearTimeout(this.blockTimeoutId);
+      this.blockTimeoutId = null;
+    }
+    if (this.unblock != null) {
+      this.unblock();
     }
   }
 
@@ -175,24 +195,28 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
+  getDatastoreForUrl(url: string): ?APIDataStore {
+    const uploadableDatastores = this.props.datastores.filter(datastore => datastore.allowsUpload);
+    return uploadableDatastores.find(ds => ds.url === url);
+  }
+
   handleSubmit = async formValues => {
     const { activeUser } = this.props;
-    const pathNameAtSubmit = window.location.pathname;
 
     if (activeUser != null) {
       Toast.info("Uploading dataset");
       this.setState({
         isUploading: true,
       });
-      const beforeUnload = action => {
+      const beforeUnload = (newLocation, action) => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
-        if (action === undefined || pathNameAtSubmit !== window.location.pathname) {
+        if (action === undefined || newLocation.pathname !== window.location.pathname) {
           const { isUploading } = this.state;
           if (isUploading) {
             window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-            window.setTimeout(() => {
+            this.blockTimeoutId = window.setTimeout(() => {
               // restore the event handler in case a user chose to stay on the page
               window.onbeforeunload = beforeUnload;
             }, 500);
@@ -202,7 +226,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         return null;
       };
 
-      this.props.history.block(beforeUnload);
+      this.unblock = this.props.history.block(beforeUnload);
       window.onbeforeunload = beforeUnload;
 
       const datasetId: APIDatasetId = {
@@ -218,10 +242,20 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         datasetId.name
       }__${getRandomString()}`;
 
+      const reserveUploadInformation = {
+        uploadId,
+        organization: datasetId.owningOrganization,
+        name: datasetId.name,
+        totalFileCount: formValues.zipFile.length,
+        layersToLink: [],
+        initialTeams: formValues.initialTeams.map(team => team.id),
+      };
+
+      await reserveDatasetUpload(formValues.datastoreUrl, reserveUploadInformation);
+
       const resumableUpload = await createResumableUpload(
         datasetId,
-        formValues.datastore,
-        formValues.zipFile.length,
+        formValues.datastoreUrl,
         uploadId,
       );
 
@@ -235,13 +269,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           uploadId,
           organization: datasetId.owningOrganization,
           name: datasetId.name,
-          initialTeams: formValues.initialTeams.map(team => team.id),
+          layersToLink: [],
           needsConversion: this.state.needsConversion,
         };
 
         this.setState({ isFinishing: true });
 
-        finishDatasetUpload(formValues.datastore, uploadInfo).then(
+        finishDatasetUpload(formValues.datastoreUrl, uploadInfo).then(
           async () => {
             trackAction("Upload dataset");
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
@@ -249,10 +283,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             let maybeError;
             if (this.state.needsConversion) {
               try {
+                const datastore = this.getDatastoreForUrl(formValues.datastoreUrl);
+                if (!datastore) {
+                  throw new Error("Selected datastore does not match available datastores");
+                }
+
                 await startConvertToWkwJob(
                   formValues.name,
                   activeUser.organization,
                   formValues.scale,
+                  datastore.name,
                 );
               } catch (error) {
                 maybeError = error;

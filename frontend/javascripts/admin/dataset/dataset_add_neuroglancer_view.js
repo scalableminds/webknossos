@@ -92,7 +92,7 @@ function DatasetAddNeuroglancerView({ datastores, onAdded, activeUser }: Props) 
     };
 
     trackAction("Add Neuroglancer dataset");
-    await addWkConnectDataset(formValues.datastore, datasetConfig);
+    await addWkConnectDataset(formValues.datastoreUrl, datasetConfig);
 
     Toast.success(messages["dataset.add_success"]);
     await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing

@@ -1,9 +1,7 @@
-/**
- * tracing_settings_view.js
- * @flow
- */
+// @flow
 
-import { Col, Row, Switch, Tooltip, Modal } from "antd";
+import { Button, Col, Divider, Modal, Row, Switch, Tooltip } from "antd";
+import type { Dispatch } from "redux";
 import {
   EditOutlined,
   InfoCircleOutlined,
@@ -11,15 +9,15 @@ import {
   ScanOutlined,
   StopOutlined,
   WarningOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
-import type { Dispatch } from "redux";
 import { connect } from "react-redux";
-import React, { useState } from "react";
+import React from "react";
 import _ from "lodash";
 import classnames from "classnames";
 
-import type { APIDataset } from "types/api_flow_types";
-import { AsyncButton, AsyncIconButton } from "components/async_clickables";
+import type { APIDataset, EditableLayerProperties } from "types/api_flow_types";
+import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -27,7 +25,11 @@ import {
   ColorSetting,
 } from "oxalis/view/components/setting_input_views";
 import { V3 } from "libs/mjs";
-import features from "features";
+import { editAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   findDataPositionForLayer,
   clearCache,
@@ -37,24 +39,36 @@ import {
 import {
   getDefaultIntensityRangeOfLayer,
   getElementClass,
+  isColorLayer as getIsColorLayer,
   getLayerBoundaries,
   getLayerByName,
   getResolutionInfo,
   getResolutions,
-  isColorLayer as getIsColorLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { userSettings } from "types/schemas/user_settings.schema";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getReadableNameByVolumeTracingId,
+  getVolumeDescriptorById,
+  getVolumeTracingById,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  setNodeRadiusAction,
+  setShowSkeletonsAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateTemporarySettingAction,
   updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
-import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-
+import { userSettings } from "types/schemas/user_settings.schema";
+import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import LinkButton from "components/link_button";
 import Model from "oxalis/model";
 import Store, {
+  type VolumeTracing,
   type DatasetConfiguration,
   type DatasetLayerConfiguration,
   type OxalisState,
@@ -63,23 +77,16 @@ import Store, {
   type Tracing,
   type Task,
 } from "oxalis/store";
-import LinkButton from "components/link_button";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  setNodeRadiusAction,
-  setShowSkeletonsAction,
-} from "oxalis/model/actions/skeletontracing_actions";
+import features from "features";
 import messages, { settings } from "messages";
-import MappingSettingsView from "./mapping_settings_view";
 
+import AddVolumeLayerModal from "./modals/add_volume_layer_modal";
+import DownsampleVolumeModal from "./modals/downsample_volume_modal";
 import Histogram, { isHistogramSupported } from "./histogram_view";
+import MappingSettingsView from "./mapping_settings_view";
 
 type DatasetSettingsProps = {|
   userConfiguration: UserConfiguration,
@@ -97,79 +104,29 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
-  onUnlinkFallbackLayer: Tracing => Promise<void>,
+  onUnlinkFallbackLayer: (Tracing, VolumeTracing) => Promise<void>,
   tracing: Tracing,
   task: ?Task,
   onChangeEnableAutoBrush: (active: boolean) => void,
+  onEditAnnotationLayer: (tracingId: string, layerProperties: EditableLayerProperties) => void,
   isAutoBrushEnabled: boolean,
   controlMode: ControlMode,
   isArbitraryMode: boolean,
 |};
 
-function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDownsample }) {
-  const [isDownsampling, setIsDownsampling] = useState(false);
-
-  const handleTriggerDownsampling = async () => {
-    setIsDownsampling(true);
-    await api.tracing.downsampleSegmentation();
-    setIsDownsampling(false);
-  };
-
-  return (
-    <Modal
-      title="Downsample Volume Annotation"
-      onCancel={isDownsampling ? null : hideDownsampleVolumeModal}
-      visible={visible}
-      footer={null}
-      width={800}
-      maskClosable={false}
-    >
-      <p>
-        This annotation does not have volume annotation data in all resolutions. Consequently,
-        annotation data cannot be rendered at all zoom values. By clicking &quot;Downsample&quot;,
-        webKnossos will use the best resolution of the volume data to create all dependent
-        resolutions.
-      </p>
-
-      <p>
-        The following resolutions will be added when clicking &quot;Downsample&quot;:{" "}
-        {magsToDownsample.map(mag => mag.join("-")).join(", ")}.
-      </p>
-
-      <div>
-        The cause for the missing resolutions can be one of the following:
-        <ul>
-          <li>
-            The annotation was created before webKnossos supported multi-resolution volume tracings.
-          </li>
-          <li>An old annotation was uploaded which did not include all resolutions.</li>
-          <li>The annotation was created in a task that was restricted to certain resolutions.</li>
-          <li>The dataset was mutated to have more resolutions.</li>
-        </ul>
-      </div>
-
-      <p style={{ fontWeight: "bold" }}>
-        Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
-        Also, the version history of the volume data will be reset.
-      </p>
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-        <AsyncButton onClick={handleTriggerDownsampling} type="primary">
-          Downsample
-        </AsyncButton>
-      </div>
-    </Modal>
-  );
-}
-
 type State = {|
-  isDownsampleVolumeModalVisible: boolean,
+  // If this is set to not-null, the downsampling modal
+  // is shown for that VolumeTracing
+  volumeTracingToDownsample: ?VolumeTracing,
+  isAddVolumeLayerModalVisible: boolean,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
 
   state = {
-    isDownsampleVolumeModalVisible: false,
+    volumeTracingToDownsample: null,
+    isAddVolumeLayerModalVisible: false,
   };
 
   componentWillMount() {
@@ -179,13 +136,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   }
 
-  getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
+  getFindDataButton = (
+    layerName: string,
+    isDisabled: boolean,
+    isColorLayer: boolean,
+    maybeVolumeTracing: ?VolumeTracing,
+  ) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
       : "If you are having trouble finding your data, webKnossos can try to find a position which contains data.";
 
-    const { volume } = Store.getState().tracing;
-    if (!isColorLayer && volume && volume.fallbackLayer) {
+    if (!isColorLayer && maybeVolumeTracing && maybeVolumeTracing.fallbackLayer) {
       tooltipText =
         "webKnossos will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
@@ -196,7 +157,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           icon={<ScanOutlined />}
           onClick={
             !isDisabled
-              ? () => this.handleFindData(layerName, isColorLayer)
+              ? () => this.handleFindData(layerName, isColorLayer, maybeVolumeTracing)
               : () => Promise.resolve()
           }
           style={{
@@ -229,11 +190,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  getDeleteButton = () => (
+  getDeleteButton = (volumeTracing: VolumeTracing) => (
     <Tooltip title="Unlink dataset's original segmentation layer">
       <StopOutlined
         onClick={() => {
-          this.removeFallbackLayer();
+          this.removeFallbackLayer(volumeTracing);
         }}
         style={{
           position: "absolute",
@@ -245,7 +206,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Tooltip>
   );
 
-  removeFallbackLayer = () => {
+  removeFallbackLayer = (volumeTracing: VolumeTracing) => {
     Modal.confirm({
       title: messages["tracing.confirm_remove_fallback_layer.title"],
       content: (
@@ -257,7 +218,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </div>
       ),
       onOk: async () => {
-        this.props.onUnlinkFallbackLayer(this.props.tracing);
+        this.props.onUnlinkFallbackLayer(this.props.tracing, volumeTracing);
       },
       width: 600,
     });
@@ -382,11 +343,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(this.props.dataset, layerName);
 
-    const isVolumeTracing = layer.category === "segmentation" ? layer.isTracingLayer : false;
-    const isFallbackLayer =
-      tracing.volume && isVolumeTracing
-        ? tracing.volume.fallbackLayer != null && !isColorLayer
-        : false;
+    const isVolumeTracing = layer.category === "segmentation" ? layer.tracingId != null : false;
+    const maybeTracingId = layer.category === "segmentation" ? layer.tracingId : null;
+    const maybeVolumeTracing =
+      maybeTracingId != null ? getVolumeTracingById(tracing, maybeTracingId) : null;
+    const hasFallbackLayer =
+      maybeVolumeTracing != null ? maybeVolumeTracing.fallbackLayer != null : false;
+    const maybeFallbackLayer =
+      maybeVolumeTracing != null && maybeVolumeTracing.fallbackLayer != null
+        ? maybeVolumeTracing.fallbackLayer
+        : null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
@@ -408,31 +374,93 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
 
+    const volumeDescriptor =
+      layer.tracingId != null ? getVolumeDescriptorById(tracing, layer.tracingId) : null;
+
+    const readableName =
+      layer.tracingId != null
+        ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+        : layerName;
+
     return (
       <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700, wordWrap: "break-word" }}>
-            {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
+            {volumeDescriptor != null ? (
+              <EditableTextLabel
+                margin="0 10px 0 0"
+                width={150}
+                value={readableName}
+                onChange={newName => {
+                  this.props.onEditAnnotationLayer(volumeDescriptor.tracingId, { name: newName });
+                }}
+                label="Volume Layer Name"
+              />
+            ) : (
+              layerName
+            )}
           </span>
 
           <Tooltip
+            overlayStyle={{ maxWidth: 800 }}
             title={
               <div>
-                Data Type: {elementClass}
-                <br />
-                Available resolutions:
-                <ul>
-                  {resolutions.map(r => (
-                    <li key={r.join()}>{r.join("-")}</li>
-                  ))}
-                </ul>
+                <div>Data Type: {elementClass}</div>
+                <div>
+                  Available resolutions:
+                  <ul>
+                    {resolutions.map(r => (
+                      <li key={r.join()}>{r.join("-")}</li>
+                    ))}
+                  </ul>
+                </div>
+                Bounding Box:
+                <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
+                  <tr>
+                    <td />
+                    <td style={{ fontSize: 10 }}>X</td>
+                    <td style={{ fontSize: 10 }}>Y</td>
+                    <td style={{ fontSize: 10 }}>Z</td>
+                  </tr>
+
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Min</td>
+                    <td>{layer.boundingBox.topLeft[0]} </td>
+                    <td>{layer.boundingBox.topLeft[1]} </td>
+                    <td>{layer.boundingBox.topLeft[2]}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Max</td>
+                    <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
+                    <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
+                    <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontSize: 10 }}>Size</td>
+                    <td>{layer.boundingBox.width} </td>
+                    <td>{layer.boundingBox.height} </td>
+                    <td>{layer.boundingBox.depth}</td>
+                  </tr>
+                </table>
               </div>
             }
             placement="left"
           >
             <InfoCircleOutlined style={{ marginLeft: 4 }} />
           </Tooltip>
+          {isVolumeTracing ? (
+            <Tooltip
+              title={`This layer is a volume annotation.${
+                maybeFallbackLayer
+                  ? ` It is based on the dataset's original layer ${maybeFallbackLayer}`
+                  : ""
+              }`}
+              placement="left"
+            >
+              <i className="fas fa-paint-brush" style={{ opacity: 0.7 }} />
+            </Tooltip>
+          ) : null}
 
           {intensityRange[0] === intensityRange[1] && !isDisabled ? (
             <Tooltip
@@ -442,12 +470,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               <WarningOutlined style={{ color: "var(--ant-warning)" }} />
             </Tooltip>
           ) : null}
-          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
+          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
 
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
-          {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
+          {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
           {this.getReloadDataButton(layerName)}
-          {isFallbackLayer ? this.getDeleteButton() : null}
+          {maybeVolumeTracing && hasFallbackLayer ? this.getDeleteButton(maybeVolumeTracing) : null}
         </Col>
       </Row>
     );
@@ -505,10 +533,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     </Row>
   );
 
-  getVolumeAnnotationSpecificSettings = (layerName: string) => {
-    const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
-    const { tracing } = this.props;
-
+  getSegmentationSpecificSettings = (layerName: string) => {
     const segmentationOpacitySetting = (
       <NumberSliderSetting
         label={settings.segmentationPatternOpacity}
@@ -523,7 +548,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <div>
         {segmentationOpacitySetting}
-        {!isPublicViewMode && tracing.volume != null ? this.maybeGetAutoBrushUi() : null}
         <MappingSettingsView layerName={layerName} />
       </div>
     );
@@ -564,15 +588,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             {isColorLayer
               ? this.getColorLayerSpecificSettings(layerConfiguration, layerName)
-              : this.getVolumeAnnotationSpecificSettings(layerName)}
+              : this.getSegmentationSpecificSettings(layerName)}
           </div>
         )}
       </div>
     );
   };
 
-  handleFindData = async (layerName: string, isDataLayer: boolean) => {
-    const { volume, tracingStore } = Store.getState().tracing;
+  handleFindData = async (layerName: string, isDataLayer: boolean, volume: ?VolumeTracing) => {
+    const { tracingStore } = Store.getState().tracing;
     const { dataset } = this.props;
     let foundPosition;
     let foundResolution;
@@ -583,7 +607,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         volume.tracingId,
       );
       if ((!position || !resolution) && volume.fallbackLayer) {
-        await this.handleFindData(volume.fallbackLayer, true);
+        await this.handleFindData(volume.fallbackLayer, true, volume);
         return;
       }
       foundPosition = position;
@@ -623,15 +647,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
 
-  getVolumeMagsToDownsample = (): Array<Vector3> => {
+  getVolumeMagsToDownsample = (volumeTracing: ?VolumeTracing): Array<Vector3> => {
     if (this.props.task != null) {
       return [];
     }
-    const volumeTracing = this.props.tracing.volume;
     if (volumeTracing == null) {
       return [];
     }
-    const segmentationLayer = Model.getEnforcedSegmentationTracingLayer();
+    const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
     const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetResolutions =
       fallbackLayerInfo != null
@@ -651,8 +674,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return magsToDownsample;
   };
 
-  getOptionalDownsampleVolumeIcon = () => {
-    const magsToDownsample = this.getVolumeMagsToDownsample();
+  getOptionalDownsampleVolumeIcon = (volumeTracing: ?VolumeTracing) => {
+    if (!volumeTracing) {
+      return null;
+    }
+    const magsToDownsample = this.getVolumeMagsToDownsample(volumeTracing);
     const hasExtensiveResolutions = magsToDownsample.length === 0;
 
     if (hasExtensiveResolutions) {
@@ -715,7 +741,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         </Tooltip>
         <span style={{ fontWeight: 700, wordWrap: "break-word" }}>Skeletons</span>
         {showSkeletons ? (
-          <React.Fragment>
+          <div style={{ marginLeft: 10 }}>
             <LogSliderSetting
               label={settings.nodeRadius}
               min={userSettings.nodeRadius.minimum}
@@ -772,37 +798,74 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               value={userConfiguration.highlightCommentedNodes}
               onChange={this.onChangeUser.highlightCommentedNodes}
             />{" "}
-          </React.Fragment>
+          </div>
         ) : null}
       </React.Fragment>
     );
   };
 
-  showDownsampleVolumeModal = () => {
-    this.setState({ isDownsampleVolumeModalVisible: true });
+  showDownsampleVolumeModal = (volumeTracing: VolumeTracing) => {
+    this.setState({ volumeTracingToDownsample: volumeTracing });
   };
 
   hideDownsampleVolumeModal = () => {
-    this.setState({ isDownsampleVolumeModalVisible: false });
+    this.setState({ volumeTracingToDownsample: null });
+  };
+
+  showAddVolumeLayerModal = () => {
+    this.setState({ isAddVolumeLayerModalVisible: true });
+  };
+
+  hideAddVolumeLayerModal = () => {
+    this.setState({ isAddVolumeLayerModalVisible: false });
   };
 
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const layerSettings = Object.entries(layers).map(entry => {
-      const [layerName, layer] = entry;
-      const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
-      // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
-      return this.getLayerSettings(layerName, layer, isColorLayer);
-    });
+
+    // Show color layer(s) first and then the segmentation layer(s).
+    const layerSettings = _.sortBy(
+      _.entries(layers).map(entry => {
+        const [layerName, layer] = entry;
+        const isColorLayer = getIsColorLayer(this.props.dataset, layerName);
+        return { layerName, layer, isColorLayer };
+      }),
+      el => !el.isColorLayer,
+    ).map(el => this.getLayerSettings(el.layerName, el.layer, el.isColorLayer));
+
     return (
       <div className="tracing-settings-menu">
         {layerSettings}
         {this.getSkeletonLayer()}
-        <DownsampleVolumeModal
-          visible={this.state.isDownsampleVolumeModalVisible}
-          hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
-          magsToDownsample={this.getVolumeMagsToDownsample()}
-        />
+
+        {this.props.tracing.restrictions.allowUpdate &&
+        this.props.controlMode === ControlModeEnum.TRACE ? (
+          <>
+            <Divider />
+            <Row type="flex" justify="center" align="middle">
+              <Button onClick={this.showAddVolumeLayerModal}>
+                <PlusOutlined />
+                Add Volume Annotation Layer
+              </Button>
+            </Row>
+          </>
+        ) : null}
+
+        {this.state.volumeTracingToDownsample != null ? (
+          <DownsampleVolumeModal
+            hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
+            volumeTracing={this.state.volumeTracingToDownsample}
+            magsToDownsample={this.getVolumeMagsToDownsample(this.state.volumeTracingToDownsample)}
+          />
+        ) : null}
+
+        {this.state.isAddVolumeLayerModalVisible ? (
+          <AddVolumeLayerModal
+            dataset={this.props.dataset}
+            onCancel={this.hideAddVolumeLayerModal}
+            tracing={this.props.tracing}
+          />
+        ) : null}
       </div>
     );
   }
@@ -847,10 +910,13 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },
-  async onUnlinkFallbackLayer(tracing: Tracing) {
+  async onUnlinkFallbackLayer(tracing: Tracing, volumeTracing: VolumeTracing) {
     const { annotationId, annotationType } = tracing;
-    await unlinkFallbackSegmentation(annotationId, annotationType);
+    await unlinkFallbackSegmentation(annotationId, annotationType, volumeTracing.tracingId);
     await api.tracing.hardReload();
+  },
+  onEditAnnotationLayer(tracingId: string, layerProperties: EditableLayerProperties) {
+    dispatch(editAnnotationLayerAction(tracingId, layerProperties));
   },
 });
 

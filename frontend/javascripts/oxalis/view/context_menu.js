@@ -1,6 +1,6 @@
 // @flow
 import React, { useEffect, type Node } from "react";
-import { Menu, notification, Divider, Tooltip } from "antd";
+import { Menu, notification, Divider, Tooltip, Popover, Input } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import {
   type AnnotationTool,
@@ -10,12 +10,19 @@ import {
   VolumeTools,
 } from "oxalis/constants";
 
-import type { OxalisState, SkeletonTracing, VolumeTracing } from "oxalis/store";
-import type { APIDataset, APIDataLayer } from "types/api_flow_types";
+import type { OxalisState, SkeletonTracing, VolumeTracing, ActiveMappingInfo } from "oxalis/store";
+import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { Dispatch } from "redux";
-import { connect, useDispatch } from "react-redux";
+import { connect, useDispatch, useSelector } from "react-redux";
 import { V3 } from "libs/mjs";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  addUserBoundingBoxAction,
+  deleteUserBoundingBoxAction,
+  changeUserBoundingBoxAction,
+} from "oxalis/model/actions/annotation_actions";
+import { type UserBoundingBox } from "oxalis/store";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -24,11 +31,16 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  hasAgglomerateMapping,
+  loadAgglomerateSkeletonAtPosition,
+} from "oxalis/controller/combinations/segmentation_handlers";
 import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
 import {
   performMinCutAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
@@ -36,15 +48,19 @@ import {
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
+  withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getVisibleSegmentationLayer,
+  getMappingInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
-import { roundTo } from "libs/utils";
+import { roundTo, hexToRgb, rgbToHex } from "libs/utils";
 
 import Shortcut from "libs/shortcut_component";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -54,6 +70,7 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 type OwnProps = {|
   contextMenuPosition: [number, number],
   clickedNodeId: ?number,
+  clickedBoundingBoxId: ?number,
   globalPosition: Vector3,
   viewport: OrthoView,
   hideContextMenu: () => void,
@@ -66,6 +83,13 @@ type DispatchProps = {|
   setActiveNode: number => void,
   hideTree: number => void,
   createTree: () => void,
+  hideBoundingBox: number => void,
+  setActiveCell: number => void,
+  addNewBoundingBox: Vector3 => void,
+  setBoundingBoxColor: (number, Vector3) => void,
+  setBoundingBoxName: (number, string) => void,
+  addNewBoundingBox: Vector3 => void,
+  deleteBoundingBox: number => void,
   setActiveCell: (number, somePosition?: Vector3) => void,
 |};
 
@@ -75,10 +99,12 @@ type StateProps = {|
   visibleSegmentationLayer: ?APIDataLayer,
   dataset: APIDataset,
   zoomStep: number,
-  currentMeshFile: ?string,
+  currentMeshFile: ?APIMeshFile,
   volumeTracing: ?VolumeTracing,
   activeTool: AnnotationTool,
   useLegacyBindings: boolean,
+  userBoundingBoxes: Array<UserBoundingBox>,
+  mappingInfo: ActiveMappingInfo,
 |};
 
 /* eslint-enable react/no-unused-prop-types */
@@ -90,6 +116,8 @@ type NoNodeContextMenuProps = {|
   segmentIdAtPosition: number,
   activeTool: AnnotationTool,
 |};
+
+const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -174,6 +202,16 @@ function shortcutBuilder(shortcuts: Array<string>): Node {
             className="keyboard-mouse-icon"
             src="/assets/images/icon-statusbar-mouse-right.svg"
             alt="Mouse Right Click"
+            style={{ margin: 0 }}
+          />
+        );
+      }
+      case "middleMouse": {
+        return (
+          <img
+            className="keyboard-mouse-icon"
+            src="/assets/images/icon-statusbar-mouse-wheel.svg"
+            alt="Mouse Wheel"
             style={{ margin: 0 }}
           />
         );
@@ -298,21 +336,142 @@ function NodeContextMenuOptions({
   );
 }
 
-function NoNodeContextMenuOptions({
-  skeletonTracing,
-  volumeTracing,
-  activeTool,
-  hideContextMenu,
+function getBoundingBoxMenuOptions({
+  addNewBoundingBox,
   globalPosition,
-  viewport,
-  createTree,
-  segmentIdAtPosition,
-  visibleSegmentationLayer,
-  dataset,
-  currentMeshFile,
-  setActiveCell,
+  activeTool,
+  clickedBoundingBoxId,
+  userBoundingBoxes,
+  setBoundingBoxName,
+  hideContextMenu,
+  setBoundingBoxColor,
+  hideBoundingBox,
+  deleteBoundingBox,
 }: NoNodeContextMenuProps) {
+  const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
+  const newBoundingBoxMenuItem = (
+    <Menu.Item
+      className="node-context-menu-item"
+      key="add-new-bounding-box"
+      onClick={() => {
+        addNewBoundingBox(globalPosition);
+      }}
+    >
+      Create new Bounding Box
+      {isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
+    </Menu.Item>
+  );
+  if (clickedBoundingBoxId == null) {
+    return [newBoundingBoxMenuItem];
+  }
+  const hoveredBBox = userBoundingBoxes.find(bbox => bbox.id === clickedBoundingBoxId);
+  if (hoveredBBox == null) {
+    return [newBoundingBoxMenuItem];
+  }
+  const setBBoxName = (evt: SyntheticInputEvent<>) => {
+    setBoundingBoxName(clickedBoundingBoxId, evt.target.value);
+  };
+  const preventContextMenuFromClosing = evt => {
+    evt.stopPropagation();
+  };
+  const upscaledBBoxColor = ((hoveredBBox.color.map(colorPart => colorPart * 255): any): Vector3);
+  return [
+    newBoundingBoxMenuItem,
+    <Menu.Item className="node-context-menu-item" key="change-bounding-box-name">
+      <Popover
+        title="Set Bounding Box Name"
+        content={
+          <Input
+            defaultValue={hoveredBBox.name}
+            placeholder="Bounding Box Name"
+            size="small"
+            onPressEnter={evt => {
+              setBBoxName(evt);
+              hideContextMenu();
+            }}
+            onBlur={setBBoxName}
+            onClick={preventContextMenuFromClosing}
+          />
+        }
+        trigger="click"
+      >
+        <span
+          onClick={preventContextMenuFromClosing}
+          style={{ width: "100%", display: "inline-block" }}
+        >
+          Change Bounding Box Name
+        </span>
+      </Popover>
+    </Menu.Item>,
+    <Menu.Item className="node-context-menu-item" key="change-bounding-box-color">
+      <span
+        onClick={preventContextMenuFromClosing}
+        style={{ width: "100%", display: "inline-block" }}
+      >
+        Change Bounding Box Color
+        <input
+          type="color"
+          style={{
+            display: "inline-block",
+            border: "none",
+            cursor: "pointer",
+            width: "100%",
+            height: "100%",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            opacity: 0,
+          }}
+          onChange={(evt: SyntheticInputEvent<>) => {
+            let color = hexToRgb(evt.target.value);
+            color = ((color.map(colorPart => colorPart / 255): any): Vector3);
+            setBoundingBoxColor(clickedBoundingBoxId, color);
+          }}
+          value={rgbToHex(upscaledBBoxColor)}
+        />
+      </span>
+    </Menu.Item>,
+    <Menu.Item
+      className="node-context-menu-item"
+      key="hide-bounding-box"
+      onClick={() => {
+        hideBoundingBox(clickedBoundingBoxId);
+      }}
+    >
+      Hide Bounding Box
+    </Menu.Item>,
+    <Menu.Item
+      className="node-context-menu-item"
+      key="delete-bounding-box"
+      onClick={() => {
+        deleteBoundingBox(clickedBoundingBoxId);
+      }}
+    >
+      Delete Bounding Box
+    </Menu.Item>,
+  ];
+}
+
+function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
+  const {
+    skeletonTracing,
+    volumeTracing,
+    activeTool,
+    globalPosition,
+    viewport,
+    createTree,
+    segmentIdAtPosition,
+    visibleSegmentationLayer,
+    dataset,
+    currentMeshFile,
+    hideContextMenu,
+    setActiveCell,
+    mappingInfo,
+    zoomStep,
+  } = props;
+
   const dispatch = useDispatch();
+  const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
   useEffect(() => {
     (async () => {
       await maybeFetchMeshFiles(visibleSegmentationLayer, dataset, false);
@@ -323,15 +482,18 @@ function NoNodeContextMenuOptions({
     if (!currentMeshFile) return;
 
     if (visibleSegmentationLayer) {
+      // Make sure the corresponding bucket is loaded
+      await api.data.getDataValue(visibleSegmentationLayer.name, globalPosition, zoomStep);
       const id = getSegmentIdForPosition(globalPosition);
       if (id === 0) {
         Toast.info("No segment found at the clicked position");
         return;
       }
+
       await loadMeshFromFile(
         id,
         globalPosition,
-        currentMeshFile,
+        currentMeshFile.meshFileName,
         visibleSegmentationLayer,
         dataset,
       );
@@ -351,6 +513,7 @@ function NoNodeContextMenuOptions({
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
+  const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
 
   const skeletonActions =
     skeletonTracing != null
@@ -370,20 +533,40 @@ function NoNodeContextMenuOptions({
               setWaypoint(globalPosition, viewport, false);
             }}
           >
-            Create new Tree here {!isVolumeBasedToolActive ? shortcutBuilder(["C"]) : null}
+            Create new Tree here{" "}
+            {!isVolumeBasedToolActive && !isBoundingBoxToolActive ? shortcutBuilder(["C"]) : null}
+          </Menu.Item>,
+
+          <Menu.Item
+            className="node-context-menu-item"
+            key="load-agglomerate-skeleton"
+            disabled={!isAgglomerateMappingEnabled.value}
+            onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
+          >
+            {isAgglomerateMappingEnabled.value ? (
+              ["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]
+            ) : (
+              <Tooltip title="Requires an active ID Mapping">
+                {["Import Agglomerate Skeleton", shortcutBuilder(["SHIFT", "middleMouse"])]}
+              </Tooltip>
+            )}
           </Menu.Item>,
         ]
       : [];
 
+  const layerName = visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
   const loadPrecomputedMeshItem = (
-    <Menu.Item
+    <MenuItemWithMappingActivationConfirmation
       className="node-context-menu-item"
       key="load-precomputed-mesh"
       onClick={loadPrecomputedMesh}
       disabled={!currentMeshFile}
+      currentMeshFile={currentMeshFile}
+      layerName={layerName}
+      mappingInfo={mappingInfo}
     >
       Load Mesh (precomputed)
-    </Menu.Item>
+    </MenuItemWithMappingActivationConfirmation>
   );
 
   const computeMeshAdHocItem = (
@@ -424,15 +607,22 @@ function NoNodeContextMenuOptions({
           </Menu.Item>,
         ]
       : [];
+
+  const boundingBoxActions = getBoundingBoxMenuOptions(props);
+
   if (volumeTracing == null && visibleSegmentationLayer != null) {
     nonSkeletonActions.push(loadPrecomputedMeshItem);
     nonSkeletonActions.push(computeMeshAdHocItem);
   }
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
-
-  const allActions = isSkeletonToolActive
-    ? skeletonActions.concat(nonSkeletonActions)
-    : nonSkeletonActions.concat(skeletonActions);
+  let allActions = [];
+  if (isSkeletonToolActive) {
+    allActions = skeletonActions.concat(nonSkeletonActions).concat(boundingBoxActions);
+  } else if (isBoundingBoxToolActive) {
+    allActions = boundingBoxActions.concat(nonSkeletonActions).concat(skeletonActions);
+  } else {
+    allActions = nonSkeletonActions.concat(skeletonActions).concat(boundingBoxActions);
+  }
 
   if (allActions.length === 0) {
     return null;
@@ -555,23 +745,31 @@ function ContextMenu(props: Props) {
           hideContextMenu();
         }}
       />
-      <div
-        style={{
-          position: "absolute",
-          left: contextMenuPosition[0],
-          top: contextMenuPosition[1],
-        }}
-        className="node-context-menu"
-        tabIndex={-1}
-        ref={inputRef}
-      >
-        <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-        {clickedNodeId != null
-          ? NodeContextMenuOptions({ ...props, clickedNodeId })
-          : NoNodeContextMenuOptions({ activeTool, segmentIdAtPosition, ...props })}
+      {/* This div serves as a "prison" for the sticky context menu. The above div
+      cannot be used since the context menu would then be closed on every click.
+      Since both divs are absolutely positioned and cover the whole page,
+      avoid blocking click events by temporarily disabling them for this "prison" div. */}
+      <div className="node-context-menu-overlay" style={{ pointerEvents: "none" }}>
+        <div
+          style={{
+            position: "sticky",
+            left: contextMenuPosition[0],
+            top: contextMenuPosition[1],
+            width: "fit-content",
+            pointerEvents: "all",
+          }}
+          className="node-context-menu"
+          tabIndex={-1}
+          ref={inputRef}
+        >
+          <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+          {clickedNodeId != null
+            ? NodeContextMenuOptions({ ...props, clickedNodeId })
+            : NoNodeContextMenuOptions({ activeTool, segmentIdAtPosition, ...props })}
 
-        <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
-        {infoRows}
+          <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
+          {infoRows}
+        </div>
       </div>
     </React.Fragment>
   );
@@ -599,14 +797,34 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setActiveCell(segmentId: number, somePosition?: Vector3) {
     dispatch(setActiveCellAction(segmentId, somePosition));
   },
+  addNewBoundingBox(center: Vector3) {
+    dispatch(addUserBoundingBoxAction(null, center));
+  },
+  setBoundingBoxName(id: number, name: string) {
+    dispatch(changeUserBoundingBoxAction(id, { name }));
+  },
+  setBoundingBoxColor(id: number, color: Vector3) {
+    dispatch(changeUserBoundingBoxAction(id, { color }));
+  },
+  deleteBoundingBox(id: number) {
+    dispatch(deleteUserBoundingBoxAction(id));
+  },
+  hideBoundingBox(id: number) {
+    dispatch(changeUserBoundingBoxAction(id, { isVisible: false }));
+  },
 });
 
 function mapStateToProps(state: OxalisState): StateProps {
   const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  const mappingInfo = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+  );
 
+  const someTracing = maybeGetSomeTracing(state.tracing);
   return {
     skeletonTracing: state.tracing.skeleton,
-    volumeTracing: state.tracing.volume,
+    volumeTracing: getActiveSegmentationTracing(state),
     datasetScale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
     dataset: state.dataset,
@@ -617,6 +835,8 @@ function mapStateToProps(state: OxalisState): StateProps {
         ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
         : null,
     useLegacyBindings: state.userConfiguration.useLegacyBindings,
+    userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
+    mappingInfo,
   };
 }
 

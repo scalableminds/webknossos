@@ -51,7 +51,7 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -153,7 +153,7 @@ function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): 
 // This function either returns the activeCellId of the current volume tracing
 // or the view-only active cell id
 function* getCurrentCellId(): Saga<number> {
-  const volumeTracing = yield* select(state => state.tracing.volume);
+  const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
   if (volumeTracing != null) {
     return volumeTracing.activeCellId;
   }
@@ -323,7 +323,7 @@ function* maybeLoadIsosurface(
   }/layers/${layer.fallbackLayer != null ? layer.fallbackLayer : layer.name}`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
-  const volumeTracing = yield* select(state => state.tracing.volume);
+  const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
   const mappingInfo = getMappingInfo(activeMappingByLayer, layer.name);
@@ -369,7 +369,7 @@ function* maybeLoadIsosurface(
   return [];
 }
 
-function* downloadIsosurfaceCellById(cellId: number): Saga<void> {
+function* downloadIsosurfaceCellById(cellName: string, cellId: number): Saga<void> {
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(cellId);
   if (geometry == null) {
@@ -387,16 +387,11 @@ function* downloadIsosurfaceCellById(cellId: number): Saga<void> {
   stl.setUint32(cellIdIndex, cellId, true);
 
   const blob = new Blob([stl]);
-  yield* call(saveAs, blob, `mesh-${cellId}.stl`);
+  yield* call(saveAs, blob, `${cellName}-${cellId}.stl`);
 }
 
 function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
-  yield* call(downloadIsosurfaceCellById, action.cellId);
-}
-
-function* downloadActiveIsosurfaceCell(): Saga<void> {
-  const currentId = yield* call(getCurrentCellId);
-  yield* call(downloadIsosurfaceCellById, currentId);
+  yield* call(downloadIsosurfaceCellById, action.cellName, action.cellId);
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
@@ -432,10 +427,9 @@ function* removeIsosurface(
 }
 
 function* markEditedCellAsDirty(): Saga<void> {
-  const volumeTracing = yield* select(state => state.tracing.volume);
-  const useTracingStore = volumeTracing != null && volumeTracing.fallbackLayer == null;
-  if (useTracingStore) {
-    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
+  if (volumeTracing != null && volumeTracing.fallbackLayer == null) {
+    const activeCellId = volumeTracing.activeCellId;
     modifiedCells.add(activeCellId);
   }
 }
@@ -514,7 +508,6 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
   yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
-  yield _takeEvery("TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);

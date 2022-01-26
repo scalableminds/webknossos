@@ -92,7 +92,7 @@ function getTraceDirection(
 function getTracingTypes(state: OxalisState) {
   return {
     skeleton: state.tracing.skeleton != null,
-    volume: state.tracing.volume != null,
+    volume: state.tracing.volumes.length > 0,
     readOnly: state.tracing.readOnly != null,
   };
 }

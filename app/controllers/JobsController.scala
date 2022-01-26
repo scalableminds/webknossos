@@ -1,12 +1,13 @@
 package controllers
 
-import java.nio.file.{Files, Paths}
 import java.util.Date
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
-import models.job.{JobDAO, JobService}
+import models.binary.DataSetDAO
+import models.job.{JobDAO, JobService, JobState, WorkerDAO, WorkerService}
 import models.organization.OrganizationDAO
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService
@@ -19,7 +20,10 @@ import scala.concurrent.ExecutionContext
 
 class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
+                               dataSetDAO: DataSetDAO,
                                jobService: JobService,
+                               workerService: WorkerService,
+                               workerDAO: WorkerDAO,
                                wkconf: WkConf,
                                slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
@@ -27,12 +31,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskInfos <- jobService.fetchCeleryInfos()
-      taskCountsByStatus = jobService.countByStatus(taskInfos)
-      workerStatus <- jobService.fetchWorkerStatus()
+      _ <- Fox.successful(())
+      jobCountsByState <- jobDAO.countByState
+      workers <- workerDAO.findAll
+      workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
-        "workers" -> workerStatus,
-        "queue" -> Json.toJson(taskCountsByStatus)
+        "workers" -> workersJson,
+        "jobsByState" -> Json.toJson(jobCountsByState)
       )
     } yield Ok(jsStatus)
   }
@@ -40,7 +45,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- jobService.updateCeleryInfos()
       jobs <- jobDAO.findAll
       jobsJsonList <- Fox.serialCombined(jobs.sortBy(-_.created))(jobService.publicWrites)
     } yield Ok(Json.toJson(jobsJsonList))
@@ -49,13 +53,31 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- jobService.updateCeleryInfos()
       job <- jobDAO.findOne(ObjectId(id))
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
 
-  def runConvertToWkwJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
+  /*
+   * Job cancelling protocol:
+   * When a user cancels a job, the manualState is immediately set. Thus, the job looks cancelled to the user
+   * The worker-written “state” field is later updated by the worker when it has successfully cancelled the job run.
+   * When both fields are set, the cancelling is complete and wk no longer includes the job in the to_cancel list sent to worker
+   */
+  def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      jobIdValidated <- ObjectId.parse(id)
+      job <- jobDAO.findOne(jobIdValidated)
+      _ <- jobDAO.updateManualState(jobIdValidated, JobState.CANCELLED)
+      js <- jobService.publicWrites(job)
+    } yield Ok(js)
+  }
+
+  def runConvertToWkwJob(organizationName: String,
+                         dataSetName: String,
+                         scale: String,
+                         dataStoreName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -70,7 +92,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken
           )
 
-          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataStoreName) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -83,9 +105,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
                             agglomerateView: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName)
+        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+          "organization.notFound",
+          organizationName)
         _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+          "dataSet.notFound",
+          dataSetName) ~> NOT_FOUND
         command = "compute_mesh_file"
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -94,7 +120,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
           "mag" -> mag,
           "agglomerate_view" -> agglomerateView
         )
-        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunComputeMeshFile"
+        job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunComputeMeshFile"
         js <- jobService.publicWrites(job)
       } yield Ok(js)
     }
@@ -103,9 +129,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                       organizationName)
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNuclei.notAllowed.organization" ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
           command = "infer_nuclei"
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -113,7 +143,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "layer_name" -> layerName,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
-          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunNucleiInferral"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -133,9 +163,13 @@ class JobsController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                       organizationName)
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationName)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.export.notAllowed.organization" ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
           _ <- jobService.assertTiffExportBoundingBoxLimits(bbox)
           command = "export_tiff"
           exportFileName = s"${formatDateForFilename(new Date())}__${dataSetName}__${tracingId.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
@@ -154,21 +188,10 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "mapping_type" -> mappingType,
             "hide_unmapped_ids" -> hideUnmappedIds
           )
-          job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunTiffExport"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunTiffExport"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
-    }
-
-  def downloadExport(jobId: String, exportFileName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        jobIdValidated <- ObjectId.parse(jobId)
-        job <- jobDAO.findOne(jobIdValidated)
-        organization <- organizationDAO.findOne(request.identity._organization)
-        filePath = Paths.get("binaryData", organization.name, ".export", job.celeryJobId, exportFileName)
-        _ <- bool2Fox(Files.exists(filePath)) ?~> "job.export.fileNotFound"
-      } yield Ok.sendPath(filePath, inline = false)
     }
 
 }

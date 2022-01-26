@@ -4,8 +4,8 @@ import sbt._
 object Dependencies {
   private val akkaVersion = "2.6.14"
   private val akkaHttpVersion = "10.2.6"
-  private val log4jVersion = "2.13.3"
-  private val webknossosWrapVersion = "1.1.11"
+  private val log4jVersion = "2.17.0"
+  private val webknossosWrapVersion = "1.1.15"
 
   private val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   private val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
@@ -42,6 +42,7 @@ object Dependencies {
   private val spire = "org.typelevel" %% "spire" % "0.14.1"
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
   private val swagger = "io.swagger" %% "swagger-play2" % "1.7.1"
+  private val jhdf = "cisd" % "jhdf5" % "19.04.0"
 
   private val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -80,11 +81,12 @@ object Dependencies {
     guice,
     swagger,
     spire,
-    akkaHttp
+    akkaHttp,
+    redis,
+    jhdf
   )
 
   val webknossosTracingstoreDependencies: Seq[ModuleID] = Seq(
-    redis,
     jgrapht
   )
 

@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
@@ -57,22 +58,15 @@ class DSRemoteWebKnossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def reportUpload(dataSourceId: DataSourceId,
-                   initialTeams: List[String],
-                   dataSetSizeBytes: Long,
-                   userTokenOpt: Option[String]): Fox[_] = {
-    val sleepDuration = 1000 // sleep for 1 second to give wk time to properly register the dataset
+  def reportUpload(dataSourceId: DataSourceId, dataSetSizeBytes: Long, userToken: String): Fox[Unit] =
     for {
-      userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
-      _ = Thread.sleep(sleepDuration)
       _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryString("token" -> userToken)
-        .post(initialTeams)
+        .post()
     } yield ()
-  }
 
   def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportIsosurfaceRequest")
@@ -86,11 +80,23 @@ class DSRemoteWebKnossosClient @Inject()(
       .silent
       .put(dataSources)
 
-  def validateDataSourceUpload(id: DataSourceId): Fox[_] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload").addQueryString("key" -> dataStoreKey).post(id)
+  def validateDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
+    for {
+      userToken <- option2Fox(userTokenOpt) ?~> "validateDataSourceUpload.noUserToken"
+      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/verifyUpload")
+        .addQueryString("key" -> dataStoreKey)
+        .addQueryString("token" -> userToken)
+        .post(info)
+    } yield ()
 
   def deleteErroneousDataSource(id: DataSourceId): Fox[_] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteErroneous").addQueryString("key" -> dataStoreKey).post(id)
+
+  def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
+    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/jobExportProperties")
+      .addQueryString("jobId" -> jobId)
+      .addQueryString("key" -> dataStoreKey)
+      .getWithJsonResponse[JobExportProperties]
 
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/validateUserAccess")

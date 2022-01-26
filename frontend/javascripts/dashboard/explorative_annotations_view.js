@@ -1,7 +1,7 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tag } from "antd";
+import { Spin, Input, Table, Button, Modal, Tooltip } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -9,6 +9,7 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   UploadOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -27,19 +28,22 @@ import {
   downloadNml,
   getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
-import { formatHash, stringToColor } from "libs/format_utils";
+import { formatHash } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
+import CategorizationLabel, {
+  CategorizationSearch,
+} from "oxalis/view/components/categorization_label";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-import UserLocalStorage from "libs/user_local_storage";
 import TextWithDescription from "components/text_with_description";
+import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -99,25 +103,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   componentDidMount() {
-    this.restoreSearchTags();
     this.fetchNextPage(0);
   }
 
   componentWillUpdate(nextProps, nextState) {
     persistence.persist(this.props.history, nextState);
-  }
-
-  restoreSearchTags() {
-    // restore the search query tags from the last session
-    const searchTagString = UserLocalStorage.getItem("lastDashboardSearchTags");
-    if (searchTagString) {
-      try {
-        const searchTags = JSON.parse(searchTagString);
-        this.setState({ tags: searchTags });
-      } catch (error) {
-        // pass
-      }
-    }
   }
 
   getCurrentModeState = () =>
@@ -221,7 +211,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (tracing.typ !== "Explorational") {
       return null;
     }
-    const hasVolumeTracing = tracing.tracing.volume != null;
+
+    const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
     const { typ, id } = tracing;
     if (!this.state.shouldShowArchivedTracings) {
       return (
@@ -318,20 +309,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   addTagToSearch = (tag: string): void => {
     if (!this.state.tags.includes(tag)) {
-      this.setState(prevState => {
-        const newTags = update(prevState.tags, { $push: [tag] });
-        UserLocalStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
-        return { tags: newTags };
-      });
+      this.setState(prevState => ({ tags: [...prevState.tags, tag] }));
     }
-  };
-
-  removeTagFromSearch = (tag: string): void => {
-    this.setState(prevState => {
-      const newTags = prevState.tags.filter(t => t !== tag);
-      UserLocalStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
-      return { tags: newTags };
-    });
   };
 
   editTagFromAnnotation = (
@@ -349,7 +328,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         if (t.id === annotation.id) {
           if (shouldAddTag) {
             // add the tag to an annotation
-            newAnnotation = update(t, { tags: { $push: [tag] } });
+            if (!t.tags.includes(tag)) {
+              newAnnotation = update(t, { tags: { $push: [tag] } });
+            }
           } else {
             // remove the tag from an annotation
             const newTags = _.without(t.tags, tag);
@@ -384,11 +365,34 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
+  renderIdAndCopyButton(tracing: APIAnnotationCompact) {
+    const copyIdToClipboard = async () => {
+      await navigator.clipboard.writeText(tracing.id);
+      Toast.success("ID copied to clipboard");
+    };
+    return (
+      <div>
+        {formatHash(tracing.id)}
+        <Tooltip title="Copy long ID" placement="bottom">
+          <Button
+            onClick={copyIdToClipboard}
+            icon={<CopyOutlined className="without-icon-margin" />}
+            style={{
+              boxShadow: "none",
+              backgroundColor: "transparent",
+              borderColor: "transparent",
+            }}
+          />
+        </Tooltip>
+      </div>
+    );
+  }
+
   renderNameWithDescription(tracing: APIAnnotationCompact) {
     return (
       <TextWithDescription
         isEditable
-        value={tracing.name}
+        value={tracing.name ? tracing.name : "Unnamed Annotation"}
         onChange={newName => this.renameTracing(tracing, newName)}
         label="Annotation Name"
         description={tracing.description}
@@ -423,7 +427,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationCompact) => this.renderIdAndCopyButton(tracing)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
@@ -443,23 +447,20 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
             annotation.stats.treeCount != null &&
             annotation.stats.nodeCount != null &&
-            annotation.stats.edgeCount != null &&
-            annotation.tracing.skeleton != null ? (
-              <div>
-                <span title="Trees">
+            annotation.stats.edgeCount != null ? (
+              <div style={{ display: "grid", gridTemplateColumns: "30% auto" }}>
+                <span title="Trees" style={{ margin: "auto" }}>
                   <i className="fas fa-sitemap" />
-                  {annotation.stats.treeCount}
                 </span>
-                <br />
-                <span title="Nodes">
+                <span>{annotation.stats.treeCount}</span>
+                <span title="Nodes" style={{ margin: "auto" }}>
                   <i className="fas fa-circle fa-sm" />
-                  {annotation.stats.nodeCount}
                 </span>
-                <br />
-                <span title="Edges">
+                <span>{annotation.stats.nodeCount}</span>
+                <span title="Edges" style={{ margin: "auto" }}>
                   <i className="fas fa-arrows-alt-h" />
-                  {annotation.stats.edgeCount}
                 </span>
+                <span>{annotation.stats.edgeCount}</span>
               </div>
             ) : null
           }
@@ -470,18 +471,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           render={(tags: Array<string>, annotation: APIAnnotationCompact) => (
             <div>
               {tags.map(tag => (
-                <Tag
+                <CategorizationLabel
                   key={tag}
-                  color={stringToColor(tag)}
+                  kind="annotations"
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
+                  tag={tag}
                   closable={
                     !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
                     !this.state.shouldShowArchivedTracings
                   }
-                >
-                  {tag}
-                </Tag>
+                />
               ))}
               {this.state.shouldShowArchivedTracings ? null : (
                 <EditableTextIcon
@@ -512,16 +512,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   renderSearchTags() {
-    return this.state.tags.map(tag => (
-      <Tag
-        key={tag}
-        color={stringToColor(tag)}
-        onClose={_.partial(this.removeTagFromSearch, tag)}
-        closable
-      >
-        {tag}
-      </Tag>
-    ));
+    return (
+      <CategorizationSearch
+        searchTags={this.state.tags}
+        setTags={tags => this.setState({ tags })}
+        localStorageSavingKey="lastDashboardSearchTags"
+      />
+    );
   }
 
   render() {

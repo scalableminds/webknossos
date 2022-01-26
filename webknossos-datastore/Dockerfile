@@ -1,19 +1,21 @@
 FROM openjdk:8-jre
 
-RUN mkdir -p /srv/webknossos-datastore \
+RUN mkdir -p /webknossos-datastore \
   && groupadd -g 1000 -r webknossos \
   && useradd -u 1000 -r -g webknossos webknossos
 
-WORKDIR /srv/webknossos-datastore
+WORKDIR /webknossos-datastore
 
-VOLUME /srv/webknossos-datastore/binaryData /tmp
+VOLUME /webknossos-datastore/binaryData /tmp
 
 COPY target/universal/stage .
-COPY lib/native target/universal/stage/lib/native
 
 RUN chown -R webknossos . \
   && chmod go+x bin/webknossos-datastore \
   && chmod go+w .
+
+RUN echo '#!/bin/bash\numask 002\nbin/webknossos-datastore "$@"\n' > /docker-entrypoint.sh \
+  && chmod +x /docker-entrypoint.sh
 
 USER webknossos
 
@@ -23,5 +25,5 @@ HEALTHCHECK \
 
 EXPOSE 9090
 
-ENTRYPOINT ["bin/webknossos-datastore"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-datastore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]

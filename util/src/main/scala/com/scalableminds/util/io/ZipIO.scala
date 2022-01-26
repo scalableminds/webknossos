@@ -92,11 +92,10 @@ object ZipIO extends LazyLogging {
   def zip(sources: Iterator[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
     if (sources.nonEmpty) {
       val zip = startZip(out)
-      val zipWrittenFuture = zipIterator(sources, zip)
-      zipWrittenFuture.onComplete { _ =>
-        zip.close()
-      }
-      zipWrittenFuture
+      for {
+        _ <- zipIterator(sources, zip)
+        _ = zip.close()
+      } yield ()
     } else {
       out.close()
       Future.successful(())

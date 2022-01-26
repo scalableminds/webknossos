@@ -15,9 +15,11 @@ import type {
   OxalisState,
 } from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
+import { AnnotationToolEnum } from "oxalis/constants";
 import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeTool,
   isVolumeAnnotationDisallowedForZoom,
@@ -53,7 +55,7 @@ export function convertUserBoundingBoxesFromServerToFrontend(
       boundingBox: convertedBoundingBox,
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
-      name: name || `user bounding box ${id}`,
+      name: name || `Bounding box ${id}`,
       isVisible: isVisible != null ? isVisible : true,
     };
   });
@@ -73,16 +75,14 @@ export function convertUserBoundingBoxesFromFrontendToServer(
 }
 
 export function convertFrontendBoundingBoxToServer(
-  boundingBox: ?BoundingBoxType,
-): ?BoundingBoxObject {
-  return Maybe.fromNullable(boundingBox)
-    .map(bb => ({
-      topLeft: bb.min,
-      width: bb.max[0] - bb.min[0],
-      height: bb.max[1] - bb.min[1],
-      depth: bb.max[2] - bb.min[2],
-    }))
-    .getOrElse(null);
+  boundingBox: BoundingBoxType,
+): BoundingBoxObject {
+  return {
+    topLeft: boundingBox.min,
+    width: boundingBox.max[0] - boundingBox.min[0],
+    height: boundingBox.max[1] - boundingBox.min[1],
+    depth: boundingBox.max[2] - boundingBox.min[2],
+  };
 }
 
 export function convertBoundariesToBoundingBox(boundary: Boundary): BoundingBoxObject {
@@ -116,6 +116,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     meshes,
     user,
+    annotationLayers,
   } = annotation;
   const restrictions = {
     ...annotation.restrictions,
@@ -132,7 +133,27 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tracingStore,
     meshes,
     user,
+    annotationLayers,
   };
+}
+
+export function getNextTool(state: OxalisState): AnnotationTool | null {
+  const disabledToolInfo = getDisabledInfoForTools(state);
+
+  const tools = Object.keys(AnnotationToolEnum);
+  const currentToolIndex = tools.indexOf(state.uiInformation.activeTool);
+  // Search for the next tool which is not disabled.
+  for (
+    let newToolIndex = currentToolIndex + 1;
+    newToolIndex < currentToolIndex + tools.length;
+    newToolIndex++
+  ) {
+    const newTool = tools[newToolIndex % tools.length];
+    if (!disabledToolInfo[newTool].isDisabled) {
+      return newTool;
+    }
+  }
+  return null;
 }
 
 export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
@@ -142,6 +163,5 @@ export function setToolReducer(state: OxalisState, tool: AnnotationTool) {
   if (isVolumeTool(tool) && isVolumeAnnotationDisallowedForZoom(tool, state)) {
     return state;
   }
-
   return updateKey(state, "uiInformation", { activeTool: tool });
 }

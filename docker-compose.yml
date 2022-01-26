@@ -22,6 +22,7 @@ services:
       - -Djava.net.preferIPv4Stack=true
       - -Dtracingstore.fossildb.address=fossildb
       - -Dtracingstore.redis.address=redis
+      - -Ddatastore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -DwebKnossos.sampleOrganization.enabled=false
       # the following lines need to be adapted for non-localhost deployments
@@ -32,7 +33,7 @@ services:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Dplay.http.router="noDS.Routes"
     volumes:
-      - ./binaryData:/srv/webknossos/binaryData
+      - ./binaryData:/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     user: ${USER_UID:-1000}:${USER_GID:-1000}
@@ -42,9 +43,8 @@ services:
     image: scalableminds/webknossos-datastore:${DOCKER_TAG:-master}
     ports:
       - "9090:9090"
-    entrypoint: bin/webknossos-datastore
     volumes:
-      - ./binaryData:/srv/webknossos-datastore/binaryData
+      - ./binaryData:/webknossos-datastore/binaryData
     command:
       - -J-Xmx20G
       - -J-Xms1G
@@ -52,13 +52,16 @@ services:
       - -Dhttp.port=9090
       - -Dhttp.uri=http://webknossos-datastore:9090
       - -Ddatastore.webKnossos.uri=webknossos:9000
+      - -Ddatastore.redis.address=redis
+    depends_on:
+      redis:
+        condition: service_healthy
 
   webknossos-tracingstore:
     build: webknossos-tracingstore
     image: scalableminds/webknossos-tracingstore:${DOCKER_TAG:-master}
     ports:
       - "9050:9050"
-    entrypoint: bin/webknossos-tracingstore
     command:
       - -J-Xmx20G
       - -J-Xms1G
@@ -139,6 +142,7 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dtracingstore.fossildb.address=fossildb
           -Dtracingstore.redis.address=redis"
+          -Ddatastore.redis.address=redis"
     stdin_open: true
 
   # Tests
@@ -178,7 +182,8 @@ services:
         -v
         "testOnly e2e.* --
           -Dtracingstore.fossildb.address=fossildb
-          -Dtracingstore.redis.address=redis"
+          -Dtracingstore.redis.address=redis
+          -Ddatastore.redis.address=redis"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 

@@ -1,48 +1,65 @@
 module.exports = function(env = {}) {
-  /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
-  var webpack = require("webpack");
-  var fs = require("fs");
-  var path = require("path");
-  const TerserPlugin = require("terser-webpack-plugin");
+  /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
+  const webpack = require("webpack");
+  const fs = require("fs");
+  const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-
-  // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
+  const TerserPlugin = require("terser-webpack-plugin");
   const CopyWebpackPlugin = require("copy-webpack-plugin");
 
-  var srcPath = path.resolve(__dirname, "frontend/javascripts/");
-  var nodePath = "node_modules";
-  var protoPath = path.join(__dirname, "webknossos-datastore/proto/");
+  const srcPath = path.resolve(__dirname, "frontend/javascripts/");
+  const nodePath = "node_modules";
+  const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
+  const publicPath = "/assets/bundle/";
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), String(process.pid), "utf8");
 
   const plugins = [
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": env.production ? '"production"' : '"development"',
+      "process.env.BABEL_ENV": process.env.BABEL_ENV,
     }),
-    new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+    new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/ }),
+    new webpack.ProvidePlugin({
+      // Needed for saxophone, i.e. readable-stream, since it is used without importing
+      // Corresponding issue: https://github.com/nodejs/readable-stream/issues/450
+      process: "process/browser",
+    }),
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-    new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
-      dot: true,
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: "./public/tf-models/**",
+          to: "tf-models/[name][ext]",
+          globOptions: {
+            dot: true,
+          },
+        },
+      ],
     }),
   ];
 
   if (env.production) {
     plugins.push(
       new TerserPlugin({
-        cache: true,
-        parallel: true,
-        sourceMap: true,
         terserOptions: {
           // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
           // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
+          // Update 20.01.2022: Doesn't seem to be bugged any longer, but the size gains (~5%) are not
+          // worth the increased build time (~60%).
           compress: false,
         },
       }),
     );
   }
+
+  const cssLoaderUrlFilter = {
+    // Don't try to handle urls that already point to the assets directory
+    filter: url => !url.startsWith("/assets/"),
+  };
 
   return {
     entry: {
@@ -55,7 +72,7 @@ module.exports = function(env = {}) {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      publicPath: "/assets/bundle/",
+      publicPath,
     },
     module: {
       rules: [
@@ -64,7 +81,7 @@ module.exports = function(env = {}) {
           use: {
             loader: "worker-loader",
             options: {
-              name: "[name].[hash].worker.js",
+              filename: "[name].[contenthash].worker.js",
             },
           },
         },
@@ -77,11 +94,13 @@ module.exports = function(env = {}) {
           test: /\.less$/,
           use: [
             MiniCssExtractPlugin.loader,
-            "css-loader",
+            { loader: "css-loader", options: { url: cssLoaderUrlFilter } },
             {
               loader: "less-loader",
               options: {
-                javascriptEnabled: true,
+                lessOptions: {
+                  javascriptEnabled: true,
+                },
               },
             },
           ],
@@ -90,61 +109,85 @@ module.exports = function(env = {}) {
           test: /\.css$/,
           use: [
             MiniCssExtractPlugin.loader,
-            "css-loader",
+            { loader: "css-loader", options: { url: cssLoaderUrlFilter } },
             {
               loader: "less-loader",
               options: {
-                javascriptEnabled: true,
+                lessOptions: {
+                  javascriptEnabled: true,
+                },
               },
             },
           ],
         },
         {
           test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-          use: {
-            loader: "url-loader",
-            options: {
-              limit: 10000,
-              mimetype: "application/font-woff",
-            },
-          },
+          type: "asset",
+          parser: { dataUrlCondition: { maxSize: 10000 } },
+          // generator: { mimetype: "application/font-woff" },
         },
         {
           test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-          use: "file-loader",
+          type: "asset/resource",
         },
-        { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
-        { test: /\.jpg$/, use: "file-loader" },
-        { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
+        {
+          test: /\.png$/,
+          type: "asset",
+          parser: { dataUrlCondition: { maxSize: 10000 } },
+        },
+        { test: /\.jpg$/, type: "asset/resource" },
+        { test: /\.proto$/, use: ["json-loader", "proto-loader6"] },
       ],
-    },
-    externals: {
-      // fs, tls and net are needed so that airbrake-js can be compiled by webpack
-      fs: "{}",
-      tls: "{}",
-      net: "{}",
     },
     resolve: {
       modules: [srcPath, nodePath, protoPath],
       alias: {
         react: path.resolve("./node_modules/react"),
       },
+      fallback: {
+        // Needed for jsonschema
+        url: require.resolve("url/"),
+      },
     },
     optimization: {
-      minimize: false,
+      minimize: env.production,
       splitChunks: {
-        chunks: "initial",
+        chunks: "all",
+        // Use a consistent name for the vendors chunk
+        name: "vendors~main",
       },
     },
     // See https://webpack.js.org/configuration/devtool/
     devtool: env.production ? "source-map" : "eval-source-map",
     plugins,
     devServer: {
-      contentBase: `${__dirname}/public`,
-      publicPath: "/assets/bundle/",
+      static: {
+        directory: `${__dirname}/public`,
+      },
+      devMiddleware: {
+        publicPath,
+      },
       port: env.PORT != null ? env.PORT : 9002,
       hot: false,
-      inline: false,
+      liveReload: false,
+      client: {
+        overlay: {
+          warnings: false,
+          errors: true,
+        },
+        logging: "error",
+      },
     },
+    cache: {
+      type: "filesystem",
+      buildDependencies: {
+        config: [__filename],
+      },
+    },
+    stats: {
+      preset: "minimal",
+    },
+    // Ignore the lengthy warning considering STLExporter which is added to the exports dynamically
+    ignoreWarnings: [/export 'STLExporter'/],
   };
 };

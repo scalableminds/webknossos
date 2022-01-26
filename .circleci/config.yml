@@ -52,10 +52,10 @@ jobs:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
       - restore_cache:
-          name: Restore webpack-uglifyjs cache
+          name: Restore webpack cache
           keys:
-            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-master
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - webpack-cache-{{ checksum ".circleci/cache_version" }}-master
       - run:
           name: Assert schema.sql and evolutions are equal
           command: |
@@ -110,10 +110,10 @@ jobs:
             - "~/.cache/yarn"
 
       - save_cache:
-          name: Save webpack-uglifyjs cache
-          key: webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          name: Save webpack cache
+          key: webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
-            - "node_modules/.cache/uglifyjs-webpack-plugin"
+            - "node_modules/.cache/webpack"
 
       - run:
           name: Build webknossos docker image

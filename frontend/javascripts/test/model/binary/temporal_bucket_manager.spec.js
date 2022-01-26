@@ -96,8 +96,8 @@ function prepareBuckets(manager, cube) {
   const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], manager, cube);
   const bucket2 = new DataBucket("uint8", [1, 0, 0, 0], manager, cube);
   for (const bucket of [bucket1, bucket2]) {
-    bucket.startDataMutation(_.noop);
-    bucket.endDataMutation(_.noop);
+    bucket.startDataMutation();
+    bucket.endDataMutation();
     bucket.markAsPulled();
   }
   return { bucket1, bucket2 };

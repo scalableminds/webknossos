@@ -115,6 +115,7 @@ dataSet.upload.success=Dataset successfully uploaded. The import is in progress 
 dataSet.create.success=Dataset successfully created
 dataSet.defaultconfiguration.updated=Dataset default configuration updated
 dataSet.list.failed=Failed to retrieve list of data sets.
+dataset.list.writesFailed=Failed to write json for dataset {0}
 dataSet.url.missing=URL missing in the supplied json
 dataSet.dataStore.missing=dataStore missing in the supplied json
 dataSet.dataSet.missing=dataSet missing in the supplied json

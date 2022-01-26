@@ -349,15 +349,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      teams <- allowedTeamsFor(dataSet._id, requestingUserOpt)
-      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization)))
-      logoUrl <- logoUrlFor(dataSet, Some(organization))
-      isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships)
-      lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt)
-      dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
-      publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
-      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
+      teams <- allowedTeamsFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchAllowedTeamsFailed"
+      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization))) ?~> "dataset.list.teamWritesFailed"
+      logoUrl <- logoUrlFor(dataSet, Some(organization)) ?~> "dataset.list.fetchLogoUrlFailed"
+      isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships) ?~> "dataset.list.isEditableCheckFailed"
+      lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt) ?~> "dataset.list.fetchLastUsedTimeFailed"
+      dataStoreJs <- dataStoreService.publicWrites(dataStore) ?~> "dataset.list.dataStoreWritesFailed"
+      dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions) ?~> "dataset.list.fetchDataSourceFailed"
+      publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_)) ?~> "dataset.list.fetchPublicationFailed"
+      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites) ?~> "dataset.list.publicationWritesFailed"
       worker <- workerDAO.findOneByDataStore(dataStore.name).futureBox
       jobsEnabled = conf.Features.jobsEnabled && worker.nonEmpty
     } yield {

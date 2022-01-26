@@ -18,7 +18,7 @@
 <PROJECT_ROOT>/node_modules/documentation/
 <PROJECT_ROOT>/node_modules/flow-coverage-report/
 <PROJECT_ROOT>/node_modules/jsonlint/
-<PROJECT_ROOT>/node_modules/hard-source-webpack-plugin/
+<PROJECT_ROOT>/node_modules/eslint-import-resolver-webpack
 <PROJECT_ROOT>/node_modules/.cache/nyc/
 <PROJECT_ROOT>/.nyc_output
 

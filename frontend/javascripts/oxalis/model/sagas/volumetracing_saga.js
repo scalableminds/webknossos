@@ -13,14 +13,11 @@ import {
   type SetActiveCellAction,
   type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import {
   ResolutionInfo,
   getBoundaries,
   getResolutionInfo,
-  getSegmentationTracingLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   type Saga,
   _takeEvery,
@@ -50,6 +47,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
+import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -57,15 +55,15 @@ import {
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
+  getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getPosition,
   getFlooredPosition,
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-
-import api from "oxalis/api/internal_api";
 import {
   isVolumeDrawingTool,
   isBrushTool,
@@ -100,6 +98,7 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import api from "oxalis/api/internal_api";
 import createProgressCallback from "libs/progress_callback";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
@@ -1013,7 +1012,7 @@ function* performMinCut(): Saga<void> {
     console.log("no skeleton");
     return;
   }
-  const activeTree = getActiveTree(skeleton).getOrElse(null);
+  const activeTree = Utils.toNullable(getActiveTree(skeleton));
 
   if (!activeTree) {
     console.log("no active tree");
@@ -1022,7 +1021,7 @@ function* performMinCut(): Saga<void> {
 
   // activeTree.
 
-  const segmentId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const segmentId = yield* select(state => enforceActiveVolumeTracing(state).activeCellId);
 
   const boundingBoxes = skeleton.userBoundingBoxes;
   if (boundingBoxes.length === 0) {
@@ -1052,7 +1051,7 @@ function* performMinCut(): Saga<void> {
   const seedA = V3.sub(globalSeedA, boundingBox.min);
   const seedB = V3.sub(globalSeedB, boundingBox.min);
 
-  const volumeTracingLayer = yield* select(store => getSegmentationTracingLayer(store.dataset));
+  const volumeTracingLayer = yield* select(store => getActiveSegmentationTracingLayer(store));
   if (!volumeTracingLayer) {
     console.log("no volumeTracing");
     return;

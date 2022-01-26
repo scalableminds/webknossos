@@ -56,13 +56,14 @@ class ProjectController @Inject()(projectService: ProjectService,
   @ApiOperation(value = "Information about a project", nickname = "projectInfo")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this project."),
-      new ApiResponse(code = 400, message = badRequestLabel)))
-  def read(@ApiParam(value = "The id of the project") id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      projectIdValidated <- ObjectId.parse(id)
-      project <- projectDAO.findOne(projectIdValidated) ?~> "project.notFound" ~> NOT_FOUND
-      js <- projectService.publicWrites(project)
-    } yield Ok(js)
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def read(@ApiParam(value = "The id of the project") id: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        projectIdValidated <- ObjectId.parse(id)
+        project <- projectDAO.findOne(projectIdValidated) ?~> "project.notFound" ~> NOT_FOUND
+        js <- projectService.publicWrites(project)
+      } yield Ok(js)
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -75,8 +76,9 @@ class ProjectController @Inject()(projectService: ProjectService,
     } yield JsonOk(Messages("project.remove.success"))
   }
 
-  @ApiOperation(value =
-    """Create a new Project.
+  @ApiOperation(
+    value =
+      """Create a new Project.
 Expects:
  - As JSON object body with keys:
   - name (string) name of the new project
@@ -90,9 +92,9 @@ Expects:
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam(name = "ProjectParameters",
-        required = true,
-        dataTypeClass = classOf[JsObject],
-        paramType = "body")))
+                           required = true,
+                           dataTypeClass = classOf[JsObject],
+                           paramType = "body")))
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       for {

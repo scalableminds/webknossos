@@ -9,7 +9,15 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import io.swagger.annotations.{Api, ApiImplicitParam, ApiImplicitParams, ApiOperation, ApiParam, ApiResponse, ApiResponses}
+import io.swagger.annotations.{
+  Api,
+  ApiImplicitParam,
+  ApiImplicitParams,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiResponses
+}
 import javax.inject.Inject
 import models.annotation._
 import models.annotation.nml.NmlResults.TracingBoxContainer
@@ -44,12 +52,13 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   @ApiOperation(value = "Information about a task", nickname = "taskInfo")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this task."),
-      new ApiResponse(code = 400, message = badRequestLabel)))
-  def read(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound" ~> NOT_FOUND
-      js <- taskService.publicWrites(task)
-    } yield Ok(js)
+          new ApiResponse(code = 400, message = badRequestLabel)))
+  def read(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound" ~> NOT_FOUND
+        js <- taskService.publicWrites(task)
+      } yield Ok(js)
   }
 
   @ApiOperation(hidden = true, value = "")
@@ -70,8 +79,9 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       } yield Ok(Json.toJson(result))
   }
 
-  @ApiOperation(value =
-    """Create new tasks from existing annotation files
+  @ApiOperation(
+    value =
+      """Create new tasks from existing annotation files
 Expects:
  - As Form data:
    - taskTypeId (string) id of the task type to be used for the new tasks
@@ -82,13 +92,15 @@ Expects:
    - boundingBox (BoundingBox, optional) limit the bounding box where the annotators should be active
  - As File attachment
    - A zip file containing base annotations (each either NML or zip with NML + volume) for the new tasks. One task will be created per annotation.
-""", nickname = "taskInfo")
+""",
+    nickname = "taskInfo"
+  )
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam(name = "TaskParameters",
-        required = true,
-        dataTypeClass = classOf[JsObject],
-        paramType = "form")))
+                           required = true,
+                           dataTypeClass = classOf[JsObject],
+                           paramType = "form")))
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"

@@ -354,18 +354,22 @@ class AnnotationController @Inject()(
 
   @ApiOperation(value = "Information about all annotations for a specific task", nickname = "annotationInfo")
   @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON list of objects containing information about the selected annotations."),
-      new ApiResponse(code = 400, message = badRequestLabel)))
-  def annotationsForTask(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      taskIdValidated <- ObjectId.parse(taskId)
-      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
-      project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"
-      jsons <- Fox.serialSequence(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-    } yield Ok(JsArray(jsons.flatten))
-  }
+    Array(
+      new ApiResponse(code = 200,
+                      message = "JSON list of objects containing information about the selected annotations."),
+      new ApiResponse(code = 400, message = badRequestLabel)
+    ))
+  def annotationsForTask(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        taskIdValidated <- ObjectId.parse(taskId)
+        task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
+        project <- projectDAO.findOne(task._project)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
+        annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"
+        jsons <- Fox.serialSequence(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+      } yield Ok(JsArray(jsons.flatten))
+    }
 
   @ApiOperation(hidden = true, value = "")
   def cancel(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

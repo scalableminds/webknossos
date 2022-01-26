@@ -3,10 +3,6 @@
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 
-export function globalPositionToBaseBucket(pos: Vector3): Vector4 {
-  return globalPositionToBucketPosition(pos, [[1, 1, 1]], 0);
-}
-
 export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,
   resolutions: Array<Vector3>,
@@ -28,12 +24,10 @@ export function globalPositionToBucketPosition(
 export function scaleGlobalPositionWithResolution(
   [x, y, z]: Vector3,
   resolution: Vector3,
+  ceil: boolean = false,
 ): Vector3 {
-  return [
-    Math.floor(x / resolution[0]),
-    Math.floor(y / resolution[1]),
-    Math.floor(z / resolution[2]),
-  ];
+  const round = ceil ? Math.ceil : Math.floor;
+  return [round(x / resolution[0]), round(y / resolution[1]), round(z / resolution[2])];
 }
 
 export function zoomedPositionToGlobalPosition(
@@ -110,6 +104,10 @@ export function zoomedPositionToZoomedAddress(
     Math.floor(z / constants.BUCKET_WIDTH),
     resolutionIndex,
   ];
+}
+
+export function zoomedAddressToZoomedPosition([x, y, z, _]: Vector4): Vector3 {
+  return [x * constants.BUCKET_WIDTH, y * constants.BUCKET_WIDTH, z * constants.BUCKET_WIDTH];
 }
 
 // TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo

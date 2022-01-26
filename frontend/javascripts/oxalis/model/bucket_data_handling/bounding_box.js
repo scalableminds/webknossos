@@ -129,6 +129,20 @@ class BoundingBox {
 
     return boxes;
   }
+
+  from_mag1_to_mag(mag: Vector3): BoundingBox {
+    const min = [
+      Math.floor(this.min[0] / mag[0]),
+      Math.floor(this.min[1] / mag[1]),
+      Math.floor(this.min[2] / mag[2]),
+    ];
+    const max = [
+      Math.ceil(this.max[0] / mag[0]),
+      Math.ceil(this.max[1] / mag[1]),
+      Math.ceil(this.max[2] / mag[2]),
+    ];
+    return new BoundingBox({ min, max });
+  }
 }
 
 export default BoundingBox;

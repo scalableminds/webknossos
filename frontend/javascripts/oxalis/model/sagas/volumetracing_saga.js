@@ -1004,7 +1004,7 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborId) {
 }
 
 function* performMinCut(): Saga<void> {
-  yield call([Model, Model.ensureSavedState]);
+  yield* call([Model, Model.ensureSavedState]);
   yield* put(disableSavingAction());
 
   const skeleton = yield* select(store => store.tracing.skeleton);
@@ -1026,7 +1026,9 @@ function* performMinCut(): Saga<void> {
   }
 
   const boundingBoxObj = boundingBoxes[0].boundingBox;
-  const boundingBox = new BoundingBox(boundingBoxObj);
+  const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
+  const targetMag = [2, 2, 1];
+  const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(targetMag);
 
   const nodes = Array.from(activeTree.nodes.values());
 
@@ -1035,33 +1037,35 @@ function* performMinCut(): Saga<void> {
     return;
   }
 
-  const globalSeedA = Utils.floor3(nodes[0].position);
-  const globalSeedB = Utils.floor3(nodes[1].position);
+  const globalSeedA = V3.from_mag1_to_mag(nodes[0].position, targetMag);
+  const globalSeedB = V3.from_mag1_to_mag(nodes[1].position, targetMag);
 
-  const MIN_DIST_TO_SEED = 30;
+  const MIN_DIST_TO_SEED = 30 / targetMag[0];
 
   if (V3.length(V3.sub(globalSeedA, globalSeedB)) < 2 * MIN_DIST_TO_SEED) {
     console.warn(`Nodes are closer than ${MIN_DIST_TO_SEED} vx apart.`);
   }
 
-  const seedA = V3.sub(globalSeedA, boundingBox.min);
-  const seedB = V3.sub(globalSeedB, boundingBox.min);
+  const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
+  const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
 
   const volumeTracingLayer = yield* select(store => getActiveSegmentationTracingLayer(store));
   if (!volumeTracingLayer) {
     console.log("no volumeTracing");
     return;
   }
+  console.log("boundingBoxTarget.getVolume()", boundingBoxTarget.getVolume());
   const inputData = yield* call(
     [api.data, api.data.getDataFor2DBoundingBox],
     volumeTracingLayer.name,
-    boundingBox,
+    boundingBoxMag1,
+    1, // mag 2
   );
 
-  const size = boundingBox.getSize();
+  const size = boundingBoxTarget.getSize();
   const l = (x, y, z) => z * size[1] * size[0] + y * size[0] + x;
   const ll = ([x, y, z]) => z * size[1] * size[0] + y * size[0] + x;
-  const edgeBuffer = new Uint16Array(boundingBox.getVolume()); // .fill(2 ** 12 - 1);
+  const edgeBuffer = new Uint16Array(boundingBoxTarget.getVolume()); // .fill(2 ** 12 - 1);
 
   if (inputData[ll(seedA)] !== inputData[ll(seedB)]) {
     console.warn("Given seeds are not placed on same segment");
@@ -1124,8 +1128,8 @@ function* performMinCut(): Saga<void> {
 
   function populateDistanceField() {
     // Breadth-first search from seedA to seedB
-    const distanceField = new Uint16Array(boundingBox.getVolume());
-    const directionField = new Uint8Array(boundingBox.getVolume()).fill(255);
+    const distanceField = new Uint16Array(boundingBoxTarget.getVolume());
+    const directionField = new Uint8Array(boundingBoxTarget.getVolume()).fill(255);
     const queue: Array<{ voxel: Array<number>, distance: number, usedEdgeIdx: number }> = [
       { voxel: seedA, distance: 1, usedEdgeIdx: 255 },
     ];
@@ -1263,7 +1267,7 @@ function* performMinCut(): Saga<void> {
 
   function traverseResidualsField() {
     // Breadth-first search from seedA to seedB
-    const visitedField = new Uint16Array(boundingBox.getVolume());
+    const visitedField = new Uint16Array(boundingBoxTarget.getVolume());
     const queue: Array<{ voxel: Array<number> }> = [{ voxel: seedA }];
     while (queue.length > 0) {
       const { voxel: currVoxel } = queue.shift();
@@ -1344,7 +1348,10 @@ function* performMinCut(): Saga<void> {
               const neighborPos = V3.add(currentPos, neighbor);
 
               if (visitedField[ll(neighborPos)] === 0) {
-                api.data.labelVoxels([V3.add(boundingBox.min, neighborPos)], 0);
+                api.data.labelVoxels(
+                  [V3.from_mag_to_mag1(V3.add(boundingBoxTarget.min, neighborPos), targetMag)],
+                  0,
+                );
               }
             }
           }
@@ -1356,7 +1363,7 @@ function* performMinCut(): Saga<void> {
   labelDeletedEdges();
   console.timeEnd("labelDeletedEdges");
   console.timeEnd("total min-cut");
-  console.log({ seedA, seedB, boundingBox, inputData, edgeBuffer });
+  console.log({ seedA, seedB, boundingBoxMag1, inputData, edgeBuffer });
 }
 
 export function* listenToMinCut(): Saga<void> {

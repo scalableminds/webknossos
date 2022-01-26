@@ -209,6 +209,14 @@ V3.divide3 = function divide3(a, k, r) {
   return r;
 };
 
+V3.from_mag1_to_mag = (vec, target_mag) => {
+  return V3.floor(V3.divide3(vec, target_mag));
+};
+
+V3.from_mag_to_mag1 = (vec, source_mag) => {
+  return V3.floor(V3.scale3(vec, source_mag));
+};
+
 const _tmpVec = [0, 0, 0];
 V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   // Computes the distance between two vectors while respecting a 3 dimensional scale

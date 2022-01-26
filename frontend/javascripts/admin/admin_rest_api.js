@@ -57,7 +57,7 @@ import {
   type WkConnectDatasetConfig,
   type APIMeshFile,
 } from "types/api_flow_types";
-import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
+import { ControlModeEnum, type Vector3, type Vector6, MappingStatusEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   Tracing,
@@ -1039,6 +1039,19 @@ export function startNucleiInferralJob(
   );
 }
 
+export function startGlobalizeFloodfillsJob(
+  organizationName: string,
+  datasetName: string,
+  newDataSetName: string,
+  layerName: string,
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/globalizeFloodfills/${organizationName}/${datasetName}?newDataSetName=${newDataSetName}&layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {
@@ -1736,6 +1749,10 @@ export function computeIsosurface(
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
   const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
+  const mapping =
+    mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED ? mappingInfo.mappingName : undefined;
+  const mappingType =
+    mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED ? mappingInfo.mappingType : undefined;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,
@@ -1750,8 +1767,8 @@ export function computeIsosurface(
           // Segment to build mesh for
           segmentId,
           // Name of mapping to apply before building mesh (optional)
-          mapping: mappingInfo.mappingName,
-          mappingType: mappingInfo.mappingType,
+          mapping,
+          mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
           scale,

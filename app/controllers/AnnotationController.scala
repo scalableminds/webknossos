@@ -352,7 +352,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
     }
 
-  @ApiOperation(value = "Information about all annotations for a specific task", nickname = "annotationInfo")
+  @ApiOperation(value = "Information about all annotations for a specific task", nickname = "annotationInfoForTask")
   @ApiResponses(
     Array(
       new ApiResponse(code = 200,

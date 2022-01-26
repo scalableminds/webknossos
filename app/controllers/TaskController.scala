@@ -93,14 +93,14 @@ Expects:
  - As File attachment
    - A zip file containing base annotations (each either NML or zip with NML + volume) for the new tasks. One task will be created per annotation.
 """,
-    nickname = "taskInfo"
+    nickname = "taskCreateFromFiles"
   )
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam(name = "TaskParameters",
                            required = true,
                            dataTypeClass = classOf[JsObject],
-                           paramType = "form")))
+                           paramType = "body")))
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"

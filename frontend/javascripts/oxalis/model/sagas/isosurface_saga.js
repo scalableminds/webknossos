@@ -9,16 +9,11 @@ import {
   getResolutionInfo,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  changeActiveIsosurfaceCellAction,
-  type ChangeActiveIsosurfaceCellAction,
-} from "oxalis/model/actions/segmentation_actions";
+import { type LoadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
 import { type Vector3 } from "oxalis/constants";
-import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   removeIsosurfaceAction,
   addIsosurfaceAction,
-  finishedRefreshingIsosurfacesAction,
   finishedLoadingIsosurfaceAction,
   startedLoadingIsosurfaceAction,
   type ImportIsosurfaceFromStlAction,
@@ -131,24 +126,15 @@ function getNeighborPosition(
   return neighboringPosition;
 }
 
-// Since isosurface rendering is only supported in view mode right now
-// (active cell id is only defined in volume annotations, mapping support
-// for datasets is limited in volume tracings etc.), we use another state
-// variable for the "active cell" in view mode. The cell can be changed via
-// shift + click on the isosurface, by clicking on its list entry in the
-// meshes tab or by clicking on the "load isosurface for centered cell" button.
-let currentViewIsosurfaceCellId = 0;
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
 const batchCounterPerSegment: { [key: number]: number } = {};
 const MAXIMUM_BATCH_SIZE = 50;
 
-function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
-  currentViewIsosurfaceCellId = action.cellId;
+function* loadAdHocIsosurface(action: LoadAdHocMeshAction): Saga<void> {
   yield* call(
     ensureSuitableIsosurface,
-    null,
     action.seedPosition,
     action.cellId,
     false,
@@ -156,37 +142,20 @@ function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): 
   );
 }
 
-// This function either returns the activeCellId of the current volume tracing
-// or the view-only active cell id
-function* getCurrentCellId(): Saga<number> {
-  const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
-  if (volumeTracing != null) {
-    return volumeTracing.activeCellId;
-  }
-
-  return currentViewIsosurfaceCellId;
-}
-
 function* ensureSuitableIsosurface(
-  maybeFlycamAction: ?FlycamAction,
-  seedPosition?: Vector3,
-  cellId?: number,
+  seedPosition: Vector3,
+  cellId: number,
   removeExistingIsosurface: boolean = false,
   layerName?: ?string,
 ): Saga<void> {
-  const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
   const layer =
     layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
 
-  if (segmentId === 0 || layer == null) {
-    return;
-  }
-  // We need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
-  if (maybeFlycamAction && !maybeFlycamAction.shouldRefreshIsosurface) {
+  if (cellId === 0 || layer == null) {
     return;
   }
 
-  yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface, layer);
+  yield* call(loadIsosurfaceForSegmentId, cellId, seedPosition, removeExistingIsosurface, layer);
 }
 
 function* getInfoForIsosurfaceLoading(
@@ -208,7 +177,7 @@ function* getInfoForIsosurfaceLoading(
 
 function* loadIsosurfaceForSegmentId(
   segmentId: number,
-  seedPosition: ?Vector3,
+  seedPosition: Vector3,
   removeExistingIsosurface: boolean,
   layer: DataLayer,
 ): Saga<void> {
@@ -244,14 +213,12 @@ function* loadIsosurfaceWithNeighbors(
   dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
-  seedPosition: ?Vector3,
+  position: Vector3,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const position =
-    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
 
@@ -411,22 +378,12 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   yield* put(addIsosurfaceAction(layerName, segmentId, seedPosition, true));
 }
 
-function* removeIsosurface(
-  action: RemoveIsosurfaceAction,
-  removeFromScene: boolean = true,
-): Saga<void> {
+function removeIsosurface(action: RemoveIsosurfaceAction, removeFromScene: boolean = true): void {
   const { layerName, cellId } = action;
   if (removeFromScene) {
     getSceneController().removeIsosurfaceById(cellId);
   }
   removeMapForSegment(layerName, cellId);
-
-  const currentCellId = yield* call(getCurrentCellId);
-  if (cellId === currentCellId) {
-    // Clear the active cell id to avoid that the isosurface is immediately reconstructed
-    // when the position changes.
-    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0]));
-  }
 }
 
 function* markEditedCellAsDirty(): Saga<void> {
@@ -440,11 +397,10 @@ function* markEditedCellAsDirty(): Saga<void> {
 function* refreshIsosurfaces(): Saga<void> {
   yield* put(saveNowAction());
   // We reload all cells that got modified till the start of reloading.
-  // By that we avoid that removing cells that got annotated during reloading from the modifiedCells set.
+  // By that we avoid to remove cells that got annotated during reloading from the modifiedCells set.
   const currentlyModifiedCells = new Set(modifiedCells);
   modifiedCells.clear();
 
-  // Also load the Isosurface at the current flycam position.
   const segmentationLayer = Model.getVisibleSegmentationLayer();
   if (!segmentationLayer) {
     return;
@@ -456,49 +412,41 @@ function* refreshIsosurfaces(): Saga<void> {
     if (!currentlyModifiedCells.has(cellId)) {
       continue;
     }
-    const isosurfacePositions = threeDMap.entries().filter(([value, _position]) => value);
-    if (isosurfacePositions.length === 0) {
-      continue;
-    }
-    // Removing Isosurface from cache.
-    yield* call(removeIsosurface, removeIsosurfaceAction(segmentationLayer.name, cellId), false);
-    // The isosurface should only be removed once after re-fetching the isosurface first position.
-    let shouldBeRemoved = true;
-    for (const [, position] of isosurfacePositions) {
-      // Reload the Isosurface at the given position if it isn't already loaded there.
-      // This is done to ensure that every voxel of the isosurface is reloaded.
-      yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
-      shouldBeRemoved = false;
-    }
+
+    yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, segmentationLayer.name);
   }
-  const position = yield* select(state => getFlooredPosition(state.flycam));
-  const cellIdAtFlycamPosition = segmentationLayer.cube.getDataValue(position);
-  yield* call(ensureSuitableIsosurface, null, position, cellIdAtFlycamPosition);
-  yield* put(finishedRefreshingIsosurfacesAction());
 }
 
 function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
-  const { cellId } = action;
+  const { cellId, layerName } = action;
 
   const threeDMap = isosurfacesMapByLayer[action.layerName].get(cellId);
-  const isosurfacePositions = threeDMap
-    ? threeDMap.entries().filter(([value, _position]) => value)
-    : [];
+  if (threeDMap == null) return;
+
+  yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+}
+
+function* _refreshIsosurfaceWithMap(
+  cellId: number,
+  threeDMap: ThreeDMap<boolean>,
+  layerName: string,
+): Saga<void> {
+  const isosurfacePositions = threeDMap.entries().filter(([value, _position]) => value);
   if (isosurfacePositions.length === 0) {
     return;
   }
-  yield* put(startedLoadingIsosurfaceAction(action.layerName, cellId));
-  // Removing Isosurface from cache.
-  yield* call(removeIsosurface, removeIsosurfaceAction(action.layerName, cellId), false);
+  yield* put(startedLoadingIsosurfaceAction(layerName, cellId));
+  // Remove isosurface from cache.
+  yield* call(removeIsosurface, removeIsosurfaceAction(layerName, cellId), false);
   // The isosurface should only be removed once after re-fetching the isosurface first position.
   let shouldBeRemoved = true;
   for (const [, position] of isosurfacePositions) {
-    // Reload the Isosurface at the given position if it isn't already loaded there.
+    // Reload the isosurface at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the isosurface is reloaded.
-    yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
+    yield* call(ensureSuitableIsosurface, position, cellId, shouldBeRemoved);
     shouldBeRemoved = false;
   }
-  yield* put(finishedLoadingIsosurfaceAction(action.layerName, cellId));
+  yield* put(finishedLoadingIsosurfaceAction(layerName, cellId));
 }
 
 function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
@@ -511,8 +459,7 @@ export default function* isosurfaceSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
   const isosurfaceActionChannel = yield _actionChannel("CHANGE_ACTIVE_ISOSURFACE_CELL");
   yield* take("WK_READY");
-  yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
-  yield _takeEvery(isosurfaceActionChannel, changeActiveIsosurfaceCell);
+  yield _takeEvery(isosurfaceActionChannel, loadAdHocIsosurface);
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);

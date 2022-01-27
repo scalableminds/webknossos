@@ -2,21 +2,21 @@
 
 import type { Vector3 } from "oxalis/constants";
 
-export type ChangeActiveIsosurfaceCellAction = {
-  type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
+export type LoadAdHocMeshAction = {
+  type: "LOAD_AD_HOC_MESH_ACTION",
   cellId: number,
   seedPosition: Vector3,
   layerName?: string,
 };
 
-export type IsosurfaceAction = ChangeActiveIsosurfaceCellAction;
+export type SegmentationAction = LoadAdHocMeshAction;
 
-export const changeActiveIsosurfaceCellAction = (
+export const loadAdHocMeshAction = (
   cellId: number,
   seedPosition: Vector3,
   layerName?: string,
-): ChangeActiveIsosurfaceCellAction => ({
-  type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
+): LoadAdHocMeshAction => ({
+  type: "LOAD_AD_HOC_MESH_ACTION",
   cellId,
   seedPosition,
   layerName,

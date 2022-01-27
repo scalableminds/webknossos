@@ -83,16 +83,14 @@ const getLoadPrecomputedMeshMenuItem = (
 
 const getComputeMeshAdHocMenuItem = (
   segment,
-  changeActiveIsosurfaceId,
+  loadAdHocMesh,
   isSegmentationLayerVisible,
   andCloseContextMenu,
 ) => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return (
     <Menu.Item
-      onClick={() =>
-        andCloseContextMenu(changeActiveIsosurfaceId(segment.id, segment.somePosition))
-      }
+      onClick={() => andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition))}
       disabled={disabled}
     >
       <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
@@ -116,9 +114,9 @@ type Props = {
   updateSegment: (number, $Shape<Segment>, string) => void,
   onSelectSegment: Segment => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
-  changeActiveIsosurfaceId: (?number, Vector3) => void,
+  loadAdHocMesh: (number, Vector3) => void,
   isosurface: ?IsosurfaceInformation,
-  setPosition: (Vector3, boolean) => void,
+  setPosition: Vector3 => void,
   loadPrecomputedMeshForSegment: Segment => Promise<void>,
   currentMeshFile: ?APIMeshFile,
 };
@@ -148,7 +146,7 @@ function _SegmentListItem({
   updateSegment,
   onSelectSegment,
   visibleSegmentationLayer,
-  changeActiveIsosurfaceId,
+  loadAdHocMesh,
   isosurface,
   setPosition,
   loadPrecomputedMeshForSegment,
@@ -171,7 +169,7 @@ function _SegmentListItem({
       )}
       {getComputeMeshAdHocMenuItem(
         segment,
-        changeActiveIsosurfaceId,
+        loadAdHocMesh,
         visibleSegmentationLayer != null,
         andCloseContextMenu,
       )}
@@ -271,7 +269,6 @@ function _SegmentListItem({
           isHovered={segment.id === hoveredSegmentId}
           isosurface={isosurface}
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
-          changeActiveIsosurfaceId={changeActiveIsosurfaceId}
           visibleSegmentationLayer={visibleSegmentationLayer}
           setPosition={setPosition}
         />
@@ -288,8 +285,7 @@ function _MeshInfoItem(props: {
   isosurface: ?IsosurfaceInformation,
   handleSegmentDropdownMenuVisibility: (number, boolean) => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
-  changeActiveIsosurfaceId: (?number, Vector3) => void,
-  setPosition: (Vector3, boolean) => void,
+  setPosition: Vector3 => void,
 }) {
   const dispatch = useDispatch();
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
@@ -339,8 +335,6 @@ function _MeshInfoItem(props: {
             return;
           }
           Store.dispatch(removeIsosurfaceAction(props.visibleSegmentationLayer.name, segment.id));
-          // Reset the active mesh id so the deleted one is not reloaded immediately
-          props.changeActiveIsosurfaceId(0, [0, 0, 0]);
         }}
       />
     </Tooltip>
@@ -383,9 +377,7 @@ function _MeshInfoItem(props: {
           {toggleVisibilityCheckbox}
           <span
             onClick={() => {
-              // Reset the current active isosurface id if a precomputed isosurface is activated
-              props.changeActiveIsosurfaceId(isPrecomputed ? 0 : segment.id, seedPosition);
-              props.setPosition(seedPosition, false);
+              props.setPosition(seedPosition);
             }}
             style={{ ...textStyle, marginLeft: 8 }}
           >

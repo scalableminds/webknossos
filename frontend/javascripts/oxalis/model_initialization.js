@@ -66,7 +66,7 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
@@ -664,9 +664,7 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
           if (isPrecomputed) {
             // pass
           } else {
-            Store.dispatch(
-              changeActiveIsosurfaceCellAction(segmentId, seedPosition, effectiveLayerName),
-            );
+            Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, effectiveLayerName));
           }
         }
       }

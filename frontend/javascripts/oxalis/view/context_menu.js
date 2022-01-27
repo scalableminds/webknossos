@@ -16,7 +16,7 @@ import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { Dispatch } from "redux";
 import { connect, useDispatch, useSelector } from "react-redux";
 import { V3 } from "libs/mjs";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
 import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
@@ -498,7 +498,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
       Toast.info("No segment found at the clicked position");
       return;
     }
-    dispatch(changeActiveIsosurfaceCellAction(id, globalPosition));
+    dispatch(loadAdHocMeshAction(id, globalPosition));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);

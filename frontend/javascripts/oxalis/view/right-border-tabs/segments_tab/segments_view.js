@@ -10,7 +10,7 @@ import memoizeOne from "memoize-one";
 import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { ExtractReturn } from "libs/type_helpers";
 import { type Vector3, MappingStatusEnum } from "oxalis/constants";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
@@ -158,17 +158,14 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
     }
   },
-  changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3) {
-    if (cellId == null) {
-      return;
-    }
-    dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition));
+  loadAdHocMesh(cellId: number, seedPosition: Vector3) {
+    dispatch(loadAdHocMeshAction(cellId, seedPosition));
   },
   setCurrentMeshFile(layerName: string, fileName: string) {
     dispatch(updateCurrentMeshFileAction(layerName, fileName));
   },
-  setPosition(position: Vector3, shouldRefreshIsosurface?: boolean) {
-    dispatch(setPositionAction(position, null, shouldRefreshIsosurface));
+  setPosition(position: Vector3) {
+    dispatch(setPositionAction(position));
   },
   updateSegment(segmentId: number, segmentShape: $Shape<Segment>, layerName: string) {
     dispatch(updateSegmentAction(segmentId, segmentShape, layerName));

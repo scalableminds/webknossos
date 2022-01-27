@@ -124,9 +124,6 @@ export type RefreshIsosurfacesAction = {
   type: "REFRESH_ISOSURFACES",
 };
 
-export type FinishedRefreshingIsosurfacesAction = {
-  type: "FINISHED_REFRESHING_ISOSURFACES",
-};
 export type RefreshIsosurfaceAction = {
   type: "REFRESH_ISOSURFACE",
   layerName: string,
@@ -195,7 +192,6 @@ export type AnnotationActionTypes =
   | UpdateIsosurfaceVisibilityAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
-  | FinishedRefreshingIsosurfacesAction
   | RefreshIsosurfaceAction
   | StartedLoadingIsosurfaceAction
   | FinishedLoadingIsosurfaceAction
@@ -365,10 +361,6 @@ export const triggerIsosurfaceDownloadAction = (
 
 export const refreshIsosurfacesAction = (): RefreshIsosurfacesAction => ({
   type: "REFRESH_ISOSURFACES",
-});
-
-export const finishedRefreshingIsosurfacesAction = (): FinishedRefreshingIsosurfacesAction => ({
-  type: "FINISHED_REFRESHING_ISOSURFACES",
 });
 
 export const refreshIsosurfaceAction = (

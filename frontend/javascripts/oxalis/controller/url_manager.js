@@ -203,7 +203,7 @@ class UrlManager {
           .filter(({ isVisible }: IsosurfaceInformation) => isVisible)
           .map(({ segmentId, seedPosition, isPrecomputed }: IsosurfaceInformation) => ({
             segmentId,
-            seedPosition,
+            seedPosition: V3.floor(seedPosition),
             isPrecomputed,
           }));
         stateByLayer[layerName] = { meshInfo: { meshFileName, meshes } };

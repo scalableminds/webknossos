@@ -51,7 +51,7 @@ test.beforeEach(async t => {
 
   // Ensure the slow compression is disabled by default. Tests may change
   // this individually.
-  t.context.enableSlowCompression(false);
+  t.context.setSlowCompression(false);
 
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
@@ -868,7 +868,7 @@ async function undoEraseInMag4Helper(t, loadBeforeUndo) {
 }
 
 test.serial("Provoke race condition when bucket compression is very slow", async t => {
-  t.context.enableSlowCompression(true);
+  t.context.setSlowCompression(true);
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,

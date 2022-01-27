@@ -97,7 +97,7 @@ mockRequire(
   "oxalis/workers/byte_array_lz4_compression.worker",
   "oxalis/workers/slow_byte_array_lz4_compression.worker",
 );
-const { enableSlowCompression } = mockRequire.reRequire(
+const { setSlowCompression } = mockRequire.reRequire(
   "oxalis/workers/byte_array_lz4_compression.worker",
 );
 
@@ -149,7 +149,7 @@ export function __setupOxalis(t, mode, apiVersion) {
   };
   t.context.model = Model;
   t.context.mocks = { Request };
-  t.context.enableSlowCompression = enableSlowCompression;
+  t.context.setSlowCompression = setSlowCompression;
 
   const webknossos = new OxalisApi(Model);
   const organizationName = "Connectomics Department";

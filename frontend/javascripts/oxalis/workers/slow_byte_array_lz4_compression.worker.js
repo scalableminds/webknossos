@@ -11,7 +11,7 @@ import { expose } from "./comlink_wrapper";
 
 let isSleepEnabled = false;
 
-export function enableSlowCompression(isEnabled: boolean) {
+export function setSlowCompression(isEnabled: boolean) {
   isSleepEnabled = isEnabled;
 }
 

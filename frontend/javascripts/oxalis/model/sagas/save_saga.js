@@ -641,6 +641,11 @@ export function* pushTracingTypeAsync(
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
 
+    const allowUpdate = yield* select(
+      state => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
+    );
+    if (!allowUpdate) return;
+
     saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
     if (saveQueue.length === 0) {
       // Save queue is empty, wait for push event

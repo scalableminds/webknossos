@@ -3,8 +3,6 @@
 // and is ONLY meant for mocking during tests. This implementation
 // allows to introduce an artificial delay for compression/decompression.
 
-import lz4 from "lz4js";
-
 import { __compressLz4BlockHelper } from "oxalis/workers/byte_array_lz4_compression.worker";
 import { sleep } from "libs/utils";
 

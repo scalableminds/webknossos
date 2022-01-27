@@ -55,6 +55,7 @@ import {
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
 import {
   getPosition,
   getFlooredPosition,
@@ -662,9 +663,7 @@ export function* floodFill(): Saga<void> {
       yield* put(
         addUserBoundingBoxAction({
           boundingBox: coveredBoundingBox,
-          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-            ",",
-          )}, timestamp=${new Date().getTime()})`,
+          name: getBBoxNameForPartialFloodfill(oldSegmentIdAtSeed, activeCellId, seedPosition),
           color: Utils.getRandomColor(),
           isVisible: true,
         }),

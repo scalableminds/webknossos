@@ -16,7 +16,10 @@ import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { Dispatch } from "redux";
 import { connect, useDispatch, useSelector } from "react-redux";
 import { V3 } from "libs/mjs";
-import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
@@ -43,7 +46,6 @@ import {
   handleFloodFillFromGlobalPosition,
 } from "oxalis/controller/combinations/volume_handlers";
 import {
-  loadMeshFromFile,
   maybeFetchMeshFiles,
   withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -479,13 +481,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
         return;
       }
 
-      await loadMeshFromFile(
-        id,
-        globalPosition,
-        currentMeshFile.meshFileName,
-        visibleSegmentationLayer,
-        dataset,
-      );
+      dispatch(loadPrecomputedMeshAction(id, globalPosition, currentMeshFile.meshFileName));
     }
   };
 

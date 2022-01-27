@@ -66,7 +66,10 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
-import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
@@ -662,7 +665,9 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
         for (const mesh of meshes) {
           const { segmentId, seedPosition, isPrecomputed } = mesh;
           if (isPrecomputed) {
-            // pass
+            Store.dispatch(
+              loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+            );
           } else {
             Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, effectiveLayerName));
           }

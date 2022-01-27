@@ -52,7 +52,7 @@ const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmat
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile,
-  loadPrecomputedMeshForSegment,
+  loadPrecomputedMesh,
   andCloseContextMenu,
   layerName,
   mappingInfo,
@@ -61,7 +61,12 @@ const getLoadPrecomputedMeshMenuItem = (
 
   return (
     <MenuItemWithMappingActivationConfirmation
-      onClick={() => andCloseContextMenu(loadPrecomputedMeshForSegment(segment))}
+      onClick={() =>
+        andCloseContextMenu(
+          // $FlowIgnore[incompatible-call] If currentMeshFile is null, the menu entry is disabled and cannot be clicked
+          loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
+        )
+      }
       disabled={!hasCurrentMeshFile}
       currentMeshFile={currentMeshFile}
       layerName={layerName}
@@ -115,9 +120,9 @@ type Props = {
   onSelectSegment: Segment => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
   loadAdHocMesh: (number, Vector3) => void,
+  loadPrecomputedMesh: (number, Vector3, string) => void,
   isosurface: ?IsosurfaceInformation,
   setPosition: Vector3 => void,
-  loadPrecomputedMeshForSegment: Segment => Promise<void>,
   currentMeshFile: ?APIMeshFile,
 };
 
@@ -149,7 +154,7 @@ function _SegmentListItem({
   loadAdHocMesh,
   isosurface,
   setPosition,
-  loadPrecomputedMeshForSegment,
+  loadPrecomputedMesh,
   currentMeshFile,
 }: Props) {
   const mappedId = mapId(segment.id);
@@ -162,7 +167,7 @@ function _SegmentListItem({
       {getLoadPrecomputedMeshMenuItem(
         segment,
         currentMeshFile,
-        loadPrecomputedMeshForSegment,
+        loadPrecomputedMesh,
         andCloseContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,

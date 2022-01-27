@@ -37,7 +37,10 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
@@ -79,10 +82,7 @@ import {
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { maybeFetchMeshFiles } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
@@ -1653,7 +1653,9 @@ class DataApi {
       }
     }
 
-    await loadMeshFromFile(segmentId, seedPosition, meshFileName, segmentationLayer, dataset);
+    Store.dispatch(
+      loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+    );
   }
 
   /**

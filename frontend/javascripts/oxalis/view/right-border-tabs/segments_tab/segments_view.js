@@ -10,7 +10,10 @@ import memoizeOne from "memoize-one";
 import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { ExtractReturn } from "libs/type_helpers";
 import { type Vector3, MappingStatusEnum } from "oxalis/constants";
-import { loadAdHocMeshAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
@@ -31,7 +34,6 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import {
-  loadMeshFromFile,
   maybeFetchMeshFiles,
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -160,6 +162,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
   },
   loadAdHocMesh(cellId: number, seedPosition: Vector3) {
     dispatch(loadAdHocMeshAction(cellId, seedPosition));
+  },
+  loadPrecomputedMesh(cellId: number, seedPosition: Vector3, meshFileName: string) {
+    dispatch(loadPrecomputedMeshAction(cellId, seedPosition, meshFileName));
   },
   setCurrentMeshFile(layerName: string, fileName: string) {
     dispatch(updateCurrentMeshFileAction(layerName, fileName));
@@ -336,21 +341,6 @@ class SegmentsView extends React.Component<Props, State> {
       disabled,
       title,
     };
-  };
-
-  loadPrecomputedMeshForSegment = async (segment: Segment) => {
-    const { dataset, currentMeshFile, visibleSegmentationLayer } = this.props;
-    if (!currentMeshFile || !visibleSegmentationLayer) {
-      return;
-    }
-
-    await loadMeshFromFile(
-      segment.id,
-      segment.somePosition,
-      currentMeshFile.meshFileName,
-      visibleSegmentationLayer,
-      dataset,
-    );
   };
 
   onSelectSegment = (segment: Segment) => {
@@ -617,7 +607,6 @@ class SegmentsView extends React.Component<Props, State> {
                         mapId={mapId}
                         segment={segment}
                         centeredSegmentId={centeredSegmentId}
-                        loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
                         selectedSegmentId={this.state.selectedSegmentId}
                         activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                         onSelectSegment={this.onSelectSegment}

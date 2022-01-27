@@ -1,5 +1,6 @@
 // @flow
 import { saveAs } from "file-saver";
+import _ from "lodash";
 
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
@@ -271,11 +272,24 @@ function* loadIsosurfaceWithNeighbors(
   yield* put(finishedLoadingIsosurfaceAction(layer.name, segmentId));
 }
 
-function hasBatchCounterExceededLimit(segmentId: number): boolean {
-  return (
-    batchCounterPerSegment[segmentId] > (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE)
-  );
+function getAdHocMeshLoadingLimit(): number {
+  return window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE;
 }
+
+function hasBatchCounterExceededLimit(segmentId: number): boolean {
+  return batchCounterPerSegment[segmentId] > getAdHocMeshLoadingLimit();
+}
+
+function _warnAboutAdHocMeshLimit(segmentId: number) {
+  const warning = "Reached ad-hoc mesh loading limit";
+  console.warn(`${warning} for segment ${segmentId}`);
+  ErrorHandling.notify(warning, {
+    segmentId,
+    limit: getAdHocMeshLoadingLimit(),
+  });
+}
+// Avoid warning about the same segment multiple times
+const warnAboutAdHocMeshLimit = _.memoize(_warnAboutAdHocMeshLimit);
 
 function* maybeLoadIsosurface(
   dataset: APIDataset,
@@ -293,6 +307,7 @@ function* maybeLoadIsosurface(
     return [];
   }
   if (hasBatchCounterExceededLimit(segmentId)) {
+    warnAboutAdHocMeshLimit(segmentId);
     return [];
   }
   batchCounterPerSegment[segmentId]++;

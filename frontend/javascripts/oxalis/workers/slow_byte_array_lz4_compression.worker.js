@@ -5,6 +5,7 @@
 
 import lz4 from "lz4js";
 
+import { __compressLz4BlockHelper } from "oxalis/workers/byte_array_lz4_compression.worker";
 import { sleep } from "libs/utils";
 
 import { expose } from "./comlink_wrapper";
@@ -19,10 +20,7 @@ async function slowCompressLz4Block(data: Uint8Array, compress: boolean): Promis
   if (isSleepEnabled) {
     await sleep(400);
   }
-  if (compress) {
-    return lz4.compress(data);
-  }
-  return lz4.decompress(data);
+  return __compressLz4BlockHelper(data, compress);
 }
 
 export default expose<typeof slowCompressLz4Block>(slowCompressLz4Block);

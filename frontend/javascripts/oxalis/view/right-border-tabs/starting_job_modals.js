@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import React, { useEffect, useState, type Node } from "react";
 import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
@@ -186,8 +187,7 @@ function StartingJobModal(props: StartingJoblModalProps) {
       <br />
       <div style={{ textAlign: "center" }}>
         <img
-          //TODO: get an image
-          src="/assets/images/nuclei_inferral_example.jpg"
+          src={`/assets/images/${_.snakeCase(jobName)}_example.jpg`}
           alt={`${jobName} example`}
           style={{ width: 400, height: "auto", borderRadius: 3 }}
         />

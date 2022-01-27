@@ -107,11 +107,15 @@ function* performMinCut(): Saga<void> {
   const globalSeedA = V3.from_mag1_to_mag(nodes[0].position, targetMag);
   const globalSeedB = V3.from_mag1_to_mag(nodes[1].position, targetMag);
 
-  const MIN_DIST_TO_SEED = 30 / targetMag[0];
+  let MIN_DIST_TO_SEED = 30 / targetMag[0];
 
-  if (V3.length(V3.sub(globalSeedA, globalSeedB)) < 2 * MIN_DIST_TO_SEED) {
-    console.warn(`Nodes are closer than ${MIN_DIST_TO_SEED} vx apart.`);
-  }
+  // if (V3.length(V3.sub(globalSeedA, globalSeedB)) < 2 * MIN_DIST_TO_SEED) {
+  //   console.warn(`Nodes are closer than ${MIN_DIST_TO_SEED} vx apart.`);
+  // }
+
+  MIN_DIST_TO_SEED = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, MIN_DIST_TO_SEED);
+
+  console.log("automatically setting MIN_DIST_TO_SEED to ", MIN_DIST_TO_SEED);
 
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
   const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
@@ -246,6 +250,7 @@ function* performMinCut(): Saga<void> {
     let foundSeed = false;
     const voxelStack = [seedB];
     const maxDistance = distanceField[ll(seedB)];
+    let removedEdgeCount = 0;
 
     while (voxelStack.length > 0) {
       const currentVoxel = voxelStack.pop();
@@ -262,7 +267,7 @@ function* performMinCut(): Saga<void> {
         currentVoxel[1] === seedA[1] &&
         currentVoxel[2] === seedA[2]
       ) {
-        console.log("found target seed");
+        console.log("finished removing shortest path. deleted edges:", removedEdgeCount);
         foundSeed = true;
         break;
       }
@@ -309,6 +314,7 @@ function* performMinCut(): Saga<void> {
       const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
 
       if (distToSeed > MIN_DIST_TO_SEED) {
+        removedEdgeCount++;
         path.unshift(neighborPos);
 
         // Remove ingoing
@@ -336,7 +342,7 @@ function* performMinCut(): Saga<void> {
       voxelStack.push(neighborPos);
     }
 
-    return { path, foundSeed };
+    return { path, foundSeed, removedEdgeCount };
   }
 
   function traverseResidualsField() {
@@ -386,7 +392,13 @@ function* performMinCut(): Saga<void> {
     // console.log("populate distance field", loopBuster);
     const { foundTarget, distanceField, directionField } = populateDistanceField();
     if (foundTarget) {
-      removeShortestPath(distanceField, directionField);
+      const { removedEdgeCount } = removeShortestPath(distanceField, directionField);
+      if (removedEdgeCount === 0) {
+        console.log(
+          "segmentation could not be partioned. zero edges removed in last iteration. probably due to nodes being too close to each other? aborting...",
+        );
+        return;
+      }
       // console.log({ path });
 
       // for (const el of path) {
@@ -422,10 +434,13 @@ function* performMinCut(): Saga<void> {
               const neighborPos = V3.add(currentPos, neighbor);
 
               if (visitedField[ll(neighborPos)] === 0) {
-                api.data.labelVoxels(
-                  [V3.from_mag_to_mag1(V3.add(boundingBoxTarget.min, neighborPos), targetMag)],
-                  0,
+                const position = V3.from_mag_to_mag1(
+                  V3.add(boundingBoxTarget.min, neighborPos),
+                  targetMag,
                 );
+                api.data.labelVoxels([position], 0);
+
+                window.addVoxelMesh(position, targetMag);
               }
             }
           }

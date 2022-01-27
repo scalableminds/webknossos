@@ -1233,16 +1233,16 @@ class DataApi {
     _zoomStep: ?number = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
 
     let zoomStep;
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      const resolutionInfo = getResolutionInfo(layer.resolutions);
       zoomStep = resolutionInfo.getClosestExistingIndex(0);
     }
 
-    const { resolutions } = layer;
+    const resolutions = resolutionInfo.getDenseResolutions();
     const bucketAddresses = this.getBucketAddressesInCuboid(bbox, resolutions, zoomStep);
     if (bucketAddresses.length > 15000) {
       console.warn(

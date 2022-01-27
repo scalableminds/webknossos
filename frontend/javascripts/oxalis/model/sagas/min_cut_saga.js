@@ -135,7 +135,14 @@ function* performMinCut(): Saga<void> {
   const edgeBuffer = new Uint16Array(boundingBoxTarget.getVolume()); // .fill(2 ** 12 - 1);
 
   if (inputData[ll(seedA)] !== inputData[ll(seedB)]) {
-    console.warn("Given seeds are not placed on same segment");
+    console.warn(
+      "Given seeds are not placed on same segment",
+      inputData[ll(seedA)],
+      "vs",
+      inputData[ll(seedB)],
+    );
+    console.log({ seedA, seedB });
+    console.log("edgeBuffer.length", edgeBuffer.length);
     return;
   }
 

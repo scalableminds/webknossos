@@ -95,7 +95,7 @@ const defaultState: OxalisState = {
       maximumLayerCountToRender: 32,
     },
     preferredQualityForMeshPrecomputation: 2,
-    preferredQualityForMeshAdHocComputation: 2,
+    preferredQualityForMeshAdHocComputation: 1,
   },
   task: null,
   dataset: {

@@ -1,8 +1,9 @@
 // @flow
 import _ from "lodash";
 
-import { type Saga, call, put, select, _takeEvery } from "oxalis/model/sagas/effect-generators";
+import { type Saga, call, put, select, _takeLatest } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
+import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -71,8 +72,15 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborId) {
 }
 
 function* performMinCut(): Saga<void> {
-  yield* call([Model, Model.ensureSavedState]);
-  yield* put(disableSavingAction());
+  const allowSave = yield* select(store => store.tracing.restrictions.allowSave);
+  if (allowSave) {
+    console.log("disable saving");
+    console.log("ensure saved state");
+    yield* call([Model, Model.ensureSavedState]);
+    console.log("disable saving");
+    yield* put(disableSavingAction());
+  }
+  console.log("start min cut");
 
   const skeleton = yield* select(store => store.tracing.skeleton);
   if (!skeleton) {
@@ -86,23 +94,58 @@ function* performMinCut(): Saga<void> {
     return;
   }
 
-  const boundingBoxes = skeleton.userBoundingBoxes;
-  if (boundingBoxes.length === 0) {
-    console.log("no bounding box defined for min-cut");
-    return;
-  }
-
-  const boundingBoxObj = boundingBoxes[0].boundingBox;
-  const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
-  const targetMag = [2, 2, 1];
-  const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(targetMag);
-
   const nodes = Array.from(activeTree.nodes.values());
 
-  if (nodes.length < 2) {
-    console.log("not enough seeds");
+  if (nodes.length !== 2) {
+    console.log("active tree should have exactly two nodes.");
     return;
   }
+
+  const boundingBoxes = skeleton.userBoundingBoxes.filter(bbox => bbox.isVisible);
+  let boundingBoxObj;
+  if (boundingBoxes.length === 0) {
+    console.log("no visible bounding box defined for min-cut. creating one...");
+    const padding = 50;
+    const newBBox = {
+      min: [
+        Math.min(nodes[0].position[0], nodes[1].position[0]) - padding,
+        Math.min(nodes[0].position[1], nodes[1].position[1]) - padding,
+        Math.min(nodes[0].position[2], nodes[1].position[2]) - padding,
+      ],
+      max: [
+        Math.max(nodes[0].position[0], nodes[1].position[0]) + padding,
+        Math.max(nodes[0].position[1], nodes[1].position[1]) + padding,
+        Math.max(nodes[0].position[2], nodes[1].position[2]) + padding,
+      ],
+    };
+    yield* put(
+      addUserBoundingBoxAction({
+        boundingBox: newBBox,
+        name: "Bounding box used for splitting cell",
+        color: Utils.getRandomColor(),
+        isVisible: true,
+      }),
+    );
+
+    boundingBoxObj = newBBox;
+  } else {
+    boundingBoxObj = boundingBoxes[0].boundingBox;
+  }
+
+  const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
+
+  if (
+    !(
+      boundingBoxMag1.containsPoint(nodes[0].position) &&
+      boundingBoxMag1.containsPoint(nodes[0].position)
+    )
+  ) {
+    console.log("The seeds are not contained in the current bbox.");
+    return;
+  }
+
+  const targetMag = [2, 2, 1];
+  const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(targetMag);
 
   const globalSeedA = V3.from_mag1_to_mag(nodes[0].position, targetMag);
   const globalSeedB = V3.from_mag1_to_mag(nodes[1].position, targetMag);
@@ -456,5 +499,8 @@ function* performMinCut(): Saga<void> {
 }
 
 export default function* listenToMinCut(): Saga<void> {
-  yield _takeEvery("PERFORM_MIN_CUT", performMinCut);
+  // todo: this cancels old requests. only for debugging. use _takeEvery instead
+  yield _takeLatest("PERFORM_MIN_CUT", performMinCut);
 }
+
+window.__isosurfaceVoxelDimensions = [1, 1, 1];

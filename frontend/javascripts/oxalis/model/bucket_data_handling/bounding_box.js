@@ -60,6 +60,12 @@ class BoundingBox {
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 
+  containsPoint(vec3: Vector3) {
+    const [x, y, z] = vec3;
+    const { min, max } = this;
+    return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
+  }
+
   containsFullBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
 

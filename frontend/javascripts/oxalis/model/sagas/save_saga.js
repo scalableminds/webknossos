@@ -99,6 +99,12 @@ import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
+// This function is needed so that Flow is satisfied
+// with how a mere promise is awaited within a saga.
+function unpackPromise<T>(p: Promise<T>): Promise<T> {
+  return p;
+}
+
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(
   action => action !== "SET_USER_BOUNDING_BOXES",
 );
@@ -536,10 +542,6 @@ function mergeDataWithBackendDataInPlace(
   for (const op of pendingOperations) {
     op(originalData);
   }
-}
-
-function unpackPromise<T>(p: Promise<T>): Promise<T> {
-  return p;
 }
 
 function* applyAndGetRevertingVolumeBatch(

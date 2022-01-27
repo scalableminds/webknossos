@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.binary.DataSetDAO
 import models.job.{JobDAO, JobService, JobState, WorkerDAO, WorkerService}
 import models.organization.OrganizationDAO
-import oxalis.security.WkEnv
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -25,6 +25,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                workerService: WorkerService,
                                workerDAO: WorkerDAO,
                                wkconf: WkConf,
+                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
@@ -171,6 +172,41 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronInferral"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+  def runGlobalizeFloodfills(
+      organizationName: String,
+      dataSetName: String,
+      newDataSetName: Option[String],
+      layerName: Option[String],
+      annotationId: Option[String],
+      annotationType: Option[String],
+  ): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.globalizeFloodfill.notAllowed.organization" ~> FORBIDDEN
+          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
+            request.identity.loginInfo)
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
+          command = "globalize_floodfills"
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "new_dataset_name" -> newDataSetName,
+            "layer_name" -> layerName,
+            "annotation_id" -> annotationId,
+            "annotation_type" -> annotationType,
+            "user_auth_token" -> userAuthToken.id,
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunGlobalizeFloodfills"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

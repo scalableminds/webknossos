@@ -1,30 +1,35 @@
 // @flow
 
-import { Table, Tag } from "antd";
-import * as React from "react";
-import { CheckCircleOutlined, CloseCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import _ from "lodash";
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  PlusOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import { Table, Tag, Tooltip } from "antd";
+import * as React from "react";
+import _ from "lodash";
 import dice from "dice-coefficient";
 import update from "immutability-helper";
 
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import type {
   APITeam,
   APIMaybeUnimportedDataset,
   APIDatasetId,
   APIDataset,
 } from "types/api_flow_types";
-import { stringToColor, formatScale } from "libs/format_utils";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
+import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
+import { stringToColor, formatScale } from "libs/format_utils";
+import { trackAction } from "oxalis/model/helpers/analytics";
+import CategorizationLabel from "oxalis/view/components/categorization_label";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
-import FormattedDate from "components/formatted_date";
-import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
-import { trackAction } from "oxalis/model/helpers/analytics";
+import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FixedExpandableTable from "components/fixed_expandable_table";
+import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
-import CategorizationLabel from "oxalis/view/components/categorization_label";
 
 const { Column } = Table;
 
@@ -255,9 +260,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 />
               </div>
             ) : (
-              <div style={{ color: "@disabled-color" }}>
-                Tags not available for inactive datasets.
-              </div>
+              <Tooltip title="No tags available for inactive datasets">
+                <WarningOutlined style={{ color: "@disabled-color" }} />
+              </Tooltip>
             )
           }
         />

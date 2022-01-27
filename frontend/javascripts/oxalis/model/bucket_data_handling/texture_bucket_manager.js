@@ -388,9 +388,16 @@ export default class TextureBucketManager {
         for (const baseBucketAddress of baseBucketAddresses) {
           const lookUpIdx = this._getBucketIndex(baseBucketAddress);
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-          if (this.lookUpBuffer[posInBuffer] !== -2 || lookUpIdx === -1) {
-            // Either, another bucket was already placed here. Or, the lookUpIdx is
-            // invalid. Skip the entire loop
+          if (lookUpIdx === -1) {
+            // The lookUpIdx is invalid. Skip the entire loop.
+            break;
+          } else if (
+            this.lookUpBuffer[posInBuffer] !== -2 &&
+            this.lookUpBuffer[posInBuffer + 1] < bucketZoomStep
+          ) {
+            // Another bucket was already placed here with a better zoomstep.
+            // Skip the entire loop.
+            // TODO: clarify flicker when zooming from mag 4 to mag 8.
             break;
           }
           this.lookUpBuffer[posInBuffer] = address;

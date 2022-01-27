@@ -1,4 +1,5 @@
 # Installation on your own Server
+The easiest way to get started with webKnossos is to get an account on [webKnossso.org](https://webknossos.org).
 
 webKnossos is open-source, so you can install it on your own server.
 We recommend a server with at least 4 CPU cores, 16 GB RAM, and as much disk space as you require for your datasets.

@@ -5,12 +5,6 @@ These shortcut hints depend on the active tool and also change when modifiers ar
 
 A complete listing of all available keyboard & mouse shortcuts for webKnossos can be found below.
 
-## Classic Controls
-
-Note that you can enable *Classic Controls* in the left sidebar.
-Without classic controls (which is the default), a more intuitive behavior is used which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes) while the right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
-With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.
-
 ## General
 
 | Key Binding                   | Operation                                   |
@@ -118,12 +112,10 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 
 ## Mesh Related Shortcuts
 
-The following bindings only work if isosurface rendering is activated in the settings and a segmentation exists.
-
 | Key Binding                                            | Operation                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------- |
-| Shift + Click on a segment in the 3D viewport          | Change the active position to the clicked position          |
-| Ctrl + Click on a segment in the 3D viewport           | Remove the isosurface of the clicked cell                   |
+| Shift + Click on a mesh in the 3D viewport          | Move the camera to the clicked position          |
+| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from webKnossos
 
 ## Agglomerate File Mapping Skeleton
 
@@ -132,3 +124,10 @@ The following binding only works in skeleton/hybrid annotations and if an agglom
 | Key Binding                     | Operation                                 |
 | ------------------------------- | ----------------------------------------- |
 | SHIFT + Middle Click            | Import Skeleton for Selected Segment      |
+
+## Classic Controls
+
+Note that you can enable *Classic Controls* in the left sidebar. 
+Classic controls are provided for backward compatibility for long-time users and are not recommend for new user accounts.
+Hence, Classic controls are disabled by default and webKnossos uses a more intuitive behavior  which assigns the most important functionality to the left mouse button (e.g., moving around, selecting/creating/moving nodes) while the right mouse button always opens a context-sensitive menu for more complex actions, such as merging two trees.
+With classic controls, several mouse controls are modifier-driven and may also use the right-click for actions, such as erasing volume data.

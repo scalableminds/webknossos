@@ -73,8 +73,6 @@ For more information regarding (public) dataset sharing and access rights (espec
 
 
 ## Sign Up & Invitations for New User Accounts
-
-
 On webKnossos.org, users can either sign up for a webKnossos account by themselves or be invited through email to join an existing organization by co-workers or collaborators. On private webKnossos instances, users can only join through an eamil invitation.
 
 !!!info
@@ -84,10 +82,12 @@ On webKnossos.org, users can either sign up for a webKnossos account by themselv
 
 
 ## Activating New Users
+- not applicable to webKnossos.org - 
 
-If newly registered users did not join via custom invite link, they are deactivated at first and need to be activated by an admin or a team manager.
-By default, the user list only shows active users, so make sure to deactivate the `Show Active Users Only` filter at the top of the user list to activate new users.
-However, deactivated users that registered in the last 14 days, will be shown above the user list regardless and can be activated quickly from there.
+If newly registered users did not join via an email invite link, they join a webKnossos organisation with the status "deactivated". An admin or a team manager needs to approve them and activate their user account before the can access anything on your webKnossos instance. 
+Users that registered within the last 14 days, will be shown above the `Users` list (accessible from the Admin menu) and can be activated quickly from there.
+After that time or by default for any other inactive users, the `Users` list only shows active users, so make sure to deactivate the `Show Active Users Only` filter at the top of the user list to see/activate new users.
+
 
 When activating new users, a popup opens for
   - team assignment

@@ -1,6 +1,7 @@
 // @flow
 import { saveAs } from "file-saver";
 import _ from "lodash";
+import { V3 } from "libs/mjs";
 
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
@@ -474,12 +475,12 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
 
 function* loadPrecomputedMeshForSegmentId(
   id: number,
-  pos: Vector3,
+  seedPosition: Vector3,
   fileName: string,
   segmentationLayer: APIDataLayer,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
-  yield* put(addIsosurfaceAction(layerName, id, pos, true));
+  yield* put(addIsosurfaceAction(layerName, id, seedPosition, true));
   yield* put(startedLoadingIsosurfaceAction(layerName, id));
   const dataset = yield* select(state => state.dataset);
 
@@ -502,14 +503,18 @@ function* loadPrecomputedMeshForSegmentId(
     return;
   }
 
-  const tasks = availableChunks.map(chunkPos => async () => {
+  // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
+  const sortedAvailableChunks = _.sortBy(availableChunks, chunkPosition =>
+    V3.length(V3.sub(seedPosition, chunkPosition)),
+  );
+  const tasks = sortedAvailableChunks.map(chunkPosition => async () => {
     const stlData = await getMeshfileChunkData(
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(segmentationLayer),
       fileName,
       id,
-      chunkPos,
+      chunkPosition,
     );
 
     const geometry = parseStlBuffer(stlData);

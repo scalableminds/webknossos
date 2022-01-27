@@ -176,6 +176,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         } yield Ok(js)
       }
     }
+
   def runGlobalizeFloodfills(
       organizationName: String,
       dataSetName: String,

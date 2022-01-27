@@ -4,7 +4,7 @@ import React, { useEffect, useState, type Node } from "react";
 import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
 import { startNucleiInferralJob, startNeuronInferralJob } from "admin/admin_rest_api";
-import { connect } from "react-redux";
+import { useSelector } from "react-redux";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
@@ -14,32 +14,26 @@ import { capitalizeWords, computeArrayFromBoundingBox, rgbToHex } from "libs/uti
 
 const { ThinSpace } = Unicode;
 
-type StateProps = {|
-  dataset: APIDataset,
-  userBoundingBoxes: Array<UserBoundingBox>,
-|};
-type OwnProps = {|
-  handleClose: () => void,
-|};
-
 type Props = {
-  ...StateProps,
-  ...OwnProps,
+  handleClose: () => void,
 };
-type StartingJoblModalProps = {
+type StartingJobModalProps = {
   ...Props,
+  dataset: APIDataset,
   jobApiCall: (string, ?UserBoundingBox) => Promise<?APIJob>,
   jobName: string,
   description: Node,
   isBoundingBoxConfigurable?: boolean,
 };
 
-function StartingJobModal(props: StartingJoblModalProps) {
+function StartingJobModal(props: StartingJobModalProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
   const { dataset, handleClose, jobName, description, jobApiCall } = props;
+  const userBoundingBoxes = useSelector((state: OxalisState) =>
+    getUserBoundingBoxesFromState(state),
+  );
   const [selectedColorLayerName, setSelectedColorLayerName] = useState<?string>(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<?UserBoundingBox>(null);
-  const { userBoundingBoxes } = props;
   const colorLayerNames = getColorLayers(dataset).map(layer => layer.name);
   useEffect(() => {
     if (colorLayerNames.length === 1) {
@@ -204,11 +198,11 @@ function StartingJobModal(props: StartingJoblModalProps) {
   );
 }
 
-function _NucleiInferralModal({ dataset, handleClose, userBoundingBoxes }: Props) {
+export function NucleiInferralModal({ handleClose }: Props) {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobModal
       dataset={dataset}
-      userBoundingBoxes={userBoundingBoxes}
       handleClose={handleClose}
       jobName="nuclei inferral"
       jobApiCall={colorLayerName =>
@@ -235,12 +229,12 @@ function _NucleiInferralModal({ dataset, handleClose, userBoundingBoxes }: Props
   );
 }
 
-function _NeuronInferralModal({ dataset, handleClose, userBoundingBoxes }: Props) {
+export function NeuronInferralModal({ handleClose }: Props) {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
   return (
     <StartingJobModal
       dataset={dataset}
       handleClose={handleClose}
-      userBoundingBoxes={userBoundingBoxes}
       jobName="neuron inferral"
       isBoundingBoxConfigurable
       jobApiCall={async (colorLayerName, boundingBox) => {
@@ -275,18 +269,3 @@ function _NeuronInferralModal({ dataset, handleClose, userBoundingBoxes }: Props
     />
   );
 }
-
-function mapStateToProps(state: OxalisState): StateProps {
-  const userBB = getUserBoundingBoxesFromState(state);
-  return {
-    dataset: state.dataset,
-    userBoundingBoxes: userBB,
-  };
-}
-
-export const NeuronInferralModal = connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  _NeuronInferralModal,
-);
-export const NucleiInferralModal = connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  _NucleiInferralModal,
-);

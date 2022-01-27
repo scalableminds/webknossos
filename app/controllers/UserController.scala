@@ -46,8 +46,8 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
-  def user(userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  @ApiOperation(value = "Returns a json with information about the user selected by the passed id", nickname = "userInfoById")
+  def user(@ApiParam(value="Id of the user to query") userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"

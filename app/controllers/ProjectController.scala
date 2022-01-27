@@ -53,15 +53,27 @@ class ProjectController @Inject()(projectService: ProjectService,
     } yield Ok(Json.toJson(js))
   }
 
-  @ApiOperation(value = "Information about a project", nickname = "projectInfo")
+  @ApiOperation(value = "Information about a project selected by id", nickname = "projectInfoById")
   @ApiResponses(
     Array(new ApiResponse(code = 200, message = "JSON object containing information about this project."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
+      new ApiResponse(code = 400, message = badRequestLabel)))
   def read(@ApiParam(value = "The id of the project") id: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         projectIdValidated <- ObjectId.parse(id)
         project <- projectDAO.findOne(projectIdValidated) ?~> "project.notFound" ~> NOT_FOUND
+        js <- projectService.publicWrites(project)
+      } yield Ok(js)
+  }
+
+  @ApiOperation(value = "Information about a project selected by name", nickname = "projectInfoByName")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON object containing information about this project."),
+      new ApiResponse(code = 400, message = badRequestLabel)))
+  def readByName(@ApiParam(value = "The name of the project") name: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
         js <- projectService.publicWrites(project)
       } yield Ok(js)
   }
@@ -164,11 +176,14 @@ Expects:
     }
   }
 
-  @ApiOperation(hidden = true, value = "")
-  def tasksForProject(id: String,
-                      limit: Option[Int] = None,
-                      pageNumber: Option[Int] = None,
-                      includeTotalCount: Option[Boolean]): Action[AnyContent] =
+  @ApiOperation(value = "Information about the tasks of a project selected by project id", nickname = "taskInfosByProjectId")
+  @ApiResponses(
+    Array(new ApiResponse(code = 200, message = "JSON list of objects containing information about the tasks of this project project."),
+      new ApiResponse(code = 400, message = badRequestLabel)))
+  def tasksForProject(@ApiParam(value="Id of the project") id: String,
+                      @ApiParam(value="Pagination: limit for the number of tasks to query") limit: Option[Int] = None,
+                      @ApiParam(value="Pagination: page number, skip the first tasks") pageNumber: Option[Int] = None,
+                      @ApiParam(value="Pagination: if true, include total count in response header as X-Total-Count") includeTotalCount: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         projectIdValidated <- ObjectId.parse(id)

@@ -73,7 +73,7 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborId) {
 
 function* performMinCut(): Saga<void> {
   const allowSave = yield* select(store => store.tracing.restrictions.allowSave);
-  if (allowSave) {
+  if (allowSave && window.disableSavingOnMinCut) {
     console.log("disable saving");
     console.log("ensure saved state");
     yield* call([Model, Model.ensureSavedState]);
@@ -483,7 +483,9 @@ function* performMinCut(): Saga<void> {
                 );
                 api.data.labelVoxels([position], 0);
 
-                window.addVoxelMesh(position, targetMag);
+                if (window.visualizeRemovedVoxelsOnMinCut) {
+                  window.addVoxelMesh(position, targetMag);
+                }
               }
             }
           }
@@ -504,3 +506,5 @@ export default function* listenToMinCut(): Saga<void> {
 }
 
 window.__isosurfaceVoxelDimensions = [1, 1, 1];
+window.disableSavingOnMinCut = false;
+window.visualizeRemovedVoxelsOnMinCut = false;

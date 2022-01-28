@@ -324,3 +324,32 @@ Catmaid datasets can be easily converted with the [webKnossos cuber](https://git
 
 After the manual conversion, proceed with the remaining import step.
 See the [Datasets guide](./datasets.md#Importing) for further instructions.
+
+
+// todo
+### ID Mappings 
+ and need to follow this schema. All segment IDs belonging to the same super-voxel need to be listed in an array:  
+```
+{
+  {
+    "name": "astrocytes",
+    "classes": [
+      [
+        69381,
+        69445,
+        138248
+      ],
+      [
+        138307,
+        343831
+      ],
+      [
+        348348,
+        132432,
+        387433,
+        338330
+      ]
+    ]
+  }
+}
+```

@@ -1,48 +1,34 @@
 # Mesh Visualization
-webKnossos offers two different ways to render segmentations as 3D meshes.
-First, meshes can simply be imported as STL files and webKnossos will render these as normal 3D objects.
-Second, webKnossos can generate isosurfaces of specific cells ad-hoc.
-These two approaches are explained in the following.
+webKnossos offers two different methods to render and visualize volumetric segmentations as 3D meshes.
 
-## Live Isosurface Generation
+1. Load a pre-computed 3D mesh. Meshes can either be (pre-)computed from within webKnossos for a whole dataset or outside of webKnossos with a `mesh file`. These mesh will be instantly available the next time you open the dataset. (quicker mesh loading time)
+2. Compute an ad-hoc mesh of any segmentation layer or volume annotation. These meshes will live-computed any time you request them.  (slower mesh loading time)
 
-When **viewing a dataset** (using the ["View" action](./dashboard.md#datasets) when opening a dataset) with a segmentation layer, the experimental "Render Isosurfaces" setting can be enabled within the [dataset settings](./mesh_visualization.md#tracing-ui-settings).
-Once the setting is enabled, webKnossos will generate isosurface meshes of the active cell and render these in the 3D viewport.
-To activate a cell, use shift+click on a segment in the annotation view.
-The isosurface is computed in chunks, which is why the isosurface is likely to appear bit by bit.
-When hovering over an isosurface in the 3D viewport, the cell will also be highlighted in the other viewports.
-Shift + Click on an isosurface in the 3D viewport will change the active position to where you clicked.
-CTRL + Click on an isosurface will remove that isosurface again.
+Mesh will always be rendered in the 3D viewport in the lower right. 
 
-![Generating isosurfaces for specific cell ids via shift+click](./images/isosurface-demo.gif)
+// todo show mesh in 3d viewport
 
-Note that the generated isosurface is not persisted for the annotation.
-Consequently, refreshing the page, will "forget" all previously generated isosurfaces.
-To persist generated isosurfaces, you can use the "Download" button within the "Meshes" pane.
-That "Download" button will persist the isosurface of the active cell as an STL file to your disk.
-Using the "Import" button in the "Meshes" pane, you can re-import isosurfaces.
+## Loading Meshes
+Regardless of the method, mesh can be loaded by right-clicking on any segment and bringing up the context-sensitive action menu. Select `Load Mesh (precomputed)` or `Compute Mesh (ad-hoc)` to load the respective 3D mesh for that segment.
 
-Read more about STL imports in the following subsection.
+Alternatively, the `Segments` tab in the right-hand sidepanel, allows you to load the mesh for any segment listed there. Select the corresponding option from the overflow menu next to each list entry.
 
-## STL Import
+// todo image of context-sensitve menu with Compute Mesh option
+// todo image of segments tab with overlfow menu open
 
-Apart from importing STLs which were created by webKnossos, you can also use the "Import" button within the "Meshes" tab to import arbitrary STL files.
-Such files can be created from volume data with the help of external tools, such as [Amira](https://www.fei.com/software/amira-avizo/).
-After the import, meshes are rendered alongside the actual data in the 3D viewport.
-For each mesh, the name, position and visibility can be adapted via the "Meshes" tab.
-In contrast to generated isosurfaces, uploaded STLs will be persisted within the annotation.
-For that reason, the import only works when opening an annotation (as opposed to just viewing a dataset).
+## Working with Meshes
+Any mesh listed in the `Segments` tab can be downloaded as an industry standard STL file for further rendering/animation, e.g. in Blender. Hover over the list entry for the disiered mesh to reveal a shortcut menu for downloading, reloading, and unloading/removing meshes.
 
-![A 3D Mesh visualized in webKnossos](./images/stl_mesh.png)
-![The Meshes Tab can be used to add and edit meshes.](./images/Meshes-Tab.png)
+Mesh visiblity can also be triggered from the `Segments` tab.
 
-## Troubleshooting
+Shift + Click on any mesh in the 3D viewport will navigate webKnosso to that postion.
+CTRL + Click on any mesh will unload that mesh.
 
-Note that the mesh and isosurface support in webKnossos is an ongoing development effort.
-The functionality is currently limited by the following:
+// todo show image of segments tab
 
-- Isosurface generation only works for segmentation layers (as opposed to volume annotations). As a result, the dataset has to be opened in view mode to enable isosurfaces.
-- Isosurfaces are not persisted automatically. If you want to manually persist an isosurface, you can use the "Download" button in the meshes tab.
-- Importing an STL which was not generated with webKnossos only works when having an annotation opened (since that mesh will be persisted).
+## Pre-Computed Mesh Generation
+Instead of having to slowly compute individal mesh every time you open a dataset, it might make more sense to pre-compute all meshes within a dataset. Pre-computed mesh have the advantage of loading really quickly - even for larger meshes.
 
-We are working on unifying the interface of meshes and isosurfaces to make the experience more intuitive.
+You can start the mesh generation from the `Segments' tab in the right-hand sidepanel. Click on the little plus button to initiate the mesh generation. We recommend to compute the mesh in the medium quality (default) to strike a good balance between visual fidelity, compute time, and GPU ressource usage.
+
+Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, pre-computed mesh will available on page reload. 

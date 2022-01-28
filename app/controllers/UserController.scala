@@ -46,16 +46,18 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  @ApiOperation(value = "Returns a json with information about the user selected by the passed id", nickname = "userInfoById")
-  def user(@ApiParam(value="Id of the user to query") userId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    log() {
-      for {
-        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        js <- userService.publicWrites(user, request.identity)
-      } yield Ok(js)
-    }
+  @ApiOperation(value = "Returns a json with information about the user selected by the passed id",
+                nickname = "userInfoById")
+  def user(@ApiParam(value = "Id of the user to query") userId: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      log() {
+        for {
+          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+          _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+          js <- userService.publicWrites(user, request.identity)
+        } yield Ok(js)
+      }
   }
 
   @ApiOperation(hidden = true, value = "")

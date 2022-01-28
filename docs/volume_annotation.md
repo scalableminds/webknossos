@@ -13,13 +13,16 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 - `Trace`: Draw outlines around the voxel you would like to label.
 - `Brush`: Draw over the voxels you would like to label. Adjust the brush size with *SHIFT + Mousewheel*.
 - `Erase (Trace/Brush)`: Draw over the voxels you would like to erase. Adjust the brush size with *SHIFT + Mousewheel*.
-- `Fill Tool`: Flood-fill the clicked region. All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active cell id.
-- `Cell Picker`: Click a segment to use its id as the active cell id.
+- `Segment Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of you viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID.
+- `Segment Picker`: Click on amy segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
 
 When using the trace or brush tool, a label can be added with *Left Mouse Drag*.
 Erasing is possible with the dedicated erase tools or with *CTRL + Shift + Left Mouse Drag*.
 
 If you have enabled *Classic Controls* in the settings sidebar, erasing is also possible with *Right Mouse Drag* within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
+
+The following modifiers are available when working with the volume annotation tools:
+- `Create New Segment ID`:
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
 ![Adding labels with the Brush tool](./images/volume_brush.gif)

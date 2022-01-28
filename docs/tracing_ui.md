@@ -2,9 +2,9 @@
 
 The main webKnossos user interface for viewing and annotating datasets is divided into five sections.
 
-1. [A toolbar](#the-toolbar) for general purposes features such as Saving your work and displaying the current position within the dataset. Further, it provides access to all the tools for annotationg and manipulating your data. It spans along the full width of the top of your screen.
-2. The left-hand sidepanel provides a list of all available data, segmentation, and annotation layers as well as a [settings menu](#tracing-ui-settings) for viewport options and keyboard controls.
-3. The center of the screen is occupied by [the annotation interface](#skeleton-annotations). Your dataset is displayed here and you navigate and annotate it as desired. Most interactions will take place here.
+1. A toolbar for general purposes features such as Saving your work and displaying the current position within the dataset. Further, it provides access to all the tools for annotationg and manipulating your data. It spans along the full width of the top of your screen.
+2. The left-hand sidepanel provides a list of all available data, segmentation, and annotation layers as well as a settings menu for viewport options and keyboard controls.
+3. The center of the screen is occupied by the annotation interface. Your dataset is displayed here and you navigate and annotate it as desired. Most interactions will take place here.
 4. The right-hand sidepanel is occupied by several tabs providing more information on your current dataset, skeleton/volume annotations, and other lists. Depending on your editing mode these tabs might adapt.
 5. The bottom of the screen is covered by a status bar showing context-sensitve hints for mouse controls as well as additional information on mouse hover.
 
@@ -17,7 +17,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 The toolbar contains frequently used commands, such as saving and sharing, your current position within the dataset and the ability to switch between various modes for viewing. Further, it provides access to all the tools for annotation, navigation, and more.
 
 The most common buttons are:
-- `Settings`: Toggles the visibility of the left-hand sidepanel with all data and segmentatio layers and settings.
+- `Settings`: Toggles the visibility of the left-hand sidepanel with all data and segmentation layers and their respective settings.
 - `Undo` / `Redo`: Undoes the last operation or redoes it if no new changes have been made in the meantime. Undo can only revert changes made in this session (since the moment the annotation view was opened). To revert to older versions use the "Restore Older Version" functionality, described later in this list.
 - `Save`: Saves your annotation work. webKnossos automatically saves every 30 seconds.
 - `Archive`: Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "My Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. (Not available for tasks)
@@ -30,10 +30,23 @@ A user can directly jump to any position within their datasets by entering them 
 The same is true for the camera rotation in flight/oblique modes.
 Clicking on the position or rotation labels copies the values to the clipboard.
 
-// TODO Tools
-
 ![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
 
+// TODO Tools
+The toolbar further features al available navigation and annotation tools for quick access:
+
+- `Move`: Navigate around the dataset.
+- `Skeleton`: Create skeleton annotations and place nodes. [Read more about skeleton annotations](./skeleton_annotation.md#tools).
+- `Trace`: Creates volume annotations by drawing outlines around the voxel you would like to label. [Read more about volume annotations](./volume_annotation.md#tools).
+- `Brush`: Creates volume annotations by drawing over the voxels you would like to label. 
+- `Erase (Trace/Brush)`: Removes voxels from a volume annotation by drawing over the voxels you would like to erase. 
+- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of you viewport). Used to fill holes in a volume annotation or to relabel a segment with a different id. 
+- `Segment Picker`: Select the volume annotation ID of a segment to make it the active cell id to continue labelling with that ID/color.
+- `Bounding Box`: Creates and resizes any bounding box. See also the BoundingBox panel below.
+
+Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explaination of all context-sensitve modifiers that are available to some tools.
+
+// todo add image of toolbar
 
 ## Layers and Settings
 The left-hand sidepanel features both a list of all available data and annotation layers as well as settings menu to fine-tune some parameters of webKnossos.
@@ -104,3 +117,21 @@ Note, not all control/viewport settings are available in every annotation mode.
 - `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 3G.
 - `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zomed in very far).
 - `Render Missing Data Black`: If a dataset doesn't contain data at a specific position, webKnossos can either render "black" at that position or it can try to render data from another magnification.
+
+## Right-Hand Sidepanel
+The right-hand sidepanel includes a number of tabs with specific information, additional interactions, listings about your current skeleton and/or volume annotation. When working with any of the webKnossos annotation tools (see above), any interactions with the dataset will lead to entries in the listing provided here.
+
+- `Info`: Contains mostly metainformation about the dataset and annotation. Can be used to name an annotation and provide additional description, e.g. when sharing with collaborators. Includes a button to start [automated analysis](./automated_analysis.md) on your dataset (beta feature). 
+- `Skeleton`: Lists all available skeleton annotations and offer further interactions with them. [Read more about skeleton annotations.](./skeleton_annotation.md)
+- `Comments`: Lists all comments assigned to individual nodes of a skeleton. [Read more about comments and skeleton annotations.](./skeleton_annotation.md#nodes_and_trees)
+- `Segments`: List all segments created during a volume annotation. It also provides access to mesh generation for indivual segments or the whole dataset, mesh visualization, mesh downloads, and more. [Read more about 3D meshes.](./mesh_visualization.md)
+- `BBoxes`: List all bounding boxes present in the dataset. Create new bounding boxes or adjust existing ones. This provides an alternativ interface for the `BoundingBox` tool.
+- `AbsTree`: Renders and abstract 2D tree representation of a skeleton annotation when enabled. Might be quite ressource intense when working with large skeletons.
+
+
+## Status Bar
+
+The status bar at the bottom of the screen serves three functions. 
+1. It shows context-sensitive mouse and keyboard control hint. Depending on you selected annotation tool, any pressed modifier keys (Shift, CMD, CTRL, ALT, etc), and the object under the mouse, it provides useful interaction hints and shortcuts.
+2. It provides useful information basd on your mouse positioning and which objects it hovers over. This includes the current mouse position in the dataset coordinate space, any segment ID that you hover over, and the currently rendered magnification level (MipMap image pyramid) used for displaying any data.
+3. When working with skeletons, the active node and tree IDs are listed. Use the little pencil icon to select/mark a specific ID as active if required. For more about the active node ID, [see the section on skeleton annotations](./skeleton_annotation.md#nodes_and_trees). 

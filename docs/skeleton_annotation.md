@@ -50,6 +50,19 @@ Flight mode is best used for annotating structures very quickly.
 Trained tracers can follow "tube"-like structures, e.g. dendrites/axons in a neuron, as though they are "flying" through them.
 Nodes are placed automatically along the flight path, creating skeletons very efficiently.
 
+### Tools
+The webKnossos toolbar at the top of the screen contains several tools designed to work with skeletons:
+
+- `Move`: Navigate around the dataset.
+- `Skeleton`: Create skeleton annotations and place nodes with a left mouse click. Read more below.
+
+When the `Skeleton` tool is active, the following modifiers become available:
+- `Create new Tree`: Creates a new tree. 
+- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead adding nodes to the active tree. Useful for marking single position objects/seeds, e.g. for marking nuclei. Also called "Soma-clicking mode".
+- `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons can be used to "collect" and merge volume segments from an over-segmenation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
+
+// todo image of the skeleton tool modifiers
+
 ### Nodes and Trees
 Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.

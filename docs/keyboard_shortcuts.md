@@ -92,16 +92,16 @@ Note that you can enable *Classic Controls* which will behave slightly different
 
 | Key Binding                       | Operation                                                   |
 | --------------------------------- | ----------------------------------------------------------- |
-| Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Cell (Trace / Brush Mode) |
-| SHIFT + Left Click                | Select Active Cell                                          |
-| CTRL + Left Mouse Drag            | Add Voxels To Current Cell while inverting the overwrite-mode (see toolbar for overwrite-mode) |
-| CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Cell                                     |
+| Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Segment (Trace / Brush Mode) |
+| SHIFT + Left Click                | Select Active Segment                                          |
+| CTRL + Left Mouse Drag            | Add Voxels To Current Segment while inverting the overwrite-mode (see toolbar for overwrite-mode) |
+| CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |
 | Alt + Mouse Move                  | Move                                                        |
-| C                                 | Create New Cell                                             |
+| C                                 | Create New Segment                                             |
 | W                                 | Toggle Modes (Move / Skeleton / Trace / Brush / ...)        |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
-| V                                 | Copy Segmentation of Current Cell From Previous Slice       |
-| SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |
+| V                                 | Copy Segmentation of Current Segment From Previous Slice       |
+| SHIFT + V                         | Copy Segmentation of Current Segment From Next Slice           |
 
 Note that you can enable *Classic Controls* which won't open a context menu on right-click, but instead erases when the brush/trace tool is activated.
 

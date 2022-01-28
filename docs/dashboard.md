@@ -1,7 +1,7 @@
 # Dashboard
 
 The Dashboard is your entry point to webKnossos.
-You can manage your datasets, create annotations, resume existing annotations and manage active tasks.
+You can manage your datasets, create annotations, resume existing annotations and retrieve tasks distributed to you.
 
 ## My Datasets
 This screen shows all the available and accessible datasets for a user.

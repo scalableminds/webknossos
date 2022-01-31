@@ -39,9 +39,9 @@ object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
-case class CompleteLinkedLayerIdentifier(layersToLink: Option[List[LinkedLayerIdentifier]])
-object CompleteLinkedLayerIdentifier {
-  implicit val jsonFormat: OFormat[CompleteLinkedLayerIdentifier] = Json.format[CompleteLinkedLayerIdentifier]
+case class LinkedLayerIdentifiers(layersToLink: Option[List[LinkedLayerIdentifier]])
+object LinkedLayerIdentifiers {
+  implicit val jsonFormat: OFormat[LinkedLayerIdentifiers] = Json.format[LinkedLayerIdentifiers]
 }
 
 case class UploadInformation(uploadId: String, needsConversion: Option[Boolean])
@@ -112,7 +112,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       )
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInformation.uploadId),
-        Json.stringify(Json.toJson(CompleteLinkedLayerIdentifier(reserveUploadInformation.layersToLink)))
+        Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInformation.layersToLink)))
       )
       _ = logger.info(
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
@@ -199,7 +199,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"unpacking to dataset to $unpackToDir")
-      linkedLayerInfo <- getObjectFromRedis[CompleteLinkedLayerIdentifier](redisKeyForLinkedLayerIdentifier(uploadId))
+      linkedLayerInfo <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
       postProcessingResult <- postProcessUploadedDataSource(datasetNeedsConversion,
                                                             unpackToDir,
                                                             dataSourceId,

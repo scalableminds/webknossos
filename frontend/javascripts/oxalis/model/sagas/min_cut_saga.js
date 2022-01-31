@@ -114,14 +114,14 @@ function* performMinCut(): Saga<void> {
     const padding = 50;
     const newBBox = {
       min: [
-        Math.min(nodes[0].position[0], nodes[1].position[0]) - padding,
-        Math.min(nodes[0].position[1], nodes[1].position[1]) - padding,
-        Math.min(nodes[0].position[2], nodes[1].position[2]) - padding,
+        Math.floor(Math.min(nodes[0].position[0], nodes[1].position[0]) - padding),
+        Math.floor(Math.min(nodes[0].position[1], nodes[1].position[1]) - padding),
+        Math.floor(Math.min(nodes[0].position[2], nodes[1].position[2]) - padding),
       ],
       max: [
-        Math.max(nodes[0].position[0], nodes[1].position[0]) + padding,
-        Math.max(nodes[0].position[1], nodes[1].position[1]) + padding,
-        Math.max(nodes[0].position[2], nodes[1].position[2]) + padding,
+        Math.ceil(Math.max(nodes[0].position[0], nodes[1].position[0]) + padding),
+        Math.ceil(Math.max(nodes[0].position[1], nodes[1].position[1]) + padding),
+        Math.ceil(Math.max(nodes[0].position[2], nodes[1].position[2]) + padding),
       ],
     };
     yield* put(
@@ -134,8 +134,13 @@ function* performMinCut(): Saga<void> {
     );
 
     boundingBoxObj = newBBox;
-  } else {
+  } else if (boundingBoxes.length === 1) {
     boundingBoxObj = boundingBoxes[0].boundingBox;
+  } else {
+    console.log(
+      "Not clear which bounding box should be used. Ensure that only one or none are visible.",
+    );
+    return;
   }
 
   const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
@@ -519,4 +524,4 @@ export default function* listenToMinCut(): Saga<void> {
 
 window.__isosurfaceVoxelDimensions = [1, 1, 1];
 window.disableSavingOnMinCut = false;
-window.visualizeRemovedVoxelsOnMinCut = false;
+window.visualizeRemovedVoxelsOnMinCut = true;

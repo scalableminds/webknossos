@@ -1,4 +1,3 @@
-// @flow
 import _ from "lodash";
 
 import { type Saga, call, put, select, _takeLatest } from "oxalis/model/sagas/effect-generators";
@@ -8,9 +7,16 @@ import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
+import constants, {
+  type BoundingBoxType,
+  type LabelMasksByBucketAndW,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
 
 const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
 
@@ -481,7 +487,13 @@ function* performMinCut(): Saga<void> {
                   V3.add(boundingBoxTarget.min, neighborPos),
                   targetMag,
                 );
-                api.data.labelVoxels([position], 0);
+                for (let dx = 0; dx < targetMag[0]; dx++) {
+                  for (let dy = 0; dy < targetMag[1]; dy++) {
+                    for (let dz = 0; dz < targetMag[2]; dz++) {
+                      api.data.labelVoxels([V3.add(position, [dx, dy, dz])], 0);
+                    }
+                  }
+                }
 
                 if (window.visualizeRemovedVoxelsOnMinCut) {
                   window.addVoxelMesh(position, targetMag);

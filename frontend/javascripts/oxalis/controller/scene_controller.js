@@ -141,12 +141,13 @@ class SceneController {
       // const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
       const material = new THREE.MeshBasicMaterial({
         color: optColor || 0xff00ff,
-        linewidth: 1,
+        // linewidth: 1,
+        opacity: 0.5,
       });
       const cube = new THREE.Mesh(boxGeometry, material);
-      cube.position.x = Math.floor(position[0] + cubeLength[0] / 2);
-      cube.position.y = Math.floor(position[1] + cubeLength[1] / 2);
-      cube.position.z = Math.floor(position[2] + cubeLength[2] / 2);
+      cube.position.x = Math.floor(position[0] + (0.9 * cubeLength[0]) / 2);
+      cube.position.y = Math.floor(position[1] + (0.9 * cubeLength[1]) / 2);
+      cube.position.z = Math.floor(position[2] + (0.9 * cubeLength[2]) / 2);
       this.rootNode.add(cube);
       return cube;
     };

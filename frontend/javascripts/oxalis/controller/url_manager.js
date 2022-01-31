@@ -187,10 +187,13 @@ class UrlManager {
       .map(node => ({ activeNode: node.id }))
       .getOrElse({});
 
-    const stateByLayer = {};
+    const stateByLayer: UrlStateByLayer = {};
     for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {
       const mappingInfo = state.temporaryConfiguration.activeMappingByLayer[layerName];
-      if (mappingInfo.mappingStatus === MappingStatusEnum.ENABLED) {
+      if (
+        mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
+        mappingInfo.mappingName != null
+      ) {
         const { mappingName, mappingType } = mappingInfo;
         stateByLayer[layerName] = { mappingInfo: { mappingName, mappingType } };
       }
@@ -200,8 +203,8 @@ class UrlManager {
       if (currentMeshFile != null) {
         const { meshFileName } = currentMeshFile;
         const meshes = Utils.values(isosurfaces)
-          .filter(({ isVisible }: IsosurfaceInformation) => isVisible)
-          .map(({ segmentId, seedPosition, isPrecomputed }: IsosurfaceInformation) => ({
+          .filter(({ isVisible }) => isVisible)
+          .map(({ segmentId, seedPosition, isPrecomputed }) => ({
             segmentId,
             seedPosition: V3.floor(seedPosition),
             isPrecomputed,

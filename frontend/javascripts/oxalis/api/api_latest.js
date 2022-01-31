@@ -1029,7 +1029,7 @@ class DataApi {
     if (hasVolumeTracings(Store.getState().tracing)) {
       await Model.ensureSavedState();
     }
-    _.forEach(this.model.dataLayers, (dataLayer: DataLayer) => {
+    Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
       dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });

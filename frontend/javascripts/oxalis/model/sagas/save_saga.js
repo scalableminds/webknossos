@@ -671,7 +671,7 @@ export function* pushTracingTypeAsync(
     yield* put(setSaveBusyAction(true, tracingType));
     if (forcePush) {
       while (true) {
-        // Send batches to the server until the save queue is empty
+        // Send batches to the server until the save queue is empty.
         saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
         if (saveQueue.length > 0) {
           yield* call(sendRequestToServer, tracingType, tracingId);

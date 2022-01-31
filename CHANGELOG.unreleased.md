@@ -8,26 +8,21 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/22.01.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/22.02.0...HEAD)
 
 ### Added
-- Added the possibility to add additional volume layers to an existing annotation via the left sidebar. [#5881](https://github.com/scalableminds/webknossos/pull/5881)
-- Added a warning when navigating away from editing the dataset's properties without having saved. [#5948](https://github.com/scalableminds/webknossos/pull/5948)
-- Tiff exports are now served from the datastore module to prepare for remote datastores with webknossos-worker. [#5942](https://github.com/scalableminds/webknossos/pull/5942)
-- Added the organization id to the auth token page and organization page. [#5965](https://github.com/scalableminds/webknossos/pull/5965)
-- Added the possibility to cancel running webknossos-worker jobs. [#5946](https://github.com/scalableminds/webknossos/pull/5946)
+- Added a button next to the histogram which adapts the contrast and brightness to the currently visible data. [#5961](https://github.com/scalableminds/webknossos/pull/5961)
 
 ### Changed
+- Upgraded webpack build tool to v5 and all other webpack related dependencies to their latest version. Enabled persistent caching which speeds up server restarts during development as well as production builds. [#5969](https://github.com/scalableminds/webknossos/pull/5969)
+- The front-end API `labelVoxels` returns a promise now which fulfills as soon as the label operation was carried out. [#5955](https://github.com/scalableminds/webknossos/pull/5955)
 - When changing which layers are visible in an annotation, this setting is persisted in the annotation, so when you share it, viewers will see the same visibility configuration. [#5967](https://github.com/scalableminds/webknossos/pull/5967)
-- Improved the UI for automatic suggestions to the datasource properties when editing a dataset. [#5948](https://github.com/scalableminds/webknossos/pull/5948)
 
 ### Fixed
-- Fixed bug where volume data downloads would sometimes produce invalid zips due to a race condition. [#5926](https://github.com/scalableminds/webknossos/pull/5926)
-- Fixed a bug which caused that the keyboard delay wasn't respected properly when rapidly pressing a key. [#5947](https://github.com/scalableminds/webknossos/pull/5947)
-- Fixed that navigating away from uploading a dataset properly warns the user that there is unsaved state. [#5948](https://github.com/scalableminds/webknossos/pull/5948)
-- Fixed a bug where an organization would be created for an already existing email address. [#5949](https://github.com/scalableminds/webknossos/pull/5949)
-- Fixed a bug where the paths of uploaded files were not checked correctly. [#5950](https://github.com/scalableminds/webknossos/pull/5950)
-- Fixed that the used datastore could not be changed in the UI when uploading a dataset. [#5952](https://github.com/scalableminds/webknossos/pull/5952)
+- Fixed volume-related bugs which could corrupt the volume data in certain scenarios. [#5955](https://github.com/scalableminds/webknossos/pull/5955)
+- Fixed the placeholder resolution computation for anisotropic layers with missing base resolutions. [#5983](https://github.com/scalableminds/webknossos/pull/5983)
+- Fixed a bug where ad-hoc meshes were computed for a mapping, although it was disabled. [#5982](https://github.com/scalableminds/webknossos/pull/5982)
+
 
 ### Removed
 

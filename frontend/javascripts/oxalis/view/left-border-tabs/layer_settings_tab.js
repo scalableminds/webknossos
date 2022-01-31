@@ -129,7 +129,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isAddVolumeLayerModalVisible: false,
   };
 
-  componentWillMount() {
+  // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
+  // eslint-disable-next-line camelcase
+  UNSAFE_componentWillMount() {
     // cache onChange handler
     this.onChangeUser = _.mapValues(this.props.userConfiguration, (__, propertyName) =>
       _.partial(this.props.onChangeUser, propertyName),
@@ -472,7 +474,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           ) : null}
           {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
 
-          {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
+          {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
           {this.getReloadDataButton(layerName)}
           {maybeVolumeTracing && hasFallbackLayer ? this.getDeleteButton(maybeVolumeTracing) : null}

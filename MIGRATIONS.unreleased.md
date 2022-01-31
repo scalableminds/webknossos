@@ -9,3 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/22.02.0...HEAD)
 
 ### Postgres Evolutions:
+- [081-annotation-viewconfiguration.sql](conf/evolutions/081-annotation-viewconfiguration.sql)

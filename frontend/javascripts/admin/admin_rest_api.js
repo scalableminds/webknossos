@@ -25,6 +25,7 @@ import {
   type APIJobState,
   type APIMapping,
   type APIMaybeUnimportedDataset,
+  type APIMeshFile,
   type APIOpenTasksReport,
   type APIOrganization,
   type APIProject,
@@ -48,6 +49,7 @@ import {
   type APIUserLoggedTime,
   type APIUserTheme,
   type AnnotationLayerDescriptor,
+  type AnnotationViewConfiguration,
   type EditableLayerProperties,
   type ExperienceDomainList,
   type MeshMetaData,
@@ -55,7 +57,6 @@ import {
   type ServerTracing,
   type TracingType,
   type WkConnectDatasetConfig,
-  type APIMeshFile,
 } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3, type Vector6, MappingStatusEnum } from "oxalis/constants";
 import type {
@@ -600,6 +601,7 @@ export type EditableAnnotation = {
   description: string,
   visibility: APIAnnotationVisibility,
   tags: Array<string>,
+  viewConfiguration?: AnnotationViewConfiguration,
 };
 
 export function editAnnotation(
@@ -1173,11 +1175,7 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function createResumableUpload(
-  datasetId: APIDatasetId,
-  datastoreUrl: string,
-  uploadId: string,
-): Promise<*> {
+export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<*> {
   const generateUniqueIdentifier = file => {
     if (file.path == null) {
       // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -1188,16 +1186,11 @@ export function createResumableUpload(
     return `${uploadId}/${file.path || file.name}`;
   };
 
-  const additionalParameters = {
-    ...datasetId,
-  };
-
   return doWithToken(
     token =>
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        query: additionalParameters,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         simultaneousUploads: 3,
@@ -1232,6 +1225,18 @@ export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
       data: uploadInformation,
+      host: datastoreHost,
+    }),
+  );
+}
+
+export function cancelDatasetUpload(
+  datastoreHost: string,
+  cancelUploadInformation: { uploadId: string },
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`/data/datasets/cancelUpload?token=${token}`, {
+      data: cancelUploadInformation,
       host: datastoreHost,
     }),
   );

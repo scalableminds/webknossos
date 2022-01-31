@@ -107,6 +107,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",
+  "save.failed.permanent":
+    "Failed to save annotation. Unfortunately, there might be a potential data loss. Please reload the page, check and correct the annotation.",
   "undo.no_undo":
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
@@ -252,6 +254,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":
     "WARNING: The upload is still in progress and will be aborted when hitting OK. Please click cancel and wait until the upload is finished before leaving the page.",
+  "dataset.leave_with_unsaved_changes":
+    "There are unsaved changes for the dataset's configuration. Please click “Save” before leaving the page. To discard the changes click “Cancel”.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.segmentationlayer_not_existing": "This tracing has no segmentation layer.",

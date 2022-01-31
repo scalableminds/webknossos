@@ -115,6 +115,7 @@ dataSet.upload.success=Dataset successfully uploaded. The import is in progress 
 dataSet.create.success=Dataset successfully created
 dataSet.defaultconfiguration.updated=Dataset default configuration updated
 dataSet.list.failed=Failed to retrieve list of data sets.
+dataset.list.writesFailed=Failed to write json for dataset {0}
 dataSet.url.missing=URL missing in the supplied json
 dataSet.dataStore.missing=dataStore missing in the supplied json
 dataSet.dataSet.missing=dataSet missing in the supplied json
@@ -336,6 +337,7 @@ job.couldNotRunCubing = Failed to start WKW conversion job.
 job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
 job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
+job.couldNotRunGlobalizeFloodfills = Failed to start job for globalizing floodfills.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 jobs.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
@@ -345,6 +347,7 @@ job.export.tiff.edgeLengthExceeded = An edge length of the selected bounding box
 job.export.notAllowed.organization = Currently tiff export is only allowed for datasets of your own organization.
 job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
+job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

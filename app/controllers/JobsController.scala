@@ -7,9 +7,9 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.job.{JobDAO, JobService, WorkerDAO, WorkerService}
+import models.job.{JobDAO, JobService, JobState, WorkerDAO, WorkerService}
 import models.organization.OrganizationDAO
-import oxalis.security.WkEnv
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import oxalis.telemetry.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -25,6 +25,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                workerService: WorkerService,
                                workerDAO: WorkerDAO,
                                wkconf: WkConf,
+                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                slackNotificationService: SlackNotificationService,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
@@ -32,12 +33,12 @@ class JobsController @Inject()(jobDAO: JobDAO,
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.successful(())
-      jobCountsByStatus <- jobDAO.countByStatus
+      jobCountsByState <- jobDAO.countByState
       workers <- workerDAO.findAll
       workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
         "workers" -> workersJson,
-        "jobsByStatus" -> Json.toJson(jobCountsByStatus)
+        "jobsByState" -> Json.toJson(jobCountsByState)
       )
     } yield Ok(jsStatus)
   }
@@ -54,6 +55,22 @@ class JobsController @Inject()(jobDAO: JobDAO,
     for {
       _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       job <- jobDAO.findOne(ObjectId(id))
+      js <- jobService.publicWrites(job)
+    } yield Ok(js)
+  }
+
+  /*
+   * Job cancelling protocol:
+   * When a user cancels a job, the manualState is immediately set. Thus, the job looks cancelled to the user
+   * The worker-written “state” field is later updated by the worker when it has successfully cancelled the job run.
+   * When both fields are set, the cancelling is complete and wk no longer includes the job in the to_cancel list sent to worker
+   */
+  def cancel(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      jobIdValidated <- ObjectId.parse(id)
+      job <- jobDAO.findOne(jobIdValidated)
+      _ <- jobDAO.updateManualState(jobIdValidated, JobState.CANCELLED)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -128,6 +145,42 @@ class JobsController @Inject()(jobDAO: JobDAO,
             "webknossos_token" -> RpcTokenHolder.webKnossosToken,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNucleiInferral"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
+  def runGlobalizeFloodfills(
+      organizationName: String,
+      dataSetName: String,
+      newDataSetName: Option[String],
+      layerName: Option[String],
+      annotationId: Option[String],
+      annotationType: Option[String],
+  ): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.globalizeFloodfill.notAllowed.organization" ~> FORBIDDEN
+          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
+            request.identity.loginInfo)
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
+          command = "globalize_floodfills"
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "new_dataset_name" -> newDataSetName,
+            "layer_name" -> layerName,
+            "annotation_id" -> annotationId,
+            "annotation_type" -> annotationType,
+            "user_auth_token" -> userAuthToken.id,
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunGlobalizeFloodfills"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

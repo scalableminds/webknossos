@@ -160,6 +160,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     datastoreUrl: "",
   };
 
+  unblock: ?Function;
+  blockTimeoutId: ?TimeoutID;
   formRef = React.createRef<typeof FormInstance>();
 
   componentDidMount() {
@@ -181,6 +183,21 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   }
 
+  componentWillUnmount() {
+    this.unblockHistory();
+  }
+
+  unblockHistory() {
+    window.onbeforeunload = null;
+    if (this.blockTimeoutId != null) {
+      clearTimeout(this.blockTimeoutId);
+      this.blockTimeoutId = null;
+    }
+    if (this.unblock != null) {
+      this.unblock();
+    }
+  }
+
   isDatasetManagerOrAdmin = () =>
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
@@ -192,22 +209,21 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   handleSubmit = async formValues => {
     const { activeUser } = this.props;
-    const pathNameAtSubmit = window.location.pathname;
 
     if (activeUser != null) {
       Toast.info("Uploading dataset");
       this.setState({
         isUploading: true,
       });
-      const beforeUnload = action => {
+      const beforeUnload = (newLocation, action) => {
         // Only show the prompt if this is a proper beforeUnload event from the browser
         // or the pathname changed
         // This check has to be done because history.block triggers this function even if only the url hash changed
-        if (action === undefined || pathNameAtSubmit !== window.location.pathname) {
+        if (action === undefined || newLocation.pathname !== window.location.pathname) {
           const { isUploading } = this.state;
           if (isUploading) {
             window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-            window.setTimeout(() => {
+            this.blockTimeoutId = window.setTimeout(() => {
               // restore the event handler in case a user chose to stay on the page
               window.onbeforeunload = beforeUnload;
             }, 500);
@@ -217,7 +233,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         return null;
       };
 
-      this.props.history.block(beforeUnload);
+      this.unblock = this.props.history.block(beforeUnload);
       window.onbeforeunload = beforeUnload;
 
       const datasetId: APIDatasetId = {

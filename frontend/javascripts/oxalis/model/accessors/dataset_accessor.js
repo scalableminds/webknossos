@@ -28,7 +28,7 @@ import constants, {
   Vector3Indicies,
   MappingStatusEnum,
 } from "oxalis/constants";
-import { aggregateBoundingBox } from "libs/utils";
+import { aggregateBoundingBox, map3 } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
@@ -256,20 +256,27 @@ export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vec
   // Therefore, the largest dim for each resolution has to be unique across all resolutions.
 
   // This function returns an array of resolutions, for which each index will
-  // hold a resolution with highest_dim === 2**index.
+  // hold a resolution with highest_dim === 2**index and where resolutions are monotonously increasing.
 
   if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
     throw new Error("Max dimension in resolutions is not unique.");
   }
-  const paddedResolutionCount = 1 + Math.log2(_.max(resolutions.map(v => _.max(v))));
+  const maxResolution = Math.log2(_.max(resolutions.map(v => _.max(v))));
   const resolutionsLookUp = _.keyBy(resolutions, _.max);
 
-  return _.range(0, paddedResolutionCount).map(exp => {
-    const resPower = 2 ** exp;
-    // If the resolution does not exist, use either the given fallback resolution or an isotropic fallback
-    const fallback = [resPower, resPower, resPower];
-    return resolutionsLookUp[resPower] || fallback;
-  });
+  const maxResPower = 2 ** maxResolution;
+  let lastResolution = [maxResPower, maxResPower, maxResPower];
+  return _.range(maxResolution, -1, -1)
+    .map(exp => {
+      const resPower = 2 ** exp;
+      // If the resolution does not exist, use the component-wise minimum of the next-higher
+      // resolution and an isotropic fallback resolution. Otherwise for anisotropic resolutions,
+      // the dense resolutions wouldn't be monotonously increasing.
+      const fallback = map3(i => Math.min(lastResolution[i], resPower), [0, 1, 2]);
+      lastResolution = resolutionsLookUp[resPower] || fallback;
+      return lastResolution;
+    })
+    .reverse();
 }
 
 function _getResolutions(dataset: APIDataset): Vector3[] {

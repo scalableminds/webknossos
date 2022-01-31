@@ -132,6 +132,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       r <- run(sql"""select count(_id) from #$existingCollectionName
               where state = '#${JobState.PENDING}'
+              and manualState is null
               and _dataStore = ${_dataStore}
               and _worker is null""".as[Int])
       head <- r.headOption
@@ -140,7 +141,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def countUnfinishedByWorker(workerId: ObjectId): Fox[Int] =
     for {
       r <- run(
-        sql"select count(_id) from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}')"
+        sql"select count(_id) from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null"
           .as[Int])
       head <- r.headOption
     } yield head
@@ -148,7 +149,21 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(
-        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') order by created"
+        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state in ('#${JobState.PENDING}', '#${JobState.STARTED}') and manualState is null order by created"
+          .as[JobsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
+  /*
+   * Jobs that are cancelled by the user (manualState set to cancelled)
+   * but not yet cancelled in the worker (state not yet set to cancelled)
+   * are sent to the worker in to_cancel list. These are gathered here.
+   * Compare the note on the job cancelling protocol in JobsController
+   */
+  def findAllCancellingByWorker(workerId: ObjectId): Fox[List[Job]] =
+    for {
+      r <- run(
+        sql"select #$columns from #$existingCollectionName where _worker = $workerId and state != '#${JobState.CANCELLED}' and manualState = '#${JobState.CANCELLED}'"
           .as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
@@ -175,13 +190,19 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                           ${new java.sql.Timestamp(j.created)}, ${j.isDeleted})""")
     } yield ()
 
+  def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"""update webknossos.jobs set manualState = '#${manualState.toString}' where _id = $id""")
+    } yield ()
+
   def updateStatus(jobId: ObjectId, s: JobStatus): Fox[Unit] = {
     val format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX")
     val startedTimestamp = s.started.map(started => format.format(new Timestamp(started)))
     val endedTimestamp = s.ended.map(ended => format.format(new Timestamp(ended)))
     for {
       _ <- run(sqlu"""update webknossos.jobs set
-              latestRunId = ${s.latestRunId},
+              latestRunId = #${optionLiteralSanitized(s.latestRunId)},
               state = '#${s.state.toString}',
               returnValue = #${optionLiteralSanitized(s.returnValue)},
               started = #${optionLiteralSanitized(startedTimestamp)},
@@ -199,6 +220,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
             where
               state = '#${JobState.PENDING}'
               and _dataStore = ${worker._dataStore}
+              and manualState is NULL
               and _worker is NULL
             order by created
             limit 1
@@ -217,10 +239,11 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def countByStatus: Fox[Map[String, Int]] =
+  def countByState: Fox[Map[String, Int]] =
     for {
       result <- run(sql"""select state, count(_id)
                            from webknossos.jobs_
+                           where manualState is null
                            group by state
                            order by state
                            """.as[(String, Int)])
@@ -309,7 +332,7 @@ class JobService @Inject()(wkConf: WkConf,
       Json.obj(
         "id" -> job._id.id,
         "command" -> job.command,
-        "commandArgs" -> (job.commandArgs - "webknossos_token"),
+        "commandArgs" -> (job.commandArgs - "webknossos_token" - "user_auth_token"),
         "state" -> job.state,
         "manualState" -> job.manualState,
         "latestRunId" -> job.latestRunId,

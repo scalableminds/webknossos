@@ -173,9 +173,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       knownUpload <- isKnownUpload(uploadId)
     } yield
       if (knownUpload) {
-        logger.info(f"Canceling dataset upload of ${dataSourceId.team}/${dataSourceId.name} with id ${uploadId}...")
-        PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.team, uploadId))
-        removeFromRedis(uploadId)
+        logger.info(f"Cancelling dataset upload of ${dataSourceId.team}/${dataSourceId.name} with id ${uploadId}...")
+        removeFromRedis(uploadId).flatMap(_ =>
+          PathUtils.deleteDirectoryRecursively(uploadDirectory(dataSourceId.team, uploadId)))
       } else {
         Fox.failure(s"Unknown upload")
       }

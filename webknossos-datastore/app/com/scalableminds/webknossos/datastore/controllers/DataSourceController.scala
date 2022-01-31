@@ -230,8 +230,6 @@ Expects:
 Expects:
  - As JSON object body with keys:
   - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
-  - organization (string): owning organization name
-  - name (string): dataset name
  - As GET parameter:
   - token (string): datastore token identifying the uploading user
 """,
@@ -258,8 +256,8 @@ Expects:
         accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), Some(token)) {
           AllowRemoteOrigin {
             for {
-              _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId)
-              _ <- uploadService.cancelUpload(request.body)
+              _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataSet.delete.webknossos.failed"
+              _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
             } yield Ok
           }
         }
@@ -504,10 +502,10 @@ Expects:
       accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), token) {
         AllowRemoteOrigin {
           for {
-            _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName,
-                                                                        dataSetName,
-                                                                        reason =
-                                                                          Some("the user wants to delete the dataset"))
+            _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
+              organizationName,
+              dataSetName,
+              reason = Some("the user wants to delete the dataset")) ?~> "dataSet.delete.failed"
             _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
           } yield Ok
         }

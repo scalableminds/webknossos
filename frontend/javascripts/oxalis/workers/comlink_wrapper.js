@@ -55,12 +55,17 @@ export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
 }
 
 export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
-  // In a node context (e.g., when executing tests), we don't create web workers
   if (_expose != null) {
     _expose(fn, self);
   }
-  // $FlowExpectedError[incompatible-return]
-  return fn;
+
+  // In a node context (e.g., when executing tests), we don't create web workers.
+  // Therefore, we simply return the passed function with the only change that
+  // we are wrapping the return value in a promise. That way, the worker and non-worker
+  // versions both return promises.
+  // $FlowExpectedError[not-a-function]
+  // $FlowExpectedError[prop-missing]
+  return (...args) => Promise.resolve(fn(...args));
 }
 
 export function pretendPromise<T>(t: T): Promise<T> {

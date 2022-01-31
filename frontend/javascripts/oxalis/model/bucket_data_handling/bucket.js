@@ -3,29 +3,29 @@
  * @flow
  */
 
+import { createNanoEvents } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
-import { createNanoEvents } from "nanoevents";
 
-import ErrorHandling from "libs/error_handling";
-import { mod } from "libs/utils";
+import { type ElementClass } from "types/api_flow_types";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import {
+  addBucketToUndoAction,
+  type MaybeUnmergedBucketLoadedPromise,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   bucketPositionToGlobalAddress,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { mod } from "libs/utils";
+import Constants, { type BoundingBoxType, type Vector3, type Vector4 } from "oxalis/constants";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, { type Vector3, type Vector4, type BoundingBoxType } from "oxalis/constants";
 import window from "libs/window";
-import { type ElementClass } from "types/api_flow_types";
-import {
-  addBucketToUndoAction,
-  type MaybeBucketLoadedPromise,
-} from "oxalis/model/actions/volumetracing_actions";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -53,6 +53,13 @@ type Emitter = {
   events: Object,
   emit: Function,
 };
+
+const WARNING_THROTTLE_THRESHOLD = 10000;
+const warnMergeWithoutPendingOperations = _.throttle(() => {
+  ErrorHandling.notify(
+    new Error("Bucket.merge() was called with an empty list of pending operations."),
+  );
+}, WARNING_THROTTLE_THRESHOLD);
 
 export class NullBucket {
   type: "null" = "null";
@@ -109,8 +116,13 @@ export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 export type Bucket = DataBucket | NullBucket;
 
 // This set saves whether a bucket is already added to the current undo volume batch
-// and gets cleared by the save saga after an annotation step has finished.
+// and gets cleared when a volume transaction is ended (marked by the action
+// FINISH_ANNOTATION_STROKE).
 export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
+
+export function markVolumeTransactionEnd() {
+  bucketsAlreadyInUndoState.clear();
+}
 
 export class DataBucket {
   type: "data" = "data";
@@ -118,6 +130,7 @@ export class DataBucket {
   visualizedMesh: ?Object;
   visualizationColor: number;
   dirtyCount: number = 0;
+  pendingOperations: Array<(BucketDataArray) => void> = [];
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -129,7 +142,7 @@ export class DataBucket {
   _fallbackBucket: ?Bucket;
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise;
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
 
   constructor(
     elementClass: ElementClass,
@@ -138,7 +151,7 @@ export class DataBucket {
     cube: DataCube,
   ) {
     this.emitter = createNanoEvents();
-    this.maybeBucketLoadedPromise = null;
+    this.maybeUnmergedBucketLoadedPromise = null;
 
     this.elementClass = elementClass;
     this.cube = cube;
@@ -235,6 +248,16 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
+  needsBackendData(): boolean {
+    /*
+    "Needs backend data" means that the front-end has not received any data (nor "missing" reply) for this bucket, yet.
+    The return value does
+      - not tell whether the data fetching was already initiated (does not differentiate between UNREQUESTED and REQUESTED)
+      - not tell whether the backend actually has data for the address (does not differentiate between LOADED and MISSING)
+    */
+    return this.state === BucketStateEnum.UNREQUESTED || this.state === BucketStateEnum.REQUESTED;
+  }
+
   getAddress(): Vector3 {
     return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
@@ -266,46 +289,61 @@ export class DataBucket {
     return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
   };
 
-  getCopyOfData(): { dataClone: BucketDataArray, triggeredBucketFetch: boolean } {
-    const { data: bucketData, triggeredBucketFetch } = this.getOrCreateData();
+  getCopyOfData(): BucketDataArray {
+    const bucketData = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
     const dataClone = new TypedArrayClass(bucketData);
-    return { dataClone, triggeredBucketFetch };
+    return dataClone;
   }
 
-  label(labelFunc: BucketDataArray => void) {
-    const { data: bucketData } = this.getOrCreateData();
-    this.markAndAddBucketForUndo();
+  // eslint-disable-next-line camelcase
+  async label_DEPRECATED(labelFunc: BucketDataArray => void): Promise<void> {
+    /*
+     * It's not recommended to use this method (repeatedly), as it can be
+     * very slow. See the docstring for Bucket.getOrCreateData() for alternatives.
+     */
+    const bucketData = await this.getDataForMutation();
+    this.startDataMutation();
     labelFunc(bucketData);
-    this.throttledTriggerLabeled();
+    this.endDataMutation();
   }
 
-  markAndAddBucketForUndo() {
+  _markAndAddBucketForUndo() {
+    // This method adds a snapshot of the current bucket to the undo stack.
+    // Note that the method may be called multiple times during a volume
+    // transaction (e.g., when moving the brush over the same buckets for
+    // multiple frames). Since a snapshot of the "old" data should be
+    // saved to the undo stack, the snapshot only has to be created once
+    // for each transaction.
+    // This is ensured by checking bucketsAlreadyInUndoState.
     this.dirty = true;
-    if (!bucketsAlreadyInUndoState.has(this)) {
-      bucketsAlreadyInUndoState.add(this);
-      const { dataClone, triggeredBucketFetch } = this.getCopyOfData();
-      if (triggeredBucketFetch) {
-        this.maybeBucketLoadedPromise = new Promise((resolve, _reject) => {
-          this.once("bucketLoaded", data => {
-            // Once the bucket was loaded, maybeBucketLoadedPromise can be null'ed
-            this.maybeBucketLoadedPromise = null;
-            resolve(data);
-          });
-        });
-      }
-      Store.dispatch(
-        // Always use the current state of this.maybeBucketLoadedPromise, since
-        // this bucket could be added to multiple undo batches while it's fetched. All entries
-        // need to have the corresponding promise for the undo to work correctly.
-        addBucketToUndoAction(
-          this.zoomedAddress,
-          dataClone,
-          this.maybeBucketLoadedPromise,
-          this.getTracingId(),
-        ),
-      );
+    if (bucketsAlreadyInUndoState.has(this)) {
+      return;
     }
+
+    bucketsAlreadyInUndoState.add(this);
+    const dataClone = this.getCopyOfData();
+    if (this.needsBackendData() && this.maybeUnmergedBucketLoadedPromise == null) {
+      this.maybeUnmergedBucketLoadedPromise = new Promise((resolve, _reject) => {
+        this.once("unmergedBucketDataLoaded", data => {
+          // Once the bucket was loaded, maybeUnmergedBucketLoadedPromise can be null'ed
+          this.maybeUnmergedBucketLoadedPromise = null;
+          resolve(data);
+        });
+      });
+    }
+    Store.dispatch(
+      // Always use the current state of this.maybeUnmergedBucketLoadedPromise, since
+      // this bucket could be added to multiple undo batches while it's fetched. All entries
+      // need to have the corresponding promise for the undo to work correctly.
+      addBucketToUndoAction(
+        this.zoomedAddress,
+        dataClone,
+        this.maybeUnmergedBucketLoadedPromise,
+        this.pendingOperations,
+        this.getTracingId(),
+      ),
+    );
   }
 
   hasData(): boolean {
@@ -321,15 +359,21 @@ export class DataBucket {
     return data;
   }
 
-  setData(newData: Uint8Array) {
-    const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
-    this.data = new TypedArrayClass(
-      newData.buffer,
-      newData.byteOffset,
-      newData.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-    );
+  setData(newData: BucketDataArray) {
+    this.data = newData;
     this.dirty = true;
     this.trigger("bucketLabeled");
+  }
+
+  uint8ToTypedBuffer(arrayBuffer: ?Uint8Array) {
+    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
+    return arrayBuffer != null
+      ? new TypedArrayClass(
+          arrayBuffer.buffer,
+          arrayBuffer.byteOffset,
+          arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+        )
+      : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
   }
 
   markAsNeeded(): void {
@@ -340,17 +384,130 @@ export class DataBucket {
     this.accessed = false;
   }
 
-  getOrCreateData(): { data: BucketDataArray, triggeredBucketFetch: boolean } {
-    let triggeredBucketFetch = false;
+  getOrCreateData(): BucketDataArray {
+    /*
+     * Don't use this method to get the bucket's data, if you want to mutate it.
+     * Instead, use
+     *   1) the preferred VoxelMap primitive (via applyVoxelMap) which works for not
+     *      (yet) loaded buckets
+     *   2) or the async method getDataForMutation(), which ensures that the bucket is
+     *      loaded before mutation (therefore, no async merge operations have to be
+     *      defined). See DataCube.floodFill() for an example usage of this pattern.
+     */
+
     if (this.data == null) {
       const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
-        triggeredBucketFetch = true;
         this.temporalBucketManager.addBucket(this);
       }
     }
-    return { data: this.getData(), triggeredBucketFetch };
+    return this.getData();
+  }
+
+  async getDataForMutation(): Promise<BucketDataArray> {
+    /*
+     * You can use the returned data to inspect it. If you decide to mutate the data,
+     * please call startDataMutation() before the mutation and endDataMutation() afterwards.
+     * Example:
+     *
+     * const data = await bucket.getDataForMutation();
+     * bucket.startDataMutation();
+     * data[...] = ...;
+     * bucket.endDataMutation();
+     */
+    await this.ensureLoaded();
+    return this.getOrCreateData();
+  }
+
+  startDataMutation(): void {
+    /*
+     * See Bucket.getDataForMutation() for a safe way of using this method.
+     */
+    this._markAndAddBucketForUndo();
+  }
+
+  endDataMutation(): void {
+    /*
+     * See Bucket.getDataForMutation() for a safe way of using this method.
+     */
+    this.cube.pushQueue.insert(this);
+    this.trigger("bucketLabeled");
+  }
+
+  applyVoxelMap(
+    voxelMap: Uint8Array,
+    cellId: number,
+    get3DAddress: (number, number, Vector3 | Float32Array) => void,
+    sliceCount: number,
+    thirdDimensionIndex: 0 | 1 | 2,
+    // If shouldOverwrite is false, a voxel is only overwritten if
+    // its old value is equal to overwritableValue.
+    shouldOverwrite: boolean = true,
+    overwritableValue: number = 0,
+  ) {
+    const data = this.getOrCreateData();
+
+    if (this.needsBackendData()) {
+      // If the frontend does not yet have the backend's data
+      // for this bucket, we apply the voxel map, but also
+      // save it in this.pendingOperations. See Bucket.merge()
+      // for more details.
+      this.pendingOperations.push(_data =>
+        this._applyVoxelMapInPlace(
+          _data,
+          voxelMap,
+          cellId,
+          get3DAddress,
+          sliceCount,
+          thirdDimensionIndex,
+          shouldOverwrite,
+          overwritableValue,
+        ),
+      );
+    }
+
+    this._applyVoxelMapInPlace(
+      data,
+      voxelMap,
+      cellId,
+      get3DAddress,
+      sliceCount,
+      thirdDimensionIndex,
+      shouldOverwrite,
+      overwritableValue,
+    );
+  }
+
+  _applyVoxelMapInPlace(
+    data: BucketDataArray,
+    voxelMap: Uint8Array,
+    cellId: number,
+    get3DAddress: (number, number, Vector3 | Float32Array) => void,
+    sliceCount: number,
+    thirdDimensionIndex: 0 | 1 | 2,
+    // If shouldOverwrite is false, a voxel is only overwritten if
+    // its old value is equal to overwritableValue.
+    shouldOverwrite: boolean = true,
+    overwritableValue: number = 0,
+  ) {
+    const out = new Float32Array(3);
+    for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+      for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+        if (voxelMap[firstDim * Constants.BUCKET_WIDTH + secondDim] === 1) {
+          get3DAddress(firstDim, secondDim, out);
+          const voxelToLabel = out;
+          voxelToLabel[thirdDimensionIndex] =
+            (voxelToLabel[thirdDimensionIndex] + sliceCount) % Constants.BUCKET_WIDTH;
+          // The voxelToLabel is already within the bucket and in the correct resolution.
+          const voxelAddress = this.cube.getVoxelIndexByVoxelOffset(voxelToLabel);
+          const currentSegmentId = data[voxelAddress];
+          if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
+            data[voxelAddress] = cellId;
+          }
+        }
+      }
+    }
   }
 
   markAsPulled(): void {
@@ -377,15 +534,9 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: ?Uint8Array): void {
+    const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
-    const data =
-      arrayBuffer != null
-        ? new TypedArrayClass(
-            arrayBuffer.buffer,
-            arrayBuffer.byteOffset,
-            arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
-          )
-        : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
+
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo =
         // Disable this conditional if you need verbose output here.
@@ -403,15 +554,21 @@ export class DataBucket {
       );
     }
     switch (this.state) {
-      case BucketStateEnum.REQUESTED:
+      case BucketStateEnum.REQUESTED: {
+        // Clone the data for the unmergedBucketDataLoaded event,
+        // as the following merge operation is done in-place.
+        const dataClone = new TypedArrayClass(data);
+        this.trigger("unmergedBucketDataLoaded", dataClone);
+
         if (this.dirty) {
           this.merge(data);
         } else {
           this.data = data;
         }
-        this.trigger("bucketLoaded", data);
         this.state = BucketStateEnum.LOADED;
+        this.trigger("bucketLoaded", data);
         break;
+      }
       default:
         this.unexpectedState();
     }
@@ -466,14 +623,31 @@ export class DataBucket {
     return fallbackBucket;
   }
 
-  merge(newData: BucketDataArray): void {
+  merge(fetchedData: BucketDataArray): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
-    for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
-      // Only overwrite with the new value if the old value was 0
-      this.data[i] = this.data[i] || newData[i];
+
+    // The frontend just received the backend's data for this bucket.
+    // We apply all pendingOperations on the backends data
+    // and set it to this.data.
+    // The old this.data is discarded/overwritten, since it was only
+    // a preliminary version of the data.
+    for (const op of this.pendingOperations) {
+      op(fetchedData);
     }
+    this.data = fetchedData;
+
+    if (this.pendingOperations.length === 0) {
+      // This can happen when mutating an unloaded bucket and then
+      // undoing it. The bucket is still marked as dirty, even though,
+      // no pending operations are necessary (since the bucket was restored
+      // to an untouched version).
+      // See this refactoring issue: https://github.com/scalableminds/webknossos/issues/5973
+      warnMergeWithoutPendingOperations();
+    }
+
+    this.pendingOperations = [];
   }
 
   // The following three methods can be used for debugging purposes.
@@ -508,6 +682,19 @@ export class DataBucket {
     }
   }
 
+  // This is a debugging function to enable logging specific
+  // to a certain bucket. When drilling down on a specific bucket
+  // you can adapt the if-condition (e.g. for only printing logs
+  // for a specific bucket address).
+  //
+  // Example usage:
+  // bucket._logMaybe("Data of problematic bucket", bucket.data)
+  _logMaybe = (...args) => {
+    if (this.zoomedAddress.join(",") === [93, 0, 0, 0].join(",")) {
+      console.log(...args);
+    }
+  };
+
   async ensureLoaded(): Promise<void> {
     let needsToAwaitBucket = false;
     if (this.isRequested()) {
@@ -522,7 +709,7 @@ export class DataBucket {
     }
     if (needsToAwaitBucket) {
       await new Promise(resolve => {
-        this.on("bucketLoaded", resolve);
+        this.once("bucketLoaded", resolve);
       });
     }
     // Bucket has been loaded by now or was loaded already

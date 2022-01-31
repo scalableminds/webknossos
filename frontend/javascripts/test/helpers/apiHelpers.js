@@ -91,6 +91,16 @@ mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
 mockRequire("oxalis/model/helpers/proto_helpers", protoHelpers);
 
+// Replace byte_array_lz4_compression.worker with a mock which supports
+// intentional slowness.
+mockRequire(
+  "oxalis/workers/byte_array_lz4_compression.worker",
+  "oxalis/workers/slow_byte_array_lz4_compression.worker",
+);
+const { setSlowCompression } = mockRequire.reRequire(
+  "oxalis/workers/byte_array_lz4_compression.worker",
+);
+
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
@@ -139,6 +149,7 @@ export function __setupOxalis(t, mode, apiVersion) {
   };
   t.context.model = Model;
   t.context.mocks = { Request };
+  t.context.setSlowCompression = setSlowCompression;
 
   const webknossos = new OxalisApi(Model);
   const organizationName = "Connectomics Department";

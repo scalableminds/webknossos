@@ -107,6 +107,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",
+  "save.failed.permanent":
+    "Failed to save annotation. Unfortunately, there might be a potential data loss. Please reload the page, check and correct the annotation.",
   "undo.no_undo":
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",

@@ -1230,7 +1230,7 @@ export function finishDatasetUpload(datastoreHost: string, uploadInformation: {}
 
 export function cancelDatasetUpload(
   datastoreHost: string,
-  cancelUploadInformation: {},
+  cancelUploadInformation: { uploadId: string },
 ): Promise<void> {
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets/cancelUpload?token=${token}`, {

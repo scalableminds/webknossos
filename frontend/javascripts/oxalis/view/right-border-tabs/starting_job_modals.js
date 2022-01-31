@@ -1,5 +1,4 @@
 // @flow
-import _ from "lodash";
 import React, { useEffect, useState, type Node } from "react";
 import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
@@ -13,6 +12,11 @@ import { Unicode, type Vector3 } from "oxalis/constants";
 import { capitalizeWords, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 
 const { ThinSpace } = Unicode;
+
+const jobNameToImagePath = {
+  "neuron inferral": "neuron_inferral_example.jpg",
+  "nuclei inferral": "nuclei_inferral_example.jpg",
+};
 
 type Props = {
   handleClose: () => void,
@@ -85,10 +89,7 @@ function StartingJobModal(props: StartingJobModalProps) {
   const ColorLayerSelection = (): Node =>
     colorLayerNames.length > 1 ? (
       <React.Fragment>
-        <p>
-          The detection approach uses a single color layer. Please select the layer that should be
-          used for detection.
-        </p>
+        <p>Please select the layer that should be used for the inferral.</p>
         <div style={{ textAlign: "center" }}>
           <Select
             showSearch
@@ -136,12 +137,10 @@ function StartingJobModal(props: StartingJobModalProps) {
     isBoundingBoxConfigurable ? (
       <React.Fragment>
         <p>
-          The detection requires you to set a bounding box for the volume where the detection shall
-          be done. As the detection takes a long time, it is suggested to only take a small volume
-          and not the whole dataset. To select a volume please create a bounding box of the desired
+          Please select the bounding box for which the inferral should be computed. Note that large
+          bounding boxes can take very long. You can create a new bounding box for the desired
           volume with the bounding box tool in the toolbar at the top. The created bounding boxes
-          will be available below for selection. The format of the Bounding Boxes is &quot;minX,
-          minY, minZ, width, height, depth&quot;.
+          will be listed below.
         </p>
         <div style={{ textAlign: "center" }}>
           <Select
@@ -181,7 +180,7 @@ function StartingJobModal(props: StartingJobModalProps) {
       <br />
       <div style={{ textAlign: "center" }}>
         <img
-          src={`/assets/images/${_.snakeCase(jobName)}_example.jpg`}
+          src={`/assets/images/${jobNameToImagePath[jobName]}`}
           alt={`${jobName} example`}
           style={{ width: 400, height: "auto", borderRadius: 3 }}
         />

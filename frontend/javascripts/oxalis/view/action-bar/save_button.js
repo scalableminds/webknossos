@@ -17,7 +17,7 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import ErrorHandling from "libs/error_handling";
-import { values } from "libs/utils";
+import * as Utils from "libs/utils";
 
 type OwnProps = {|
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
@@ -134,7 +134,7 @@ function getOldestUnsavedTimestamp(saveQueue): ?number {
   if (saveQueue.skeleton.length > 0) {
     oldestUnsavedTimestamp = saveQueue.skeleton[0].timestamp;
   }
-  for (const volumeQueue of values(saveQueue.volumes)) {
+  for (const volumeQueue of Utils.values(saveQueue.volumes)) {
     if (volumeQueue.length > 0) {
       const oldestVolumeTimestamp = volumeQueue[0].timestamp;
       oldestUnsavedTimestamp = Math.min(

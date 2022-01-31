@@ -27,11 +27,7 @@ import type {
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
-import {
-  computeArrayFromBoundingBox,
-  computeBoundingBoxFromBoundingBoxObject,
-  values,
-} from "libs/utils";
+import * as Utils from "libs/utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
@@ -120,7 +116,7 @@ export function serializeToNml(
   buildInfo: APIBuildInfo,
 ): string {
   // Only visible trees will be serialized!
-  const visibleTrees = values(tracing.trees).filter(tree => tree.isVisible);
+  const visibleTrees = Utils.values(tracing.trees).filter(tree => tree.isVisible);
   return [
     "<things>",
     ...indent(
@@ -178,7 +174,7 @@ function serializeMetaInformation(
 
 function serializeTaskBoundingBox(boundingBox: ?BoundingBoxType, tagName: string): string {
   if (boundingBox) {
-    const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
+    const boundingBoxArray = Utils.computeArrayFromBoundingBox(boundingBox);
     const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
     return serializeTag(tagName, {
       topLeftX,
@@ -194,7 +190,7 @@ function serializeTaskBoundingBox(boundingBox: ?BoundingBoxType, tagName: string
 
 function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string {
   const { boundingBox, id, name, isVisible } = bb;
-  const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
+  const boundingBoxArray = Utils.computeArrayFromBoundingBox(boundingBox);
   const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
   const color = bb.color ? mapColorToComponents(bb.color) : {};
   return serializeTag(tagName, {
@@ -734,7 +730,7 @@ export function parseNml(
             );
             const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
-              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
               color: _parseColor(attr, DEFAULT_COLOR),
               id: userBoundingBoxId,
               isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
@@ -747,7 +743,7 @@ export function parseNml(
             const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
             const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
-              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
               color: TASK_BOUNDING_BOX_COLOR,
               id: userBoundingBoxId,
               isVisible: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
@@ -794,7 +790,7 @@ export function parseNml(
       })
       .on("finish", () => {
         // Split potentially unconnected trees
-        const originalTrees = values(trees);
+        const originalTrees = Utils.values(trees);
         let maxTreeId = getMaximumTreeId(trees);
         for (const tree of originalTrees) {
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);

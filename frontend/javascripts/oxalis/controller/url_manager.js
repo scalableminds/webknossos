@@ -6,11 +6,7 @@ import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store, {
-  type OxalisState,
-  type MappingType,
-  type IsosurfaceInformation,
-} from "oxalis/store";
+import Store, { type OxalisState, type MappingType } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, {
   type ViewMode,
@@ -26,7 +22,7 @@ import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
-type Mesh = {|
+type MeshUrlDescriptor = {|
   +segmentId: number,
   +seedPosition: Vector3,
   +isPrecomputed: boolean,
@@ -36,7 +32,7 @@ export type UrlStateByLayer = {
   [layerName: string]: {
     meshInfo?: {
       meshFileName: string,
-      meshes?: Array<Mesh>,
+      meshes?: Array<MeshUrlDescriptor>,
     },
     mappingInfo?: {
       mappingName: string,

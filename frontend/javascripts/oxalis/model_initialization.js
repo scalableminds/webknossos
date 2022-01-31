@@ -661,7 +661,7 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
 
       Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
 
-      if (meshes != null && meshes.length > 0) {
+      if (meshes != null) {
         for (const mesh of meshes) {
           const { segmentId, seedPosition, isPrecomputed } = mesh;
           if (isPrecomputed) {

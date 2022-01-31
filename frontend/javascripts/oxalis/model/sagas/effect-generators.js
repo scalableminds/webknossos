@@ -59,3 +59,4 @@ export const _cancel = IOEffects.cancel;
 export const _all = IOEffects.all;
 export const _delay = IOEffects.delay;
 export const _actionChannel = IOEffects.actionChannel;
+export const _fork = IOEffects.fork;

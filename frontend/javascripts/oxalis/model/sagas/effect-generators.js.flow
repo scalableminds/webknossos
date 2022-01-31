@@ -1,6 +1,6 @@
 // @flow
 
-import { type Channel, type Effect, type Pattern, type Task, type Saga as _Saga, channel, effects } from "redux-saga";
+import { type Channel, type Effect, type Pattern, type Task as _Task, type Saga as _Saga, channel, effects } from "redux-saga";
 import {
   all as typedAll,
   race as typedRace,
@@ -14,6 +14,7 @@ import {
   debounce as typedDebounce,
   cancel as typedCancel,
   actionChannel as typedActionChannel,
+  fork as typedFork,
 } from "redux-saga/effects";
 
 import type { Action } from "oxalis/model/actions/actions";
@@ -192,4 +193,6 @@ declare export var _cancel: typeof typedCancel;
 declare export var _actionChannel: typeof typedActionChannel;
 declare export var _delay: typeof typedDelay;
 declare export var _actionChannel: typeof typedActionChannel;
+declare export var _fork: typeof typedFork;
 export type Saga<T> = _Saga<T>;
+export type Task<T> = _Task<T>;

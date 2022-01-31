@@ -468,7 +468,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       otherAction =>
         otherAction.type === "REMOVE_ISOSURFACE" &&
         otherAction.cellId === cellId &&
-        otherAction.layerName === layerName,
+        otherAction.layerName === layer.name,
     ),
   });
 }
@@ -507,19 +507,23 @@ function* loadPrecomputedMeshForSegmentId(
   const sortedAvailableChunks = _.sortBy(availableChunks, chunkPosition =>
     V3.length(V3.sub(seedPosition, chunkPosition)),
   );
-  const tasks = sortedAvailableChunks.map(chunkPosition => async () => {
-    const stlData = await getMeshfileChunkData(
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      fileName,
-      id,
-      chunkPosition,
-    );
+  const tasks = sortedAvailableChunks.map(
+    chunkPosition =>
+      function* loadChunk() {
+        const stlData = yield* call(
+          getMeshfileChunkData,
+          dataset.dataStore.url,
+          dataset,
+          getBaseSegmentationName(segmentationLayer),
+          fileName,
+          id,
+          chunkPosition,
+        );
 
-    const geometry = parseStlBuffer(stlData);
-    getSceneController().addIsosurfaceFromGeometry(geometry, id);
-  });
+        const geometry = parseStlBuffer(stlData);
+        getSceneController().addIsosurfaceFromGeometry(geometry, id);
+      },
+  );
 
   try {
     yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);

@@ -1,16 +1,14 @@
-/*
- * cube.spec.js
- * @flow
- */
+// @flow
 import _ from "lodash";
 
+import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
+import { sleep } from "libs/utils";
 import anyTest, { type TestInterface } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 
 mockRequire.stopAll();
 
@@ -58,10 +56,33 @@ test.beforeEach(t => {
   };
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
   const cube = new Cube([100, 100, 100], resolutionInfo, "uint32", false);
-  const pullQueue = {
-    add: sinon.stub(),
-    pull: sinon.stub(),
-  };
+
+  class PullQueueMock {
+    queue = [];
+    processedQueue = [];
+    add(item) {
+      this.queue.push(item);
+    }
+
+    async pull() {
+      // If the pull happens synchronously, the bucketLoaded promise
+      // in Bucket.ensureLoaded() is created too late. Therefore,
+      // we put a small sleep in here (this mirrors the behavior when
+      // actually downloading data).
+      await sleep(10);
+      for (const item of this.queue) {
+        const bucket = cube.getBucket(item.bucket, true);
+        if (bucket.type === "data") {
+          bucket.markAsPulled();
+          bucket.receiveData(new Uint8Array(4 * 32 ** 3));
+        }
+      }
+      this.processedQueue = this.queue;
+      this.queue = [];
+    }
+  }
+
+  const pullQueue = new PullQueueMock();
   const pushQueue = {
     insert: sinon.stub(),
     push: sinon.stub(),
@@ -101,51 +122,41 @@ test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
 
 test("Voxel Labeling should request buckets when temporal buckets are created", t => {
   const { cube, pullQueue } = t.context;
-  cube.labelVoxelInResolution([1, 1, 1], 42, 0);
 
-  t.plan(2);
+  cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 42, 0);
+
+  t.plan(1);
   return runAsync([
     () => {
-      t.true(
-        pullQueue.add.calledWith({
-          bucket: [0, 0, 0, 0],
-          priority: -1,
-        }),
-      );
-      t.true(pullQueue.pull.called);
+      t.deepEqual(pullQueue.processedQueue[0], {
+        bucket: [0, 0, 0, 0],
+        priority: -1,
+      });
     },
   ]);
 });
 
-test("Voxel Labeling should push buckets after they were pulled", t => {
+test("Voxel Labeling should push buckets after they were pulled", async t => {
   const { cube, pushQueue } = t.context;
-  cube.labelVoxelInResolution([1, 1, 1], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 42, 0);
 
-  t.plan(3);
-  let bucket;
+  t.plan(1);
+  const bucket = cube.getBucket([0, 0, 0, 0]);
+
   return runAsync([
-    () => {
-      t.is(pushQueue.insert.called, false);
-    },
-    () => {
-      bucket = cube.getBucket([0, 0, 0, 0]);
-      bucket.markAsPulled();
-      bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
-      t.pass();
-    },
     () => {
       t.true(pushQueue.insert.calledWith(bucket));
     },
   ]);
 });
 
-test("Voxel Labeling should push buckets immediately if they are pulled already", t => {
+test("Voxel Labeling should push buckets immediately if they are pulled already", async t => {
   const { cube, pushQueue } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
   bucket.markAsPulled();
-  bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
+  bucket.receiveData(new Uint8Array(4 * 32 ** 3));
 
-  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
 
   t.plan(1);
   return runAsync([
@@ -155,12 +166,12 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   ]);
 });
 
-test("Voxel Labeling should only create one temporal bucket", t => {
+test("Voxel Labeling should only instantiate one bucket when labelling the same bucket twice", async t => {
   const { cube } = t.context;
-  // Creates temporal bucket
-  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
-  // Uses existing temporal bucket
-  cube.labelVoxelInResolution([1, 0, 0], 43, 0);
+  // Creates bucket
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
+  // Uses existing bucket
+  await cube._labelVoxelInResolution_DEPRECATED([1, 0, 0], 43, 0);
 
   const data = cube.getBucket([0, 0, 0, 0]).getData();
 
@@ -168,38 +179,18 @@ test("Voxel Labeling should only create one temporal bucket", t => {
   t.is(data[1], 43);
 });
 
-test("Voxel Labeling should merge incoming buckets", t => {
-  const { cube } = t.context;
-  const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
-
-  const oldData = new Uint32Array(32 * 32 * 32);
-  // First voxel should be overwritten by new data
-  oldData[0] = 12345;
-  // Second voxel should be merged into new data
-  oldData[1] = 67890;
-
-  cube.labelVoxelInResolution([0, 0, 0], 424242, 0);
-
-  bucket.markAsPulled();
-  bucket.receiveData(new Uint8Array(oldData.buffer));
-
-  const newData = bucket.getData();
-  t.is(newData[0], 424242);
-  t.is(newData[1], oldData[1]);
-});
-
-test("getDataValue() should return the raw value without a mapping", t => {
+test("getDataValue() should return the raw value without a mapping", async t => {
   const { cube } = t.context;
   const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
-  cube.labelVoxelInResolution([0, 0, 0], value, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], value, 0);
 
   t.is(cube.getDataValue([0, 0, 0]), value);
 });
 
-test("getDataValue() should return the mapping value if available", t => {
+test("getDataValue() should return the mapping value if available", async t => {
   const { cube } = t.context;
-  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
-  cube.labelVoxelInResolution([1, 1, 1], 43, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], 42, 0);
+  await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], 43, 0);
 
   const mapping = [];
   mapping[42] = 1;

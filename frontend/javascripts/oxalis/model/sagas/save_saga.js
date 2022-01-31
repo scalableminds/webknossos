@@ -664,19 +664,25 @@ export function* pushTracingTypeAsync(
       // Save queue is empty, wait for push event
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
-    yield* race({
+    const { forcePush } = yield* race({
       timeout: _delay(PUSH_THROTTLE_TIME),
       forcePush: _take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true, tracingType));
-    while (true) {
-      // Send batches to the server until the save queue is empty
-      saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
-      if (saveQueue.length > 0) {
-        yield* call(sendRequestToServer, tracingType, tracingId);
-      } else {
-        break;
+    if (forcePush) {
+      while (true) {
+        // Send batches to the server until the save queue is empty
+        saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
+        if (saveQueue.length > 0) {
+          yield* call(sendRequestToServer, tracingType, tracingId);
+        } else {
+          break;
+        }
       }
+    } else {
+      // Saving the tracing a via timeout only saves the current state.
+      // It does not require to hit a save state without changes.
+      yield* call(sendRequestToServer, tracingType, tracingId);
     }
     yield* put(setSaveBusyAction(false, tracingType));
   }

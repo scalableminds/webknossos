@@ -520,14 +520,16 @@ function* loadPrecomputedMeshForSegmentId(
           chunkPosition,
         );
 
-        const geometry = parseStlBuffer(stlData);
-        getSceneController().addIsosurfaceFromGeometry(geometry, id);
+        const geometry = yield* call(parseStlBuffer, stlData);
+        const sceneController = yield* call(getSceneController);
+        yield* call([sceneController, sceneController.addIsosurfaceFromGeometry], geometry, id);
       },
   );
 
   try {
     yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
+    console.error(exception);
     Toast.warning("Some mesh objects could not be loaded.");
   }
 

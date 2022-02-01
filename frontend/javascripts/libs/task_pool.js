@@ -46,5 +46,6 @@ export default function* processTaskWithPool(
   for (let i = 0; i < poolSize; i++) {
     yield* fork(startNextTask);
   }
-  // The saga will wait for all forked tasks to terminate before returning.
+  // The saga will wait for all forked tasks to terminate before returning, because
+  // fork() creates attached forks (in contrast to spawn()).
 }

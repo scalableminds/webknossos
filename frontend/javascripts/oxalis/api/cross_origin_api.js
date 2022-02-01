@@ -56,7 +56,7 @@ const onMessage = async event => {
     case "loadPrecomputedMesh": {
       const segmentId = args[0];
       const seedPosition = args[1];
-      await api.data.loadPrecomputedMesh(segmentId, seedPosition);
+      api.data.loadPrecomputedMesh(segmentId, seedPosition);
       break;
     }
     case "setMeshVisibility": {

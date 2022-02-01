@@ -1618,9 +1618,9 @@ class DataApi {
    * const availableMeshFiles = await api.data.getAvailableMeshFiles();
    * api.data.setActiveMeshFile(availableMeshFiles[0]);
    *
-   * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
+   * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
-  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
+  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
     if (!effectiveLayerName) {

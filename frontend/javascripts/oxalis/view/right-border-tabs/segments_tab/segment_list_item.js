@@ -115,7 +115,7 @@ const getMakeSegmentActiveMenuItem = (
       onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
       disabled={disabled}
     >
-      <Tooltip title={title}>Make Segment Active</Tooltip>
+      <Tooltip title={title}>Activate Segment ID</Tooltip>
     </Menu.Item>
   );
 };

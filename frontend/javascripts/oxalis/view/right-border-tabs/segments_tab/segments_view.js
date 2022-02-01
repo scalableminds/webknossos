@@ -44,7 +44,10 @@ import {
   updateDatasetSettingAction,
   updateTemporarySettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { updateSegmentAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  updateSegmentAction,
+  setActiveCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import Model from "oxalis/model";

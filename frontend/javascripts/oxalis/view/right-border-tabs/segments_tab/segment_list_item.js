@@ -105,15 +105,14 @@ const getMakeSegmentActiveMenuItem = (
   setActiveCell,
   activeCellId,
   andCloseContextMenu,
-) => { 
+) => {
   const disabled = segment.id === activeCellId;
-  const title = disabled ? "This segment ID is already active."
-   : "Make this the active segment ID.";
+  const title = disabled
+    ? "This segment ID is already active."
+    : "Make this the active segment ID.";
   return (
     <Menu.Item
-      onClick={() =>
-        andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))
-      }
+      onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
       disabled={disabled}
     >
       <Tooltip title={title}>Make Segment Active</Tooltip>
@@ -198,12 +197,7 @@ function _SegmentListItem({
         visibleSegmentationLayer != null,
         andCloseContextMenu,
       )}
-      {getMakeSegmentActiveMenuItem(
-        segment,
-        setActiveCell,
-        activeCellId,
-        andCloseContextMenu,
-      )}
+      {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
     </Menu>
   );
 

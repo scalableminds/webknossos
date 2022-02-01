@@ -31,12 +31,19 @@ export function CardContainer({
   }
 }
 
-export function DatasetNameFormItem({ activeUser }: { activeUser: ?APIUser }) {
+export function DatasetNameFormItem({
+  activeUser,
+  initialName,
+}: {
+  activeUser: ?APIUser,
+  initialName?: string,
+}) {
   return (
     <FormItem
       name="name"
       label="Dataset Name"
       hasFeedback
+      initialValue={initialName}
       rules={[
         { required: true, message: messages["dataset.import.required.name"] },
         { min: 3 },

@@ -241,11 +241,11 @@ Expects:
       skeletonVersion: Option[Long],
       volumeVersion: Option[Long],
       skipVolumeData: Option[Boolean]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.UserAwareAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
-        _ = analyticsService.track(DownloadAnnotationEvent(request.identity, id, typ))
+        _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id, typ)))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
           case AnnotationType.CompoundProject => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))
@@ -266,7 +266,7 @@ Expects:
   // TODO: select versions per layer
   private def downloadExplorational(annotationId: String,
                                     typ: String,
-                                    issuingUser: User,
+                                    issuingUser: Option[User],
                                     skeletonVersion: Option[Long],
                                     volumeVersion: Option[Long],
                                     skipVolumeData: Boolean)(implicit ctx: DBAccessContext) = {
@@ -350,9 +350,11 @@ Expects:
     }
   }
 
-  private def downloadProject(projectId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
-                                                                                      m: MessagesProvider) =
+  private def downloadProject(projectId: String, userOpt: Option[User], skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider) =
     for {
+      user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
       projectIdValidated <- ObjectId.parse(projectId)
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
@@ -363,8 +365,9 @@ Expects:
       Ok.sendFile(file, inline = false, fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
     }
 
-  private def downloadTask(taskId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
-                                                                                m: MessagesProvider) = {
+  private def downloadTask(taskId: String, userOpt: Option[User], skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider) = {
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap {
       annotations =>
         val finished = annotations.filter(_.state == Finished)
@@ -372,6 +375,7 @@ Expects:
     }
 
     for {
+      user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
       task <- taskDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound") ~> NOT_FOUND
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound") ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
@@ -382,8 +386,9 @@ Expects:
     }
   }
 
-  private def downloadTaskType(taskTypeId: String, user: User, skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext) = {
+  private def downloadTaskType(taskTypeId: String, userOpt: Option[User], skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)
@@ -396,6 +401,7 @@ Expects:
       } yield zip
 
     for {
+      user <- userOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN

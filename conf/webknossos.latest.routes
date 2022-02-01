@@ -87,7 +87,7 @@ PUT           /datastores/:name/datasources                                    c
 PATCH         /datastores/:name/status                                         controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/verifyUpload                                   controllers.WKRemoteDataStoreController.validateDataSetUpload(name: String, key: String, token: String)
 POST          /datastores/:name/reportDatasetUpload                            controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
-POST          /datastores/:name/deleteErroneous                                controllers.WKRemoteDataStoreController.deleteErroneous(name: String, key: String)
+POST          /datastores/:name/deleteDataset                                  controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                            controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
 POST          /datastores/:name/validateUserAccess                             controllers.UserTokenController.validateAccessViaDatastore(name: String, key: String, token: Option[String])
 POST          /datastores                                                      controllers.DataStoreController.create
@@ -207,6 +207,7 @@ GET           /jobs/run/convertToWkw/:organizationName/:dataSetName            c
 GET           /jobs/run/computeMeshFile/:organizationName/:dataSetName         controllers.JobsController.runComputeMeshFileJob(organizationName: String, dataSetName: String, layerName: String, mag: String, agglomerateView: Option[String])
 GET           /jobs/run/exportTiff/:organizationName/:dataSetName              controllers.JobsController.runExportTiffJob(organizationName: String, dataSetName: String, bbox: String, layerName: Option[String], tracingId: Option[String], tracingVersion: Option[String], annotationId: Option[String], annotationType: Option[String], hideUnmappedIds: Option[Boolean], mappingName: Option[String], mappingType: Option[String])
 GET           /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
+GET           /jobs/run/globalizeFloodfills/:organizationName/:dataSetName     controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, newDataSetName: Option[String], layerName: Option[String], annotationId: Option[String], annotationType: Option[String])
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                 controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

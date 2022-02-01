@@ -57,7 +57,7 @@ export default {
               },
             },
             additionalProperties: false,
-            required: ["meshFileName"],
+            required: ["meshes"],
           },
         },
         additionalProperties: false,

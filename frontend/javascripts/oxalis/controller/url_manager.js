@@ -31,8 +31,8 @@ type MeshUrlDescriptor = {|
 export type UrlStateByLayer = {
   [layerName: string]: {
     meshInfo?: {
-      meshFileName: string,
-      meshes?: Array<MeshUrlDescriptor>,
+      meshFileName: ?string,
+      meshes: Array<MeshUrlDescriptor>,
     },
     mappingInfo?: {
       mappingName: string,
@@ -196,15 +196,16 @@ class UrlManager {
     }
     for (const layerName of Object.keys(state.localSegmentationData)) {
       const { isosurfaces, currentMeshFile } = state.localSegmentationData[layerName];
-      if (currentMeshFile != null) {
-        const { meshFileName } = currentMeshFile;
-        const meshes = Utils.values(isosurfaces)
-          .filter(({ isVisible }) => isVisible)
-          .map(({ segmentId, seedPosition, isPrecomputed }) => ({
-            segmentId,
-            seedPosition: V3.floor(seedPosition),
-            isPrecomputed,
-          }));
+      const meshFileName = currentMeshFile?.meshFileName;
+      const meshes = Utils.values(isosurfaces)
+        .filter(({ isVisible }) => isVisible)
+        .map(({ segmentId, seedPosition, isPrecomputed }) => ({
+          segmentId,
+          seedPosition: V3.floor(seedPosition),
+          isPrecomputed,
+        }));
+
+      if (meshFileName != null || meshes.length > 0) {
         stateByLayer[layerName] = { meshInfo: { meshFileName, meshes } };
       }
     }

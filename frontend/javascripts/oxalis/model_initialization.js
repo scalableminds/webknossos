@@ -659,18 +659,22 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
     if (layerState.meshInfo) {
       const { meshFileName, meshes } = layerState.meshInfo;
 
-      Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
+      if (meshFileName != null) {
+        Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
+      }
 
-      if (meshes != null) {
-        for (const mesh of meshes) {
-          const { segmentId, seedPosition, isPrecomputed } = mesh;
-          if (isPrecomputed) {
+      for (const mesh of meshes) {
+        const { segmentId, seedPosition, isPrecomputed } = mesh;
+        if (isPrecomputed) {
+          if (meshFileName != null) {
             Store.dispatch(
               loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
             );
           } else {
-            Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, effectiveLayerName));
+            console.warn("Could not load precomputed mesh, because no meshFileName was specified.");
           }
+        } else {
+          Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, effectiveLayerName));
         }
       }
     }

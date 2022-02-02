@@ -1,10 +1,9 @@
 package controllers
 
-import java.io.File
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import akka.stream.scaladsl._
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -30,9 +29,7 @@ import models.task._
 import models.user._
 import oxalis.security.WkEnv
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.iteratee.streams.IterateeStreams
+import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData}
 import utils.ObjectId
@@ -51,6 +48,7 @@ class AnnotationIOController @Inject()(
     taskDAO: TaskDAO,
     taskTypeDAO: TaskTypeDAO,
     tracingStoreService: TracingStoreService,
+    temporaryFileCreator: TemporaryFileCreator,
     annotationService: AnnotationService,
     analyticsService: AnalyticsService,
     sil: Silhouette[WkEnv],
@@ -268,30 +266,34 @@ Expects:
                                     volumeVersion: Option[Long],
                                     skipVolumeData: Boolean)(implicit ctx: DBAccessContext) = {
 
-    def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
+    def skeletonToTemporaryFile(dataSet: DataSet,
+                                annotation: Annotation,
+                                organizationName: String): Fox[TemporaryFile] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
           tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-      } yield {
-        (nmlWriter.toNmlStream(fetchedAnnotationLayers,
-                               Some(annotation),
-                               dataSet.scale,
-                               None,
-                               organizationName,
-                               Some(user),
-                               taskOpt),
-         name + ".nml")
-      }
+        nmlTemporaryFile = temporaryFileCreator.create()
+        nmlStream = nmlWriter.toNmlStream(fetchedAnnotationLayers,
+                                          Some(annotation),
+                                          dataSet.scale,
+                                          None,
+                                          organizationName,
+                                          Some(user),
+                                          taskOpt)
+        temporaryFileStream = new BufferedOutputStream(new FileOutputStream(nmlTemporaryFile))
+        _ <- NamedEnumeratorStream("", nmlStream).writeTo(temporaryFileStream)
+        _ = temporaryFileStream.close()
+      } yield nmlTemporaryFile
 
-    def volumeOrHybridToDownloadStream(dataSet: DataSet,
-                                       annotation: Annotation,
-                                       name: String,
-                                       organizationName: String): Fox[(Enumerator[Array[Byte]], String)] =
+    def volumeOrHybridToTemporaryFile(dataset: DataSet,
+                                      annotation: Annotation,
+                                      name: String,
+                                      organizationName: String): Fox[TemporaryFile] =
       for {
-        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
             tracingStoreClient.getVolumeTracing(volumeAnnotationLayer, volumeVersion, skipVolumeData)
@@ -302,46 +304,61 @@ Expects:
         }
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-      } yield {
-        val nmlStream = NamedEnumeratorStream(
-          name + ".nml",
-          nmlWriter.toNmlStream(fetchedSkeletonLayers ::: fetchedVolumeLayers,
-                                Some(annotation),
-                                dataSet.scale,
-                                None,
-                                organizationName,
-                                Some(user),
-                                taskOpt)
-        )
-        val dataStreams: List[NamedEnumeratorStream] =
-          fetchedVolumeLayers.zipWithIndex.flatMap {
-            case (volumeLayer, index) => volumeLayer.namedVolumeDataEnumerator(index, fetchedVolumeLayers.length == 1)
-          }
-        (Enumerator.outputStream { outputStream =>
-          ZipIO.zip(
-            nmlStream :: dataStreams,
-            outputStream
-          )
-        }, name + ".zip")
-      }
+        nmlStream = nmlWriter.toNmlStream(fetchedSkeletonLayers ::: fetchedVolumeLayers,
+                                          Some(annotation),
+                                          dataset.scale,
+                                          None,
+                                          organizationName,
+                                          Some(user),
+                                          taskOpt)
+        temporaryFile = temporaryFileCreator.create()
+        zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
+        _ <- zipper.addFileFromEnumerator(name + ".nml", nmlStream)
+        _ = fetchedVolumeLayers.zipWithIndex.map {
+          case (volumeLayer, index) =>
+            volumeLayer.volumeDataOpt.foreach { volumeData =>
+              val dataZipName = volumeLayer.volumeDataZipName(index, fetchedSkeletonLayers.length == 1)
+              zipper.addFileFromBytes(dataZipName, volumeData)
+            }
+        }
+        _ = zipper.close()
+      } yield temporaryFile
 
-    def tracingToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
+    def annotationToTemporaryFile(dataSet: DataSet,
+                                  annotation: Annotation,
+                                  name: String,
+                                  organizationName: String): Fox[TemporaryFile] =
       if (annotation.tracingType == TracingType.skeleton)
-        skeletonToDownloadStream(dataSet, annotation, name, organizationName)
+        skeletonToTemporaryFile(dataSet, annotation, organizationName)
       else
-        volumeOrHybridToDownloadStream(dataSet, annotation, name, organizationName)
+        volumeOrHybridToTemporaryFile(dataSet, annotation, name, organizationName)
+
+    def exportExtensionForAnnotation(annotation: Annotation): String =
+      if (annotation.tracingType == TracingType.skeleton)
+        ".nml"
+      else
+        ".zip"
+
+    def exportMimeTypeForAnnotation(annotation: Annotation): String =
+      if (annotation.tracingType == TracingType.skeleton)
+        "application/xml"
+      else
+        "application/zip"
 
     for {
       annotation <- provider.provideAnnotation(typ, annotationId, issuingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, annotationId)
       name <- provider.nameFor(annotation) ?~> "annotation.name.impossible"
+      fileExtension = exportExtensionForAnnotation(annotation)
+      fileName = name + fileExtension
+      mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
-      (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name, organization.name)
+      temporaryFile <- annotationToTemporaryFile(dataSet, annotation, name, organization.name)
     } yield {
-      Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
-        .as(if (fileName.toLowerCase.endsWith(".zip")) "application/zip" else "application/xml")
+      Ok.sendFile(temporaryFile, inline = false)
+        .as(mimeType)
         .withHeaders(CONTENT_DISPOSITION ->
           s"attachment;filename=${'"'}$fileName${'"'}")
     }

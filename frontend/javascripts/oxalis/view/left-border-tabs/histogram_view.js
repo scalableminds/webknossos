@@ -1,15 +1,22 @@
 // @flow
 
-import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
-import * as _ from "lodash";
-import * as React from "react";
 import type { Dispatch } from "redux";
+import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
+import { VerticalAlignMiddleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import { type DatasetLayerConfiguration } from "oxalis/store";
-import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import * as React from "react";
+import * as _ from "lodash";
+
 import type { APIHistogramData, ElementClass } from "types/api_flow_types";
-import type { Vector3, Vector2 } from "oxalis/constants";
+import { OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
+import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { roundTo } from "libs/utils";
+import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import Store, { type DatasetLayerConfiguration } from "oxalis/store";
+import api from "oxalis/api/internal_api";
+import Toast from "libs/toast";
+import { div } from "../../shaders/utils.glsl";
 
 type OwnProps = {|
   data: APIHistogramData,
@@ -38,7 +45,7 @@ type HistogramState = {
 
 const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
-const canvasWidth = 300;
+const canvasWidth = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
@@ -187,6 +194,78 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     500,
   );
 
+  getClippingValues = async (layerName: string, thresholdRatio: number = 0.05) => {
+    const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
+    const [TypedArrayClass] = getConstructorForElementClass(elementClass);
+
+    const [cuboidXY, cuboidXZ, cuboidYZ] = await Promise.all([
+      api.data.getViewportData(OrthoViews.PLANE_XY, layerName),
+      api.data.getViewportData(OrthoViews.PLANE_XZ, layerName),
+      api.data.getViewportData(OrthoViews.PLANE_YZ, layerName),
+    ]);
+    const dataForAllViewports = new TypedArrayClass(
+      cuboidXY.length + cuboidXZ.length + cuboidYZ.length,
+    );
+
+    dataForAllViewports.set(cuboidXY);
+    dataForAllViewports.set(cuboidXZ, cuboidXY.length);
+    dataForAllViewports.set(cuboidYZ, cuboidXY.length + cuboidXZ.length);
+
+    const localHist = new Map();
+    for (let i = 0; i < dataForAllViewports.length; i++) {
+      if (dataForAllViewports[i] !== 0) {
+        const value = localHist.get(dataForAllViewports[i]);
+        localHist.set(dataForAllViewports[i], value != null ? value + 1 : 1);
+      }
+    }
+
+    const sortedHistKeys = Array.from(localHist.keys()).sort((a, b) => a - b);
+    const accumulator = new Map();
+    let area = 0;
+    for (const key of sortedHistKeys) {
+      const value = localHist.get(key);
+      area += value != null ? value : 0;
+      accumulator.set(key, area);
+    }
+    const thresholdValue = (thresholdRatio * area) / 2.0;
+
+    let lowerClip = -1;
+    for (const key of sortedHistKeys) {
+      const value = accumulator.get(key);
+      if (value != null && value >= thresholdValue) {
+        lowerClip = key;
+        break;
+      }
+    }
+    let upperClip = -1;
+    for (const key of sortedHistKeys.reverse()) {
+      const value = accumulator.get(key);
+      if (value != null && value < area - thresholdValue) {
+        upperClip = key;
+        break;
+      }
+    }
+    return [lowerClip, upperClip];
+  };
+
+  clipHistogram = async (isInEditMode: boolean, layerName: string) => {
+    const [lowerClip, upperClip] = await this.getClippingValues(layerName);
+    if (lowerClip === -1 || upperClip === -1) {
+      Toast.warning(
+        "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
+      );
+      return;
+    }
+    if (!isInEditMode) {
+      this.onThresholdChange([lowerClip, upperClip]);
+    } else {
+      this.onThresholdChange([lowerClip, upperClip]);
+      this.setState({ currentMin: lowerClip, currentMax: upperClip });
+      this.props.onChangeLayer(layerName, "min", lowerClip);
+      this.props.onChangeLayer(layerName, "max", upperClip);
+    }
+  };
+
   render() {
     const {
       intensityRangeMin,
@@ -201,9 +280,31 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
 
     const minMaxInputStyle = { width: "100%" };
-
+    const editModeAddendum = isInEditMode
+      ? "In Edit Mode, the histogram's range will be adjusted, too."
+      : "";
+    const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <React.Fragment>
+        <div
+          style={{
+            position: "relative",
+            width: 22,
+            top: -22,
+            left: 237,
+          }}
+        >
+          <Tooltip title={tooltipText}>
+            <VerticalAlignMiddleOutlined
+              style={{
+                position: "relative",
+                transform: "rotate(90deg)",
+                cursor: "pointer",
+              }}
+              onClick={() => this.clipHistogram(isInEditMode, layerName)}
+            />
+          </Tooltip>
+        </div>
         <canvas
           ref={ref => {
             this.canvasRef = ref;
@@ -221,10 +322,10 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           onAfterChange={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
           tipFormatter={this.tipFormatter}
-          style={{ width: canvasWidth, margin: 0, marginBottom: 6 }}
+          style={{ width: canvasWidth, margin: 0, marginTop: 6 }}
         />
         {isInEditMode ? (
-          <Row type="flex" align="middle">
+          <Row type="flex" align="middle" style={{ marginTop: 6 }}>
             <Col span={4}>
               <label className="setting-label">Min:</label>
             </Col>

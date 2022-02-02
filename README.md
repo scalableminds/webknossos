@@ -179,6 +179,9 @@ yarn run lint
 # Format frontend code
 yarn run pretty
 
+# Format backend code
+yarn pretty-backend
+
 # Frontend type checking
 yarn flow
 

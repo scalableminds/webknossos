@@ -129,10 +129,13 @@ dataset.initialTeams.invalidTeams=Can only assign teams of user
 dataset.initialTeams.timeout=Timeout while setting initial teams. Was the request sent manually? Received at {0}, dataset created at {1}
 dataSet.uploader.notEmpty=Dataset already has non-empty uploader
 dataset.delete.disabled=Dataset deletion is disabled for this webKnossos instance
+dataSet.delete.webknossos.failed=Could not delete dataset from webKnossos database
+dataSet.delete.failed=Could not delete the dataset on disk.
 dataSet.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
 dataSet.upload.validation.failed=Failed to validate Dataset information for upload.
 dataSet.upload.linkPublicOnly=Only layers of existing public datasets can be linked
 dataSet.upload.invalidLinkedLayers=Could not link all requested layers
+dataSet.upload.cancel.failed=Could not cancel the upload.
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -337,6 +340,7 @@ job.couldNotRunCubing = Failed to start WKW conversion job.
 job.couldNotRunTiffExport = Failed to start Tiff export job.
 job.couldNotRunComputeMeshFile = Failed to start mesh file computation job.
 job.couldNotRunNucleiInferral = Failed to start nuclei inferral job.
+job.couldNotRunGlobalizeFloodfills = Failed to start job for globalizing floodfills.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 jobs.worker.notFound = Could not find this worker in the database.
 job.export.fileNotFound = Exported file not found. The link may be expired.
@@ -346,6 +350,7 @@ job.export.tiff.edgeLengthExceeded = An edge length of the selected bounding box
 job.export.notAllowed.organization = Currently tiff export is only allowed for datasets of your own organization.
 job.inferNuclei.notAllowed.organization = Currently nuclei inferral is only allowed for datasets of your own organization.
 job.meshFile.notAllowed.organization = Calculating mesh files is only allowed for datasets of your own organization.
+job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 
 agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 

@@ -111,6 +111,9 @@ class DataCube {
     _.extend(this, BackboneEvents);
 
     this.cubes = [];
+    if (isSegmentation) {
+      this.MAXIMUM_BUCKET_COUNT *= 2;
+    }
     this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
 
     // Initializing the cube-arrays with boundaries

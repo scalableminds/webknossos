@@ -44,7 +44,10 @@ import {
   updateDatasetSettingAction,
   updateTemporarySettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  updateSegmentAction,
+  setActiveCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import Model from "oxalis/model";
@@ -163,6 +166,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
       return;
     }
     dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
+  },
+  setActiveCell(segmentId: number, somePosition?: Vector3) {
+    dispatch(setActiveCellAction(segmentId, somePosition));
   },
   setCurrentMeshFile(layerName: string, fileName: string) {
     dispatch(updateCurrentMeshFileAction(layerName, fileName));

@@ -30,6 +30,7 @@ import {
   setActiveNodeAction,
   createTreeAction,
   setTreeVisibilityAction,
+  createBranchPointAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   hasAgglomerateMapping,
@@ -242,6 +243,7 @@ function NodeContextMenuOptions({
   deleteEdge,
   mergeTrees,
   deleteNode,
+  createBranchPoint,
   setActiveNode,
   hideTree,
   useLegacyBindings,
@@ -252,6 +254,7 @@ function NodeContextMenuOptions({
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
   const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
   const areInSameTree = activeTreeId === clickedTree.treeId;
+  const isBranchpoint = clickedTree.branchPoints.find(bp => bp.nodeId === clickedNodeId) != null;
   const isTheSameNode = activeNodeId === clickedNodeId;
   let areNodesConnected = false;
   if (areInSameTree && !isTheSameNode && activeNodeId != null) {
@@ -295,6 +298,17 @@ function NodeContextMenuOptions({
       >
         Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
       </Menu.Item>
+      {isBranchpoint ? null : (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="branchpoint-node"
+          onClick={() =>
+            activeNodeId != null ? createBranchPoint(clickedNodeId, clickedTree.treeId) : null
+          }
+        >
+          Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+        </Menu.Item>
+      )}
       <Menu.Item
         className="node-context-menu-item"
         key="measure-node-path-length"
@@ -773,6 +787,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   deleteNode(nodeId: number, treeId: number) {
     dispatch(deleteNodeAction(nodeId, treeId));
+  },
+  createBranchPoint(nodeId: number, treeId: number) {
+    dispatch(createBranchPointAction(nodeId, treeId));
   },
   setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));

@@ -642,19 +642,24 @@ class DataApi {
   }
 
   /**
-   * Label voxels with the supplied value.
+   * Label voxels with the supplied value. Note that this method does not mutate
+   * the data immediately, but instead returns a promise (since the data might
+   * have to be downloaded first).
+   *
    * _Volume tracing only!_
    *
    * @example // Set the segmentation id for some voxels to 1337
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  labelVoxels(voxels: Array<Vector3>, label: number): void {
+  async labelVoxels(voxels: Array<Vector3>, label: number): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
 
-    for (const voxel of voxels) {
-      segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);
-    }
+    await Promise.all(
+      voxels.map(voxel =>
+        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(voxel, label),
+      ),
+    );
 
     segmentationLayer.cube.pushQueue.push();
   }

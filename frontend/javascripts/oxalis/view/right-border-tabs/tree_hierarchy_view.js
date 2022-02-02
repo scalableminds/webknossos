@@ -38,6 +38,7 @@ import {
   setTreeGroupsAction,
   shuffleTreeColorAction,
   setTreeGroupAction,
+  deleteTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -430,6 +431,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             <i className="fas fa-adjust" /> Shuffle Tree Color
           </Menu.Item>
           <Menu.Item
+            key="deleteTree"
+            onClick={() => this.props.onDeleteTree(tree.treeId)}
+            title="Delete Tree"
+          >
+            <i className="fas fa-trash" /> Delete Tree
+          </Menu.Item>
+          <Menu.Item
             key="measureSkeleton"
             onClick={() => this.handleMeasureSkeletonLength(tree.treeId, tree.name)}
             title="Measure Skeleton Length"
@@ -557,6 +565,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onShuffleTreeColor(treeId) {
     dispatch(shuffleTreeColorAction(treeId));
+  },
+  onDeleteTree(treeId) {
+    dispatch(deleteTreeAction(treeId));
   },
   onToggleTree(treeId) {
     dispatch(toggleTreeAction(treeId));

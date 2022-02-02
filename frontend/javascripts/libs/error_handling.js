@@ -63,6 +63,7 @@ class ErrorHandling {
   commitHash: ?string;
   airbrake: typeof Notifier;
   numberOfErrors: number = 0;
+  sessionStartTime: Date = new Date();
 
   initialize(options: ErrorHandlingOptions) {
     if (options == null) {
@@ -166,7 +167,10 @@ class ErrorHandling {
     const actionLog = getActionLog();
     const error = maybeError instanceof Error ? maybeError : new Error(JSON.stringify(maybeError));
 
-    this.airbrake.notify({ error, params: { ...optParams, actionLog } });
+    this.airbrake.notify({
+      error,
+      params: { ...optParams, actionLog, sessionStartTime: this.sessionStartTime },
+    });
   }
 
   assertExtendContext(additionalContext: Object) {

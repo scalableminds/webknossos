@@ -285,7 +285,7 @@ export function applyVoxelMap(
   get3DAddress: (number, number, Vector3 | Float32Array) => void,
   numberOfSlicesToApply: number,
   thirdDimensionIndex: 0 | 1 | 2,
-  // if shouldOverwrite is false, a voxel is only overwritten if
+  // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
@@ -294,15 +294,14 @@ export function applyVoxelMap(
     if (bucket.type === "null") {
       return;
     }
-    bucket.markAndAddBucketForUndo();
+    bucket.startDataMutation();
   }
 
   function postprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
     }
-    dataCube.pushQueue.insert(bucket);
-    bucket.trigger("bucketLabeled");
+    bucket.endDataMutation();
   }
 
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
@@ -332,24 +331,16 @@ export function applyVoxelMap(
       if (bucket.type === "null") {
         continue;
       }
-      const { data } = bucket.getOrCreateData();
 
-      for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
-        for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
-          if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
-            get3DAddress(firstDim, secondDim, out);
-            const voxelToLabel = out;
-            voxelToLabel[thirdDimensionIndex] =
-              (voxelToLabel[thirdDimensionIndex] + sliceCount) % constants.BUCKET_WIDTH;
-            // The voxelToLabel is already within the bucket and in the correct resolution.
-            const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
-            const currentSegmentId = data[voxelAddress];
-            if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
-              data[voxelAddress] = cellId;
-            }
-          }
-        }
-      }
+      bucket.applyVoxelMap(
+        voxelMap,
+        cellId,
+        get3DAddress,
+        sliceCount,
+        thirdDimensionIndex,
+        shouldOverwrite,
+        overwritableValue,
+      );
     }
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);

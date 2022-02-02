@@ -197,6 +197,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     Xml.withinElementSync("volume") {
       writer.writeAttribute("id", index.toString)
       writer.writeAttribute("location", volumeFilename.getOrElse(volumeLayer.volumeDataZipName(index, isSingle)))
+      volumeLayer.name.foreach(_ => writer.writeAttribute("name", _))
       volumeLayer.tracing match {
         case Right(volumeTracing) => volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
         case _                    => ()

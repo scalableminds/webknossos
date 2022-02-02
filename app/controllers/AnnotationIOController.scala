@@ -275,7 +275,6 @@ Expects:
           tracingStoreClient.getSkeletonTracing(_, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
-        nmlTemporaryFile = temporaryFileCreator.create()
         nmlStream = nmlWriter.toNmlStream(fetchedAnnotationLayers,
                                           Some(annotation),
                                           dataSet.scale,
@@ -283,6 +282,7 @@ Expects:
                                           organizationName,
                                           Some(user),
                                           taskOpt)
+        nmlTemporaryFile = temporaryFileCreator.create()
         temporaryFileStream = new BufferedOutputStream(new FileOutputStream(nmlTemporaryFile))
         _ <- NamedEnumeratorStream("", nmlStream).writeTo(temporaryFileStream)
         _ = temporaryFileStream.close()

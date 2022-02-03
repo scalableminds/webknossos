@@ -176,10 +176,10 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- Fox.runIf(!skipVolumeData) {
-        rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allData")
+        rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataBlocking")
           .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
           .addQueryStringOptional("version", version.map(_.toString))
-          .getStream
+          .getWithBytesResponse
       }
       fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
     } yield fetchedAnnotationLayer

@@ -51,6 +51,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
         _ <- jobDAO.updateStatus(jobIdParsed, request.body)
         jobAfterChange <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
+        _ <- jobService.cleanUpIfFailed(jobAfterChange)
       } yield Ok
   }
 

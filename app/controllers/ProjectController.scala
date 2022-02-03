@@ -100,7 +100,9 @@ Expects:
   - expectedTime (int, optional) time limit
   - owner (string) id of a user
   - isBlacklistedFromReport (boolean) if true, the project is skipped on the progress report tables
-""")
+""",
+    nickname = "createProject"
+  )
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam(name = "ProjectParameters",

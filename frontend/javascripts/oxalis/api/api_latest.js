@@ -1328,17 +1328,6 @@ class DataApi {
     const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
     const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
-    console.log(
-      "channelCount * extent[0] * extent[1] * extent[2]",
-      channelCount * extent[0] * extent[1] * extent[2],
-    );
-    console.log(
-      "channelCount, extent[0], extent[1], extent[2]",
-      channelCount,
-      extent[0],
-      extent[1],
-      extent[2],
-    );
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
     const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();

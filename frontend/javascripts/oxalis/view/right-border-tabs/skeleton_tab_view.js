@@ -116,7 +116,6 @@ type StateProps = {|
   onSelectNextTreeForward: () => void,
   onSelectNextTreeBackward: () => void,
   onCreateTree: () => void,
-  onMinCut: () => void,
   onDeleteTree: () => void,
   onSetTreeGroup: (?number, number) => void,
   onChangeTreeName: string => void,
@@ -729,9 +728,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <SearchOutlined />
                     </ButtonComponent>
                   </AdvancedSearchPopover>
-                  <ButtonComponent onClick={this.props.onMinCut} title="Min-Cut">
-                    <i className="fas fa-cut" />
-                  </ButtonComponent>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
                     title="Create new Tree (C)"
@@ -853,9 +849,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onCreateTree() {
     dispatch(createTreeAction());
-  },
-  onMinCut() {
-    dispatch(performMinCutAction());
   },
   onDeleteTree() {
     dispatch(deleteTreeAsUserAction());

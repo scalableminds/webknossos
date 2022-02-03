@@ -89,7 +89,6 @@ class BoundingBox {
     return new BoundingBox({ min: newMin, max: newMax });
   }
 
-  // aka getExtent
   getSize(): Vector3 {
     const size = V3.sub(this.max, this.min);
     return size;

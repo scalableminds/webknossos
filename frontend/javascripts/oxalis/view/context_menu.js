@@ -279,7 +279,7 @@ function NodeContextMenuOptions({
         key="min-cut"
         onClick={() => dispatch(performMinCutAction())}
       >
-        Perform Min-Cut
+        Perform Min-Cut (Experimental)
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"

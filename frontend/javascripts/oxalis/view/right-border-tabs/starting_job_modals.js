@@ -126,11 +126,10 @@ function StartingJobModal(props: StartingJobModalProps) {
           style={{
             backgroundColor: colorAsHexString,
             marginTop: -2,
-            marginRight: 6
+            marginRight: 6,
           }}
         />
-        {bbox.name}{" "}
-        ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")})
+        {bbox.name} ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")})
       </>
     );
   };
@@ -258,10 +257,10 @@ export function NeuronInferralModal({ handleClose }: Props) {
           </p>
           <p>
             <b>
-              Note that this feature is still experimental and takes quite a long time. Thus we
-              suggest to use a small bounding box and not the full dataset extent. The neuron
-              detection currently works best with EM data. The best resolution for the process will
-              be chosen automatically.
+              Note that this feature is still experimental and can take a long time. Thus we suggest
+              to use a small bounding box and not the full dataset extent. The neuron detection
+              currently works best with EM data. The best resolution for the process will be chosen
+              automatically.
             </b>
           </p>
         </>

@@ -18,6 +18,11 @@ import constants, {
   type Vector4,
 } from "oxalis/constants";
 
+// By default, a new bounding box is created around
+// the seed nodes with a padding. Within the bounding box
+// the min-cut is computed.
+const DEFAULT_PADDING = [50, 50, 50];
+
 //
 // Helper functions for managing neighbors / edges.
 //
@@ -90,8 +95,22 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
 }
 
 //
-// Algorithmic implementation of min cut approach
+// Algorithmic implementation of the min cut approach.
 //
+// The directed (!) voxel graph is defined so that each voxel is a node and
+// two nodes are connected if they are neighbors and have the same segment id.
+// Since the graph is directed, all edges are initially symmetric double-edges.
+//
+// The algorithm looks for shortest paths between two given seeds A and B (via
+// breadth-first searches).
+// In each iteration, a shortest path between A and B is removed until no paths
+// exist anymore. Then, the two seeds are separated from each other.
+//
+// When removing a path, only the edges are removed which point from A to B.
+// This leaves "back-edges" in the graph (also known as "residuals").
+// In the final phase, these residuals are traversed to find out which nodes
+// cannot be reached, anymore. These nodes are the one that should be erased
+// to separate A from B.
 
 function* performMinCut(action: PerformMinCutAction): Saga<void> {
   const allowSave = yield* select(store => store.tracing.restrictions.allowSave);
@@ -106,7 +125,6 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
 
   const skeleton = yield* select(store => store.tracing.skeleton);
   if (!skeleton) {
-    console.log("no skeleton");
     return;
   }
   const seedTree = skeleton.trees[action.treeId];
@@ -127,20 +145,12 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
   const boundingBoxes = skeleton.userBoundingBoxes.filter(bbox => bbox.isVisible);
   let boundingBoxObj;
   if (boundingBoxes.length === 0) {
-    console.log("no visible bounding box defined for min-cut. creating one...");
-    const padding = 50;
+    console.log("No visible bounding box defined for min-cut. Creating one...");
     const newBBox = {
-      min: [
-        Math.floor(Math.min(nodes[0].position[0], nodes[1].position[0]) - padding),
-        Math.floor(Math.min(nodes[0].position[1], nodes[1].position[1]) - padding),
-        Math.floor(Math.min(nodes[0].position[2], nodes[1].position[2]) - padding),
-      ],
-      max: [
-        Math.ceil(Math.max(nodes[0].position[0], nodes[1].position[0]) + padding),
-        Math.ceil(Math.max(nodes[0].position[1], nodes[1].position[1]) + padding),
-        Math.ceil(Math.max(nodes[0].position[2], nodes[1].position[2]) + padding),
-      ],
+      min: [V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING))],
+      max: [V3.floor(V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING))],
     };
+
     yield* put(
       addUserBoundingBoxAction({
         boundingBox: newBBox,
@@ -172,6 +182,7 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
     return;
   }
 
+  // todo: generalize
   const targetMag = [2, 2, 1];
   // const targetMag = [1, 1, 1];
   const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(targetMag);
@@ -186,7 +197,6 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
   // }
 
   MIN_DIST_TO_SEED = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, MIN_DIST_TO_SEED);
-
   console.log("automatically setting MIN_DIST_TO_SEED to ", MIN_DIST_TO_SEED);
 
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
@@ -212,13 +222,11 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
 
   if (inputData[ll(seedA)] !== inputData[ll(seedB)]) {
     console.warn(
-      "Given seeds are not placed on same segment",
+      "The given seeds are not placed on same segment",
       inputData[ll(seedA)],
       "vs",
       inputData[ll(seedB)],
     );
-    console.log({ seedA, seedB });
-    console.log("edgeBuffer.length", edgeBuffer.length);
     return;
   }
 
@@ -268,13 +276,6 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
   console.timeEnd("populate data");
 
   const originalEdgeBuffer = new Uint16Array(edgeBuffer); // .fill(2 ** 12 - 1);
-
-  // for (let y = 0; y < 4; y++) {
-  //   for (let x = 0; x < 4; x++) {
-  //     const neighbors = getNeighborsFromBitMask(edgeBuffer[l(x, y, 0)]);
-  //     console.log({ x, y, neighbors });
-  //   }
-  // }
 
   function populateDistanceField() {
     // Breadth-first search from seedA to seedB
@@ -451,24 +452,6 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
         queue.push({ voxel: neighborPos });
       }
     }
-
-    // queue.push({ voxel: seedB });
-    // while (queue.length > 0) {
-    //   const { voxel: currVoxel } = queue.shift();
-
-    //   const currVoxelIdx = ll(currVoxel);
-    //   if (visitedField[currVoxelIdx] > 0) {
-    //     continue;
-    //   }
-    //   visitedField[currVoxelIdx] = 1;
-    //   const neighbors = getNeighborsFromBitMask(edgeBuffer[currVoxelIdx]).ingoing;
-
-    //   for (const neighbor of neighbors) {
-    //     const neighborPos = V3.add(currVoxel, neighbor);
-
-    //     queue.push({ voxel: neighborPos });
-    //   }
-    // }
 
     return { visitedField };
   }

@@ -242,4 +242,18 @@ V2.scale2 = function scale2(a, k, r) {
   return r;
 };
 
+// Component-wise minimum of two vectors.
+V3.min = (vec1, vec2) => [
+  Math.min(vec1[0], vec2[0]),
+  Math.min(vec1[1], vec2[1]),
+  Math.min(vec1[2], vec2[2]),
+];
+
+// Component-wise maximum of two vectors.
+V3.max = (vec1, vec2) => [
+  Math.max(vec1[0], vec2[0]),
+  Math.max(vec1[1], vec2[1]),
+  Math.max(vec1[2], vec2[2]),
+];
+
 export { M4x4, V2, V3 };

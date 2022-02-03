@@ -24,7 +24,7 @@ type FloodFillAction = {
   callback?: () => void,
 };
 
-type PerformMinCutAction = {
+export type PerformMinCutAction = {
   type: "PERFORM_MIN_CUT",
   treeId: number,
 };

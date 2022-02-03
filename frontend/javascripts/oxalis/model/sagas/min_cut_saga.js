@@ -1,5 +1,7 @@
+// @flow
 import _ from "lodash";
 
+import type { PerformMinCutAction } from "oxalis/model/actions/volumetracing_actions";
 import { type Saga, call, put, select, _takeLatest } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
@@ -147,8 +149,8 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
   if (boundingBoxes.length === 0) {
     console.log("No visible bounding box defined for min-cut. Creating one...");
     const newBBox = {
-      min: [V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING))],
-      max: [V3.floor(V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING))],
+      min: V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
+      max: V3.floor(V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
     };
 
     yield* put(
@@ -234,45 +236,7 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
 
   console.time("total min-cut");
   console.time("populate data");
-  for (let x = 0; x < size[0]; x++) {
-    for (let y = 0; y < size[1]; y++) {
-      for (let z = 0; z < size[2]; z++) {
-        // Traverse over all voxels
-
-        const pos = [x, y, z];
-        const linIndex = l(x, y, z);
-
-        // Ignore voxel if it does not belong to seed segment
-        if (inputData[linIndex] !== segmentId) {
-          continue;
-        }
-
-        // Go over all neighbors
-        for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
-          const neighbor = NEIGHBOR_LOOKUP[neighborIdx];
-          const neighborPos = V3.add(pos, neighbor);
-
-          if (
-            neighborPos[0] < 0 ||
-            neighborPos[1] < 0 ||
-            neighborPos[2] < 0 ||
-            neighborPos[0] >= size[0] ||
-            neighborPos[1] >= size[1] ||
-            neighborPos[2] >= size[2]
-          ) {
-            // neighbor is outside of volume
-            continue;
-          }
-
-          const neighborLinIndex = ll(neighborPos);
-          if (inputData[neighborLinIndex] === segmentId) {
-            addOutgoingEdge(edgeBuffer, linIndex, neighborIdx);
-            addIngoingEdge(edgeBuffer, neighborLinIndex, invertNeighborIdx(neighborIdx));
-          }
-        }
-      }
-    }
-  }
+  buildGraph(inputData, edgeBuffer, segmentId, size, l, ll);
   console.timeEnd("populate data");
 
   const originalEdgeBuffer = new Uint16Array(edgeBuffer); // .fill(2 ** 12 - 1);
@@ -530,6 +494,48 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
   console.timeEnd("labelDeletedEdges");
   console.timeEnd("total min-cut");
   console.log({ seedA, seedB, boundingBoxMag1, inputData, edgeBuffer });
+}
+
+function buildGraph(inputData, edgeBuffer, segmentId, size, l, ll) {
+  for (let x = 0; x < size[0]; x++) {
+    for (let y = 0; y < size[1]; y++) {
+      for (let z = 0; z < size[2]; z++) {
+        // Traverse over all voxels
+
+        const pos = [x, y, z];
+        const linIndex = l(x, y, z);
+
+        // Ignore voxel if it does not belong to seed segment
+        if (inputData[linIndex] !== segmentId) {
+          continue;
+        }
+
+        // Go over all neighbors
+        for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
+          const neighbor = NEIGHBOR_LOOKUP[neighborIdx];
+          const neighborPos = V3.add(pos, neighbor);
+
+          if (
+            neighborPos[0] < 0 ||
+            neighborPos[1] < 0 ||
+            neighborPos[2] < 0 ||
+            neighborPos[0] >= size[0] ||
+            neighborPos[1] >= size[1] ||
+            neighborPos[2] >= size[2]
+          ) {
+            // neighbor is outside of volume
+            continue;
+          }
+
+          const neighborLinIndex = ll(neighborPos);
+          if (inputData[neighborLinIndex] === segmentId) {
+            addOutgoingEdge(edgeBuffer, linIndex, neighborIdx);
+            addIngoingEdge(edgeBuffer, neighborLinIndex, invertNeighborIdx(neighborIdx));
+          }
+        }
+      }
+    }
+  }
 }
 
 export default function* listenToMinCut(): Saga<void> {

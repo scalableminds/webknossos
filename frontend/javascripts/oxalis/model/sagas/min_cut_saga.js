@@ -77,7 +77,7 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborId) {
   edgeBuffer[idx] &= ~(2 ** neighborId);
 }
 
-function* performMinCut(): Saga<void> {
+function* performMinCut(action: PerformMinCutAction): Saga<void> {
   const allowSave = yield* select(store => store.tracing.restrictions.allowSave);
   if (allowSave && window.disableSavingOnMinCut) {
     console.log("disable saving");
@@ -86,24 +86,25 @@ function* performMinCut(): Saga<void> {
     console.log("disable saving");
     yield* put(disableSavingAction());
   }
-  console.log("start min cut");
+  console.log("Start min cut");
 
   const skeleton = yield* select(store => store.tracing.skeleton);
   if (!skeleton) {
     console.log("no skeleton");
     return;
   }
+  const seedTree = skeleton.trees[action.treeId];
   const activeTree = Utils.toNullable(getActiveTree(skeleton));
 
-  if (!activeTree) {
-    console.log("no active tree");
+  if (!seedTree) {
+    console.log("seedTree not found?");
     return;
   }
 
-  const nodes = Array.from(activeTree.nodes.values());
+  const nodes = Array.from(seedTree.nodes.values());
 
   if (nodes.length !== 2) {
-    console.log("active tree should have exactly two nodes.");
+    console.log("seedTree should have exactly two nodes.");
     return;
   }
 

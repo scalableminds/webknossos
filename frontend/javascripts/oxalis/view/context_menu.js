@@ -248,6 +248,7 @@ function NodeContextMenuOptions({
   setActiveNode,
   hideTree,
   useLegacyBindings,
+  volumeTracing,
 }: NodeContextMenuOptionsProps) {
   const dispatch = useDispatch();
   if (skeletonTracing == null) {
@@ -274,13 +275,15 @@ function NodeContextMenuOptions({
       >
         Select this Node
       </Menu.Item>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="min-cut"
-        onClick={() => dispatch(performMinCutAction())}
-      >
-        Perform Min-Cut (Experimental)
-      </Menu.Item>
+      {volumeTracing != null && clickedTree.nodes.size() == 2 ? (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="min-cut"
+          onClick={() => dispatch(performMinCutAction(clickedTree.treeId))}
+        >
+          Perform Min-Cut (Experimental)
+        </Menu.Item>
+      ) : null}
       <Menu.Item
         className="node-context-menu-item"
         key="merge-trees"

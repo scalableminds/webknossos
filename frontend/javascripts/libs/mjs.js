@@ -256,4 +256,6 @@ V3.max = (vec1, vec2) => [
   Math.max(vec1[2], vec2[2]),
 ];
 
+V3.equals = (vec1, vec2) => vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
+
 export { M4x4, V2, V3 };

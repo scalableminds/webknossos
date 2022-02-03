@@ -156,6 +156,7 @@ function* performMinCut(): Saga<void> {
   }
 
   const targetMag = [2, 2, 1];
+  // const targetMag = [1, 1, 1];
   const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(targetMag);
 
   const globalSeedA = V3.from_mag1_to_mag(nodes[0].position, targetMag);
@@ -266,13 +267,25 @@ function* performMinCut(): Saga<void> {
       { voxel: seedA, distance: 1, usedEdgeIdx: 255 },
     ];
     let foundTarget = false;
+    let lastDistance = 0;
+    let skipCount = 0;
+    let iterationCount = 0;
+
     while (queue.length > 0) {
+      iterationCount++;
       const { voxel: currVoxel, distance, usedEdgeIdx } = queue.shift();
 
       const currVoxelIdx = ll(currVoxel);
       if (distanceField[currVoxelIdx] > 0) {
+        skipCount++;
         continue;
       }
+
+      if (distance > lastDistance) {
+        console.log("new distance reached:", { distance, skipCount, iterationCount });
+        lastDistance = distance;
+      }
+
       distanceField[currVoxelIdx] = distance;
       directionField[currVoxelIdx] = usedEdgeIdx;
 
@@ -289,7 +302,9 @@ function* performMinCut(): Saga<void> {
 
         const neighborId = getNeighborId(neighbor);
 
-        queue.push({ voxel: neighborPos, distance: distance + 1, usedEdgeIdx: neighborId });
+        if (distanceField[ll(neighborPos)] == 0) {
+          queue.push({ voxel: neighborPos, distance: distance + 1, usedEdgeIdx: neighborId });
+        }
       }
     }
 
@@ -525,3 +540,125 @@ export default function* listenToMinCut(): Saga<void> {
 window.__isosurfaceVoxelDimensions = [1, 1, 1];
 window.disableSavingOnMinCut = false;
 window.visualizeRemovedVoxelsOnMinCut = true;
+
+// function labelVoxels(voxels) {
+//   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
+//   const dimensionIndices = Dimensions.getIndices(activeViewport);
+
+//   for (const voxel of voxels) {
+//     labelVoxelMap(labeledVoxelMapOfCopiedVoxel, voxel, activeViewport);
+//   }
+// }
+
+// function labelVoxelMap(labeledVoxelMapOfCopiedVoxel, cube, voxelTargetAddress, labeledZoomStep) {
+//   const bucket = cube.getOrCreateBucket(
+//     cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
+//   );
+//   if (bucket.type === "null") {
+//     return;
+//   }
+//   const labeledVoxelInBucket = cube.getVoxelOffset(voxelTargetAddress, labeledZoomStep);
+//   const labelMapOfBucket =
+//     labeledVoxelMapOfCopiedVoxel.get(bucket.zoomedAddress) ||
+//     new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
+//   const labeledVoxel2D = [
+//     labeledVoxelInBucket[dimensionIndices[0]],
+//     labeledVoxelInBucket[dimensionIndices[1]],
+//   ];
+//   labelMapOfBucket[labeledVoxel2D[0] * constants.BUCKET_WIDTH + labeledVoxel2D[1]] = 1;
+//   labeledVoxelMapOfCopiedVoxel.set(bucket.zoomedAddress, labelMapOfBucket);
+// }
+
+///////////////////////////
+
+function labelVoxels(voxels: Array<Vector3>) {
+  const labelMasksByBucketAndW = labelVoxelsHelper(voxels);
+
+  const indexSet = new Set();
+  for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
+    for (const zIndex of labelMaskByIndex.keys()) {
+      indexSet.add(zIndex);
+    }
+  }
+  for (const indexZ of indexSet) {
+    const labeledVoxelMapFromFloodFill = new Map();
+    for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
+      const map = labelMaskByIndex.get(indexZ);
+      if (map != null) {
+        labeledVoxelMapFromFloodFill.set(bucketAddress, map);
+      }
+    }
+
+    applyVoxelMap(
+      currentLabeledVoxelMap,
+      cube,
+      newCellIdValue,
+      voxelBuffer.getFast3DCoordinate,
+      numberOfSlices,
+      thirdDim,
+      shouldOverwrite,
+      overwritableValue,
+    );
+
+    applyLabeledVoxelMapToAllMissingResolutions(
+      labeledVoxelMapFromFloodFill,
+      labeledZoomStep,
+      dimensionIndices,
+      resolutionInfo,
+      cube,
+      activeCellId,
+      indexZ,
+      true,
+    );
+  }
+}
+
+function labelVoxelsHelper(
+  voxels: Array<Vector3>,
+  dimensionIndices: DimensionMap,
+  zoomStep: number,
+): LabelMasksByBucketAndW {
+  // Helper function to convert between xyz and uvw (both directions)
+  const transpose = (voxel: Vector3): Vector3 =>
+    Dimensions.transDimWithIndices(voxel, dimensionIndices);
+
+  const bucketsWithLabeledVoxelsMap: LabelMasksByBucketAndW = new Map();
+
+  // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
+  const currentLabeledVoxelMap =
+    bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) || new Map();
+  const resolutions = getResolutions(Store.getState().dataset);
+  const currentResolution = resolutions[currentBucket.zoomedAddress[3]];
+
+  const markUvwInSliceAsLabeled = ([firstCoord, secondCoord, thirdCoord]) => {
+    // Convert bucket local W coordinate to global W (both mag-dependent)
+    const w = dimensionIndices[2];
+    thirdCoord += currentBucket.getTopLeftInMag()[w];
+    // Convert mag-dependent W to mag-independent W
+    thirdCoord = thirdCoord * currentResolution[w];
+
+    if (!currentLabeledVoxelMap.has(thirdCoord)) {
+      currentLabeledVoxelMap.set(thirdCoord, new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0));
+    }
+    const dataArray = currentLabeledVoxelMap.get(thirdCoord);
+    if (!dataArray) {
+      // Satisfy flow
+      throw new Error("Map entry does not exist, even though it was just set.");
+    }
+    dataArray[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
+  };
+
+  // Use a VoxelNeighborQueue2D/3D to iterate over the bucket and using bucket-local addresses and not global addresses.
+  const initialVoxelInSliceUvw = transpose(initialXyzVoxelInBucket);
+  markUvwInSliceAsLabeled(initialVoxelInSliceUvw);
+
+  const neighbourVoxelUvw = []; // todo
+  const neighbourVoxelXyz = transpose(neighbourVoxelUvw);
+
+  // const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxelXyz);
+  // bucketData[neighbourVoxelIndex] = cellId;
+  markUvwInSliceAsLabeled(neighbourVoxelUvw);
+  bucketsWithLabeledVoxelsMap.set(currentBucket.zoomedAddress, currentLabeledVoxelMap);
+
+  return bucketsWithLabeledVoxelsMap;
+}

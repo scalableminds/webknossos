@@ -155,13 +155,11 @@ Expects:
     Action.async(parse.multipartFormData) { implicit request =>
       val uploadForm = Form(
         tuple(
-          "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-          "owningOrganization" -> nonEmptyText,
           "resumableChunkNumber" -> number,
           "resumableChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
           "resumableIdentifier" -> nonEmptyText
-        )).fill(("", "", -1, -1, -1, ""))
+        )).fill((-1, -1, -1, ""))
 
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, Some(token)) {
         AllowRemoteOrigin {
@@ -170,14 +168,12 @@ Expects:
             .fold(
               hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
               success = {
-                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
-                  val id = DataSourceId(name, organization)
+                case (chunkNumber, chunkSize, totalChunkCount, uploadId) =>
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadId)
                     _ <- bool2Fox(isKnownUpload) ?~> "dataSet.upload.validation.failed"
                     chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                     _ <- uploadService.handleUploadChunk(uploadId,
-                                                         id,
                                                          chunkSize,
                                                          totalChunkCount,
                                                          chunkNumber,
@@ -213,7 +209,7 @@ Expects:
                            paramType = "body")))
   @ApiResponses(
     Array(
-      new ApiResponse(code = 200, message = "Empty body, chunk was saved on the server"),
+      new ApiResponse(code = 200, message = "Empty body, upload was successfully finished"),
       new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
     ))
   def finishUpload(token: String): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
@@ -228,6 +224,45 @@ Expects:
       }
 
   }
+
+  @ApiOperation(
+    value = """Cancel a running dataset upload
+Expects:
+ - As JSON object body with keys:
+  - uploadId (string): upload id that was also used in chunk upload (this time without file paths)
+ - As GET parameter:
+  - token (string): datastore token identifying the uploading user
+""",
+    nickname = "datasetCancelUpload"
+  )
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam(name = "cancelUploadInformation",
+                           required = true,
+                           dataTypeClass = classOf[CancelUploadInformation],
+                           paramType = "body")))
+  @ApiResponses(
+    Array(
+      new ApiResponse(code = 200, message = "Empty body, upload was cancelled"),
+      new ApiResponse(code = 400, message = "Operation could not be performed. See JSON body for more information.")
+    ))
+  def cancelUpload(token: String): Action[CancelUploadInformation] =
+    Action.async(validateJson[CancelUploadInformation]) { implicit request =>
+      val dataSourceIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
+        case false => Fox.failure("dataSet.upload.validation.failed")
+        case true  => uploadService.getDataSourceIdByUploadId(request.body.uploadId)
+      }
+      dataSourceIdFox.flatMap { dataSourceId =>
+        accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), Some(token)) {
+          AllowRemoteOrigin {
+            for {
+              _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataSet.delete.webknossos.failed"
+              _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
+            } yield Ok
+          }
+        }
+      }
+    }
 
   @ApiOperation(hidden = true, value = "")
   def fetchSampleDataSource(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
@@ -463,14 +498,15 @@ Expects:
   @ApiOperation(hidden = true, value = "")
   def deleteOnDisk(token: Option[String], organizationName: String, dataSetName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName)),
-                                        token) {
+      val dataSourceId = DataSourceId(dataSetName, organizationName)
+      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId), token) {
         AllowRemoteOrigin {
           for {
-            _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName,
-                                                                        dataSetName,
-                                                                        reason =
-                                                                          Some("the user wants to delete the dataset"))
+            _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
+              organizationName,
+              dataSetName,
+              reason = Some("the user wants to delete the dataset")) ?~> "dataSet.delete.failed"
+            _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
           } yield Ok
         }
       }

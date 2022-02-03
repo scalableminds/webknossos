@@ -1,7 +1,6 @@
 package models.job
 
 import java.sql.Timestamp
-
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
@@ -9,9 +8,10 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.binary.DataStoreDAO
+import models.binary.{DataSetDAO, DataStoreDAO}
 import models.job.JobState.JobState
 import models.organization.OrganizationDAO
 import models.user.{MultiUserDAO, User, UserDAO}
@@ -257,6 +257,7 @@ class JobService @Inject()(wkConf: WkConf,
                            jobDAO: JobDAO,
                            dataStoreDAO: DataStoreDAO,
                            organizationDAO: OrganizationDAO,
+                           dataSetDAO: DataSetDAO,
                            analyticsService: AnalyticsService,
                            slackNotificationService: SlackNotificationService,
                            val lifecycle: ApplicationLifecycle,
@@ -308,6 +309,18 @@ class JobService @Inject()(wkConf: WkConf,
     } yield ()
     ()
   }
+
+  def cleanUpIfFailed(job: Job): Fox[Unit] =
+    if (job.state == JobState.FAILURE && job.command == "convert_to_wkw") {
+      logger.info(s"WKW conversion job ${job._id} failed. Deleting dataset from the database, freeing the name...")
+      val commandArgs = job.commandArgs.value
+      for {
+        datasetName <- commandArgs.get("dataset_name").map(_.as[String]).toFox
+        organizationName <- commandArgs.get("organization_name").map(_.as[String]).toFox
+        dataset <- dataSetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext)
+        _ <- dataSetDAO.deleteDataset(dataset._id)
+      } yield ()
+    } else Fox.successful(())
 
   def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {

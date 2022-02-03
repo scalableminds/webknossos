@@ -59,9 +59,13 @@ object ZipIO extends LazyLogging {
     }
 
     def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(
+        implicit ec: ExecutionContext): Future[Unit] =
+      addFileFromNamedEnumerator(NamedEnumeratorStream(name, data))
+
+    def addFileFromNamedEnumerator(namedEnumerator: NamedEnumeratorStream)(
         implicit ec: ExecutionContext): Future[Unit] = {
-      stream.putNextEntry(new ZipEntry(name))
-      NamedEnumeratorStream("", data).writeTo(stream).map(_ => stream.closeEntry())
+      stream.putNextEntry(new ZipEntry(namedEnumerator.name))
+      namedEnumerator.writeTo(stream).map(_ => stream.closeEntry())
     }
 
     /**
@@ -89,17 +93,20 @@ object ZipIO extends LazyLogging {
   def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
     zip(sources.toIterator, out)
 
-  def zip(sources: Iterator[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
+  def zip(sources: Iterator[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] = {
+    val zip = startZip(out)
     if (sources.nonEmpty) {
-      val zip = startZip(out)
       for {
         _ <- zipIterator(sources, zip)
         _ = zip.close()
+        _ = out.close()
       } yield ()
     } else {
+      zip.close()
       out.close()
       Future.successful(())
     }
+  }
 
   private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Future[Unit] =
     if (!sources.hasNext) {

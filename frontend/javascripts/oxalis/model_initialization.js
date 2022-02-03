@@ -657,24 +657,32 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
     }
 
     if (layerState.meshInfo) {
-      const { meshFileName, meshes } = layerState.meshInfo;
+      const { meshFileName: currentMeshFileName, meshes } = layerState.meshInfo;
 
-      if (meshFileName != null) {
-        Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, meshFileName));
+      if (currentMeshFileName != null) {
+        Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
       }
 
       for (const mesh of meshes) {
-        const { segmentId, seedPosition, isPrecomputed } = mesh;
-        if (isPrecomputed) {
-          if (meshFileName != null) {
-            Store.dispatch(
-              loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
-            );
-          } else {
-            console.warn("Could not load precomputed mesh, because no meshFileName was specified.");
-          }
+        const { segmentId, seedPosition } = mesh;
+        if (mesh.isPrecomputed) {
+          const { meshFileName } = mesh;
+          Store.dispatch(
+            loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+          );
         } else {
-          Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition, effectiveLayerName));
+          const { mappingName, mappingType } = mesh;
+          Store.dispatch(
+            loadAdHocMeshAction(
+              segmentId,
+              seedPosition,
+              // `undefined` values will be interpreted to mean the currently active mapping which
+              // is not desired for meshes loaded via url.
+              mappingName !== undefined ? mappingName : null,
+              mappingType !== undefined ? mappingType : null,
+              effectiveLayerName,
+            ),
+          );
         }
       }
     }

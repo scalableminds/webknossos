@@ -510,14 +510,27 @@ type UiInformation = {
   +busyBlockingInfo: BusyBlockingInfo,
 };
 
-export type IsosurfaceInformation = {|
+type BaseIsosurfaceInformation = {|
   +segmentId: number,
   +seedPosition: Vector3,
   +isLoading: boolean,
-  +isPrecomputed: boolean,
   +isVisible: boolean,
-  +fileName?: string,
 |};
+
+export type AdHocIsosurfaceInformation = {|
+  ...BaseIsosurfaceInformation,
+  +isPrecomputed: false,
+  +mappingName: ?string,
+  +mappingType: ?MappingType,
+|};
+
+export type PrecomputedIsosurfaceInformation = {|
+  ...BaseIsosurfaceInformation,
+  +isPrecomputed: true,
+  +meshFileName: string,
+|};
+
+export type IsosurfaceInformation = AdHocIsosurfaceInformation | PrecomputedIsosurfaceInformation;
 
 export type OxalisState = {|
   +datasetConfiguration: DatasetConfiguration,

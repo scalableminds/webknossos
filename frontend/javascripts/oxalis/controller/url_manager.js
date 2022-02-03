@@ -6,7 +6,11 @@ import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import Store, { type OxalisState, type MappingType } from "oxalis/store";
+import Store, {
+  type OxalisState,
+  type MappingType,
+  type IsosurfaceInformation,
+} from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, {
   type ViewMode,
@@ -22,11 +26,22 @@ import { validateUrlStateJSON } from "types/validation";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
-type MeshUrlDescriptor = {|
+type BaseMeshUrlDescriptor = {|
   +segmentId: number,
   +seedPosition: Vector3,
-  +isPrecomputed: boolean,
 |};
+type AdHocMeshUrlDescriptor = {|
+  ...BaseMeshUrlDescriptor,
+  +isPrecomputed: false,
+  mappingName: ?string,
+  mappingType: ?MappingType,
+|};
+type PrecomputedMeshUrlDescriptor = {|
+  ...BaseMeshUrlDescriptor,
+  +isPrecomputed: true,
+  meshFileName: string,
+|};
+type MeshUrlDescriptor = AdHocMeshUrlDescriptor | PrecomputedMeshUrlDescriptor;
 
 export type UrlStateByLayer = {
   [layerName: string]: {
@@ -41,6 +56,32 @@ export type UrlStateByLayer = {
     },
   },
 };
+
+function mapIsosurfaceInfoToUrlMeshDescriptor(
+  isosurfaceInfo: IsosurfaceInformation,
+): MeshUrlDescriptor {
+  const { segmentId, seedPosition } = isosurfaceInfo;
+  const baseUrlDescriptor: BaseMeshUrlDescriptor = {
+    segmentId,
+    seedPosition: V3.floor(seedPosition),
+  };
+  if (isosurfaceInfo.isPrecomputed) {
+    const { meshFileName } = isosurfaceInfo;
+    return {
+      ...baseUrlDescriptor,
+      isPrecomputed: true,
+      meshFileName,
+    };
+  } else {
+    const { mappingName, mappingType } = isosurfaceInfo;
+    return {
+      ...baseUrlDescriptor,
+      isPrecomputed: false,
+      mappingName,
+      mappingType,
+    };
+  }
+}
 
 // If the type of UrlManagerState changes, the following files need to be updated:
 // docs/sharing.md#sharing-link-format
@@ -196,17 +237,13 @@ class UrlManager {
     }
     for (const layerName of Object.keys(state.localSegmentationData)) {
       const { isosurfaces, currentMeshFile } = state.localSegmentationData[layerName];
-      const meshFileName = currentMeshFile?.meshFileName;
+      const currentMeshFileName = currentMeshFile?.meshFileName;
       const meshes = Utils.values(isosurfaces)
         .filter(({ isVisible }) => isVisible)
-        .map(({ segmentId, seedPosition, isPrecomputed }) => ({
-          segmentId,
-          seedPosition: V3.floor(seedPosition),
-          isPrecomputed,
-        }));
+        .map(mapIsosurfaceInfoToUrlMeshDescriptor);
 
-      if (meshFileName != null || meshes.length > 0) {
-        stateByLayer[layerName] = { meshInfo: { meshFileName, meshes } };
+      if (currentMeshFileName != null || meshes.length > 0) {
+        stateByLayer[layerName] = { meshInfo: { meshFileName: currentMeshFileName, meshes } };
       }
     }
     const stateByLayerOptional = _.size(stateByLayer) > 0 ? { stateByLayer } : {};

@@ -6,7 +6,7 @@ type OxalisKey2<K1, K2> = $ElementType<OxalisKey<K1>, K2>;
 type OxalisKey3<K1, K2, K3> = $ElementType<OxalisKey2<K1, K2>, K3>;
 type OxalisKey4<K1, K2, K3, K4> = $ElementType<OxalisKey3<K1, K2, K3>, K4>;
 
-type WriteableShape<T> = $Shape<$Exact<{ ...T }>>;
+export type WriteableShape<T> = $Shape<$Exact<{ ...T }>>;
 export type StateShape1<K1> = WriteableShape<OxalisKey<K1>>;
 export type StateShape2<K1, K2> = WriteableShape<OxalisKey2<K1, K2>>;
 export type StateShape3<K1, K2, K3> = WriteableShape<OxalisKey3<K1, K2, K3>>;

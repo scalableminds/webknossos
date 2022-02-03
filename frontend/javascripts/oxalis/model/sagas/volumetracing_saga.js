@@ -43,7 +43,8 @@ import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
   addUserBoundingBoxAction,
-  type AddIsosurfaceAction,
+  type AddAdHocIsosurfaceAction,
+  type AddPrecomputedIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
@@ -863,7 +864,8 @@ export function* diffVolumeTracing(
 
 function* ensureSegmentExists(
   action:
-    | AddIsosurfaceAction
+    | AddAdHocIsosurfaceAction
+    | AddPrecomputedIsosurfaceAction
     | SetActiveCellAction
     | UpdateTemporarySettingAction
     | ClickSegmentAction,
@@ -882,7 +884,7 @@ function* ensureSegmentExists(
     return;
   }
 
-  if (action.type === "ADD_ISOSURFACE") {
+  if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
     const { seedPosition } = action;
     yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
   } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
@@ -904,7 +906,10 @@ function* ensureSegmentExists(
 }
 
 function* maintainSegmentsMap(): Saga<void> {
-  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"], ensureSegmentExists);
+  yield _takeEvery(
+    ["ADD_AD_HOC_ISOSURFACE", "ADD_PRECOMPUTED_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
+    ensureSegmentExists,
+  );
 }
 
 function* getGlobalMousePosition(): Saga<?Vector3> {

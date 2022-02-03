@@ -18,10 +18,39 @@ export default {
         seedPosition: {
           $ref: "#/definitions/types::Vector3",
         },
-        isPrecomputed: { type: "boolean" },
+      },
+      required: ["segmentId", "seedPosition"],
+    },
+    "types::PrecomputedMesh": {
+      type: "object",
+      allOf: [{ $ref: "#/definitions/types::Mesh" }],
+      properties: {
+        // These need to be repeated due to jsonschema's interpretation of additionalProperties
+        // but the type doesn't need to be specified again.
+        segmentId: {},
+        seedPosition: {},
+        isPrecomputed: { enum: [true] },
+        meshFileName: { type: "string" },
       },
       additionalProperties: false,
-      required: ["segmentId", "seedPosition", "isPrecomputed"],
+      required: ["isPrecomputed", "meshFileName"],
+    },
+    "types::AdHocMesh": {
+      type: "object",
+      allOf: [{ $ref: "#/definitions/types::Mesh" }],
+      properties: {
+        // These need to be repeated due to jsonschema's interpretation of additionalProperties
+        // but the type doesn't need to be specified again.
+        segmentId: {},
+        seedPosition: {},
+        isPrecomputed: { enum: [false] },
+        mappingName: { type: "string" },
+        mappingType: {
+          $ref: "#/definitions/types::MappingType",
+        },
+      },
+      additionalProperties: false,
+      required: ["isPrecomputed"],
     },
     "types::UrlStateByLayer": {
       type: "object",
@@ -49,11 +78,12 @@ export default {
               meshFileName: { type: "string" },
               meshes: {
                 type: "array",
-                items: [
-                  {
-                    $ref: "#/definitions/types::Mesh",
-                  },
-                ],
+                items: {
+                  anyOf: [
+                    { $ref: "#/definitions/types::PrecomputedMesh" },
+                    { $ref: "#/definitions/types::AdHocMesh" },
+                  ],
+                },
               },
             },
             additionalProperties: false,

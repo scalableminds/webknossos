@@ -57,13 +57,13 @@ import {
   type WkConnectDatasetConfig,
   type APIMeshFile,
 } from "types/api_flow_types";
-import { ControlModeEnum, type Vector3, type Vector6, MappingStatusEnum } from "oxalis/constants";
+import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
   DatasetConfiguration,
   Tracing,
   TraceOrViewCommand,
   AnnotationType,
-  ActiveMappingInfo,
+  MappingType,
   VolumeTracing,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
@@ -1734,25 +1734,31 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.
-type IsosurfaceRequest = {
+type IsosurfaceRequest = {|
   position: Vector3,
   zoomStep: number,
   segmentId: number,
   voxelDimensions: Vector3,
   cubeSize: Vector3,
   scale: Vector3,
-};
+  mappingName: ?string,
+  mappingType: ?MappingType,
+|};
 
 export function computeIsosurface(
   requestUrl: string,
-  mappingInfo: ActiveMappingInfo,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
-  const mapping =
-    mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED ? mappingInfo.mappingName : undefined;
-  const mappingType =
-    mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED ? mappingInfo.mappingType : undefined;
+  const {
+    position,
+    zoomStep,
+    segmentId,
+    voxelDimensions,
+    cubeSize,
+    scale,
+    mappingName,
+    mappingType,
+  } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,
@@ -1766,8 +1772,8 @@ export function computeIsosurface(
           zoomStep,
           // Segment to build mesh for
           segmentId,
-          // Name of mapping to apply before building mesh (optional)
-          mapping,
+          // Name and type of mapping to apply before building mesh (optional)
+          mapping: mappingName,
           mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,

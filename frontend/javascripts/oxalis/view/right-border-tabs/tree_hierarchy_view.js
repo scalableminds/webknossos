@@ -67,6 +67,7 @@ type Props = {
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
   onToggleTree: number => void,
+  onDeleteTree: number => void,
   onToggleAllTrees: () => void,
   onSetTreeColor: (number, Vector3) => void,
   onToggleTreeGroup: number => void,

@@ -24,11 +24,11 @@ trait NamedStream {
 }
 
 case class NamedFunctionStream(name: String, writer: OutputStream => Future[Unit]) extends NamedStream {
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext) = writer(out)
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] = writer(out)
 }
 
 case class NamedEnumeratorStream(name: String, enumerator: Enumerator[Array[Byte]]) extends NamedStream {
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext) = {
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] = {
     val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
       out.write(bytes)
     }

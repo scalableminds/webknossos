@@ -89,6 +89,7 @@ type DispatchProps = {|
   addNewBoundingBox: Vector3 => void,
   deleteBoundingBox: number => void,
   setActiveCell: (number, somePosition?: Vector3) => void,
+  createBranchPoint: (number, number) => void,
 |};
 
 type StateProps = {|

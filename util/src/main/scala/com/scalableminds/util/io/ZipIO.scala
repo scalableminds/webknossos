@@ -59,9 +59,13 @@ object ZipIO extends LazyLogging {
     }
 
     def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(
+        implicit ec: ExecutionContext): Future[Unit] =
+      addFileFromNamedEnumerator(NamedEnumeratorStream(name, data))
+
+    def addFileFromNamedEnumerator(namedEnumerator: NamedEnumeratorStream)(
         implicit ec: ExecutionContext): Future[Unit] = {
-      stream.putNextEntry(new ZipEntry(name))
-      NamedEnumeratorStream("", data).writeTo(stream).map(_ => stream.closeEntry())
+      stream.putNextEntry(new ZipEntry(namedEnumerator.name))
+      namedEnumerator.writeTo(stream).map(_ => stream.closeEntry())
     }
 
     /**

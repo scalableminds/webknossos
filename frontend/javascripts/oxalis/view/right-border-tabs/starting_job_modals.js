@@ -121,15 +121,16 @@ function StartingJobModal(props: StartingJobModalProps) {
     const colorAsHexString = rgbToHex(upscaledColor);
     return (
       <>
-        {bbox.name}{" "}
         <div
           className="color-display-wrapper"
           style={{
             backgroundColor: colorAsHexString,
             marginTop: -2,
+            marginRight: 6
           }}
-        />{" "}
-        - {computeArrayFromBoundingBox(bbox.boundingBox).join(", ")}
+        />
+        {bbox.name}{" "}
+        ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")})
       </>
     );
   };
@@ -145,7 +146,7 @@ function StartingJobModal(props: StartingJobModalProps) {
         <div style={{ textAlign: "center" }}>
           <Select
             showSearch
-            style={{ width: 300 }}
+            style={{ width: 400 }}
             placeholder="Select a bounding box"
             optionFilterProp="children"
             value={renderUserBoundingBox(selectedBoundingBox)}
@@ -189,7 +190,7 @@ function StartingJobModal(props: StartingJobModalProps) {
       <ColorLayerSelection />
       <BoundingBoxSelection />
       <div style={{ textAlign: "center" }}>
-        <Button type="primary" disabled={hasUnselectedOptions} onClick={startJob}>
+        <Button type="primary" size="large" disabled={hasUnselectedOptions} onClick={startJob}>
           Start {capitalizeWords(jobName)}
         </Button>
       </div>

@@ -68,7 +68,7 @@ type State = {
   model: Model,
 };
 
-const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset"];
+const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
 
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
@@ -371,11 +371,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     }
     this.state.model.doAction(FlexLayout.Actions.selectTab(`${side}-border-tab-container`));
     this.onLayoutChange();
-    if (toggleInternalState) {
-      // Avoid sending the event two times in case a viewport is maximized or minified back
-      // as maximizing on sends the event on its own.
-      sendAnalyticsEvent("change_tracing_layout", { viewMode: this.props.layoutKey });
-    }
   }
 
   onRenderTabSet = (

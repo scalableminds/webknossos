@@ -680,8 +680,11 @@ export function* pushTracingTypeAsync(
         }
       }
     } else {
-      // Saving the tracing a via timeout only saves the current state.
-      // It does not require to hit a save state without changes.
+      // Saving the tracing automatically (via timeout) only saves the current state.
+      // It does not require to reach an empty saveQueue. This is especially
+      // important when the auto-saving happens during continuous movements.
+      // Always draining the save queue completely would mean that save
+      // requests are sent as long as the user moves.
       yield* call(sendRequestToServer, tracingType, tracingId);
     }
     yield* put(setSaveBusyAction(false, tracingType));

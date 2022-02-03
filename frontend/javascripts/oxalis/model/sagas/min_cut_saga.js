@@ -18,64 +18,80 @@ import constants, {
   type Vector4,
 } from "oxalis/constants";
 
+//
+// Helper functions for managing neighbors / edges.
+//
+
+// There are 6 neighbor in 3D space (manhattan-jumps).
+// The neighbors can be accessed via neighbor indices (e.g., idx=1 ==> neighbor [0, -1, 0])
 const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
+// neighborToIndex is a mapping from neighbor to neighbor index (e.g., neighbor [0, -1, 0] ==> idx=1)
+const neighborToIndex = new Map(_.zip(_.values(NEIGHBOR_LOOKUP), _.range(NEIGHBOR_LOOKUP.length)));
 
-const neighborToIndex: Map<Array<number>, number> = new Map();
-
-function buildNeighborToIndexMap() {
-  let idx: number = 0;
-  for (const neighbor of NEIGHBOR_LOOKUP) {
-    neighborToIndex.set(neighbor, idx);
-
-    idx++;
+function getNeighborIdx(neighbor) {
+  const neighborIdx = neighborToIndex.get(neighbor);
+  if (neighborIdx == null) {
+    throw new Error("Could not look up neighbor");
   }
+  return neighborIdx;
 }
 
-buildNeighborToIndexMap();
-
-const invertNeighborId = (neighborId: number) =>
-  (neighborId + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
+// Given a neighbor X (e.g., idx=1 == [0, -1, 0]), the opposite neighbor can be
+// interesting (idx=4 == [0, 1, 0]). A common use case is dealing with doubly-linked
+// edges in a graph. For example:
+//
+// Given:
+//   A --> B
+// From the perspective of A, B can be accessed by using the outgoing edge
+// along vector [0, 1, 0] (idx=4). From the perspective of B, this is an
+// ingoing edge (referenced by idx=1 == [0, -1, 0]).
+const invertNeighborIdx = (neighborIdx: number) =>
+  (neighborIdx + NEIGHBOR_LOOKUP.length / 2) % NEIGHBOR_LOOKUP.length;
 
 function _getNeighborsFromBitMask(bitMask) {
+  // Note: Use the memoized version of this: getNeighborsFromBitMask.
+  // Ingoing and outgoing edges are stored as a bitmask. The first half
+  // of the bitmask holds the ingoing edges as bits. The second half the
+  // outgoing edges.
+  //
+  // For example, the bitmask
+  //  010000 000000
+  // means that there is exactly one ingoing edge ([0, -1, 0]).
   const neighbors = {
     ingoing: [],
     outgoing: [],
   };
 
-  for (let neighborId = 0; neighborId < NEIGHBOR_LOOKUP.length; neighborId++) {
-    if ((bitMask & (2 ** neighborId)) !== 0) {
-      neighbors.outgoing.push(NEIGHBOR_LOOKUP[neighborId]);
+  for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
+    if ((bitMask & (2 ** neighborIdx)) !== 0) {
+      neighbors.outgoing.push(NEIGHBOR_LOOKUP[neighborIdx]);
     }
-    if ((bitMask & (2 ** (neighborId + NEIGHBOR_LOOKUP.length))) !== 0) {
-      neighbors.ingoing.push(NEIGHBOR_LOOKUP[neighborId]);
+    if ((bitMask & (2 ** (neighborIdx + NEIGHBOR_LOOKUP.length))) !== 0) {
+      neighbors.ingoing.push(NEIGHBOR_LOOKUP[neighborIdx]);
     }
   }
 
   return neighbors;
 }
-
 const getNeighborsFromBitMask = _.memoize(_getNeighborsFromBitMask);
 
-function getNeighborId(neighbor) {
-  const neighborId = neighborToIndex.get(neighbor);
-  if (neighborId == null) {
-    throw new Error("Could not look up neighbor");
-  }
-  return neighborId;
+// Functions to add/remove edges which mutate the bitmask.
+function addOutgoingEdge(edgeBuffer, idx, neighborIdx) {
+  edgeBuffer[idx] |= 2 ** neighborIdx;
+}
+function addIngoingEdge(edgeBuffer, idx, neighborIdx) {
+  edgeBuffer[idx] |= 2 ** (NEIGHBOR_LOOKUP.length + neighborIdx);
+}
+function removeIngoingEdge(edgeBuffer, idx, neighborIdx) {
+  edgeBuffer[idx] &= ~(2 ** (NEIGHBOR_LOOKUP.length + neighborIdx));
+}
+function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
+  edgeBuffer[idx] &= ~(2 ** neighborIdx);
 }
 
-function addOutgoingEdge(edgeBuffer, idx, neighborId) {
-  edgeBuffer[idx] |= 2 ** neighborId;
-}
-function addIngoingEdge(edgeBuffer, idx, neighborId) {
-  edgeBuffer[idx] |= 2 ** (NEIGHBOR_LOOKUP.length + neighborId);
-}
-function removeIngoingEdge(edgeBuffer, idx, neighborId) {
-  edgeBuffer[idx] &= ~(2 ** (NEIGHBOR_LOOKUP.length + neighborId));
-}
-function removeOutgoingEdge(edgeBuffer, idx, neighborId) {
-  edgeBuffer[idx] &= ~(2 ** neighborId);
-}
+//
+// Algorithmic implementation of min cut approach
+//
 
 function* performMinCut(action: PerformMinCutAction): Saga<void> {
   const allowSave = yield* select(store => store.tracing.restrictions.allowSave);
@@ -224,8 +240,8 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
         }
 
         // Go over all neighbors
-        for (let neighborId = 0; neighborId < NEIGHBOR_LOOKUP.length; neighborId++) {
-          const neighbor = NEIGHBOR_LOOKUP[neighborId];
+        for (let neighborIdx = 0; neighborIdx < NEIGHBOR_LOOKUP.length; neighborIdx++) {
+          const neighbor = NEIGHBOR_LOOKUP[neighborIdx];
           const neighborPos = V3.add(pos, neighbor);
 
           if (
@@ -242,8 +258,8 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
 
           const neighborLinIndex = ll(neighborPos);
           if (inputData[neighborLinIndex] === segmentId) {
-            addOutgoingEdge(edgeBuffer, linIndex, neighborId);
-            addIngoingEdge(edgeBuffer, neighborLinIndex, invertNeighborId(neighborId));
+            addOutgoingEdge(edgeBuffer, linIndex, neighborIdx);
+            addIngoingEdge(edgeBuffer, neighborLinIndex, invertNeighborIdx(neighborIdx));
           }
         }
       }
@@ -301,10 +317,10 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
       for (const neighbor of neighbors) {
         const neighborPos = V3.add(currVoxel, neighbor);
 
-        const neighborId = getNeighborId(neighbor);
+        const neighborIdx = getNeighborIdx(neighbor);
 
         if (distanceField[ll(neighborPos)] == 0) {
-          queue.push({ voxel: neighborPos, distance: distance + 1, usedEdgeIdx: neighborId });
+          queue.push({ voxel: neighborPos, distance: distance + 1, usedEdgeIdx: neighborIdx });
         }
       }
     }
@@ -351,13 +367,13 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
       if (originallyUsedEdgeId >= NEIGHBOR_LOOKUP.length) {
         throw new Error("Could not look up used edge in directionField");
       }
-      const edgeId = invertNeighborId(originallyUsedEdgeId);
+      const edgeId = invertNeighborIdx(originallyUsedEdgeId);
       const neighbor = NEIGHBOR_LOOKUP[edgeId];
 
       const neighborPos = V3.add(currentVoxel, neighbor);
-      const neighborId = neighborToIndex.get(neighbor);
+      const neighborIdx = neighborToIndex.get(neighbor);
 
-      if (neighborId == null) {
+      if (neighborIdx == null) {
         throw new Error("Could not look up neighbor");
       }
 
@@ -390,7 +406,7 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
         // Remove ingoing
         // console.log("Before removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
 
-        removeIngoingEdge(edgeBuffer, ll(currentVoxel), neighborId);
+        removeIngoingEdge(edgeBuffer, ll(currentVoxel), neighborIdx);
 
         // console.log("After removing edge", edgeBuffer[ll(currentVoxel)].toString(2));
 
@@ -401,10 +417,10 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
         }
 
         // Remove outgoing
-        const invertedNeighborId = invertNeighborId(neighborId);
+        const invertedNeighborIdx = invertNeighborIdx(neighborIdx);
         // console.log("Before removing edge", edgeBuffer[ll(neighborPos)].toString(2));
 
-        removeOutgoingEdge(edgeBuffer, ll(neighborPos), invertedNeighborId);
+        removeOutgoingEdge(edgeBuffer, ll(neighborPos), invertedNeighborIdx);
 
         // console.log("After removing edge", edgeBuffer[ll(neighborPos)].toString(2));
       }

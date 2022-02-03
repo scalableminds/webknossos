@@ -39,6 +39,6 @@ class DataSourceRepository @Inject()(
   def cleanUpDataSource(dataSourceId: DataSourceId): Fox[Unit] =
     for {
       _ <- Fox.successful(remove(dataSourceId))
-      _ <- remoteWebKnossosClient.deleteErroneousDataSource(dataSourceId)
+      _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId)
     } yield ()
 }

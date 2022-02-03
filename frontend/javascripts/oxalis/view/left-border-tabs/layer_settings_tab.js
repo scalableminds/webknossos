@@ -474,7 +474,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           ) : null}
           {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
 
-          {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
+          {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
           {this.getReloadDataButton(layerName)}
           {maybeVolumeTracing && hasFallbackLayer ? this.getDeleteButton(maybeVolumeTracing) : null}

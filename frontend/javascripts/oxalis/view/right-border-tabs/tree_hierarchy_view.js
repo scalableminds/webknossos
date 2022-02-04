@@ -260,14 +260,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onDeleteGroup(groupId);
   }
 
-  handleGroupDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
-    if (isVisible) {
-      this.setState({ activeTreeDropdownId: treeId });
-      return;
-    }
-    this.setState({ activeTreeDropdownId: null });
-  };
-
   handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
     if (isVisible) {
       this.setState({ activeTreeDropdownId: treeId });
@@ -459,6 +451,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             autoDestroy
             placement="bottomCenter"
             visible={this.state.activeTreeDropdownId === tree.treeId}
+            // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
             onVisibleChange={isVisible =>
               this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
             }

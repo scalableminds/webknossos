@@ -772,27 +772,10 @@ class DataCube {
   async getLoadedBucket(bucketAddress: Vector4) {
     const bucket = this.getOrCreateBucket(bucketAddress);
 
-    if (bucket.type === "null") {
-      return bucket;
+    if (bucket.type !== "null") {
+      await bucket.ensureLoaded();
     }
 
-    let needsToAwaitBucket = false;
-    if (bucket.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (bucket.needsRequest()) {
-      this.pullQueue.add({
-        bucket: bucketAddress,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      });
-      this.pullQueue.pull();
-      needsToAwaitBucket = true;
-    }
-    if (needsToAwaitBucket) {
-      await new Promise(resolve => {
-        bucket.on("bucketLoaded", resolve);
-      });
-    }
-    // Bucket has been loaded by now or was loaded already
     return bucket;
   }
 }

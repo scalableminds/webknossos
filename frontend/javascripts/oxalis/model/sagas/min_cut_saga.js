@@ -115,15 +115,6 @@ function* performMinCut(action: Action): Saga<void> {
   if (action.type !== "PERFORM_MIN_CUT") {
     throw new Error("Satisfy flow.");
   }
-
-  const allowSave = yield* select(store => store.tracing.restrictions.allowSave);
-  if (allowSave && window.disableSavingOnMinCut) {
-    console.log("disable saving");
-    console.log("ensure saved state");
-    yield* call([Model, Model.ensureSavedState]);
-    console.log("disable saving");
-    yield* put(disableSavingAction());
-  }
   console.log("Start min cut");
 
   const skeleton = yield* select(store => store.tracing.skeleton);
@@ -184,9 +175,24 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  // todo: generalize
-  const targetMag = [2, 2, 1];
-  // const targetMag = [1, 1, 1];
+  const volumeTracingLayer = yield* select(store => getActiveSegmentationTracingLayer(store));
+  if (!volumeTracingLayer) {
+    console.log("no volumeTracing");
+    return;
+  }
+
+  const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
+  const appropriateResolutionInfo = selectAppropriateResolution(boundingBoxMag1, resolutionInfo);
+  if (!appropriateResolutionInfo) {
+    console.warn(
+      "The bounding box for the selected seeds is too large. Choose a smaller bounding box or lower the distance between the seeds. Alternatively, ensure that lower magnifications exist which can be used.",
+    );
+    return;
+  }
+  const [resolutionIndex, targetMag] = appropriateResolutionInfo;
+
+  console.log("resolutionIndex, targetMag", { resolutionIndex, targetMag });
+
   const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(targetMag);
 
   const globalSeedA = V3.from_mag1_to_mag(nodes[0].position, targetMag);
@@ -204,19 +210,18 @@ function* performMinCut(action: Action): Saga<void> {
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
   const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
 
-  const volumeTracingLayer = yield* select(store => getActiveSegmentationTracingLayer(store));
-  if (!volumeTracingLayer) {
-    console.log("no volumeTracing");
-    return;
-  }
   console.log("boundingBoxTarget.getVolume()", boundingBoxTarget.getVolume());
+  console.log("Loading data...");
   const inputData = yield* call(
     [api.data, api.data.getDataFor2DBoundingBox],
     volumeTracingLayer.name,
     boundingBoxMag1,
-    1, // mag 2
+    resolutionIndex,
   );
 
+  // For the 3D volume flat arrays are constructed
+  // into which can be accessed with the helper methods
+  // l(x, y, z) and l([x, y, z]).
   const size = boundingBoxTarget.getSize();
   const l = (x, y, z) => z * size[1] * size[0] + y * size[0] + x;
   const ll = ([x, y, z]) => z * size[1] * size[0] + y * size[0] + x;
@@ -352,7 +357,7 @@ function populateDistanceField(edgeBuffer, boundingBoxTarget, seedA, seedB, ll) 
   // to remove a shortest path.
   const directionField = new Uint8Array(boundingBoxTarget.getVolume()).fill(255);
 
-  const queue: Array<{ voxel: Array<number>, distance: number, usedEdgeIdx: number }> = [
+  const queue: Array<{ voxel: Vector3, distance: number, usedEdgeIdx: number }> = [
     { voxel: seedA, distance: 1, usedEdgeIdx: 255 },
   ];
   let foundTarget = false;
@@ -371,7 +376,6 @@ function populateDistanceField(edgeBuffer, boundingBoxTarget, seedA, seedB, ll) 
     }
 
     if (distance > lastDistance) {
-      console.log("new distance reached:", { distance, skipCount, iterationCount });
       lastDistance = distance;
     }
 
@@ -394,6 +398,7 @@ function populateDistanceField(edgeBuffer, boundingBoxTarget, seedA, seedB, ll) 
     }
   }
 
+  console.log("populateDistanceField finished:", { lastDistance, skipCount, iterationCount });
   return { distanceField, directionField, foundTarget };
 }
 
@@ -449,10 +454,10 @@ function removeShortestPath(
       removedEdgeCount++;
       path.unshift(neighborPos);
 
-      // Remove ingoing
+      // Remove ingoing edge
       removeIngoingEdge(edgeBuffer, ll(currentVoxel), neighborIdx);
 
-      // Remove outgoing
+      // Remove outgoing edge
       const invertedNeighborIdx = invertNeighborIdx(neighborIdx);
       removeOutgoingEdge(edgeBuffer, ll(neighborPos), invertedNeighborIdx);
     }
@@ -463,11 +468,16 @@ function removeShortestPath(
   return { path, foundSeed, removedEdgeCount };
 }
 
-function traverseResidualsField(boundingBoxTarget, seedA, ll, edgeBuffer) {
+function traverseResidualsField(
+  boundingBoxTarget: BoundingBox,
+  seedA: Vector3,
+  ll,
+  edgeBuffer: Uint16Array,
+) {
   // Perform a breadth-first search from seedA to seedB and return
   // which voxels were visited (visitedField).
   const visitedField = new Uint16Array(boundingBoxTarget.getVolume());
-  const queue: Array<{ voxel: Array<number> }> = [{ voxel: seedA }];
+  const queue: Array<{ voxel: Vector3 }> = [{ voxel: seedA }];
   while (queue.length > 0) {
     const { voxel: currVoxel } = queue.shift();
 
@@ -536,6 +546,6 @@ export default function* listenToMinCut(): Saga<void> {
   yield* takeEveryUnlessBusy("PERFORM_MIN_CUT", performMinCut, "Min-cut is being computed.");
 }
 
+// Todo: remove before merging
 window.__isosurfaceVoxelDimensions = [1, 1, 1];
-window.disableSavingOnMinCut = false;
-window.visualizeRemovedVoxelsOnMinCut = true;
+window.visualizeRemovedVoxelsOnMinCut = false;

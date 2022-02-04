@@ -1,24 +1,18 @@
 // @flow
 import _ from "lodash";
 
+import type { Action } from "oxalis/model/actions/actions";
 import type { PerformMinCutAction } from "oxalis/model/actions/volumetracing_actions";
-import { type Saga, call, put, select, _takeLatest } from "oxalis/model/sagas/effect-generators";
+import { type Saga, call, put, select, _takeEvery } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import constants, {
-  type BoundingBoxType,
-  type LabelMasksByBucketAndW,
-  type Vector3,
-  type Vector4,
-} from "oxalis/constants";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
@@ -118,7 +112,11 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
 // cannot be reached, anymore. These nodes are the one that should be erased
 // to separate A from B.
 
-function* performMinCut(action: PerformMinCutAction): Saga<void> {
+function* performMinCut(action: Action): Saga<void> {
+  if (action.type !== "PERFORM_MIN_CUT") {
+    throw new Error("Satisfy flow.");
+  }
+
   const allowSave = yield* select(store => store.tracing.restrictions.allowSave);
   if (allowSave && window.disableSavingOnMinCut) {
     console.log("disable saving");
@@ -134,7 +132,6 @@ function* performMinCut(action: PerformMinCutAction): Saga<void> {
     return;
   }
   const seedTree = skeleton.trees[action.treeId];
-  const activeTree = Utils.toNullable(getActiveTree(skeleton));
 
   if (!seedTree) {
     console.log("seedTree not found?");
@@ -392,7 +389,7 @@ function populateDistanceField(edgeBuffer, boundingBoxTarget, seedA, seedB, ll) 
       const neighborPos = V3.add(currVoxel, neighbor);
       const neighborIdx = getNeighborIdx(neighbor);
 
-      if (distanceField[ll(neighborPos)] == 0) {
+      if (distanceField[ll(neighborPos)] === 0) {
         queue.push({ voxel: neighborPos, distance: distance + 1, usedEdgeIdx: neighborIdx });
       }
     }
@@ -448,8 +445,6 @@ function removeShortestPath(
 
     const currDist = distanceField[ll(neighborPos)];
     const distToSeed = Math.min(currDist, maxDistance - currDist);
-
-    const ingoingNeighborsOld = getNeighborsFromBitMask(edgeBuffer[ll(currentVoxel)]).ingoing;
 
     if (distToSeed > minDistToSeed) {
       removedEdgeCount++;
@@ -539,9 +534,36 @@ function labelDeletedEdges(
   }
 }
 
+function* takeEveryUnlessBusy(actionDescriptor, saga: Action => Saga<void>, reason): Saga<void> {
+  /*
+   * Similar to _takeEvery, this function can be used to react to
+   * actions to start sagas. However, the difference is that once the given
+   * saga is executed, webKnossos will be marked as busy. When being busy,
+   * following actions which match the actionDescriptor are ignored.
+   * When the given saga finishes, busy is set to false.
+   *
+   * Note that busyBlockingInfo is also used in other places within webKnossos.
+   */
+
+  function* sagaBusyWrapper(action: Action) {
+    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+    if (busyBlockingInfo.isBusy) {
+      console.warn(
+        `Ignoring ${action.type} request (reason: ${busyBlockingInfo.reason || "null"})`,
+      );
+      return;
+    }
+
+    yield* put(setBusyBlockingInfoAction(true, reason));
+    yield* call(saga, action);
+    yield* put(setBusyBlockingInfoAction(false));
+  }
+
+  yield _takeEvery(actionDescriptor, sagaBusyWrapper);
+}
+
 export default function* listenToMinCut(): Saga<void> {
-  // todo: this cancels old requests. only for debugging. use _takeEvery instead
-  yield _takeLatest("PERFORM_MIN_CUT", performMinCut);
+  yield* takeEveryUnlessBusy("PERFORM_MIN_CUT", performMinCut, "Min-cut is being computed.");
 }
 
 window.__isosurfaceVoxelDimensions = [1, 1, 1];

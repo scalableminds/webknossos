@@ -12,6 +12,7 @@ import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
+import window from "libs/window";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box

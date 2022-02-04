@@ -2,13 +2,12 @@
 import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
-import type { PerformMinCutAction } from "oxalis/model/actions/volumetracing_actions";
-import { type Saga, call, put, select, _takeEvery } from "oxalis/model/sagas/effect-generators";
+import { type Saga, call, put, select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Model from "oxalis/model";
 import * as Utils from "libs/utils";
@@ -531,34 +530,6 @@ function labelDeletedEdges(
       }
     }
   }
-}
-
-function* takeEveryUnlessBusy(actionDescriptor, saga: Action => Saga<void>, reason): Saga<void> {
-  /*
-   * Similar to _takeEvery, this function can be used to react to
-   * actions to start sagas. However, the difference is that once the given
-   * saga is executed, webKnossos will be marked as busy. When being busy,
-   * following actions which match the actionDescriptor are ignored.
-   * When the given saga finishes, busy is set to false.
-   *
-   * Note that busyBlockingInfo is also used in other places within webKnossos.
-   */
-
-  function* sagaBusyWrapper(action: Action) {
-    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
-    if (busyBlockingInfo.isBusy) {
-      console.warn(
-        `Ignoring ${action.type} request (reason: ${busyBlockingInfo.reason || "null"})`,
-      );
-      return;
-    }
-
-    yield* put(setBusyBlockingInfoAction(true, reason));
-    yield* call(saga, action);
-    yield* put(setBusyBlockingInfoAction(false));
-  }
-
-  yield _takeEvery(actionDescriptor, sagaBusyWrapper);
 }
 
 export default function* listenToMinCut(): Saga<void> {

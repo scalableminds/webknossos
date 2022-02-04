@@ -2,7 +2,7 @@
 
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, Menu, Modal, notification } from "antd";
-import { DeleteOutlined, PlusOutlined, SettingOutlined, ShrinkOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
@@ -260,35 +260,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onDeleteGroup(groupId);
   }
 
-  handleDropdownClick = (params: { domEvent: SyntheticMouseEvent<*>, key: string }) => {
-    const { domEvent, key } = params;
-    // $FlowIssue[prop-missing] .dataset is unknown to flow
-    const groupId = parseInt(domEvent.target.dataset.groupId, 10);
-    if (key === "create") {
-      this.createGroup(groupId);
-    } else if (key === "delete") {
-      this.deleteGroup(groupId);
-    } else if (key === "collapseSubgroups") {
-      this.setExpansionOfAllSubgroupsTo(groupId, false);
-    } else if (key === "expandSubgroups") {
-      this.setExpansionOfAllSubgroupsTo(groupId, true);
-    }
-  };
-
   handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
     if (isVisible) {
       this.setState({ activeTreeDropdownId: treeId });
       return;
     }
     this.setState({ activeTreeDropdownId: null });
-  };
-
-  toggleTreeDropdownMenuVisibility = (treeId: number) => {
-    if (this.state.activeTreeDropdownId === treeId) {
-      this.setState({ activeTreeDropdownId: null });
-    } else {
-      this.setState({ activeTreeDropdownId: treeId });
-    }
   };
 
   getNodeStyleClassForBackground = (id: number) => {
@@ -325,24 +302,39 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       child => !child.expanded && child.type === TYPE_GROUP,
     );
     const hasSubgroup = anySatisfyDeep(node.children, child => child.type === TYPE_GROUP);
-    const menu = (
-      <Menu onClick={this.handleDropdownClick}>
-        <Menu.Item key="create" data-group-id={id}>
+    const createMenu = () => (
+      <Menu>
+        <Menu.Item key="create" data-group-id={id} onClick={() => this.createGroup(id)}>
           <PlusOutlined />
           Create new group
         </Menu.Item>
-        <Menu.Item key="delete" data-group-id={id} disabled={isRoot}>
+        <Menu.Item
+          key="delete"
+          data-group-id={id}
+          disabled={isRoot}
+          onClick={() => this.deleteGroup(id)}
+        >
           <DeleteOutlined />
-          Delete
+          Delete group
         </Menu.Item>
         {hasSubgroup ? (
-          <Menu.Item key="collapseSubgroups" data-group-id={id} disabled={!hasExpandedSubgroup}>
+          <Menu.Item
+            key="collapseSubgroups"
+            data-group-id={id}
+            disabled={!hasExpandedSubgroup}
+            onClick={() => this.setExpansionOfAllSubgroupsTo(id, false)}
+          >
             <ShrinkOutlined />
             Collapse all subgroups
           </Menu.Item>
         ) : null}
         {hasSubgroup ? (
-          <Menu.Item key="expandSubgroups" data-group-id={id} disabled={!hasCollapsedSubgroup}>
+          <Menu.Item
+            key="expandSubgroups"
+            data-group-id={id}
+            disabled={!hasCollapsedSubgroup}
+            onClick={() => this.setExpansionOfAllSubgroupsTo(id, true)}
+          >
             <ShrinkOutlined />
             Expand all subgroups
           </Menu.Item>
@@ -352,30 +344,38 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<no name>";
-    const nameAndDropdown = (
-      <span className="ant-dropdown-link">
-        <span data-id={id} onClick={this.onSelectGroup} style={{ marginLeft: 9 }}>
-          {displayableName}{" "}
-        </span>
-        <Dropdown overlay={menu} placement="bottomCenter">
-          <SettingOutlined className="group-actions-icon" />
-        </Dropdown>
-      </span>
-    );
+
     return (
       <div>
-        {node.containsTrees ? (
-          <Checkbox
-            checked={node.isChecked}
-            indeterminate={node.isIndeterminate}
-            onChange={this.onCheck}
-            node={node}
-            style={CHECKBOX_STYLE}
-          />
-        ) : (
-          <span style={CHECKBOX_PLACEHOLDER_STYLE} />
-        )}
-        {nameAndDropdown}
+        <Dropdown
+          overlay={createMenu}
+          placement="bottomCenter"
+          // The overlay is generated lazily. By default, this would make the overlay
+          // re-render on each parent's render() after it was shown for the first time.
+          // The reason for this is that it's not destroyed after closing.
+          // Therefore, autoDestroy is passed.
+          // destroyPopupOnHide should also be an option according to the docs, but
+          // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+          autoDestroy
+          trigger={["contextMenu"]}
+        >
+          <span>
+            {node.containsTrees ? (
+              <Checkbox
+                checked={node.isChecked}
+                indeterminate={node.isIndeterminate}
+                onChange={this.onCheck}
+                node={node}
+                style={CHECKBOX_STYLE}
+              />
+            ) : (
+              <span style={CHECKBOX_PLACEHOLDER_STYLE} />
+            )}
+            <span data-id={id} onClick={this.onSelectGroup} style={{ marginLeft: 9 }}>
+              {displayableName}
+            </span>
+          </span>
+        </Dropdown>
       </div>
     );
   };
@@ -452,6 +452,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             autoDestroy
             placement="bottomCenter"
             visible={this.state.activeTreeDropdownId === tree.treeId}
+            // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
             onVisibleChange={isVisible =>
               this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
             }

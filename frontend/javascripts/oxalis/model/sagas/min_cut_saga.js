@@ -18,29 +18,48 @@ import api from "oxalis/api/internal_api";
 // the min-cut is computed.
 const DEFAULT_PADDING = [50, 50, 50];
 
+// Voxels which are close to the seeds must not be relabeled.
+// Otherwise, trivial min-cuts are performed which cut right
+// around one seed.
+// For seeds that are very close to each other, their distance
+// overrides this threshold.
+const MIN_DIST_TO_SEED = 30;
+
 const TimeoutError = new Error("Timeout");
 const PartitionFailedError = new Error(
   "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
 );
 
-const MIN_CUT_TIMEOUT = 10 * 1000; // 10 seconds
+// If the min-cut does not succeed after 10 seconds
+// in the selected mag, the next mag is tried.
+const MIN_CUT_TIMEOUT = 10 * 1000;
 
-// 2 MV corresponds to ~...MB for uint32
+// To choose the initial mag, a voxel threshold is defined
+// as a heuristic. This avoids that an unrealistic mag
+// is tried in the first place.
+// 2 MV corresponds to ~8MB for uint32 data.
 const VOXEL_THRESHOLD = 2000000;
+
+// The first magnification is always ignored initially as a performance
+// optimization (unless it's the only existent mag).
+const ALWAYS_IGNORE_FIRST_MAG_INITIALLY = true;
 
 function selectAppropriateResolutions(boundingBoxMag1, resolutionInfo): Array<[number, Vector3]> {
   const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
   const appropriateResolutions = [];
 
   for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
-    if (resolutionIndex === 0 && resolutionsWithIndices.length > 1) {
+    if (
+      resolutionIndex === 0 &&
+      resolutionsWithIndices.length > 1 &&
+      ALWAYS_IGNORE_FIRST_MAG_INITIALLY
+    ) {
       // Don't consider Mag 1, as it's usually to fine-granular
       continue;
     }
     const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(resolution);
 
     if (boundingBoxTarget.getVolume() < VOXEL_THRESHOLD) {
-      console.log("Choosing to process", boundingBoxTarget.getVolume(), "voxels at", resolution);
       appropriateResolutions.push([resolutionIndex, resolution]);
     }
   }
@@ -126,12 +145,15 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
 // determine a appropriate mag to compute the min-cut in.
 // If the computation takes too long, the min-cut is aborted and a
 // poorer mag is tried.
+// Afterwards, it is tried to "refine" the min-cut by also calculating
+// the min-cut in better mags. As a result, the cut is initially drawn
+// "with broad/fast strokes" and the final details are solved in higher
+// mags.
 
 function* performMinCut(action: Action): Saga<void> {
   if (action.type !== "PERFORM_MIN_CUT") {
     throw new Error("Satisfy flow.");
   }
-  console.log("Start min cut");
 
   const skeleton = yield* select(store => store.tracing.skeleton);
   if (!skeleton) {
@@ -140,8 +162,7 @@ function* performMinCut(action: Action): Saga<void> {
   const seedTree = skeleton.trees[action.treeId];
 
   if (!seedTree) {
-    console.log("seedTree not found?");
-    return;
+    throw new Error("seedTree not found?");
   }
 
   const nodes = Array.from(seedTree.nodes.values());
@@ -206,8 +227,13 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
+  // Try to perform a min-cut on the selected resolutions. If the min-cut
+  // fails for one resolution, it's tried again on the next resolution.
+  // If the min-cut succeeds, it's refined again with the better resolutions.
   for (const [resolutionIndex, targetMag] of appropriateResolutionInfos) {
     try {
+      console.log("Trying min-cut computation at", targetMag);
+      console.group();
       yield* call(
         tryMinCutAtMag,
         targetMag,
@@ -216,6 +242,34 @@ function* performMinCut(action: Action): Saga<void> {
         nodes,
         volumeTracingLayer,
       );
+      console.groupEnd();
+
+      for (
+        let refiningResolutionIndex = resolutionIndex - 1;
+        refiningResolutionIndex >= 0;
+        refiningResolutionIndex--
+      ) {
+        // Refine min-cut on lower resolutions, if they exist.
+        if (!resolutionInfo.hasIndex(refiningResolutionIndex)) {
+          continue;
+        }
+
+        const refiningResolution = resolutionInfo.getResolutionByIndexOrThrow(
+          refiningResolutionIndex,
+        );
+        console.log("Refining min-cut at", refiningResolution);
+        console.group();
+        yield* call(
+          tryMinCutAtMag,
+          refiningResolution,
+          refiningResolutionIndex,
+          boundingBoxMag1,
+          nodes,
+          volumeTracingLayer,
+        );
+        console.groupEnd();
+      }
+
       return;
     } catch (exception) {
       if (exception === TimeoutError) {
@@ -263,11 +317,7 @@ function* tryMinCutAtMag(
   const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);
   const globalSeedB = V3.fromMag1ToMag(nodes[1].position, targetMag);
 
-  let minDistToSeed = 30 / targetMag[0];
-
-  // if (V3.length(V3.sub(globalSeedA, globalSeedB)) < 2 * minDistToSeed) {
-  //   console.warn(`Nodes are closer than ${minDistToSeed} vx apart.`);
-  // }
+  let minDistToSeed = MIN_DIST_TO_SEED / targetMag[0];
 
   minDistToSeed = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, minDistToSeed);
   console.log("automatically setting minDistToSeed to ", minDistToSeed);

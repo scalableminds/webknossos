@@ -18,7 +18,10 @@ import api from "oxalis/api/internal_api";
 // the min-cut is computed.
 const DEFAULT_PADDING = [50, 50, 50];
 
-const timeoutException = new Error("Timeout");
+const TimeoutError = new Error("Timeout");
+const PartitionFailedError = new Error(
+  "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
+);
 
 // 2 MV corresponds to ~...MB for uint32
 const VOXEL_THRESHOLD = 2000000;
@@ -198,7 +201,7 @@ function* performMinCut(action: Action): Saga<void> {
 
   const volumeTracingLayer = yield* select(store => getActiveSegmentationTracingLayer(store));
   if (!volumeTracingLayer) {
-    console.log("no volumeTracing");
+    console.log("No volumeTracing available.");
     return;
   }
 
@@ -223,8 +226,11 @@ function* performMinCut(action: Action): Saga<void> {
       );
       return;
     } catch (exception) {
-      if (exception === timeoutException) {
+      if (exception === TimeoutError) {
         console.log("Retrying at higher mag if possible...");
+      } else if (exception === PartitionFailedError) {
+        console.warn(exception);
+        return;
       } else {
         throw exception;
       }
@@ -331,11 +337,7 @@ function* tryMinCutAtMag(
         minDistToSeed,
       );
       if (removedEdgeCount === 0) {
-        console.log(
-          "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
-        );
-        // todo: return in caller, too
-        return;
+        throw PartitionFailedError;
       }
     } else {
       console.log("Segmentation is partitioned");
@@ -375,7 +377,7 @@ function buildGraph(inputData, segmentId, size, length, l, ll, timeoutThreshold)
     if (x % Math.floor(size[0] / 10) === 0 && performance.now() > timeoutThreshold) {
       // After each 10% chunk, we yield to redux-saga to allow
       // cancellation.
-      throw timeoutException;
+      throw TimeoutError;
     }
     for (let y = 0; y < size[1]; y++) {
       for (let z = 0; z < size[2]; z++) {
@@ -439,7 +441,7 @@ function populateDistanceField(
   while (queue.length > 0) {
     iterationCount++;
     if (iterationCount % 100000 === 0 && performance.now() > timeoutThreshold) {
-      throw timeoutException;
+      throw TimeoutError;
     }
     const { voxel: currVoxel, distance, usedEdgeIdx } = queue.shift();
 

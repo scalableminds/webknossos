@@ -3,15 +3,7 @@ import _ from "lodash";
 
 import type { Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import {
-  type Saga,
-  call,
-  _call,
-  put,
-  select,
-  _delay,
-  race,
-} from "oxalis/model/sagas/effect-generators";
+import { type Saga, call, put, select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
@@ -26,30 +18,29 @@ import api from "oxalis/api/internal_api";
 // the min-cut is computed.
 const DEFAULT_PADDING = [50, 50, 50];
 
-// Don't perform more than X deletions to avoid hanging
-// browsers when something goes wrong.
-const MAXIMUM_PATH_DELETIONS = 3000;
+const timeoutException = new Error("Timeout");
 
 // 2 MV corresponds to ~...MB for uint32
 const VOXEL_THRESHOLD = 2000000;
 
-function selectAppropriateResolution(boundingBoxMag1, resolutionInfo): ?[number, Vector3] {
+function selectAppropriateResolutions(boundingBoxMag1, resolutionInfo): Array<[number, Vector3]> {
   const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
+  const appropriateResolutions = [];
 
   for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
     if (resolutionIndex === 0 && resolutionsWithIndices.length > 1) {
       // Don't consider Mag 1, as it's usually to fine-granular
       continue;
     }
-    const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(resolution);
+    const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(resolution);
 
     if (boundingBoxTarget.getVolume() < VOXEL_THRESHOLD) {
       console.log("Choosing to process", boundingBoxTarget.getVolume(), "voxels at", resolution);
-      return [resolutionIndex, resolution];
+      appropriateResolutions.push([resolutionIndex, resolution]);
     }
   }
 
-  return null;
+  return appropriateResolutions;
 }
 
 //
@@ -212,21 +203,49 @@ function* performMinCut(action: Action): Saga<void> {
   }
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  const appropriateResolutionInfo = selectAppropriateResolution(boundingBoxMag1, resolutionInfo);
-  if (!appropriateResolutionInfo) {
+  const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
+  if (appropriateResolutionInfos.length === 0) {
     console.warn(
       "The bounding box for the selected seeds is too large. Choose a smaller bounding box or lower the distance between the seeds. Alternatively, ensure that lower magnifications exist which can be used.",
     );
     return;
   }
-  const [resolutionIndex, targetMag] = appropriateResolutionInfo;
 
+  for (const [resolutionIndex, targetMag] of appropriateResolutionInfos) {
+    try {
+      yield* call(
+        tryMinCutAtMag,
+        targetMag,
+        resolutionIndex,
+        boundingBoxMag1,
+        nodes,
+        volumeTracingLayer,
+      );
+      return;
+    } catch (exception) {
+      if (exception === timeoutException) {
+        console.log("Retrying at higher mag if possible...");
+      } else {
+        throw exception;
+      }
+    }
+  }
+  console.log("Couldn't perform min-cut due to timeout");
+}
+
+function* tryMinCutAtMag(
+  targetMag,
+  resolutionIndex,
+  boundingBoxMag1,
+  nodes,
+  volumeTracingLayer,
+): Saga<void> {
   console.log("resolutionIndex, targetMag", { resolutionIndex, targetMag });
 
-  const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(targetMag);
+  const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
 
-  const globalSeedA = V3.from_mag1_to_mag(nodes[0].position, targetMag);
-  const globalSeedB = V3.from_mag1_to_mag(nodes[1].position, targetMag);
+  const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);
+  const globalSeedB = V3.fromMag1ToMag(nodes[1].position, targetMag);
 
   let minDistToSeed = 30 / targetMag[0];
 
@@ -268,23 +287,21 @@ function* performMinCut(action: Action): Saga<void> {
 
   const segmentId = inputData[ll(seedA)];
 
+  const timeoutThreshold = performance.now() + 10 * 1000; // 10 seconds
   console.log("Starting min-cut...");
   console.time("Total min-cut");
 
   console.time("Build Graph");
 
-  const { timeout: timeoutDuringBuildGraph, edgeBuffer: untypedEdgeBuffer } = yield* race({
-    timeout: _delay(5000),
-    edgeBuffer: _call(buildGraph, inputData, segmentId, size, boundingBoxTarget.getVolume(), l, ll),
-  });
-  // Flow does not understand that edgeBuffer should have
-  // the unwrapped return type of buildGraph.
-  const edgeBuffer = ((untypedEdgeBuffer: any): Uint16Array);
-
-  if (timeoutDuringBuildGraph) {
-    console.log("Aborting min-cut during building graph");
-    return;
-  }
+  const edgeBuffer = buildGraph(
+    inputData,
+    segmentId,
+    size,
+    boundingBoxTarget.getVolume(),
+    l,
+    ll,
+    timeoutThreshold,
+  );
 
   // Copy original edge buffer, as it's mutated later when removing edges.
   const originalEdgeBuffer = new Uint16Array(edgeBuffer);
@@ -292,51 +309,38 @@ function* performMinCut(action: Action): Saga<void> {
 
   console.time("Find & delete paths");
 
-  let loopCounter = 0;
-  function* partition() {
-    while (true) {
-      loopCounter++;
-      const { foundTarget, distanceField, directionField } = yield* call(
-        populateDistanceField,
-        edgeBuffer,
-        boundingBoxTarget,
+  let exitLoop = false;
+  while (!exitLoop) {
+    const { foundTarget, distanceField, directionField } = populateDistanceField(
+      edgeBuffer,
+      boundingBoxTarget,
+      seedA,
+      seedB,
+      ll,
+      timeoutThreshold,
+    );
+    if (foundTarget) {
+      const { removedEdgeCount } = removeShortestPath(
+        distanceField,
+        directionField,
         seedA,
         seedB,
         ll,
+        size,
+        edgeBuffer,
+        minDistToSeed,
       );
-      if (foundTarget) {
-        const { removedEdgeCount } = removeShortestPath(
-          distanceField,
-          directionField,
-          seedA,
-          seedB,
-          ll,
-          size,
-          edgeBuffer,
-          minDistToSeed,
+      if (removedEdgeCount === 0) {
+        console.log(
+          "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
         );
-        if (removedEdgeCount === 0) {
-          console.log(
-            "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
-          );
-          // todo: return in caller, too
-          return;
-        }
-      } else {
-        console.log("Segmentation is partitioned");
-        break;
+        // todo: return in caller, too
+        return;
       }
+    } else {
+      console.log("Segmentation is partitioned");
+      exitLoop = true;
     }
-  }
-
-  const { timeout: timeoutDuringPartition } = yield* race({
-    timeout: _delay(10000),
-    parition: _call(partition),
-  });
-
-  if (timeoutDuringPartition) {
-    console.log("Aborting min-cut during partitioning after", loopCounter, "iterations");
-    return;
   }
 
   console.timeEnd("Find & delete paths");
@@ -365,13 +369,13 @@ function isPositionOutside(position, size) {
   );
 }
 
-function* buildGraph(inputData, segmentId, size, length, l, ll) {
+function buildGraph(inputData, segmentId, size, length, l, ll, timeoutThreshold) {
   const edgeBuffer = new Uint16Array(length);
   for (let x = 0; x < size[0]; x++) {
-    if (x % Math.floor(size[0] / 10) === 0) {
+    if (x % Math.floor(size[0] / 10) === 0 && performance.now() > timeoutThreshold) {
       // After each 10% chunk, we yield to redux-saga to allow
       // cancellation.
-      yield call(_.noop);
+      throw timeoutException;
     }
     for (let y = 0; y < size[1]; y++) {
       for (let z = 0; z < size[2]; z++) {
@@ -407,13 +411,14 @@ function* buildGraph(inputData, segmentId, size, length, l, ll) {
   return edgeBuffer;
 }
 
-function* populateDistanceField(
+function populateDistanceField(
   edgeBuffer: Uint16Array,
   boundingBoxTarget: BoundingBox,
   seedA: Vector3,
   seedB: Vector3,
   ll,
-): Saga<*> {
+  timeoutThreshold: number,
+) {
   // Perform a breadth-first search from seedA to seedB.
 
   // The distance field encodes the distance from the current voxel to seedA.
@@ -429,21 +434,17 @@ function* populateDistanceField(
   ];
   let foundTarget = false;
   let lastDistance = 0;
-  let skipCount = 0;
   let iterationCount = 0;
 
   while (queue.length > 0) {
     iterationCount++;
-    if (iterationCount % 100000 === 0) {
-      // Allow saga cancellation by yielding to redux-saga
-      // once in a while.
-      yield* call(_.noop);
+    if (iterationCount % 100000 === 0 && performance.now() > timeoutThreshold) {
+      throw timeoutException;
     }
     const { voxel: currVoxel, distance, usedEdgeIdx } = queue.shift();
 
     const currVoxelIdx = ll(currVoxel);
     if (distanceField[currVoxelIdx] > 0) {
-      skipCount++;
       continue;
     }
 
@@ -470,7 +471,6 @@ function* populateDistanceField(
     }
   }
 
-  console.log("populateDistanceField finished:", { lastDistance, skipCount, iterationCount });
   return { distanceField, directionField, foundTarget };
 }
 
@@ -497,7 +497,7 @@ function removeShortestPath(
     const currentDistance = distanceField[ll(currentVoxel)];
 
     if (V3.equals(currentVoxel, seedA)) {
-      console.log("Finished removing shortest path. Deleted edges:", removedEdgeCount);
+      // console.log("Finished removing shortest path. Deleted edges:", removedEdgeCount);
       foundSeed = true;
       break;
     }
@@ -591,7 +591,7 @@ function labelDeletedEdges(
             const neighborPos = V3.add(currentPos, neighbor);
 
             if (visitedField[ll(neighborPos)] === 0) {
-              const position = V3.from_mag_to_mag1(
+              const position = V3.fromMagToMag1(
                 V3.add(boundingBoxTarget.min, neighborPos),
                 targetMag,
               );

@@ -275,7 +275,7 @@ function NodeContextMenuOptions({
       >
         Select this Node
       </Menu.Item>
-      {volumeTracing != null && clickedTree.nodes.size() == 2 ? (
+      {volumeTracing != null && clickedTree.nodes.size() === 2 ? (
         <Menu.Item
           className="node-context-menu-item"
           key="min-cut"

@@ -209,13 +209,9 @@ V3.divide3 = function divide3(a, k, r) {
   return r;
 };
 
-V3.from_mag1_to_mag = (vec, target_mag) => {
-  return V3.floor(V3.divide3(vec, target_mag));
-};
+V3.fromMag1ToMag = (vec, targetMag) => V3.floor(V3.divide3(vec, targetMag));
 
-V3.from_mag_to_mag1 = (vec, source_mag) => {
-  return V3.floor(V3.scale3(vec, source_mag));
-};
+V3.fromMagToMag1 = (vec, sourceMag) => V3.floor(V3.scale3(vec, sourceMag));
 
 const _tmpVec = [0, 0, 0];
 V3.scaledSquaredDist = function squaredDist(a, b, scale) {

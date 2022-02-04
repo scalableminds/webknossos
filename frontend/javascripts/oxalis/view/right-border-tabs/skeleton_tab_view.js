@@ -47,7 +47,6 @@ import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_
 import {
   importVolumeTracingAction,
   setMaxCellAction,
-  performMinCutAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";

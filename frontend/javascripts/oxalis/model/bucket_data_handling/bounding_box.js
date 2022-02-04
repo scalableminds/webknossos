@@ -135,7 +135,7 @@ class BoundingBox {
     return boxes;
   }
 
-  from_mag1_to_mag(mag: Vector3): BoundingBox {
+  fromMag1ToMag(mag: Vector3): BoundingBox {
     const min = [
       Math.floor(this.min[0] / mag[0]),
       Math.floor(this.min[1] / mag[1]),

@@ -590,7 +590,7 @@ export function* floodFill(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
 
-    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+    const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
 
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
@@ -613,7 +613,7 @@ export function* floodFill(): Saga<void> {
       seedPosition,
       activeCellId,
       dimensionIndices,
-      currentViewportBounding,
+      boundingBoxForFloodFill,
       labeledZoomStep,
       progressCallback,
       fillMode === FillModeEnum._3D,

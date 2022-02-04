@@ -27,7 +27,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";

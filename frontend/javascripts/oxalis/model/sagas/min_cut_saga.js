@@ -505,7 +505,6 @@ function labelDeletedEdges(
         if (visitedField[idx] === 1) {
           const neighbors = getNeighborsFromBitMask(originalEdgeBuffer[idx]).outgoing;
           const currentPos = [x, y, z];
-          // api.data.labelVoxels([V3.add(boundingBox.min, currentPos)], 2);
 
           for (const neighbor of neighbors) {
             const neighborPos = V3.add(currentPos, neighbor);

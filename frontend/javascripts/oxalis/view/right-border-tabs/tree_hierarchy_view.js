@@ -349,7 +349,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       <div>
         <Dropdown
           overlay={createMenu}
-          placement="bottomCenter" // The overlay is generated lazily. By default, this would make the overlay
+          placement="bottomCenter"
+          // The overlay is generated lazily. By default, this would make the overlay
           // re-render on each parent's render() after it was shown for the first time.
           // The reason for this is that it's not destroyed after closing.
           // Therefore, autoDestroy is passed.

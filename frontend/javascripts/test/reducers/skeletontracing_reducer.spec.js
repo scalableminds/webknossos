@@ -640,14 +640,17 @@ test("SkeletonTracing should delete specific selected branchpoint", t => {
     resolution,
   );
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
-  
+
   // create one node and set it as branchpoint, create a second node and jump back to branchpoint
   let newState = SkeletonTracingReducer(initialState, createNodeAction);
   newState = SkeletonTracingReducer(newState, createBranchPointAction);
   newState = SkeletonTracingReducer(newState, createNodeAction);
   newState = SkeletonTracingReducer(newState, createBranchPointAction);
 
-  const deleteSelectedBranchPointAction = SkeletonTracingActions.deleteSelectedBranchPointAction(1, 1);
+  const deleteSelectedBranchPointAction = SkeletonTracingActions.deleteSelectedBranchPointAction(
+    1,
+    1,
+  );
   newState = SkeletonTracingReducer(newState, deleteSelectedBranchPointAction);
 
   t.not(newState, initialState);

@@ -307,7 +307,9 @@ function NodeContextMenuOptions({
           className="node-context-menu-item"
           key="branchpoint-node"
           onClick={() =>
-            activeNodeId != null ? deleteSelectedBranchPoint(clickedNodeId, clickedTree.treeId) : null
+            activeNodeId != null
+              ? deleteSelectedBranchPoint(clickedNodeId, clickedTree.treeId)
+              : null
           }
         >
           Unmark as Branchpoint

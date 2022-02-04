@@ -609,7 +609,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
-        case "DELETE_SELECTED_BRANCHPOINT": {
+        case "DELETE_BRANCHPOINT_BY_ID": {
           const { nodeId, treeId } = action;
           return getTree(skeletonTracing, treeId)
             .map(tree =>

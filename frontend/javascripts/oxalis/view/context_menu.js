@@ -31,6 +31,7 @@ import {
   createTreeAction,
   setTreeVisibilityAction,
   createBranchPointAction,
+  deleteSelectedBranchPointAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   hasAgglomerateMapping,
@@ -90,6 +91,7 @@ type DispatchProps = {|
   deleteBoundingBox: number => void,
   setActiveCell: (number, somePosition?: Vector3) => void,
   createBranchPoint: (number, number) => void,
+  deleteSelectedBranchPoint: (number, number) => void,
 |};
 
 type StateProps = {|
@@ -245,6 +247,7 @@ function NodeContextMenuOptions({
   mergeTrees,
   deleteNode,
   createBranchPoint,
+  deleteSelectedBranchPoint,
   setActiveNode,
   hideTree,
   useLegacyBindings,
@@ -299,7 +302,17 @@ function NodeContextMenuOptions({
       >
         Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
       </Menu.Item>
-      {isBranchpoint ? null : (
+      {isBranchpoint ? (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="branchpoint-node"
+          onClick={() =>
+            activeNodeId != null ? deleteSelectedBranchPoint(clickedNodeId, clickedTree.treeId) : null
+          }
+        >
+          Unmark as Branchpoint
+        </Menu.Item>
+      ) : (
         <Menu.Item
           className="node-context-menu-item"
           key="branchpoint-node"
@@ -791,6 +804,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   createBranchPoint(nodeId: number, treeId: number) {
     dispatch(createBranchPointAction(nodeId, treeId));
+  },
+  deleteSelectedBranchPoint(nodeId: number, treeId: number) {
+    dispatch(deleteSelectedBranchPointAction(nodeId, treeId));
   },
   setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));

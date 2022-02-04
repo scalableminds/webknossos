@@ -74,6 +74,11 @@ type CreateBranchPointAction = {
   timestamp: number,
 };
 type DeleteBranchPointAction = { type: "DELETE_BRANCHPOINT" };
+type DeleteSelectedBranchPointAction = {
+  type: "DELETE_SELECTED_BRANCHPOINT",
+  nodeId: number,
+  treeId: number,
+};
 type ToggleTreeAction = { type: "TOGGLE_TREE", treeId: ?number, timestamp: number };
 type SetTreeVisibilityAction = {
   type: "SET_TREE_VISIBILITY",
@@ -146,6 +151,7 @@ export type SkeletonTracingAction =
   | SetNodePositionAction
   | CreateBranchPointAction
   | DeleteBranchPointAction
+  | DeleteSelectedBranchPointAction
   | RequestDeleteBranchPointAction
   | CreateTreeAction
   | AddTreesAndGroupsAction
@@ -186,6 +192,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_NODE_RADIUS",
   "SET_NODE_POSITION",
   "CREATE_BRANCHPOINT",
+  "DELETE_SELECTED_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
   "ADD_TREES_AND_GROUPS",
@@ -312,6 +319,15 @@ export const createBranchPointAction = (
 
 export const deleteBranchPointAction = (): DeleteBranchPointAction => ({
   type: "DELETE_BRANCHPOINT",
+});
+
+export const deleteSelectedBranchPointAction = (
+  nodeId: number,
+  treeId: number,
+): DeleteSelectedBranchPointAction => ({
+  type: "DELETE_SELECTED_BRANCHPOINT",
+  nodeId,
+  treeId,
 });
 
 export const requestDeleteBranchPointAction = (): RequestDeleteBranchPointAction => ({

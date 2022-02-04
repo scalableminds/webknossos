@@ -78,6 +78,7 @@ type State = {
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
   searchFocusOffset: number,
+  activeTreeDropdownId: ?number,
 };
 
 const didTreeDataChange = (prevProps: Props, nextProps: Props): boolean =>
@@ -91,6 +92,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
+    activeTreeDropdownId: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -257,6 +259,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   deleteGroup(groupId: number) {
     this.props.onDeleteGroup(groupId);
   }
+
+  handleGroupDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
+    if (isVisible) {
+      this.setState({ activeTreeDropdownId: treeId });
+      return;
+    }
+    this.setState({ activeTreeDropdownId: null });
+  };
+
+  handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
+    if (isVisible) {
+      this.setState({ activeTreeDropdownId: treeId });
+      return;
+    }
+    this.setState({ activeTreeDropdownId: null });
+  };
 
   getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
@@ -440,6 +458,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
             autoDestroy
             placement="bottomCenter"
+            visible={this.state.activeTreeDropdownId === tree.treeId}
+            onVisibleChange={isVisible =>
+              this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
+            }
             trigger={["contextMenu"]}
           >
             <span>

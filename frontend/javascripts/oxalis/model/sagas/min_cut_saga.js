@@ -1,15 +1,23 @@
 // @flow
 import _ from "lodash";
 
+import type { Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import { type Saga, call, put, select } from "oxalis/model/sagas/effect-generators";
+import {
+  type Saga,
+  call,
+  _call,
+  put,
+  select,
+  _delay,
+  race,
+} from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import Model from "oxalis/model";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 
@@ -21,6 +29,28 @@ const DEFAULT_PADDING = [50, 50, 50];
 // Don't perform more than X deletions to avoid hanging
 // browsers when something goes wrong.
 const MAXIMUM_PATH_DELETIONS = 3000;
+
+// 2 MV corresponds to ~...MB for uint32
+const VOXEL_THRESHOLD = 2000000;
+
+function selectAppropriateResolution(boundingBoxMag1, resolutionInfo): ?[number, Vector3] {
+  const resolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
+
+  for (const [resolutionIndex, resolution] of resolutionsWithIndices) {
+    if (resolutionIndex === 0 && resolutionsWithIndices.length > 1) {
+      // Don't consider Mag 1, as it's usually to fine-granular
+      continue;
+    }
+    const boundingBoxTarget = boundingBoxMag1.from_mag1_to_mag(resolution);
+
+    if (boundingBoxTarget.getVolume() < VOXEL_THRESHOLD) {
+      console.log("Choosing to process", boundingBoxTarget.getVolume(), "voxels at", resolution);
+      return [resolutionIndex, resolution];
+    }
+  }
+
+  return null;
+}
 
 //
 // Helper functions for managing neighbors / edges.
@@ -238,51 +268,77 @@ function* performMinCut(action: Action): Saga<void> {
 
   const segmentId = inputData[ll(seedA)];
 
+  console.log("Starting min-cut...");
   console.time("Total min-cut");
 
   console.time("Build Graph");
-  const edgeBuffer = buildGraph(inputData, segmentId, size, boundingBoxTarget.getVolume(), l, ll);
+
+  const { timeout: timeoutDuringBuildGraph, edgeBuffer: untypedEdgeBuffer } = yield* race({
+    timeout: _delay(5000),
+    edgeBuffer: _call(buildGraph, inputData, segmentId, size, boundingBoxTarget.getVolume(), l, ll),
+  });
+  // Flow does not understand that edgeBuffer should have
+  // the unwrapped return type of buildGraph.
+  const edgeBuffer = ((untypedEdgeBuffer: any): Uint16Array);
+
+  if (timeoutDuringBuildGraph) {
+    console.log("Aborting min-cut during building graph");
+    return;
+  }
+
   // Copy original edge buffer, as it's mutated later when removing edges.
   const originalEdgeBuffer = new Uint16Array(edgeBuffer);
   console.timeEnd("Build Graph");
 
   console.time("Find & delete paths");
-  for (let loopBuster = 0; loopBuster < MAXIMUM_PATH_DELETIONS; loopBuster++) {
-    const { foundTarget, distanceField, directionField } = populateDistanceField(
-      edgeBuffer,
-      boundingBoxTarget,
-      seedA,
-      seedB,
-      ll,
-    );
-    if (foundTarget) {
-      const { removedEdgeCount } = removeShortestPath(
-        distanceField,
-        directionField,
+
+  let loopCounter = 0;
+  function* partition() {
+    while (true) {
+      loopCounter++;
+      const { foundTarget, distanceField, directionField } = yield* call(
+        populateDistanceField,
+        edgeBuffer,
+        boundingBoxTarget,
         seedA,
         seedB,
         ll,
-        size,
-        edgeBuffer,
-        minDistToSeed,
       );
-      if (removedEdgeCount === 0) {
-        console.log(
-          "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
+      if (foundTarget) {
+        const { removedEdgeCount } = removeShortestPath(
+          distanceField,
+          directionField,
+          seedA,
+          seedB,
+          ll,
+          size,
+          edgeBuffer,
+          minDistToSeed,
         );
-        return;
+        if (removedEdgeCount === 0) {
+          console.log(
+            "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
+          );
+          // todo: return in caller, too
+          return;
+        }
+      } else {
+        console.log("Segmentation is partitioned");
+        break;
       }
-    } else {
-      console.log("Segmentation is partitioned");
-      break;
-    }
-
-    if (loopBuster === MAXIMUM_PATH_DELETIONS - 1) {
-      console.warn(
-        `Aborted min-cut, since more than ${MAXIMUM_PATH_DELETIONS} iterations were necessary.`,
-      );
     }
   }
+
+  const { timeout: timeoutDuringPartition } = yield* race({
+    timeout: _delay(10000),
+    parition: _call(partition),
+  });
+
+  if (timeoutDuringPartition) {
+    console.log("Aborting min-cut during partitioning after", loopCounter, "iterations");
+    return;
+  }
+
   console.timeEnd("Find & delete paths");
 
   console.time("traverseResidualsField");
@@ -309,9 +365,14 @@ function isPositionOutside(position, size) {
   );
 }
 
-function buildGraph(inputData, segmentId, size, length, l, ll) {
+function* buildGraph(inputData, segmentId, size, length, l, ll) {
   const edgeBuffer = new Uint16Array(length);
   for (let x = 0; x < size[0]; x++) {
+    if (x % Math.floor(size[0] / 10) === 0) {
+      // After each 10% chunk, we yield to redux-saga to allow
+      // cancellation.
+      yield call(_.noop);
+    }
     for (let y = 0; y < size[1]; y++) {
       for (let z = 0; z < size[2]; z++) {
         // Traverse over all voxels
@@ -346,7 +407,13 @@ function buildGraph(inputData, segmentId, size, length, l, ll) {
   return edgeBuffer;
 }
 
-function populateDistanceField(edgeBuffer, boundingBoxTarget, seedA, seedB, ll) {
+function* populateDistanceField(
+  edgeBuffer: Uint16Array,
+  boundingBoxTarget: BoundingBox,
+  seedA: Vector3,
+  seedB: Vector3,
+  ll,
+): Saga<*> {
   // Perform a breadth-first search from seedA to seedB.
 
   // The distance field encodes the distance from the current voxel to seedA.
@@ -367,6 +434,11 @@ function populateDistanceField(edgeBuffer, boundingBoxTarget, seedA, seedB, ll) 
 
   while (queue.length > 0) {
     iterationCount++;
+    if (iterationCount % 100000 === 0) {
+      // Allow saga cancellation by yielding to redux-saga
+      // once in a while.
+      yield* call(_.noop);
+    }
     const { voxel: currVoxel, distance, usedEdgeIdx } = queue.shift();
 
     const currVoxelIdx = ll(currVoxel);

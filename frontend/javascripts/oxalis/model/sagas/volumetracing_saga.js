@@ -47,7 +47,6 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
-import { disableSavingAction } from "oxalis/model/actions/save_actions";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -55,9 +54,7 @@ import {
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
-  getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
 import {
   getPosition,
@@ -70,6 +67,7 @@ import {
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
+import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
   updateTemporarySettingAction,
@@ -98,8 +96,7 @@ import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import api from "oxalis/api/internal_api";
+import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
 import createProgressCallback from "libs/progress_callback";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
@@ -142,6 +139,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+    if (busyBlockingInfo.isBusy) {
+      console.warn(`Ignoring brush request (reason: ${busyBlockingInfo.reason || "null"})`);
+      continue;
+    }
     if (startEditingAction.type !== "START_EDITING") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
@@ -156,6 +158,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
     if (isZoomStepTooHighForAnnotating) {
+      continue;
+    }
+    if (activeTool === AnnotationToolEnum.MOVE) {
+      // This warning can be helpful when debugging tests.
+      console.warn("Volume actions are ignored since current tool is the move tool.");
       continue;
     }
 
@@ -403,6 +410,7 @@ function* labelWithVoxelBuffer2D(
   // thirdDimensionOfSlice needs to be provided in global coordinates
   const thirdDimensionOfSlice =
     topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+
   applyLabeledVoxelMapToAllMissingResolutions(
     currentLabeledVoxelMap,
     labeledZoomStep,
@@ -469,7 +477,6 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {
-        cube.labelVoxelInResolution(voxelTargetAddress, templateLabelValue, labeledZoomStep);
         const bucket = cube.getOrCreateBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
         );
@@ -510,6 +517,19 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
       );
     }
   }
+
+  const thirdDim = dimensionIndices[2];
+  applyVoxelMap(
+    labeledVoxelMapOfCopiedVoxel,
+    cube,
+    activeCellId,
+    getFast3DCoordinateHelper(activeViewport, z),
+    1,
+    thirdDim,
+    false,
+    0,
+  );
+
   applyLabeledVoxelMapToAllMissingResolutions(
     labeledVoxelMapOfCopiedVoxel,
     labeledZoomStep,
@@ -675,7 +695,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   segmentationCube: DataCube,
   cellId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
-  // if shouldOverwrite is false, a voxel is only overwritten if
+  // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean,
   overwritableValue: number = 0,
@@ -969,6 +989,17 @@ function* maintainContourGeometry(): Saga<void> {
   }
 }
 
+function* maintainVolumeTransactionEnds(): Saga<void> {
+  // When FINISH_ANNOTATION_STROKE is dispatched, the current volume
+  // transaction has ended. All following UI actions which
+  // mutate buckets should operate on a fresh `bucketsAlreadyInUndoState` set.
+  // Therefore, `markVolumeTransactionEnd` should be called immediately
+  // when FINISH_ANNOTATION_STROKE is dispatched. There should be no waiting
+  // on other operations (such as pending compressions) as it has been the case
+  // before. Otherwise, different undo states would "bleed" into each other.
+  yield _takeEvery("FINISH_ANNOTATION_STROKE", markVolumeTransactionEnd);
+}
+
 export default [
   editVolumeLayerAsync,
   ensureToolIsAllowedInResolution,
@@ -978,4 +1009,5 @@ export default [
   maintainHoveredSegmentId,
   listenToMinCut,
   maintainContourGeometry,
+  maintainVolumeTransactionEnds,
 ];

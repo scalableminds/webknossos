@@ -16,6 +16,7 @@ import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions"
 import Store, { type DatasetLayerConfiguration } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import Toast from "libs/toast";
+import { div } from "../../shaders/utils.glsl";
 
 type OwnProps = {|
   data: APIHistogramData,
@@ -285,6 +286,25 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <React.Fragment>
+        <div
+          style={{
+            position: "relative",
+            width: 22,
+            top: -22,
+            left: 237,
+          }}
+        >
+          <Tooltip title={tooltipText}>
+            <VerticalAlignMiddleOutlined
+              style={{
+                position: "relative",
+                transform: "rotate(90deg)",
+                cursor: "pointer",
+              }}
+              onClick={() => this.clipHistogram(isInEditMode, layerName)}
+            />
+          </Tooltip>
+        </div>
         <canvas
           ref={ref => {
             this.canvasRef = ref;
@@ -292,18 +312,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           width={canvasWidth}
           height={canvasHeight}
         />
-        <Tooltip title={tooltipText}>
-          <VerticalAlignMiddleOutlined
-            style={{
-              position: "absolute",
-              transform: "rotate(90deg)",
-              top: 14,
-              right: 82,
-              cursor: "pointer",
-            }}
-            onClick={() => this.clipHistogram(isInEditMode, layerName)}
-          />
-        </Tooltip>
         <Slider
           range
           value={[intensityRangeMin, intensityRangeMax]}

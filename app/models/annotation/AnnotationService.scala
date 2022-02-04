@@ -792,6 +792,7 @@ class AnnotationService @Inject()(
         "id" -> annotation.id,
         "name" -> annotation.name,
         "description" -> annotation.description,
+        "viewConfiguration" -> annotation.viewConfiguration,
         "typ" -> annotation.typ,
         "task" -> taskJson,
         "stats" -> annotation.statistics,

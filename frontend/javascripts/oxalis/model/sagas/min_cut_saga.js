@@ -23,6 +23,8 @@ const PartitionFailedError = new Error(
   "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
 );
 
+const MIN_CUT_TIMEOUT = 10 * 1000; // 10 seconds
+
 // 2 MV corresponds to ~...MB for uint32
 const VOXEL_THRESHOLD = 2000000;
 
@@ -118,22 +120,12 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
 }
 
 //
-// Algorithmic implementation of the min cut approach.
+// Actual min cut implementation.
 //
-// The directed (!) voxel graph is defined so that each voxel is a node and
-// two nodes are connected if they are neighbors and have the same segment id.
-// Since the graph is directed, all edges are initially symmetric double-edges.
-//
-// The algorithm looks for shortest paths between two given seeds A and B (via
-// breadth-first searches).
-// In each iteration, a shortest path between A and B is removed until no paths
-// exist anymore. Then, the two seeds are separated from each other.
-//
-// When removing a path, only the edges are removed which point from A to B.
-// This leaves "back-edges" in the graph (also known as "residuals").
-// In the final phase, these residuals are traversed to find out which nodes
-// cannot be reached, anymore. These nodes are the one that should be erased
-// to separate A from B.
+// Note that a heuristic is used to
+// determine a appropriate mag to compute the min-cut in.
+// If the computation takes too long, the min-cut is aborted and a
+// poorer mag is tried.
 
 function* performMinCut(action: Action): Saga<void> {
   if (action.type !== "PERFORM_MIN_CUT") {
@@ -236,8 +228,26 @@ function* performMinCut(action: Action): Saga<void> {
       }
     }
   }
-  console.log("Couldn't perform min-cut due to timeout");
+  console.warn("Couldn't perform min-cut due to timeout");
 }
+
+//
+// Algorithmic implementation of the min cut approach.
+//
+// The directed (!) voxel graph is defined so that each voxel is a node and
+// two nodes are connected if they are neighbors and have the same segment id.
+// Since the graph is directed, all edges are initially symmetric double-edges.
+//
+// The algorithm looks for shortest paths between two given seeds A and B (via
+// breadth-first searches).
+// In each iteration, a shortest path between A and B is removed until no paths
+// exist anymore. Then, the two seeds are separated from each other.
+//
+// When removing a path, only the edges are removed which point from A to B.
+// This leaves "back-edges" in the graph (also known as "residuals").
+// In the final phase, these residuals are traversed to find out which nodes
+// cannot be reached, anymore. These nodes are the one that should be erased
+// to separate A from B.
 
 function* tryMinCutAtMag(
   targetMag,
@@ -293,7 +303,15 @@ function* tryMinCutAtMag(
 
   const segmentId = inputData[ll(seedA)];
 
-  const timeoutThreshold = performance.now() + 10 * 1000; // 10 seconds
+  // We calculate the latest time at which the min cut may still
+  // be executed. The min-cut algorithm will check from time to
+  // time whether the threshold is violated.
+  // This approach was chosen over a timeout mechanism via
+  // race/delay saga due to performance reasons. The latter approach
+  // requires that even tightly-called functions are generators
+  // which yield to the redux-saga middleware. Rough benchmarks
+  // showed an overall slow-down of factor 6.
+  const timeoutThreshold = performance.now() + MIN_CUT_TIMEOUT;
   console.log("Starting min-cut...");
   console.time("Total min-cut");
 

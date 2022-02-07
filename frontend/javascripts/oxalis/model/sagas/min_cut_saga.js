@@ -1,12 +1,16 @@
 // @flow
 import _ from "lodash";
 
-import type { Vector3 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import { type Saga, call, put, select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
+import type { Vector3 } from "oxalis/constants";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  enforceActiveVolumeTracing,
+  getActiveSegmentationTracingLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -215,6 +219,7 @@ function* performMinCut(action: Action): Saga<void> {
   }
 
   const volumeTracingLayer = yield* select(store => getActiveSegmentationTracingLayer(store));
+  const volumeTracing = yield* select(enforceActiveVolumeTracing);
   if (!volumeTracingLayer) {
     console.log("No volumeTracing available.");
     return;
@@ -284,6 +289,9 @@ function* performMinCut(action: Action): Saga<void> {
       }
     }
   }
+
+  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+
   console.warn("Couldn't perform min-cut due to timeout");
 }
 

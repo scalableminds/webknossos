@@ -63,12 +63,22 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     extractBytesResponse(performRequest)
   }
 
+  def post(): Fox[WSResponse] = {
+    request = request.withMethod("POST")
+    performRequest
+  }
+
   def post(file: File): Fox[WSResponse] = {
     request = request.withBody(file).withMethod("POST")
     performRequest
   }
 
-  def postWithJsonResponse[T: Reads](file: File): Fox[T] = {
+  def postWithJsonResponse[T: Reads]: Fox[T] = {
+    request = request.withMethod("POST")
+    parseJsonResponse(performRequest)
+  }
+
+  def postFileWithJsonResponse[T: Reads](file: File): Fox[T] = {
     request = request.withBody(file).withMethod("POST")
     parseJsonResponse(performRequest)
   }
@@ -102,7 +112,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     performRequest
   }
 
-  def postWithJsonResponse[T: Writes, U: Reads](body: T = Json.obj()): Fox[U] = {
+  def postJsonWithJsonResponse[T: Writes, U: Reads](body: T = Json.obj()): Fox[U] = {
     request = request
       .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))

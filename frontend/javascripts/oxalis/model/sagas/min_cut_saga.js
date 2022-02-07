@@ -169,7 +169,8 @@ function* performMinCut(action: Action): Saga<void> {
   const nodes = Array.from(seedTree.nodes.values());
 
   if (nodes.length !== 2) {
-    console.log("seedTree should have exactly two nodes.");
+  // The min-cut operation should not be available in the context-menu when the tree
+  // does not have exactly two nodes.
     return;
   }
 
@@ -296,7 +297,7 @@ function* performMinCut(action: Action): Saga<void> {
 // The algorithm looks for shortest paths between two given seeds A and B (via
 // breadth-first searches).
 // In each iteration, a shortest path between A and B is removed until no paths
-// exist anymore. Then, the two seeds are separated from each other.
+// exist anymore. Thus, the two seeds are separated from each other.
 //
 // When removing a path, only the edges are removed which point from A to B.
 // This leaves "back-edges" in the graph (also known as "residuals").
@@ -311,7 +312,6 @@ function* tryMinCutAtMag(
   nodes,
   volumeTracingLayer,
 ): Saga<void> {
-  console.log("resolutionIndex, targetMag", { resolutionIndex, targetMag });
 
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
 
@@ -444,8 +444,7 @@ function buildGraph(inputData, segmentId, size, length, l, ll, timeoutThreshold)
   const edgeBuffer = new Uint16Array(length);
   for (let x = 0; x < size[0]; x++) {
     if (x % Math.floor(size[0] / 10) === 0 && performance.now() > timeoutThreshold) {
-      // After each 10% chunk, we yield to redux-saga to allow
-      // cancellation.
+      // After each 10% chunk, we check whether there's a timeout
       throw TimeoutError;
     }
     for (let y = 0; y < size[1]; y++) {
@@ -568,7 +567,6 @@ function removeShortestPath(
     const currentDistance = distanceField[ll(currentVoxel)];
 
     if (V3.equals(currentVoxel, seedA)) {
-      // console.log("Finished removing shortest path. Deleted edges:", removedEdgeCount);
       foundSeed = true;
       break;
     }
@@ -593,6 +591,8 @@ function removeShortestPath(
     const currDist = distanceField[ll(neighborPos)];
     const distToSeed = Math.min(currDist, maxDistance - currDist);
 
+    // We don't want to remove voxels which are close to the seeds.
+    // See explanation for MIN_DIST_TO_SEED for details.
     if (distToSeed > minDistToSeed) {
       removedEdgeCount++;
       path.unshift(neighborPos);

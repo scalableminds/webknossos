@@ -1249,7 +1249,6 @@ class DataApi {
         "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another resolution.",
       );
     }
-    console.log("await getLoadedBucket promises");
     const buckets = await Promise.all(
       bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
     );

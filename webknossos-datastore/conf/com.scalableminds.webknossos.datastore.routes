@@ -51,10 +51,9 @@ GET         /datasets/:organizationName/:dataSetName                            
 DELETE      /datasets/:organizationName/:dataSetName/deleteOnDisk                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(token: Option[String], organizationName: String, dataSetName: String)
 
 # Actions
-GET         /triggers/checkInbox                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheck(token: Option[String])
-GET         /triggers/checkInboxBlocking                                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(token: Option[String])
-GET         /triggers/newOrganizationFolder                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(token: Option[String], organizationName: String)
-GET         /triggers/reload/:organizationName/:dataSetName                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(token: Option[String], organizationName: String, dataSetName: String, layerName: Option[String])
+POST        /triggers/checkInboxBlocking                                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(token: Option[String])
+POST        /triggers/newOrganizationFolder                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(token: Option[String], organizationName: String)
+POST        /triggers/reload/:organizationName/:dataSetName                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(token: Option[String], organizationName: String, dataSetName: String, layerName: Option[String])
 
 # Exports
 GET         /exports/:jobId/download                                                                                              @com.scalableminds.webknossos.datastore.controllers.ExportsController.download(token: Option[String], jobId: String)

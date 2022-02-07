@@ -94,8 +94,8 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       sendAnalyticsEvent("switched_layout", {
         from: { viewMode: prevProps.layoutKey, layoutName: prevProps.layoutName },
         to: {
-          viewMode: this.props.layoutKey,
-          layoutName: this.props.layoutName,
+          viewMode: layoutKey,
+          layoutName,
         },
       });
       this.rebuildLayout();

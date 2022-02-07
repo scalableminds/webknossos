@@ -169,6 +169,7 @@ DELETE        /scripts/:id                                                     c
 GET           /projects                                                        controllers.ProjectController.list
 GET           /projects/assignments                                            controllers.ProjectController.listWithStatus
 POST          /projects                                                        controllers.ProjectController.create
+GET           /projects/byName/:name                                           controllers.ProjectController.readByName(name: String)
 GET           /projects/:id                                                    controllers.ProjectController.read(id: String)
 DELETE        /projects/:id                                                    controllers.ProjectController.delete(id: String)
 PUT           /projects/:id                                                    controllers.ProjectController.update(id: String)

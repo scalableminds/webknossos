@@ -38,6 +38,10 @@ const PartitionFailedError = new Error(
 // If the min-cut does not succeed after 10 seconds
 // in the selected mag, the next mag is tried.
 const MIN_CUT_TIMEOUT = 10 * 1000;
+// During the refinement phase, the timeout is very forgiving.
+// Even if the refinement is slow, we typically don't want to
+// abort it, since the initial min-cut has already been performed.
+const MIN_CUT_TIMEOUT_REFINEMENT = 10 * 60 * 1000;
 
 // To choose the initial mag, a voxel threshold is defined
 // as a heuristic. This avoids that an unrealistic mag
@@ -247,6 +251,7 @@ function* performMinCut(action: Action): Saga<void> {
         boundingBoxMag1,
         nodes,
         volumeTracingLayer,
+        MIN_CUT_TIMEOUT,
       );
       console.groupEnd();
 
@@ -264,14 +269,24 @@ function* performMinCut(action: Action): Saga<void> {
           refiningResolutionIndex,
         );
         console.group("Refining min-cut at", refiningResolution.join("-"));
-        yield* call(
-          tryMinCutAtMag,
-          refiningResolution,
-          refiningResolutionIndex,
-          boundingBoxMag1,
-          nodes,
-          volumeTracingLayer,
-        );
+        try {
+          yield* call(
+            tryMinCutAtMag,
+            refiningResolution,
+            refiningResolutionIndex,
+            boundingBoxMag1,
+            nodes,
+            volumeTracingLayer,
+            MIN_CUT_TIMEOUT_REFINEMENT,
+          );
+        } catch (exception) {
+          if (exception === TimeoutError) {
+            console.log(
+              "Refinement of min-cut timed out. There still might be small voxel connections between the seeds.",
+            );
+            return;
+          }
+        }
         console.groupEnd();
       }
 
@@ -317,6 +332,7 @@ function* tryMinCutAtMag(
   boundingBoxMag1,
   nodes,
   volumeTracingLayer,
+  maxTimeoutDuration,
 ): Saga<void> {
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
 
@@ -367,7 +383,7 @@ function* tryMinCutAtMag(
   // requires that even tightly-called functions are generators
   // which yield to the redux-saga middleware. Rough benchmarks
   // showed an overall slow-down of factor 6.
-  const timeoutThreshold = performance.now() + MIN_CUT_TIMEOUT;
+  const timeoutThreshold = performance.now() + maxTimeoutDuration;
   console.log("Starting min-cut...");
   console.time("Total min-cut");
 

@@ -102,5 +102,5 @@ class DSRemoteWebKnossosClient @Inject()(
     rpc(s"$webKnossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
       .addQueryStringOptional("token", token)
-      .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
+      .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }

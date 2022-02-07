@@ -169,8 +169,8 @@ function* performMinCut(action: Action): Saga<void> {
   const nodes = Array.from(seedTree.nodes.values());
 
   if (nodes.length !== 2) {
-  // The min-cut operation should not be available in the context-menu when the tree
-  // does not have exactly two nodes.
+    // The min-cut operation should not be available in the context-menu when the tree
+    // does not have exactly two nodes.
     return;
   }
 
@@ -312,7 +312,6 @@ function* tryMinCutAtMag(
   nodes,
   volumeTracingLayer,
 ): Saga<void> {
-
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
 
   const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);

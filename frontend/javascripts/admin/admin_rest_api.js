@@ -986,7 +986,7 @@ export async function startConvertToWkwJob(
   return Request.receiveJSON(
     `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&dataStoreName=${datastoreName}`,
     {
-      method: "POST"
+      method: "POST",
     },
   );
 }
@@ -1018,7 +1018,7 @@ export async function startExportTiffJob(
       ",",
     )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
     {
-      method: "POST"
+      method: "POST",
     },
   );
 }
@@ -1035,7 +1035,7 @@ export function startComputeMeshFileJob(
       "-",
     )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
     {
-      method: "POST"
+      method: "POST",
     },
   );
 }
@@ -1048,7 +1048,7 @@ export function startNucleiInferralJob(
   return Request.receiveJSON(
     `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
     {
-      method: "POST"
+      method: "POST",
     },
   );
 }
@@ -1064,7 +1064,7 @@ export function startGlobalizeFloodfillsJob(
   return Request.receiveJSON(
     `/api/jobs/run/globalizeFloodfills/${organizationName}/${datasetName}?newDataSetName=${newDataSetName}&layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
     {
-      method: "POST"
+      method: "POST",
     },
   );
 }

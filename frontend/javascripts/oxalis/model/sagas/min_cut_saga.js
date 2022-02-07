@@ -239,8 +239,7 @@ function* performMinCut(action: Action): Saga<void> {
   // If the min-cut succeeds, it's refined again with the better resolutions.
   for (const [resolutionIndex, targetMag] of appropriateResolutionInfos) {
     try {
-      console.log("Trying min-cut computation at", targetMag);
-      console.group();
+      console.group("Trying min-cut computation at", targetMag.join("-"));
       yield* call(
         tryMinCutAtMag,
         targetMag,
@@ -264,8 +263,7 @@ function* performMinCut(action: Action): Saga<void> {
         const refiningResolution = resolutionInfo.getResolutionByIndexOrThrow(
           refiningResolutionIndex,
         );
-        console.log("Refining min-cut at", refiningResolution);
-        console.group();
+        console.group("Refining min-cut at", refiningResolution.join("-"));
         yield* call(
           tryMinCutAtMag,
           refiningResolution,
@@ -624,8 +622,9 @@ function traverseResidualsField(
   ll,
   edgeBuffer: Uint16Array,
 ) {
-  // Perform a breadth-first search from seedA to seedB and return
-  // which voxels were visited (visitedField).
+  // Perform a breadth-first search from seedA and return
+  // which voxels were visited (visitedField). This represents
+  // the graph component for seedA.
   const visitedField = new Uint16Array(boundingBoxTarget.getVolume());
   const queue: Array<{ voxel: Vector3 }> = [{ voxel: seedA }];
   while (queue.length > 0) {

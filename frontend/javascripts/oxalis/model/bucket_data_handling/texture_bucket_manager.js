@@ -337,7 +337,15 @@ export default class TextureBucketManager {
     );
 
     const currentZoomStep = this.currentAnchorPoint[3];
-    for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
+
+    // console.log("try to sort entries beforehand");
+    // const entries = _.sortBy(Array.from(this.activeBucketToIndexMap.entries()), [
+    //   ([bucket]) => bucket.zoomedAddress[3],
+    // ]);
+
+    const entries = this.activeBucketToIndexMap.entries();
+
+    for (const [bucket, reservedAddress] of entries) {
       let address = -1;
       let bucketZoomStep = bucket.zoomedAddress[3];
       if (!bucketDebuggingFlags.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {

@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWCube
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
@@ -13,13 +12,13 @@ import scala.concurrent.ExecutionContext
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
   // To be defined in subclass.
-  def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube] = Empty
+  def loadFromUnderlying(readInstruction: DataReadInstruction): Box[DataCube] = Empty
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
 
-  private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Box[WKWCube] = {
+  private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Box[DataCube] = {
     val t = System.currentTimeMillis
     val result = loadFromUnderlying(readInstruction)
     val duration = System.currentTimeMillis - t

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, tracing = Value
+  val wkw, zarr, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {

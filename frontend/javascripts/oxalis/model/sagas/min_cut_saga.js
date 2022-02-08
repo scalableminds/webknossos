@@ -650,9 +650,9 @@ function traverseResidualsField(
   // which voxels were visited (visitedField). This represents
   // the graph component for seedA.
   const visitedField = new Uint8Array(boundingBoxTarget.getVolume());
-  const queue: Array<{ voxel: Vector3 }> = [{ voxel: seedA }];
+  const queue: Array<Vector3> = [seedA];
   while (queue.length > 0) {
-    const { voxel: currVoxel } = queue.shift();
+    const currVoxel = queue.shift();
 
     const currVoxelIdx = ll(currVoxel);
     if (visitedField[currVoxelIdx] > 0) {
@@ -664,7 +664,7 @@ function traverseResidualsField(
     for (const neighbor of neighbors) {
       const neighborPos = V3.add(currVoxel, neighbor);
 
-      queue.push({ voxel: neighborPos });
+      queue.push(neighborPos);
     }
   }
 

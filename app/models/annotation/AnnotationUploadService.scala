@@ -38,8 +38,8 @@ class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreat
                      isTaskUpload: Boolean,
                      basePath: Option[String] = None)(implicit m: MessagesProvider): NmlParseResult =
     NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath) match {
-      case Full((skeletonTracing, volumeTracingsWithDataLocations, description)) =>
-        NmlParseSuccess(name, skeletonTracing, volumeTracingsWithDataLocations, description)
+      case Full((skeletonTracing, uploadedVolumeLayers, description)) =>
+        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
@@ -82,8 +82,8 @@ class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreat
 
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingsWithDataLocations, description) =>
-          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), volumeTracingsWithDataLocations, description)
+        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
+          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), uploadedVolumeLayers, description)
         case r => r
       }
     } else {
@@ -104,11 +104,8 @@ class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreat
     }
 
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingsWithDataLocations, description) =>
-        NmlParseSuccess(name,
-                        Some(wrapTreesInGroup(name, skeletonTracing)),
-                        volumeTracingsWithDataLocations,
-                        description)
+      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
+        NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), uploadedVolumeLayers, description)
       case r => r
     }
   }

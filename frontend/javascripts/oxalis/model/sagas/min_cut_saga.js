@@ -109,11 +109,12 @@ const invertNeighborIdx = (neighborIdx: number) =>
 function _getNeighborsFromBitMask(bitMask) {
   // Note: Use the memoized version of this: getNeighborsFromBitMask.
   // Ingoing and outgoing edges are stored as a bitmask. The first half
-  // of the bitmask holds the ingoing edges as bits. The second half the
-  // outgoing edges.
+  // (higher significance) of the bitmask holds the ingoing edges as bits.
+  // The second half (lower significance) the outgoing edges.
   //
   // For example, the bitmask
   //  010000 000000
+  //  (most significant bits to least significant bits)
   // means that there is exactly one ingoing edge ([0, -1, 0]).
   const neighbors = {
     ingoing: [],

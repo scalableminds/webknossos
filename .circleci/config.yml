@@ -263,7 +263,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
           command: |

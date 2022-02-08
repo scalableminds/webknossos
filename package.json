@@ -106,6 +106,7 @@
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --cache --quiet frontend/javascripts/ tools/",
+    "lintd": "node_modules/.bin/eslint_d --cache --quiet frontend/javascripts/ tools/ # lintd uses a daemon for better speed (especially useful for hooking up to editors)",
     "lint-no-cache": "node_modules/.bin/eslint --quiet frontend/javascripts/ tools/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
     "pretty-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",

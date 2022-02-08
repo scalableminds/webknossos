@@ -188,7 +188,13 @@ function* performMinCut(action: Action): Saga<void> {
     console.log("No visible bounding box defined for min-cut. Creating one...");
     const newBBox = {
       min: V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
-      max: V3.floor(V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
+      max: V3.floor(
+        V3.add(
+          V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING),
+          // Add [1, 1, 1], since BoundingBox.max is exclusive
+          [1, 1, 1],
+        ),
+      ),
     };
 
     yield* put(

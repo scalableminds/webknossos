@@ -73,16 +73,6 @@ class DataSourceController @Inject()(
     }
 
   @ApiOperation(hidden = true, value = "")
-  def triggerInboxCheck(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources, token) {
-      AllowRemoteOrigin {
-        dataSourceService.checkInbox(verbose = true)
-        Ok
-      }
-    }
-  }
-
-  @ApiOperation(hidden = true, value = "")
   def triggerInboxCheckBlocking(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, token) {
       AllowRemoteOrigin {

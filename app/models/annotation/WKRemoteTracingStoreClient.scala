@@ -82,7 +82,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryStringOptional("version", versionString)
       .addQueryString("fromTask" -> isFromTask.toString)
-      .getWithJsonResponse[String]
+      .postWithJsonResponse[String]
   }
 
   def duplicateVolumeTracing(volumeTracingId: String,
@@ -97,7 +97,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
       .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
       .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
       .addQueryString("downsample" -> downsample.toString)
-      .postWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
+      .postJsonWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
@@ -105,7 +105,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromIds")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryString("persist" -> persistTracing.toString)
-      .postWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
+      .postJsonWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
   }
 
   def mergeVolumeTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
@@ -113,7 +113,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
     rpc(s"${tracingStore.url}/tracings/volume/mergedFromIds")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
       .addQueryString("persist" -> persistTracing.toString)
-      .postWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
+      .postJsonWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
   }
 
   def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[String] = {
@@ -200,7 +200,7 @@ class WKRemoteTracingStoreClient(tracingStore: TracingStore, dataSet: DataSet, r
     for {
       newId: String <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/unlinkFallback")
         .addQueryString("token" -> RpcTokenHolder.webKnossosToken)
-        .postWithJsonResponse[DataSourceLike, String](dataSource)
+        .postJsonWithJsonResponse[DataSourceLike, String](dataSource)
     } yield newId
   }
 

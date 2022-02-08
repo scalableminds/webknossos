@@ -318,6 +318,9 @@ function* performMinCut(action: Action): Saga<void> {
 
 //
 // Algorithmic implementation of the min cut approach.
+// For more background, look up the Edmonds–Karp or Ford–Fulkerson algorithm.
+// Note that our min-cut approach is a special case of these algorithms, since
+// we only have edges with a capacity of 1.
 //
 // The directed (!) voxel graph is defined so that each voxel is a node and
 // two nodes are connected if they are neighbors and have the same segment id.

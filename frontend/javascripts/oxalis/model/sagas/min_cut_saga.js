@@ -63,7 +63,7 @@ function selectAppropriateResolutions(boundingBoxMag1, resolutionInfo): Array<[n
       resolutionsWithIndices.length > 1 &&
       ALWAYS_IGNORE_FIRST_MAG_INITIALLY
     ) {
-      // Don't consider Mag 1, as it's usually to fine-granular
+      // Don't consider Mag 1, as it's usually too fine-granular
       continue;
     }
     const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(resolution);
@@ -84,7 +84,7 @@ function selectAppropriateResolutions(boundingBoxMag1, resolutionInfo): Array<[n
 // The neighbors can be accessed via neighbor indices (e.g., idx=1 ==> neighbor [0, -1, 0])
 const NEIGHBOR_LOOKUP = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
 // neighborToIndex is a mapping from neighbor to neighbor index (e.g., neighbor [0, -1, 0] ==> idx=1)
-const neighborToIndex = new Map(_.zip(_.values(NEIGHBOR_LOOKUP), _.range(NEIGHBOR_LOOKUP.length)));
+const neighborToIndex = new Map(_.zip(NEIGHBOR_LOOKUP, _.range(NEIGHBOR_LOOKUP.length)));
 
 function getNeighborIdx(neighbor) {
   const neighborIdx = neighborToIndex.get(neighbor);
@@ -98,7 +98,7 @@ function getNeighborIdx(neighbor) {
 // interesting (idx=4 == [0, 1, 0]). A common use case is dealing with doubly-linked
 // edges in a graph. For example:
 //
-// Given:
+// Given the neighboring voxels:
 //   A --> B
 // From the perspective of A, B can be accessed by using the outgoing edge
 // along vector [0, 1, 0] (idx=4). From the perspective of B, this is an
@@ -151,7 +151,7 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
 // Actual min cut implementation.
 //
 // Note that a heuristic is used to
-// determine a appropriate mag to compute the min-cut in.
+// determine an appropriate mag to compute the min-cut in.
 // If the computation takes too long, the min-cut is aborted and a
 // poorer mag is tried.
 // Afterwards, it is tried to "refine" the min-cut by also calculating
@@ -171,7 +171,7 @@ function* performMinCut(action: Action): Saga<void> {
   const seedTree = skeleton.trees[action.treeId];
 
   if (!seedTree) {
-    throw new Error("seedTree not found?");
+    throw new Error(`seedTree with id ${action.treeId} not found.`);
   }
 
   const nodes = Array.from(seedTree.nodes.values());
@@ -221,7 +221,7 @@ function* performMinCut(action: Action): Saga<void> {
   if (
     !(
       boundingBoxMag1.containsPoint(nodes[0].position) &&
-      boundingBoxMag1.containsPoint(nodes[0].position)
+      boundingBoxMag1.containsPoint(nodes[1].position)
     )
   ) {
     console.log("The seeds are not contained in the current bbox.");
@@ -330,7 +330,7 @@ function* performMinCut(action: Action): Saga<void> {
 // When removing a path, only the edges are removed which point from A to B.
 // This leaves "back-edges" in the graph (also known as "residuals").
 // In the final phase, these residuals are traversed to find out which nodes
-// cannot be reached, anymore. These nodes are the one that should be erased
+// cannot be reached, anymore. These nodes are the ones that should be erased
 // to separate A from B.
 
 function* tryMinCutAtMag(
@@ -364,7 +364,7 @@ function* tryMinCutAtMag(
   );
 
   // For the 3D volume flat arrays are constructed
-  // into which can be accessed with the helper methods
+  // which can be accessed with the helper methods
   // l(x, y, z) and l([x, y, z]).
   const size = boundingBoxTarget.getSize();
   const l = (x, y, z) => z * size[1] * size[0] + y * size[0] + x;
@@ -613,7 +613,7 @@ function removeShortestPath(
     }
 
     if (!(distanceField[ll(neighborPos)] < currentDistance && distanceField[ll(neighborPos)] > 0)) {
-      throw new Error("Direction points towards a higher distance?");
+      throw new Error("Direction points towards an equal/higher/zero distance?");
     }
 
     const currDist = distanceField[ll(neighborPos)];
@@ -648,7 +648,7 @@ function traverseResidualsField(
   // Perform a breadth-first search from seedA and return
   // which voxels were visited (visitedField). This represents
   // the graph component for seedA.
-  const visitedField = new Uint16Array(boundingBoxTarget.getVolume());
+  const visitedField = new Uint8Array(boundingBoxTarget.getVolume());
   const queue: Array<{ voxel: Vector3 }> = [{ voxel: seedA }];
   while (queue.length > 0) {
     const { voxel: currVoxel } = queue.shift();

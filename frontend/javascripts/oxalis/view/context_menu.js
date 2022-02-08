@@ -309,18 +309,20 @@ function NodeContextMenuOptions({
       >
         Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
       </Menu.Item>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="measure-node-path-length"
-        disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
-        onClick={() =>
-          activeNodeId != null
-            ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
-            : null
-        }
-      >
-        Path Length to this Node
-      </Menu.Item>
+      {isTheSameNode ? null : (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="measure-node-path-length"
+          disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+          onClick={() =>
+            activeNodeId != null
+              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
+              : null
+          }
+        >
+          Path Length to this Node
+        </Menu.Item>
+      )}
       <Menu.Item
         className="node-context-menu-item"
         key="measure-whole-tree-length"

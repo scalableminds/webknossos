@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, Volu
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractSegmentationLayer,
+  DataLayerLike,
   GenericDataSource,
   SegmentationLayer
 }
@@ -138,7 +139,6 @@ Expects:
       return Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
     if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
       Fox.serialCombined(volumeLayersGrouped.toList.flatten) { uploadedVolumeLayer =>
-        val dataZipFile = otherFiles.get(uploadedVolumeLayer.dataZipLocation).map(_.path.toFile)
         for {
           savedTracingId <- client.saveVolumeTracing(uploadedVolumeLayer.tracing,
                                                      uploadedVolumeLayer.getDataZipFrom(otherFiles))
@@ -247,8 +247,8 @@ Expects:
       }
     } yield allAdapted
 
-  private def adaptPropertiesToFallbackLayer[T](volumeTracing: VolumeTracing,
-                                                dataSource: GenericDataSource[T]): Fox[VolumeTracing] =
+  private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](volumeTracing: VolumeTracing,
+                                                                 dataSource: GenericDataSource[T]): Fox[VolumeTracing] =
     for {
       _ <- Fox.successful(())
       fallbackLayer = dataSource.dataLayers.flatMap {
@@ -371,7 +371,7 @@ Expects:
         _ = fetchedVolumeLayers.zipWithIndex.map {
           case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>
-              val dataZipName = volumeLayer.volumeDataZipName(index, fetchedSkeletonLayers.length == 1)
+              val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
               zipper.addFileFromBytes(dataZipName, volumeData)
             }
         }

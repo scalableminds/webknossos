@@ -1,21 +1,28 @@
-package models.annotation.nml
+package models.annotation
 
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, StandardCopyOption}
 
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
+import models.annotation.nml.{NmlParser, NmlResults}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.i18n.MessagesProvider
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 
-class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends LazyLogging {
+case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
+  def getDataZipFrom(otherFiles: Map[String, TemporaryFile]): Option[File] =
+    otherFiles.get(dataZipLocation).map(_.path.toFile)
+}
 
-  def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
+class AnnotationUploadService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends LazyLogging {
+
+  private def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
       implicit m: MessagesProvider): NmlParseResult =
     extractFromNml(new FileInputStream(file), name, overwritingDataSetName, isTaskUpload)
 
@@ -31,8 +38,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends L
                      isTaskUpload: Boolean,
                      basePath: Option[String] = None)(implicit m: MessagesProvider): NmlParseResult =
     NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath) match {
-      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) =>
-        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
+      case Full((skeletonTracing, volumeTracingsWithDataLocations, description)) =>
+        NmlParseSuccess(name, skeletonTracing, volumeTracingsWithDataLocations, description)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
@@ -75,8 +82,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends L
 
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
-          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), volumeTracingOpt, description)
+        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingsWithDataLocations, description) =>
+          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), volumeTracingsWithDataLocations, description)
         case r => r
       }
     } else {
@@ -97,8 +104,11 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends L
     }
 
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
-        NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), volumeTracingOpt, description)
+      case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingsWithDataLocations, description) =>
+        NmlParseSuccess(name,
+                        Some(wrapTreesInGroup(name, skeletonTracing)),
+                        volumeTracingsWithDataLocations,
+                        description)
       case r => r
     }
   }

@@ -298,6 +298,7 @@ function* performMinCut(action: Action): Saga<void> {
 
       return;
     } catch (exception) {
+      console.groupEnd();
       if (exception === TimeoutError) {
         console.log("Retrying at higher mag if possible...");
       } else if (exception === PartitionFailedError) {

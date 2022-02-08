@@ -14,6 +14,7 @@ import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import window from "libs/window";
@@ -313,7 +314,7 @@ function* performMinCut(action: Action): Saga<void> {
 
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
-  console.warn("Couldn't perform min-cut due to timeout");
+  yield* call([Toast, Toast.warning], "Couldn't perform min-cut due to timeout");
 }
 
 //
@@ -375,11 +376,11 @@ function* tryMinCutAtMag(
   const ll = ([x, y, z]) => z * size[1] * size[0] + y * size[0] + x;
 
   if (inputData[ll(seedA)] !== inputData[ll(seedB)]) {
-    console.warn(
-      "The given seeds are not placed on same segment",
-      inputData[ll(seedA)],
-      "vs",
-      inputData[ll(seedB)],
+    yield* call(
+      [Toast, Toast.warning],
+      `The given seeds are not placed on same segment: ${inputData[ll(seedA)]} vs ${
+        inputData[ll(seedB)]
+      }.`,
     );
     return;
   }

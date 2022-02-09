@@ -48,6 +48,7 @@ const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
 };
 
 const scalebarWidthFactor = 0.3;
+const maxScaleBarWidthFactor = 0.45;
 const minWidthToFillScalebar = 130;
 
 function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
@@ -55,7 +56,10 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
   const viewportHeightInNm = convertPixelsToNm(viewportHeightInPixels, zoomValue, dataset);
   const scaledWidthInNm = viewportWidthInNm * scalebarWidthFactor;
   const scalebarWidthInNm = getBestScalebarAnchorInNm(scaledWidthInNm);
-  const scaleBarWidthPercentage = (scalebarWidthInNm / viewportWidthInNm) * 100;
+  const scaleBarWidthFactor = Math.min(
+    scalebarWidthInNm / viewportWidthInNm,
+    maxScaleBarWidthFactor,
+  );
 
   const tooltip = [
     formatNumberToLength(viewportWidthInNm),
@@ -66,6 +70,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
     " ",
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
+  const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
 
   return (
     <Tooltip
@@ -83,7 +88,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
           right: "1%",
           width: collapseScalebar
             ? 16
-            : `calc(${scaleBarWidthPercentage}% - ${Math.round(
+            : `calc(${scaleBarWidthFactor * 100}% - ${Math.round(
                 ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
               )}%)`,
           height: 14,
@@ -99,7 +104,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
         <div
           style={{
             borderBottom: "1px solid",
-            borderLeft: "1px solid",
+            borderLeft: limitScalebar ? "none" : "1px solid",
             borderRight: "1px solid",
           }}
         >

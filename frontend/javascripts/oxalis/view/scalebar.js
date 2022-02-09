@@ -22,8 +22,8 @@ type OwnProps = {|
 type StateProps = {|
   dataset: APIDataset,
   zoomValue: number,
-  widthInPixels: number,
-  heightInPixels: number,
+  viewportWidthInPixels: number,
+  viewportHeightInPixels: number,
 |};
 
 type Props = {|
@@ -33,10 +33,10 @@ type Props = {|
 
 const scalebarWidthPercentage = 0.25;
 
-function Scalebar({ zoomValue, dataset, widthInPixels, heightInPixels }: Props) {
-  const widthInNm = convertPixelsToNm(widthInPixels, zoomValue, dataset);
-  const heightInNm = convertPixelsToNm(heightInPixels, zoomValue, dataset);
   const formattedScalebarWidth = formatNumberToLength(widthInNm * scalebarWidthPercentage);
+function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
+  const viewportWidthInNm = convertPixelsToNm(viewportWidthInPixels, zoomValue, dataset);
+  const viewportHeightInNm = convertPixelsToNm(viewportHeightInPixels, zoomValue, dataset);
 
   return (
     <Tooltip
@@ -93,8 +93,8 @@ const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => 
   return {
     zoomValue,
     dataset: state.dataset,
-    widthInPixels: width,
-    heightInPixels: height,
+    viewportWidthInPixels: width,
+    viewportHeightInPixels: height,
   };
 };
 

@@ -93,7 +93,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .addQueryString("token" -> dataStoreToken, "organizationName" -> organizationName)
-        .get
+        .post
         .futureBox
 
     for {

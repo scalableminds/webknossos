@@ -76,12 +76,9 @@ class SampleDataSourceService @Inject()(rpc: RPC,
           tmpfile.write(bytes.toArray)
           tmpfile.close()
 
-          uploadService
-            .finishUpload(UploadInformation(downloadId, id.name, id.team, None, needsConversion = None),
-                          checkCompletion = false)
-            .map { _ =>
-              runningDownloads.remove(id)
-            }
+          uploadService.finishUpload(UploadInformation(downloadId, None), checkCompletion = false).map { _ =>
+            runningDownloads.remove(id)
+          }
         case _ => runningDownloads.remove(id)
       }
     } yield ()

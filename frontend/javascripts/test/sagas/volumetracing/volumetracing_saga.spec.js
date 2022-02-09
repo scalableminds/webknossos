@@ -153,6 +153,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
+  saga.next({ isBusy: false });
   saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.BRUSH);
@@ -186,6 +187,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
+  saga.next({ isBusy: false });
   saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.TRACE);
@@ -225,6 +227,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
+  saga.next({ isBusy: false });
   saga.next(volumeTracing);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.TRACE);
@@ -271,6 +274,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
+  saga.next({ isBusy: false });
   saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(AnnotationToolEnum.TRACE);
@@ -309,4 +313,16 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
       0,
     ),
   );
+});
+
+test.only("VolumeTracingSaga should ignore brush action when busy (saga test)", t => {
+  const saga = editVolumeLayerAsync();
+  saga.next();
+  saga.next();
+  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
+  saga.next(startEditingAction);
+
+  // When isBusy is true, the saga should wait for a new START_EDITING action
+  // (thus, other actions, such as finishLayer, will be ignored).
+  expectValueDeepEqual(t, saga.next({ isBusy: true }), take("START_EDITING"));
 });

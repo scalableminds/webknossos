@@ -31,12 +31,31 @@ type Props = {|
   ...StateProps,
 |};
 
-const scalebarWidthPercentage = 0.25;
+const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
+  const closestExponent = Math.floor(Math.log10(lengthInNm));
+  const closestPowerOfTen = 10 ** closestExponent;
+  const mantissa = lengthInNm / closestPowerOfTen;
 
-  const formattedScalebarWidth = formatNumberToLength(widthInNm * scalebarWidthPercentage);
+  let bestAnchor = 1;
+  for (const anchor of [2, 5, 10]) {
+    if (Math.abs(anchor - mantissa) < Math.abs(bestAnchor - mantissa)) {
+      bestAnchor = anchor;
+    } else {
+      break;
+    }
+  }
+  return bestAnchor * closestPowerOfTen;
+};
+
+const scalebarWidthFactor = 0.3;
+const minWidthToFillScalebar = 130;
+
 function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
   const viewportWidthInNm = convertPixelsToNm(viewportWidthInPixels, zoomValue, dataset);
   const viewportHeightInNm = convertPixelsToNm(viewportHeightInPixels, zoomValue, dataset);
+  const scaledWidthInNm = viewportWidthInNm * scalebarWidthFactor;
+  const scalebarWidthInNm = getBestScalebarAnchorInNm(scaledWidthInNm);
+  const scaleBarWidthPercentage = (scalebarWidthInNm / viewportWidthInNm) * 100;
 
   return (
     <Tooltip

@@ -2,9 +2,10 @@
 import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import type { Node } from "oxalis/store";
 import { type Saga, call, put, select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
-import type { Vector3 } from "oxalis/constants";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import {
   enforceActiveVolumeTracing,
@@ -149,6 +150,11 @@ function removeOutgoingEdge(edgeBuffer, idx, neighborIdx) {
   edgeBuffer[idx] &= ~(2 ** neighborIdx);
 }
 
+export function isBoundingBoxUsableForMinCut(boundingBoxObj: BoundingBoxType, nodes: Array<Node>) {
+  const bbox = new BoundingBox(boundingBoxObj);
+  return bbox.containsPoint(nodes[0].position) && bbox.containsPoint(nodes[1].position);
+}
+
 //
 // Actual min cut implementation.
 //
@@ -218,12 +224,7 @@ function* performMinCut(action: Action): Saga<void> {
 
   const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
 
-  if (
-    !(
-      boundingBoxMag1.containsPoint(nodes[0].position) &&
-      boundingBoxMag1.containsPoint(nodes[1].position)
-    )
-  ) {
+  if (!isBoundingBoxUsableForMinCut(boundingBoxObj, nodes)) {
     console.log("The seeds are not contained in the current bbox.");
     return;
   }

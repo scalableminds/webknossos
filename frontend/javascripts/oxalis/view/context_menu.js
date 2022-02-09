@@ -43,7 +43,6 @@ import {
   getSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "oxalis/controller/combinations/volume_handlers";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getVisibleSegmentationLayer,
   getMappingInfo,
@@ -52,11 +51,13 @@ import {
   hasAgglomerateMapping,
   loadAgglomerateSkeletonAtPosition,
 } from "oxalis/controller/combinations/segmentation_handlers";
+import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
   withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   performMinCutAction,
   setActiveCellAction,
@@ -251,6 +252,48 @@ function shortcutBuilder(shortcuts: Array<string>): Node {
   );
 }
 
+function getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch) {
+  const seeds = Array.from(clickedTree.nodes.values());
+  if (volumeTracing == null || seeds.length !== 2) {
+    return null;
+  }
+
+  return (
+    <SubMenu
+      key="min-cut"
+      title="Perform Min-Cut (Experimental)"
+      // For some reason, antd doesn't pass the ant-dropdown class to the
+      // sub menu itself which makes the label of the item group too big.
+      // Passing the CSS class here fixes it (font-size is 14px instead of
+      // 16px then).
+      popupClassName="ant-dropdown"
+    >
+      <Menu.ItemGroup
+        key="choose-bbox-group"
+        title="Choose a bounding box for the min-cut operation:"
+      >
+        <Menu.Item
+          key="create-new"
+          onClick={() => dispatch(performMinCutAction(clickedTree.treeId))}
+        >
+          Create new bounding box
+        </Menu.Item>
+
+        {userBoundingBoxes
+          .filter(bbox => isBoundingBoxUsableForMinCut(bbox.boundingBox, seeds))
+          .map(bbox => (
+            <Menu.Item
+              key={bbox.id}
+              onClick={() => dispatch(performMinCutAction(clickedTree.treeId, bbox.id))}
+            >
+              {bbox.name || "Unnamed bounding box"}
+            </Menu.Item>
+          ))}
+      </Menu.ItemGroup>
+    </SubMenu>
+  );
+}
+
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
@@ -289,35 +332,7 @@ function NodeContextMenuOptions({
       >
         Select this Node
       </Menu.Item>
-      {volumeTracing != null && clickedTree.nodes.size() === 2 ? (
-        <SubMenu
-          key="min-cut"
-          title="Perform Min-Cut (Experimental)"
-          // For some reason, antd doesn't pass the ant-dropdown class to the
-          // sub menu itself which makes the label of the item group too big.
-          // Passing the CSS class here fixes it (font-size is 14px instead of
-          // 16px then).
-          popupClassName="ant-dropdown"
-        >
-          <Menu.ItemGroup key="choose-bbox-group" title="Choose bounding box for operation:">
-            <Menu.Item
-              key="create-new"
-              onClick={() => dispatch(performMinCutAction(clickedTree.treeId))}
-            >
-              Create new bounding box
-            </Menu.Item>
-
-            {userBoundingBoxes.map(bbox => (
-              <Menu.Item
-                key={bbox.id}
-                onClick={() => dispatch(performMinCutAction(clickedTree.treeId, bbox.id))}
-              >
-                {bbox.name || "Unnamed bounding box"}
-              </Menu.Item>
-            ))}
-          </Menu.ItemGroup>
-        </SubMenu>
-      ) : null}
+      {getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch)}
       <Menu.Item
         key="merge-trees"
         disabled={areInSameTree}

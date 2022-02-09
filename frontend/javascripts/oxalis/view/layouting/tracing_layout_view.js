@@ -275,7 +275,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         {status === "loaded" && (
           <ContextMenuContainer
             hideContextMenu={this.hideContextMenu}
-            clickedNodeId={this.state.clickedNodeId}
+            maybeClickedNodeId={this.state.clickedNodeId}
             clickedBoundingBoxId={this.state.clickedBoundingBoxId}
             globalPosition={this.state.contextMenuGlobalPosition}
             contextMenuPosition={contextMenuPosition}

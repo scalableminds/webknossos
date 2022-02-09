@@ -10,7 +10,7 @@ export default {
     "types::ViewMode": {
       enum: ["orthogonal", "oblique", "flight", "volume"],
     },
-    "types::MappingType": { enum: ["JSON", "HDF5"] },
+    "types::MappingType": { enum: ["JSON", "HDF5", null] },
     "types::Mesh": {
       type: "object",
       properties: {
@@ -44,7 +44,7 @@ export default {
         segmentId: {},
         seedPosition: {},
         isPrecomputed: { enum: [false] },
-        mappingName: { type: "string" },
+        mappingName: { type: ["string", "null"] },
         mappingType: {
           $ref: "#/definitions/types::MappingType",
         },
@@ -75,7 +75,7 @@ export default {
           meshInfo: {
             type: "object",
             properties: {
-              meshFileName: { type: "string" },
+              meshFileName: { type: ["string", "null"] },
               meshes: {
                 type: "array",
                 items: {

@@ -232,7 +232,10 @@ class UrlManager {
         mappingInfo.mappingName != null
       ) {
         const { mappingName, mappingType } = mappingInfo;
-        stateByLayer[layerName] = { mappingInfo: { mappingName, mappingType } };
+        stateByLayer[layerName] = {
+          ...stateByLayer[layerName],
+          mappingInfo: { mappingName, mappingType },
+        };
       }
     }
     for (const layerName of Object.keys(state.localSegmentationData)) {
@@ -243,7 +246,10 @@ class UrlManager {
         .map(mapIsosurfaceInfoToUrlMeshDescriptor);
 
       if (currentMeshFileName != null || meshes.length > 0) {
-        stateByLayer[layerName] = { meshInfo: { meshFileName: currentMeshFileName, meshes } };
+        stateByLayer[layerName] = {
+          ...stateByLayer[layerName],
+          meshInfo: { meshFileName: currentMeshFileName, meshes },
+        };
       }
     }
     const stateByLayerOptional = _.size(stateByLayer) > 0 ? { stateByLayer } : {};

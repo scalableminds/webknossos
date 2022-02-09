@@ -57,18 +57,22 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
   const scalebarWidthInNm = getBestScalebarAnchorInNm(scaledWidthInNm);
   const scaleBarWidthPercentage = (scalebarWidthInNm / viewportWidthInNm) * 100;
 
+  const tooltip = [
+    formatNumberToLength(viewportWidthInNm),
+    ThinSpace,
+    MultiplicationSymbol,
+    ThinSpace,
+    formatNumberToLength(viewportHeightInNm),
+    " ",
+  ].join("");
+  const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
+
   return (
     <Tooltip
       title={
         <div>
           <div>Viewport Size:</div>
-          <div>
-            {formatNumberToLength(widthInNm)}
-            {ThinSpace}
-            {MultiplicationSymbol}
-            {ThinSpace}
-            {formatNumberToLength(heightInNm)}{" "}
-          </div>
+          <div>{tooltip}</div>
         </div>
       }
     >
@@ -77,10 +81,11 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
           position: "absolute",
           bottom: "1%",
           right: "1%",
-          // The scalebar should have a width of 25% from the actual viewport (without the borders)
-          width: `calc(25% - ${Math.round(
-            ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
-          )}%)`,
+          width: collapseScalebar
+            ? 16
+            : `calc(${scaleBarWidthPercentage}% - ${Math.round(
+                ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
+              )}%)`,
           height: 14,
           background: "rgba(0, 0, 0, .3)",
           color: "white",
@@ -98,7 +103,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
             borderRight: "1px solid",
           }}
         >
-          {formattedScalebarWidth}
+          {collapseScalebar ? "i" : formatNumberToLength(scalebarWidthInNm)}
         </div>
       </div>
     </Tooltip>

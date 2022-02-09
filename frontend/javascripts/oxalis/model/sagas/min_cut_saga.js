@@ -239,7 +239,8 @@ function* performMinCut(action: Action): Saga<void> {
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
   const appropriateResolutionInfos = selectAppropriateResolutions(boundingBoxMag1, resolutionInfo);
   if (appropriateResolutionInfos.length === 0) {
-    console.warn(
+    yield* call(
+      [Toast, Toast.warning],
       "The bounding box for the selected seeds is too large. Choose a smaller bounding box or lower the distance between the seeds. Alternatively, ensure that lower magnifications exist which can be used.",
     );
     return;

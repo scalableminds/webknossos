@@ -139,21 +139,72 @@
   color: @text-color;
   background: @component-background;
   box-shadow: @box-shadow-base;
+
   .node-context-menu-item {
-    font-size: 12px;
-    height: 30px;
-    line-height: 30px;
-    padding: 0px 10px;
+    clear: both;
+    margin: 0;
+    padding: 5px 12px;
+    /* color: rgba(0, 0, 0, 0.85); */
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 22px;
+    white-space: nowrap;
   }
-  .ant-menu {
-    border-right: none;
+  // .node-context-menu-item {
+  //   font-size: 12px !important;
+  //   height: 30px !important;
+  //   line-height: 30px !important;
+  //   padding: 0px 10px !important;
+  // }
+
+  // .ant-menu-item-group-title,
+  // .ant-menu-item-group-list {
+  //   padding: 0 16px 0 10px !important;
+  // }
+
+  // .ant-menu-submenu-title {
+  //   padding: 0 !important;
+  // }
+
+  // .ant-menu {
+  //   border-right: none;
+  // }
+
+  .ant-dropdown {
+    position: static !important;
+  }
+
+  > div {
+    width: unset !important;
+    position: unset !important;
+  }
+
+  .overlayClassName {
+    min-width: unset !important;
+  }
+
+  .keyboard-key-icon-small {
+    line-height: 30px;
   }
 }
 
-.node-context-menu-sub {
-  font-size: 12px;
-  margin-left: -6px;
-}
+// .node-context-menu-item,
+// .ant-menu-submenu-title,
+// .ant-menu-item-group-title {
+//   font-size: 12px !important;
+//   height: 30px !important;
+//   line-height: 30px !important;
+//   padding: 0px 10px !important;
+// }
+
+// .node-context-menu-item.ant-menu-item-group {
+//   height: auto !important;
+// }
+
+// .node-context-menu-sub {
+//   font-size: 12px;
+//   margin-left: -6px;
+// }
 
 #version-restore-sider {
   box-shadow: @box-shadow-base;

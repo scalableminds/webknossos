@@ -184,10 +184,15 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
-  const boundingBoxes = skeleton.userBoundingBoxes.filter(bbox => bbox.isVisible);
+  const { boundingBoxId } = action;
   let boundingBoxObj;
-  if (boundingBoxes.length === 0) {
-    console.log("No visible bounding box defined for min-cut. Creating one...");
+  if (boundingBoxId != null) {
+    const boundingBoxes = skeleton.userBoundingBoxes.filter(bbox => bbox.id === boundingBoxId);
+    if (boundingBoxes.length !== 1) {
+      throw new Error(`Could not find specified bounding box with id ${boundingBoxId}.`);
+    }
+    boundingBoxObj = boundingBoxes[0].boundingBox;
+  } else {
     const newBBox = {
       min: V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
       max: V3.floor(
@@ -209,13 +214,6 @@ function* performMinCut(action: Action): Saga<void> {
     );
 
     boundingBoxObj = newBBox;
-  } else if (boundingBoxes.length === 1) {
-    boundingBoxObj = boundingBoxes[0].boundingBox;
-  } else {
-    console.log(
-      "Not clear which bounding box should be used. Ensure that only one or none are visible.",
-    );
-    return;
   }
 
   const boundingBoxMag1 = new BoundingBox(boundingBoxObj);

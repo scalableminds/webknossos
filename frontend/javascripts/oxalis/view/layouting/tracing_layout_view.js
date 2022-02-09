@@ -271,7 +271,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <React.Fragment>
         <PresentModernControls />
-        {contextMenuPosition != null && contextMenuViewport != null ? (
+
+        {status === "loaded" && (
           <ContextMenu
             hideContextMenu={this.hideContextMenu}
             clickedNodeId={this.state.clickedNodeId}
@@ -280,7 +281,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             contextMenuPosition={contextMenuPosition}
             viewport={contextMenuViewport}
           />
-        ) : null}
+        )}
+
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
           isUpdateAllowed={isUpdateTracingAllowed}

@@ -27,6 +27,7 @@ type FloodFillAction = {
 export type PerformMinCutAction = {
   type: "PERFORM_MIN_CUT",
   treeId: number,
+  boundingBoxId?: number,
 };
 
 type FinishEditingAction = { type: "FINISH_EDITING" };
@@ -153,9 +154,13 @@ export const floodFillAction = (
   callback,
 });
 
-export const performMinCutAction = (treeId: number): PerformMinCutAction => ({
+export const performMinCutAction = (
+  treeId: number,
+  boundingBoxId?: number,
+): PerformMinCutAction => ({
   type: "PERFORM_MIN_CUT",
   treeId,
+  boundingBoxId,
 });
 
 export const finishEditingAction = (): FinishEditingAction => ({

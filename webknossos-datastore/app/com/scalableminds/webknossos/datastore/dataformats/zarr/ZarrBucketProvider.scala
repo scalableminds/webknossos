@@ -11,8 +11,8 @@ import net.liftweb.util.Helpers.tryo
 class ZarrCube(zarrArray: ZarrArray) extends DataCube {
 
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
-    val offset = Array(bucket.globalX, bucket.globalY, bucket.globalZ)
-    val shape = Array(bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
+    val offset = Array(0, 0, bucket.globalX, bucket.globalY, bucket.globalZ)
+    val shape = Array(1, 1, bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
     tryo(zarrArray.read(offset, shape).asInstanceOf[Array[Byte]])
   }
 
@@ -22,7 +22,11 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube {
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
-    val zarrFilePath = readInstruction.baseDir.resolve("testZarrData")
+    val zarrFilePath = readInstruction.baseDir
+      .resolve(readInstruction.dataSource.id.team)
+      .resolve(readInstruction.dataSource.id.name)
+      .resolve(readInstruction.dataLayer.name)
+    logger.info(s"zarrFilePath: $zarrFilePath")
 
     if (zarrFilePath.toFile.exists()) {
       tryo(ZarrArray.open(zarrFilePath)).map(new ZarrCube(_))

@@ -19,7 +19,7 @@ trait ZarrLayer extends DataLayer {
 
   def resolutions: List[Point3D] = List(Point3D(1, 1, 1))
 
-  def lengthOfUnderlyingCubes(resolution: Point3D): Int = 0
+  def lengthOfUnderlyingCubes(resolution: Point3D): Int = 1024
 
 }
 

@@ -132,6 +132,14 @@ export function convertPixelsToNm(
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
+export function convertNmToPixels(
+  lengthInNm: number,
+  zoomValue: number,
+  dataset: APIDataset,
+): number {
+  return lengthInNm / (zoomValue * getBaseVoxel(dataset.dataSource.scale));
+}
+
 class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state = {
     showNucleiInferralModal: false,

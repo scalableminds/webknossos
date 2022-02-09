@@ -6,7 +6,6 @@ import { V3 } from "libs/mjs";
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataLayer } from "types/api_flow_types";
-import type { MappingType } from "oxalis/store";
 import {
   ResolutionInfo,
   getResolutionInfo,
@@ -17,6 +16,7 @@ import {
 import {
   type LoadAdHocMeshAction,
   type LoadPrecomputedMeshAction,
+  type IsosurfaceMappingInfo,
 } from "oxalis/model/actions/segmentation_actions";
 import { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import {
@@ -81,11 +81,6 @@ const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
 const isosurfacesMapByLayer: { [layerName: string]: Map<number, ThreeDMap<boolean>> } = {};
 const cubeSize = [256, 256, 256];
 const modifiedCells: Set<number> = new Set();
-
-type IsosurfaceMappingInfo = {|
-  mappingName: ?string,
-  mappingType: ?MappingType,
-|};
 
 export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
@@ -167,8 +162,7 @@ function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void>
     action.cellId,
     false,
     action.layerName,
-    action.mappingName,
-    action.mappingType,
+    action.mappingInfo,
   );
 }
 
@@ -177,8 +171,7 @@ function* loadAdHocIsosurface(
   cellId: number,
   removeExistingIsosurface: boolean = false,
   layerName?: ?string,
-  maybeMappingName?: ?string,
-  maybeMappingType?: ?MappingType,
+  maybeMappingInfo?: IsosurfaceMappingInfo,
 ): Saga<void> {
   const layer =
     layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
@@ -187,12 +180,7 @@ function* loadAdHocIsosurface(
     return;
   }
 
-  const isosurfaceMappingInfo = yield* call(
-    getIsosurfaceMappingInfo,
-    layer.name,
-    maybeMappingName,
-    maybeMappingType,
-  );
+  const isosurfaceMappingInfo = yield* call(getIsosurfaceMappingInfo, layer.name, maybeMappingInfo);
 
   yield* call(
     loadIsosurfaceForSegmentId,
@@ -206,18 +194,17 @@ function* loadAdHocIsosurface(
 
 function* getIsosurfaceMappingInfo(
   layerName: string,
-  maybeMappingName?: ?string,
-  maybeMappingType?: ?MappingType,
+  maybeMappingInfo: ?IsosurfaceMappingInfo,
 ): Saga<IsosurfaceMappingInfo> {
   const activeMappingByLayer = yield* select(
     state => state.temporaryConfiguration.activeMappingByLayer,
   );
+  if (maybeMappingInfo != null) return maybeMappingInfo;
+
   const mappingInfo = getMappingInfo(activeMappingByLayer, layerName);
   const isMappingActive = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
-  const mappingName =
-    maybeMappingName === undefined && isMappingActive ? mappingInfo.mappingName : maybeMappingName;
-  const mappingType =
-    maybeMappingType === undefined && isMappingActive ? mappingInfo.mappingType : maybeMappingType;
+  const mappingName = isMappingActive ? mappingInfo.mappingName : null;
+  const mappingType = isMappingActive ? mappingInfo.mappingType : null;
   return {
     mappingName,
     mappingType,
@@ -435,8 +422,10 @@ function* refreshIsosurfaces(): Saga<void> {
   if (!segmentationLayer) {
     return;
   }
-  // First create an array containing information about all loaded isosurfaces as the map is manipulated within the loop.
-  const isosurfacesMapForLayer = isosurfacesMapByLayer[segmentationLayer.name] || new Map();
+
+  isosurfacesMapByLayer[segmentationLayer.name] =
+    isosurfacesMapByLayer[segmentationLayer.name] || new Map();
+  const isosurfacesMapForLayer = isosurfacesMapByLayer[segmentationLayer.name];
   for (const [cellId, threeDMap] of Array.from(isosurfacesMapForLayer.entries())) {
     if (!currentlyModifiedCells.has(cellId)) {
       continue;
@@ -483,15 +472,10 @@ function* _refreshIsosurfaceWithMap(
   for (const [, position] of isosurfacePositions) {
     // Reload the isosurface at the given position if it isn't already loaded there.
     // This is done to ensure that every voxel of the isosurface is reloaded.
-    yield* call(
-      loadAdHocIsosurface,
-      position,
-      cellId,
-      shouldBeRemoved,
-      layerName,
+    yield* call(loadAdHocIsosurface, position, cellId, shouldBeRemoved, layerName, {
       mappingName,
       mappingType,
-    );
+    });
     shouldBeRemoved = false;
   }
   yield* put(finishedLoadingIsosurfaceAction(layerName, cellId));

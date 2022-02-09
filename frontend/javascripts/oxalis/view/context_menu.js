@@ -839,6 +839,11 @@ function ContextMenuInner(propsWithInputRef: PropsWithRef) {
       />,
     );
 
+    // It's important to not use <NodeContextMenuOptions ...>
+    // or <NoNodeContextMenuOptions ... />
+    // for the following two expressions, since this breaks
+    // antd's internal population of the correct class names
+    // for the menu.
     overlay =
       maybeClickedNodeId != null
         ? NodeContextMenuOptions({

@@ -1,6 +1,7 @@
 package controllers
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.util.zip.Deflater
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
@@ -321,6 +322,7 @@ Expects:
           case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>
               val dataZipName = volumeLayer.volumeDataZipName(index, fetchedSkeletonLayers.length == 1)
+              zipper.stream.setMethod(Deflater.NO_COMPRESSION)
               zipper.addFileFromBytes(dataZipName, volumeData)
             }
         }

@@ -93,11 +93,11 @@ object ZipIO extends LazyLogging {
   def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
     zip(sources.toIterator, out)
 
-  def zip(sources: Iterator[NamedStream], out: OutputStream, noCompression: Boolean = false)(
+  def zip(sources: Iterator[NamedStream], out: OutputStream, level: Int = -1)(
       implicit ec: ExecutionContext): Future[Unit] = {
     val zip = startZip(out)
-    if (noCompression) {
-      zip.stream.setMethod(Deflater.NO_COMPRESSION)
+    if (level != -1) {
+      zip.stream.setLevel(level)
     }
     if (sources.nonEmpty) {
       for {

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import java.nio.file.Paths
+import java.net.URI
+import java.nio.file.FileSystems
 import java.nio.{ByteBuffer, ByteOrder}
 
 import com.bc.zarr.ZarrArray
@@ -31,21 +32,25 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging {
 
+  // public example data from OME
+  private val bucketName = "idr/zarr/v0.1/6001251.zarr"
+  private val s3Uri = URI.create(s"s3://uk1s3.embassy.ebi.ac.uk")
+  private val s3fs = FileSystems.newFileSystem(s3Uri, null)
+
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
-    val useS3 = false
+    val useS3 = true
 
     val layerPath = if (useS3) {
-      s"https://.../${readInstruction.dataLayer.name}"
+      s3fs.getPath("/" + bucketName)
     } else {
       readInstruction.baseDir
         .resolve(readInstruction.dataSource.id.team)
         .resolve(readInstruction.dataSource.id.name)
         .resolve(readInstruction.dataLayer.name)
-        .toString
     }
     logger.info(s"zarrFilePath: $layerPath")
 
-    if (useS3 || Paths.get(layerPath).toFile.exists()) {
+    if (useS3 || layerPath.toFile.exists()) {
       tryo(ZarrArray.open(layerPath)).map(new ZarrCube(_))
     } else Empty
   }

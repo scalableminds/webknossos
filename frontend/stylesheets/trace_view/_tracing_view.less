@@ -144,67 +144,38 @@
     clear: both;
     margin: 0;
     padding: 5px 12px;
-    /* color: rgba(0, 0, 0, 0.85); */
     font-weight: normal;
     font-size: 14px;
     line-height: 22px;
     white-space: nowrap;
   }
-  // .node-context-menu-item {
-  //   font-size: 12px !important;
-  //   height: 30px !important;
-  //   line-height: 30px !important;
-  //   padding: 0px 10px !important;
-  // }
+  .keyboard-key-icon-small {
+    line-height: 30px;
+  }
 
-  // .ant-menu-item-group-title,
-  // .ant-menu-item-group-list {
-  //   padding: 0 16px 0 10px !important;
-  // }
-
-  // .ant-menu-submenu-title {
-  //   padding: 0 !important;
-  // }
-
-  // .ant-menu {
-  //   border-right: none;
-  // }
-
+  // Antd is asked to render the dropdown menu
+  // into .node-context-menu. However, antd expects
+  // that div to be positioned at 0,0 and tries to
+  // position the menu within the div accordingly.
+  // However, we are already positioning the div
+  // the the desired spot. Therefore, the dropdown itself
+  // should be positioned statically.
   .ant-dropdown {
     position: static !important;
   }
 
   > div {
+    // Fixes too wide context menu
     width: unset !important;
+    // Ensures that the context menu is correctly trapped
+    // within its sticky container.
     position: unset !important;
   }
 
-  .overlayClassName {
+  .dropdown-overlay-container-for-context-menu {
     min-width: unset !important;
   }
-
-  .keyboard-key-icon-small {
-    line-height: 30px;
-  }
 }
-
-// .node-context-menu-item,
-// .ant-menu-submenu-title,
-// .ant-menu-item-group-title {
-//   font-size: 12px !important;
-//   height: 30px !important;
-//   line-height: 30px !important;
-//   padding: 0px 10px !important;
-// }
-
-// .node-context-menu-item.ant-menu-item-group {
-//   height: auto !important;
-// }
-
-// .node-context-menu-sub {
-//   font-size: 12px;
-//   margin-left: -6px;
-// }
 
 #version-restore-sider {
   box-shadow: @box-shadow-base;

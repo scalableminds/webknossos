@@ -100,6 +100,26 @@ const getComputeMeshAdHocMenuItem = (
   );
 };
 
+const getMakeSegmentActiveMenuItem = (
+  segment,
+  setActiveCell,
+  activeCellId,
+  andCloseContextMenu,
+) => {
+  const disabled = segment.id === activeCellId;
+  const title = disabled
+    ? "This segment ID is already active."
+    : "Make this the active segment ID.";
+  return (
+    <Menu.Item
+      onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
+      disabled={disabled}
+    >
+      <Tooltip title={title}>Activate Segment ID</Tooltip>
+    </Menu.Item>
+  );
+};
+
 type Props = {
   segment: Segment,
   mapId: number => number,
@@ -117,6 +137,7 @@ type Props = {
   onSelectSegment: Segment => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
   changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
+  setActiveCell: (number, somePosition?: Vector3) => void,
   isosurface: ?IsosurfaceInformation,
   setPosition: (Vector3, boolean) => void,
   loadPrecomputedMeshForSegment: Segment => Promise<void>,
@@ -149,6 +170,7 @@ function _SegmentListItem({
   onSelectSegment,
   visibleSegmentationLayer,
   changeActiveIsosurfaceId,
+  setActiveCell,
   isosurface,
   setPosition,
   loadPrecomputedMeshForSegment,
@@ -175,6 +197,7 @@ function _SegmentListItem({
         visibleSegmentationLayer != null,
         andCloseContextMenu,
       )}
+      {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
     </Menu>
   );
 

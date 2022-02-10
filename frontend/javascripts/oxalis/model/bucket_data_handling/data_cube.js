@@ -111,6 +111,9 @@ class DataCube {
     _.extend(this, BackboneEvents);
 
     this.cubes = [];
+    if (isSegmentation) {
+      this.MAXIMUM_BUCKET_COUNT *= 2;
+    }
     this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
 
     // Initializing the cube-arrays with boundaries
@@ -341,39 +344,34 @@ class DataCube {
     }
   }
 
-  labelTestShape(): void {
-    // draw a sphere, centered at (100, 100, 100) with radius 50
-
-    for (let x = 80; x <= 120; x++) {
-      for (let y = 80; y <= 120; y++) {
-        for (let z = 80; z <= 120; z++) {
-          if (
-            Math.sqrt((x - 100) * (x - 100) + (y - 100) * (y - 100) + (z - 100) * (z - 100)) <= 20
-          ) {
-            this.labelVoxelInResolution([x, y, z], 0, 5);
-          }
-        }
-      }
-    }
-  }
-
-  labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
+  // eslint-disable-next-line camelcase
+  async _labelVoxelInAllResolutions_DEPRECATED(
+    voxel: Vector3,
+    label: number,
+    activeCellId: ?number,
+  ): Promise<void> {
     // This function is only provided for the wK front-end api and should not be used internally,
     // since it only operates on one voxel and therefore is not performance-optimized.
     // Please make use of a LabeledVoxelsMap instead.
+    const promises = [];
     for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
-      this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
+      promises.push(
+        this._labelVoxelInResolution_DEPRECATED(voxel, label, resolutionIndex, activeCellId),
+      );
     }
+
+    await Promise.all(promises);
 
     this.triggerPushQueue();
   }
 
-  labelVoxelInResolution(
+  // eslint-disable-next-line camelcase
+  async _labelVoxelInResolution_DEPRECATED(
     voxel: Vector3,
     label: number,
     zoomStep: number,
     activeCellId: ?number,
-  ): void {
+  ): Promise<void> {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
@@ -394,13 +392,7 @@ class DataCube {
           const labelFunc = (data: BucketDataArray): void => {
             data[voxelIndex] = label;
           };
-          bucket.label(labelFunc);
-
-          // Push bucket if it's loaded or missing (i.e., not existent on the server),
-          // otherwise, TemporalBucketManager will push it once it is available.
-          if (bucket.isLoaded() || bucket.isMissing()) {
-            this.pushQueue.insert(bucket);
-          }
+          await bucket.label_DEPRECATED(labelFunc);
         }
       }
     }
@@ -459,7 +451,7 @@ class DataCube {
       );
     }
     const seedVoxelIndex = this.getVoxelIndex(globalSeedVoxel, zoomStep);
-    const sourceCellId = seedBucket.getOrCreateData().data[seedVoxelIndex];
+    const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
     if (sourceCellId === cellId) {
       return {
         bucketsWithLabeledVoxelsMap,
@@ -516,16 +508,21 @@ class DataCube {
       if (shouldIgnoreBucket) {
         continue;
       }
+
+      // Since the floodfill operation needs to read the existing bucket data, we need to
+      // load (await) the data first. This means that we don't have to define LabeledVoxelMaps
+      // for the current magnification. This simplifies the algorithm, too, since the floodfill also
+      // uses the bucket's data array to mark visited voxels (which would not be possible with
+      // LabeledVoxelMaps).
       // eslint-disable-next-line no-await-in-loop
-      await currentBucket.ensureLoaded();
-      const { data: bucketData } = currentBucket.getOrCreateData();
+      const bucketData = await currentBucket.getDataForMutation();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
         continue;
       }
       // Add the bucket to the current volume undo batch, if it isn't already part of it.
-      currentBucket.markAndAddBucketForUndo();
+      currentBucket.startDataMutation();
       // Mark the initial voxel.
       bucketData[initialVoxelIndex] = cellId;
       // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
@@ -629,8 +626,7 @@ class DataCube {
       if (bucket.type === "null") {
         continue;
       }
-      this.pushQueue.insert(bucket);
-      bucket.trigger("bucketLabeled");
+      bucket.endDataMutation();
     }
 
     return {
@@ -643,12 +639,18 @@ class DataCube {
     };
   }
 
-  setBucketData(zoomedAddress: Vector4, data: Uint8Array) {
+  setBucketData(
+    zoomedAddress: Vector4,
+    data: BucketDataArray,
+    newPendingOperations: Array<(BucketDataArray) => void>,
+  ) {
     const bucket = this.getOrCreateBucket(zoomedAddress);
     if (bucket.type === "null") {
       return;
     }
     bucket.setData(data);
+    bucket.pendingOperations = newPendingOperations;
+
     this.pushQueue.insert(bucket);
   }
 

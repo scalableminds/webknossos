@@ -68,20 +68,24 @@ object AssetCompilation {
       try {
         val destination = target.value / "universal" / "stage" / "tools" / "postgres"
         destination.mkdirs
-        (baseDirectory.value / "tools" / "postgres")
-          .listFiles()
-          .foreach(
-            file =>
-              Files.copy(
-                file.toPath,
-                (destination / file.name).toPath,
-                StandardCopyOption.REPLACE_EXISTING
-            )
-          )
+        deleteRecursively(destination)
+        copyRecursively(baseDirectory.value / "tools" / "postgres", destination)
       } catch {
         case e: Exception =>
           streams.value.log
             .error("Could not copy SQL schema to stage dir: " + e.getMessage)
+      }
+
+      // copy test/db
+      try {
+        val destination = target.value / "universal" / "stage" / "test" / "db"
+        destination.mkdirs
+        deleteRecursively(destination)
+        copyRecursively(baseDirectory.value / "test" / "db", destination)
+      } catch {
+        case e: Exception =>
+          streams.value.log
+            .error("Could not test database entries to stage dir: " + e.getMessage)
       }
 
       // copy node_modules for diff_schema.js

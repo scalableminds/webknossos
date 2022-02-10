@@ -58,7 +58,11 @@ function* restartableSaga(): Saga<void> {
     console.error("The sagas crashed because of the following error:", err);
     if (process.env.BABEL_ENV !== "test") {
       ErrorHandling.notify(err, {});
-      toggleErrorHighlighting(true);
+      // Hide potentially old error highlighting which mentions a retry mechanism.
+      toggleErrorHighlighting(false);
+      // Show error highlighting which mentions the permanent error.
+      toggleErrorHighlighting(true, true);
+
       alert(`\
 Internal error.
 Please reload the page to avoid losing data.

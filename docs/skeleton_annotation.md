@@ -32,6 +32,8 @@ Most skeleton annotation operations and keyboard shortcuts are tailored for the 
 Oblique mode presents an arbitrarily-resliced view through the data.
 In contrast to Orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible.
 
+![View in Oblique Mode](./images/tracing_ui_obliquemode.png)
+
 #### Flight Mode
 Flight mode also allows a resliced view through the data.
 In contrast to Oblique mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere.
@@ -58,10 +60,10 @@ The webKnossos toolbar at the top of the screen contains several tools designed 
 
 When the `Skeleton` tool is active, the following modifiers become available:
 - `Create new Tree`: Creates a new tree. 
-- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead adding nodes to the active tree. Useful for marking single position objects/seeds, e.g. for marking nuclei. Also called "Soma-clicking mode".
-- `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons can be used to "collect" and merge volume segments from an over-segmenation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
+- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead of adding nodes to the active tree. Useful for marking single position objects/seeds, e.g. for marking nuclei. Also called "Soma-clicking mode".
+- `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons can be used to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
 
-// todo image of the skeleton tool modifiers
+![Skeleton Tool modifiers](./images/skeleton_tool_modifiers.png)
 
 ### Nodes and Trees
 Skeleton annotations consist of connected nodes forming a graph.
@@ -121,7 +123,7 @@ Trees can be dragged and dropped between tree groups.
 This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse (on Mac OS Cmd + Left Mouse).
 Hover over existing tree groups to bring up a cog icon and menu for creating new (sub-) groups or to delete a group. Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
 
-![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
+![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.png)
 
 #### Merging / Splitting Trees
 Common tree operations include splitting and merging trees.

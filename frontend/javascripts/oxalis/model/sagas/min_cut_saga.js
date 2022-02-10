@@ -28,6 +28,9 @@ const DEFAULT_PADDING = [50, 50, 50];
 // Voxels which are close to the seeds must not be relabeled.
 // Otherwise, trivial min-cuts are performed which cut right
 // around one seed.
+// This distance is specified in voxels of the current mag (i.e.,
+// a distance of 30 vx should be respected) and does not need scaling
+// to another mag.
 // For seeds that are very close to each other, their distance
 // overrides this threshold.
 const MIN_DIST_TO_SEED = 30;
@@ -213,7 +216,9 @@ function* performMinCut(action: Action): Saga<void> {
     yield* put(
       addUserBoundingBoxAction({
         boundingBox: newBBox,
-        name: "Bounding box used for splitting cell",
+        name: `Bounding box used for splitting cell (seedA=(${nodes[0].position.join(
+          ",",
+        )}), seedB=(${nodes[1].position.join(",")}), timestamp=${new Date().getTime()})`,
         color: Utils.getRandomColor(),
         isVisible: true,
       }),
@@ -225,6 +230,8 @@ function* performMinCut(action: Action): Saga<void> {
   const boundingBoxMag1 = new BoundingBox(boundingBoxObj);
 
   if (!isBoundingBoxUsableForMinCut(boundingBoxObj, nodes)) {
+    // The user should not be able to trigger this path --> Don't show a toast.
+    // Only keep this for debugging purposes.
     console.log("The seeds are not contained in the current bbox.");
     return;
   }
@@ -289,7 +296,7 @@ function* performMinCut(action: Action): Saga<void> {
           );
         } catch (exception) {
           if (exception === TimeoutError) {
-            console.log(
+            console.warn(
               "Refinement of min-cut timed out. There still might be small voxel connections between the seeds.",
             );
             yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
@@ -351,16 +358,13 @@ function* tryMinCutAtMag(
   const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);
   const globalSeedB = V3.fromMag1ToMag(nodes[1].position, targetMag);
 
-  let minDistToSeed = MIN_DIST_TO_SEED / targetMag[0];
-
-  minDistToSeed = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, minDistToSeed);
-  console.log("automatically setting minDistToSeed to ", minDistToSeed);
+  const minDistToSeed = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, MIN_DIST_TO_SEED);
+  console.log("Setting minDistToSeed to ", minDistToSeed);
 
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
   const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
 
-  console.log("boundingBoxTarget.getVolume()", boundingBoxTarget.getVolume());
-  console.log("Loading data...");
+  console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
   const inputData = yield* call(
     [api.data, api.data.getDataFor2DBoundingBox],
     volumeTracingLayer.name,
@@ -458,8 +462,6 @@ function* tryMinCutAtMag(
   console.timeEnd("labelDeletedEdges");
 
   console.timeEnd("Total min-cut");
-
-  console.log({ seedA, seedB, boundingBoxMag1, inputData, edgeBuffer });
 }
 
 function isPositionOutside(position, size) {
@@ -722,7 +724,3 @@ function labelDeletedEdges(
 export default function* listenToMinCut(): Saga<void> {
   yield* takeEveryUnlessBusy("PERFORM_MIN_CUT", performMinCut, "Min-cut is being computed.");
 }
-
-// Todo: remove before merging
-window.__isosurfaceVoxelDimensions = [1, 1, 1];
-window.visualizeRemovedVoxelsOnMinCut = false;

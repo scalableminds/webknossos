@@ -69,7 +69,10 @@ class AnnotationIOController @Inject()(
     value =
       """Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation.
 Expects:
- - As file attachment: any number of NML files or ZIP files containing NMLs, optionally with volume data ZIPs referenced from an NML in a ZIP
+ - As file attachment:
+    - Any number of NML files or ZIP files containing NMLs, optionally with volume data ZIPs referenced from an NML in a ZIP
+    - If multiple annotations are uploaded, they are merged into one.
+       - This is not supported if any of the annotations has multiple volume layers.
  - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
    - If "true": in merged annotation, create tree group wrapping the trees of each file
    - If "false": in merged annotation, rename trees with the respective file name as prefix""",
@@ -106,6 +109,8 @@ Expects:
             description = descriptionForNMLs(parseResultsFiltered.map(_.description))
             _ <- assertNonEmpty(parseSuccesses)
             skeletonTracings = parseSuccesses.flatMap(_.skeletonTracing)
+            // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
+            // This is what determines the merging strategy for volume layers
             volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
             dataSet <- findDataSetForUploadedAnnotations(skeletonTracings,
                                                          volumeLayersGroupedRaw.flatten.map(_.tracing))

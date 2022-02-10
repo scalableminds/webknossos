@@ -985,6 +985,9 @@ export async function startConvertToWkwJob(
 ): Promise<Array<APIJob>> {
   return Request.receiveJSON(
     `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&dataStoreName=${datastoreName}`,
+    {
+      method: "POST",
+    },
   );
 }
 
@@ -1014,6 +1017,9 @@ export async function startExportTiffJob(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?bbox=${bbox.join(
       ",",
     )}${layerNameSuffix}${tracingIdSuffix}${tracingVersionSuffix}${annotationIdSuffix}${annotationTypeSuffix}${mappingNameSuffix}${mappingTypeSuffix}${hideUnmappedIdsSuffix}`,
+    {
+      method: "POST",
+    },
   );
 }
 
@@ -1028,6 +1034,9 @@ export function startComputeMeshFileJob(
     `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?layerName=${layerName}&mag=${mag.join(
       "-",
     )}${agglomerateView ? `&agglomerateView=${agglomerateView}` : ""}`,
+    {
+      method: "POST",
+    },
   );
 }
 
@@ -1038,6 +1047,9 @@ export function startNucleiInferralJob(
 ): Promise<APIJob> {
   return Request.receiveJSON(
     `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}`,
+    {
+      method: "POST",
+    },
   );
 }
 
@@ -1064,6 +1076,9 @@ export function startGlobalizeFloodfillsJob(
 ): Promise<APIJob> {
   return Request.receiveJSON(
     `/api/jobs/run/globalizeFloodfills/${organizationName}/${datasetName}?newDataSetName=${newDataSetName}&layerName=${layerName}&annotationId=${annotationId}&annotationType=${annotationType}`,
+    {
+      method: "POST",
+    },
   );
 }
 
@@ -1318,6 +1333,7 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
   await doWithToken(token =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
       host: datastoreHost,
+      method: "POST",
     }),
   );
 }
@@ -1334,6 +1350,7 @@ export async function triggerDatasetClearCache(
       }`,
       {
         host: datastoreHost,
+        method: "POST",
       },
     ),
   );

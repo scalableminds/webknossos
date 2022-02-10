@@ -292,12 +292,14 @@ function* performMinCut(action: Action): Saga<void> {
             console.log(
               "Refinement of min-cut timed out. There still might be small voxel connections between the seeds.",
             );
+            yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
             return;
           }
         }
         console.groupEnd();
       }
 
+      yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
       return;
     } catch (exception) {
       console.groupEnd();
@@ -311,8 +313,6 @@ function* performMinCut(action: Action): Saga<void> {
       }
     }
   }
-
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
   yield* call([Toast, Toast.warning], "Couldn't perform min-cut due to timeout");
 }

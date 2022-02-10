@@ -327,7 +327,8 @@ class UserService @Inject()(conf: WkConf,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
         "selectedTheme" -> multiUser.selectedTheme,
         "created" -> user.created,
-        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
+        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
+        "isSuperUser" -> multiUser.isSuperUser
       )
     }
   }

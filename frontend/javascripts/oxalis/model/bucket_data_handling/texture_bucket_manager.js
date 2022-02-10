@@ -399,7 +399,7 @@ export default class TextureBucketManager {
             // The lookUpIdx is invalid. Skip the entire loop.
             break;
           } else if (
-            this.lookUpBuffer[posInBuffer] !== 2 &&
+            this.lookUpBuffer[posInBuffer] !== -2 &&
             this.lookUpBuffer[posInBuffer + 1] <= bucketZoomStep
           ) {
             // Another bucket was already placed here with a better zoomstep.

@@ -477,13 +477,13 @@ function isPositionOutside(position, size) {
 
 function buildGraph(inputData, segmentId, size, length, l, ll, timeoutThreshold) {
   const edgeBuffer = new Uint16Array(length);
-  for (let x = 0; x < size[0]; x++) {
-    if (x % Math.floor(size[0] / 10) === 0 && performance.now() > timeoutThreshold) {
+  for (let z = 0; z < size[2]; z++) {
+    if (z % Math.floor(size[2] / 10) === 0 && performance.now() > timeoutThreshold) {
       // After each 10% chunk, we check whether there's a timeout
       throw TimeoutError;
     }
     for (let y = 0; y < size[1]; y++) {
-      for (let z = 0; z < size[2]; z++) {
+      for (let x = 0; x < size[0]; x++) {
         // Traverse over all voxels
 
         const pos = [x, y, z];
@@ -686,9 +686,9 @@ function labelDeletedEdges(
   l,
   ll,
 ) {
-  for (let x = 0; x < size[0]; x++) {
+  for (let z = 0; z < size[2]; z++) {
     for (let y = 0; y < size[1]; y++) {
-      for (let z = 0; z < size[2]; z++) {
+      for (let x = 0; x < size[0]; x++) {
         const idx = l(x, y, z);
         if (visitedField[idx] === 1) {
           const neighbors = getNeighborsFromBitMask(originalEdgeBuffer[idx]).outgoing;
@@ -702,9 +702,9 @@ function labelDeletedEdges(
                 V3.add(boundingBoxTarget.min, neighborPos),
                 targetMag,
               );
-              for (let dx = 0; dx < targetMag[0]; dx++) {
+              for (let dz = 0; dz < targetMag[2]; dz++) {
                 for (let dy = 0; dy < targetMag[1]; dy++) {
-                  for (let dz = 0; dz < targetMag[2]; dz++) {
+                  for (let dx = 0; dx < targetMag[0]; dx++) {
                     api.data.labelVoxels([V3.add(position, [dx, dy, dz])], 0);
                   }
                 }

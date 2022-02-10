@@ -9,7 +9,7 @@ function getOrganization() {
 }
 
 function gtagGuard(...params) {
-  if (typeof window.ga !== "undefined" && window.ga !== null) {
+  if (typeof window.gtag !== "undefined" && window.gtag !== null) {
     window.gtag(...params);
   }
 }

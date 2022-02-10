@@ -17,7 +17,6 @@ For more data storage, check out the [pricing page for paid plans](https://webkn
 
 If you are looking for on-premise hosting at your institute or custom solutions, [please reach out to us](mailto:hello@webknossos.org).
 
-
 ## Explore Published Datasets
 On [webknossos.org](https://webknossos.org) there is already large number of published community datasets available for you to explore.
 To get started, navigate to the `Featured Publications` tab on your [dashboard](./dashboard.md).
@@ -26,7 +25,11 @@ Click on the dataset name to open the dataset.
 
 ![The list of available datasets](./images/getting_started-datasets.png)
 
-Once you are in the "View" mode (read-only), you are presented with three orthogonal views and one 3D viewport.
+Any webKnossos dataset can be opened for read-only viewing ("View" mode) or in editor-mode to create a new skeleton and/or volume annotation. 
+The main webKnossos user interface consists of three orthogonal viewports slicing the data along the major axis and a 3D viewport. Read more about the UI in the section [about the UI](./tracing_ui.md).
+
+![The webKnossos user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.png)
+
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) for advanced use.
 
@@ -52,10 +55,10 @@ webKnossos will launch the main annotation screen allowing you to navigate your 
 
 Depending on the current tool - selectable in the top bar - various actions can be performed.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
-The first tool is the MOVE tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
-In the SKELETON tool, a left mouse click can be used to place markers in the data, called nodes.
+The first tool is the **MOVE** tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
+In the **SKELETON** tool, a left mouse click can be used to place markers in the data, called nodes.
 Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
-The DRAW tool allows to "paint" voxels to create volumetric annotations.
+The **BRUSH** tool allows to "paint" voxels to create volumetric annotations. The tool **ERASE** can be used in two different ways: using it via the Brush tool allows to erase the voxels by brushing over them. You can also adjust the brush with Shift + Mousewheel. In case you need to erase a large segment without great precision, we recommend to use the Erase tool via the **TRACE** tool that follows it in the top bar. This tool allows to draw outlines around the voxels. For choosing the type of the Erase tool click first on the Brush or Trace button and after that on the Erase. Besides that, the tool Trace can be used to label the necessary voxels along with the tool Brush. By activating the **FILL TOOL** button you can floodfill the clicked region. While having the **SEGMENT PICKER** tool enabled you can click on a voxel to make its segment ID the active segment ID. The **BOUNDING BOX TOOL** button allows to create, resize and modify bounding boxes. 
 
 A right mouse click can be used to open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment. 
 Basic movement along the 3rd axis is done with the mouse wheel or by pressing the spacebar keyboard shortcut.

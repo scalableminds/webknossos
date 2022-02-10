@@ -5,7 +5,7 @@ You can manage your datasets, create annotations, resume existing annotations an
 
 ## My Datasets
 This screen shows all the available and accessible datasets for a user.
-You can **view** a dataset (read-only), or start new **skeleton** or **volume** annotations from this screen.
+You can **view** a dataset (read-only), or start new annotations from this screen.
 Search for your dataset by using the search bar or by sorting any of the table columns.
 Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
@@ -21,7 +21,7 @@ Regular users can only start or continue annotations and work on tasks.
 ## My Tasks
 
 With Tasks, you can coordinate large annotation projects with your users.
-Tasks are small annotation work assignments that are automatically distributed to users. This particularly useful, when you have several users, such as working students, scientific assistances, outside collaborators etc, in your organisation that you can distribute the work to.
+Tasks are small annotation work assignments that are automatically distributed to users. This is particularly useful, when you have several users, such as working students, scientific assistances, outside collaborators etc, in your organisation that you can distribute the work to.
 
 On the Task screen, users can request new tasks, continue to work on existing tasks, and finish tasks. These tasks will be assigned based on a user's experience level, project priority, and task availability.
 Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
@@ -29,7 +29,7 @@ Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 ![Work with Tasks](./images/dashboard_tasks.png)
 
 ## My Annotations
-This screen lists all your skeleton or volume annotations that you started on a dataset (outside of tasks). Annotation are either created by starting new annotations from the "My Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer. (See [NML files](./data_formats.md#nml) for skeleton annotations.)
+This screen lists all your skeleton, volume or hybrid annotations that you started on a dataset (outside of tasks). Annotation are either created by starting new annotations from the "My Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer. (See [NML files](./data_formats.md#nml) for skeleton annotations.)
 
 Annotations can be resumed, archived (soft "deleted"), and downloaded for offline analysis.
 You can also add custom tags to annotations in order to organize and group them. 
@@ -40,7 +40,8 @@ Each annotation can be renamed to reflect its content.
 
 
 ## Shared Annotations
-This screen shows all skeleton or volume annotations that were shared by other collaborators of your organization. Only annotations shared through the "Team Sharing" mechanic will be listed provided your user account is part of the respective team. Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing).
+This screen shows all skeleton, volume or hybrid annotations that were shared by other collaborators of your organization. 
+Only annotations shared through the "Team Sharing" mechanic will be listed provided your user account is part of the respective team. Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing).
 
 You can view the linked annotations (read-only) or copy them to your account for modification.
 
@@ -48,7 +49,9 @@ You can view the linked annotations (read-only) or copy them to your account for
 
 ## Featured Publications
 
-This screen lists a number of featured, public community datasets and their respective publications hosted by the webKnossos team. Feel free explore these datasets or built upon them.
+This screen lists a number of featured, public community datasets and their respective publications hosted by the webKnossos team. Feel free to explore these datasets or to built upon them.
 
 [Contact us](mailto:hello@webknossos.org) if you would like your data and publication to be featured here as well.
+
+![The list of available datasets](./images/dashboard_featured_publications.png)
 

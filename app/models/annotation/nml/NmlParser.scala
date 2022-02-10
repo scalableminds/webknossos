@@ -8,11 +8,11 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -30,13 +30,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private val DEFAULT_INTERPOLATION = false
   private val DEFAULT_TIMESTAMP = 0L
 
-  @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
   def parse(name: String,
             nmlInputStream: InputStream,
             overwritingDataSetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
-      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] =
+      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] =
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -71,30 +70,31 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
         logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
-        val volumeTracingWithDataLocation =
-          if (volumes.isEmpty) None
-          else
-            Some(
-              (VolumeTracing(
-                 None,
-                 boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
-                 timestamp,
-                 dataSetName,
-                 editPosition,
-                 editRotation,
-                 ElementClass.uint32,
-                 volumes.head.fallbackLayer,
-                 0,
-                 0,
-                 zoomLevel,
-                 None,
-                 userBoundingBoxes,
-                 organizationName
-               ),
-               basePath.getOrElse("") + volumes.head.location)
+        val volumeLayers: List[UploadedVolumeLayer] =
+          volumes.toList.map { v =>
+            UploadedVolumeLayer(
+              VolumeTracing(
+                None,
+                boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
+                timestamp,
+                dataSetName,
+                editPosition,
+                editRotation,
+                ElementClass.uint32,
+                v.fallbackLayerName,
+                0,
+                0,
+                zoomLevel,
+                None,
+                userBoundingBoxes,
+                organizationName
+              ),
+              basePath.getOrElse("") + v.dataZipPath,
+              v.name
             )
+          }
 
-        val skeletonTracing =
+        val skeletonTracingOpt: Option[SkeletonTracing] =
           if (treesSplit.isEmpty) None
           else
             Some(
@@ -115,7 +115,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
               )
             )
 
-        (skeletonTracing, volumeTracingWithDataLocation, description)
+        (skeletonTracingOpt, volumeLayers, description)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
@@ -146,8 +146,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     } yield TreeGroup(name, id, children)
   }
 
-  private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[Volume] =
-    volumeNodes.map(node => Volume(getSingleAttribute(node, "location"), getSingleAttributeOpt(node, "fallbackLayer")))
+  private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[NmlVolumeTag] =
+    volumeNodes.map(
+      node =>
+        NmlVolumeTag(
+          getSingleAttribute(node, "location"),
+          getSingleAttributeOpt(node, "fallbackLayer"),
+          getSingleAttributeOpt(node, "name")
+      ))
 
   private def parseTrees(treeNodes: NodeSeq,
                          branchPoints: Map[Int, List[BranchPoint]],

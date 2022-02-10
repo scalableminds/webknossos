@@ -219,7 +219,7 @@ class JobListView extends React.PureComponent<Props, State> {
           )}
         </span>
       );
-    } else if (job.type === "infer_nuclei") {
+    } else if (job.type === "infer_nuclei" || job.type === "infer_neurons") {
       return (
         <span>
           {job.resultLink && (

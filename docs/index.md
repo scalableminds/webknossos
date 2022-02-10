@@ -42,9 +42,9 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 
 # Built for Science
 webKnossos is built for scientist with support by scientists. Our goals is to make image analysis and data exploration accessible and easy to use. 
-While originally designed for the annotation of electron microscopy of neural circuits in the Cortex, we have seen great projects using it to analyze MRI/CT scans, fluorescences microscopy imags, and synchrotron datasets.
+While originally designed for the annotation of electron microscopy of neural circuits in the Cortex, we have seen great projects using it to analyze MRI/CT scans, fluorescences microscopy images, and synchrotron datasets.
 
-webKnossos impact on data annotation in neuroscience and Connectomics has been published in Nature, 2017 and many other [publications](./publications.md):
+webKnossos impact on data annotation in neuroscience and Connectomics has been published in Nature Methods, 2017 and many other [publications](./publications.md):
 
 > Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
 webKnossos: efficient online 3D data annotation for connectomics.

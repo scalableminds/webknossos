@@ -1,11 +1,11 @@
 ## Skeleton Annotations
-The typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that span across many data slices as a graph of connected nodes.
-A good example is the analysis of nerve cells by placing a node every few slices to reconstruct their path/circuitry through a dataset. (See image below)
+A typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that spans across many data slices as a graph of connected nodes.
+A good example is the analysis of nerve cells by placing a node every few slices to reconstruct their path/circuitry through a dataset (see image below).
 
 Commonly, skeleton annotations contain the reconstruction of one or more structures, often with many thousand nodes.
 All connected nodes form a tree or more technically speaking a graph.
 
-webKnossos skeleton annotations can be downloaded, modified, imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
+webKnossos skeleton annotations can be downloaded, modified and imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
 
 This article outlines commonly used features and operations for viewing, editing, or creating new skeleton annotations in webKnossos.
 
@@ -119,7 +119,7 @@ Trees can be nested and organized in so-called `Tree Groups`.
 Tree groups can have a name and are used to structure and label your annotation even further.
 Trees can be dragged and dropped between tree groups. 
 This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse (on Mac OS Cmd + Left Mouse).
-Hover over existing tree groups to bring up a cog icon and menu for creating new (sub-) groups or to delete a group. Renaming of a group can be done by selecting a group and then entering the new name into the input above the tree hierarchy structure view.
+Hover over existing tree groups to bring up a cog icon and menu for creating new (sub-) groups or to delete a group. Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
 
 ![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
 

@@ -317,19 +317,16 @@ Expects:
                                           taskOpt)
         temporaryFile = temporaryFileCreator.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.path.toString))))
-        before = System.currentTimeMillis()
         _ <- zipper.addFileFromEnumerator(name + ".nml", nmlStream)
         _ = fetchedVolumeLayers.zipWithIndex.map {
           case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>
               val dataZipName = volumeLayer.volumeDataZipName(index, fetchedSkeletonLayers.length == 1)
-              zipper.stream.setLevel(Deflater.NO_COMPRESSION)
+              zipper.stream.setLevel(Deflater.BEST_SPEED)
               zipper.addFileFromBytes(dataZipName, volumeData)
             }
         }
-        after = System.currentTimeMillis()
         _ = zipper.close()
-        _ = logger.info(s"Zipping annotation (wk side) took ${after - before} ms")
       } yield temporaryFile
 
     def annotationToTemporaryFile(dataSet: DataSet,

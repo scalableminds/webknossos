@@ -222,16 +222,15 @@ class VolumeTracingService @Inject()(
       new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
 
     val before = System.currentTimeMillis()
-    val zipResult = ZipIO.zip(buckets, os, level = Deflater.HUFFMAN_ONLY)
+    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
     zipResult.onComplete {
       case failure: scala.util.Failure[Unit] =>
         logger.debug(
           s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
       case _: scala.util.Success[Unit] =>
-        logger.debug(s"Successfully sent zipped volume data for $tracingId")
         val after = System.currentTimeMillis()
-        logger.info(s"Zipping volume (tracingstore side) took ${after - before} ms")
+        logger.info(s"Zipping volume data for $tracingId took ${after - before} ms")
     }
     zipResult
   }

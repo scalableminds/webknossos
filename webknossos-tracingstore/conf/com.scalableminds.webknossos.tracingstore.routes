@@ -4,7 +4,6 @@
 
 # Health endpoint
 GET         /health                                             @com.scalableminds.webknossos.tracingstore.controllers.Application.health
-GET         /zipTest                                            @com.scalableminds.webknossos.tracingstore.controllers.Application.zipTest
 
 # Volume tracings
 POST        /volume/save                                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(token: Option[String])

@@ -34,8 +34,8 @@ class DataSourceService @Inject()(
     with LazyLogging
     with FoxImplicits {
 
-  override protected lazy val enabled: Boolean = false
-  protected lazy val tickerInterval: FiniteDuration = 20 minutes
+  override protected lazy val enabled: Boolean = config.Datastore.WatchFileSystem.enabled
+  protected lazy val tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
 
   val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 

@@ -150,6 +150,33 @@ class JobsController @Inject()(jobDAO: JobDAO,
       }
     }
 
+  def runInferNeuronsJob(organizationName: String,
+                         dataSetName: String,
+                         layerName: String,
+                         bbox: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferNeurons.notAllowed.organization" ~> FORBIDDEN
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName) ~> NOT_FOUND
+          command = "infer_neurons"
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> dataSetName,
+            "layer_name" -> layerName,
+            "webknossos_token" -> RpcTokenHolder.webKnossosToken,
+            "bbox" -> bbox,
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataSet._dataStore) ?~> "job.couldNotRunNeuronInferral"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
   def runGlobalizeFloodfills(
       organizationName: String,
       dataSetName: String,

@@ -5,8 +5,8 @@
  * https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/puppeteer
  */
 
-declare module 'puppeteer' {
-  import type { ChildProcess } from 'child_process';
+declare module "puppeteer" {
+  import type { ChildProcess } from "child_process";
 
   declare class OverridableEventEmitter extends events$EventEmitter {
     /* eslint-disable flowtype/no-weak-types */
@@ -129,7 +129,7 @@ declare module 'puppeteer' {
     message(): string,
 
     /** The dialog type. Dialog's type, can be one of `alert`, `beforeunload`, `confirm` or `prompt`. */
-    type(): 'alert' | 'beforeunload' | 'confirm' | 'prompt',
+    type(): "alert" | "beforeunload" | "confirm" | "prompt",
   };
 
   /** ConsoleMessage objects are dispatched by page via the 'console' event. */
@@ -141,52 +141,52 @@ declare module 'puppeteer' {
     text(): string,
 
     type():
-      | 'log'
-      | 'debug'
-      | 'info'
-      | 'error'
-      | 'warning'
-      | 'dir'
-      | 'dirxml'
-      | 'table'
-      | 'trace'
-      | 'clear'
-      | 'startGroup'
-      | 'startGroupCollapsed'
-      | 'endGroup'
-      | 'assert'
-      | 'profile'
-      | 'profileEnd'
-      | 'count'
-      | 'timeEnd',
+      | "log"
+      | "debug"
+      | "info"
+      | "error"
+      | "warning"
+      | "dir"
+      | "dirxml"
+      | "table"
+      | "trace"
+      | "clear"
+      | "startGroup"
+      | "startGroupCollapsed"
+      | "endGroup"
+      | "assert"
+      | "profile"
+      | "profileEnd"
+      | "count"
+      | "timeEnd",
   };
 
   declare type PageEvents =
-    | 'console'
-    | 'dialog'
-    | 'error'
-    | 'frameattached'
-    | 'framedetached'
-    | 'framenavigated'
-    | 'load'
-    | 'pageerror'
-    | 'request'
-    | 'requestfailed'
-    | 'requestfinished'
-    | 'response';
+    | "console"
+    | "dialog"
+    | "error"
+    | "frameattached"
+    | "framedetached"
+    | "framenavigated"
+    | "load"
+    | "pageerror"
+    | "request"
+    | "requestfailed"
+    | "requestfinished"
+    | "response";
 
   declare type BrowserEvents =
-    | 'disconnected'
-    | 'targetchanged'
-    | 'targetcreated'
-    | 'targetdestroyed';
+    | "disconnected"
+    | "targetchanged"
+    | "targetcreated"
+    | "targetdestroyed";
 
   declare type AuthOptions = {
     password: string,
     username: string,
   };
 
-  declare type MouseButtons = 'left' | 'right' | 'middle';
+  declare type MouseButtons = "left" | "right" | "middle";
 
   declare type ClickOptions = {
     /** defaults to left */
@@ -220,7 +220,7 @@ declare module 'puppeteer' {
     path: string,
 
     /** The cookie same site definition. */
-    sameSite: 'Strict' | 'Lax',
+    sameSite: "Strict" | "Lax",
 
     /** The cookie secure flag. */
     secure: boolean,
@@ -255,7 +255,7 @@ declare module 'puppeteer' {
     path?: string,
 
     /** The cookie same site definition. */
-    sameSite?: 'Strict' | 'Lax',
+    sameSite?: "Strict" | "Lax",
 
     /** The cookie secure flag. */
     secure?: boolean,
@@ -310,7 +310,7 @@ declare module 'puppeteer' {
 
   declare type EvaluateFn = string | ((...args: Array<mixed>) => mixed);
 
-  declare type LoadEvent = 'load' | 'domcontentloaded' | 'networkidle0' | 'networkidle2';
+  declare type LoadEvent = "load" | "domcontentloaded" | "networkidle0" | "networkidle2";
 
   /** The navigation options. */
   declare type NavigationOptions = {
@@ -327,16 +327,16 @@ declare module 'puppeteer' {
   };
 
   declare type PDFFormat =
-    | 'Letter'
-    | 'Legal'
-    | 'Tabload'
-    | 'Ledger'
-    | 'A0'
-    | 'A1'
-    | 'A2'
-    | 'A3'
-    | 'A4'
-    | 'A5';
+    | "Letter"
+    | "Legal"
+    | "Tabload"
+    | "Ledger"
+    | "A0"
+    | "A1"
+    | "A2"
+    | "A3"
+    | "A4"
+    | "A5";
 
   declare type PDFOptions = {
     /**
@@ -454,7 +454,7 @@ declare module 'puppeteer' {
      * The screenshot type.
      * @default png
      */
-    type?: 'jpeg' | 'png',
+    type?: "jpeg" | "png",
   };
 
   /** Options for `addStyleTag` */
@@ -484,7 +484,7 @@ declare module 'puppeteer' {
   };
 
   declare type PageFnOptions = {
-    polling?: 'raf' | 'mutation' | number,
+    polling?: "raf" | "mutation" | number,
     timeout?: number,
   };
 
@@ -675,22 +675,22 @@ declare module 'puppeteer' {
   };
 
   declare type Headers = { [key: string]: string };
-  declare type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' | 'OPTIONS';
+  declare type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE" | "OPTIONS";
 
   declare type ResourceType =
-    | 'document'
-    | 'stylesheet'
-    | 'image'
-    | 'media'
-    | 'font'
-    | 'script'
-    | 'texttrack'
-    | 'xhr'
-    | 'fetch'
-    | 'eventsource'
-    | 'websocket'
-    | 'manifest'
-    | 'other';
+    | "document"
+    | "stylesheet"
+    | "image"
+    | "media"
+    | "font"
+    | "script"
+    | "texttrack"
+    | "xhr"
+    | "fetch"
+    | "eventsource"
+    | "websocket"
+    | "manifest"
+    | "other";
 
   declare type Overrides = {
     headers?: Headers,
@@ -838,10 +838,7 @@ declare module 'puppeteer' {
      */
     $$eval: (
       selector: string,
-      pageFunction: (
-        elements: NodeList<Element>,
-        ...args: Array<mixed>
-      ) => mixed,
+      pageFunction: (elements: NodeList<Element>, ...args: Array<mixed>) => mixed,
       ...args: Array<mixed>
     ) => Promise<mixed>;
 
@@ -891,7 +888,7 @@ declare module 'puppeteer' {
     /** Returns frame's url. */
     +url: () => string;
 
-    waitFor: (
+    waitForTimeout: (
       // fn can be an abritary function
       // eslint-disable-next-line flowtype/no-weak-types
       selectorOrFunctionOrTimeout: string | number | Function,
@@ -909,7 +906,7 @@ declare module 'puppeteer' {
 
     waitForSelector: (
       selector: string,
-      options?: {hidden?: boolean, timeout?: number, visible?: boolean}
+      options?: { hidden?: boolean, timeout?: number, visible?: boolean },
     ) => Promise<ElementHandle>;
   }
 
@@ -1023,7 +1020,7 @@ declare module 'puppeteer' {
     emulate(options: $Shape<EmulateOptions>): Promise<void>;
 
     /** Emulates the media. */
-    emulateMedia(mediaType: 'screen' | 'print' | null): Promise<void>;
+    emulateMedia(mediaType: "screen" | "print" | null): Promise<void>;
 
     /**
      * Evaluates a function in the page context.
@@ -1052,7 +1049,7 @@ declare module 'puppeteer' {
      */
     exposeFunction(
       name: string,
-      puppeteerFunction: (...args: Array<mixed>) => mixed
+      puppeteerFunction: (...args: Array<mixed>) => mixed,
     ): Promise<void>;
 
     /** This method fetches an element with selector and focuses it. */
@@ -1109,7 +1106,7 @@ declare module 'puppeteer' {
      */
     on<K: PageEvents>(
       eventName: K,
-      handler: (e: $ElementType<PageEventObj, K>, ...args: Array<mixed>) => void
+      handler: (e: $ElementType<PageEventObj, K>, ...args: Array<mixed>) => void,
     ): Page;
 
     /**
@@ -1120,7 +1117,7 @@ declare module 'puppeteer' {
      */
     once<K: PageEvents>(
       eventName: K,
-      handler: (e: $ElementType<PageEventObj, K>, ...args: Array<mixed>) => void
+      handler: (e: $ElementType<PageEventObj, K>, ...args: Array<mixed>) => void,
     ): Page;
 
     /**
@@ -1284,7 +1281,7 @@ declare module 'puppeteer' {
      */
     on<K: BrowserEvents>(
       eventName: K,
-      handler: (e: $ElementType<BrowserEventObj, K>, ...args: Array<mixed>) => void
+      handler: (e: $ElementType<BrowserEventObj, K>, ...args: Array<mixed>) => void,
     ): Browser;
 
     /**
@@ -1295,7 +1292,7 @@ declare module 'puppeteer' {
      */
     once<K: BrowserEvents>(
       eventName: K,
-      handler: (e: $ElementType<BrowserEventObj, K>, ...args: Array<mixed>) => void
+      handler: (e: $ElementType<BrowserEventObj, K>, ...args: Array<mixed>) => void,
     ): Browser;
 
     /** Promise which resolves to an array of all open pages. */
@@ -1342,7 +1339,7 @@ declare module 'puppeteer' {
     page(): Promise<Page>,
 
     /** Identifies what kind of target this is.  */
-    type(): 'page' | 'service_worker' | 'other',
+    type(): "page" | "service_worker" | "other",
 
     /** Returns the target URL. */
     url(): string,

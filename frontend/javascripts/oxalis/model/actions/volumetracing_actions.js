@@ -44,12 +44,13 @@ export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
   source: "previousLayer" | "nextLayer",
 };
-export type MaybeBucketLoadedPromise = null | Promise<BucketDataArray>;
+export type MaybeUnmergedBucketLoadedPromise = null | Promise<BucketDataArray>;
 export type AddBucketToUndoAction = {
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
   tracingId: string,
 };
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
@@ -219,13 +220,15 @@ export const setContourTracingModeAction = (mode: ContourMode): SetContourTracin
 export const addBucketToUndoAction = (
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
   tracingId: string,
 ): AddBucketToUndoAction => ({
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress,
   bucketData,
-  maybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise,
+  pendingOperations: pendingOperations.slice(),
   tracingId,
 });
 

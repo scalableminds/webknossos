@@ -30,6 +30,8 @@ import {
   setActiveNodeAction,
   createTreeAction,
   setTreeVisibilityAction,
+  createBranchPointAction,
+  deleteBranchpointByIdAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   hasAgglomerateMapping,
@@ -88,6 +90,8 @@ type DispatchProps = {|
   addNewBoundingBox: Vector3 => void,
   deleteBoundingBox: number => void,
   setActiveCell: (number, somePosition?: Vector3) => void,
+  createBranchPoint: (number, number) => void,
+  deleteBranchpointById: (number, number) => void,
 |};
 
 type StateProps = {|
@@ -242,6 +246,8 @@ function NodeContextMenuOptions({
   deleteEdge,
   mergeTrees,
   deleteNode,
+  createBranchPoint,
+  deleteBranchpointById,
   setActiveNode,
   hideTree,
   useLegacyBindings,
@@ -252,6 +258,7 @@ function NodeContextMenuOptions({
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
   const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
   const areInSameTree = activeTreeId === clickedTree.treeId;
+  const isBranchpoint = clickedTree.branchPoints.find(bp => bp.nodeId === clickedNodeId) != null;
   const isTheSameNode = activeNodeId === clickedNodeId;
   let areNodesConnected = false;
   if (areInSameTree && !isTheSameNode && activeNodeId != null) {
@@ -295,6 +302,27 @@ function NodeContextMenuOptions({
       >
         Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
       </Menu.Item>
+      {isBranchpoint ? (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="branchpoint-node"
+          onClick={() =>
+            activeNodeId != null ? deleteBranchpointById(clickedNodeId, clickedTree.treeId) : null
+          }
+        >
+          Unmark as Branchpoint
+        </Menu.Item>
+      ) : (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="branchpoint-node"
+          onClick={() =>
+            activeNodeId != null ? createBranchPoint(clickedNodeId, clickedTree.treeId) : null
+          }
+        >
+          Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+        </Menu.Item>
+      )}
       <Menu.Item
         className="node-context-menu-item"
         key="measure-node-path-length"
@@ -773,6 +801,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   deleteNode(nodeId: number, treeId: number) {
     dispatch(deleteNodeAction(nodeId, treeId));
+  },
+  createBranchPoint(nodeId: number, treeId: number) {
+    dispatch(createBranchPointAction(nodeId, treeId));
+  },
+  deleteBranchpointById(nodeId: number, treeId: number) {
+    dispatch(deleteBranchpointByIdAction(nodeId, treeId));
   },
   setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));

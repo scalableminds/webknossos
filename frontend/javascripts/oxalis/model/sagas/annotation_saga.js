@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import type { EditAnnotationLayerAction } from "oxalis/model/actions/annotation_actions";
 import {
   type EditableAnnotation,
@@ -31,12 +32,23 @@ const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export function* pushAnnotationUpdateAsync(): Saga<void> {
   const tracing = yield* select(state => state.tracing);
+  if (!tracing.restrictions.allowUpdate) {
+    return;
+  }
+
+  // Persist the visibility of each layer within the annotation-specific
+  // viewConfiguration.
+  const { layers } = yield* select(state => state.datasetConfiguration);
+  const viewConfiguration = {
+    layers: _.mapValues(layers, layer => ({ isDisabled: layer.isDisabled })),
+  };
 
   // The extra type annotaton is needed here for flow
   const editObject: $Shape<EditableAnnotation> = {
     name: tracing.name,
     visibility: tracing.visibility,
     description: tracing.description,
+    viewConfiguration,
   };
   yield* retry(
     SETTINGS_MAX_RETRY_COUNT,
@@ -147,6 +159,10 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield _takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
   yield _takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield _takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
+  yield _takeLatest(
+    action => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+    pushAnnotationUpdateAsync,
+  );
   yield _takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 

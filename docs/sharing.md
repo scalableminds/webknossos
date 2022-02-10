@@ -1,28 +1,36 @@
 # Collaboration & Sharing
-webKnossos is built for working collaboratively and sharing your work with the community.
-webKnossos can share both skeleton annotations of large structures as well as raw datasets and segmentations for showcasing the data.
-The sharing features discussed here refer to sharing scenarios with colleagues, reviewers, and publishers outside of your webKnossos organization or your lab.
+webKnossos is built for working collaboratively and sharing your work with colleagues, collaborators, and the scientific community.
+Anything in webKnossos can be shared: the raw datasets, any skeleton or volume annotaton, or complex segmentations.
 
-To manage access rights to certain datasets for webKnossos users check out [the Datasets guide](./datasets.md#general).
+When speaking about collaboration and sharing, we imagine two scenarios supported by webKnossos:
+1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g. colleagues from other institutes, reviewers, publishers, a paper publication and the research community as a whole.
+2. Share data within your organisation to collaborate with other members/coworkers
 
-## Dataset Sharing
+Since webKnossos is a web platfrom most anything can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
+- send collaborators an *email* containing a link to specific, interesting data location or annotations
+- include a link in a *publication* so reader can have direct access to the data to see for themselves
+- share a link through *Slack*, *MS Teams*, or any other messenger service
+- include it in any *lab journal* and *blog* posts
+- link it in a *forum* post
 
-Dataset sharing allows outside users to view your datasets and segmentation layers within webKnossos.
-Shared resources can be accessed through a direct URL or can be featured on a spotlight gallery for showcasing your work.
-[Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
+In many ways, the sharing by web link works similiarly to productes like Google Drive or Dropbox.
 
-Sharing a dataset is useful for multiple scenarios: 
-- You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@webknossos.org)).
-- You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
-- You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
+webKnossos sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
 
-webKnossos shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
+## Sharing 
+As mentioned earlier any webKnossos ressource can be share as a normal web URL. The easisted way to obtain this sharing link is by clicking the `Share` button in the tool bar at top of the screen next to the position/coordinate section. 
 
-![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=512s)
+For more control, you can bring up the detailed sharing dialog. The sharing dialog is accessible from the menu next to the Save button at the top of the screen under `Share`. The sharing menu includes fine-grained option for internal and outside sharing, explained in more detail below:
 
-![Video: Connect webKnossos with Your Publications](https://www.youtube.com/watch?v=Ut4m6L3nYdY)
+1. `Private`: Only you and your team manager have access to the annotation.
+2. `Internal`: All members of your organization have access to the annotation. 
+3. `Public`: Everybody, regardless their login status, can access this annotation.
+4. (`Team Sharing`: Share this annotation with other organization members on the dashboard in the `Shared Annotations` tab)
 
-### Private Sharing for Review
+In any case, the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the select node etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
+
+
+### Private and Internal Sharing
 A privately shared dataset can only be accessed from outside users using the correct URL.
 A unique authentification token is part of the URL so anyone with this URL has access rights for viewing the dataset.
 The dataset is NOT featured publicly anywhere else on your webKnossos instance.
@@ -78,9 +86,7 @@ Sharing works for both skeletons and volume annotations.
 ### Annotation Permissions
 There are three options to control, who can see an annotation if they know the annotation url. To learn how to get the url, look at the following paragraph about [Link Sharing](#link-sharing).
 
-1. `Private`: Only you and your team manager have access to the annotation.
-2. `Internal`: All members of your organization have access to the annotation. 
-3. `Public`: Everybody, regardless their login status, has access to the annotation.
+
 
 The default option is `Internal`.
 
@@ -171,3 +177,23 @@ If members of these teams open their [Shared Annotations Dashboard Tab](./dashbo
     Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.
 
 ![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)
+
+
+
+
+
+
+Dataset sharing allows people outside of your organisation or anyone without a webKnossos accounts to view your datasets and annotations within webKnossos directly from their browser. No additional installation or signup is is needed. Anyone with a link can view the data.
+
+
+
+
+
+Shared resources can be accessed through a direct URL or can be featured on a spotlight gallery for showcasing your work.
+[Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
+
+
+
+![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=512s)
+
+![Video: Connect webKnossos with Your Publications](https://www.youtube.com/watch?v=Ut4m6L3nYdY)

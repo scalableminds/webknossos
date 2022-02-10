@@ -58,6 +58,12 @@ object ZipIO extends LazyLogging {
       stream.closeEntry()
     }
 
+    def addFileFromFilePath(name: String, filePath: Path): Unit = {
+      stream.putNextEntry(new ZipEntry(name))
+      stream.write(Files.readAllBytes(filePath))
+      stream.closeEntry()
+    }
+
     def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(
         implicit ec: ExecutionContext): Future[Unit] =
       addFileFromNamedEnumerator(NamedEnumeratorStream(name, data))

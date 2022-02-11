@@ -12,9 +12,6 @@ jobs:
       TZ: Europe/Berlin
     steps:
       - checkout
-      - run: |
-          sudo cat /proc/cpuinfo
-          sudo free -h
       - run:
           name: "Custom environment variables"
           command: |

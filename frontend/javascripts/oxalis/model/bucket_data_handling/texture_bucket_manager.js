@@ -180,9 +180,10 @@ export default class TextureBucketManager {
     if (this.isRefreshBufferOutOfDate) {
       this._refreshLookUpBuffer();
     }
-    window.requestAnimationFrame(() => {
+    // window.requestAnimationFrame(() => {
+    setTimeout(() => {
       this.keepLookUpBufferUpToDate();
-    });
+    }, 5000);
   }
 
   // Commit "active" buckets by writing these to the dataTexture.
@@ -241,8 +242,10 @@ export default class TextureBucketManager {
     }
 
     window.requestAnimationFrame(() => {
+      // setTimeout(() => {
       this.processWriterQueue();
     });
+    // }, 100);
   }
 
   getTextures(): Array<typeof THREE.DataTexture | typeof UpdatableTexture> {
@@ -361,11 +364,12 @@ export default class TextureBucketManager {
           const maxAllowedZoomStep =
             currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
           while (!abortFallbackLoop) {
-            if (fallbackBucket.type !== "null") {
-              if (
-                fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
-                this.committedBucketSet.has(fallbackBucket)
-              ) {
+            if (
+              // why do we abort the loop if type === "null" ?
+              fallbackBucket.type !== "null" &&
+              fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep
+            ) {
+              if (this.committedBucketSet.has(fallbackBucket)) {
                 address = this.activeBucketToIndexMap.get(fallbackBucket);
                 address = address != null ? address : -1;
                 bucketZoomStep = fallbackBucket.zoomedAddress[3];
@@ -397,15 +401,15 @@ export default class TextureBucketManager {
           const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
           if (lookUpIdx === -1) {
             // The lookUpIdx is invalid. Skip the entire loop.
-            break;
+            continue;
           } else if (
-            this.lookUpBuffer[posInBuffer] !== -2 &&
+            this.lookUpBuffer[posInBuffer] > -1 &&
             this.lookUpBuffer[posInBuffer + 1] <= bucketZoomStep
           ) {
             // Another bucket was already placed here with a better zoomstep.
             // Skip the entire loop.
             // TODO: clarify flicker when zooming from mag 4 to mag 8.
-            break;
+            continue;
           }
           this.lookUpBuffer[posInBuffer] = address;
           this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;

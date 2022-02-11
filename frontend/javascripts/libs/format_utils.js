@@ -77,7 +77,7 @@ export function formatNumberToLength(lengthInNm: number): string {
   }
   const lengthInUnit = lengthInNm / closestFactor;
   if (lengthInUnit !== Math.floor(lengthInUnit)) {
-    lengthInUnit.toFixed(1);
+    return `${lengthInUnit.toFixed(1)}${ThinSpace}${unit}`;
   }
   return `${lengthInUnit}${ThinSpace}${unit}`;
 }

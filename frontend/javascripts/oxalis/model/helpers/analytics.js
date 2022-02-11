@@ -8,23 +8,21 @@ function getOrganization() {
   return activeUser != null ? activeUser.organization : null;
 }
 
-function gaGuard(...params) {
-  if (typeof window.ga !== "undefined" && window.ga !== null) {
-    window.ga(...params);
+function gtagGuard(...params) {
+  if (typeof window.gtag !== "undefined" && window.gtag !== null) {
+    window.gtag(...params);
   }
 }
 
 // The void return type is needed for flow to check successfully
 export function trackAction(action: string): void {
-  gaGuard("send", "event", "Action", action, getOrganization());
+  gtagGuard("event", "action", action, getOrganization());
 }
 
 export function trackVersion(version: string): void {
-  gaGuard("send", {
-    hitType: "event",
-    eventCategory: "pageLoad",
-    eventAction: "version",
-    eventLabel: version,
+  gtagGuard("event", "version", {
+    event_category: "page_load",
+    event_label: version,
   });
 }
 
@@ -37,7 +35,10 @@ export function googleAnalyticsLogClicks(evt: MouseEvent) {
     // Restrict the textContent to a maximum length
     const textContent = target.textContent.trim().slice(0, 50);
     if (textContent.length > 0) {
-      gaGuard("send", "event", "Click", textContent, getOrganization());
+      gtagGuard("event", "click", {
+        event_category: textContent,
+        event_label: getOrganization(),
+      });
     }
   }
 }

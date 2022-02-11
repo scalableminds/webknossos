@@ -40,22 +40,24 @@ const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
   for (const anchor of [2, 5, 10]) {
     if (Math.abs(anchor - mantissa) < Math.abs(bestAnchor - mantissa)) {
       bestAnchor = anchor;
-    } else {
-      break;
     }
   }
   return bestAnchor * closestPowerOfTen;
 };
 
-const scalebarWidthFactor = 0.3;
+// This factor describes how wide the scalebar would ideally be.
+// However, this is only a rough guideline, as the actual width is changed
+// so that round length values are represented.
+const idealScalebarWidthFactor = 0.3;
+
 const maxScaleBarWidthFactor = 0.45;
 const minWidthToFillScalebar = 130;
 
 function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
   const viewportWidthInNm = convertPixelsToNm(viewportWidthInPixels, zoomValue, dataset);
   const viewportHeightInNm = convertPixelsToNm(viewportHeightInPixels, zoomValue, dataset);
-  const scaledWidthInNm = viewportWidthInNm * scalebarWidthFactor;
-  const scalebarWidthInNm = getBestScalebarAnchorInNm(scaledWidthInNm);
+  const idealWidthInNm = viewportWidthInNm * idealScalebarWidthFactor;
+  const scalebarWidthInNm = getBestScalebarAnchorInNm(idealWidthInNm);
   const scaleBarWidthFactor = Math.min(
     scalebarWidthInNm / viewportWidthInNm,
     maxScaleBarWidthFactor,
@@ -66,11 +68,11 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberToLength(viewportHeightInNm),
-    " ",
+    formatNumberToLength(viewportHeightInNm)
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
+  const padding = 4;
 
   return (
     <Tooltip
@@ -89,7 +91,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
           width: collapseScalebar
             ? 16
             : `calc(${scaleBarWidthFactor * 100}% - ${Math.round(
-                ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
+                ((2 * OUTER_CSS_BORDER - 2 * padding) / constants.VIEWPORT_WIDTH) * 100,
               )}%)`,
           height: 14,
           background: "rgba(0, 0, 0, .3)",
@@ -98,7 +100,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
           fontSize: 12,
           lineHeight: "14px",
           boxSizing: "content-box",
-          padding: 4,
+          padding: {padding},
         }}
       >
         <div

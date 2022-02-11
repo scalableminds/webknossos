@@ -76,8 +76,8 @@ browserHistory.listen(location => {
     // The listener is called repeatedly for a single page change, don't send repeated pageviews
     if (lastPage !== newPage) {
       // Update the tracker state first, so that subsequent pageviews AND events use the correct page
-      window.ga("set", "page", newPage);
-      window.ga("send", "pageview");
+      window.gtag("set", "page_path", newPage);
+      window.gtag("event", "page_view");
     }
   }
 });

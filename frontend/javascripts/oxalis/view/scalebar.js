@@ -68,7 +68,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberToLength(viewportHeightInNm)
+    formatNumberToLength(viewportHeightInNm),
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
@@ -100,7 +100,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
           fontSize: 12,
           lineHeight: "14px",
           boxSizing: "content-box",
-          padding: {padding},
+          padding: { padding },
         }}
       >
         <div

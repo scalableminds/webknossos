@@ -11,7 +11,7 @@ jobs:
       TZ: Europe/Berlin
     steps:
       - checkout
-      - run:
+      - run: |
           sudo cat /proc/cpuinfo
           sudo free -h
       - run:

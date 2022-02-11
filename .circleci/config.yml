@@ -2,7 +2,8 @@ version: 2
 jobs:
   build_test_deploy:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-02
+      docker_layer_caching: true
     environment:
       USER_NAME: circleci
       USER_UID: 1001
@@ -10,6 +11,9 @@ jobs:
       TZ: Europe/Berlin
     steps:
       - checkout
+      - run:
+          sudo cat /proc/cpuinfo
+          sudo free -h
       - run:
           name: "Custom environment variables"
           command: |

@@ -30,6 +30,7 @@ import {
   getSegmentationLayerByNameOrFallbackName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,
@@ -49,7 +50,6 @@ import {
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
@@ -67,7 +67,11 @@ import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/map
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
-import Store, { type AnnotationType, type TraceOrViewCommand } from "oxalis/store";
+import Store, {
+  type AnnotationType,
+  type DatasetConfiguration,
+  type TraceOrViewCommand,
+} from "oxalis/store";
 import Toast from "libs/toast";
 import UrlManager, {
   type PartialUrlManagerState,
@@ -143,6 +147,8 @@ export async function initialize(
     displayedVolumeTracings,
     getSharingToken(),
   );
+  applyAnnotationSpecificViewConfigurationInplace(annotation, initialDatasetSettings);
+
   initializeSettings(initialUserSettings, initialDatasetSettings);
 
   let initializationInformation = null;
@@ -649,6 +655,25 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
           );
         }
       }
+    }
+  }
+}
+
+function applyAnnotationSpecificViewConfigurationInplace(
+  annotation: ?APIAnnotation,
+  initialDatasetSettings: DatasetConfiguration,
+) {
+  /*
+  Apply annotation-specific view configurations to the dataset settings which are persisted
+  per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled" information per
+  layer which should override the isDisabled information in DatasetConfiguration.
+  */
+  if (annotation && annotation.viewConfiguration) {
+    for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
+      _.merge(
+        initialDatasetSettings.layers[layerName],
+        annotation.viewConfiguration.layers[layerName],
+      );
     }
   }
 }

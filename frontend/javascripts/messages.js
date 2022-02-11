@@ -107,6 +107,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",
+  "save.failed.permanent":
+    "Failed to save annotation. Unfortunately, there might be a potential data loss. Please reload the page, check and correct the annotation.",
   "undo.no_undo":
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
@@ -245,6 +247,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
+  "dataset.upload_cancel": "The dataset upload was cancelled.",
   "dataset.unsupported_file_type":
     "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
   "dataset.upload_invalid_zip":

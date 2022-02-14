@@ -1,14 +1,21 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.util.geometry.{BoundingBox, GenericPosition, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import org.apache.commons.lang3.builder.HashCodeBuilder
+
+
+trait GenericPosition {
+  def x: Int
+  def y: Int
+  def z: Int
+}
 
 class VoxelPosition(
     protected val globalX: Int,
     protected val globalY: Int,
     protected val globalZ: Int,
-    val resolution: Point3D
+    val resolution: Vec3Int
 ) extends GenericPosition {
 
   val x: Int = globalX / resolution.x
@@ -44,7 +51,7 @@ case class BucketPosition(
     globalX: Int,
     globalY: Int,
     globalZ: Int,
-    resolution: Point3D
+    resolution: Vec3Int
 ) extends GenericPosition {
 
   val bucketLength: Int = DataLayer.bucketLength
@@ -78,7 +85,7 @@ case class BucketPosition(
     BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
 
   def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ),
+    new BoundingBox(Vec3Int(globalX, globalY, globalZ),
                     bucketLength * resolution.x,
                     bucketLength * resolution.y,
                     bucketLength * resolution.z)
@@ -91,7 +98,7 @@ class CubePosition(
     protected val globalX: Int,
     protected val globalY: Int,
     protected val globalZ: Int,
-    val resolution: Point3D,
+    val resolution: Vec3Int,
     val cubeLength: Int
 ) extends GenericPosition {
 
@@ -110,7 +117,7 @@ class CubePosition(
   }
 
   def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ),
+    new BoundingBox(Vec3Int(globalX, globalY, globalZ),
                     cubeLength * resolution.x,
                     cubeLength * resolution.y,
                     cubeLength * resolution.z)

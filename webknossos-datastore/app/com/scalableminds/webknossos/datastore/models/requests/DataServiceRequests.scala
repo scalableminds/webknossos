@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.util.geometry.Vector3I
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 import java.nio.file.Path
@@ -19,7 +19,7 @@ case class DataServiceDataRequest(
     dataLayerMapping: Option[String],
     cuboid: Cuboid,
     settings: DataServiceRequestSettings,
-    voxelDimensions: Vector3I = Vector3I(1, 1, 1)
+    subsamplingStrides: Vec3Int = Vec3Int(1, 1, 1)
 )
 
 case class DataReadInstruction(

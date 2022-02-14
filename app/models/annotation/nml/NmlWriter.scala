@@ -1,6 +1,6 @@
 package models.annotation.nml
 
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -20,7 +20,7 @@ case class NmlParameters(
     dataSetName: String,
     organizationName: String,
     description: Option[String],
-    scale: Option[Scale],
+    scale: Option[Vec3Double],
     createdTimestamp: Long,
     editPosition: Point3D,
     editRotation: Vector3D,
@@ -35,7 +35,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
 
   def toNmlStream(annotationLayers: List[FetchedAnnotationLayer],
                   annotation: Option[Annotation],
-                  scale: Option[Scale],
+                  scale: Option[Vec3Double],
                   volumeFilename: Option[String],
                   organizationName: String,
                   annotationOwner: Option[User],
@@ -57,7 +57,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
 
   def toNml(annotationLayers: List[FetchedAnnotationLayer],
             annotation: Option[Annotation],
-            scale: Option[Scale],
+            scale: Option[Vec3Double],
             volumeFilename: Option[String],
             organizationName: String,
             annotationOwner: Option[User],
@@ -93,7 +93,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                volumeLayers: List[FetchedAnnotationLayer],
                                annotation: Option[Annotation],
                                organizationName: String,
-                               scale: Option[Scale]): Fox[NmlParameters] =
+                               scale: Option[Vec3Double]): Fox[NmlParameters] =
     for {
       parameterSourceAnnotationLayer <- selectLayerWithPrecedence(skeletonLayers, volumeLayers)
       nmlParameters = parameterSourceAnnotationLayer.tracing match {

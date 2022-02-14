@@ -1,7 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -40,7 +40,7 @@ case class DataSet(
     isPublic: Boolean,
     isUsable: Boolean,
     name: String,
-    scale: Option[Scale],
+    scale: Option[Vec3Double],
     sharingToken: Option[String],
     status: String,
     logoUrl: Option[String],
@@ -65,15 +65,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
   def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
-  private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Scale]] = literalOpt match {
+  private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
     case Some(literal) =>
       for {
-        scale <- Scale.fromList(parseArrayTuple(literal).map(_.toFloat)) ?~> "could not parse edit position"
+        scale <- Vec3Double.fromList(parseArrayTuple(literal).map(_.toDouble)) ?~> "could not parse dataset scale"
       } yield Some(scale)
     case None => Fox.successful(None)
   }
 
-  private def writeScaleLiteral(scale: Scale): String =
+  private def writeScaleLiteral(scale: Vec3Double): String =
     writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
 
   def parse(r: DatasetsRow): Fox[DataSet] =
@@ -339,12 +339,12 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
 class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-  def parseRow(row: DatasetResolutionsRow): Fox[Point3D] =
+  def parseRow(row: DatasetResolutionsRow): Fox[Vec3Int] =
     for {
-      resolution <- Point3D.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
+      resolution <- Vec3Int.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
     } yield resolution
 
-  def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[Point3D]] =
+  def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[Vec3Int]] =
     for {
       rows <- run(
         DatasetResolutions.filter(r => r._Dataset === dataSetId.id && r.datalayername === dataLayerName).result)
@@ -388,7 +388,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
         .fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      standinResolutions: Option[List[Point3D]] = if (skipResolutions) Some(List.empty[Point3D]) else None
+      standinResolutions: Option[List[Vec3Int]] = if (skipResolutions) Some(List.empty[Vec3Int]) else None
       resolutions <- Fox.fillOption(standinResolutions)(
         dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer")
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(

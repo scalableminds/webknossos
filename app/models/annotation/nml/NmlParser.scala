@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.typesafe.scalalogging.LazyLogging
@@ -202,7 +202,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       width <- getSingleAttribute(node, "width").toIntOpt
       height <- getSingleAttribute(node, "height").toIntOpt
       depth <- getSingleAttribute(node, "depth").toIntOpt
-    } yield BoundingBox(Point3D(topLeftX, topLeftY, topLeftZ), width, height, depth)
+    } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
   private def parseDataSetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")
@@ -219,10 +219,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseTime(nodes: NodeSeq): Long =
     nodes.headOption.flatMap(node => getSingleAttribute(node, "ms").toLongOpt).getOrElse(DEFAULT_TIME)
 
-  private def parseEditPosition(nodes: NodeSeq): Option[Point3D] =
+  private def parseEditPosition(nodes: NodeSeq): Option[Vec3Int] =
     nodes.headOption.flatMap(parsePoint3D)
 
-  private def parseEditRotation(nodes: NodeSeq): Option[Vector3D] =
+  private def parseEditRotation(nodes: NodeSeq): Option[Vec3Double] =
     nodes.headOption.flatMap(parseRotationForParams)
 
   private def parseZoomLevel(nodes: NodeSeq) =
@@ -247,7 +247,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       x <- xText.toIntOpt.orElse(xText.toFloatOpt.map(math.round))
       y <- yText.toIntOpt.orElse(yText.toFloatOpt.map(math.round))
       z <- zText.toIntOpt.orElse(zText.toFloatOpt.map(math.round))
-    } yield Point3D(x, y, z)
+    } yield Vec3Int(x, y, z)
   }
 
   private def parseRotationForParams(node: XMLNode) =
@@ -255,14 +255,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       rotX <- getSingleAttribute(node, "xRot").toDoubleOpt
       rotY <- getSingleAttribute(node, "yRot").toDoubleOpt
       rotZ <- getSingleAttribute(node, "zRot").toDoubleOpt
-    } yield Vector3D(rotX, rotY, rotZ)
+    } yield Vec3Double(rotX, rotY, rotZ)
 
   private def parseRotationForNode(node: XMLNode) =
     for {
       rotX <- getSingleAttribute(node, "rotX").toDoubleOpt
       rotY <- getSingleAttribute(node, "rotY").toDoubleOpt
       rotZ <- getSingleAttribute(node, "rotZ").toDoubleOpt
-    } yield Vector3D(rotX, rotY, rotZ)
+    } yield Vec3Double(rotX, rotY, rotZ)
 
   private def parseColorOpt(node: XMLNode) =
     for {

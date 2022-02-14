@@ -5,7 +5,7 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
@@ -53,7 +53,7 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               volumeTracingOpt: Option[VolumeTracing],
                               volumeDataOpt: Option[Array[Byte]],
                               name: String,
-                              scaleOpt: Option[Scale],
+                              scaleOpt: Option[Vec3Double],
                               annotation: Annotation,
                               user: User,
                               taskOpt: Option[Task],
@@ -121,8 +121,8 @@ class AnnotationService @Inject()(
       organizationName: String,
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
-      startPosition: Option[Point3D] = None,
-      startRotation: Option[Vector3D] = None,
+      startPosition: Option[Vec3Int] = None,
+      startRotation: Option[Vec3Double] = None,
       resolutionRestrictions: ResolutionRestrictions
   ): Fox[VolumeTracing] = {
     val resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer)
@@ -135,8 +135,8 @@ class AnnotationService @Inject()(
         boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
         System.currentTimeMillis(),
         dataSource.id.name,
-        point3DToProto(startPosition.getOrElse(dataSource.center)),
-        vector3DToProto(startRotation.getOrElse(vector3DFromProto(VolumeTracingDefaults.editRotation))),
+        vec3IntToProto(startPosition.getOrElse(dataSource.center)),
+        vec3DoubleToProto(startRotation.getOrElse(vec3DoubleFromProto(VolumeTracingDefaults.editRotation))),
         elementClassToProto(
           fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
         fallbackLayer.map(_.name),
@@ -144,7 +144,7 @@ class AnnotationService @Inject()(
         0,
         VolumeTracingDefaults.zoomLevel,
         organizationName = Some(organizationName),
-        resolutions = resolutionsRestricted.map(point3DToProto)
+        resolutions = resolutionsRestricted.map(vec3IntToProto)
       )
   }
 
@@ -430,8 +430,8 @@ class AnnotationService @Inject()(
 
   def createSkeletonTracingBase(dataSetName: String,
                                 boundingBox: Option[BoundingBox],
-                                startPosition: Point3D,
-                                startRotation: Vector3D): SkeletonTracing = {
+                                startPosition: Vec3Int,
+                                startRotation: Vec3Double): SkeletonTracing = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -458,8 +458,8 @@ class AnnotationService @Inject()(
   def createVolumeTracingBase(dataSetName: String,
                               organizationId: ObjectId,
                               boundingBox: Option[BoundingBox],
-                              startPosition: Point3D,
-                              startRotation: Vector3D,
+                              startPosition: Vec3Int,
+                              startRotation: Vec3Double,
                               volumeShowFallbackLayer: Boolean,
                               resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext,
                                                                               m: MessagesProvider): Fox[VolumeTracing] =
@@ -595,7 +595,7 @@ class AnnotationService @Inject()(
   private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
       implicit ctx: DBAccessContext): Fox[List[List[DownloadAnnotation]]] = {
 
-    def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Scale]) =
+    def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Vec3Double]) =
       for {
         user <- userService.findOneById(annotation._user, useCache = true) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"

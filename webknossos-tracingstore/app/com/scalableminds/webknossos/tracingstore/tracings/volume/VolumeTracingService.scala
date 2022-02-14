@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -125,15 +125,15 @@ class VolumeTracingService @Inject()(
       _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
     } yield volumeTracing
 
-  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Fox[Point3D] =
+  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Fox[Vec3Int] =
     if (tracing.resolutions.nonEmpty) {
       tracing.resolutions
         .find(r => r.maxDim == math.pow(2, zoomStep))
-        .map(point3DFromProto)
+        .map(vec3IntFromProto)
         .toFox ?~> s"Received bucket with zoomStep ($zoomStep), no matching resolution found in tracing (has ${tracing.resolutions})"
     } else {
       val isotropicResolution = math.pow(2, zoomStep).toInt
-      Fox.successful(Point3D(isotropicResolution, isotropicResolution, isotropicResolution))
+      Fox.successful(Vec3Int(isotropicResolution, isotropicResolution, isotropicResolution))
     }
 
   private def revertToVolumeVersion(tracingId: String,
@@ -156,10 +156,10 @@ class VolumeTracingService @Inject()(
     sourceTracing
   }
 
-  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Point3D]] = {
+  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Vec3Int]] = {
     if (tracing.version != 0L) return Failure("Tracing has already been edited.")
 
-    val resolutionSets = new mutable.HashSet[Set[Point3D]]()
+    val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
     withZipsFromMultiZip(initialData) { (_, dataZip) =>
       val resolutionSet = resolutionSetFromZipfile(dataZip)
       if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
@@ -186,13 +186,13 @@ class VolumeTracingService @Inject()(
   def initializeWithData(tracingId: String,
                          tracing: VolumeTracing,
                          initialData: File,
-                         resolutionRestrictions: ResolutionRestrictions): Box[Set[Point3D]] = {
+                         resolutionRestrictions: ResolutionRestrictions): Box[Set[Vec3Int]] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
 
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val savedResolutions = new mutable.HashSet[Point3D]()
+    val savedResolutions = new mutable.HashSet[Vec3Int]()
 
     val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
       if (resolutionRestrictions.isForbidden(bucketPosition.resolution)) {
@@ -254,7 +254,7 @@ class VolumeTracingService @Inject()(
       largestSegmentId = 0L,
       fallbackLayer = None,
       version = 0L,
-      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, None).map(point3DToProto)
+      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, None).map(vec3IntToProto)
     )
 
   def duplicate(tracingId: String,
@@ -295,7 +295,7 @@ class VolumeTracingService @Inject()(
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
-          if (destinationTracing.resolutions.contains(point3DToProto(bucketPosition.resolution))) {
+          if (destinationTracing.resolutions.contains(vec3IntToProto(bucketPosition.resolution))) {
             saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
           } else Fox.successful(())
       }.toList)
@@ -310,7 +310,7 @@ class VolumeTracingService @Inject()(
       tracing.elementClass,
       tracing.largestSegmentId,
       isTemporaryTracing,
-      volumeResolutions = tracing.resolutions.map(point3DFromProto).toList
+      volumeResolutions = tracing.resolutions.map(vec3IntFromProto).toList
     )
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {
@@ -329,12 +329,12 @@ class VolumeTracingService @Inject()(
 
   def updateResolutionList(tracingId: String,
                            tracing: VolumeTracing,
-                           resolutions: Set[Point3D],
+                           resolutions: Set[Vec3Int],
                            toCache: Boolean = false): Fox[String] =
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(resolutions.nonEmpty) ?~> "Resolution restrictions result in zero resolutions"
-      id <- save(tracing.copy(resolutions = resolutions.toList.sortBy(_.maxDim).map(point3DToProto)),
+      id <- save(tracing.copy(resolutions = resolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
                  Some(tracingId),
                  tracing.version,
                  toCache)
@@ -355,7 +355,7 @@ class VolumeTracingService @Inject()(
         segmentationLayer,
         request.cuboid(segmentationLayer),
         request.segmentId,
-        request.voxelDimensions,
+        request.subsamplingStrides,
         request.scale,
         request.mapping,
         request.mappingType
@@ -363,7 +363,7 @@ class VolumeTracingService @Inject()(
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
 
-  def findData(tracingId: String): Fox[Option[Point3D]] =
+  def findData(tracingId: String): Fox[Option[Vec3Int]] =
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
       volumeLayer = volumeTracingLayer(tracingId, tracing)
@@ -372,7 +372,7 @@ class VolumeTracingService @Inject()(
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
         getPositionOfNonZeroData(bucket._2,
-                                 Point3D(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
+                                 Vec3Int(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
                                  volumeLayer.bytesPerElement)
       } else None
     } yield bucketPosOpt
@@ -418,10 +418,10 @@ class VolumeTracingService @Inject()(
                       toCache: Boolean): Fox[Unit] = {
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(ElementClass.uint8)
 
-    val resolutionSets = new mutable.HashSet[Set[Point3D]]()
+    val resolutionSets = new mutable.HashSet[Set[Vec3Int]]()
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>
-        val resolutionSet = new mutable.HashSet[Point3D]()
+        val resolutionSet = new mutable.HashSet[Vec3Int]()
         bucketStreamFromSelector(selector, tracing).foreach {
           case (bucketPosition, _) =>
             resolutionSet.add(bucketPosition.resolution)
@@ -434,7 +434,7 @@ class VolumeTracingService @Inject()(
     // If none of the tracings contained any volume data. Do not save buckets, do not touch resolution list
     if (resolutionSets.isEmpty) return Fox.successful(())
 
-    val resolutionsIntersection: Set[Point3D] = resolutionSets.headOption.map { head =>
+    val resolutionsIntersection: Set[Vec3Int] = resolutionSets.headOption.map { head =>
       resolutionSets.foldLeft(head) { (acc, element) =>
         acc.intersect(element)
       }
@@ -468,7 +468,7 @@ class VolumeTracingService @Inject()(
     val resolutionSet = resolutionSetFromZipfile(zipFile)
     val resolutionsDoMatch =
       resolutionSet.isEmpty || resolutionSet == resolveLegacyResolutionList(tracing.resolutions)
-        .map(point3DFromProto)
+        .map(vec3IntFromProto)
         .toSet
 
     if (!resolutionsDoMatch) return Fox.failure("annotation.volume.resolutionsDoNotMatch")

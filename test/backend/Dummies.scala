@@ -3,14 +3,14 @@ package backend
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
-import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3Int, Vec3DoubleProto}
+import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3DoubleProto, Vec3IntProto}
 
 object Dummies {
   val timestamp = 123456789
   val timestampLong = 123456789L
 
   def createDummyNode(id: Int): Node =
-    Node(id, Vec3Int(id, id + 1, id + 2), Vec3DoubleProto(id, id + 1, id + 2), id, 1, 10, 8, id % 2 == 0, timestamp)
+    Node(id, Vec3IntProto(id, id + 1, id + 2), Vec3DoubleProto(id, id + 1, id + 2), id, 1, 10, 8, id % 2 == 0, timestamp)
 
   val tree1: Tree = Tree(
     1,
@@ -46,7 +46,7 @@ object Dummies {
                                 timestamp,
                                 None,
                                 Some(1),
-                                Vec3Int(1, 1, 1),
+                                Vec3IntProto(1, 1, 1),
                                 Vec3DoubleProto(1.0, 1.0, 1.0),
                                 1.0,
                                 0,
@@ -70,7 +70,7 @@ object Dummies {
                                          timestamp,
                                          None,
                                          None,
-                                         Vec3Int(1, 1, 1),
+                                         Vec3IntProto(1, 1, 1),
                                          Vec3DoubleProto(1.0, 1.0, 1.0),
                                          1.0,
                                          0,
@@ -79,16 +79,16 @@ object Dummies {
 
   val volumeTracing: VolumeTracing = VolumeTracing(
     None,
-    BoundingBoxProto(Vec3Int(0,0,0), 10, 10, 10),
+    BoundingBoxProto(Vec3IntProto(0,0,0), 10, 10, 10),
     timestamp,
     "dummy_dataset",
-    Vec3Int(1, 1, 1),
+    Vec3IntProto(1, 1, 1),
     Vec3DoubleProto(1.0, 1.0, 1.0),
     ElementClass.uint16,
     None,
     5,
     0,
     1.0,
-    segments = Seq(Segment(5, Some(Vec3Int(7,7,7))))
+    segments = Seq(Segment(5, Some(Vec3IntProto(7,7,7))))
   )
 }

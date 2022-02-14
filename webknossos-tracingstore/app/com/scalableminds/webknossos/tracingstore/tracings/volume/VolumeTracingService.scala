@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
@@ -280,7 +280,11 @@ class VolumeTracingService @Inject()(
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       tracing
         .addUserBoundingBoxes(
-          NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), tracing.boundingBox))
+          NamedBoundingBoxProto(newId,
+                                Some("task bounding box"),
+                                Some(true),
+                                Some(getRandomColor),
+                                tracing.boundingBox))
         .withBoundingBox(dataSetBoundingBox.get)
     } else tracing
 
@@ -396,8 +400,8 @@ class VolumeTracingService @Inject()(
     tracingA.copy(
       largestSegmentId = largestSegmentId,
       boundingBox = mergedBoundingBox.getOrElse(
-        com.scalableminds.webknossos.datastore.geometry.BoundingBox(
-          com.scalableminds.webknossos.datastore.geometry.Point3D(0, 0, 0),
+        com.scalableminds.webknossos.datastore.geometry.BoundingBoxProto(
+          com.scalableminds.webknossos.datastore.geometry.Vec3IntProto(0, 0, 0),
           0,
           0,
           0)), // should never be empty for volumes

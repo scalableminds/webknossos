@@ -10,7 +10,7 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   private val boundingBox = None
   private val activeNodeId = None
   val editPosition: Vec3Int = Vec3Int(0, 0, 0)
-  val editRotation: Vec3Double = Vec3Double()
+  val editRotation: Vec3Double = Vec3Double(0, 0, 0)
   val zoomLevel: Double = 2.0
   private val version = 0
   private val userBoundingBox = None
@@ -30,7 +30,7 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
 
 object NodeDefaults extends ProtoGeometryImplicits {
   val id: Int = 0
-  val rotation: Vec3Double = Vec3Double()
+  val rotation: Vec3Double = Vec3Double(0, 0, 0)
   val position: Vec3Int = Vec3Int(0, 0, 0)
   val radius: Float = 1.0f
   val viewport: Int = 1

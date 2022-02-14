@@ -11,7 +11,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.Color
+import com.scalableminds.webknossos.datastore.geometry.ColorProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
@@ -62,10 +62,10 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
 // Uses the proto-generated geometry classes, hence the full qualifiers.
 case class RedundantTracingProperties(
-    editPosition: com.scalableminds.webknossos.datastore.geometry.Point3D,
-    editRotation: com.scalableminds.webknossos.datastore.geometry.Vector3D,
+    editPosition: com.scalableminds.webknossos.datastore.geometry.Vec3IntProto,
+    editRotation: com.scalableminds.webknossos.datastore.geometry.Vec3DoubleProto,
     zoomLevel: Double,
-    userBoundingBoxes: Seq[com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox]
+    userBoundingBoxes: Seq[com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto]
 )
 
 class AnnotationService @Inject()(
@@ -248,7 +248,7 @@ class AnnotationService @Inject()(
             s.editRotation,
             s.zoomLevel,
             s.userBoundingBoxes ++ s.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox(0, None, None, None, _))
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _))
           )
         case Right(v) =>
           RedundantTracingProperties(
@@ -256,7 +256,7 @@ class AnnotationService @Inject()(
             v.editRotation,
             v.zoomLevel,
             v.userBoundingBoxes ++ v.userBoundingBox.map(
-              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox(0, None, None, None, _))
+              com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto(0, None, None, None, _))
           )
       }
 
@@ -437,7 +437,7 @@ class AnnotationService @Inject()(
       1,
       Seq(initialNode),
       Seq.empty,
-      Some(Color(1, 0, 0, 1)),
+      Some(ColorProto(1, 0, 0, 1)),
       Seq(BranchPoint(initialNode.id, System.currentTimeMillis())),
       Seq.empty,
       "",

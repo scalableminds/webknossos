@@ -5,7 +5,7 @@ import java.io.InputStream
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto}
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
@@ -164,9 +164,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       .toSingleBox(Messages("nml.element.invalid", "trees"))
 
   @SuppressWarnings(Array("TraversableHead")) // We check that size == 1 before accessing head
-  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider): Seq[NamedBoundingBox] =
+  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider): Seq[NamedBoundingBoxProto] =
     if (boundingBoxNodes.size == 1 && getSingleAttribute(boundingBoxNodes.head, "id").isEmpty) {
-      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head).map(NamedBoundingBox(0, None, None, None, _))
+      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head).map(NamedBoundingBoxProto(0, None, None, None, _))
     } else {
       boundingBoxNodes.flatMap(node => {
         val idText = getSingleAttribute(node, "id")
@@ -177,20 +177,20 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           color = parseColor(node)
           boundingBox <- parseBoundingBox(node)
           nameOpt = if (name.isEmpty) None else Some(name)
-        } yield NamedBoundingBox(id, nameOpt, isVisible, color, boundingBox)
+        } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)
       })
     }
 
   private def parseTaskBoundingBox(
       nodes: NodeSeq,
       isTask: Boolean,
-      userBoundingBoxes: Seq[NamedBoundingBox]): Option[Either[BoundingBox, NamedBoundingBox]] =
+      userBoundingBoxes: Seq[NamedBoundingBoxProto]): Option[Either[BoundingBox, NamedBoundingBoxProto]] =
     nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
       if (isTask) {
         Left(bb)
       } else {
         val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
-        Right(NamedBoundingBox(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
+        Right(NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
       }
     }
 
@@ -271,7 +271,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       colorGreen <- getSingleAttribute(node, "color.b").toFloatOpt
       colorAlpha <- getSingleAttribute(node, "color.a").toFloatOpt
     } yield {
-      Color(colorRed, colorBlue, colorGreen, colorAlpha)
+      ColorProto(colorRed, colorBlue, colorGreen, colorAlpha)
     }
 
   private def parseColor(node: XMLNode) =
@@ -283,7 +283,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseGroupId(node: XMLNode) =
     getSingleAttribute(node, "groupId").toIntOpt
 
-  private def parseVisibility(node: XMLNode, color: Option[Color]): Option[Boolean] =
+  private def parseVisibility(node: XMLNode, color: Option[ColorProto]): Option[Boolean] =
     getSingleAttribute(node, "isVisible").toBooleanOpt match {
       case Some(isVisible) => Some(isVisible)
       case None            => color.map(c => !c.a.isNearZero)

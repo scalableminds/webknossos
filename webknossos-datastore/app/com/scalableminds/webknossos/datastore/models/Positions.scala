@@ -4,7 +4,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
-
 trait GenericPosition {
   def x: Int
   def y: Int

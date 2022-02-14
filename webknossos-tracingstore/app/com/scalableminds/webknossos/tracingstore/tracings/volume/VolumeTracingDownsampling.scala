@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore,
   VersionedKeyValuePair
 }
-import com.scalableminds.webknossos.datastore.geometry.{Point3D => ProtoPoint3D}
+import com.scalableminds.webknossos.datastore.geometry.{Vec3IntProto => ProtoPoint3D}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import play.api.libs.json.{Format, Json}
 

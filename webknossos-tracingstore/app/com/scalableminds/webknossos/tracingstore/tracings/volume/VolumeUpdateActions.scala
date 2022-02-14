@@ -109,7 +109,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
 
-    def updateUserBoundingBoxes(): Seq[geometry.NamedBoundingBox] =
+    def updateUserBoundingBoxes(): Seq[geometry.NamedBoundingBoxProto] =
       tracing.userBoundingBoxes.map { boundingBox =>
         if (boundingBoxId.forall(_ == boundingBox.id))
           boundingBox.copy(isVisible = Some(isVisible))

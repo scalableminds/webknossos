@@ -5,13 +5,18 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.geometry.ColorProto
+import com.scalableminds.webknossos.datastore.geometry.{
+  ColorProto,
+  NamedBoundingBoxProto,
+  Vec3DoubleProto,
+  Vec3IntProto
+}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
@@ -62,10 +67,10 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
 // Uses the proto-generated geometry classes, hence the full qualifiers.
 case class RedundantTracingProperties(
-    editPosition: com.scalableminds.webknossos.datastore.geometry.Vec3IntProto,
-    editRotation: com.scalableminds.webknossos.datastore.geometry.Vec3DoubleProto,
+    editPosition: Vec3IntProto,
+    editRotation: Vec3DoubleProto,
     zoomLevel: Double,
-    userBoundingBoxes: Seq[com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto]
+    userBoundingBoxes: Seq[NamedBoundingBoxProto]
 )
 
 class AnnotationService @Inject()(

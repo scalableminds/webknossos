@@ -59,14 +59,37 @@ export function formatScale(scaleArr: ?Vector3, roundTo?: number = 2): string {
   }
 }
 
+const nmFactorToUnit = new Map([
+  [1e-3, "pm"],
+  [1, "nm"],
+  [1e3, "µm"],
+  [1e6, "mm"],
+  [1e9, "m"],
+  [1e12, "km"],
+]);
+const sortedNmFactors = Array.from(nmFactorToUnit.keys()).sort((a, b) => a - b);
+
 export function formatNumberToLength(lengthInNm: number): string {
-  if (lengthInNm < 1000) {
-    return `${lengthInNm.toFixed(0)}${ThinSpace}nm`;
-  } else if (lengthInNm < 1000000) {
-    return `${(lengthInNm / 1000).toFixed(1)}${ThinSpace}µm`;
-  } else {
-    return `${(lengthInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
+  const closestFactor = findClosestLengthUnitFactor(lengthInNm);
+  const unit = nmFactorToUnit.get(closestFactor);
+  if (unit == null) {
+    throw new Error("Couldn't look up appropriate length unit.");
   }
+  const lengthInUnit = lengthInNm / closestFactor;
+  if (lengthInUnit !== Math.floor(lengthInUnit)) {
+    return `${lengthInUnit.toFixed(1)}${ThinSpace}${unit}`;
+  }
+  return `${lengthInUnit}${ThinSpace}${unit}`;
+}
+
+export function findClosestLengthUnitFactor(lengthInNm: number): number {
+  let closestFactor = sortedNmFactors[0];
+  for (const factor of sortedNmFactors) {
+    if (lengthInNm >= factor) {
+      closestFactor = factor;
+    }
+  }
+  return closestFactor;
 }
 
 export function formatLengthAsVx(lengthInVx: number, roundTo?: number = 2): string {

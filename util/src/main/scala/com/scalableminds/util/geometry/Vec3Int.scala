@@ -68,7 +68,7 @@ object Vec3Int {
   def fromList(l: List[Int]) =
     fromArray(l.toArray)
 
-  implicit object Point3DReads extends Reads[Vec3Int] {
+  implicit object Vec3IntReads extends Reads[Vec3Int] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>
         val c = ts.map(fromJson[Int](_)).flatMap(_.asOpt)
@@ -77,11 +77,11 @@ object Vec3Int {
         else
           JsSuccess(Vec3Int(c(0), c(1), c(2)))
       case _ =>
-        JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.expected.point3DArray"))))
+        JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.expected.vec3IntArray"))))
     }
   }
 
-  implicit object Point3DWrites extends Writes[Vec3Int] {
+  implicit object Vec3IntWrites extends Writes[Vec3Int] {
     def writes(v: Vec3Int) = {
       val l = List(v.x, v.y, v.z)
       JsArray(l.map(toJson(_)))

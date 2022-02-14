@@ -220,7 +220,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     nodes.headOption.flatMap(node => getSingleAttribute(node, "ms").toLongOpt).getOrElse(DEFAULT_TIME)
 
   private def parseEditPosition(nodes: NodeSeq): Option[Vec3Int] =
-    nodes.headOption.flatMap(parsePoint3D)
+    nodes.headOption.flatMap(parseVec3Int)
 
   private def parseEditRotation(nodes: NodeSeq): Option[Vec3Double] =
     nodes.headOption.flatMap(parseRotationForParams)
@@ -239,7 +239,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         } ?~ Messages("nml.node.id.invalid", "branchpoint", getSingleAttribute(branchPoint, "id"))
     }.toList.toSingleBox(Messages("nml.element.invalid", "branchpoints"))
 
-  private def parsePoint3D(node: XMLNode) = {
+  private def parseVec3Int(node: XMLNode) = {
     val xText = getSingleAttribute(node, "x")
     val yText = getSingleAttribute(node, "y")
     val zText = getSingleAttribute(node, "z")
@@ -388,7 +388,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     for {
       id <- nodeIdText.toIntOpt ?~ Messages("nml.node.id.invalid", "", nodeIdText)
       radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
-      position <- parsePoint3D(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
+      position <- parseVec3Int(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)

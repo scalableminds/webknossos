@@ -245,7 +245,7 @@ trait ResolutionFormatHelper {
 
     override def writes(resolution: Either[Int, Vec3Int]): JsValue = resolution match {
       case Left(r)  => JsNumber(r)
-      case Right(r) => Vec3Int.Point3DWrites.writes(r)
+      case Right(r) => Vec3Int.Vec3IntWrites.writes(r)
     }
   }
 }

@@ -23,9 +23,10 @@ import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
-
 import java.io._
 import java.nio.file.Paths
+import java.util.zip.Deflater
+
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -220,13 +221,16 @@ class VolumeTracingService @Inject()(
     val buckets: Iterator[NamedStream] =
       new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
 
-    val zipResult = ZipIO.zip(buckets, os)
+    val before = System.currentTimeMillis()
+    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
 
     zipResult.onComplete {
       case failure: scala.util.Failure[Unit] =>
         logger.debug(
           s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-      case _: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
+      case _: scala.util.Success[Unit] =>
+        val after = System.currentTimeMillis()
+        logger.info(s"Zipping volume data for $tracingId took ${after - before} ms")
     }
     zipResult
   }

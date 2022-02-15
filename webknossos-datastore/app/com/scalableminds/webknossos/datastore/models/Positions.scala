@@ -78,10 +78,12 @@ case class BucketPosition(
     BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
 
   def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ),
-                    bucketLength * resolution.x,
-                    bucketLength * resolution.y,
-                    bucketLength * resolution.z)
+    new BoundingBox(
+      Point3D(topLeft.x * resolution.x, topLeft.y * resolution.y, topLeft.z * resolution.z),
+      bucketLength * resolution.x,
+      bucketLength * resolution.y,
+      bucketLength * resolution.z
+    )
 
   override def toString: String =
     s"BucketPosition($globalX, $globalY, $globalZ, mag$resolution)"

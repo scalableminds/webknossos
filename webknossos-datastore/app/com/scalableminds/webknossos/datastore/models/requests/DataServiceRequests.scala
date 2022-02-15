@@ -19,7 +19,7 @@ case class DataServiceDataRequest(
     dataLayerMapping: Option[String],
     cuboid: Cuboid,
     settings: DataServiceRequestSettings,
-    voxelDimensions: Vector3I = Vector3I(1, 1, 1)
+    voxelDimensions: Vector3I = Vector3I(1, 1, 1) // if != 1, skip voxels when loading (used for isosurface generation)
 )
 
 case class DataReadInstruction(

@@ -18,6 +18,7 @@ import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import HistogramSaga from "oxalis/model/sagas/load_histogram_data_saga";
+import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
 
 let rootSagaCrashed = false;
@@ -41,6 +42,7 @@ function* restartableSaga(): Saga<void> {
       _call(SettingsSaga),
       _call(watchSkeletonTracingAsync),
       _call(HistogramSaga),
+      _call(listenToClipHistogramSaga),
       _call(watchDataRelevantChanges),
       _call(isosurfaceSaga),
       _call(watchTasksAsync),

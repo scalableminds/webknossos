@@ -100,10 +100,7 @@ type DatasetSettingsProps = {|
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  onClipHistogram: (
-    layerName: string,
-    shouldAdjustClipRange: boolean,
-  ) => void,
+  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => void,
   histogramData: HistogramDataForAllLayers,
   onChangeRadius: (value: number) => void,
   onChangeShowSkeletons: boolean => void,

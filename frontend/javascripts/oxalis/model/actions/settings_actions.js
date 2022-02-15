@@ -163,7 +163,10 @@ export const setHistogramDataAction = (
   histogramData,
 });
 
-export const clipHistogramAction = (layerName: string, shouldAdjustClipRange: boolean): ClipHistogramAction => ({
+export const clipHistogramAction = (
+  layerName: string,
+  shouldAdjustClipRange: boolean,
+): ClipHistogramAction => ({
   type: "CLIP_HISTOGRAM",
   layerName,
   shouldAdjustClipRange,

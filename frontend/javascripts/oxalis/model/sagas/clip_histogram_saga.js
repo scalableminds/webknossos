@@ -12,7 +12,7 @@ import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import api from "oxalis/api/internal_api";
 
-function onThresholdChange (layerName: string, [firstVal, secVal]: [number, number]) {
+function onThresholdChange(layerName: string, [firstVal, secVal]: [number, number]) {
   if (firstVal < secVal) {
     Store.dispatch(updateLayerSettingAction(layerName, "intensityRange", [firstVal, secVal]));
   } else {
@@ -20,7 +20,7 @@ function onThresholdChange (layerName: string, [firstVal, secVal]: [number, numb
   }
 }
 
-async function getClippingValues (layerName: string, thresholdRatio: number = 0.05) {
+async function getClippingValues(layerName: string, thresholdRatio: number = 0.05) {
   const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
   const [TypedArrayClass] = getConstructorForElementClass(elementClass);
 
@@ -76,7 +76,7 @@ async function getClippingValues (layerName: string, thresholdRatio: number = 0.
   return [lowerClip, upperClip, wiggleRoom];
 }
 
-async function clipHistogram (layerName: string, shouldAdjustClipRange: boolean) {
+async function clipHistogram(layerName: string, shouldAdjustClipRange: boolean) {
   const [lowerClip, upperClip, wiggleRoom] = await getClippingValues(layerName);
   if (lowerClip === -1 || upperClip === -1) {
     Toast.warning(

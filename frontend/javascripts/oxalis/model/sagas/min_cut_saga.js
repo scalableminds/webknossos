@@ -17,6 +17,7 @@ import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import createProgressCallback from "libs/progress_callback";
 import api from "oxalis/api/internal_api";
 import window from "libs/window";
 
@@ -42,11 +43,12 @@ const PartitionFailedError = new Error(
 
 // If the min-cut does not succeed after 10 seconds
 // in the selected mag, the next mag is tried.
-const MIN_CUT_TIMEOUT = 10 * 1000;
-// During the refinement phase, the timeout is very forgiving.
+const MIN_CUT_TIMEOUT = 10 * 1000; // 10 seconds
+// During the refinement phase, the timeout is more forgiving.
 // Even if the refinement is slow, we typically don't want to
 // abort it, since the initial min-cut has already been performed.
-const MIN_CUT_TIMEOUT_REFINEMENT = 10 * 60 * 1000;
+// Note that the timeout is used for each refining min-cut phase.
+const MIN_CUT_TIMEOUT_REFINEMENT = 30 * 1000; // 30 seconds
 
 // To choose the initial mag, a voxel threshold is defined
 // as a heuristic. This avoids that an unrealistic mag
@@ -198,7 +200,11 @@ function* performMinCut(action: Action): Saga<void> {
   if (boundingBoxId != null) {
     const boundingBoxes = skeleton.userBoundingBoxes.filter(bbox => bbox.id === boundingBoxId);
     if (boundingBoxes.length !== 1) {
-      throw new Error(`Could not find specified bounding box with id ${boundingBoxId}.`);
+      throw new Error(
+        `Expected (exactly) one bounding box with id ${boundingBoxId} but there are ${
+          boundingBoxes.length
+        }.`,
+      );
     }
     boundingBoxObj = boundingBoxes[0].boundingBox;
   } else {
@@ -253,11 +259,19 @@ function* performMinCut(action: Action): Saga<void> {
     return;
   }
 
+  const progressCallback = createProgressCallback({ pauseDelay: 200, successMessageDelay: 5000 });
+
   // Try to perform a min-cut on the selected resolutions. If the min-cut
   // fails for one resolution, it's tried again on the next resolution.
   // If the min-cut succeeds, it's refined again with the better resolutions.
   for (const [resolutionIndex, targetMag] of appropriateResolutionInfos) {
     try {
+      yield* call(
+        progressCallback,
+        false,
+        `Trying min-cut computation at Mag=${targetMag.join("-")}`,
+      );
+
       console.group("Trying min-cut computation at", targetMag.join("-"));
       yield* call(
         tryMinCutAtMag,
@@ -284,6 +298,11 @@ function* performMinCut(action: Action): Saga<void> {
           refiningResolutionIndex,
         );
         console.group("Refining min-cut at", refiningResolution.join("-"));
+        yield* call(
+          progressCallback,
+          false,
+          `Refining min-cut at Mag=${refiningResolution.join("-")}`,
+        );
         try {
           yield* call(
             tryMinCutAtMag,
@@ -300,6 +319,13 @@ function* performMinCut(action: Action): Saga<void> {
               "Refinement of min-cut timed out. There still might be small voxel connections between the seeds.",
             );
             yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+            yield* call(
+              progressCallback,
+              true,
+              "Min-cut calculation finished. However, the refinement timed out. There still might be small voxel connections between the seeds.",
+              {},
+              "warning",
+            );
             return;
           }
         }
@@ -307,6 +333,7 @@ function* performMinCut(action: Action): Saga<void> {
       }
 
       yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+      yield* call(progressCallback, true, "Min-cut calculation was successful.");
       return;
     } catch (exception) {
       console.groupEnd();
@@ -321,6 +348,13 @@ function* performMinCut(action: Action): Saga<void> {
     }
   }
 
+  yield* call(
+    progressCallback,
+    true,
+    "A min-cut couldn't be performed, because the calculation timed out.",
+    {},
+    "warning",
+  );
   yield* call([Toast, Toast.warning], "Couldn't perform min-cut due to timeout");
 }
 
@@ -543,7 +577,7 @@ function populateDistanceField(
 
   while (queue.length > 0) {
     iterationCount++;
-    if (iterationCount % 100000 === 0 && performance.now() > timeoutThreshold) {
+    if (iterationCount % 10000 === 0 && performance.now() > timeoutThreshold) {
       throw TimeoutError;
     }
     const { voxel: currVoxel, distance, usedEdgeIdx } = queue.shift();

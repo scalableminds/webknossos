@@ -280,7 +280,7 @@ function getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispa
           key="create-new"
           onClick={() => dispatch(performMinCutAction(clickedTree.treeId))}
         >
-          Create new bounding box
+          Use default bounding box
         </Menu.Item>
 
         {userBoundingBoxes

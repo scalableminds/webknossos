@@ -2,21 +2,15 @@
 
 import type { Dispatch } from "redux";
 import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
-import { VerticalAlignMiddleOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
+import { type Vector2, type Vector3 } from "oxalis/constants";
 
 import type { APIHistogramData, ElementClass } from "types/api_flow_types";
-import { OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
-import Store, { type DatasetLayerConfiguration } from "oxalis/store";
-import api from "oxalis/api/internal_api";
-import Toast from "libs/toast";
-import { div } from "../../shaders/utils.glsl";
+import { type DatasetLayerConfiguration } from "oxalis/store";
 
 type OwnProps = {|
   data: APIHistogramData,
@@ -208,31 +202,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
 
     const minMaxInputStyle = { width: "100%" };
-    const editModeAddendum = isInEditMode
-      ? "In Edit Mode, the histogram's range will be adjusted, too."
-      : "";
-    const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <React.Fragment>
-        <div
-          style={{
-            position: "relative",
-            width: 22,
-            top: -22,
-            left: 237,
-          }}
-        >
-          <Tooltip title={tooltipText}>
-            <VerticalAlignMiddleOutlined
-              style={{
-                position: "relative",
-                transform: "rotate(90deg)",
-                cursor: "pointer",
-              }}
-              onClick={() => this.clipHistogram(isInEditMode, layerName)}
-            />
-          </Tooltip>
-        </div>
         <canvas
           ref={ref => {
             this.canvasRef = ref;

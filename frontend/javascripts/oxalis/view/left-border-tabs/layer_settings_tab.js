@@ -10,6 +10,7 @@ import {
   StopOutlined,
   WarningOutlined,
   PlusOutlined,
+  VerticalAlignMiddleOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
@@ -61,6 +62,7 @@ import {
   updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
+  clipHistogramAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
@@ -97,6 +99,10 @@ type DatasetSettingsProps = {|
     layerName: string,
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
+  ) => void,
+  onClipHistogram: (
+    layerName: string,
+    shouldAdjustClipRange: boolean,
   ) => void,
   histogramData: HistogramDataForAllLayers,
   onChangeRadius: (value: number) => void,
@@ -241,6 +247,27 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             cursor: "pointer",
             color: isInEditMode ? "var(--ant-primary)" : null,
           }}
+        />
+      </Tooltip>
+    );
+  };
+
+  getClipButton = (layerName: string, isInEditMode: boolean) => {
+    const editModeAddendum = isInEditMode
+      ? "In Edit Mode, the histogram's range will be adjusted, too."
+      : "";
+    const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
+    return (
+      <Tooltip title={tooltipText}>
+        <VerticalAlignMiddleOutlined
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 58,
+            cursor: "pointer",
+            transform: "rotate(90deg)",
+          }}
+          onClick={() => this.props.onClipHistogram(layerName, isInEditMode)}
         />
       </Tooltip>
     );
@@ -474,6 +501,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           ) : null}
           {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
 
+          {hasHistogram && !isDisabled ? this.getClipButton(layerName, isInEditMode) : null}
           {hasHistogram && !isDisabled ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer, maybeVolumeTracing)}
           {this.getReloadDataButton(layerName)}
@@ -894,6 +922,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeLayer(layerName, propertyName, value) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
+  },
+  onClipHistogram(layerName, shouldAdjustClipRange) {
+    dispatch(clipHistogramAction(layerName, shouldAdjustClipRange));
   },
   onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));

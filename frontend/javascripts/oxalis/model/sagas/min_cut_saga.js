@@ -387,6 +387,7 @@ function* tryMinCutAtMag(
   volumeTracingLayer,
   maxTimeoutDuration,
 ): Saga<void> {
+  const targetMagString = `${targetMag.join(",")}`;
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
 
   const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);
@@ -435,9 +436,9 @@ function* tryMinCutAtMag(
   // showed an overall slow-down of factor 6.
   const timeoutThreshold = performance.now() + maxTimeoutDuration;
   console.log("Starting min-cut...");
-  console.time("Total min-cut");
+  console.time(`Total min-cut (${targetMagString})`);
 
-  console.time("Build Graph");
+  console.time(`Build Graph (${targetMagString})`);
 
   const edgeBuffer = buildGraph(
     inputData,
@@ -451,9 +452,9 @@ function* tryMinCutAtMag(
 
   // Copy original edge buffer, as it's mutated later when removing edges.
   const originalEdgeBuffer = new Uint16Array(edgeBuffer);
-  console.timeEnd("Build Graph");
+  console.timeEnd(`Build Graph (${targetMagString})`);
 
-  console.time("Find & delete paths");
+  console.time(`Find & delete paths (${targetMagString})`);
 
   let exitLoop = false;
   while (!exitLoop) {
@@ -485,17 +486,17 @@ function* tryMinCutAtMag(
     }
   }
 
-  console.timeEnd("Find & delete paths");
+  console.timeEnd(`Find & delete paths (${targetMagString})`);
 
-  console.time("traverseResidualsField");
+  console.time(`traverseResidualsField (${targetMagString})`);
   const { visitedField } = traverseResidualsField(boundingBoxTarget, seedA, ll, edgeBuffer);
-  console.timeEnd("traverseResidualsField");
+  console.timeEnd(`traverseResidualsField (${targetMagString})`);
 
-  console.time("labelDeletedEdges");
+  console.time(`labelDeletedEdges (${targetMagString})`);
   labelDeletedEdges(visitedField, boundingBoxTarget, size, originalEdgeBuffer, targetMag, l, ll);
-  console.timeEnd("labelDeletedEdges");
+  console.timeEnd(`labelDeletedEdges (${targetMagString})`);
 
-  console.timeEnd("Total min-cut");
+  console.timeEnd(`Total min-cut (${targetMagString})`);
 }
 
 function isPositionOutside(position, size) {

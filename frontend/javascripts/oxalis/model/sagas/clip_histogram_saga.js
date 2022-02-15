@@ -71,11 +71,13 @@ async function getClippingValues (layerName: string, thresholdRatio: number = 0.
       break;
     }
   }
-  return [lowerClip, upperClip];
+  // largest brightness value is first after the keys were reversed
+  const wiggleRoom = Math.floor(thresholdRatio * sortedHistKeys[0]);
+  return [lowerClip, upperClip, wiggleRoom];
 }
 
 async function clipHistogram (layerName: string, shouldAdjustClipRange: boolean) {
-  const [lowerClip, upperClip] = await getClippingValues(layerName);
+  const [lowerClip, upperClip, wiggleRoom] = await getClippingValues(layerName);
   if (lowerClip === -1 || upperClip === -1) {
     Toast.warning(
       "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
@@ -86,8 +88,8 @@ async function clipHistogram (layerName: string, shouldAdjustClipRange: boolean)
     onThresholdChange(layerName, [lowerClip, upperClip]);
   } else {
     onThresholdChange(layerName, [lowerClip, upperClip]);
-    Store.dispatch(updateLayerSettingAction(layerName, "min", lowerClip));
-    Store.dispatch(updateLayerSettingAction(layerName, "max", upperClip));
+    Store.dispatch(updateLayerSettingAction(layerName, "min", lowerClip - wiggleRoom));
+    Store.dispatch(updateLayerSettingAction(layerName, "max", upperClip + wiggleRoom));
   }
 }
 

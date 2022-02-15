@@ -207,7 +207,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         style={{
           position: "absolute",
           top: 4,
-          right: 38,
+          right: 36,
           cursor: "pointer",
         }}
       />
@@ -243,7 +243,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 38,
+            right: 36,
             cursor: "pointer",
             color: isInEditMode ? "var(--ant-primary)" : null,
           }}

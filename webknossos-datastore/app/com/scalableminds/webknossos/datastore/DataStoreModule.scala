@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore
 import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
+import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemHolder
 import com.scalableminds.webknossos.datastore.services._
 
 class DataStoreModule extends AbstractModule {
@@ -10,6 +11,7 @@ class DataStoreModule extends AbstractModule {
   val system: ActorSystem = ActorSystem("webknossos-datastore")
 
   override def configure(): Unit = {
+    bind(classOf[FileSystemHolder]).asEagerSingleton()
     bind(classOf[DataStoreConfig]).asEagerSingleton()
     bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)

@@ -11,6 +11,7 @@ ThisBuild / scalacOptions ++= Seq(
   "-target:jvm-1.8",
   "-feature",
   "-deprecation",
+  "-nobootcp",
   "-language:implicitConversions",
   "-language:postfixOps",
   "-Xlint:unused",

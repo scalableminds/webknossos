@@ -5,9 +5,11 @@ import java.net.URI
 import java.nio.file.spi.FileSystemProvider
 import java.nio.file.{FileSystem, FileSystemAlreadyExistsException, FileSystems}
 import java.nio.{ByteBuffer, ByteOrder}
+import java.text.MessageFormat
 import java.util.ServiceLoader
 
 import com.bc.zarr.ZarrArray
+import com.google.common.collect.ImmutableMap
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCube}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -34,16 +36,44 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 }
 
 class FileSystemHolder @Inject()() extends LazyLogging {
-  private val s3Uri = URI.create(s"s3://uk1s3.embassy.ebi.ac.uk")
-  logger.info(s"Loading file system for uri $s3Uri")
-  val s3fs: Option[FileSystem] = try {
-    Some(FileSystems.newFileSystem(s3Uri, null, currentThread().getContextClassLoader))
-  } catch {
-    case _: FileSystemAlreadyExistsException => {
-      ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
 
-      None
+  def findS3Provider : Option[FileSystemProvider] = {
+    val i = ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
+    while (i.hasNext) {
+      val p = i.next()
+      if (p.getScheme.equalsIgnoreCase(s3Uri.getScheme)) {
+        return Some(p)
+      }
     }
+    None
+  }
+
+
+  val s3AccessKey = ""
+  val s3SecretKey = ""
+  val s3Server = "s3.us-east-1.amazonaws.com"
+
+  val env: ImmutableMap[String, Any] = ImmutableMap.builder[String, Any]
+    .put(com.upplication.s3fs.AmazonS3Factory.ACCESS_KEY, s3AccessKey)
+    .put(com.upplication.s3fs.AmazonS3Factory.SECRET_KEY, s3SecretKey).build
+
+  private val s3Uri = URI.create(MessageFormat.format("s3://{0}", s3Server))
+  private val s3UriWithKey = URI.create(MessageFormat.format("s3://{0}@{1}", s3AccessKey, s3Server))
+
+  logger.info(s"Loading file system for uri $s3Uri")
+
+  val s3fs: Option[FileSystem] = try {
+    Some(FileSystems.newFileSystem(s3Uri, env, currentThread().getContextClassLoader))
+  } catch {
+    case e: FileSystemAlreadyExistsException =>
+      logger.info("newFileSystem errored:", e)
+      try {
+        findS3Provider.map(_.getFileSystem(s3UriWithKey))
+      } catch {
+        case e2: Exception =>
+          logger.error("getFileSytem errored:", e2)
+          None
+      }
   }
 
   logger.info(s"Loaded file system $s3fs for uri $s3Uri")

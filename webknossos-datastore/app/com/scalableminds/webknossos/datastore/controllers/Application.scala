@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.lang.reflect.Field
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
 import java.nio.file.spi.FileSystemProvider
 import java.util
 
@@ -13,8 +13,11 @@ import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.asScalaIteratorConverter
 
-class Application @Inject()(redisClient: DataStoreRedisStore, fileSystemHolder: FileSystemHolder)(implicit ec: ExecutionContext) extends Controller {
+class Application @Inject()(redisClient: DataStoreRedisStore, fileSystemHolder: FileSystemHolder)(
+    implicit ec: ExecutionContext)
+    extends Controller {
 
   def health: Action[AnyContent] = Action.async { implicit request =>
     log() {
@@ -40,22 +43,17 @@ class Application @Inject()(redisClient: DataStoreRedisStore, fileSystemHolder: 
 
     logger.info(f"${fileSystemHolder.s3fs}")
 
-    val path = "demodata/6001251.zarr"
-
-
-
     fileSystemHolder.s3fs.map { s3fs =>
-      val layerPath: Path = s3fs.getPath("/" + path + "/0/")
-      try {
-        logger.info(s"${Files.list(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr"))}")
-      } catch {
-        case e: Exception => logger.info("/webknossos-zarr/demodata/6001251.zarr errored:", e)
-      }
+      val files = Files.list(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/")).iterator().asScala.toList
+      logger.info(s"files: $files")
 
-      ZarrArray.open(layerPath)
+      val bytes = Files.readAllBytes(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/0.0.99.0.0"))
+
+      logger.info(s"read ${bytes.length} bytes from /webknossos-zarr/demodata/6001251.zarr/0/0.0.99.0.0")
+
+      ZarrArray.open(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/"))
+      ()
     }
-
-
 
     /*val scl = classOf[ClassLoader].getDeclaredField("scl")
     scl.setAccessible(true)
@@ -84,7 +82,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore, fileSystemHolder: 
     logger.info(s"INSTALLED: ${FileSystemProvider
       .installedProviders()
       .asScala}")
-*/
+     */
     Ok
   }
 

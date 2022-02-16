@@ -37,7 +37,7 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 
 class FileSystemHolder @Inject()() extends LazyLogging {
 
-  def findS3Provider : Option[FileSystemProvider] = {
+  def findS3Provider: Option[FileSystemProvider] = {
     val i = ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
     while (i.hasNext) {
       val p = i.next()
@@ -48,14 +48,15 @@ class FileSystemHolder @Inject()() extends LazyLogging {
     None
   }
 
-
   val s3AccessKey = ""
   val s3SecretKey = ""
-  val s3Server = "s3.us-east-1.amazonaws.com"
+  val s3Server = "s3.amazonaws.com"
 
-  val env: ImmutableMap[String, Any] = ImmutableMap.builder[String, Any]
+  val env: ImmutableMap[String, Any] = ImmutableMap
+    .builder[String, Any]
     .put(com.upplication.s3fs.AmazonS3Factory.ACCESS_KEY, s3AccessKey)
-    .put(com.upplication.s3fs.AmazonS3Factory.SECRET_KEY, s3SecretKey).build
+    .put(com.upplication.s3fs.AmazonS3Factory.SECRET_KEY, s3SecretKey)
+    .build
 
   private val s3Uri = URI.create(MessageFormat.format("s3://{0}", s3Server))
   private val s3UriWithKey = URI.create(MessageFormat.format("s3://{0}@{1}", s3AccessKey, s3Server))
@@ -85,7 +86,7 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
   private val bucketName = "idr/zarr/v0.1/6001251.zarr"
   private val s3Uri = URI.create(s"s3://uk1s3.embassy.ebi.ac.uk")
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] =
     Empty /*
     val useS3 = true
     FileSystemHolder.s3fs.map { s3fs =>
@@ -103,7 +104,5 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
         tryo(ZarrArray.open(layerPath)).map(new ZarrCube(_))
       } else Empty
     }.getOrElse(Empty)*/
-
-  }
 
 }

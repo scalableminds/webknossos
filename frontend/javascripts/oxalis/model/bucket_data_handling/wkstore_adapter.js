@@ -222,6 +222,7 @@ function sliceBufferIntoPieces(
 
 export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
   const items = [];
+  console.time("sendToStore for " + batch.length);
   for (const bucket of batch) {
     const data = bucket.getData();
     const bucketInfo = createSendBucketInfo(
@@ -233,5 +234,6 @@ export async function sendToStore(batch: Array<DataBucket>, tracingId: string): 
     const compressedBase64 = await byteArrayToLz4Base64(byteArray);
     items.push(updateBucket(bucketInfo, compressedBase64));
   }
+  console.timeEnd("sendToStore for " + batch.length);
   Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

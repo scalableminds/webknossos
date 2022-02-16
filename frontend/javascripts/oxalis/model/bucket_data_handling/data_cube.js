@@ -81,6 +81,8 @@ class DataCube {
   resolutionInfo: ResolutionInfo;
   layerName: string;
 
+  dirtyBucketsCount: number;
+
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
   // The bucket-arrays are initialized large enough to hold the whole cube. Thus no
@@ -108,13 +110,41 @@ class DataCube {
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
 
+    this.dirtyBucketsCount = 0;
+
+    if (isSegmentation) {
+      setInterval(() => {
+        console.log("#######");
+
+        let dirtyBucketsCount = 0;
+        for (let i = 0; i < this.buckets.length; i++) {
+          if (this.buckets[i].dirty) {
+            dirtyBucketsCount++;
+          }
+        }
+
+        let weirdDirtyState = 0;
+        for (let i = 0; i < this.buckets.length; i++) {
+          if (this.buckets[i].dirty && this.buckets[i].dirtyCount === 0) {
+            weirdDirtyState++;
+          }
+        }
+        if (weirdDirtyState > 0) {
+          console.log("weirdDirtyState", weirdDirtyState);
+        }
+
+        console.log("dirtyBucketsCount", dirtyBucketsCount);
+        console.log("this.buckets.length", this.buckets.length);
+      }, 2000);
+    }
+
     _.extend(this, BackboneEvents);
 
     this.cubes = [];
     if (isSegmentation) {
-      this.MAXIMUM_BUCKET_COUNT *= 2;
+      this.MAXIMUM_BUCKET_COUNT = Math.floor(this.MAXIMUM_BUCKET_COUNT / 5);
     }
-    this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
+    this.buckets = [];
 
     // Initializing the cube-arrays with boundaries
     const cubeBoundary = [
@@ -280,44 +310,48 @@ class DataCube {
   }
 
   markBucketsAsUnneeded(): void {
-    for (let i = 0; i < this.bucketCount; i++) {
+    for (let i = 0; i < this.buckets.length; i++) {
       this.buckets[i].markAsUnneeded();
     }
   }
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
-    if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
-      for (let i = 0; i < this.bucketCount; i++) {
-        this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
+    if (this.buckets.length >= this.MAXIMUM_BUCKET_COUNT) {
+      let foundCollectibleBucket = false;
+
+      for (let i = 0; i < this.buckets.length; i++) {
+        this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
         if (this.buckets[this.bucketIterator].shouldCollect()) {
+          foundCollectibleBucket = true;
           break;
         }
       }
 
-      if (!this.buckets[this.bucketIterator].shouldCollect()) {
-        if (process.env.BABEL_ENV === "test") {
-          throw new Error("Bucket was forcefully evicted/garbage-collected.");
-        }
-        const errorMessage =
-          "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.";
-        console.error(errorMessage);
-        ErrorHandling.notify(new Error(errorMessage), {
-          elementClass: this.elementClass,
-          isSegmentation: this.isSegmentation,
-          resolutionInfo: this.resolutionInfo,
-        });
+      if (foundCollectibleBucket) {
+        this.collectBucket(this.buckets[this.bucketIterator]);
+      } else {
+        // if (process.env.BABEL_ENV === "test") {
+        //   throw new Error("Bucket was forcefully evicted/garbage-collected.");
+        // }
+        // const errorMessage =
+        //   "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.";
+        // console.error(errorMessage);
+        // ErrorHandling.notify(new Error(errorMessage), {
+        //   elementClass: this.elementClass,
+        //   isSegmentation: this.isSegmentation,
+        //   resolutionInfo: this.resolutionInfo,
+        // });
+
+        // Effectively, push to this.buckets by setting the iterator to
+        // a new index.
+        this.bucketIterator = this.buckets.length;
       }
-
-      this.collectBucket(this.buckets[this.bucketIterator]);
-      this.bucketCount--;
     }
 
-    this.bucketCount++;
-    if (this.buckets[this.bucketIterator]) {
-      this.buckets[this.bucketIterator].trigger("bucketCollected");
-    }
     this.buckets[this.bucketIterator] = bucket;
-    this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
+    // Note that bucketIterator is allowed to point to the next free
+    // slot (i.e., bucketIterator == this.buckets.length).
+    this.bucketIterator = (this.bucketIterator + 1) % (this.buckets.length + 1);
   }
 
   collectAllBuckets(): void {
@@ -326,7 +360,6 @@ class DataCube {
     for (const bucket of this.buckets) {
       if (bucket != null) {
         this.collectBucket(bucket);
-        bucket.trigger("bucketCollected");
       }
     }
     this.buckets = [];

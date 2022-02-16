@@ -230,6 +230,7 @@ export class DataBucket {
     this.data = null;
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
+    this.trigger("bucketCollected");
   }
 
   needsRequest(): boolean {

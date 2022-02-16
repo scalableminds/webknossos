@@ -36,7 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where ad-hoc meshes were computed for a mapping, although it was disabled. [#5982](https://github.com/scalableminds/webknossos/pull/5982)
 - Fixed a bug where volume annotation downloads would sometimes contain truncated zips. [#6009](https://github.com/scalableminds/webknossos/pull/6009)
 - Fixed a bug where downloaded multi-layer volume annotations would have the wrong data.zip filenames. [#6028](https://github.com/scalableminds/webknossos/pull/6028)
-
+- Fixed a bug which could cause an error message to appear when saving. [#6052](https://github.com/scalableminds/webknossos/pull/6052)
 
 ### Removed
 

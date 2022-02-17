@@ -1773,7 +1773,7 @@ type IsosurfaceRequest = {
   position: Vector3,
   zoomStep: number,
   segmentId: number,
-  voxelDimensions: Vector3,
+  subsamplingStrides: Vector3,
   cubeSize: Vector3,
   scale: Vector3,
 };
@@ -1783,7 +1783,7 @@ export function computeIsosurface(
   mappingInfo: ActiveMappingInfo,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
+  const { position, zoomStep, segmentId, subsamplingStrides, cubeSize, scale } = isosurfaceRequest;
   const mapping =
     mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED ? mappingInfo.mappingName : undefined;
   const mappingType =
@@ -1796,8 +1796,8 @@ export function computeIsosurface(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, voxelDimensions)),
-          cubeSize: V3.toArray(V3.add(cubeSize, voxelDimensions)),
+          position: V3.toArray(V3.sub(position, subsamplingStrides)),
+          cubeSize: V3.toArray(V3.add(cubeSize, subsamplingStrides)),
           zoomStep,
           // Segment to build mesh for
           segmentId,
@@ -1805,7 +1805,7 @@ export function computeIsosurface(
           mapping,
           mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
-          voxelDimensions,
+          subsamplingStrides,
           scale,
         },
       },

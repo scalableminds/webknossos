@@ -1,19 +1,19 @@
 package com.scalableminds.webknossos.datastore.services.mcubes
 
-import com.scalableminds.util.geometry.{BoundingBox, Vector3D, Vector3I}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 
 import scala.collection.mutable
 
 object MarchingCubes {
 
   def marchingCubes[T](data: Array[T],
-                       dataDimensions: Vector3I,
+                       dataDimensions: Vec3Int,
                        boundingBox: BoundingBox,
                        segmentId: T,
-                       voxelDimensions: Vector3D,
-                       offset: Vector3D,
-                       scale: Vector3D,
-                       vertexBuffer: mutable.ArrayBuffer[Vector3D]) {
+                       subsamplingStrides: Vec3Double,
+                       offset: Vec3Double,
+                       scale: Vec3Double,
+                       vertexBuffer: mutable.ArrayBuffer[Vec3Double]) {
 
     def getVoxelData(x: Int, y: Int, z: Int): T =
       data(x + (dataDimensions.x * y) + (dataDimensions.x * dataDimensions.y * z))
@@ -50,9 +50,9 @@ object MarchingCubes {
       if (getVoxelData(x, y + 1, z + 1) == segmentId) cubeIndex |= 128
       if (getVoxelData(x + 1, y + 1, z + 1) == segmentId) cubeIndex |= 64
 
-      val position = Vector3D(x, y, z)
+      val position = Vec3Double(x, y, z)
       MarchingCubesTable.triangleTable(cubeIndex).foreach { edgeDelta =>
-        vertexBuffer += ((position + edgeDelta) * voxelDimensions + offset) * scale
+        vertexBuffer += ((position + edgeDelta) * subsamplingStrides + offset) * scale
       }
     }
   }

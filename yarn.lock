@@ -8371,6 +8371,11 @@ lru-cache@^6.0.0:
   dependencies:
     yallist "^4.0.0"
 
+lz4-wasm@^0.7.5:
+  version "0.7.5"
+  resolved "https://registry.yarnpkg.com/lz4-wasm/-/lz4-wasm-0.7.5.tgz#1f852bb82d193eb25428048077a5b68173f97018"
+  integrity sha512-OoZg/zRi5D/ccDAVrsvSmRrbRQeaDJLXJSAIGS90iCEFQJJpeQjXRj39pNDQHIxgqwT3StkthDdqlOKJxXGZZg==
+
 lz4js@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/lz4js/-/lz4js-0.2.0.tgz#09f1a397cb2158f675146c3351dde85058cb322f"

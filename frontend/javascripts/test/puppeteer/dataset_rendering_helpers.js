@@ -131,6 +131,7 @@ async function waitForRenderingFinish(page: Page) {
   let changedPixels = Infinity;
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || changedPixels > 0) {
+    console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
     await page.waitForTimeout(10000);
     currentShot = await page.screenshot({ fullPage: true });
     if (lastShot != null) {

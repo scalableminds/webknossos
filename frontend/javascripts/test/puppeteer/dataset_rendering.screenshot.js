@@ -24,7 +24,8 @@ process.on("unhandledRejection", (err, promise) => {
 
 const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots");
 
-let URL = "https://master.webknossos.xyz";
+// TODO: Revert before merging
+let URL = "https://meshesinlink.webknossos.xyz";
 if (!process.env.URL) {
   console.warn(
     "[Warning] No url specified, assuming dev master. If you want to specify a URL, prepend URL=<url> to the command.",

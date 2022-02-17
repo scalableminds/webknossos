@@ -18,7 +18,7 @@ import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/sto
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ActionBarView from "oxalis/view/action_bar_view";
-import ContextMenu from "oxalis/view/context_menu";
+import ContextMenuContainer from "oxalis/view/context_menu";
 import ButtonComponent from "oxalis/view/components/button_component";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
@@ -271,16 +271,18 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <React.Fragment>
         <PresentModernControls />
-        {contextMenuPosition != null && contextMenuViewport != null ? (
-          <ContextMenu
+
+        {status === "loaded" && (
+          <ContextMenuContainer
             hideContextMenu={this.hideContextMenu}
-            clickedNodeId={this.state.clickedNodeId}
+            maybeClickedNodeId={this.state.clickedNodeId}
             clickedBoundingBoxId={this.state.clickedBoundingBoxId}
             globalPosition={this.state.contextMenuGlobalPosition}
             contextMenuPosition={contextMenuPosition}
-            viewport={contextMenuViewport}
+            maybeViewport={contextMenuViewport}
           />
-        ) : null}
+        )}
+
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
           isUpdateAllowed={isUpdateTracingAllowed}

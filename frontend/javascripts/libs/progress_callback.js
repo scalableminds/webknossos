@@ -32,6 +32,7 @@ export default function createProgressCallback(options: Options): ProgressCallba
     isDone: boolean,
     status: string | React$Node,
     overridingOptions: $Shape<Options> = {},
+    finalFeedbackMethod: "success" | "error" | "info" | "warning" = "success",
   ): Promise<{ hideFn: HideFn }> => {
     if (hideFn != null) {
       // Clear old progress message
@@ -50,10 +51,10 @@ export default function createProgressCallback(options: Options): ProgressCallba
       const pauseDelay = overridingOptions.pauseDelay || options.pauseDelay;
       await sleep(pauseDelay);
     } else {
-      // Show success message and clear that after
+      // Show (success) message and clear that after
       // ${successDelay} ms
       const successDelay = overridingOptions.successMessageDelay || options.successMessageDelay;
-      hideFn = message.success({
+      hideFn = message[finalFeedbackMethod]({
         content: status,
         duration: 0,
         key: overridingOptions.key || options.key,

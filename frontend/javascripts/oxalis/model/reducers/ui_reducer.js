@@ -65,6 +65,11 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_BUSY_BLOCKING_INFO_ACTION": {
+      if (action.value.isBusy && state.uiInformation.busyBlockingInfo.isBusy) {
+        throw new Error(
+          "Busy-mutex violated. Cannot set isBusy to true, as it is already set to true.",
+        );
+      }
       return updateKey(state, "uiInformation", { busyBlockingInfo: action.value });
     }
 

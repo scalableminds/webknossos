@@ -45,6 +45,11 @@ type SetHistogramDataAction = {
   type: "SET_HISTOGRAM_DATA",
   histogramData: HistogramDataForAllLayers,
 };
+export type ClipHistogramAction = {
+  type: "CLIP_HISTOGRAM",
+  layerName: string,
+  shouldAdjustClipRange: boolean,
+};
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
 type InitializeGpuSetupAction = {
@@ -156,6 +161,15 @@ export const setHistogramDataAction = (
 ): SetHistogramDataAction => ({
   type: "SET_HISTOGRAM_DATA",
   histogramData,
+});
+
+export const clipHistogramAction = (
+  layerName: string,
+  shouldAdjustClipRange: boolean,
+): ClipHistogramAction => ({
+  type: "CLIP_HISTOGRAM",
+  layerName,
+  shouldAdjustClipRange,
 });
 
 export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingAction => ({

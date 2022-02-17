@@ -12,6 +12,8 @@ rm -rf webknossos-tracingstore/target
 rm -rf webknossos-tracingstore/project/target
 rm -rf webknossos-tracingstore/project/project/target
 rm -rf node_modules
+rm -rf .eslintcache
 mkdir target
 
 echo "[info] Done. Don’t forget to run yarn install before the next yarn start."
+

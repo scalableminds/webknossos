@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Path
 
-import com.scalableminds.util.geometry.{Point3D, Vector3I}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
@@ -29,7 +29,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
 
     if (!request.cuboid.hasValidDimensions) {
       Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
-    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.voxelDimensions == Vector3I(1, 1, 1)) {
+    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.subsamplingStrides == Vec3Int(1, 1, 1)) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
         handleBucketRequest(request, bucket)
       }
@@ -90,53 +90,53 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
-    val voxelDimensions = request.voxelDimensions
+    val subsamplingStrides = request.subsamplingStrides
 
-    val resultVolume = Point3D(
-      math.ceil(cuboid.width.toDouble / voxelDimensions.x.toDouble).toInt,
-      math.ceil(cuboid.height.toDouble / voxelDimensions.y.toDouble).toInt,
-      math.ceil(cuboid.depth.toDouble / voxelDimensions.z.toDouble).toInt
+    val resultVolume = Vec3Int(
+      math.ceil(cuboid.width.toDouble / subsamplingStrides.x.toDouble).toInt,
+      math.ceil(cuboid.height.toDouble / subsamplingStrides.y.toDouble).toInt,
+      math.ceil(cuboid.depth.toDouble / subsamplingStrides.z.toDouble).toInt
     )
     val result = new Array[Byte](resultVolume.x * resultVolume.y * resultVolume.z * bytesPerElement)
     val bucketLength = DataLayer.bucketLength
 
     rs.reverse.foreach {
       case (bucket, data) =>
-        val xRemainder = cuboid.topLeft.x % voxelDimensions.x
-        val yRemainder = cuboid.topLeft.y % voxelDimensions.y
-        val zRemainder = cuboid.topLeft.z % voxelDimensions.z
+        val xRemainder = cuboid.topLeft.x % subsamplingStrides.x
+        val yRemainder = cuboid.topLeft.y % subsamplingStrides.y
+        val zRemainder = cuboid.topLeft.z % subsamplingStrides.z
 
         val xMin = math
-          .ceil((math.max(cuboid.topLeft.x, bucket.topLeft.x).toDouble - xRemainder) / voxelDimensions.x.toDouble)
-          .toInt * voxelDimensions.x + xRemainder
+          .ceil((math.max(cuboid.topLeft.x, bucket.topLeft.x).toDouble - xRemainder) / subsamplingStrides.x.toDouble)
+          .toInt * subsamplingStrides.x + xRemainder
         val yMin = math
-          .ceil((math.max(cuboid.topLeft.y, bucket.topLeft.y).toDouble - yRemainder) / voxelDimensions.y.toDouble)
-          .toInt * voxelDimensions.y + yRemainder
+          .ceil((math.max(cuboid.topLeft.y, bucket.topLeft.y).toDouble - yRemainder) / subsamplingStrides.y.toDouble)
+          .toInt * subsamplingStrides.y + yRemainder
         val zMin = math
-          .ceil((math.max(cuboid.topLeft.z, bucket.topLeft.z).toDouble - zRemainder) / voxelDimensions.z.toDouble)
-          .toInt * voxelDimensions.z + zRemainder
+          .ceil((math.max(cuboid.topLeft.z, bucket.topLeft.z).toDouble - zRemainder) / subsamplingStrides.z.toDouble)
+          .toInt * subsamplingStrides.z + zRemainder
 
         val xMax = math.min(cuboid.bottomRight.x, bucket.topLeft.x + bucketLength)
         val yMax = math.min(cuboid.bottomRight.y, bucket.topLeft.y + bucketLength)
         val zMax = math.min(cuboid.bottomRight.z, bucket.topLeft.z + bucketLength)
 
         for {
-          z <- zMin until zMax by voxelDimensions.z
-          y <- yMin until yMax by voxelDimensions.y
-          // if voxelDimensions.x == 1, we can bulk copy a row of voxels and do not need to iterate in the x dimension
-          x <- xMin until xMax by (if (voxelDimensions.x == 1) xMax else voxelDimensions.x)
+          z <- zMin until zMax by subsamplingStrides.z
+          y <- yMin until yMax by subsamplingStrides.y
+          // if subsamplingStrides.x == 1, we can bulk copy a row of voxels and do not need to iterate in the x dimension
+          x <- xMin until xMax by (if (subsamplingStrides.x == 1) xMax else subsamplingStrides.x)
         } {
           val dataOffset =
             (x % bucketLength +
               y % bucketLength * bucketLength +
               z % bucketLength * bucketLength * bucketLength) * bytesPerElement
 
-          val rx = (x - cuboid.topLeft.x) / voxelDimensions.x
-          val ry = (y - cuboid.topLeft.y) / voxelDimensions.y
-          val rz = (z - cuboid.topLeft.z) / voxelDimensions.z
+          val rx = (x - cuboid.topLeft.x) / subsamplingStrides.x
+          val ry = (y - cuboid.topLeft.y) / subsamplingStrides.y
+          val rz = (z - cuboid.topLeft.z) / subsamplingStrides.z
 
           val resultOffset = (rx + ry * resultVolume.x + rz * resultVolume.x * resultVolume.y) * bytesPerElement
-          if (voxelDimensions.x == 1) {
+          if (subsamplingStrides.x == 1) {
             // bulk copy a row of voxels
             System.arraycopy(data, dataOffset, result, resultOffset, (xMax - x) * bytesPerElement)
           } else {

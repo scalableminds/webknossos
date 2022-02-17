@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(80);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(81);
 COMMIT TRANSACTION;
 
 
@@ -37,6 +37,7 @@ CREATE TABLE webknossos.annotations(
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name VARCHAR(256) NOT NULL DEFAULT '',
+  viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   statistics JSONB NOT NULL,
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',

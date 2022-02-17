@@ -23,6 +23,13 @@ type FloodFillAction = {
   planeId: OrthoView,
   callback?: () => void,
 };
+
+export type PerformMinCutAction = {
+  type: "PERFORM_MIN_CUT",
+  treeId: number,
+  boundingBoxId?: number,
+};
+
 type FinishEditingAction = { type: "FINISH_EDITING" };
 export type SetActiveCellAction = {
   type: "SET_ACTIVE_CELL",
@@ -44,12 +51,13 @@ export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
   source: "previousLayer" | "nextLayer",
 };
-export type MaybeBucketLoadedPromise = null | Promise<BucketDataArray>;
+export type MaybeUnmergedBucketLoadedPromise = null | Promise<BucketDataArray>;
 export type AddBucketToUndoAction = {
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
   tracingId: string,
 };
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
@@ -84,6 +92,7 @@ export type VolumeTracingAction =
   | StartEditingAction
   | AddToLayerAction
   | FloodFillAction
+  | PerformMinCutAction
   | FinishEditingAction
   | SetActiveCellAction
   | ClickSegmentAction
@@ -143,6 +152,15 @@ export const floodFillAction = (
   position,
   planeId,
   callback,
+});
+
+export const performMinCutAction = (
+  treeId: number,
+  boundingBoxId?: number,
+): PerformMinCutAction => ({
+  type: "PERFORM_MIN_CUT",
+  treeId,
+  boundingBoxId,
 });
 
 export const finishEditingAction = (): FinishEditingAction => ({
@@ -219,13 +237,15 @@ export const setContourTracingModeAction = (mode: ContourMode): SetContourTracin
 export const addBucketToUndoAction = (
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
-  maybeBucketLoadedPromise: MaybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise,
+  pendingOperations: Array<(BucketDataArray) => void>,
   tracingId: string,
 ): AddBucketToUndoAction => ({
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress,
   bucketData,
-  maybeBucketLoadedPromise,
+  maybeUnmergedBucketLoadedPromise,
+  pendingOperations: pendingOperations.slice(),
   tracingId,
 });
 

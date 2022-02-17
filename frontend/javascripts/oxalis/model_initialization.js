@@ -30,6 +30,7 @@ import {
   getSegmentationLayerByNameOrFallbackName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   getTracingsForAnnotation,
@@ -40,7 +41,10 @@ import {
   getUserConfiguration,
   getDatasetViewConfiguration,
 } from "admin/admin_rest_api";
-import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
+import {
+  initializeAnnotationAction,
+  updateCurrentMeshFileAction,
+} from "oxalis/model/actions/annotation_actions";
 import {
   initializeSettingsAction,
   initializeGpuSetupAction,
@@ -49,7 +53,6 @@ import {
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
@@ -63,11 +66,19 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
-import Store, { type AnnotationType, type TraceOrViewCommand } from "oxalis/store";
+import Store, {
+  type AnnotationType,
+  type DatasetConfiguration,
+  type TraceOrViewCommand,
+} from "oxalis/store";
 import Toast from "libs/toast";
 import UrlManager, {
   type PartialUrlManagerState,
@@ -143,6 +154,8 @@ export async function initialize(
     displayedVolumeTracings,
     getSharingToken(),
   );
+  applyAnnotationSpecificViewConfigurationInplace(annotation, initialDatasetSettings);
+
   initializeSettings(initialUserSettings, initialDatasetSettings);
 
   let initializationInformation = null;
@@ -605,24 +618,22 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
   for (const layerName of Object.keys(stateByLayer)) {
     const layerState = stateByLayer[layerName];
 
+    let effectiveLayerName;
+    try {
+      const { dataset } = Store.getState();
+      // The name of the layer could have changed if a volume tracing was created from a viewed annotation
+      effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+    } catch (e) {
+      console.error(e);
+      Toast.error(
+        `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
+      );
+      ErrorHandling.notify(e, { urlLayerState: stateByLayer });
+      continue;
+    }
+
     if (layerState.mappingInfo != null) {
       const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
-
-      let effectiveLayerName;
-      try {
-        const { dataset } = Store.getState();
-        // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-        effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
-      } catch (e) {
-        console.error(e);
-        Toast.error(
-          `URL configuration values for the layer "${layerName}" are ignored, because: ${
-            e.message
-          }`,
-        );
-        ErrorHandling.notify(e, { urlLayerState: stateByLayer });
-        continue;
-      }
 
       Store.dispatch(
         setMappingAction(effectiveLayerName, mappingName, mappingType, {
@@ -649,6 +660,53 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
           );
         }
       }
+    }
+
+    if (layerState.meshInfo) {
+      const { meshFileName: currentMeshFileName, meshes } = layerState.meshInfo;
+
+      if (currentMeshFileName != null) {
+        Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
+      }
+
+      for (const mesh of meshes) {
+        const { segmentId, seedPosition } = mesh;
+        if (mesh.isPrecomputed) {
+          const { meshFileName } = mesh;
+          Store.dispatch(
+            loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+          );
+        } else {
+          const { mappingName, mappingType } = mesh;
+          Store.dispatch(
+            loadAdHocMeshAction(
+              segmentId,
+              seedPosition,
+              { mappingName, mappingType },
+              effectiveLayerName,
+            ),
+          );
+        }
+      }
+    }
+  }
+}
+
+function applyAnnotationSpecificViewConfigurationInplace(
+  annotation: ?APIAnnotation,
+  initialDatasetSettings: DatasetConfiguration,
+) {
+  /*
+  Apply annotation-specific view configurations to the dataset settings which are persisted
+  per user per dataset. The AnnotationViewConfiguration currently only holds the "isDisabled" information per
+  layer which should override the isDisabled information in DatasetConfiguration.
+  */
+  if (annotation && annotation.viewConfiguration) {
+    for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
+      _.merge(
+        initialDatasetSettings.layers[layerName],
+        annotation.viewConfiguration.layers[layerName],
+      );
     }
   }
 }

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.geometry.Color
+import com.scalableminds.webknossos.datastore.geometry.ColorProto
 
 trait SkeletonUpdateActionHelper {
 
@@ -16,13 +16,13 @@ trait SkeletonUpdateActionHelper {
       .find(_.treeId == treeId)
       .getOrElse(throw new NoSuchElementException("Tracing does not contain tree with requested id " + treeId))
 
-  protected def convertColor(aColor: com.scalableminds.util.image.Color): Color =
-    Color(aColor.r, aColor.g, aColor.b, aColor.a)
+  protected def convertColor(aColor: com.scalableminds.util.image.Color): ColorProto =
+    ColorProto(aColor.r, aColor.g, aColor.b, aColor.a)
   protected def convertBranchPoint(aBranchPoint: UpdateActionBranchPoint): BranchPoint =
     BranchPoint(aBranchPoint.nodeId, aBranchPoint.timestamp)
   protected def convertComment(aComment: UpdateActionComment): Comment =
     Comment(aComment.nodeId, aComment.content)
-  protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]): Option[Color] =
+  protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]): Option[ColorProto] =
     aColorOpt match {
       case Some(aColor) => Some(convertColor(aColor))
       case None         => None

@@ -7,7 +7,7 @@ import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
-import com.scalableminds.webknossos.datastore.geometry.Point3D
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage._
@@ -157,7 +157,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         case (pos, idx) =>
           NodeDefaults.createInstance.copy(
             id = idx,
-            position = Point3D(pos(0).toInt, pos(1).toInt, pos(2).toInt)
+            position = Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)
           )
       }
 

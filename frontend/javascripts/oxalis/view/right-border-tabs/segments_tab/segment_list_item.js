@@ -52,7 +52,7 @@ const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmat
 const getLoadPrecomputedMeshMenuItem = (
   segment: Segment,
   currentMeshFile,
-  loadPrecomputedMeshForSegment,
+  loadPrecomputedMesh,
   andCloseContextMenu,
   layerName,
   mappingInfo,
@@ -61,7 +61,12 @@ const getLoadPrecomputedMeshMenuItem = (
 
   return (
     <MenuItemWithMappingActivationConfirmation
-      onClick={() => andCloseContextMenu(loadPrecomputedMeshForSegment(segment))}
+      onClick={() =>
+        andCloseContextMenu(
+          // $FlowIgnore[incompatible-call] If currentMeshFile is null, the menu entry is disabled and cannot be clicked
+          loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
+        )
+      }
       disabled={!hasCurrentMeshFile}
       currentMeshFile={currentMeshFile}
       layerName={layerName}
@@ -83,19 +88,37 @@ const getLoadPrecomputedMeshMenuItem = (
 
 const getComputeMeshAdHocMenuItem = (
   segment,
-  changeActiveIsosurfaceId,
+  loadAdHocMesh,
   isSegmentationLayerVisible,
   andCloseContextMenu,
 ) => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return (
     <Menu.Item
-      onClick={() =>
-        andCloseContextMenu(changeActiveIsosurfaceId(segment.id, segment.somePosition, true))
-      }
+      onClick={() => andCloseContextMenu(loadAdHocMesh(segment.id, segment.somePosition))}
       disabled={disabled}
     >
       <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>
+    </Menu.Item>
+  );
+};
+
+const getMakeSegmentActiveMenuItem = (
+  segment,
+  setActiveCell,
+  activeCellId,
+  andCloseContextMenu,
+) => {
+  const disabled = segment.id === activeCellId;
+  const title = disabled
+    ? "This segment ID is already active."
+    : "Make this the active segment ID.";
+  return (
+    <Menu.Item
+      onClick={() => andCloseContextMenu(setActiveCell(segment.id, segment.somePosition))}
+      disabled={disabled}
+    >
+      <Tooltip title={title}>Activate Segment ID</Tooltip>
     </Menu.Item>
   );
 };
@@ -116,10 +139,11 @@ type Props = {
   updateSegment: (number, $Shape<Segment>, string) => void,
   onSelectSegment: Segment => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
-  changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
+  loadAdHocMesh: (number, Vector3) => void,
+  loadPrecomputedMesh: (number, Vector3, string) => void,
+  setActiveCell: (number, somePosition?: Vector3) => void,
   isosurface: ?IsosurfaceInformation,
-  setPosition: (Vector3, boolean) => void,
-  loadPrecomputedMeshForSegment: Segment => Promise<void>,
+  setPosition: Vector3 => void,
   currentMeshFile: ?APIMeshFile,
 };
 
@@ -148,10 +172,11 @@ function _SegmentListItem({
   updateSegment,
   onSelectSegment,
   visibleSegmentationLayer,
-  changeActiveIsosurfaceId,
+  loadAdHocMesh,
+  setActiveCell,
   isosurface,
   setPosition,
-  loadPrecomputedMeshForSegment,
+  loadPrecomputedMesh,
   currentMeshFile,
 }: Props) {
   const mappedId = mapId(segment.id);
@@ -164,17 +189,18 @@ function _SegmentListItem({
       {getLoadPrecomputedMeshMenuItem(
         segment,
         currentMeshFile,
-        loadPrecomputedMeshForSegment,
+        loadPrecomputedMesh,
         andCloseContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
       )}
       {getComputeMeshAdHocMenuItem(
         segment,
-        changeActiveIsosurfaceId,
+        loadAdHocMesh,
         visibleSegmentationLayer != null,
         andCloseContextMenu,
       )}
+      {getMakeSegmentActiveMenuItem(segment, setActiveCell, activeCellId, andCloseContextMenu)}
     </Menu>
   );
 
@@ -271,7 +297,6 @@ function _SegmentListItem({
           isHovered={segment.id === hoveredSegmentId}
           isosurface={isosurface}
           handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
-          changeActiveIsosurfaceId={changeActiveIsosurfaceId}
           visibleSegmentationLayer={visibleSegmentationLayer}
           setPosition={setPosition}
         />
@@ -288,8 +313,7 @@ function _MeshInfoItem(props: {
   isosurface: ?IsosurfaceInformation,
   handleSegmentDropdownMenuVisibility: (number, boolean) => void,
   visibleSegmentationLayer: ?APISegmentationLayer,
-  changeActiveIsosurfaceId: (?number, Vector3, boolean) => void,
-  setPosition: (Vector3, boolean) => void,
+  setPosition: Vector3 => void,
 }) {
   const dispatch = useDispatch();
   const onChangeMeshVisibility = (layerName: string, id: number, isVisible: boolean) => {
@@ -339,8 +363,6 @@ function _MeshInfoItem(props: {
             return;
           }
           Store.dispatch(removeIsosurfaceAction(props.visibleSegmentationLayer.name, segment.id));
-          // reset the active mesh id so the deleted one is not reloaded immediately
-          props.changeActiveIsosurfaceId(0, [0, 0, 0], false);
         }}
       />
     </Tooltip>
@@ -383,8 +405,7 @@ function _MeshInfoItem(props: {
           {toggleVisibilityCheckbox}
           <span
             onClick={() => {
-              props.changeActiveIsosurfaceId(segment.id, seedPosition, !isPrecomputed);
-              props.setPosition(seedPosition, false);
+              props.setPosition(seedPosition);
             }}
             style={{ ...textStyle, marginLeft: 8 }}
           >

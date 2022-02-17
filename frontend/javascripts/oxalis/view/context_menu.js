@@ -1,7 +1,18 @@
 // @flow
-import React, { useEffect, type Node } from "react";
-import { Menu, notification, Divider, Tooltip, Popover, Input } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
+import type { Dispatch } from "redux";
+import { Dropdown, Menu, notification, Tooltip, Popover, Input } from "antd";
+import { connect, useDispatch, useSelector } from "react-redux";
+import React, { useEffect, type Node } from "react";
+
+import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
+import type {
+  ActiveMappingInfo,
+  OxalisState,
+  SkeletonTracing,
+  UserBoundingBox,
+  VolumeTracing,
+} from "oxalis/store";
 import {
   type AnnotationTool,
   AnnotationToolEnum,
@@ -9,20 +20,16 @@ import {
   type OrthoView,
   VolumeTools,
 } from "oxalis/constants";
-
-import type { OxalisState, SkeletonTracing, VolumeTracing, ActiveMappingInfo } from "oxalis/store";
-import type { APIDataset, APIDataLayer, APIMeshFile } from "types/api_flow_types";
-import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import type { Dispatch } from "redux";
-import { connect, useDispatch, useSelector } from "react-redux";
 import { V3 } from "libs/mjs";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
   changeUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { type UserBoundingBox } from "oxalis/store";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -30,46 +37,53 @@ import {
   setActiveNodeAction,
   createTreeAction,
   setTreeVisibilityAction,
+  createBranchPointAction,
+  deleteBranchpointByIdAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  hasAgglomerateMapping,
-  loadAgglomerateSkeletonAtPosition,
-} from "oxalis/controller/combinations/segmentation_handlers";
-import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "oxalis/controller/combinations/volume_handlers";
 import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-  withMappingActivationConfirmation,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import Model from "oxalis/model";
-import api from "oxalis/api/internal_api";
-import Toast from "libs/toast";
-import messages from "messages";
-import {
   getVisibleSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
-import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
+import {
+  hasAgglomerateMapping,
+  loadAgglomerateSkeletonAtPosition,
+} from "oxalis/controller/combinations/segmentation_handlers";
+import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
+import {
+  maybeFetchMeshFiles,
+  withMappingActivationConfirmation,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  performMinCutAction,
+  setActiveCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { roundTo, hexToRgb, rgbToHex } from "libs/utils";
-
+import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
+import Model from "oxalis/model";
 import Shortcut from "libs/shortcut_component";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import Toast from "libs/toast";
+import api from "oxalis/api/internal_api";
+import messages from "messages";
+
+const { SubMenu } = Menu;
 
 /* eslint-disable react/no-unused-prop-types */
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {|
-  contextMenuPosition: [number, number],
-  clickedNodeId: ?number,
+  contextMenuPosition: ?[number, number],
+  maybeClickedNodeId: ?number,
   clickedBoundingBoxId: ?number,
   globalPosition: Vector3,
-  viewport: OrthoView,
+  maybeViewport: ?OrthoView,
   hideContextMenu: () => void,
 |};
 
@@ -88,6 +102,8 @@ type DispatchProps = {|
   addNewBoundingBox: Vector3 => void,
   deleteBoundingBox: number => void,
   setActiveCell: (number, somePosition?: Vector3) => void,
+  createBranchPoint: (number, number) => void,
+  deleteBranchpointById: (number, number) => void,
 |};
 
 type StateProps = {|
@@ -104,14 +120,21 @@ type StateProps = {|
   mappingInfo: ActiveMappingInfo,
 |};
 
-/* eslint-enable react/no-unused-prop-types */
-
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
-type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
+type PropsWithRef = {| ...Props, inputRef: React$ElementRef<*> |};
+type NodeContextMenuOptionsProps = {|
+  ...Props,
+  viewport: OrthoView,
+  clickedNodeId: number,
+  infoRows: Array<React$Node>,
+|};
+/* eslint-enable react/no-unused-prop-types */
 type NoNodeContextMenuProps = {|
   ...Props,
+  viewport: OrthoView,
   segmentIdAtPosition: number,
   activeTool: AnnotationTool,
+  infoRows: Array<React$Node>,
 |};
 
 const MenuItemWithMappingActivationConfirmation = withMappingActivationConfirmation(Menu.Item);
@@ -235,6 +258,48 @@ function shortcutBuilder(shortcuts: Array<string>): Node {
   );
 }
 
+function getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch) {
+  const seeds = Array.from(clickedTree.nodes.values());
+  if (volumeTracing == null || seeds.length !== 2) {
+    return null;
+  }
+
+  return (
+    <SubMenu
+      key="min-cut"
+      title="Perform Min-Cut (Experimental)"
+      // For some reason, antd doesn't pass the ant-dropdown class to the
+      // sub menu itself which makes the label of the item group too big.
+      // Passing the CSS class here fixes it (font-size is 14px instead of
+      // 16px then).
+      popupClassName="ant-dropdown"
+    >
+      <Menu.ItemGroup
+        key="choose-bbox-group"
+        title="Choose a bounding box for the min-cut operation:"
+      >
+        <Menu.Item
+          key="create-new"
+          onClick={() => dispatch(performMinCutAction(clickedTree.treeId))}
+        >
+          Use default bounding box
+        </Menu.Item>
+
+        {userBoundingBoxes
+          .filter(bbox => isBoundingBoxUsableForMinCut(bbox.boundingBox, seeds))
+          .map(bbox => (
+            <Menu.Item
+              key={bbox.id}
+              onClick={() => dispatch(performMinCutAction(clickedTree.treeId, bbox.id))}
+            >
+              {bbox.name || "Unnamed bounding box"}
+            </Menu.Item>
+          ))}
+      </Menu.ItemGroup>
+    </SubMenu>
+  );
+}
+
 function NodeContextMenuOptions({
   skeletonTracing,
   clickedNodeId,
@@ -242,16 +307,23 @@ function NodeContextMenuOptions({
   deleteEdge,
   mergeTrees,
   deleteNode,
+  createBranchPoint,
+  deleteBranchpointById,
   setActiveNode,
   hideTree,
   useLegacyBindings,
+  volumeTracing,
+  infoRows,
 }: NodeContextMenuOptionsProps) {
+  const dispatch = useDispatch();
   if (skeletonTracing == null) {
     return null;
   }
+  const { userBoundingBoxes } = skeletonTracing;
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
   const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
   const areInSameTree = activeTreeId === clickedTree.treeId;
+  const isBranchpoint = clickedTree.branchPoints.find(bp => bp.nodeId === clickedNodeId) != null;
   const isTheSameNode = activeNodeId === clickedNodeId;
   let areNodesConnected = false;
   if (areInSameTree && !isTheSameNode && activeNodeId != null) {
@@ -263,15 +335,14 @@ function NodeContextMenuOptions({
   return (
     <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       <Menu.Item
-        className="node-context-menu-item"
         key="set-node-active"
         disabled={isTheSameNode}
         onClick={() => setActiveNode(clickedNodeId)}
       >
         Select this Node
       </Menu.Item>
+      {getMaybeMinCutItem(clickedTree, volumeTracing, userBoundingBoxes, dispatch)}
       <Menu.Item
-        className="node-context-menu-item"
         key="merge-trees"
         disabled={areInSameTree}
         onClick={() => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null)}
@@ -280,7 +351,6 @@ function NodeContextMenuOptions({
         {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
       </Menu.Item>
       <Menu.Item
-        className="node-context-menu-item"
         key="delete-edge"
         disabled={!areNodesConnected}
         onClick={() => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null)}
@@ -288,39 +358,53 @@ function NodeContextMenuOptions({
         Delete Edge to this Node{" "}
         {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
       </Menu.Item>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="delete-node"
-        onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}
-      >
+      <Menu.Item key="delete-node" onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}>
         Delete this Node {activeNodeId === clickedNodeId ? shortcutBuilder(["Del"]) : null}
       </Menu.Item>
+      {isBranchpoint ? (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="branchpoint-node"
+          onClick={() =>
+            activeNodeId != null ? deleteBranchpointById(clickedNodeId, clickedTree.treeId) : null
+          }
+        >
+          Unmark as Branchpoint
+        </Menu.Item>
+      ) : (
+        <Menu.Item
+          className="node-context-menu-item"
+          key="branchpoint-node"
+          onClick={() =>
+            activeNodeId != null ? createBranchPoint(clickedNodeId, clickedTree.treeId) : null
+          }
+        >
+          Mark as Branchpoint {activeNodeId === clickedNodeId ? shortcutBuilder(["B"]) : null}
+        </Menu.Item>
+      )}
+      {isTheSameNode ? null : (
+        <Menu.Item
+          key="measure-node-path-length"
+          disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+          onClick={() =>
+            activeNodeId != null
+              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
+              : null
+          }
+        >
+          Path Length to this Node
+        </Menu.Item>
+      )}
       <Menu.Item
-        className="node-context-menu-item"
-        key="measure-node-path-length"
-        disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
-        onClick={() =>
-          activeNodeId != null
-            ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
-            : null
-        }
-      >
-        Path Length to this Node
-      </Menu.Item>
-      <Menu.Item
-        className="node-context-menu-item"
         key="measure-whole-tree-length"
         onClick={() => measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name)}
       >
         Path Length of this Tree
       </Menu.Item>
-      <Menu.Item
-        className="node-context-menu-item"
-        key="hide-tree"
-        onClick={() => hideTree(clickedTree.treeId)}
-      >
+      <Menu.Item key="hide-tree" onClick={() => hideTree(clickedTree.treeId)}>
         Hide this Tree
       </Menu.Item>
+      {infoRows}
     </Menu>
   );
 }
@@ -340,7 +424,6 @@ function getBoundingBoxMenuOptions({
   const isBoundingBoxToolActive = activeTool === AnnotationToolEnum.BOUNDING_BOX;
   const newBoundingBoxMenuItem = (
     <Menu.Item
-      className="node-context-menu-item"
       key="add-new-bounding-box"
       onClick={() => {
         addNewBoundingBox(globalPosition);
@@ -366,7 +449,7 @@ function getBoundingBoxMenuOptions({
   const upscaledBBoxColor = ((hoveredBBox.color.map(colorPart => colorPart * 255): any): Vector3);
   return [
     newBoundingBoxMenuItem,
-    <Menu.Item className="node-context-menu-item" key="change-bounding-box-name">
+    <Menu.Item key="change-bounding-box-name">
       <Popover
         title="Set Bounding Box Name"
         content={
@@ -392,10 +475,10 @@ function getBoundingBoxMenuOptions({
         </span>
       </Popover>
     </Menu.Item>,
-    <Menu.Item className="node-context-menu-item" key="change-bounding-box-color">
+    <Menu.Item key="change-bounding-box-color">
       <span
         onClick={preventContextMenuFromClosing}
-        style={{ width: "100%", display: "inline-block" }}
+        style={{ width: "100%", display: "inline-block", position: "relative" }}
       >
         Change Bounding Box Color
         <input
@@ -421,7 +504,6 @@ function getBoundingBoxMenuOptions({
       </span>
     </Menu.Item>,
     <Menu.Item
-      className="node-context-menu-item"
       key="hide-bounding-box"
       onClick={() => {
         hideBoundingBox(clickedBoundingBoxId);
@@ -430,7 +512,6 @@ function getBoundingBoxMenuOptions({
       Hide Bounding Box
     </Menu.Item>,
     <Menu.Item
-      className="node-context-menu-item"
       key="delete-bounding-box"
       onClick={() => {
         deleteBoundingBox(clickedBoundingBoxId);
@@ -457,6 +538,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
     setActiveCell,
     mappingInfo,
     zoomStep,
+    infoRows,
   } = props;
 
   const dispatch = useDispatch();
@@ -479,13 +561,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
         return;
       }
 
-      await loadMeshFromFile(
-        id,
-        globalPosition,
-        currentMeshFile.meshFileName,
-        visibleSegmentationLayer,
-        dataset,
-      );
+      dispatch(loadPrecomputedMeshAction(id, globalPosition, currentMeshFile.meshFileName));
     }
   };
 
@@ -498,7 +574,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
       Toast.info("No segment found at the clicked position");
       return;
     }
-    dispatch(changeActiveIsosurfaceCellAction(id, globalPosition, true));
+    dispatch(loadAdHocMeshAction(id, globalPosition));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);
@@ -507,15 +583,10 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   const skeletonActions =
     skeletonTracing != null
       ? [
-          <Menu.Item
-            className="node-context-menu-item"
-            key="create-node"
-            onClick={() => setWaypoint(globalPosition, viewport, false)}
-          >
+          <Menu.Item key="create-node" onClick={() => setWaypoint(globalPosition, viewport, false)}>
             Create Node here
           </Menu.Item>,
           <Menu.Item
-            className="node-context-menu-item"
             key="create-node-with-tree"
             onClick={() => {
               createTree();
@@ -527,7 +598,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           </Menu.Item>,
 
           <Menu.Item
-            className="node-context-menu-item"
             key="load-agglomerate-skeleton"
             disabled={!isAgglomerateMappingEnabled.value}
             onClick={() => loadAgglomerateSkeletonAtPosition(globalPosition)}
@@ -546,7 +616,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   const layerName = visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null;
   const loadPrecomputedMeshItem = (
     <MenuItemWithMappingActivationConfirmation
-      className="node-context-menu-item"
       key="load-precomputed-mesh"
       onClick={loadPrecomputedMesh}
       disabled={!currentMeshFile}
@@ -559,11 +628,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   );
 
   const computeMeshAdHocItem = (
-    <Menu.Item
-      className="node-context-menu-item"
-      key="compute-mesh-adhc"
-      onClick={computeMeshAdHoc}
-    >
+    <Menu.Item key="compute-mesh-adhc" onClick={computeMeshAdHoc}>
       Compute Mesh (ad-hoc)
     </Menu.Item>
   );
@@ -575,7 +640,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           // would be an eraser effectively).
           segmentIdAtPosition > 0 ? (
             <Menu.Item
-              className="node-context-menu-item"
               key="select-cell"
               onClick={() => {
                 setActiveCell(segmentIdAtPosition, globalPosition);
@@ -588,7 +652,6 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
           <Menu.Item
-            className="node-context-menu-item"
             key="fill-cell"
             onClick={() => handleFloodFillFromGlobalPosition(globalPosition, viewport)}
           >
@@ -620,11 +683,26 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
   return (
     <Menu onClick={hideContextMenu} style={{ borderRadius: 6 }} mode="vertical">
       {allActions}
+      {infoRows}
     </Menu>
   );
 }
 
-function ContextMenu(props: Props) {
+function ContextMenuContainer(props: Props) {
+  /*
+   * This container for the context menu is *always* rendered.
+   * An input ref is stored for the actual container which is
+   * passed to antd <Dropdown /> so that it renders the actual
+   * menu into that container when desired.
+   * When <Dropdown /> is not used to render the menu, antd assumes
+   * that the <Menu /> is a navigational menu. Navigational menus
+   * behave differently (predominantly, their styling uses way more
+   * padding and entries are rendered as links). In earlier implementations
+   * of the context menu, we simply overrode those styles. However, at the
+   * latest when sub menus are used, the styling issues become too complicated
+   * to deal with.
+   */
+
   const inputRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -633,133 +711,196 @@ function ContextMenu(props: Props) {
     }
   }, [inputRef.current]);
 
+  const { contextMenuPosition, hideContextMenu } = props;
+
+  return (
+    <>
+      <React.Fragment>
+        <div
+          className="node-context-menu-overlay"
+          onClick={hideContextMenu}
+          onContextMenu={evt => {
+            evt.preventDefault();
+            hideContextMenu();
+          }}
+          style={{ display: contextMenuPosition == null ? "none" : "inherit" }}
+        />
+        {/*
+          This div serves as a "prison" for the sticky context menu. The above div
+          cannot be used since the context menu would then be closed on every click.
+          Since both divs are absolutely positioned and cover the whole page,
+          avoid blocking click events by temporarily disabling them for this "prison"
+          div.
+        */}
+        <div
+          className="node-context-menu-overlay"
+          style={{
+            pointerEvents: "none",
+            display: contextMenuPosition == null ? "none" : "inherit",
+          }}
+        >
+          <div
+            style={{
+              position: "sticky",
+              left: contextMenuPosition != null ? contextMenuPosition[0] : 0,
+              top: contextMenuPosition != null ? contextMenuPosition[1] : 0,
+              width: "fit-content",
+              pointerEvents: "all",
+            }}
+            className="node-context-menu"
+            tabIndex={-1}
+            ref={inputRef}
+          />
+          <ContextMenuInner {...props} inputRef={inputRef} />
+        </div>
+      </React.Fragment>
+    </>
+  );
+}
+
+function ContextMenuInner(propsWithInputRef: PropsWithRef) {
+  const { inputRef, ...props } = propsWithInputRef;
   const {
     skeletonTracing,
     activeTool,
-    clickedNodeId,
+    maybeClickedNodeId,
     contextMenuPosition,
     hideContextMenu,
     datasetScale,
     globalPosition,
+    maybeViewport,
   } = props;
-  const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
-  const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
 
-  let nodeContextMenuTree = null;
-  let nodeContextMenuNode = null;
-  if (skeletonTracing != null && clickedNodeId != null) {
-    getNodeAndTree(skeletonTracing, clickedNodeId).map(([tree, node]) => {
-      nodeContextMenuNode = node;
-      nodeContextMenuTree = tree;
-    });
-  }
-  const positionToMeasureDistanceTo =
-    nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
-  const activeNode =
-    activeNodeId != null && skeletonTracing != null
-      ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
-      : null;
-  const distanceToSelection =
-    activeNode != null
-      ? [
-          formatNumberToLength(
-            V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
-          ),
-          formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
-        ]
-      : null;
-  const nodePositionAsString =
-    nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
+  let overlay = <div />;
+  if (contextMenuPosition != null && maybeViewport != null) {
+    const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
+    const activeNodeId = skeletonTracing != null ? skeletonTracing.activeNodeId : null;
 
-  const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
+    let nodeContextMenuTree = null;
+    let nodeContextMenuNode = null;
+    if (skeletonTracing != null && maybeClickedNodeId != null) {
+      getNodeAndTree(skeletonTracing, maybeClickedNodeId).map(([tree, node]) => {
+        nodeContextMenuNode = node;
+        nodeContextMenuTree = tree;
+      });
+    }
+    const positionToMeasureDistanceTo =
+      nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
+    const activeNode =
+      activeNodeId != null && skeletonTracing != null
+        ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
+        : null;
+    const distanceToSelection =
+      activeNode != null
+        ? [
+            formatNumberToLength(
+              V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+            ),
+            formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
+          ]
+        : null;
+    const nodePositionAsString =
+      nodeContextMenuNode != null ? positionToString(nodeContextMenuNode.position) : "";
 
-  const infoRows = [];
+    const segmentIdAtPosition = getSegmentIdForPosition(globalPosition);
 
-  if (clickedNodeId != null && nodeContextMenuTree != null) {
-    infoRows.push(
-      <div key="nodeInfo" className="node-context-menu-item">
-        Node with Id {clickedNodeId} in Tree {nodeContextMenuTree.treeId}
-      </div>,
+    const infoRows = [];
+
+    if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
+      infoRows.push(
+        <div key="nodeInfo" className="node-context-menu-item">
+          Node with Id {maybeClickedNodeId} in Tree {nodeContextMenuTree.treeId}
+        </div>,
+      );
+    }
+    if (nodeContextMenuNode != null) {
+      infoRows.push(
+        <div key="positionInfo" className="node-context-menu-item">
+          Position: {nodePositionAsString}
+          {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
+        </div>,
+      );
+    } else {
+      const positionAsString = positionToString(globalPosition);
+      infoRows.push(
+        <div key="positionInfo" className="node-context-menu-item">
+          Position: {positionAsString}
+          {copyIconWithTooltip(positionAsString, "Copy position")}
+        </div>,
+      );
+    }
+
+    if (distanceToSelection != null) {
+      infoRows.push(
+        <div key="distanceInfo" className="node-context-menu-item">
+          <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
+          {maybeClickedNodeId != null ? "Node" : "Position"}
+          {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
+        </div>,
+      );
+    }
+
+    if (segmentIdAtPosition > 0) {
+      infoRows.push(
+        <div key="copy-cell" className="node-context-menu-item">
+          <div className="cell-context-icon" alt="Segment Icon" />
+          Segment ID: {segmentIdAtPosition}{" "}
+          {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
+        </div>,
+      );
+    }
+
+    const maybeHoveredCellMenuItem = getMaybeHoveredCellMenuItem(globalPosition);
+    if (!maybeHoveredCellMenuItem) {
+      infoRows.push(maybeHoveredCellMenuItem);
+    }
+
+    infoRows.unshift(
+      <Menu.Divider
+        key="divider"
+        className="hide-if-first hide-if-last"
+        style={{ margin: "4px 0px" }}
+      />,
     );
-  }
-  if (nodeContextMenuNode != null) {
-    infoRows.push(
-      <div key="positionInfo" className="node-context-menu-item">
-        Position: {nodePositionAsString}
-        {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
-      </div>,
-    );
-  } else {
-    const positionAsString = positionToString(globalPosition);
-    infoRows.push(
-      <div key="positionInfo" className="node-context-menu-item">
-        Position: {positionAsString}
-        {copyIconWithTooltip(positionAsString, "Copy position")}
-      </div>,
-    );
-  }
 
-  if (distanceToSelection != null) {
-    infoRows.push(
-      <div key="distanceInfo" className="node-context-menu-item">
-        <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to this{" "}
-        {clickedNodeId != null ? "Node" : "Position"}
-        {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
-      </div>,
-    );
-  }
-
-  if (segmentIdAtPosition > 0) {
-    infoRows.push(
-      <div key="copy-cell" className="node-context-menu-item">
-        <div className="cell-context-icon" alt="Segment Icon" />
-        Segment ID: {segmentIdAtPosition}{" "}
-        {copyIconWithTooltip(segmentIdAtPosition, "Copy Segment ID")}
-      </div>,
-    );
-  }
-
-  const maybeHoveredCellMenuItem = getMaybeHoveredCellMenuItem(globalPosition);
-  if (!maybeHoveredCellMenuItem) {
-    infoRows.push(maybeHoveredCellMenuItem);
+    // It's important to not use <NodeContextMenuOptions ...>
+    // or <NoNodeContextMenuOptions ... />
+    // for the following two expressions, since this breaks
+    // antd's internal population of the correct class names
+    // for the menu.
+    overlay =
+      maybeClickedNodeId != null
+        ? NodeContextMenuOptions({
+            clickedNodeId: maybeClickedNodeId,
+            infoRows,
+            viewport: maybeViewport,
+            ...props,
+          })
+        : NoNodeContextMenuOptions({
+            activeTool,
+            segmentIdAtPosition,
+            infoRows,
+            viewport: maybeViewport,
+            ...props,
+          });
   }
 
   return (
     <React.Fragment>
-      <div
-        className="node-context-menu-overlay"
-        onClick={hideContextMenu}
-        onContextMenu={evt => {
-          evt.preventDefault();
-          hideContextMenu();
-        }}
-      />
-      {/* This div serves as a "prison" for the sticky context menu. The above div
-      cannot be used since the context menu would then be closed on every click.
-      Since both divs are absolutely positioned and cover the whole page,
-      avoid blocking click events by temporarily disabling them for this "prison" div. */}
-      <div className="node-context-menu-overlay" style={{ pointerEvents: "none" }}>
-        <div
-          style={{
-            position: "sticky",
-            left: contextMenuPosition[0],
-            top: contextMenuPosition[1],
-            width: "fit-content",
-            pointerEvents: "all",
-          }}
-          className="node-context-menu"
-          tabIndex={-1}
-          ref={inputRef}
-        >
+      {inputRef != null ? (
+        <>
           <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-          {clickedNodeId != null
-            ? NodeContextMenuOptions({ ...props, clickedNodeId })
-            : NoNodeContextMenuOptions({ activeTool, segmentIdAtPosition, ...props })}
-
-          <Divider className="hide-if-first hide-if-last" style={{ margin: "4px 0px" }} />
-          {infoRows}
-        </div>
-      </div>
+          <Dropdown
+            overlay={overlay}
+            overlayClassName="dropdown-overlay-container-for-context-menu"
+            visible={contextMenuPosition != null}
+            getPopupContainer={() => inputRef.current}
+            destroyPopupOnHide
+          >
+            <div />
+          </Dropdown>
+        </>
+      ) : null}
     </React.Fragment>
   );
 }
@@ -773,6 +914,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   deleteNode(nodeId: number, treeId: number) {
     dispatch(deleteNodeAction(nodeId, treeId));
+  },
+  createBranchPoint(nodeId: number, treeId: number) {
+    dispatch(createBranchPointAction(nodeId, treeId));
+  },
+  deleteBranchpointById(nodeId: number, treeId: number) {
+    dispatch(deleteBranchpointByIdAction(nodeId, treeId));
   },
   setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));
@@ -832,4 +979,4 @@ function mapStateToProps(state: OxalisState): StateProps {
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-)(ContextMenu);
+)(ContextMenuContainer);

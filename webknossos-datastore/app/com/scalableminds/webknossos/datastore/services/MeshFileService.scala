@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import java.nio.file.{Path, Paths}
 
 import ch.systemsx.cisd.hdf5.HDF5FactoryProvider
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -31,7 +31,7 @@ object ListMeshChunksRequest {
 
 case class MeshChunkDataRequest(
     meshFile: String,
-    position: Point3D,
+    position: Vec3Int,
     segmentId: Long
 )
 
@@ -97,7 +97,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   def listMeshChunksForSegment(organizationName: String,
                                dataSetName: String,
                                dataLayerName: String,
-                               listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Point3D]] = {
+                               listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Vec3Int]] = {
     val meshFilePath =
       dataBaseDir
         .resolve(organizationName)
@@ -145,15 +145,15 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield (data, encoding)
   }
 
-  private def positionLiteral(position: Point3D) =
+  private def positionLiteral(position: Vec3Int) =
     s"${position.x}_${position.y}_${position.z}"
 
-  private def parsePositionLiteral(positionLiteral: String): Fox[Point3D] = {
+  private def parsePositionLiteral(positionLiteral: String): Fox[Vec3Int] = {
     val split = positionLiteral.split("_").toList
     for {
       _ <- bool2Fox(split.length == 3)
       asInts <- tryo { split.map(_.toInt) }
-    } yield Point3D(asInts.head, asInts(1), asInts(2))
+    } yield Vec3Int(asInts.head, asInts(1), asInts(2))
   }
 
   def initHDFReader(meshFilePath: Path): CachedMeshFile = {

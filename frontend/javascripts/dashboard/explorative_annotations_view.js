@@ -70,6 +70,7 @@ type State = {
   searchQuery: string,
   tags: Array<string>,
   isLoading: boolean,
+  performedInitialFetch: boolean,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -96,15 +97,21 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     searchQuery: "",
     tags: [],
     isLoading: false,
+    performedInitialFetch: false,
   };
 
   componentDidMount() {
     this.setState(persistence.load(this.props.history));
-    this.fetchNextPage(0);
   }
 
-  componentDidUpdate() {
+  componentDidUpdate(_prevProps, prevState) {
     persistence.persist(this.props.history, this.state);
+    if (
+      this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings ||
+      !this.state.performedInitialFetch
+    ) {
+      this.fetchNextPage(0);
+    }
   }
 
   getCurrentModeState = () =>
@@ -146,7 +153,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
     const previousTracings = this.getCurrentModeState().tracings;
-
+    if (this.getCurrentModeState().loadedAllTracings) {
+      return;
+    }
     try {
       this.setState({ isLoading: true });
       const tracings =
@@ -162,7 +171,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     } catch (error) {
       handleGenericError(error);
     } finally {
-      this.setState({ isLoading: false });
+      this.setState({ isLoading: false, performedInitialFetch: true });
     }
   };
 
@@ -210,8 +219,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
 
     const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
-    const { typ, id } = tracing;
-    if (!this.state.shouldShowArchivedTracings) {
+    const { typ, id, state } = tracing;
+    if (state === "Active") {
       return (
         <div>
           <Link to={`/annotations/${typ}/${id}`}>
@@ -237,7 +246,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <br />
         </div>
       );
-    } else {
+    } else if (state === "Finished") {
       return (
         <div>
           <AsyncLink
@@ -250,6 +259,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <br />
         </div>
       );
+    } else {
+      return null;
     }
   };
 

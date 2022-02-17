@@ -5,6 +5,7 @@ import type {
   ReadOnlyTracing,
   SkeletonTracing,
   Tracing,
+  UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
 import { type ServerTracing, type TracingType, TracingTypeEnum } from "types/api_flow_types";
@@ -69,3 +70,8 @@ export function selectTracing(
 
   return volumeTracing;
 }
+
+export const getUserBoundingBoxesFromState = (state: OxalisState): Array<UserBoundingBox> => {
+  const maybeSomeTracing = maybeGetSomeTracing(state.tracing);
+  return maybeSomeTracing != null ? maybeSomeTracing.userBoundingBoxes : [];
+};

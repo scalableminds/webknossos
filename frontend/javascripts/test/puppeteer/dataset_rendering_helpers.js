@@ -108,7 +108,7 @@ export async function screenshotSandboxWithMappingLink(
 async function waitForMappingEnabled(page: Page) {
   let isMappingEnabled;
   while (!isMappingEnabled) {
-    await page.waitFor(5000);
+    await page.waitForTimeout(5000);
     isMappingEnabled = await page.evaluate(
       "webknossos.apiReady().then(async api => api.data.isMappingEnabled())",
     );
@@ -118,7 +118,7 @@ async function waitForMappingEnabled(page: Page) {
 async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   while (inputCatchers == null || inputCatchers.length < 4) {
-    await page.waitFor(500);
+    await page.waitForTimeout(500);
     inputCatchers = await page.$(".inputcatcher");
   }
 }
@@ -129,7 +129,7 @@ async function waitForRenderingFinish(page: Page) {
   let changedPixels = Infinity;
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || changedPixels > 0) {
-    await page.waitFor(10000);
+    await page.waitForTimeout(10000);
     currentShot = await page.screenshot({ fullPage: true });
     if (lastShot != null) {
       changedPixels = pixelmatch(lastShot, currentShot, {}, 1920, 1080, {

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.DataCube
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
@@ -13,7 +13,7 @@ case class CachedCube(
     organization: String,
     dataSourceName: String,
     dataLayerName: String,
-    resolution: Point3D,
+    resolution: Vec3Int,
     x: Int,
     y: Int,
     z: Int

@@ -5,14 +5,14 @@ import java.io.InputStream
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundingBoxProto}
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -30,13 +30,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private val DEFAULT_INTERPOLATION = false
   private val DEFAULT_TIMESTAMP = 0L
 
-  @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
   def parse(name: String,
             nmlInputStream: InputStream,
             overwritingDataSetName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
-      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] =
+      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] =
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -71,30 +70,31 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
 
         logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
-        val volumeTracingWithDataLocation =
-          if (volumes.isEmpty) None
-          else
-            Some(
-              (VolumeTracing(
-                 None,
-                 boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
-                 timestamp,
-                 dataSetName,
-                 editPosition,
-                 editRotation,
-                 ElementClass.uint32,
-                 volumes.head.fallbackLayer,
-                 0,
-                 0,
-                 zoomLevel,
-                 None,
-                 userBoundingBoxes,
-                 organizationName
-               ),
-               basePath.getOrElse("") + volumes.head.location)
+        val volumeLayers: List[UploadedVolumeLayer] =
+          volumes.toList.map { v =>
+            UploadedVolumeLayer(
+              VolumeTracing(
+                None,
+                boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
+                timestamp,
+                dataSetName,
+                editPosition,
+                editRotation,
+                ElementClass.uint32,
+                v.fallbackLayerName,
+                0,
+                0,
+                zoomLevel,
+                None,
+                userBoundingBoxes,
+                organizationName
+              ),
+              basePath.getOrElse("") + v.dataZipPath,
+              v.name
             )
+          }
 
-        val skeletonTracing =
+        val skeletonTracingOpt: Option[SkeletonTracing] =
           if (treesSplit.isEmpty) None
           else
             Some(
@@ -115,7 +115,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
               )
             )
 
-        (skeletonTracing, volumeTracingWithDataLocation, description)
+        (skeletonTracingOpt, volumeLayers, description)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
@@ -146,8 +146,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     } yield TreeGroup(name, id, children)
   }
 
-  private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[Volume] =
-    volumeNodes.map(node => Volume(getSingleAttribute(node, "location"), getSingleAttributeOpt(node, "fallbackLayer")))
+  private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[NmlVolumeTag] =
+    volumeNodes.map(
+      node =>
+        NmlVolumeTag(
+          getSingleAttribute(node, "location"),
+          getSingleAttributeOpt(node, "fallbackLayer"),
+          getSingleAttributeOpt(node, "name")
+      ))
 
   private def parseTrees(treeNodes: NodeSeq,
                          branchPoints: Map[Int, List[BranchPoint]],
@@ -158,9 +164,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       .toSingleBox(Messages("nml.element.invalid", "trees"))
 
   @SuppressWarnings(Array("TraversableHead")) // We check that size == 1 before accessing head
-  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider): Seq[NamedBoundingBox] =
+  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider): Seq[NamedBoundingBoxProto] =
     if (boundingBoxNodes.size == 1 && getSingleAttribute(boundingBoxNodes.head, "id").isEmpty) {
-      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head).map(NamedBoundingBox(0, None, None, None, _))
+      Seq.empty ++ parseBoundingBox(boundingBoxNodes.head).map(NamedBoundingBoxProto(0, None, None, None, _))
     } else {
       boundingBoxNodes.flatMap(node => {
         val idText = getSingleAttribute(node, "id")
@@ -171,20 +177,20 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           color = parseColor(node)
           boundingBox <- parseBoundingBox(node)
           nameOpt = if (name.isEmpty) None else Some(name)
-        } yield NamedBoundingBox(id, nameOpt, isVisible, color, boundingBox)
+        } yield NamedBoundingBoxProto(id, nameOpt, isVisible, color, boundingBox)
       })
     }
 
   private def parseTaskBoundingBox(
       nodes: NodeSeq,
       isTask: Boolean,
-      userBoundingBoxes: Seq[NamedBoundingBox]): Option[Either[BoundingBox, NamedBoundingBox]] =
+      userBoundingBoxes: Seq[NamedBoundingBoxProto]): Option[Either[BoundingBox, NamedBoundingBoxProto]] =
     nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
       if (isTask) {
         Left(bb)
       } else {
         val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
-        Right(NamedBoundingBox(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
+        Right(NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb))
       }
     }
 
@@ -196,7 +202,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       width <- getSingleAttribute(node, "width").toIntOpt
       height <- getSingleAttribute(node, "height").toIntOpt
       depth <- getSingleAttribute(node, "depth").toIntOpt
-    } yield BoundingBox(Point3D(topLeftX, topLeftY, topLeftZ), width, height, depth)
+    } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
   private def parseDataSetName(nodes: NodeSeq): String =
     nodes.headOption.map(node => getSingleAttribute(node, "name")).getOrElse("")
@@ -213,10 +219,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseTime(nodes: NodeSeq): Long =
     nodes.headOption.flatMap(node => getSingleAttribute(node, "ms").toLongOpt).getOrElse(DEFAULT_TIME)
 
-  private def parseEditPosition(nodes: NodeSeq): Option[Point3D] =
-    nodes.headOption.flatMap(parsePoint3D)
+  private def parseEditPosition(nodes: NodeSeq): Option[Vec3Int] =
+    nodes.headOption.flatMap(parseVec3Int)
 
-  private def parseEditRotation(nodes: NodeSeq): Option[Vector3D] =
+  private def parseEditRotation(nodes: NodeSeq): Option[Vec3Double] =
     nodes.headOption.flatMap(parseRotationForParams)
 
   private def parseZoomLevel(nodes: NodeSeq) =
@@ -233,7 +239,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         } ?~ Messages("nml.node.id.invalid", "branchpoint", getSingleAttribute(branchPoint, "id"))
     }.toList.toSingleBox(Messages("nml.element.invalid", "branchpoints"))
 
-  private def parsePoint3D(node: XMLNode) = {
+  private def parseVec3Int(node: XMLNode) = {
     val xText = getSingleAttribute(node, "x")
     val yText = getSingleAttribute(node, "y")
     val zText = getSingleAttribute(node, "z")
@@ -241,7 +247,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       x <- xText.toIntOpt.orElse(xText.toFloatOpt.map(math.round))
       y <- yText.toIntOpt.orElse(yText.toFloatOpt.map(math.round))
       z <- zText.toIntOpt.orElse(zText.toFloatOpt.map(math.round))
-    } yield Point3D(x, y, z)
+    } yield Vec3Int(x, y, z)
   }
 
   private def parseRotationForParams(node: XMLNode) =
@@ -249,14 +255,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       rotX <- getSingleAttribute(node, "xRot").toDoubleOpt
       rotY <- getSingleAttribute(node, "yRot").toDoubleOpt
       rotZ <- getSingleAttribute(node, "zRot").toDoubleOpt
-    } yield Vector3D(rotX, rotY, rotZ)
+    } yield Vec3Double(rotX, rotY, rotZ)
 
   private def parseRotationForNode(node: XMLNode) =
     for {
       rotX <- getSingleAttribute(node, "rotX").toDoubleOpt
       rotY <- getSingleAttribute(node, "rotY").toDoubleOpt
       rotZ <- getSingleAttribute(node, "rotZ").toDoubleOpt
-    } yield Vector3D(rotX, rotY, rotZ)
+    } yield Vec3Double(rotX, rotY, rotZ)
 
   private def parseColorOpt(node: XMLNode) =
     for {
@@ -265,7 +271,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       colorGreen <- getSingleAttribute(node, "color.b").toFloatOpt
       colorAlpha <- getSingleAttribute(node, "color.a").toFloatOpt
     } yield {
-      Color(colorRed, colorBlue, colorGreen, colorAlpha)
+      ColorProto(colorRed, colorBlue, colorGreen, colorAlpha)
     }
 
   private def parseColor(node: XMLNode) =
@@ -277,7 +283,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseGroupId(node: XMLNode) =
     getSingleAttribute(node, "groupId").toIntOpt
 
-  private def parseVisibility(node: XMLNode, color: Option[Color]): Option[Boolean] =
+  private def parseVisibility(node: XMLNode, color: Option[ColorProto]): Option[Boolean] =
     getSingleAttribute(node, "isVisible").toBooleanOpt match {
       case Some(isVisible) => Some(isVisible)
       case None            => color.map(c => !c.a.isNearZero)
@@ -382,7 +388,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     for {
       id <- nodeIdText.toIntOpt ?~ Messages("nml.node.id.invalid", "", nodeIdText)
       radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
-      position <- parsePoint3D(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
+      position <- parseVec3Int(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)

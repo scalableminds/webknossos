@@ -217,7 +217,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
                                             unpackToDir: Path,
                                             dataSourceId: DataSourceId,
-                                            layersToLink: Option[List[LinkedLayerIdentifier]]) =
+                                            layersToLink: Option[List[LinkedLayerIdentifier]]): Fox[Unit] =
     if (datasetNeedsConversion)
       Fox.successful(())
     else {
@@ -241,9 +241,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       case Failure(msg, e, _) =>
         deleteOnDisk(dataSourceId.team, dataSourceId.name, dataSetNeedsConversion, Some("the upload failed"))
         dataSourceRepository.cleanUpDataSource(dataSourceId)
-        val errorMsg = s"Error $label: $msg, $e"
-        logger.warn(errorMsg)
-        Fox.failure(errorMsg)
+        logger.warn(s"Error while $label: $msg, $e")
+        for {
+          _ <- result ?~> f"Error while $label"
+        } yield ()
     }
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =

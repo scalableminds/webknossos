@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.util.Base64
 
-import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -22,7 +22,7 @@ trait VolumeUpdateActionHelper {
 
 trait ApplyableVolumeAction extends VolumeUpdateAction
 
-case class UpdateBucketVolumeAction(position: Point3D,
+case class UpdateBucketVolumeAction(position: Vec3Int,
                                     cubeSize: Int,
                                     zoomStep: Int,
                                     base64Data: String,
@@ -43,8 +43,8 @@ object UpdateBucketVolumeAction {
 
 case class UpdateTracingVolumeAction(
     activeSegmentId: Long,
-    editPosition: Point3D,
-    editRotation: Vector3D,
+    editPosition: Vec3Int,
+    editRotation: Vec3Double,
     largestSegmentId: Long,
     zoomLevel: Double,
     actionTimestamp: Option[Long] = None,
@@ -109,7 +109,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
 
-    def updateUserBoundingBoxes(): Seq[geometry.NamedBoundingBox] =
+    def updateUserBoundingBoxes(): Seq[geometry.NamedBoundingBoxProto] =
       tracing.userBoundingBoxes.map { boundingBox =>
         if (boundingBoxId.forall(_ == boundingBox.id))
           boundingBox.copy(isVisible = Some(isVisible))
@@ -172,7 +172,7 @@ object UpdateTdCamera {
 }
 
 case class CreateSegmentVolumeAction(id: Long,
-                                     anchorPosition: Option[Point3D],
+                                     anchorPosition: Option[Vec3Int],
                                      name: Option[String],
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None)
@@ -186,7 +186,7 @@ case class CreateSegmentVolumeAction(id: Long,
     CompactVolumeUpdateAction("createSegment", actionTimestamp, Json.obj("id" -> id))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newSegment = Segment(id, anchorPosition.map(point3DToProto), name, creationTime)
+    val newSegment = Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime)
     tracing.addSegments(newSegment)
   }
 }
@@ -196,7 +196,7 @@ object CreateSegmentVolumeAction {
 }
 
 case class UpdateSegmentVolumeAction(id: Long,
-                                     anchorPosition: Option[Point3D],
+                                     anchorPosition: Option[Vec3Int],
                                      name: Option[String],
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None)
@@ -213,7 +213,7 @@ case class UpdateSegmentVolumeAction(id: Long,
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def segmentTransform(segment: Segment): Segment =
       segment.copy(
-        anchorPosition = anchorPosition.map(point3DToProto),
+        anchorPosition = anchorPosition.map(vec3IntToProto),
         name = name,
         creationTime = creationTime
       )

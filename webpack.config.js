@@ -62,9 +62,6 @@ module.exports = function(env = {}) {
   };
 
   return {
-    experiments: {
-      syncWebAssembly: true,
-    },
     entry: {
       main: "main.js",
       light: "style_light.js",

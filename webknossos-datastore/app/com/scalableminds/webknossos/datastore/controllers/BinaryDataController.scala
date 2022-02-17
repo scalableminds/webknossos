@@ -6,7 +6,7 @@ import java.util.Base64
 
 import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -184,7 +184,7 @@ class BinaryDataController @Inject()(
             new VoxelPosition(x * cubeSize * resolution,
                               y * cubeSize * resolution,
                               z * cubeSize * resolution,
-                              Point3D(resolution, resolution, resolution)),
+                              Vec3Int(resolution, resolution, resolution)),
             cubeSize,
             cubeSize,
             cubeSize
@@ -399,7 +399,7 @@ class BinaryDataController @Inject()(
               segmentationLayer,
               request.body.cuboid(dataLayer),
               request.body.segmentId,
-              request.body.voxelDimensions,
+              request.body.subsamplingStrides,
               request.body.scale,
               request.body.mapping,
               request.body.mappingType

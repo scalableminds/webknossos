@@ -5,7 +5,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
@@ -253,7 +253,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
         for {
           positionOpt <- tracingService.findData(tracingId)
         } yield {
-          Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Point3D(1, 1, 1))))
+          Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Vec3Int(1, 1, 1))))
         }
       }
     }

@@ -159,6 +159,5 @@ trait ExtendedController
     with FoxImplicits
     with ResultImplicits
     with Status
-    with WithHighlightableResult
     with WithFilters
     with I18nSupport

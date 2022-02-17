@@ -6,8 +6,8 @@ import "geometry.proto";
 
 message Node {
     required int32 id = 1;
-    required Point3D position = 2;
-    required Vector3D rotation = 3;
+    required Vec3IntProto position = 2;
+    required Vec3DoubleProto rotation = 3;
     required float radius = 4;
     required int32 viewport = 5;
     required int32 resolution = 6;
@@ -35,7 +35,7 @@ message Tree {
      required int32 treeId = 1;
      repeated Node nodes = 2;
      repeated Edge edges = 3;
-     optional Color color = 4;
+     optional ColorProto color = 4;
      repeated BranchPoint branchPoints = 5;
      repeated Comment comments = 6;
      required string name = 7;
@@ -54,15 +54,15 @@ message SkeletonTracing {
     required string dataSetName = 1;
     repeated Tree trees = 2;
     required int64 createdTimestamp = 3;
-    optional BoundingBox boundingBox = 4;
+    optional BoundingBoxProto boundingBox = 4;
     optional int32 activeNodeId = 5;
-    required Point3D editPosition = 6;
-    required Vector3D editRotation = 7;
+    required Vec3IntProto editPosition = 6;
+    required Vec3DoubleProto editRotation = 7;
     required double zoomLevel = 8;
     required int64 version = 9;
-    optional BoundingBox userBoundingBox = 10;
+    optional BoundingBoxProto userBoundingBox = 10;
     repeated TreeGroup treeGroups = 11;
-    repeated NamedBoundingBox userBoundingBoxes = 12;
+    repeated NamedBoundingBoxProto userBoundingBoxes = 12;
     optional string organizationName = 13; // to identify the dataset (may differ from annotation orga)
 }
 

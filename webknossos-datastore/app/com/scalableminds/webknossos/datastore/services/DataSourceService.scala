@@ -126,7 +126,7 @@ class DataSourceService @Inject()(
     val resolutionsByZ = dataSource.dataLayers.map(_.resolutions.sortBy(_.z))
 
     val errors = List(
-      Check(dataSource.scale.isValid, "DataSource scale is invalid"),
+      Check(dataSource.scale.isStrictlyPositive, "DataSource scale is invalid"),
       Check(resolutionsByX == resolutionsByY && resolutionsByX == resolutionsByZ,
             "Scales do not monotonically increase in all dimensions"),
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),

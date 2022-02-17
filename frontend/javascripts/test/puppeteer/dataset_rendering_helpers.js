@@ -106,6 +106,7 @@ export async function screenshotSandboxWithMappingLink(
 }
 
 async function waitForMappingEnabled(page: Page) {
+  console.log("Waiting for mapping to be enabled");
   let isMappingEnabled;
   while (!isMappingEnabled) {
     await page.waitForTimeout(5000);
@@ -113,6 +114,7 @@ async function waitForMappingEnabled(page: Page) {
       "webknossos.apiReady().then(async api => api.data.isMappingEnabled())",
     );
   }
+  console.log("Mapping was enabled");
 }
 
 async function waitForTracingViewLoad(page: Page) {
@@ -147,12 +149,16 @@ async function openTracingView(
   optionalViewOverride: ?string,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`), {
+  const url = urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`);
+  await page.goto(url, {
     timeout: 0,
   });
 
+  console.log(`Opening tracing view at ${url}`);
   await waitForTracingViewLoad(page);
+  console.log("Loaded tracing view");
   await waitForRenderingFinish(page);
+  console.log("Finished rendering tracing view");
 }
 
 async function openSandboxView(
@@ -162,21 +168,23 @@ async function openSandboxView(
   optionalViewOverride: ?string,
 ) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
-  await page.goto(
-    urljoin(
-      baseUrl,
-      `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
-    ),
-    {
-      timeout: 0,
-    },
+  const url = urljoin(
+    baseUrl,
+    `/datasets/${datasetId.owningOrganization}/${datasetId.name}/sandbox/skeleton${urlSlug}`,
   );
+  await page.goto(url, {
+    timeout: 0,
+  });
 
+  console.log(`Opening sandbox tracing view at ${url}`);
   await waitForTracingViewLoad(page);
+  console.log("Loaded tracing view");
   await waitForRenderingFinish(page);
+  console.log("Finished rendering tracing view");
 }
 
 async function screenshotTracingView(page: Page): Promise<Screenshot> {
+  console.log("Screenshot tracing view");
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [
     "#inputcatcher_TDView",

@@ -4,15 +4,8 @@ import { message } from "antd";
 import React from "react";
 import _ from "lodash";
 
+import type { Action } from "oxalis/model/actions/actions";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
-import {
-  type CopySegmentationLayerAction,
-  updateDirectionAction,
-  updateSegmentAction,
-  finishAnnotationStrokeAction,
-  type SetActiveCellAction,
-  type ClickSegmentAction,
-} from "oxalis/model/actions/volumetracing_actions";
 import {
   ResolutionInfo,
   getBoundaries,
@@ -69,6 +62,14 @@ import {
 } from "oxalis/model/accessors/tool_accessor";
 import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+import {
+  updateDirectionAction,
+  updateSegmentAction,
+  finishAnnotationStrokeAction,
+  type SetActiveCellAction,
+  type ClickSegmentAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   updateTemporarySettingAction,
   type UpdateTemporarySettingAction,
@@ -102,13 +103,18 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
+import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
-  yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
+  yield* takeEveryUnlessBusy(
+    "COPY_SEGMENTATION_LAYER",
+    copySegmentationLayer,
+    "Copying from neighbor slice",
+  );
   yield _takeLeading("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
@@ -423,7 +429,10 @@ function* labelWithVoxelBuffer2D(
   );
 }
 
-function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
+function* copySegmentationLayer(action: Action): Saga<void> {
+  if (action.type !== "COPY_SEGMENTATION_LAYER") {
+    throw new Error("Satisfy flow");
+  }
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -581,7 +590,7 @@ export function* floodFill(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
 
-    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+    const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
 
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
@@ -604,7 +613,7 @@ export function* floodFill(): Saga<void> {
       seedPosition,
       activeCellId,
       dimensionIndices,
-      currentViewportBounding,
+      boundingBoxForFloodFill,
       labeledZoomStep,
       progressCallback,
       fillMode === FillModeEnum._3D,
@@ -1006,6 +1015,7 @@ export default [
   watchVolumeTracingAsync,
   maintainSegmentsMap,
   maintainHoveredSegmentId,
+  listenToMinCut,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
 ];

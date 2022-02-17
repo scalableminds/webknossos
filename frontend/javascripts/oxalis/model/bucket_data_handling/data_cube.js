@@ -27,7 +27,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -772,27 +772,10 @@ class DataCube {
   async getLoadedBucket(bucketAddress: Vector4) {
     const bucket = this.getOrCreateBucket(bucketAddress);
 
-    if (bucket.type === "null") {
-      return bucket;
+    if (bucket.type !== "null") {
+      await bucket.ensureLoaded();
     }
 
-    let needsToAwaitBucket = false;
-    if (bucket.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (bucket.needsRequest()) {
-      this.pullQueue.add({
-        bucket: bucketAddress,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      });
-      this.pullQueue.pull();
-      needsToAwaitBucket = true;
-    }
-    if (needsToAwaitBucket) {
-      await new Promise(resolve => {
-        bucket.on("bucketLoaded", resolve);
-      });
-    }
-    // Bucket has been loaded by now or was loaded already
     return bucket;
   }
 }

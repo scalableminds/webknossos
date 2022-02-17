@@ -9,6 +9,7 @@ import pixelmatch from "pixelmatch";
 
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
+import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 
 export const { WK_AUTH_TOKEN } = process.env;
 if (!WK_AUTH_TOKEN) {
@@ -126,18 +127,29 @@ async function waitForTracingViewLoad(page: Page) {
 }
 
 async function waitForRenderingFinish(page: Page) {
+  const width = 1920;
+  const height = 1080;
   let currentShot;
   let lastShot = await page.screenshot({ fullPage: true });
   let changedPixels = Infinity;
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
-  while (currentShot == null || changedPixels > 0) {
+  while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
     console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
     await page.waitForTimeout(10000);
     currentShot = await page.screenshot({ fullPage: true });
     if (lastShot != null) {
-      changedPixels = pixelmatch(lastShot, currentShot, {}, 1920, 1080, {
-        threshold: 0.0,
-      });
+      changedPixels = pixelmatch(
+        // The buffers need to be converted to png before comparing them
+        // as they might have different lengths, otherwise (probably due to different png encodings)
+        (await bufferToPng(lastShot, width, height)).data,
+        (await bufferToPng(currentShot, width, height)).data,
+        null,
+        width,
+        height,
+        {
+          threshold: 0.0,
+        },
+      );
     }
     lastShot = currentShot;
   }

@@ -5,7 +5,7 @@ import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 
-import { compareScreenshot } from "./screenshot_helpers";
+import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {
   screenshotDataset,
   screenshotDatasetWithMapping,
@@ -62,6 +62,7 @@ test.beforeEach(async t => {
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
+      "--use-gl=egl",
     ],
     dumpio: true,
   });
@@ -133,13 +134,6 @@ async function withRetry(
     }
     console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
   }
-}
-
-function isPixelEquivalent(changedPixels, width, height) {
-  // There may be a difference of 0.1 %
-  const allowedThreshold = 0.1 / 100;
-  const allowedChangedPixel = allowedThreshold * width * height;
-  return changedPixels < allowedChangedPixel;
 }
 
 test.serial(

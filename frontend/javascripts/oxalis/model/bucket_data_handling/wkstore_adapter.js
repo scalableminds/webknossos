@@ -1,5 +1,6 @@
 // @flow
 
+import _ from "lodash";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -13,7 +14,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
-import { updateBucket } from "oxalis/model/sagas/update_actions";
+import { updateBucket, type UpdateBucketUpdateAction } from "oxalis/model/sagas/update_actions";
 import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ErrorHandling from "libs/error_handling";
@@ -23,7 +24,18 @@ import constants, { type Vector3, type Vector4, MappingStatusEnum } from "oxalis
 import window from "libs/window";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
-const byteArrayToLz4Base64 = createWorker(ByteArrayToLz4Base64Worker);
+
+const workers = _.range(0, 2).map(idx => createWorker(ByteArrayToLz4Base64Worker));
+let workerIdx = 0;
+let maximumSize = 0;
+const byteArrayToLz4Base64 = array => {
+  if (array.length > maximumSize) {
+    maximumSize = array.length;
+    console.log("new maximumSize", maximumSize);
+  }
+  workerIdx = (workerIdx + 1) % workers.length;
+  return workers[workerIdx](array);
+};
 
 export const REQUEST_TIMEOUT = 60000;
 
@@ -221,19 +233,28 @@ function sliceBufferIntoPieces(
 }
 
 export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
-  const items = [];
-  console.time("sendToStore for " + batch.length);
-  for (const bucket of batch) {
-    const data = bucket.getData();
-    const bucketInfo = createSendBucketInfo(
-      bucket.zoomedAddress,
-      getResolutions(Store.getState().dataset),
-    );
-    const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-    // eslint-disable-next-line no-await-in-loop
-    const compressedBase64 = await byteArrayToLz4Base64(byteArray);
-    items.push(updateBucket(bucketInfo, compressedBase64));
-  }
-  console.timeEnd("sendToStore for " + batch.length);
+  const then = performance.now();
+
+  const items = await Promise.all(
+    batch.map(
+      async (bucket): Promise<UpdateBucketUpdateAction> => {
+        const data = bucket.getCopyOfData();
+        const bucketInfo = createSendBucketInfo(
+          bucket.zoomedAddress,
+          getResolutions(Store.getState().dataset),
+        );
+        const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        // eslint-disable-next-line no-await-in-loop
+        const compressedBase64 = await byteArrayToLz4Base64(byteArray);
+        console.log("byteArray", byteArray);
+        return updateBucket(bucketInfo, compressedBase64);
+      },
+    ),
+  );
+  const duration = performance.now() - then;
+  const durationPerItem = duration / batch.length;
+
+  console.log("durationPerItem", durationPerItem);
+
   Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

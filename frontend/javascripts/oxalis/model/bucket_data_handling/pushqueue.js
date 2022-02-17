@@ -9,7 +9,12 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Toast from "libs/toast";
 
 const BATCH_SIZE = 32;
-const DEBOUNCE_TIME = 1000;
+// Only process the PushQueue after there was no user interaction
+// for PUSH_DEBOUNCE_TIME milliseconds...
+const PUSH_DEBOUNCE_TIME = 1000;
+// ...unless a timeout of PUSH_DEBOUNCE_MAX_WAIT_TIME milliseconds
+// is exceeded. Then, initiate a push.
+const PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 
 class PushQueue {
   dataSetName: string;
@@ -92,7 +97,7 @@ class PushQueue {
     }
   };
 
-  push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
+  push = _.debounce(this.pushImpl, PUSH_DEBOUNCE_TIME, { maxWait: PUSH_DEBOUNCE_MAX_WAIT_TIME });
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
     return sendToStore(batch, this.cube.layerName);

@@ -264,6 +264,20 @@ export class OxalisModel {
     return storeStateSaved && pushQueuesSaved;
   }
 
+  getTotalPushQueueSize() {
+    const compressingBuckets = _.sum(
+      Object.values(this.dataLayers).map(dataLayer => dataLayer.pushQueue.taskQueue.tasks.length),
+    );
+    const pendingBuckets = _.sum(
+      Object.values(this.dataLayers).map(dataLayer => dataLayer.pushQueue.queue.size),
+    );
+
+    return {
+      compressingBuckets,
+      pendingBuckets,
+    };
+  }
+
   forceSave = () => {
     // In contrast to the save function, this method will trigger exactly one saveNowAction
     // regardless of what the current save state is

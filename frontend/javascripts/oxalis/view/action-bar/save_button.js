@@ -52,6 +52,10 @@ class SaveButton extends React.PureComponent<Props, State> {
   state = {
     isStateSaved: false,
     showUnsavedWarning: false,
+    saveInfo: {
+      compressingBuckets: 0,
+      pendingBuckets: 0,
+    },
   };
 
   componentDidMount() {
@@ -74,9 +78,15 @@ class SaveButton extends React.PureComponent<Props, State> {
       reportUnsavedDurationThresholdExceeded();
     }
 
+    const { compressingBuckets, pendingBuckets } = Model.getTotalPushQueueSize();
+
     this.setState({
       isStateSaved,
       showUnsavedWarning,
+      saveInfo: {
+        compressingBuckets,
+        pendingBuckets,
+      },
     });
   };
 
@@ -107,11 +117,21 @@ class SaveButton extends React.PureComponent<Props, State> {
         className={this.props.className}
         style={{ background: showUnsavedWarning ? "var(--ant-error)" : null }}
       >
-        {this.shouldShowProgress() ? (
-          <span style={{ marginLeft: 8 }}>{Math.floor((progressFraction || 0) * 100)} %</span>
-        ) : (
-          <span className="hide-on-small-screen">Save</span>
-        )}
+        <Tooltip
+          visible
+          title={
+            <div>
+              <div>Pending buckets: {this.state.saveInfo.pendingBuckets}</div>
+              <div>Compressing buckets: {this.state.saveInfo.compressingBuckets}</div>
+            </div>
+          }
+        >
+          {this.shouldShowProgress() ? (
+            <span style={{ marginLeft: 8 }}>{Math.floor((progressFraction || 0) * 100)} %</span>
+          ) : (
+            <span className="hide-on-small-screen">Save</span>
+          )}
+        </Tooltip>
         {showUnsavedWarning ? (
           <Tooltip
             visible

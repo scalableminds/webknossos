@@ -10,18 +10,19 @@ function importComlink() {
     // Comlink should only be imported in a browser context, since it makes use of functionality
     // which does not exist in node
     // eslint-disable-next-line global-require
-    const { wrap, transferHandlers, expose: _expose } = require("comlink");
-    return { wrap, transferHandlers, _expose };
+    const { wrap, transferHandlers, expose: _expose, transfer: _transfer } = require("comlink");
+    return { wrap, transferHandlers, _expose, _transfer };
   } else {
     return {
       wrap: null,
       transferHandlers: new Map(),
       _expose: null,
+      _transfer: null,
     };
   }
 }
 
-const { wrap, transferHandlers, _expose } = importComlink();
+const { wrap, transferHandlers, _expose, _transfer } = importComlink();
 
 // It's important that transferHandlers are registered in this wrapper module and
 // not from another file. Otherwise, callers would need to register the handler
@@ -78,3 +79,5 @@ export function pretendPromise<T>(t: T): Promise<T> {
   // $FlowExpectedError[incompatible-return]
   return t;
 }
+
+export const transfer = _transfer;

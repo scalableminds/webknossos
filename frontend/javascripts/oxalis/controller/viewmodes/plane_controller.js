@@ -133,12 +133,12 @@ class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(createCellAction()),
-      v: () => {
+      v: guardNotTDViewport(() => {
         Store.dispatch(copySegmentationLayerAction());
-      },
-      "shift + v": () => {
+      }),
+      "shift + v": guardNotTDViewport(() => {
         Store.dispatch(copySegmentationLayerAction(true));
-      },
+      }),
     };
   }
 }
@@ -159,6 +159,16 @@ const getMoveValue = timeFactor => {
     constants.FPS
   );
 };
+
+function guardNotTDViewport(guardedFunction) {
+  return () => {
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    if (activeViewport === OrthoViews.TDView) {
+      return undefined;
+    }
+    return guardedFunction();
+  };
+}
 
 function createDelayAwareMoveHandler(multiplier: number) {
   // The multiplier can be used for inverting the direction as well as for
@@ -184,15 +194,14 @@ function createDelayAwareMoveHandler(multiplier: number) {
     let direction = Math.sign(multiplier);
 
     const { activeViewport } = state.viewModeData.plane;
-    const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
-    const voxelPerSecond =
-      state.userConfiguration.moveValue / state.dataset.dataSource.scale[thirdDim];
-
     if (activeViewport === OrthoViews.TDView) {
       // Nothing should happen then, anyway.
       return 0;
     }
 
+    const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
+    const voxelPerSecond =
+      state.userConfiguration.moveValue / state.dataset.dataSource.scale[thirdDim];
     if (state.userConfiguration.dynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction
       direction *= state.flycam.spaceDirectionOrtho[thirdDim];

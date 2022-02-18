@@ -1,11 +1,11 @@
 ## Skeleton Annotations
-A typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that spans across many data slices as a graph of connected nodes.
+A typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that span across many data slices as a graph of connected nodes.
 A good example is the analysis of nerve cells by placing a node every few slices to reconstruct their path/circuitry through a dataset (see image below).
 
 Commonly, skeleton annotations contain the reconstruction of one or more structures, often with many thousand nodes.
 All connected nodes form a tree or more technically speaking a graph.
 
-webKnossos skeleton annotations can be downloaded, modified and imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
+webKnossos skeleton annotations can be downloaded, modified, and imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
 
 This article outlines commonly used features and operations for viewing, editing, or creating new skeleton annotations in webKnossos.
 

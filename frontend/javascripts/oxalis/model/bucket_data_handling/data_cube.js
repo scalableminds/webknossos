@@ -6,7 +6,6 @@
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 
-import ErrorHandling from "libs/error_handling";
 import {
   type Bucket,
   DataBucket,
@@ -15,23 +14,28 @@ import {
   NullBucket,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
+import { type ElementClass } from "types/api_flow_types";
+import { type ProgressCallback } from "libs/progress_callback";
+import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
 import {
   getResolutions,
   ResolutionInfo,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { V3 } from "libs/mjs";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
+import ErrorHandling from "libs/error_handling";
 import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
+import Toast from "libs/toast";
 import constants, {
   type Vector3,
   type Vector4,
@@ -39,9 +43,13 @@ import constants, {
   type LabelMasksByBucketAndW,
   MappingStatusEnum,
 } from "oxalis/constants";
-import { type ElementClass } from "types/api_flow_types";
-import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
-import { type ProgressCallback } from "libs/progress_callback";
+
+const warnAboutTooManyAllocations = _.once(() => {
+  const msg =
+    "webKnossos needed to allocate an unusually large amount of image data. It is advised to save your work and reload the page.";
+  ErrorHandling.notify(new Error(msg));
+  Toast.warning(msg, { sticky: true });
+});
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -142,7 +150,8 @@ class DataCube {
 
     this.cubes = [];
     if (isSegmentation) {
-      this.MAXIMUM_BUCKET_COUNT = Math.floor(this.MAXIMUM_BUCKET_COUNT / 5);
+      // undo
+      this.MAXIMUM_BUCKET_COUNT = Math.floor(this.MAXIMUM_BUCKET_COUNT / 10);
     }
     this.buckets = [];
 
@@ -330,19 +339,21 @@ class DataCube {
       if (foundCollectibleBucket) {
         this.collectBucket(this.buckets[this.bucketIterator]);
       } else {
-        // if (process.env.BABEL_ENV === "test") {
-        //   throw new Error("Bucket was forcefully evicted/garbage-collected.");
-        // }
-        // const errorMessage =
-        //   "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.";
-        // console.error(errorMessage);
-        // ErrorHandling.notify(new Error(errorMessage), {
-        //   elementClass: this.elementClass,
-        //   isSegmentation: this.isSegmentation,
-        //   resolutionInfo: this.resolutionInfo,
-        // });
+        const warnMessage = `More than ${this.buckets.length} needed to be allocated.`;
+        if (this.buckets.length % 100 === 0) {
+          console.warn(warnMessage);
+          ErrorHandling.notify(new Error(warnMessage), {
+            elementClass: this.elementClass,
+            isSegmentation: this.isSegmentation,
+            resolutionInfo: this.resolutionInfo,
+          });
+        }
 
-        // Effectively, push to this.buckets by setting the iterator to
+        if (this.buckets.length > (2 * constants.MAXIMUM_BUCKET_COUNT_PER_LAYER) / 10) {
+          warnAboutTooManyAllocations();
+        }
+
+        // Effectively, push to `this.buckets` by setting the iterator to
         // a new index.
         this.bucketIterator = this.buckets.length;
       }

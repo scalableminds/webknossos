@@ -1,7 +1,5 @@
 // @flow
 
-import _ from "lodash";
-
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -241,7 +239,6 @@ export async function sendToStore(batch: Array<DataBucket>, tracingId: string): 
           getResolutions(Store.getState().dataset),
         );
         const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-        // eslint-disable-next-line no-await-in-loop
         const compressedBase64 = await compressionPool.submit(byteArray);
         return updateBucket(bucketInfo, compressedBase64);
       },

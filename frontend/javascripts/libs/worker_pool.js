@@ -18,7 +18,7 @@ export default class WorkerPool<P, R> {
   currentWorkerIdx: number;
 
   constructor(workerFn: () => (...args: Array<P>) => R, count: number) {
-    this.workers = _.range(0, count).map(idx => workerFn());
+    this.workers = _.range(0, count).map(_idx => workerFn());
     this.currentWorkerIdx = 0;
   }
 

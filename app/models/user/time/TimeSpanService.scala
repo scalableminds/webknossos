@@ -90,7 +90,11 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
   private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: Annotation)(
-      implicit ctx: DBAccessContext) = {
+      implicit ctx: DBAccessContext): Fox[Unit] = {
+    if (timestamps.isEmpty) {
+      logger.warn("Timetracking called with empty timestamps list.")
+      return Fox.successful(())
+    }
     // Only if the annotation belongs to the user, we are going to log the time on the annotation
     val annotation = if (_annotation._user == _user) Some(_annotation) else None
     val start = timestamps.head

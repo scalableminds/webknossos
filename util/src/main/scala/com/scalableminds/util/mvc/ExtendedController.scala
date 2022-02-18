@@ -35,9 +35,15 @@ trait ResultBox extends I18nSupport with Formatter {
       implicit messages: MessagesProvider): String = chain match {
     case Full(failure) =>
       val serverTimeMsg = if (includeTime) "[Server Time " + formatDate(System.currentTimeMillis()) + "] " else ""
-      serverTimeMsg + " <~ " + Messages(failure.msg) + formatChain(failure.chain, includeTime = false)
+      serverTimeMsg + " <~ " + formatFailure(failure) + formatChain(failure.chain, includeTime = false)
     case _ => ""
   }
+
+  private def formatFailure(failure: Failure)(implicit messages: MessagesProvider): String =
+    failure match {
+      case ParamFailure(msg, _, _, param) => Messages(msg) + " " + param.toString
+      case Failure(msg, _, _)             => Messages(msg)
+    }
 
   def jsonMessages(msgs: JsArray): JsObject =
     Json.obj("messages" -> msgs)
@@ -153,6 +159,5 @@ trait ExtendedController
     with FoxImplicits
     with ResultImplicits
     with Status
-    with WithHighlightableResult
     with WithFilters
     with I18nSupport

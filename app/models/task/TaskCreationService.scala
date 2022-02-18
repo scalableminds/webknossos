@@ -3,7 +3,7 @@ package models.task
 import java.io.File
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -247,7 +247,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       volumeTracing: Box[VolumeTracing],
       fileName: Box[String],
       description: Box[Option[String]])(implicit m: MessagesProvider): Box[TaskParameters] = {
-    val paramBox: Box[(Option[BoundingBox], String, Point3D, Vector3D)] = skeletonTracing match {
+    val paramBox: Box[(Option[BoundingBox], String, Vec3Int, Vec3Double)] = skeletonTracing match {
       case Full(tracing) => Full((tracing.boundingBox, tracing.dataSetName, tracing.editPosition, tracing.editRotation))
       case f: Failure    => f
       case Empty =>

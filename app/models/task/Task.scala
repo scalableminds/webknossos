@@ -1,7 +1,7 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{profile, _}
 import javax.inject.Inject
@@ -24,8 +24,8 @@ case class Task(
     openInstances: Long,
     tracingTime: Option[Long],
     boundingBox: Option[BoundingBox],
-    editPosition: Point3D,
-    editRotation: Vector3D,
+    editPosition: Vec3Int,
+    editRotation: Vec3Double,
     creationInfo: Option[String],
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
@@ -40,8 +40,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
   def parse(r: TasksRow): Fox[Task] =
     for {
-      editPosition <- Point3D.fromList(parseArrayTuple(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
-      editRotation <- Vector3D.fromList(parseArrayTuple(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
+      editPosition <- Vec3Int.fromList(parseArrayTuple(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
+      editRotation <- Vec3Double.fromList(parseArrayTuple(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
     } yield {
       Task(
         ObjectId(r._Id),

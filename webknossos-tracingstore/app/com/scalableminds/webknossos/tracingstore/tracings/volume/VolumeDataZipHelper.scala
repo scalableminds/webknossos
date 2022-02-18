@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.{File, FileOutputStream, InputStream}
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -35,8 +35,8 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
     unzipResult.map(_ => ())
   }
 
-  protected def resolutionSetFromZipfile(zipFile: File): Set[Point3D] = {
-    val resolutionSet = new mutable.HashSet[Point3D]()
+  protected def resolutionSetFromZipfile(zipFile: File): Set[Vec3Int] = {
+    val resolutionSet = new mutable.HashSet[Vec3Int]()
     ZipIO.withUnziped(zipFile) {
       case (fileName, _) =>
         parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>

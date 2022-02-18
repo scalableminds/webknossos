@@ -23,6 +23,13 @@ type FloodFillAction = {
   planeId: OrthoView,
   callback?: () => void,
 };
+
+export type PerformMinCutAction = {
+  type: "PERFORM_MIN_CUT",
+  treeId: number,
+  boundingBoxId?: number,
+};
+
 type FinishEditingAction = { type: "FINISH_EDITING" };
 export type SetActiveCellAction = {
   type: "SET_ACTIVE_CELL",
@@ -85,6 +92,7 @@ export type VolumeTracingAction =
   | StartEditingAction
   | AddToLayerAction
   | FloodFillAction
+  | PerformMinCutAction
   | FinishEditingAction
   | SetActiveCellAction
   | ClickSegmentAction
@@ -144,6 +152,15 @@ export const floodFillAction = (
   position,
   planeId,
   callback,
+});
+
+export const performMinCutAction = (
+  treeId: number,
+  boundingBoxId?: number,
+): PerformMinCutAction => ({
+  type: "PERFORM_MIN_CUT",
+  treeId,
+  boundingBoxId,
 });
 
 export const finishEditingAction = (): FinishEditingAction => ({

@@ -209,6 +209,10 @@ V3.divide3 = function divide3(a, k, r) {
   return r;
 };
 
+V3.fromMag1ToMag = (vec, targetMag) => V3.floor(V3.divide3(vec, targetMag));
+
+V3.fromMagToMag1 = (vec, sourceMag) => V3.floor(V3.scale3(vec, sourceMag));
+
 const _tmpVec = [0, 0, 0];
 V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   // Computes the distance between two vectors while respecting a 3 dimensional scale
@@ -233,5 +237,21 @@ V2.scale2 = function scale2(a, k, r) {
   r[1] = a[1] * k[1];
   return r;
 };
+
+// Component-wise minimum of two vectors.
+V3.min = (vec1, vec2) => [
+  Math.min(vec1[0], vec2[0]),
+  Math.min(vec1[1], vec2[1]),
+  Math.min(vec1[2], vec2[2]),
+];
+
+// Component-wise maximum of two vectors.
+V3.max = (vec1, vec2) => [
+  Math.max(vec1[0], vec2[0]),
+  Math.max(vec1[1], vec2[1]),
+  Math.max(vec1[2], vec2[2]),
+];
+
+V3.equals = (vec1, vec2) => vec1[0] === vec2[0] && vec1[1] === vec2[1] && vec1[2] === vec2[2];
 
 export { M4x4, V2, V3 };

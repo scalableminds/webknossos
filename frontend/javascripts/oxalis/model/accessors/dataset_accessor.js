@@ -80,11 +80,15 @@ export class ResolutionInfo {
   }
 
   getResolutionsWithIndices(): Array<[number, Vector3]> {
-    return Array.from(this.resolutionMap.entries()).map(entry => {
-      const [powerOfTwo, resolution] = entry;
-      const resolutionIndex = Math.log2(powerOfTwo);
-      return [resolutionIndex, resolution];
-    });
+    return _.sortBy(
+      Array.from(this.resolutionMap.entries()).map(entry => {
+        const [powerOfTwo, resolution] = entry;
+        const resolutionIndex = Math.log2(powerOfTwo);
+        return [resolutionIndex, resolution];
+      }),
+      // Sort by resolutionIndex
+      tuple => tuple[0],
+    );
   }
 
   indexToPowerOf2(index: number): number {

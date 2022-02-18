@@ -17,7 +17,7 @@ function importComlink() {
       wrap: null,
       transferHandlers: new Map(),
       _expose: null,
-      _transfer: null,
+      _transfer: <P>(element: P, transferrables: Array<any>): P => element,
     };
   }
 }

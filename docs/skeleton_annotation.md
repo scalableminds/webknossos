@@ -32,7 +32,7 @@ Most skeleton annotation operations and keyboard shortcuts are tailored for the 
 Oblique mode presents an arbitrarily-resliced view through the data.
 In contrast to Orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible.
 
-![View in Oblique Mode](./images/tracing_ui_obliquemode.png)
+![Viewport in Oblique Mode](./images/tracing_ui_obliquemode.png)
 
 #### Flight Mode
 Flight mode also allows a resliced view through the data.

@@ -66,6 +66,7 @@ test.beforeEach(async t => {
     ],
     dumpio: true,
   });
+  console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
   global.Headers = Headers;
   global.fetch = fetch;
   global.Request = Request;

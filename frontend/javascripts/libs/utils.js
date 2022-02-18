@@ -24,6 +24,11 @@ export function mod(x: number, n: number) {
   return ((x % n) + n) % n;
 }
 
+export function values<K, V>(o: { [K]: V }): Array<V> {
+  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+  return Object.values(o);
+}
+
 export function map2<A, B>(fn: (A, number) => B, tuple: [A, A]): [B, B] {
   const [x, y] = tuple;
   return [fn(x, 0), fn(y, 1)];

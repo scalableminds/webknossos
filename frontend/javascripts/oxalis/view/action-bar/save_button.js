@@ -31,6 +31,10 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isStateSaved: boolean,
   showUnsavedWarning: boolean,
+  saveInfo: {
+    compressingBucketCount: number,
+    waitingForCompressionBucketCount: number,
+  },
 };
 
 const SAVE_POLLING_INTERVAL = 1000; // 1s
@@ -53,8 +57,8 @@ class SaveButton extends React.PureComponent<Props, State> {
     isStateSaved: false,
     showUnsavedWarning: false,
     saveInfo: {
-      compressingBuckets: 0,
-      pendingBuckets: 0,
+      compressingBucketCount: 0,
+      waitingForCompressionBucketCount: 0,
     },
   };
 
@@ -78,14 +82,14 @@ class SaveButton extends React.PureComponent<Props, State> {
       reportUnsavedDurationThresholdExceeded();
     }
 
-    const { compressingBuckets, pendingBuckets } = Model.getTotalPushQueueSize();
+    const { compressingBucketCount, waitingForCompressionBucketCount } = Model.getPushQueueStats();
 
     this.setState({
       isStateSaved,
       showUnsavedWarning,
       saveInfo: {
-        compressingBuckets,
-        pendingBuckets,
+        compressingBucketCount,
+        waitingForCompressionBucketCount,
       },
     });
   };
@@ -108,6 +112,10 @@ class SaveButton extends React.PureComponent<Props, State> {
     const { progressFraction } = this.props;
     const { showUnsavedWarning } = this.state;
 
+    const totalBucketsToCompress =
+      this.state.saveInfo.waitingForCompressionBucketCount +
+      this.state.saveInfo.compressingBucketCount;
+
     return (
       <ButtonComponent
         key="save-button"
@@ -118,12 +126,10 @@ class SaveButton extends React.PureComponent<Props, State> {
         style={{ background: showUnsavedWarning ? "var(--ant-error)" : null }}
       >
         <Tooltip
-          visible
           title={
-            <div>
-              <div>Pending buckets: {this.state.saveInfo.pendingBuckets}</div>
-              <div>Compressing buckets: {this.state.saveInfo.compressingBuckets}</div>
-            </div>
+            totalBucketsToCompress > 0
+              ? `${totalBucketsToCompress} buckets remaining to compress...`
+              : null
           }
         >
           {this.shouldShowProgress() ? (

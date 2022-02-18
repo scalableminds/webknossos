@@ -8,7 +8,7 @@ import AsyncTaskQueue from "libs/async_task_queue";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Toast from "libs/toast";
 
-const BATCH_SIZE = 32;
+export const COMPRESSING_BATCH_SIZE = 32;
 // Only process the PushQueue after there was no user interaction
 // for PUSH_DEBOUNCE_TIME milliseconds...
 const PUSH_DEBOUNCE_TIME = 1000;
@@ -19,25 +19,30 @@ const PUSH_DEBOUNCE_MAX_WAIT_TIME = 30000;
 class PushQueue {
   dataSetName: string;
   cube: DataCube;
-  taskQueue: AsyncTaskQueue;
+  compressionTaskQueue: AsyncTaskQueue;
   sendData: boolean;
-  queue: Set<DataBucket>;
+  // The pendingQueue contains all buckets which are marked as
+  // "should be snapshotted and saved". That queue is processed
+  // in a debounced manner and sent to the `compressionTaskQueue`.
+  // The `compressionTaskQueue` compresses the bucket data and
+  // sends it to the save queue.
+  pendingQueue: Set<DataBucket>;
 
   constructor(cube: DataCube, sendData: boolean = true) {
     this.cube = cube;
-    this.taskQueue = new AsyncTaskQueue(Infinity);
+    this.compressionTaskQueue = new AsyncTaskQueue(Infinity);
     this.sendData = sendData;
-    this.queue = new Set();
+    this.pendingQueue = new Set();
 
     const autoSaveFailureMessage = "Auto-Save failed!";
-    this.taskQueue.on("failure", () => {
+    this.compressionTaskQueue.on("failure", () => {
       console.error("PushQueue failure");
       if (document.body != null) {
         document.body.classList.add("save-error");
       }
       Toast.error(autoSaveFailureMessage, { sticky: true });
     });
-    this.taskQueue.on("success", () => {
+    this.compressionTaskQueue.on("success", () => {
       if (document.body != null) {
         document.body.classList.remove("save-error");
       }
@@ -47,15 +52,15 @@ class PushQueue {
 
   stateSaved(): boolean {
     return (
-      this.queue.size === 0 &&
+      this.pendingQueue.size === 0 &&
       this.cube.temporalBucketManager.getCount() === 0 &&
-      !this.taskQueue.isBusy()
+      !this.compressionTaskQueue.isBusy()
     );
   }
 
   insert(bucket: DataBucket): void {
-    if (!this.queue.has(bucket)) {
-      this.queue.add(bucket);
+    if (!this.pendingQueue.has(bucket)) {
+      this.pendingQueue.add(bucket);
       bucket.dirtyCount++;
     }
 
@@ -63,11 +68,11 @@ class PushQueue {
   }
 
   clear(): void {
-    this.queue.clear();
+    this.pendingQueue.clear();
   }
 
   print(): void {
-    this.queue.forEach(e => console.log(e));
+    this.pendingQueue.forEach(e => console.log(e));
   }
 
   pushImpl = async () => {
@@ -76,22 +81,22 @@ class PushQueue {
       return;
     }
 
-    while (this.queue.size) {
-      let batchSize = Math.min(BATCH_SIZE, this.queue.size);
+    while (this.pendingQueue.size) {
+      let batchSize = Math.min(COMPRESSING_BATCH_SIZE, this.pendingQueue.size);
       const batch = [];
-      for (const bucket of this.queue) {
+      for (const bucket of this.pendingQueue) {
         if (batchSize <= 0) break;
 
-        this.queue.delete(bucket);
+        this.pendingQueue.delete(bucket);
         batch.push(bucket);
         batchSize--;
       }
       // fire and forget
-      this.taskQueue.scheduleTask(() => this.pushBatch(batch));
+      this.compressionTaskQueue.scheduleTask(() => this.pushBatch(batch));
     }
     try {
       // wait here
-      await this.taskQueue.join();
+      await this.compressionTaskQueue.join();
     } catch (error) {
       alert("We've encountered a permanent issue while saving. Please try to reload the page.");
     }

@@ -19,9 +19,8 @@ import io.swagger.annotations.{
   ApiResponses
 }
 import javax.inject.Inject
-import models.annotation._
+import models.annotation.{AnnotationUploadService, _}
 import models.annotation.nml.NmlResults.TracingBoxContainer
-import models.annotation.nml.NmlService
 import models.project.ProjectDAO
 import models.task._
 import models.user._
@@ -42,7 +41,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
                                userService: UserService,
                                taskDAO: TaskDAO,
                                taskService: TaskService,
-                               nmlService: NmlService,
+                               nmlService: AnnotationUploadService,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with ResultBox

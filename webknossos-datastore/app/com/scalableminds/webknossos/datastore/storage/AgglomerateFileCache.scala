@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.storage
 import java.util
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage
@@ -112,7 +112,7 @@ class BoundingBoxCache(
   private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
     val res = cuboid.resolution
     val tl = cuboid.topLeft
-    Cuboid(new VoxelPosition(tl.x * res.x, tl.y * res.y, tl.z * res.z, Point3D(1, 1, 1)),
+    Cuboid(new VoxelPosition(tl.x * res.x, tl.y * res.y, tl.z * res.z, Vec3Int(1, 1, 1)),
            cuboid.width * res.x,
            cuboid.height * res.y,
            cuboid.depth * res.z)

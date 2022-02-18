@@ -136,6 +136,22 @@ class SceneController {
       return cube;
     };
 
+    window.addVoxelMesh = (position: Vector3, _cubeLength: Vector3, optColor?: string) => {
+      // Shrink voxels a bit so that it's easier to identify individual voxels.
+      const cubeLength = _cubeLength.map(el => el * 0.9);
+      const boxGeometry = new THREE.BoxGeometry(...cubeLength);
+      const material = new THREE.MeshBasicMaterial({
+        color: optColor || 0xff00ff,
+        opacity: 0.5,
+      });
+      const cube = new THREE.Mesh(boxGeometry, material);
+      cube.position.x = position[0] + cubeLength[0] / 2;
+      cube.position.y = position[1] + cubeLength[1] / 2;
+      cube.position.z = position[2] + cubeLength[2] / 2;
+      this.rootNode.add(cube);
+      return cube;
+    };
+
     let renderedLines = [];
 
     window.addLine = (a: Vector3, b: Vector3) => {

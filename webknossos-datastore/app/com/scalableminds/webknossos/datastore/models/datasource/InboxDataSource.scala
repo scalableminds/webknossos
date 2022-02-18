@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
@@ -14,7 +14,7 @@ package object inbox {
 
     def isUsable: Boolean = toUsable.isDefined
 
-    def scaleOpt: Option[Scale]
+    def scaleOpt: Option[Vec3Double]
 
     def statusOpt: Option[String]
 
@@ -37,12 +37,12 @@ package object inbox {
 
   case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                      status: String,
-                                                     scale: Option[Scale] = None,
+                                                     scale: Option[Vec3Double] = None,
                                                      existingDataSourceProperties: Option[JsValue] = None)
       extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
 
-    val scaleOpt: Option[Scale] = scale
+    val scaleOpt: Option[Vec3Double] = scale
 
     val statusOpt: Option[String] = Some(status)
 

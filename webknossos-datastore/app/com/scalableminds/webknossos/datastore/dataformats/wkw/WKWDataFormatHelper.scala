@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.{Path, Paths}
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
 import com.scalableminds.webknossos.wrap.VoxelType
@@ -29,7 +29,7 @@ trait WKWDataFormatHelper {
       .resolve(s"y${cube.y}")
       .resolve(s"x${cube.x}.$dataFileExtension")
 
-  private def formatResolution(resolution: Point3D, resolutionAsTripleOpt: Option[Boolean] = None): String =
+  private def formatResolution(resolution: Vec3Int, resolutionAsTripleOpt: Option[Boolean] = None): String =
     resolutionAsTripleOpt.map { resolutionAsTriple =>
       if (resolutionAsTriple) s"${resolution.x}-${resolution.y}-${resolution.z}"
       else resolution.maxDim.toString
@@ -38,7 +38,7 @@ trait WKWDataFormatHelper {
     }
 
   def wkwHeaderFilePath(
-      resolution: Point3D,
+      resolution: Vec3Int,
       dataSourceId: Option[DataSourceId] = None,
       dataLayerName: Option[String] = None,
       baseDir: Path = Paths.get("")
@@ -69,13 +69,13 @@ trait WKWDataFormatHelper {
     }
   }
 
-  protected def parseResolution(resolutionStr: String): Option[Point3D] =
+  protected def parseResolution(resolutionStr: String): Option[Vec3Int] =
     resolutionStr.toIntOpt match {
-      case Some(resolutionInt) => Some(Point3D(resolutionInt, resolutionInt, resolutionInt))
+      case Some(resolutionInt) => Some(Vec3Int(resolutionInt, resolutionInt, resolutionInt))
       case None =>
         val pattern = """(\d+)-(\d+)-(\d+)""".r
         resolutionStr match {
-          case pattern(x, y, z) => Some(Point3D(x.toInt, y.toInt, z.toInt))
+          case pattern(x, y, z) => Some(Vec3Int(x.toInt, y.toInt, z.toInt))
           case _                => None
         }
     }

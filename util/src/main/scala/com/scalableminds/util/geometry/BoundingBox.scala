@@ -2,9 +2,9 @@ package com.scalableminds.util.geometry
 
 import net.liftweb.common.{Box, Empty, Full}
 
-case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
+case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
-  val bottomRight: Point3D = topLeft.move(width, height, depth)
+  val bottomRight: Vec3Int = topLeft.move(width, height, depth)
 
   def intersects(other: BoundingBox): Boolean =
     math.max(topLeft.x, other.topLeft.x) < math.min(bottomRight.x, other.bottomRight.x) &&
@@ -20,13 +20,13 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
     val h = math.max(other.bottomRight.y, bottomRight.y) - y
     val d = math.max(other.bottomRight.z, bottomRight.z) - z
 
-    BoundingBox(Point3D(x, y, z), w, h, d)
+    BoundingBox(Vec3Int(x, y, z), w, h, d)
   }
 
   def isEmpty: Boolean =
     width <= 0 || height <= 0 || depth <= 0
 
-  def center: Point3D =
+  def center: Vec3Int =
     topLeft.move(bottomRight).scale(0.5f)
 
   def scale(s: Float): BoundingBox =
@@ -38,8 +38,8 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
   def volume: Long =
     width.toLong * height.toLong * depth.toLong
 
-  def dimensions: Point3D =
-    Point3D(width, height, depth)
+  def dimensions: Vec3Int =
+    Vec3Int(width, height, depth)
 
 }
 
@@ -50,7 +50,7 @@ object BoundingBox {
   private val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
   def empty: BoundingBox =
-    BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
+    BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
 
   def createFrom(s: String): Box[BoundingBox] =
     s match {
@@ -58,7 +58,7 @@ object BoundingBox {
         try {
           Full(
             BoundingBox(
-              Point3D(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
+              Vec3Int(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
               Integer.parseInt(width),
               Integer.parseInt(height),
               Integer.parseInt(depth)
@@ -75,7 +75,7 @@ object BoundingBox {
       case head :: tail =>
         tail.foldLeft(head)(_ combineWith _)
       case _ =>
-        BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
+        BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
     }
 
   def createFrom(bbox: List[List[Int]]): Box[BoundingBox] =
@@ -83,12 +83,12 @@ object BoundingBox {
       Empty
     else
       Full(
-        BoundingBox(Point3D(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
+        BoundingBox(Vec3Int(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
                     bbox(0)(1) - bbox(0)(0),
                     bbox(1)(1) - bbox(1)(0),
                     bbox(2)(1) - bbox(2)(0)))
 
-  def createFrom(topLeft: Point3D, bottomRight: Point3D): Box[BoundingBox] =
+  def createFrom(topLeft: Vec3Int, bottomRight: Vec3Int): Box[BoundingBox] =
     if (topLeft <= bottomRight)
       Full(BoundingBox(topLeft, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y, bottomRight.z - topLeft.z))
     else
@@ -96,7 +96,7 @@ object BoundingBox {
 
   def fromSQL(ints: List[Int]): Option[BoundingBox] =
     if (ints.length == 6)
-      Some(BoundingBox(Point3D(ints(0), ints(1), ints(2)), ints(3), ints(4), ints(5)))
+      Some(BoundingBox(Vec3Int(ints(0), ints(1), ints(2)), ints(3), ints(4), ints(5)))
     else
       None
 

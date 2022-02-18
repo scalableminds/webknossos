@@ -60,6 +60,12 @@ class BoundingBox {
     return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
 
+  containsPoint(vec3: Vector3) {
+    const [x, y, z] = vec3;
+    const { min, max } = this;
+    return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
+  }
+
   containsFullBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
 
@@ -83,8 +89,18 @@ class BoundingBox {
     return new BoundingBox({ min: newMin, max: newMax });
   }
 
-  chunkIntoBuckets() {
+  getSize(): Vector3 {
     const size = V3.sub(this.max, this.min);
+    return size;
+  }
+
+  getVolume(): number {
+    const size = this.getSize();
+    return size[0] * size[1] * size[2];
+  }
+
+  chunkIntoBuckets() {
+    const size = this.getSize();
     const start = [...this.min];
     const chunkSize = [32, 32, 32];
     const chunkBorderAlignments = [32, 32, 32];
@@ -117,6 +133,20 @@ class BoundingBox {
     }
 
     return boxes;
+  }
+
+  fromMag1ToMag(mag: Vector3): BoundingBox {
+    const min = [
+      Math.floor(this.min[0] / mag[0]),
+      Math.floor(this.min[1] / mag[1]),
+      Math.floor(this.min[2] / mag[2]),
+    ];
+    const max = [
+      Math.ceil(this.max[0] / mag[0]),
+      Math.ceil(this.max[1] / mag[1]),
+      Math.ceil(this.max[2] / mag[2]),
+    ];
+    return new BoundingBox({ min, max });
   }
 }
 

@@ -692,10 +692,7 @@ class DataCube {
     if (bucket.type === "null") {
       return;
     }
-    bucket.setData(data);
-    bucket.pendingOperations = newPendingOperations;
-
-    this.pushQueue.insert(bucket);
+    bucket.setData(data, newPendingOperations);
   }
 
   triggerPushQueue() {

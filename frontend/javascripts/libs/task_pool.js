@@ -1,5 +1,10 @@
 // @flow
 
+/*
+  Given an array of async tasks, processTaskWithPool
+  allows to execute at most ${poolSize} tasks concurrently.
+ */
+
 export default function processTaskWithPool<T>(
   tasks: Array<() => Promise<T>>,
   poolSize: number,

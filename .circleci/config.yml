@@ -250,28 +250,30 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - run:
-          name: Remove dev-deployment
-          command: >
-            curl
-            -X POST
-            -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
-      - run:
-          name: Wait 3min
-          command: sleep 180
-      - run:
-          name: Install dev-deployment
-          command: >
-            curl
-            -X POST
-            -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+      # TODO: Revert before merging
+      # - run:
+      #     name: Remove dev-deployment
+      #     command: >
+      #       curl
+      #       -X POST
+      #       -H "X-Auth-Token: $RELEASE_API_TOKEN"
+      #       https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+      # - run:
+      #     name: Wait 3min
+      #     command: sleep 180
+      # - run:
+      #     name: Install dev-deployment
+      #     command: >
+      #       curl
+      #       -X POST
+      #       -H "X-Auth-Token: $RELEASE_API_TOKEN"
+      #       https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
+          # TODO: replace 1 with 180 before merging
           command: |
             yarn install --frozen-lockfile &
-            sleep 180 &
+            sleep 1 &
             wait
       - run:
           name: Refresh datasets

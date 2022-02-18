@@ -62,7 +62,7 @@ test.beforeEach(async t => {
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
-      "--use-gl=egl",
+      "--use-gl=swiftshader",
     ],
     dumpio: true,
   });

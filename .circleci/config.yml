@@ -250,39 +250,36 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      # TODO: Revert before merging
-      # - run:
-      #     name: Remove dev-deployment
-      #     command: >
-      #       curl
-      #       -X POST
-      #       -H "X-Auth-Token: $RELEASE_API_TOKEN"
-      #       https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
-      # - run:
-      #     name: Wait 3min
-      #     command: sleep 180
-      # - run:
-      #     name: Install dev-deployment
-      #     command: >
-      #       curl
-      #       -X POST
-      #       -H "X-Auth-Token: $RELEASE_API_TOKEN"
-      #       https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+      - run:
+          name: Remove dev-deployment
+          command: >
+            curl
+            -X POST
+            -H "X-Auth-Token: $RELEASE_API_TOKEN"
+            https://kubernetix.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+      - run:
+          name: Wait 3min
+          command: sleep 180
+      - run:
+          name: Install dev-deployment
+          command: >
+            curl
+            -X POST
+            -H "X-Auth-Token: $RELEASE_API_TOKEN"
+            https://kubernetix.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
-          # TODO: replace 1 with 180 before merging
           command: |
             yarn install --frozen-lockfile &
-            sleep 1 &
+            sleep 180 &
             wait
       - run:
           name: Refresh datasets
           command: curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=$WK_AUTH_TOKEN
       - run:
           name: Run screenshot-tests
-          # TODO: replace with master.webknossos.xyz
           command: |
-            URL=https://meshesinlink.webknossos.xyz/ \
+            URL=https://master.webknossos.xyz/ \
             yarn test-screenshot
 
       - store_artifacts:
@@ -292,12 +289,10 @@ workflows:
   version: 2
   circleci_build:
     jobs:
-      - nightly:
+      - build_test_deploy:
           filters:
             tags:
               only: /.*/
-      # TODO: Revert before merging
-      - nightly
   circleci_nightly:
     jobs:
       - nightly

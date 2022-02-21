@@ -24,8 +24,7 @@ process.on("unhandledRejection", (err, promise) => {
 
 const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots");
 
-// TODO: Revert before merging
-let URL = "https://meshesinlink.webknossos.xyz";
+let URL = "https://master.webknossos.xyz";
 if (!process.env.URL) {
   console.warn(
     "[Warning] No url specified, assuming dev master. If you want to specify a URL, prepend URL=<url> to the command.",
@@ -136,41 +135,6 @@ async function withRetry(
     console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
   }
 }
-
-test.serial(
-  "it should render a dataset linked to with ad-hoc and precomputed meshes correctly",
-  async t => {
-    const datasetName = "test-agglomerate-file";
-    const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
-    await withRetry(
-      3,
-      async () => {
-        const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
-        const { screenshot, width, height } = await screenshotDataset(
-          await getNewPage(t.context.browser),
-          URL,
-          datasetId,
-          viewOverride,
-        );
-        const changedPixels = await compareScreenshot(
-          screenshot,
-          width,
-          height,
-          BASE_PATH,
-          `${datasetName}_with_meshes_link`,
-        );
-
-        return isPixelEquivalent(changedPixels, width, height);
-      },
-      condition => {
-        t.true(
-          condition,
-          `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
-        );
-      },
-    );
-  },
-);
 
 datasetNames.map(async datasetName => {
   test.serial(`it should render dataset ${datasetName} correctly`, async t => {
@@ -302,6 +266,41 @@ test.serial(
         t.true(
           condition,
           `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeletons does not look the same.`,
+        );
+      },
+    );
+  },
+);
+
+test.serial(
+  "it should render a dataset linked to with ad-hoc and precomputed meshes correctly",
+  async t => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
+    await withRetry(
+      3,
+      async () => {
+        const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
+        const { screenshot, width, height } = await screenshotDataset(
+          await getNewPage(t.context.browser),
+          URL,
+          datasetId,
+          viewOverride,
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          BASE_PATH,
+          `${datasetName}_with_meshes_link`,
+        );
+
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      condition => {
+        t.true(
+          condition,
+          `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
         );
       },
     );

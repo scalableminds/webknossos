@@ -5,7 +5,7 @@ import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 
-import { compareScreenshot } from "./screenshot_helpers";
+import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {
   screenshotDataset,
   screenshotDatasetWithMapping,
@@ -61,9 +61,11 @@ test.beforeEach(async t => {
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
+      "--use-gl=swiftshader",
     ],
     dumpio: true,
   });
+  console.log(`\nRunning chrome version ${await t.context.browser.version()}\n`);
   global.Headers = Headers;
   global.fetch = fetch;
   global.Request = Request;
@@ -89,6 +91,8 @@ const viewOverrides: { [key: string]: string } = {
   "Multi-Channel-Test": "1201,1072,7,0,0.683",
   "test-agglomerate-file":
     '{"position":[60,60,60],"mode":"orthogonal","zoomStep":0.5,"stateByLayer":{"segmentation":{"mappingInfo":{"mappingName":"agglomerate_view_70","mappingType":"HDF5","agglomerateIdsToImport":[1, 6]}}}}',
+  "test-agglomerate-file-with-meshes":
+    '{"position":[63,67,118],"mode":"orthogonal","zoomStep":0.826,"stateByLayer":{"segmentation":{"meshInfo":{"meshFileName":"meshfile-with-name","meshes":[{"segmentId":4,"seedPosition":[64,75,118],"isPrecomputed":true,"meshFileName":"meshfile-with-name"},{"segmentId":12,"seedPosition":[107,125,118],"isPrecomputed":false,"mappingName":"agglomerate_view_70","mappingType":"HDF5"},{"segmentId":79,"seedPosition":[110,78,118],"isPrecomputed":false,"mappingName":null,"mappingType":null}]}}}}',
 };
 
 const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
@@ -128,14 +132,8 @@ async function withRetry(
       resolveFn(condition);
       return;
     }
+    console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
   }
-}
-
-function isPixelEquivalent(changedPixels, width, height) {
-  // There may be a difference of 0.1 %
-  const allowedThreshold = 0.1 / 100;
-  const allowedChangedPixel = allowedThreshold * width * height;
-  return changedPixels < allowedChangedPixel;
 }
 
 datasetNames.map(async datasetName => {
@@ -268,6 +266,41 @@ test.serial(
         t.true(
           condition,
           `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeletons does not look the same.`,
+        );
+      },
+    );
+  },
+);
+
+test.serial(
+  "it should render a dataset linked to with ad-hoc and precomputed meshes correctly",
+  async t => {
+    const datasetName = "test-agglomerate-file";
+    const viewOverride = viewOverrides["test-agglomerate-file-with-meshes"];
+    await withRetry(
+      3,
+      async () => {
+        const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
+        const { screenshot, width, height } = await screenshotDataset(
+          await getNewPage(t.context.browser),
+          URL,
+          datasetId,
+          viewOverride,
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          BASE_PATH,
+          `${datasetName}_with_meshes_link`,
+        );
+
+        return isPixelEquivalent(changedPixels, width, height);
+      },
+      condition => {
+        t.true(
+          condition,
+          `Dataset with name: "${datasetName}", ad-hoc and precomputed meshes does not look the same.`,
         );
       },
     );

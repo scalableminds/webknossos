@@ -41,7 +41,10 @@ import {
   getUserConfiguration,
   getDatasetViewConfiguration,
 } from "admin/admin_rest_api";
-import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
+import {
+  initializeAnnotationAction,
+  updateCurrentMeshFileAction,
+} from "oxalis/model/actions/annotation_actions";
 import {
   initializeSettingsAction,
   initializeGpuSetupAction,
@@ -63,6 +66,10 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
@@ -611,24 +618,22 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
   for (const layerName of Object.keys(stateByLayer)) {
     const layerState = stateByLayer[layerName];
 
+    let effectiveLayerName;
+    try {
+      const { dataset } = Store.getState();
+      // The name of the layer could have changed if a volume tracing was created from a viewed annotation
+      effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+    } catch (e) {
+      console.error(e);
+      Toast.error(
+        `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
+      );
+      ErrorHandling.notify(e, { urlLayerState: stateByLayer });
+      continue;
+    }
+
     if (layerState.mappingInfo != null) {
       const { mappingName, mappingType, agglomerateIdsToImport } = layerState.mappingInfo;
-
-      let effectiveLayerName;
-      try {
-        const { dataset } = Store.getState();
-        // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-        effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
-      } catch (e) {
-        console.error(e);
-        Toast.error(
-          `URL configuration values for the layer "${layerName}" are ignored, because: ${
-            e.message
-          }`,
-        );
-        ErrorHandling.notify(e, { urlLayerState: stateByLayer });
-        continue;
-      }
 
       Store.dispatch(
         setMappingAction(effectiveLayerName, mappingName, mappingType, {
@@ -652,6 +657,34 @@ function applyLayerState(stateByLayer: UrlStateByLayer) {
         for (const agglomerateId of agglomerateIdsToImport) {
           Store.dispatch(
             loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
+          );
+        }
+      }
+    }
+
+    if (layerState.meshInfo) {
+      const { meshFileName: currentMeshFileName, meshes } = layerState.meshInfo;
+
+      if (currentMeshFileName != null) {
+        Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
+      }
+
+      for (const mesh of meshes) {
+        const { segmentId, seedPosition } = mesh;
+        if (mesh.isPrecomputed) {
+          const { meshFileName } = mesh;
+          Store.dispatch(
+            loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+          );
+        } else {
+          const { mappingName, mappingType } = mesh;
+          Store.dispatch(
+            loadAdHocMeshAction(
+              segmentId,
+              seedPosition,
+              { mappingName, mappingType },
+              effectiveLayerName,
+            ),
           );
         }
       }

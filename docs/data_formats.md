@@ -1,14 +1,17 @@
 # Supported Data Formats
 
-webKnossos uses the webKnosso-wrap (WKW) container format for all (internal) data representations - both for the raw (microscopy) image datasets and segmentations. Skeleton annotations are saved as NML files. This section explain these formats in detail.
+webKnossos uses several file formats for reading large-scale volumetric image data and storing skeleton and volume annotations. The section will provide technical backgrounds on these file formats, list examples, and explain concepts and details.
 
-Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its file format can be read by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html).
+The webKnosso-wrap (WKW) container format is used for all internal voxel data representations - both for the raw (microscopy) image datasets and segmentations. Skeleton annotations are saved as NML files. 
+
+Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use custom script based on the [webKnossos Python libray](https://docs.webknossos.org/webknossos-py/index.html).
 
 Additionally, webKnossos.org supports connecting and loading data from:
 - Neuroglancer Pre-Computed Dataset stored on Google Cloud
 - BossDB
 
-The following sections explain the concepts and file formats which are supported by webKnossos. See page on [software tooling](.tooling.md) for working with these file formats in Python and MatLab.
+See page on [dataset](./datasets.md) for uploading and configuring datasets.
+See page on [software tooling](./tooling.md) for working with these file formats in Python and MatLab.
 
 ### Conversion with webknossos.org
 When uploading data to [webKnossos](https://webknossos.org), various data formats are automatically detected and converted.
@@ -314,10 +317,23 @@ The structure of the tree groups is listed inside the `<groups>`-tag.
 Groups can be freely nested inside each other.
 
 
-// todo
 ### ID Mapping Files
+webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerates" files need to be pre-computed and put into a `agglomerates` directory inside a segmentation layer:
 
- and need to follow this schema. All segment IDs belonging to the same super-voxel need to be listed in an array:  
+```
+great_dataset                   # Dataset root
+├─ segmentation                 # Dataset layer (e.g., color, segmentation)
+│  ├─ agglomerates/             # Magnification step (1, 2, 4, 8, 16 etc.)
+│  │  ├─ my_mapping_file.json   # one or more agglomerate files
+│  │  ├─ different_mapping.json # one agglomerate file per mapping
+```
+
+webKnossos supports two formats for theese agglomerates:
+- JSON
+- HDF5
+
+#### JSON schema
+All segment IDs belonging to the same super-voxel need to be listed in an array:  
 ```
 {
   {

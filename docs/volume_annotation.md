@@ -59,7 +59,7 @@ Due to perfomance reasons, 3D flood-fills only work in a small, local bounding b
 Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as new dataset in your dashboard.
 
 ### Mappings / On-Demand Agglomeration
-With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 
+With webKnossos it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation. 
 
 This feature work well with automated machine learning segmentation workflows. We typically produce several agglomeration results based on different prediction and size thresholds leading to several possible segmentations based of one initial over-segmentation. We load these ID map into webKnossos to quickly review these results in an interactive session.
 

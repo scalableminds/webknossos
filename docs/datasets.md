@@ -6,23 +6,62 @@ Working with 3D (and 2D) image datasets is at the heart of webKnossos.
 - [Configure the dataset](#configuring-datasets) defaults and permissions to your specification.
 - [Share your datasets](./sharing.md#dataset-sharing) with the public or with selected users.
 
+[Read the section on file and data formats](./data_formats.md) if your interest in the technical background and concepts behind webKnossos datasets.
+
 ## Importing Datasets
 
-
 ### Uploading through the web browser
-To import a dataset, you can use the upload functionality within webKnossos.
-From the "My dataset" tab in the user dashboar, click the "Add Dataset" button.
-Then, drag your data into the form and ensure all form fields are filled.
+The easiest way to to get started with working on your dataset, is the through the webKnossos web interface. You can directly upload your dataset through the browser.
+
+1. From the "My dataset" tab in the user dashboard, click the "Add Dataset" button.
+2. Provide some metadata information:
+  - a **name** 
+  - give access permissions for one or more teams (use `default` team if unsure)
+  - **scale** of each voxel (in nanometers)
+3. Drag and drop your data into the upload section
+4. Click the **Upload** button
+
 
 webKnossos uses the [WKW-format](./data_formats.md#wkw-datasets) internally to display your data.
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
+
 If your data is not in WKW, you can either:
 - upload the data in a supported file format and webKnossos will be automatically converted to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset conversion will take some time. Check the Jobs page for progress or refresh the dashboard page periodically.
-- [Convert](#convert-datasets) your data manually to WKW.
+- [Convert](#converting-datasets) your data manually to WKW.
 
-Read more about the [Data Formats](./data_formats.md) we support and how they should be structured when uploading them.
+In particular, the following file formats are supported for uploading (and conversion):
+- [WKW dataset](#WKW-Datasets)
+- [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (tif, jpg, png, dm3, dm4)
+  - as an extension, multiple folders with image sequences are interpreted as [separate layers](#Multi-Layer-Image-File-Sequence)
+- Single-file images (tif, czi, nifti, raw)
+- KNOSSOS file hierarchy 
+- [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
 
-Once the data is uploaded (and potentially converted) you can to go the Dataset Settings to doublecheck important properties (such as the dataset scale) or to make it public.
+Once the data is uploaded (and potentially converted) you can further configure a dataset [Settings](./datasets.md#configuring-datasets) and double-check layer properties, finetune access rights & permission, or set default values for rendering.
+
+### Working with Neuroglancer and BossDB dataset
+On webKnossos.org you can work directly with 
+- datasets in the Neuroglancer precomputed format stored in the Google Cloud
+- datasets provided by a BossDB server
+
+To import these datasets:
+1. From the "My dataset" tab in the user dashboard, click the "Add Dataset" button.
+2. Select the "Add Neuroglancer Dataset" or "Add BossDB Dataset" tab
+3. Provide some metadata information:
+  - a **name** 
+  - a URL or domain/collection identifier to locate the dataset on the remote service
+  - authentication credentials for accessing the ressources on the remote service
+4. Click **Add* button
+
+webKnossos will NOT download/copy any data from these third-party data providers. 
+Rather, any data viewed in webKnossos will be streamed read-only and directly from the remote source. 
+Any other webKnossos feature, e.g. annotations, access rights, will be stored in webKnossos and do not affect these services. 
+
+Note, this may count against any usage limits or minutes as defined by these third party services. Check with the service provider or dataset owner.
+
+### Working with Zarr dataset
+We are working on integrating full Zarr support into webKnossos. If you have dataset in the Zarr format and would like to work with us on building, testing and refining the Zarr integration into webKnossos than [please contact us](mailto:hello@webknossos.org).
+
 
 ### Uploading through the Python API
 For those wishing to automate dataset upload or to do it programmatically, check out the webKnossos [Python library](https://github.com/scalableminds/webknossos-libs). It allows to create, manage and upload datasets as well. 
@@ -67,8 +106,8 @@ services:
 Any dataset uploaded through the web interface at [webknossos.org](https://webknossos.org) is automatically converted for compatiblity.
 
 For manual conversion, we provide the following software tools and libraries:
-- The [webKnossos Cuber](https://github.com/scalableminds/webknossos-libs/wkcuber) is a CLI tool that can convert many formats to WKW. 
-- For other file formats, the [Python webKnossos libray](https://github.com/scalableminds/webknossos-libs) can be an option for custom scripting.
+- The [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
+- For other file formats, the [Python webKnossos libray](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
 See page on [software tooling](.tooling.md) for more.
 

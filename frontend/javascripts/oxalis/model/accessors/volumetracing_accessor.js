@@ -175,6 +175,9 @@ export function isVolumeAnnotationDisallowedForZoom(tool: AnnotationTool, state:
 const MAX_BRUSH_SIZE_FOR_MAG1 = 300;
 export function getMaximumBrushSize(state: OxalisState) {
   const volumeResolutions = getResolutionInfoOfActiveSegmentationTracingLayer(state);
+  if (volumeResolutions.resolutions.length === 0) {
+    return MAX_BRUSH_SIZE_FOR_MAG1;
+  }
   const lowestExistingResolutionIndex = volumeResolutions.getClosestExistingIndex(0);
 
   // For each leading magnification which does not exist,

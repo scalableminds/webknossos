@@ -240,7 +240,7 @@ test("Garbage Collection should grow beyond soft limit if necessary", t => {
   [b1, b2, b3].map(b => b.markAsPulled());
 
   // Allocate a 4th one which should still be possible (will exceed BUCKET_COUNT_SOFT_LIMIT)
-  const b4 = cube.getOrCreateBucket([3, 3, 3, 0]);
+  cube.getOrCreateBucket([3, 3, 3, 0]);
 
   const addresses = cube.buckets.map(b => b.zoomedAddress);
   t.deepEqual(addresses, [[0, 0, 0, 0], [1, 1, 1, 0], [2, 2, 2, 0], [3, 3, 3, 0]]);

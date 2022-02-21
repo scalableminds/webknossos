@@ -1,6 +1,6 @@
 #!/bin/bash
 
-testBundlePath="public/test-bundle"
+testBundlePath="public-test/test-bundle"
 jsPath="frontend/javascripts"
 FIND=find
 

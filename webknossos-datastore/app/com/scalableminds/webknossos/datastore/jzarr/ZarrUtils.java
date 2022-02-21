@@ -68,17 +68,19 @@ public final class ZarrUtils {
         getObjectWriter(prettyPrinting).writeValue(writer, o);
     }
 
-    public static int[][] computeChunkIndices(int[] shape, int[] chunks, int[] bufferShape, int[] to) {
-        final int depth = shape.length;
+    public static int[][] computeChunkIndices(int[] arrayShape, int[] arrayChunkSize, int[] selectedShape, int[] selectedOffset) {
+        final int depth = arrayShape.length;
         int[] start = new int[depth];
         int[] end = new int[depth];
         int numChunks = 1;
-        for (int i = 0; i < depth; i++) {
-            final int staIdx = to[i] / chunks[i];
-            final int endIdx = (to[i] + bufferShape[i] - 1) / chunks[i];
-            numChunks *= (endIdx - staIdx + 1);
-            start[i] = staIdx;
-            end[i] = endIdx;
+        for (int dim = 0; dim < depth; dim++) {
+            final int startIdx = selectedOffset[dim] / arrayChunkSize[dim];
+            final int maxIdx = (arrayShape[dim] - 1) / arrayChunkSize[dim];
+            int endIdx = (selectedOffset[dim] + selectedShape[dim] - 1) / arrayChunkSize[dim];
+            endIdx = Math.min(endIdx, maxIdx);
+            start[dim] = startIdx;
+            end[dim] = endIdx;
+            numChunks *= (endIdx - startIdx + 1);
         }
 
         final int[][] chunkIndices = new int[numChunks][];

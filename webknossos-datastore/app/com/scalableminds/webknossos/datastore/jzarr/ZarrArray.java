@@ -1,29 +1,3 @@
-/*
- *
- * MIT License
- *
- * Copyright (c) 2020. Brockmann Consult GmbH (info@brockmann-consult.de)
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- */
-
 package com.scalableminds.webknossos.datastore.jzarr;
 
 import com.scalableminds.webknossos.datastore.jzarr.chunk.ChunkReaderWriter;
@@ -117,12 +91,6 @@ public class ZarrArray {
                     compressor = nullCompressor;
                 }
                 DimensionSeparator separator = header.getDimensionSeparator();
-                if (separator == null && chunks.length > 1) {
-                    final boolean nestedChunks = findNestedChunks(relativePath, store, chunks);
-                    if (nestedChunks) {
-                        separator = DimensionSeparator.SLASH;
-                    }
-                }
                 if (separator == null) {
                     separator = DimensionSeparator.DOT;
                 }
@@ -208,38 +176,6 @@ public class ZarrArray {
 
     public ByteOrder getByteOrder() {
         return _byteOrder;
-    }
-
-    public void write(Number value) throws IOException, InvalidRangeException {
-        final int[] shape = getShape();
-        final int[] offset = new int[shape.length];
-        write(value, shape, offset);
-    }
-
-    public void write(Number value, int[] shape, int[] offset) throws IOException, InvalidRangeException {
-        final Object data = ZarrUtils.createDataBufferFilledWith(value, getDataType(), shape);
-        write(data, shape, offset);
-    }
-
-    public void write(Object data, int[] dataShape, int[] offset) throws IOException, InvalidRangeException {
-        final int[][] chunkIndices = ZarrUtils.computeChunkIndices(_shape, _chunks, dataShape, offset);
-        ucar.ma2.DataType dataType = ucar.ma2.DataType.getType(data.getClass().getComponentType(), false);
-        final Array source = Array.factory(dataType, dataShape, data);
-
-        for (int[] chunkIndex : chunkIndices) {
-            final String chunkFilename = getChunkFilename(chunkIndex);
-            final ZarrPath chunkFilePath = relativePath.resolve(chunkFilename);
-            final int[] fromBufferPos = computeFrom(chunkIndex, offset, false);
-            synchronized (chunkFilename) {
-                if (partialCopyingIsNotNeeded(dataShape, fromBufferPos)) {
-                    _chunkReaderWriter.write(chunkFilePath.storeKey, source);
-                } else {
-                    final Array targetChunk = _chunkReaderWriter.read(chunkFilePath.storeKey);
-                    PartialDataCopier.copy(fromBufferPos, source, targetChunk);
-                    _chunkReaderWriter.write(chunkFilePath.storeKey, targetChunk);
-                }
-            }
-        }
     }
 
     public Object read() throws IOException, InvalidRangeException {

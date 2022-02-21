@@ -14,7 +14,6 @@ import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Full}
 
 class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
@@ -22,6 +21,7 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
     val offset = Array(0, 0, bucket.globalZ, bucket.globalY, bucket.globalX)
     val shape = Array(1, 1, bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
+    logger.info("Cut out bucket!")
     Full(toByteArray(zarrArray.read(shape, offset).asInstanceOf[Array[Short]]))
   }
 
@@ -93,10 +93,10 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
           .resolve(readInstruction.dataSource.id.name)
           .resolve(readInstruction.dataLayer.name)
       }
-      logger.info(s"zarrFilePath: $layerPath")
 
       if (useS3 || layerPath.toFile.exists()) {
-        tryo(ZarrArray.open(layerPath)).map(new ZarrCube(_))
+        logger.info(s"opening: $layerPath")
+        Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
       } else Empty
     }.getOrElse(Empty)
   }

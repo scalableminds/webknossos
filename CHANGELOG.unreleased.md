@@ -29,6 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Changed a number of API routes from GET to POST to avoid unwanted side effects. [#6023](https://github.com/scalableminds/webknossos/pull/6023)
 - Removed unused datastore route `checkInbox` (use `checkInboxBlocking` instead). [#6023](https://github.com/scalableminds/webknossos/pull/6023)
 - Migrated to Google Analytics 4. [#6031](https://github.com/scalableminds/webknossos/pull/6031)
+- Improved stability and speed of volume annotations when annotating large areas. [#6055](https://github.com/scalableminds/webknossos/pull/6055)
 
 ### Fixed
 - Fixed volume-related bugs which could corrupt the volume data in certain scenarios. [#5955](https://github.com/scalableminds/webknossos/pull/5955)

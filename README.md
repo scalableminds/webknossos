@@ -72,6 +72,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10+](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
+* [Blosc](TODO)
 * [node.js 12+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
@@ -119,6 +120,8 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/source
 
 sudo apt update
 sudo apt install -y nodejs git postgresql postgresql-client scala sbt openjdk-8-jdk yarn redis-server build-essential
+
+TODO Blosc
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"

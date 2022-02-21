@@ -5,9 +5,9 @@ import java.nio.file.Files
 import java.nio.file.spi.FileSystemProvider
 import java.util
 
-import com.bc.zarr.ZarrArray
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemHolder
+import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
@@ -15,7 +15,7 @@ import play.api.mvc.{Action, AnyContent}
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
 
-class Application @Inject()(redisClient: DataStoreRedisStore, fileSystemHolder: FileSystemHolder)(
+class Application @Inject()(redisClient: DataStoreRedisStore /*, fileSystemHolder: FileSystemHolder*/ )(
     implicit ec: ExecutionContext)
     extends Controller {
 
@@ -41,18 +41,25 @@ class Application @Inject()(redisClient: DataStoreRedisStore, fileSystemHolder: 
   def testS3: Action[AnyContent] = Action { implicit request =>
     val existingProviders: util.List[FileSystemProvider] = FileSystemProvider.installedProviders
 
-    logger.info(f"${fileSystemHolder.s3fs}")
+    //logger.info(f"${fileSystemHolder.s3fs}")
 
-    fileSystemHolder.s3fs.map { s3fs =>
+    FileSystemHolder.s3fs.foreach { s3fs =>
       val files = Files.list(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/")).iterator().asScala.toList
       logger.info(s"files: $files")
 
-      val bytes = Files.readAllBytes(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/0.0.99.0.0"))
+      /*val bytes = Files.readAllBytes(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/0.0.99.0.0"))
 
       logger.info(s"read ${bytes.length} bytes from /webknossos-zarr/demodata/6001251.zarr/0/0.0.99.0.0")
 
+      val channel: SeekableByteChannel = Files.newByteChannel(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/0.0.99.0.0"))
+      val stream: InputStream = Channels.newInputStream(channel)
+
+      val bf = ByteBuffer.allocate(64)
+      channel.position(10)
+      channel.read(bf)
+      logger.info(s"Read ${bf.array().length} bytes: ${bf.array().mkString("Array(", ", ", ")")}")*/
+
       ZarrArray.open(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/"))
-      ()
     }
 
     /*val scl = classOf[ClassLoader].getDeclaredField("scl")

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
@@ -17,9 +17,9 @@ trait ZarrLayer extends DataLayer {
 
   lazy val bucketProvider = new ZarrBucketProvider(this)
 
-  def resolutions: List[Point3D] = List(Point3D(1, 1, 1))
+  def resolutions: List[Vec3Int] = List(Vec3Int(1, 1, 1))
 
-  def lengthOfUnderlyingCubes(resolution: Point3D): Int = 1024
+  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = 1024
 
 }
 

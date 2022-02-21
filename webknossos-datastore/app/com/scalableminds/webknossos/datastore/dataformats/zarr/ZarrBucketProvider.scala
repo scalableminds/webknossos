@@ -8,13 +8,13 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.text.MessageFormat
 import java.util.ServiceLoader
 
-import com.bc.zarr.ZarrArray
 import com.google.common.collect.ImmutableMap
-import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCube}
+import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Empty, Full}
 
 class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
@@ -35,7 +35,7 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 
 }
 
-class FileSystemHolder @Inject()() extends LazyLogging {
+object FileSystemHolder extends LazyLogging {
 
   def findS3Provider: Option[FileSystemProvider] = {
     val i = ServiceLoader.load(classOf[FileSystemProvider], currentThread().getContextClassLoader).iterator()
@@ -82,16 +82,11 @@ class FileSystemHolder @Inject()() extends LazyLogging {
 
 class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging {
 
-  // public example data from OME
-  private val bucketName = "idr/zarr/v0.1/6001251.zarr"
-  private val s3Uri = URI.create(s"s3://uk1s3.embassy.ebi.ac.uk")
-
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] =
-    Empty /*
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
     val useS3 = true
     FileSystemHolder.s3fs.map { s3fs =>
       val layerPath = if (useS3) {
-        s3fs.getPath("/" + bucketName)
+        s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/")
       } else {
         readInstruction.baseDir
           .resolve(readInstruction.dataSource.id.team)
@@ -103,6 +98,7 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
       if (useS3 || layerPath.toFile.exists()) {
         tryo(ZarrArray.open(layerPath)).map(new ZarrCube(_))
       } else Empty
-    }.getOrElse(Empty)*/
+    }.getOrElse(Empty)
+  }
 
 }

@@ -43,7 +43,6 @@ object Dependencies {
   private val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
   private val swagger = "io.swagger" %% "swagger-play2" % "1.7.1"
   private val jhdf = "cisd" % "jhdf5" % "19.04.0"
-  private val jzarr = "com.bc.zarr" % "jzarr" % "0.3.5"
   private val s3fs = "org.lasersonlab" % "s3fs" % "2.2.3"
 
   private val sql = Seq(
@@ -86,7 +85,6 @@ object Dependencies {
     akkaHttp,
     redis,
     jhdf,
-    jzarr,
     s3fs
   )
 

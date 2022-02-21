@@ -228,8 +228,6 @@ function sliceBufferIntoPieces(
 }
 
 export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
-  const then = performance.now();
-
   const items: Array<UpdateAction> = await Promise.all(
     batch.map(
       async (bucket): Promise<UpdateAction> => {
@@ -244,10 +242,6 @@ export async function sendToStore(batch: Array<DataBucket>, tracingId: string): 
       },
     ),
   );
-  const duration = performance.now() - then;
-  const durationPerItem = duration / batch.length;
-
-  console.log("durationPerItem", durationPerItem);
 
   Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

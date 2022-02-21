@@ -73,12 +73,11 @@ const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
 const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 class DataCube {
-  MAXIMUM_BUCKET_COUNT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
+  BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
-  bucketCount: number = 0;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
@@ -93,9 +92,12 @@ class DataCube {
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
-  // The bucket-arrays are initialized large enough to hold the whole cube. Thus no
-  // expanding is necessary. bucketCount keeps track of how many buckets are currently
-  // in the cube.
+  // The bucket array is initialized as an empty array and grows dynamically. If the
+  // length exceeds BUCKET_COUNT_SOFT_LIMIT, it is tried to garbage-collect an older
+  // bucket when placing a new one. If this does not succeed (happens if all buckets
+  // in a volume annotation layer are dirty), the array grows further.
+  // If the array grows beyond 2 * BUCKET_COUNT_SOFT_LIMIT, the user is warned about
+  // this.
   //
   // Each bucket consists of an access-value, the zoomStep and the actual data.
   // The access-values are used for garbage collection. When a bucket is accessed, its
@@ -120,7 +122,7 @@ class DataCube {
 
     this.dirtyBucketsCount = 0;
 
-    if (isSegmentation) {
+    if (isSegmentation && process.env.BABEL_ENV !== "test") {
       setInterval(() => {
         console.log("#######");
 
@@ -149,9 +151,9 @@ class DataCube {
     _.extend(this, BackboneEvents);
 
     this.cubes = [];
-    if (isSegmentation) {
+    if (isSegmentation && process.env.BABEL_ENV !== "test") {
       // undo
-      this.MAXIMUM_BUCKET_COUNT = Math.floor(this.MAXIMUM_BUCKET_COUNT / 10);
+      this.BUCKET_COUNT_SOFT_LIMIT = Math.floor(this.BUCKET_COUNT_SOFT_LIMIT / 10);
     }
     this.buckets = [];
 
@@ -325,7 +327,7 @@ class DataCube {
   }
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
-    if (this.buckets.length >= this.MAXIMUM_BUCKET_COUNT) {
+    if (this.buckets.length >= this.BUCKET_COUNT_SOFT_LIMIT) {
       let foundCollectibleBucket = false;
 
       for (let i = 0; i < this.buckets.length; i++) {
@@ -374,7 +376,6 @@ class DataCube {
       }
     }
     this.buckets = [];
-    this.bucketCount = 0;
     this.bucketIterator = 0;
   }
 

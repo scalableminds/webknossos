@@ -12,6 +12,7 @@
 <PROJECT_ROOT>/conf/.*
 <PROJECT_ROOT>/lib/.*
 <PROJECT_ROOT>/public/.*
+<PROJECT_ROOT>/public-test/.*
 <PROJECT_ROOT>/tools/.*
 <PROJECT_ROOT>/node_modules/webpack-cli/
 <PROJECT_ROOT>/node_modules/findup/

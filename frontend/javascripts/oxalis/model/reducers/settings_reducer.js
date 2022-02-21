@@ -9,7 +9,6 @@ import {
   getVisibleSegmentationLayers,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateKey, updateKey3, type StateShape1 } from "oxalis/model/helpers/deep_update";
 import { userSettings } from "types/schemas/user_settings.schema";
 

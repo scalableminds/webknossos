@@ -3,6 +3,13 @@ import { PNG } from "pngjs";
 import fs from "fs";
 import pixelmatch from "pixelmatch";
 
+export function isPixelEquivalent(changedPixels: number, width: number, height: number) {
+  // There may be a difference of 0.1 %
+  const allowedThreshold = 0.1 / 100;
+  const allowedChangedPixel = allowedThreshold * width * height;
+  return changedPixels < allowedChangedPixel;
+}
+
 function openScreenshot(path: string, name: string): Promise<typeof PNG> {
   return new Promise(resolve => {
     fs.createReadStream(`${path}/${name}.png`)
@@ -29,7 +36,7 @@ function saveScreenshot(png: typeof PNG, path: string, name: string): Promise<vo
   });
 }
 
-function bufferToPng(buffer: Buffer, width: number, height: number): Promise<typeof PNG> {
+export function bufferToPng(buffer: Buffer, width: number, height: number): Promise<typeof PNG> {
   return new Promise(resolve => {
     const png = new PNG({ width, height });
     png.parse(buffer, () => resolve(png));

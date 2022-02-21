@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added experimental min-cut feature to split a segment in a volume tracing with two seeds. [#5885](https://github.com/scalableminds/webknossos/pull/5885)
 - Annotations with multiple volume layers can now be uploaded. (Note that merging multiple annotations with multiple volume layers each is not supported.) [#6028](https://github.com/scalableminds/webknossos/pull/6028)
 - Decrease volume annotation download latency by using a different compression level. [#6036](https://github.com/scalableminds/webknossos/pull/6036)
+- The visible meshes are now included in the link copied from the "Share" modal or the "Share" button next to the dataset position. They are automatically loaded for users that open the shared link. [#5993](https://github.com/scalableminds/webknossos/pull/5993)
 
 ### Changed
 - Upgraded webpack build tool to v5 and all other webpack related dependencies to their latest version. Enabled persistent caching which speeds up server restarts during development as well as production builds. [#5969](https://github.com/scalableminds/webknossos/pull/5969)

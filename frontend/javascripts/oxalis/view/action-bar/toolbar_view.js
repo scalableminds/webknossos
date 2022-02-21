@@ -15,6 +15,7 @@ import { document } from "libs/window";
 import {
   getActiveSegmentationTracing,
   getMappingInfoForVolumeTracing,
+  getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -324,6 +325,7 @@ function CreateTreeButton() {
 
 function ChangeBrushSizeButton() {
   const brushSize = useSelector(state => state.userConfiguration.brushSize);
+  const maximumBrushSize = useSelector(state => getMaximumBrushSize(state));
 
   return (
     <Tooltip title="Change the brush size">
@@ -335,7 +337,7 @@ function ChangeBrushSizeButton() {
               label=""
               roundTo={0}
               min={userSettings.brushSize.minimum}
-              max={userSettings.brushSize.maximum}
+              max={maximumBrushSize}
               step={5}
               spans={[0, 14, 10]}
               value={brushSize}

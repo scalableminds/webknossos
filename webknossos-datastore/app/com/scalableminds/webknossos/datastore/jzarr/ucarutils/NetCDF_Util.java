@@ -23,7 +23,7 @@
  * SOFTWARE.
  *
  */
-package com.scalableminds.webknossos.datastore.jzarr.ucar;
+package com.scalableminds.webknossos.datastore.jzarr.ucarutils;
 
 import com.scalableminds.webknossos.datastore.jzarr.DataType;
 import ucar.ma2.Array;

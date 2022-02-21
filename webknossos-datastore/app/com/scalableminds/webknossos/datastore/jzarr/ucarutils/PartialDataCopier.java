@@ -24,7 +24,7 @@
  *
  */
 
-package com.scalableminds.webknossos.datastore.jzarr.ucar;
+package com.scalableminds.webknossos.datastore.jzarr.ucarutils;
 
 import ucar.ma2.Array;
 import ucar.ma2.IndexIterator;

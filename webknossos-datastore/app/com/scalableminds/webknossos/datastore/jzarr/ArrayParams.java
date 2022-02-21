@@ -187,7 +187,6 @@ public class ArrayParams {
     /**
      * Returns {@link Params} built from the parameters previously set.<br/>
      * This method is package local and should  be used by framework itself only.<br/>
-     * It is used by {@link ZarrArray#create(ZarrPath, Store, ArrayParams, Map)}
      *
      * @return {@link Params}
      */

@@ -21,7 +21,7 @@ class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
     val offset = Array(0, 0, bucket.globalZ, bucket.globalY, bucket.globalX)
     val shape = Array(1, 1, bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
-    logger.info("Cut out bucket!")
+    //logger.info("Cut out bucket!")
     Full(toByteArray(zarrArray.read(shape, offset).asInstanceOf[Array[Short]]))
   }
 

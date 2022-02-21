@@ -29,7 +29,7 @@ import com.scalableminds.webknossos.datastore.jzarr.Compressor;
 import com.scalableminds.webknossos.datastore.jzarr.CompressorFactory;
 import com.scalableminds.webknossos.datastore.jzarr.DataType;
 import com.scalableminds.webknossos.datastore.jzarr.storage.Store;
-import com.scalableminds.webknossos.datastore.jzarr.ucar.NetCDF_Util;
+import com.scalableminds.webknossos.datastore.jzarr.ucarutils.NetCDF_Util;
 import ucar.ma2.Array;
 
 import java.io.IOException;

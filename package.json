@@ -201,7 +201,7 @@
   },
   "ava": {
     "files": [
-      "./public/test-bundle/**/*.{js,jsx}"
+      "./public-test/test-bundle/**/*.{js,jsx}"
     ],
     "ignoredByWatcher": [
       "./binaryData/**/*.*"
@@ -216,7 +216,7 @@
     "sourceMap": false,
     "instrument": false,
     "exclude": [
-      "public/test-bundle/test/**/*.*",
+      "public-test/test-bundle/test/**/*.*",
       "frontend/javascripts/test/**/*.*"
     ]
   }

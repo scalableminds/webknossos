@@ -4,15 +4,8 @@ import { message } from "antd";
 import React from "react";
 import _ from "lodash";
 
+import type { Action } from "oxalis/model/actions/actions";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
-import {
-  type CopySegmentationLayerAction,
-  updateDirectionAction,
-  updateSegmentAction,
-  finishAnnotationStrokeAction,
-  type SetActiveCellAction,
-  type ClickSegmentAction,
-} from "oxalis/model/actions/volumetracing_actions";
 import {
   ResolutionInfo,
   getBoundaries,
@@ -43,7 +36,8 @@ import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
   addUserBoundingBoxAction,
-  type AddIsosurfaceAction,
+  type AddAdHocIsosurfaceAction,
+  type AddPrecomputedIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
@@ -69,6 +63,14 @@ import {
 } from "oxalis/model/accessors/tool_accessor";
 import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+import {
+  updateDirectionAction,
+  updateSegmentAction,
+  finishAnnotationStrokeAction,
+  type SetActiveCellAction,
+  type ClickSegmentAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   updateTemporarySettingAction,
   type UpdateTemporarySettingAction,
@@ -102,13 +104,18 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
+import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
-  yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
+  yield* takeEveryUnlessBusy(
+    "COPY_SEGMENTATION_LAYER",
+    copySegmentationLayer,
+    "Copying from neighbor slice",
+  );
   yield _takeLeading("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
@@ -423,7 +430,10 @@ function* labelWithVoxelBuffer2D(
   );
 }
 
-function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
+function* copySegmentationLayer(action: Action): Saga<void> {
+  if (action.type !== "COPY_SEGMENTATION_LAYER") {
+    throw new Error("Satisfy flow");
+  }
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -581,7 +591,7 @@ export function* floodFill(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
 
-    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+    const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
 
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
@@ -604,7 +614,7 @@ export function* floodFill(): Saga<void> {
       seedPosition,
       activeCellId,
       dimensionIndices,
-      currentViewportBounding,
+      boundingBoxForFloodFill,
       labeledZoomStep,
       progressCallback,
       fillMode === FillModeEnum._3D,
@@ -887,7 +897,8 @@ export function* diffVolumeTracing(
 
 function* ensureSegmentExists(
   action:
-    | AddIsosurfaceAction
+    | AddAdHocIsosurfaceAction
+    | AddPrecomputedIsosurfaceAction
     | SetActiveCellAction
     | UpdateTemporarySettingAction
     | ClickSegmentAction,
@@ -906,7 +917,7 @@ function* ensureSegmentExists(
     return;
   }
 
-  if (action.type === "ADD_ISOSURFACE") {
+  if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
     const { seedPosition } = action;
     yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
   } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
@@ -928,7 +939,10 @@ function* ensureSegmentExists(
 }
 
 function* maintainSegmentsMap(): Saga<void> {
-  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"], ensureSegmentExists);
+  yield _takeEvery(
+    ["ADD_AD_HOC_ISOSURFACE", "ADD_PRECOMPUTED_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
+    ensureSegmentExists,
+  );
 }
 
 function* getGlobalMousePosition(): Saga<?Vector3> {
@@ -1006,6 +1020,7 @@ export default [
   watchVolumeTracingAsync,
   maintainSegmentsMap,
   maintainHoveredSegmentId,
+  listenToMinCut,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
 ];

@@ -1,14 +1,14 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, _}
 import play.api.libs.json.{Json, OFormat}
 
-case class WKWResolution(resolution: Either[Int, Point3D], cubeLength: Int) {
-  def resolutionAsPoint3D: Point3D = resolution match {
+case class WKWResolution(resolution: Either[Int, Vec3Int], cubeLength: Int) {
+  def toVec3Int: Vec3Int = resolution match {
     case Left(r) =>
-      Point3D(r, r, r)
+      Vec3Int(r, r, r)
     case Right(r) =>
       r
   }
@@ -26,10 +26,10 @@ trait WKWLayer extends DataLayer {
 
   def wkwResolutions: List[WKWResolution]
 
-  def resolutions: List[Point3D] = wkwResolutions.map(_.resolutionAsPoint3D)
+  def resolutions: List[Vec3Int] = wkwResolutions.map(_.toVec3Int)
 
-  def lengthOfUnderlyingCubes(resolution: Point3D): Int =
-    wkwResolutions.find(_.resolutionAsPoint3D == resolution).map(_.cubeLength).getOrElse(0)
+  def lengthOfUnderlyingCubes(resolution: Vec3Int): Int =
+    wkwResolutions.find(_.toVec3Int == resolution).map(_.cubeLength).getOrElse(0)
 
 }
 

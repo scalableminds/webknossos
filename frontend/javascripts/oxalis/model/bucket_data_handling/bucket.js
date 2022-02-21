@@ -715,12 +715,21 @@ export class DataBucket {
       });
       this.cube.pullQueue.pull();
       needsToAwaitBucket = true;
+    } else if (this.isMissing()) {
+      // Awaiting is not necessary.
     }
     if (needsToAwaitBucket) {
       await new Promise(resolve => {
         this.once("bucketLoaded", resolve);
+        this.once("bucketMissing", resolve);
       });
     }
     // Bucket has been loaded by now or was loaded already
+    if (this.isMissing()) {
+      // In the past, ensureLoaded() never returned if the bucket
+      // was MISSING. This log might help to discover potential
+      // bugs which could arise in combination with MISSING buckets.
+      console.warn("Awaited missing bucket.");
+    }
   }
 }

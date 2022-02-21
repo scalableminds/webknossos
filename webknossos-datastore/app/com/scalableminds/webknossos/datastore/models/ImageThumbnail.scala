@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
 import play.api.libs.json.{Json, OFormat}
 
@@ -27,7 +27,7 @@ object ImageThumbnail {
     // Parameters that seem to be working good enough
     val center =
       if (centerX.isDefined && centerY.isDefined && centerZ.isDefined)
-        Point3D(centerX.get, centerY.get, centerZ.get)
+        Vec3Int(centerX.get, centerY.get, centerZ.get)
       else dataLayer.boundingBox.center
     val resolutionExponent = bestResolutionExponent(dataLayer, zoomOpt)
     val resolution = dataLayer.lookUpResolution(resolutionExponent, snapToClosest = true)

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.util.geometry.{Point3D, Vector3D, Vector3I}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import play.api.libs.json.{Json, OFormat}
@@ -24,7 +24,7 @@ case class DataRequest(
 }
 
 case class WebKnossosDataRequest(
-    position: Point3D,
+    position: Vec3Int,
     zoomStep: Int,
     cubeSize: Int,
     fourBit: Option[Boolean],
@@ -47,12 +47,12 @@ object WebKnossosDataRequest {
 }
 
 case class WebKnossosIsosurfaceRequest(
-    position: Point3D,
+    position: Vec3Int,
     zoomStep: Int,
-    cubeSize: Point3D,
+    cubeSize: Vec3Int,
     segmentId: Long,
-    voxelDimensions: Vector3I,
-    scale: Vector3D,
+    subsamplingStrides: Vec3Int,
+    scale: Vec3Double,
     mapping: Option[String] = None,
     mappingType: Option[String] = None
 ) {

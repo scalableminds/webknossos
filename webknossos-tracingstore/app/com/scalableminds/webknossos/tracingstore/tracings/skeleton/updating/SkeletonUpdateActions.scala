@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
-import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
 import play.api.libs.json._
 
@@ -171,8 +171,8 @@ case class DeleteEdgeSkeletonAction(source: Int,
 }
 
 case class CreateNodeSkeletonAction(id: Int,
-                                    position: Point3D,
-                                    rotation: Option[Vector3D],
+                                    position: Vec3Int,
+                                    rotation: Option[Vec3Double],
                                     radius: Option[Float],
                                     viewport: Option[Int],
                                     resolution: Option[Int],
@@ -210,8 +210,8 @@ case class CreateNodeSkeletonAction(id: Int,
 }
 
 case class UpdateNodeSkeletonAction(id: Int,
-                                    position: Point3D,
-                                    rotation: Option[Vector3D],
+                                    position: Vec3Int,
+                                    rotation: Option[Vec3Double],
                                     radius: Option[Float],
                                     viewport: Option[Int],
                                     resolution: Option[Int],
@@ -284,8 +284,8 @@ case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup
 }
 
 case class UpdateTracingSkeletonAction(activeNode: Option[Int],
-                                       editPosition: com.scalableminds.util.geometry.Point3D,
-                                       editRotation: com.scalableminds.util.geometry.Vector3D,
+                                       editPosition: com.scalableminds.util.geometry.Vec3Int,
+                                       editRotation: com.scalableminds.util.geometry.Vec3Double,
                                        zoomLevel: Double,
                                        userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
                                        actionTimestamp: Option[Long] = None,

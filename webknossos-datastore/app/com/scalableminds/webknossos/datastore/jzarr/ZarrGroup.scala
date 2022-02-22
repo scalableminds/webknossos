@@ -25,7 +25,7 @@ object ZarrGroup {
   }
 
   @throws[IOException]
-  private def validateGroupToBeOpened(store: Store, relativePath: ZarrPath): Unit = try {
+  private def validateGroupToBeOpened(store: Store, relativePath: ZarrPath): Unit = {
     val is = store.getInputStream(relativePath.resolve(FILENAME_DOT_ZGROUP).storeKey)
     try {
       if (is == null)
@@ -35,7 +35,7 @@ object ZarrGroup {
   }
 
   @throws[IOException]
-  private def ensureZarrFormatIs2(is: InputStream): Unit = try {
+  private def ensureZarrFormatIs2(is: InputStream): Unit = {
     val in = new InputStreamReader(is)
     val reader = new BufferedReader(in)
     try {

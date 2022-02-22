@@ -33,24 +33,25 @@ class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLoggi
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCube] = {
     val useLocal = layer.fileSystemSelector.typ == FileSystemType.Local
-    FileSystemHolder
-      .getOrCreate(layer.fileSystemSelector)
-      .map { fs: FileSystem =>
-        val layerPath = if (useLocal) {
-          readInstruction.baseDir
-            .resolve(readInstruction.dataSource.id.team)
-            .resolve(readInstruction.dataSource.id.name)
-            .resolve(readInstruction.dataLayer.name)
-        } else {
-          fs.getPath(layer.remotePath.getOrElse(""))
-        }
-
-        if (!useLocal || layerPath.toFile.exists()) {
+    if (useLocal) {
+      val layerPath = readInstruction.baseDir
+        .resolve(readInstruction.dataSource.id.team)
+        .resolve(readInstruction.dataSource.id.name)
+        .resolve(readInstruction.dataLayer.name)
+      if (layerPath.toFile.exists()) {
+        Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
+      } else Empty
+    } else {
+      val layerPathOpt = FileSystemHolder.getOrCreate(layer.fileSystemSelector).map { fs: FileSystem =>
+        fs.getPath(layer.remotePath.getOrElse(""))
+      }
+      layerPathOpt match {
+        case None => Empty
+        case Some(layerPath) =>
           logger.info(s"opening: $layerPath")
           Full(ZarrArray.open(layerPath)).map(new ZarrCube(_))
-        } else Empty
       }
-      .getOrElse(Empty)
+    }
   }
 
 }

@@ -28,53 +28,49 @@ object ZarrArray {
   @throws[IOException]
   def open(relativePath: ZarrPath, store: Store): ZarrArray = {
     val zarrHeaderPath = relativePath.resolve(FILENAME_DOT_ZARRAY)
+    val storageStream = store.getInputStream(zarrHeaderPath.storeKey)
     try {
-      val storageStream = store.getInputStream(zarrHeaderPath.storeKey)
+      if (storageStream == null)
+        throw new IOException("'" + FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
+      val reader = new BufferedReader(new InputStreamReader(storageStream))
       try {
-        if (storageStream == null)
-          throw new IOException("'" + FILENAME_DOT_ZARRAY + "' expected but is not readable or missing in store.")
-        try {
-          val reader = new BufferedReader(new InputStreamReader(storageStream))
-          try {
-            val header = ZarrUtils.fromJson(reader, classOf[ZarrHeader])
-            val shape = header.getShape
-            val chunks = header.getChunks
-            val dataType = header.getRawDataType
-            val byteOrder = header.getByteOrder
-            val fillValue = header.getFill_value
-            var compressor = header.getCompressor
-            if (compressor == null) compressor = nullCompressor
-            var separator = header.getDimensionSeparator
-            if (separator == null) separator = DimensionSeparator.DOT
-            new ZarrArray(relativePath, shape, chunks, dataType, byteOrder, fillValue, compressor, separator, store)
-          } finally if (reader != null) reader.close()
-        }
-      } finally if (storageStream != null) storageStream.close()
-    }
+        val header = ZarrUtils.fromJson(reader, classOf[ZarrHeader])
+        val shape = header.getShape
+        val chunks = header.getChunks
+        val dataType = header.getRawDataType
+        val byteOrder = header.getByteOrder
+        val fillValue = header.getFill_value
+        var compressor = header.getCompressor
+        if (compressor == null) compressor = nullCompressor
+        var separator = header.getDimensionSeparator
+        if (separator == null) separator = DimensionSeparator.DOT
+        new ZarrArray(relativePath, shape, chunks, dataType, byteOrder, fillValue, compressor, separator, store)
+      } finally if (reader != null) reader.close()
+    } finally if (storageStream != null) storageStream.close()
   }
 }
 
-class ZarrArray private (val relativePath: ZarrPath,
-                         val _shape: Array[Int],
-                         val _chunkShape: Array[Int],
-                         val _dataType: DataType,
-                         val _byteOrder: ByteOrder,
-                         val _fillValue: Number,
-                         val _compressor: Compressor,
-                         val _separator: DimensionSeparator,
-                         val _store: Store) {
+class ZarrArray private (relativePath: ZarrPath,
+                         _shape: Array[Int],
+                         _chunkShape: Array[Int],
+                         _dataType: DataType,
+                         _byteOrder: ByteOrder,
+                         _fillValue: Number,
+                         _compressor: Compressor,
+                         _separator: DimensionSeparator,
+                         _store: Store) {
 
   final private val _chunkReaderWriter =
     ChunkReaderWriter.create(_compressor, _dataType, _byteOrder, _chunkShape, _fillValue, _store)
   final private val _chunkContentsCache = new util.HashMap[String, Ma2Array]
   if (_separator == null) throw new IllegalArgumentException("separator must not be null")
 
-  def getCompressor = _compressor
-  def getDataType = _dataType
-  def getShape = util.Arrays.copyOf(_shape, _shape.length)
-  def getChunks = util.Arrays.copyOf(_chunkShape, _chunkShape.length)
-  def getFillValue = _fillValue
-  def getByteOrder = _byteOrder
+  def getCompressor: Compressor = _compressor
+  def getDataType: DataType = _dataType
+  def getShape: Array[Int] = util.Arrays.copyOf(_shape, _shape.length)
+  def getChunks: Array[Int] = util.Arrays.copyOf(_chunkShape, _chunkShape.length)
+  def getFillValue: Number = _fillValue
+  def getByteOrder: ByteOrder = _byteOrder
 
   @throws[IOException]
   @throws[InvalidRangeException]

@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Annotations with multiple volume layers can now be uploaded. (Note that merging multiple annotations with multiple volume layers each is not supported.) [#6028](https://github.com/scalableminds/webknossos/pull/6028)
 - Decrease volume annotation download latency by using a different compression level. [#6036](https://github.com/scalableminds/webknossos/pull/6036)
 - The visible meshes are now included in the link copied from the "Share" modal or the "Share" button next to the dataset position. They are automatically loaded for users that open the shared link. [#5993](https://github.com/scalableminds/webknossos/pull/5993)
+- Added a new "Connectome Tab" which can be used to explore connectomes by visualizing neurites and their synaptic connections. Connectome files need to be placed in a `connectomes` folder inside of the respective segmentation layer. It is possible to craft links that automatically load specific agglomerates and their synapses when openend. For more information refer to https://docs.webknossos.org/webknossos/sharing.html#sharing-link-format. [#5894](https://github.com/scalableminds/webknossos/pull/5894)
 
 ### Changed
 - Upgraded webpack build tool to v5 and all other webpack related dependencies to their latest version. Enabled persistent caching which speeds up server restarts during development as well as production builds. [#5969](https://github.com/scalableminds/webknossos/pull/5969)

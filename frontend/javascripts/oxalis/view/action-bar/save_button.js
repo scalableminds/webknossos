@@ -129,7 +129,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         <Tooltip
           title={
             totalBucketsToCompress > 0
-              ? `${totalBucketsToCompress} buckets remaining to compress...`
+              ? `${totalBucketsToCompress} items remaining to compress...`
               : null
           }
         >

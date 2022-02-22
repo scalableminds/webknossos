@@ -9,6 +9,7 @@ import type {
   RemoteMeshMetaData,
 } from "types/api_flow_types";
 import type {
+  MappingType,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
@@ -124,9 +125,6 @@ export type RefreshIsosurfacesAction = {
   type: "REFRESH_ISOSURFACES",
 };
 
-export type FinishedRefreshingIsosurfacesAction = {
-  type: "FINISHED_REFRESHING_ISOSURFACES",
-};
 export type RefreshIsosurfaceAction = {
   type: "REFRESH_ISOSURFACE",
   layerName: string,
@@ -166,13 +164,24 @@ export type RemoveIsosurfaceAction = {
   cellId: number,
 };
 
-export type AddIsosurfaceAction = {
-  type: "ADD_ISOSURFACE",
+type BaseIsosurfaceInformation = {|
   layerName: string,
   cellId: number,
   seedPosition: Vector3,
-  isPrecomputed: boolean,
-};
+|};
+
+export type AddAdHocIsosurfaceAction = {|
+  type: "ADD_AD_HOC_ISOSURFACE",
+  ...BaseIsosurfaceInformation,
+  mappingName: ?string,
+  mappingType: ?MappingType,
+|};
+
+export type AddPrecomputedIsosurfaceAction = {|
+  type: "ADD_PRECOMPUTED_ISOSURFACE",
+  ...BaseIsosurfaceInformation,
+  meshFileName: string,
+|};
 
 export type AnnotationActionTypes =
   | InitializeAnnotationAction
@@ -195,7 +204,6 @@ export type AnnotationActionTypes =
   | UpdateIsosurfaceVisibilityAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
-  | FinishedRefreshingIsosurfacesAction
   | RefreshIsosurfaceAction
   | StartedLoadingIsosurfaceAction
   | FinishedLoadingIsosurfaceAction
@@ -203,7 +211,8 @@ export type AnnotationActionTypes =
   | UpdateCurrentMeshFileAction
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction
-  | AddIsosurfaceAction;
+  | AddAdHocIsosurfaceAction
+  | AddPrecomputedIsosurfaceAction;
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
@@ -367,10 +376,6 @@ export const refreshIsosurfacesAction = (): RefreshIsosurfacesAction => ({
   type: "REFRESH_ISOSURFACES",
 });
 
-export const finishedRefreshingIsosurfacesAction = (): FinishedRefreshingIsosurfacesAction => ({
-  type: "FINISHED_REFRESHING_ISOSURFACES",
-});
-
 export const refreshIsosurfaceAction = (
   layerName: string,
   cellId: number,
@@ -434,15 +439,30 @@ export const removeIsosurfaceAction = (
   cellId,
 });
 
-export const addIsosurfaceAction = (
+export const addAdHocIsosurfaceAction = (
   layerName: string,
   cellId: number,
   seedPosition: Vector3,
-  isPrecomputed: boolean,
-): AddIsosurfaceAction => ({
-  type: "ADD_ISOSURFACE",
+  mappingName: ?string,
+  mappingType: ?MappingType,
+): AddAdHocIsosurfaceAction => ({
+  type: "ADD_AD_HOC_ISOSURFACE",
   layerName,
   cellId,
   seedPosition,
-  isPrecomputed,
+  mappingName,
+  mappingType,
+});
+
+export const addPrecomputedIsosurfaceAction = (
+  layerName: string,
+  cellId: number,
+  seedPosition: Vector3,
+  meshFileName: string,
+): AddPrecomputedIsosurfaceAction => ({
+  type: "ADD_PRECOMPUTED_ISOSURFACE",
+  layerName,
+  cellId,
+  seedPosition,
+  meshFileName,
 });

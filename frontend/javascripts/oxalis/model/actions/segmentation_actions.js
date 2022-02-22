@@ -1,23 +1,52 @@
 // @flow
 
 import type { Vector3 } from "oxalis/constants";
+import type { MappingType } from "oxalis/store";
 
-export type ChangeActiveIsosurfaceCellAction = {
-  type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
+export type IsosurfaceMappingInfo = {|
+  mappingName: ?string,
+  mappingType: ?MappingType,
+|};
+
+export type LoadAdHocMeshAction = {
+  type: "LOAD_AD_HOC_MESH_ACTION",
   cellId: number,
   seedPosition: Vector3,
-  shouldReload: boolean,
+  mappingInfo?: IsosurfaceMappingInfo,
+  layerName?: string,
+};
+export type LoadPrecomputedMeshAction = {
+  type: "LOAD_PRECOMPUTED_MESH_ACTION",
+  cellId: number,
+  seedPosition: Vector3,
+  meshFileName: string,
+  layerName?: string,
 };
 
-export type IsosurfaceAction = ChangeActiveIsosurfaceCellAction;
+export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
 
-export const changeActiveIsosurfaceCellAction = (
+export const loadAdHocMeshAction = (
   cellId: number,
   seedPosition: Vector3,
-  shouldReload: boolean,
-): ChangeActiveIsosurfaceCellAction => ({
-  type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
+  mappingInfo?: IsosurfaceMappingInfo,
+  layerName?: string,
+): LoadAdHocMeshAction => ({
+  type: "LOAD_AD_HOC_MESH_ACTION",
   cellId,
   seedPosition,
-  shouldReload,
+  mappingInfo,
+  layerName,
+});
+
+export const loadPrecomputedMeshAction = (
+  cellId: number,
+  seedPosition: Vector3,
+  meshFileName: string,
+  layerName?: string,
+): LoadPrecomputedMeshAction => ({
+  type: "LOAD_PRECOMPUTED_MESH_ACTION",
+  cellId,
+  seedPosition,
+  meshFileName,
+  layerName,
 });

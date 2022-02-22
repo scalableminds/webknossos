@@ -13,9 +13,9 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 
 type MergerModeState = {
-  treeColors: Object,
-  colorMapping: Object,
-  nodesPerSegment: Object,
+  treeColors: { [number]: ?number },
+  colorMapping: { [number]: number },
+  nodesPerSegment: { [number]: number },
   nodes: Array<NodeWithTreeId>,
   // A properly initialized merger mode should always
   // have a segmentationLayerName. However, some edge cases
@@ -41,7 +41,7 @@ function getTreeColor(treeId: number, mergerModeState: MergerModeState) {
   const { treeColors } = mergerModeState;
   let color = treeColors[treeId];
   // Generate a new color if tree was never seen before
-  if (color === undefined) {
+  if (color == null) {
     color = Math.ceil(127 * Math.random());
     treeColors[treeId] = color;
   }
@@ -252,8 +252,8 @@ function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
     treeColors[activeTreeId] = undefined;
     // Applies the change of the color to all connected segments
     Object.keys(colorMapping).forEach(key => {
-      if (colorMapping[key] === oldColor) {
-        colorMapping[key] = getTreeColor(activeTreeId, mergerModeState);
+      if (colorMapping[+key] === oldColor) {
+        colorMapping[+key] = getTreeColor(activeTreeId, mergerModeState);
       }
     });
     // Update the segmentation

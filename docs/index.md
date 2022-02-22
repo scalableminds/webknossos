@@ -10,7 +10,7 @@ webKnossos is also a platform for [showcasing datasets](https://webknossos.org) 
 ![Video: webKnossos: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI)
 
 ## Getting Started
-Sign up for a free account on [https://webknossos.org/](https://webknossos.org/) and either upload one of your own dataset and work with a large selection of published community datasets. 
+Sign up for a free account on [https://webknossos.org/](https://webknossos.org/) and either upload one of your own datasets, or work with a large selection of published community datasets. 
 
 ## Features
 * Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, etc
@@ -41,8 +41,8 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 ![Showcasing Datasets](./images/spotlight.png)
 
 # Built for Science
-webKnossos is built for scientist with support by scientists. Our goals is to make image analysis and data exploration accessible and easy to use. 
-While originally designed for the annotation of electron microscopy of neural circuits in the Cortex, we have seen great projects using it to analyze MRI/CT scans, fluorescences microscopy imags, and synchrotron datasets.
+webKnossos is built for scientists with support by scientists. Our goal is to make image analysis and data exploration accessible and easy to use. 
+While originally designed for the annotation of electron microscopy of neural circuits, we have seen great projects using it to analyze MRI/CT scans, fluorescences microscopy images, and synchrotron datasets.
 
 webKnossos impact on data annotation in neuroscience and Connectomics has been published in Nature, 2017 and many other [publications](./publications.md):
 

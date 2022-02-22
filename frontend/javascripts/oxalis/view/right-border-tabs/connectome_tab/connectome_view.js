@@ -210,6 +210,7 @@ class ConnectomeView extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
+    const { connectomeData, filteredConnectomeData, checkedKeys } = this.state;
     if (
       prevProps.activeAgglomerateIds !== this.props.activeAgglomerateIds ||
       prevProps.currentConnectomeFile !== this.props.currentConnectomeFile
@@ -219,18 +220,28 @@ class ConnectomeView extends React.Component<Props, State> {
     if (prevProps.segmentationLayer !== this.props.segmentationLayer) {
       this.maybeUpdateSkeleton(prevProps.segmentationLayer);
     }
-    if (prevState.filteredConnectomeData !== this.state.filteredConnectomeData) {
-      this.updateSynapseTrees(prevState.filteredConnectomeData);
+    if (prevState.filteredConnectomeData !== filteredConnectomeData) {
+      const connectomeFileChanged =
+        prevState.filteredConnectomeData != null &&
+        filteredConnectomeData != null &&
+        prevState.filteredConnectomeData.connectomeFile !== filteredConnectomeData.connectomeFile;
+      this.updateSynapseTrees(prevState.filteredConnectomeData, connectomeFileChanged);
     }
     if (
-      prevState.connectomeData !== this.state.connectomeData ||
-      prevState.filteredConnectomeData !== this.state.filteredConnectomeData ||
-      prevState.checkedKeys !== this.state.checkedKeys
+      prevState.connectomeData !== connectomeData ||
+      prevState.filteredConnectomeData !== filteredConnectomeData ||
+      prevState.checkedKeys !== checkedKeys
     ) {
+      const connectomeFileMappingChanged =
+        prevState.connectomeData != null &&
+        connectomeData != null &&
+        prevState.connectomeData.connectomeFile.mappingName !==
+          connectomeData.connectomeFile.mappingName;
       this.updateAgglomerateTrees(
         prevState.connectomeData,
         prevState.filteredConnectomeData,
         prevState.checkedKeys,
+        connectomeFileMappingChanged,
       );
     }
   }
@@ -413,7 +424,7 @@ class ConnectomeView extends React.Component<Props, State> {
     });
   }
 
-  updateSynapseTrees(prevFilteredConnectomeData: ?ConnectomeData) {
+  updateSynapseTrees(prevFilteredConnectomeData: ?ConnectomeData, connectomeFileChanged: boolean) {
     const { segmentationLayer } = this.props;
     const { filteredConnectomeData } = this.state;
 
@@ -428,17 +439,12 @@ class ConnectomeView extends React.Component<Props, State> {
       filteredSynapseIds = getSynapseIdsFromConnectomeData(filteredConnectomeData);
     }
 
-    const reset =
-      prevFilteredConnectomeData != null &&
-      filteredConnectomeData != null &&
-      prevFilteredConnectomeData.connectomeFile !== filteredConnectomeData.connectomeFile;
-
     let deletedSynapseIds;
     let addedSynapseIds;
-    if (reset) {
-      // If the data needs to be reset, because the connectome file has changed, all existing trees need to be removed
-      // and all non-existing trees need to be newly added. Otherwise, IDs of one connectome file would get mixed up
-      // with IDs from the other.
+    if (connectomeFileChanged) {
+      // If the connectome file has changed, all existing trees need to be removed and all non-existing
+      // trees need to be newly added. Otherwise, synapse IDs of one connectome file would get mixed up
+      // with synapse IDs from the other.
       deletedSynapseIds = prevFilteredSynapseIds;
       addedSynapseIds = filteredSynapseIds;
     } else {
@@ -487,6 +493,7 @@ class ConnectomeView extends React.Component<Props, State> {
     prevConnectomeData: ?ConnectomeData,
     prevFilteredConnectomeData: ?ConnectomeData,
     prevCheckedKeys: Array<string>,
+    connectomeFileMappingChanged: boolean,
   ) {
     const { segmentationLayer } = this.props;
     const { connectomeData, filteredConnectomeData, checkedKeys } = this.state;
@@ -515,18 +522,16 @@ class ConnectomeView extends React.Component<Props, State> {
       filteredAgglomerateIds.includes(agglomerateId),
     );
 
-    const reset =
-      prevConnectomeData != null &&
-      connectomeData != null &&
-      prevConnectomeData.connectomeFile.mappingName !== connectomeData.connectomeFile.mappingName;
-
     let deletedAgglomerateIds;
     let hiddenAgglomerateIds;
     let addedAgglomerateIds;
-    if (reset) {
-      // If the agglomerate skeletons need to be reset, because the connectome file mapping has changed,
-      // all existing trees need to be removed and all non-existing trees need to be newly added.
-      // Otherwise, IDs of one connectome file would get mixed up with IDs from the other.
+    if (connectomeFileMappingChanged) {
+      // If the connectome file's mapping has changed, all existing trees need to be removed
+      // and all non-existing trees need to be newly added.
+      // Otherwise, agglomerate IDs of one mapping file would get mixed up with agglomerate IDs
+      // from the other.
+      // It the connectome file has changed but the mapping file remained the same, the agglomerate
+      // skeletons can be reused since they are the same.
       deletedAgglomerateIds = prevUnfilteredAgglomerateIds;
       hiddenAgglomerateIds = [];
       addedAgglomerateIds = visibleAgglomerateIds;

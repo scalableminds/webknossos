@@ -752,7 +752,7 @@ class ConnectomeView extends React.Component<Props, State> {
       return (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="No segment selected. Use the input field above to enter segment IDs."
+          description="No segment(s) selected. Use the input field above to enter segment IDs or right-click on a segment and select 'Import Agglomerate and Synapses'."
         />
       );
     } else {

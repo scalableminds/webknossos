@@ -634,9 +634,9 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
       mappingInfo={mappingInfo}
     >
       {isConnectomeMappingEnabled.value ? (
-        "Import Synapses for Agglomerate"
+        "Import Agglomerate and Synapses"
       ) : (
-        <Tooltip title={isConnectomeMappingEnabled.reason}>Import Synapses for Agglomerate</Tooltip>
+        <Tooltip title={isConnectomeMappingEnabled.reason}>Import Agglomerate and Synapses</Tooltip>
       )}
     </MenuItemWithMappingActivationConfirmation>
   );

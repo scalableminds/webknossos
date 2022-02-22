@@ -14,9 +14,10 @@ import net.liftweb.common.{Box, Empty, Full}
 class ZarrCube(zarrArray: ZarrArray) extends DataCube with LazyLogging {
 
   def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
-    val offset = Array(0, 0, bucket.globalZ, bucket.globalY, bucket.globalX)
-    val shape = Array(1, 1, bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
-    Full(toByteArray(zarrArray.read(shape, offset).asInstanceOf[Array[Short]]))
+    val offset = Array(0, bucket.globalZ, bucket.globalY, bucket.globalX)
+    val shape = Array(1, bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
+    //Full(toByteArray(zarrArray.read(shape, offset).asInstanceOf[Array[Short]]))
+    Full(zarrArray.read(shape, offset).asInstanceOf[Array[Byte]])
   }
 
   private def toByteArray(dataShort: Array[Short]): Array[Byte] = {

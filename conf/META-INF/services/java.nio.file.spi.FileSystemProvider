@@ -1,1 +1,2 @@
 com.upplication.s3fs.S3FileSystemProvider
+com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsFileSystemProvider

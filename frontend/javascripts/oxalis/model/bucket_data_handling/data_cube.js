@@ -341,7 +341,7 @@ class DataCube {
       if (foundCollectibleBucket) {
         this.collectBucket(this.buckets[this.bucketIterator]);
       } else {
-        const warnMessage = `More than ${this.buckets.length} needed to be allocated.`;
+        const warnMessage = `More than ${this.buckets.length} buckets needed to be allocated.`;
         if (this.buckets.length % 100 === 0) {
           console.warn(warnMessage);
           ErrorHandling.notify(new Error(warnMessage), {
@@ -371,9 +371,7 @@ class DataCube {
     this.pullQueue.clear();
     this.pullQueue.abortRequests();
     for (const bucket of this.buckets) {
-      if (bucket != null) {
-        this.collectBucket(bucket);
-      }
+      this.collectBucket(bucket);
     }
     this.buckets = [];
     this.bucketIterator = 0;

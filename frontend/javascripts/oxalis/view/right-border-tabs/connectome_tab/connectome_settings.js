@@ -13,6 +13,10 @@ import {
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { userSettings } from "types/schemas/user_settings.schema";
+import { settings } from "messages";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { NumberSliderSetting } from "oxalis/view/components/setting_input_views";
 
 const { Option } = Select;
 
@@ -25,6 +29,7 @@ type StateProps = {|
   availableConnectomeFiles: ?Array<APIConnectomeFile>,
   currentConnectomeFile: ?APIConnectomeFile,
   pendingConnectomeFileName: ?string,
+  particleSize: number,
 |};
 
 type Props = {| ...OwnProps, ...StateProps |};
@@ -42,6 +47,7 @@ const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => 
     currentConnectomeFile: connectomeData != null ? connectomeData.currentConnectomeFile : null,
     pendingConnectomeFileName:
       connectomeData != null ? connectomeData.pendingConnectomeFileName : null,
+    particleSize: state.userConfiguration.particleSize,
   };
 };
 
@@ -94,46 +100,65 @@ class ConnectomeFilters extends React.Component<Props> {
     }
   };
 
+  updateParticleSize = (value: number) => {
+    Store.dispatch(updateUserSettingAction("particleSize", value));
+  };
+
   getConnectomeFileSettings = () => {
-    const { currentConnectomeFile, availableConnectomeFiles } = this.props;
+    const { currentConnectomeFile, availableConnectomeFiles, particleSize } = this.props;
     const currentConnectomeFileName =
       currentConnectomeFile != null ? currentConnectomeFile.connectomeFileName : null;
     return (
-      <Row style={{ width: 300 }}>
-        <Col span={10}>
-          <label className="setting-label">Connectome File</label>
-        </Col>
-        <Col span={14}>
-          <Tooltip
-            title="Select a connectome file from which synapses will be loaded."
-            placement="top"
-          >
-            <Select
-              placeholder="Select a connectome file"
-              value={currentConnectomeFileName}
-              onChange={this.handleConnectomeFileSelected}
-              size="small"
-              loading={availableConnectomeFiles == null}
-              style={{ width: "100%" }}
+      <>
+        <Row style={{ width: 350 }}>
+          <Col span={9}>
+            <label className="setting-label">Connectome File</label>
+          </Col>
+          <Col span={15}>
+            <Tooltip
+              title="Select a connectome file from which synapses will be loaded."
+              placement="top"
             >
-              {availableConnectomeFiles != null && availableConnectomeFiles.length ? (
-                availableConnectomeFiles.map(connectomeFile => (
-                  <Option
-                    key={connectomeFile.connectomeFileName}
-                    value={connectomeFile.connectomeFileName}
-                  >
-                    {connectomeFile.connectomeFileName}
+              <Select
+                placeholder="Select a connectome file"
+                value={currentConnectomeFileName}
+                onChange={this.handleConnectomeFileSelected}
+                size="small"
+                loading={availableConnectomeFiles == null}
+                style={{ width: "100%" }}
+              >
+                {availableConnectomeFiles != null && availableConnectomeFiles.length ? (
+                  availableConnectomeFiles.map(connectomeFile => (
+                    <Option
+                      key={connectomeFile.connectomeFileName}
+                      value={connectomeFile.connectomeFileName}
+                    >
+                      {connectomeFile.connectomeFileName}
+                    </Option>
+                  ))
+                ) : (
+                  <Option value={null} disabled>
+                    No files available
                   </Option>
-                ))
-              ) : (
-                <Option value={null} disabled>
-                  No files available
-                </Option>
-              )}
-            </Select>
-          </Tooltip>
-        </Col>
-      </Row>
+                )}
+              </Select>
+            </Tooltip>
+          </Col>
+        </Row>
+        <Row style={{ width: 350 }}>
+          <Col span={24}>
+            <NumberSliderSetting
+              label={settings.particleSize}
+              min={userSettings.particleSize.minimum}
+              max={userSettings.particleSize.maximum}
+              step={0.1}
+              roundTo={1}
+              value={particleSize}
+              onChange={this.updateParticleSize}
+            />
+          </Col>
+        </Row>
+      </>
     );
   };
 

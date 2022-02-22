@@ -47,11 +47,11 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
 
     return (
-      <Row type="flex" align="middle">
+      <Row type="flex" align="middle" gutter={rowGutter}>
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={8}>
+        <Col span={9}>
           <Slider
             min={min}
             max={max}
@@ -61,11 +61,11 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             disabled={disabled}
           />
         </Col>
-        <Col span={5}>
+        <Col span={6}>
           <InputNumber
             min={min}
             max={max}
-            style={{ width: 80, marginLeft: 16 }}
+            style={{ width: "100%" }}
             value={value}
             onChange={this._onChange}
             size="small"
@@ -95,7 +95,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   static defaultProps = {
     disabled: false,
     roundTo: 3,
-    spans: [9, 8, 5],
+    spans: [9, 9, 6],
   };
 
   onChangeInput = (value: number) => {
@@ -138,7 +138,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled, spans } = this.props;
     return (
-      <Row type="flex" align="middle">
+      <Row type="flex" align="middle" gutter={rowGutter}>
         <Col span={spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -156,7 +156,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
           <InputNumber
             min={min}
             max={max}
-            style={{ width: 80, marginLeft: 16 }}
+            style={{ width: "100%" }}
             value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
             onChange={this.onChangeInput}
             disabled={disabled}
@@ -235,7 +235,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
         </Col>
         <Col span={15}>
           <InputNumber
-            style={{ width: 80 }}
+            style={{ width: "100%" }}
             min={min}
             max={max}
             onChange={onChange}

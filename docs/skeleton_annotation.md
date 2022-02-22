@@ -3,7 +3,7 @@ A typical goal of skeleton annotations is the reconstruction of long-running str
 A good example is the analysis of nerve cells by placing a node every few slices to reconstruct their path/circuitry through a dataset (see image below).
 
 Commonly, skeleton annotations contain the reconstruction of one or more structures, often with many thousand nodes.
-All connected nodes form a tree or more technically speaking a graph.
+All connected nodes form a tree, i.e., an undirected graph.
 
 webKnossos skeleton annotations can be downloaded, modified, and imported using a human-readable XML-based file format called [NML](./data_formats.md#nml).
 
@@ -60,8 +60,8 @@ The webKnossos toolbar at the top of the screen contains several tools designed 
 
 When the `Skeleton` tool is active, the following modifiers become available:
 - `Create new Tree`: Creates a new tree. 
-- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead of adding nodes to the active tree. Useful for marking single position objects/seeds, e.g. for marking nuclei. Also called "Soma-clicking mode".
-- `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons can be used to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
+- `Toggle single node tree mode`: Modifies the behavior of the skeleton annotation tool to create a new tree at each click instead of adding nodes to the active tree. Useful for marking single position objects/seeds, e.g., for marking nuclei. Also called "Soma-clicking mode".
+- `Toggle merger mode`: Modifies the behavior of the skeleton annotation tool to launch the `Merger Mode`. In merger mode skeletons, can be used to "collect" and merge volume segments from an over-segmentation. [Read more about `Merger Mode`](./volume_annotation.md#proof_reading_and_merging_segments).
 
 ![Skeleton Tool modifiers](./images/skeleton_tool_modifiers.png)
 
@@ -70,10 +70,10 @@ Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.
 
 Nodes can be placed by clicking (*Left Click* by default or *Right Click* when *Classic Controls* are enabled in the settings sidebar) in orthogonal mode (the skeleton tool should be selected) or automatically when moving in flight or oblique mode.
-All (global) operations are executed on the currently active node, e.g. adding a comment or node deletion. 
+All (global) operations are executed on the currently active node, e.g., adding a comment or node deletion. 
 The active node is always highlighted with a circle around it. 
 Most keyboard shortcuts take the active node into context.
-Operations on whole trees, e.g. splitting or merging trees, follow the same pattern.
+Operations on whole trees, e.g., splitting or merging trees, follow the same pattern.
 
 Skeleton annotations can contain one or many trees consisting of several nodes all the way to millions of nodes.
 Users can add comments to each node to mark important positions or easily select them from a list of comments for later usage.
@@ -81,21 +81,20 @@ Comments are organized in the `Comments` tab on the right-hand side of the scree
 The `Tree Viewer` tab on the right-hand side menu displays a 2D simplified tree representation of the currently active tree.
 
 Many organic structures do not follow a single, linear path but split into several individual branches instead.
-webKnossos natively supports branch points.
-Any node can be marked as a branch point using the keyboard shortcut "B".
+webKnossos natively supports marking nodes as branch points.
+Any node can be marked as a branch point using the keyboard shortcut "B" or through the right-click menu.
 Branch points are highlighted using a slightly different color.
-All branch points are saved as a stack for each tree and can be accessed first-in, first-out (FIFO).
-Press the "J" to jump to the latest branch point to continue working from there and remove it from the stack.
+All branch points are stored as a first-in, first-out (FIFO) stack. Press "J" to jump to the latest branch point in FIFO-order to continue working from there and remove it from the stack.
 
 ## Keyboard Shortcuts for Skeleton Annotations
-While most operations for working with skeleton annotations are either available through the UI or the context-sensitve right-click menu, some user prefer to use keyboard shortcuts work very efficiently.
+While most operations for working with skeleton annotations are either available through the UI or the context-sensitive right-click menu, some users prefer to use keyboard shortcuts to work very efficiently.
 
 | Key Binding       | Operation                           |
 | ----------------- | -------------                       |
 | Left Click        | Create New Node                     |
 | Left Click        | Select Node (Mark as Active Node) under the cursor  |
 | Left Drag         | Move around                         |
-| Left Drag         | Move node under the cursor        |
+| Left Drag         | Move the node under the cursor        |
 | S                 | Center Camera on Active Node        |
 | DEL               | Delete Active Node                  |
 | B                 | Create Branch Point                 |
@@ -109,7 +108,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | Left Drag         | Move around                         |
 | Right Click       | Create New Node                     |
 | SHIFT + Left Click| Select Node (Mark as Active Node)   |
-| Left Drag         | Move node under the cursor (unless *Classic Controls* are enabled)        |
+| Left Drag         | Move the node under the cursor (unless *Classic Controls* are enabled)        |
 
 A full list of keyboard shortcuts is [available here](./keyboard_shortcuts.md).
 
@@ -121,7 +120,8 @@ Trees can be nested and organized in so-called `Tree Groups`.
 Tree groups can have a name and are used to structure and label your annotation even further.
 Trees can be dragged and dropped between tree groups. 
 This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse (on Mac OS Cmd + Left Mouse).
-Hover over existing tree groups to bring up a cog icon and menu for creating new (sub-) groups or to delete a group. Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
+Right-click on an existing tree group to bring up a menu for creating new (sub-)groups or to delete a group. 
+Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
 
 ![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.png)
 
@@ -146,7 +146,7 @@ The active node, branch points, and nodes that have comments assigned to them ar
 Users can assign new random colors to a single tree or all trees at once.](images/tracing_ui_tree_color.png)
 
 #### Skeleton & Tree Visibility
-You can quickly toggle the visibility of all skeletons from the `Layers` menu in the left-hand sidepanel. 
+You can quickly toggle the visibility of all skeletons from the `Layers` menu in the left-hand side panel. 
 
 The visibility of individual trees can be toggled to hide some trees for a better overview.
 Toggle the checkbox before each tree name or tree group to hide/show it.
@@ -186,22 +186,22 @@ There are two ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.
 
-2. If you need more fine-grained control over which trees to download use the `Download Selected Trees` option. From the `Skeletons` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
+2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeletons` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
 
 ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](images/tracing_ui_download.png)
 
 Importing a skeleton annotation can be achieved using one of two ways:
 
-1. If you already have an annotation open you can easily add more skeletons to it by **drag and dropping** an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open annotation.
+1. If you already have an annotation open you can easily add more skeletons to it by *drag and dropping* an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open annotation.
 
-2. To import a skeleton annotation as a completely new webKnossos annotation, just drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "My Annotations" section.
+2. To import a skeleton annotation as a completely new webKnossos annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "My Annotations" section.
 
 ![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](images/tracing_ui_import.png)
 
 ### Merging Skeleton Annotations
 There are two ways for merging annotations:
 
-1. While in the annotation UI, **drag and drop** an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open annotation.
+1. While in the annotation UI, *drag and drop* an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open annotation.
 
 2. If you would like to merge your current annotation with another existing annotation, select the `Merge` operation from the overflow menu next to the `Save` button. (see image) Either enter the ID of an existing explorative annotation or select a whole project and proceed to merge the selection with your currently open annotation. The resulting annotation can either be created as a new explorative annotation. Otherwise, the merge will happen in your current annotation.
 

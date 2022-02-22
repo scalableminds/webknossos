@@ -8,7 +8,7 @@ We provide a number of free, open-source libraries and tools alongside webKnosso
 - Our official Python library for working with webKnossos datasets, skeleton and volume annotations and for downloading/uploading data from your webKnossos instance through the REST API.
 - Read & write webKnossos datasets and *.wkw files (raw image data and volume segmentations)
 - Read & write *.nml files (skeleton annotations)
-- Download, modify, and upload datasets to webKnossos
+- Download, modify and upload datasets to webKnossos
 
 
 ## webKnossos Cuber
@@ -22,7 +22,7 @@ We provide a number of free, open-source libraries and tools alongside webKnosso
 ## webKnossos Connect
 - [https://github.com/scalableminds/webknossos-connect](https://github.com/scalableminds/webknossos-connect)
 - A webKnossos compatible data connector written in Python
-- webKnossos-connect serves as an adapter between the webKnossos data store interface and other alternative data storage servers (e.g BossDB) or static files hosted on Cloud Storage (e.g. Neuroglancer Precomputed)
+- webKnossos-connect serves as an adapter between the webKnossos data store interface and other alternative data storage servers (e.g., BossDB) or static files hosted on Cloud Storage (e.g. Neuroglancer Precomputed)
 
 
 ## webKnossos Wrap Data Format (wkw)

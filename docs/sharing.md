@@ -1,47 +1,47 @@
 # Collaboration & Sharing
 webKnossos is built for working collaboratively and sharing your work with colleagues, collaborators, and the scientific community.
-Anything in webKnossos can be shared: the raw datasets, any skeleton or volume annotaton, or complex segmentations.
+Anything in webKnossos can be shared: the raw datasets, any skeleton or volume annotations, or complex segmentations.
 
 When speaking about collaboration and sharing, we imagine two scenarios supported by webKnossos:
-1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g. colleagues from other institutes, reviewers, publishers, a paper publication and the research community as a whole.
-2. Share data within your organisation to collaborate with other members/coworkers
+1. Sharing data with outsiders - anyone who is not a member of your webKnossos organization, e.g., colleagues from other institutes, reviewers, publishers, a paper publication, and the research community as a whole.
+2. Share data within your organization to collaborate with other members/co-workers
 
-Since webKnossos is a web platfrom most anything can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
+Since webKnossos is a web platform, most resources can be shared as a web link/URL. This makes it super easy to integrate webKnossos in your existing communication workflows, e.g.:
 - send collaborators an *email* containing a link to specific, interesting data location or annotations
-- include a link in a *publication* so reader can have direct access to the data to see for themselves
+- include a link in a *publication* so readers can have direct access to the data to see for themselves
 - share a link through *Slack*, *MS Teams*, or any other messenger service
 - include it in any *lab journal* and *blog* posts
 - link it in a *forum* post
 
-In many ways, the sharing by web link works similiarly to productes like Google Drive or Dropbox.
+In many ways, the sharing by web link works similarly to products like Google Drive or Dropbox.
 
 webKnossos sharing is tightly integrated with user permissions and access rights. See the sections [on dataset management](./datasets.md#general) and [user administration](./users.md) for more info.
 
 ## Sharing 
-As mentioned earlier any webKnossos ressource can be share as a normal web URL. The easisted way to obtain this sharing link is by clicking the `Share` button in the tool bar at top of the screen next to the position/coordinate section. 
+As mentioned earlier, any webKnossos resource can be shared as a normal web URL. The easiest way to obtain this sharing link is by clicking the `Share` button in the toolbar at the top of the screen next to the position/coordinate section. 
 
-For more control, you can bring up the detailed sharing dialog. The sharing dialog is accessible from the menu next to the Save button at the top of the screen under `Share`. The sharing menu includes fine-grained option for internal and outside sharing, explained in more detail below:
+For more control, you can bring up the detailed sharing dialog. The sharing dialog is accessible from the menu next to the Save button at the top of the screen under `Share`. The sharing menu includes fine-grained options for internal and outside sharing, explained in more detail below:
 
 1. `Private`: Only you and your team manager have access to the annotation.
 2. `Internal`: All members of your organization have access to the annotation. 
 3. `Public`: Everybody, regardless their login status, can access this annotation.
 4. (`Team Sharing`: Share this annotation with other organization members on the dashboard in the `Shared Annotations` tab)
 
-In any case, the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the select node etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
+In any case, the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
 
 
 ### Private and Internal Sharing
 A privately shared dataset can only be accessed from outside users using the correct URL.
-A unique authentification token is part of the URL so anyone with this URL has access rights for viewing the dataset.
+A unique authentification token is part of the URL, so anyone with this URL has access permission for viewing the dataset.
 The dataset is NOT featured publicly anywhere else on your webKnossos instance.
 
 Private sharing is useful for giving outside users (reviewers, editors, journalists etc.) an opportunity to look at your data without having to publish it publicly.
 
 To share a dataset privately, follow these steps:
 
-1. Navigate to your user dashboard and `Datasets`. 
-2. Select the dataset that you want to share and click on `Edit`.
-3. Under the `General` tab, scroll down to the `Sharing Link` and copy it. 
+1. Navigate to your user dashboard and `My Datasets`. 
+2. Select the dataset that you want to share and click on `Settings`.
+3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it. 
 
 That's all you need to do.
 
@@ -84,11 +84,9 @@ Besides sharing just the data layers for viewing, webKnossos can also share comp
 Sharing works for both skeletons and volume annotations.
 
 ### Annotation Permissions
-There are three options to control, who can see an annotation if they know the annotation url. To learn how to get the url, look at the following paragraph about [Link Sharing](#link-sharing).
+There are three options to control who can see an annotation if they know the annotation URL. To learn how to get the URL, read the following paragraph about [Link Sharing](#link-sharing).
 
-
-
-The default option is `Internal`.
+The default option is `Internal` sharing.
 
 To change the visibility of an annotation, follow these steps:
 
@@ -104,21 +102,21 @@ Annotations can be shared via a link. People, who obtain the link, must have acc
 `Public` annotations do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website.
 Unlike with datasets, publicly shared annotations are not featured in a gallery.
 For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
-Otherwise, the annotation and data cannot be loaded by webKnossos and an error will occur.
+Otherwise, the annotation and data cannot be loaded by webKnossos, and an error will occur.
 [Learn how to share datasets publicly above.](#public-sharing)
 
 `Internal` annotations require the recipient of a link to log in with his webKnossos account.
 This is primarily used for sharing annotations with your co-workers, e.g. for highlighting interesting positions in your work.
-Since your position, rotation, zoom etc. is encoded in the URL, it is a great way for working collaboratively.
-Just send an URL to your co-workers in an email or blog post and they may jump right into the annotation at your location.
+Since your position, rotation, zoom etc. is encoded in the URL it is a great way for working collaboratively.
+Just send an URL to your co-workers in an email or blog post, and they may jump right into the annotation at your location.
 
 `Private` annotations don't allow sharing. However, your direct supervisor and admins can still view the annotation.
 
 Since every annotation is tied to an individual webKnossos user, co-workers cannot modify your annotation if you share it with them.
 Instead, the shared annotation will be read-only.
 If your co-workers want to make modifications to the annotation, they can click the `Copy to my Account` button in the toolbar.
-This will make a copy of the annotation, link it to the co-workers' accounts and enable modifications again.
-Think of this feature like GitHub forks. Changes made to the copy are not automatically synced with the original.
+This will create a copy of the annotation, link it to the co-workers' accounts and enable modifications again.
+Think of this feature like GitHub forks. Changes made to a copy are not automatically synced with the original.
 
 To get the sharing link of an annotation, follow the same steps as for changing the viewing permissions:
 

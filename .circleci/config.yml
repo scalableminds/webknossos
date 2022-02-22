@@ -293,6 +293,8 @@ workflows:
           filters:
             tags:
               only: /.*/
+      # TODO: Remove before merging
+      - nightly
   circleci_nightly:
     jobs:
       - nightly

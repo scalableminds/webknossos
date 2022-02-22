@@ -167,19 +167,19 @@ The information is JSON-encoded in the URL fragment and has the following format
         agglomerateIdsToImport?: Array<number>,
       },
     },
-  },
-};
+  };
 
-type UrlManagerState = {|
-  position?: Vector3,
-  mode?: ViewMode,
-  zoomStep?: number,
-  activeNode?: number,
-  rotation?: Vector3,
-  stateByLayer?: UrlStateByLayer,
-|};
+  type UrlManagerState = {|
+    position?: Vector3,
+    mode?: ViewMode,
+    zoomStep?: number,
+    activeNode?: number,
+    rotation?: Vector3,
+    stateByLayer?: UrlStateByLayer,
+  |};
 
-```
+  ```
+</details>
 
 To avoid having to create annotations in advance when programmatically crafting links, a sandbox annotation can be used. A sandbox annotation is always accessible through the same URL and offers all available annotation features, however, changes are not saved. At any point, users can decide to copy the current state to their account. The sandbox can be accessed at `<webknossos_host>/datasets/<organization>/<dataset>/sandbox/skeleton`.
 

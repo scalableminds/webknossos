@@ -3,10 +3,11 @@
 import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { OxalisState, UserBoundingBox, IsosurfaceInformation } from "oxalis/store";
 import { V3 } from "libs/mjs";
 import {
   type StateShape1,
+  type WriteableShape,
   updateKey,
   updateKey2,
   updateKey4,
@@ -187,10 +188,16 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_ISOSURFACE_VISIBILITY": {
       const { layerName, id, visibility } = action;
-      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", id, {
-        isVisible: visibility,
-      });
+      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = { isVisible: visibility };
+      return updateKey4(
+        state,
+        "localSegmentationData",
+        layerName,
+        "isosurfaces",
+        // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        id,
+        isosurfaceInfo,
+      );
     }
 
     case "ADD_MESH_METADATA": {
@@ -216,32 +223,80 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "ADD_ISOSURFACE": {
-      const { layerName, cellId, seedPosition, isPrecomputed } = action;
-      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
+    case "ADD_AD_HOC_ISOSURFACE": {
+      const { layerName, cellId, seedPosition, mappingName, mappingType } = action;
+      const isosurfaceInfo: IsosurfaceInformation = {
         segmentId: cellId,
         seedPosition,
         isLoading: false,
         isVisible: true,
-        isPrecomputed,
-      });
+        isPrecomputed: false,
+        mappingName,
+        mappingType,
+      };
+
+      return updateKey4(
+        state,
+        "localSegmentationData",
+        layerName,
+        "isosurfaces",
+        // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        cellId,
+        // $FlowIgnore[incompatible-call]
+        // $FlowIgnore[prop-missing] updateKey has problems with union types
+        isosurfaceInfo,
+      );
+    }
+    case "ADD_PRECOMPUTED_ISOSURFACE": {
+      const { layerName, cellId, seedPosition, meshFileName } = action;
+      const isosurfaceInfo: IsosurfaceInformation = {
+        segmentId: cellId,
+        seedPosition,
+        isLoading: false,
+        isVisible: true,
+        isPrecomputed: true,
+        meshFileName,
+      };
+
+      return updateKey4(
+        state,
+        "localSegmentationData",
+        layerName,
+        "isosurfaces",
+        // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        cellId,
+        // $FlowIgnore[incompatible-call]
+        // $FlowIgnore[prop-missing] updateKey has problems with union types
+        isosurfaceInfo,
+      );
     }
 
     case "STARTED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
-      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
-        isLoading: true,
-      });
+      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = { isLoading: true };
+      return updateKey4(
+        state,
+        "localSegmentationData",
+        layerName,
+        "isosurfaces",
+        // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        cellId,
+        isosurfaceInfo,
+      );
     }
 
     case "FINISHED_LOADING_ISOSURFACE": {
       const { layerName, cellId } = action;
-      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
-      return updateKey4(state, "localSegmentationData", layerName, "isosurfaces", cellId, {
-        isLoading: false,
-      });
+      const isosurfaceInfo: WriteableShape<IsosurfaceInformation> = { isLoading: false };
+      return updateKey4(
+        state,
+        "localSegmentationData",
+        layerName,
+        "isosurfaces",
+        // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+        cellId,
+        isosurfaceInfo,
+      );
     }
 
     case "UPDATE_MESH_FILE_LIST": {

@@ -1,15 +1,22 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemType.FileSystemType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  Category,
-  DataFormat,
-  DataLayer,
-  ElementClass,
-  SegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource._
 import play.api.libs.json.{Json, OFormat}
+
+case class FileSystemCredentials(username: String, password: String)
+
+object FileSystemCredentials {
+  implicit val jsonFormat: OFormat[FileSystemCredentials] = Json.format[FileSystemCredentials]
+}
+
+case class FileSystemSelector(typ: FileSystemType, uri: Option[String], credentials: Option[FileSystemCredentials])
+
+object FileSystemSelector {
+  implicit val jsonFormat: OFormat[FileSystemSelector] = Json.format[FileSystemSelector]
+}
 
 trait ZarrLayer extends DataLayer {
 
@@ -21,6 +28,10 @@ trait ZarrLayer extends DataLayer {
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = 1024
 
+  val fileSystemSelector: FileSystemSelector
+
+  val remotePath: Option[String]
+
 }
 
 case class ZarrDataLayer(
@@ -28,6 +39,8 @@ case class ZarrDataLayer(
     category: Category.Value,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
+    fileSystemSelector: FileSystemSelector,
+    remotePath: Option[String],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends ZarrLayer
@@ -42,6 +55,8 @@ case class ZarrSegmentationLayer(
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
     mappings: Option[Set[String]],
+    fileSystemSelector: FileSystemSelector,
+    remotePath: Option[String],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
     adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayer

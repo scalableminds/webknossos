@@ -145,8 +145,8 @@ class ZarrArray private (val relativePath: ZarrPath,
     ZarrUtils.readAttributes(relativePath, _store)
 
   override def toString: String =
-    getClass.getCanonicalName + "{" + "'/" + relativePath.storeKey + "' " + "shape=" + util.Arrays.toString(_shape) + ", chunks=" + util.Arrays
-      .toString(_chunkShape) + ", dataType=" + _dataType + ", fillValue=" + _fillValue + ", " + _compressor.toString + ", store=" + _store.getClass.getSimpleName + ", byteOrder=" + _byteOrder + '}'
+    s"${getClass.getCanonicalName} {'/${relativePath.storeKey}' shape=${_shape.mkString(",")} chunks=${_chunkShape
+      .mkString(",")} dtype=${_dataType} fillValue=${_fillValue}, ${_compressor}, store=${_store.getClass.getSimpleName}, byteOrder=${_byteOrder}}"
 
   private def computeOffsetInChunk(chunkIndex: Array[Int], globalOffset: Array[Int]): Array[Int] =
     chunkIndex.zipWithIndex.map {

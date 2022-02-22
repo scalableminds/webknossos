@@ -1,19 +1,15 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.lang.reflect.Field
-import java.nio.file.Files
 import java.nio.file.spi.FileSystemProvider
 import java.util
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.zarr.FileSystemHolder
-import com.scalableminds.webknossos.datastore.jzarr.ZarrArray
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
-import scala.jdk.CollectionConverters.asScalaIteratorConverter
 
 class Application @Inject()(redisClient: DataStoreRedisStore /*, fileSystemHolder: FileSystemHolder*/ )(
     implicit ec: ExecutionContext)
@@ -43,7 +39,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore /*, fileSystemHolde
 
     //logger.info(f"${fileSystemHolder.s3fs}")
 
-    FileSystemHolder.s3fs.foreach { s3fs =>
+    /*FileSystemHolder.s3fs.foreach { s3fs =>
       val files = Files.list(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/")).iterator().asScala.toList
       logger.info(s"files: $files")
 
@@ -61,7 +57,7 @@ class Application @Inject()(redisClient: DataStoreRedisStore /*, fileSystemHolde
 
       ZarrArray.open(s3fs.getPath("/webknossos-zarr/demodata/6001251.zarr/0/"))
     }
-
+     */
     /*val scl = classOf[ClassLoader].getDeclaredField("scl")
     scl.setAccessible(true)
 

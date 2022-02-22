@@ -2,6 +2,8 @@ import datetime
 import re
 import sys
 
+VERSION_REGEX = r"[\d]{1,2}\.[\d]{1,2}.[\d]{0,2}"
+
 
 def update_changelogs():
 
@@ -14,6 +16,11 @@ def update_changelogs():
 
     # Determine new version
     this_version = sys.argv[1]
+
+    assert re.match(
+        VERSION_REGEX, this_version
+    ), "The version string should specified like this: 22.03.1"
+
     today = datetime.date.today()
     today_str = f"{today.strftime('%Y')}-{today.strftime('%m')}-{today.strftime('%d')}"
 

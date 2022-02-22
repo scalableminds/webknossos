@@ -202,16 +202,3 @@ If members of these teams open their [Shared Annotations Dashboard Tab](./dashbo
 ![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)
 
 Dataset sharing allows people outside of your organization or anyone without a webKnossos account to view your datasets and annotations within webKnossos directly from their browser. No additional installation or signup is needed. Anyone with a link can view the data.
-
-
-
-
-
-Shared resources can be accessed through a direct URL or can be featured on a spotlight gallery for showcasing your work.
-[Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
-
-
-
-![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=512s)
-
-![Video: Connect webKnossos with Your Publications](https://www.youtube.com/watch?v=Ut4m6L3nYdY)

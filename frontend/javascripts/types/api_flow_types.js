@@ -419,7 +419,7 @@ export type MeshMetaData = {|
 export type AnnotationViewConfiguration = {
   layers: {
     [layerName: string]: {
-      visibility: boolean,
+      isDisabled: boolean,
     },
   },
 };

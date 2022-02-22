@@ -59,7 +59,7 @@ class TSRemoteWebKnossosClient @Inject()(
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")
       .addQueryString("key" -> tracingStoreKey)
       .addQueryStringOptional("token", token)
-      .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
+      .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 
 class TracingStoreAccessTokenService @Inject()(val remoteWebKnossosClient: TSRemoteWebKnossosClient,

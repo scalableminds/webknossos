@@ -1,6 +1,6 @@
 package models.binary
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.ImageThumbnail
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -19,7 +19,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC) 
                                 width: Int,
                                 height: Int,
                                 zoom: Option[Double],
-                                center: Option[Point3D]): Fox[Array[Byte]] = {
+                                center: Option[Vec3Int]): Fox[Array[Byte]] = {
     logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
       .addQueryString("token" -> RpcTokenHolder.webKnossosToken)

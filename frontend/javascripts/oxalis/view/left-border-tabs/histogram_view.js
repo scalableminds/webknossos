@@ -1,15 +1,16 @@
 // @flow
 
-import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
-import * as _ from "lodash";
-import * as React from "react";
 import type { Dispatch } from "redux";
+import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
 import { connect } from "react-redux";
-import { type DatasetLayerConfiguration } from "oxalis/store";
-import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import * as React from "react";
+import * as _ from "lodash";
+import { type Vector2, type Vector3 } from "oxalis/constants";
+
 import type { APIHistogramData, ElementClass } from "types/api_flow_types";
-import type { Vector3, Vector2 } from "oxalis/constants";
 import { roundTo } from "libs/utils";
+import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import { type DatasetLayerConfiguration } from "oxalis/store";
 
 type OwnProps = {|
   data: APIHistogramData,
@@ -38,7 +39,7 @@ type HistogramState = {
 
 const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
-const canvasWidth = 300;
+const canvasWidth = 318;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
@@ -201,7 +202,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
 
     const minMaxInputStyle = { width: "100%" };
-
     return (
       <React.Fragment>
         <canvas
@@ -221,10 +221,10 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           onAfterChange={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
           tipFormatter={this.tipFormatter}
-          style={{ width: canvasWidth, margin: 0, marginBottom: 6 }}
+          style={{ width: canvasWidth, margin: 0, marginTop: 6 }}
         />
         {isInEditMode ? (
-          <Row type="flex" align="middle">
+          <Row type="flex" align="middle" style={{ marginTop: 6 }}>
             <Col span={4}>
               <label className="setting-label">Min:</label>
             </Col>

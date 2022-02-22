@@ -69,6 +69,8 @@ type State = {
   model: Model,
 };
 
+const ignoredLayoutChangesByAnalytics = ["FlexLayout_SetActiveTabset", "FlexLayout_SelectTab"];
+
 class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
   // This variable stores the border open status that should be active, when no main tab is maximized.
@@ -90,6 +92,13 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   componentDidUpdate(prevProps: Props) {
     const { layoutName, layoutKey } = this.props;
     if (layoutName !== prevProps.layoutName || layoutKey !== prevProps.layoutKey) {
+      sendAnalyticsEvent("switched_layout", {
+        from: { viewMode: prevProps.layoutKey, layoutName: prevProps.layoutName },
+        to: {
+          viewMode: layoutKey,
+          layoutName,
+        },
+      });
       this.rebuildLayout();
     }
   }
@@ -119,9 +128,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
 
   loadCurrentModel() {
     const { layoutName, layoutKey } = this.props;
-    if (layoutName !== DEFAULT_LAYOUT_NAME) {
-      sendAnalyticsEvent("load_custom_layout", { viewMode: this.props.layoutKey });
-    }
     const layout = getLayoutConfig(layoutKey, layoutName);
     const model = FlexLayout.Model.fromJson(layout);
     return model;
@@ -139,6 +145,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.updateToModelStateAndAdjustIt(model);
     this.setState({ model });
     setTimeout(this.onLayoutChange, 1);
+    if (this.props.layoutName !== DEFAULT_LAYOUT_NAME) {
+      sendAnalyticsEvent("load_custom_layout", { viewMode: this.props.layoutKey });
+    }
   }
 
   attachKeyboardShortcuts() {
@@ -317,7 +326,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onLayoutChange = () => {
-    sendAnalyticsEvent("change_tracing_layout", { viewMode: this.props.layoutKey });
     const currentLayoutModel = _.cloneDeep(this.state.model.toJson());
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
@@ -355,6 +363,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
       if (OrthoViews[toggledViewportId] != null) {
         this.props.setActiveViewport(OrthoViews[toggledViewportId]);
       }
+    }
+    if (!ignoredLayoutChangesByAnalytics.includes(type)) {
+      sendAnalyticsEvent("change_tracing_layout", { viewMode: this.props.layoutKey });
     }
     return action;
   };

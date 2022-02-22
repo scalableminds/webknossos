@@ -10,7 +10,48 @@ export default {
     "types::ViewMode": {
       enum: ["orthogonal", "oblique", "flight", "volume"],
     },
-    "types::MappingType": { enum: ["JSON", "HDF5"] },
+    "types::MappingType": { enum: ["JSON", "HDF5", null] },
+    "types::Mesh": {
+      type: "object",
+      properties: {
+        segmentId: { type: "number" },
+        seedPosition: {
+          $ref: "#/definitions/types::Vector3",
+        },
+      },
+      required: ["segmentId", "seedPosition"],
+    },
+    "types::PrecomputedMesh": {
+      type: "object",
+      allOf: [{ $ref: "#/definitions/types::Mesh" }],
+      properties: {
+        // These need to be repeated due to jsonschema's interpretation of additionalProperties
+        // but the type doesn't need to be specified again.
+        segmentId: {},
+        seedPosition: {},
+        isPrecomputed: { enum: [true] },
+        meshFileName: { type: "string" },
+      },
+      additionalProperties: false,
+      required: ["isPrecomputed", "meshFileName"],
+    },
+    "types::AdHocMesh": {
+      type: "object",
+      allOf: [{ $ref: "#/definitions/types::Mesh" }],
+      properties: {
+        // These need to be repeated due to jsonschema's interpretation of additionalProperties
+        // but the type doesn't need to be specified again.
+        segmentId: {},
+        seedPosition: {},
+        isPrecomputed: { enum: [false] },
+        mappingName: { type: ["string", "null"] },
+        mappingType: {
+          $ref: "#/definitions/types::MappingType",
+        },
+      },
+      additionalProperties: false,
+      required: ["isPrecomputed"],
+    },
     "types::UrlStateByLayer": {
       type: "object",
       additionalProperties: {
@@ -30,6 +71,23 @@ export default {
             },
             additionalProperties: false,
             required: ["mappingName", "mappingType"],
+          },
+          meshInfo: {
+            type: "object",
+            properties: {
+              meshFileName: { type: ["string", "null"] },
+              meshes: {
+                type: "array",
+                items: {
+                  anyOf: [
+                    { $ref: "#/definitions/types::PrecomputedMesh" },
+                    { $ref: "#/definitions/types::AdHocMesh" },
+                  ],
+                },
+              },
+            },
+            additionalProperties: false,
+            required: ["meshes"],
           },
           connectomeInfo: {
             type: "object",

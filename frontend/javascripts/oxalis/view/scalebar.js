@@ -22,8 +22,8 @@ type OwnProps = {|
 type StateProps = {|
   dataset: APIDataset,
   zoomValue: number,
-  widthInPixels: number,
-  heightInPixels: number,
+  viewportWidthInPixels: number,
+  viewportHeightInPixels: number,
 |};
 
 type Props = {|
@@ -31,25 +31,55 @@ type Props = {|
   ...StateProps,
 |};
 
-const scalebarWidthPercentage = 0.25;
+const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
+  const closestExponent = Math.floor(Math.log10(lengthInNm));
+  const closestPowerOfTen = 10 ** closestExponent;
+  const mantissa = lengthInNm / closestPowerOfTen;
 
-function Scalebar({ zoomValue, dataset, widthInPixels, heightInPixels }: Props) {
-  const widthInNm = convertPixelsToNm(widthInPixels, zoomValue, dataset);
-  const heightInNm = convertPixelsToNm(heightInPixels, zoomValue, dataset);
-  const formattedScalebarWidth = formatNumberToLength(widthInNm * scalebarWidthPercentage);
+  let bestAnchor = 1;
+  for (const anchor of [2, 5, 10]) {
+    if (Math.abs(anchor - mantissa) < Math.abs(bestAnchor - mantissa)) {
+      bestAnchor = anchor;
+    }
+  }
+  return bestAnchor * closestPowerOfTen;
+};
+
+// This factor describes how wide the scalebar would ideally be.
+// However, this is only a rough guideline, as the actual width is changed
+// so that round length values are represented.
+const idealScalebarWidthFactor = 0.3;
+
+const maxScaleBarWidthFactor = 0.45;
+const minWidthToFillScalebar = 130;
+
+function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
+  const viewportWidthInNm = convertPixelsToNm(viewportWidthInPixels, zoomValue, dataset);
+  const viewportHeightInNm = convertPixelsToNm(viewportHeightInPixels, zoomValue, dataset);
+  const idealWidthInNm = viewportWidthInNm * idealScalebarWidthFactor;
+  const scalebarWidthInNm = getBestScalebarAnchorInNm(idealWidthInNm);
+  const scaleBarWidthFactor = Math.min(
+    scalebarWidthInNm / viewportWidthInNm,
+    maxScaleBarWidthFactor,
+  );
+
+  const tooltip = [
+    formatNumberToLength(viewportWidthInNm),
+    ThinSpace,
+    MultiplicationSymbol,
+    ThinSpace,
+    formatNumberToLength(viewportHeightInNm),
+  ].join("");
+  const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
+  const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
+  const padding = 4;
 
   return (
     <Tooltip
       title={
         <div>
           <div>Viewport Size:</div>
-          <div>
-            {formatNumberToLength(widthInNm)}
-            {ThinSpace}
-            {MultiplicationSymbol}
-            {ThinSpace}
-            {formatNumberToLength(heightInNm)}{" "}
-          </div>
+          <div>{tooltip}</div>
         </div>
       }
     >
@@ -58,10 +88,11 @@ function Scalebar({ zoomValue, dataset, widthInPixels, heightInPixels }: Props) 
           position: "absolute",
           bottom: "1%",
           right: "1%",
-          // The scalebar should have a width of 25% from the actual viewport (without the borders)
-          width: `calc(25% - ${Math.round(
-            ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
-          )}%)`,
+          width: collapseScalebar
+            ? 16
+            : `calc(${scaleBarWidthFactor * 100}% - ${Math.round(
+                ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
+              )}% + ${2 * padding}px)`,
           height: 14,
           background: "rgba(0, 0, 0, .3)",
           color: "white",
@@ -69,17 +100,17 @@ function Scalebar({ zoomValue, dataset, widthInPixels, heightInPixels }: Props) 
           fontSize: 12,
           lineHeight: "14px",
           boxSizing: "content-box",
-          padding: 4,
+          padding,
         }}
       >
         <div
           style={{
             borderBottom: "1px solid",
-            borderLeft: "1px solid",
+            borderLeft: limitScalebar ? "none" : "1px solid",
             borderRight: "1px solid",
           }}
         >
-          {formattedScalebarWidth}
+          {collapseScalebar ? "i" : formatNumberToLength(scalebarWidthInNm)}
         </div>
       </div>
     </Tooltip>
@@ -93,8 +124,8 @@ const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => 
   return {
     zoomValue,
     dataset: state.dataset,
-    widthInPixels: width,
-    heightInPixels: height,
+    viewportWidthInPixels: width,
+    viewportHeightInPixels: height,
   };
 };
 

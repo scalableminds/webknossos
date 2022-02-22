@@ -4,15 +4,8 @@ import { message } from "antd";
 import React from "react";
 import _ from "lodash";
 
+import type { Action } from "oxalis/model/actions/actions";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
-import {
-  type CopySegmentationLayerAction,
-  updateDirectionAction,
-  updateSegmentAction,
-  finishAnnotationStrokeAction,
-  type SetActiveCellAction,
-  type ClickSegmentAction,
-} from "oxalis/model/actions/volumetracing_actions";
 import {
   ResolutionInfo,
   getBoundaries,
@@ -43,7 +36,8 @@ import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
   addUserBoundingBoxAction,
-  type AddIsosurfaceAction,
+  type AddAdHocIsosurfaceAction,
+  type AddPrecomputedIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { calculateMaybeGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import { diffDiffableMaps } from "libs/diffable_map";
@@ -55,6 +49,7 @@ import {
   getSegmentsForLayer,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
 import {
   getPosition,
   getFlooredPosition,
@@ -66,7 +61,16 @@ import {
   isBrushTool,
   isTraceTool,
 } from "oxalis/model/accessors/tool_accessor";
+import { markVolumeTransactionEnd } from "oxalis/model/bucket_data_handling/bucket";
 import { setToolAction, setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
+import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+import {
+  updateDirectionAction,
+  updateSegmentAction,
+  finishAnnotationStrokeAction,
+  type SetActiveCellAction,
+  type ClickSegmentAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   updateTemporarySettingAction,
   type UpdateTemporarySettingAction,
@@ -94,19 +98,24 @@ import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import VolumeLayer, { getFast3DCoordinateHelper } from "oxalis/model/volumetracing/volumelayer";
 import createProgressCallback from "libs/progress_callback";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
+import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
-  yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
+  yield* takeEveryUnlessBusy(
+    "COPY_SEGMENTATION_LAYER",
+    copySegmentationLayer,
+    "Copying from neighbor slice",
+  );
   yield _takeLeading("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
@@ -136,6 +145,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    const busyBlockingInfo = yield* select(state => state.uiInformation.busyBlockingInfo);
+    if (busyBlockingInfo.isBusy) {
+      console.warn(`Ignoring brush request (reason: ${busyBlockingInfo.reason || "null"})`);
+      continue;
+    }
     if (startEditingAction.type !== "START_EDITING") {
       throw new Error("Unexpected action. Satisfy flow.");
     }
@@ -150,6 +164,11 @@ export function* editVolumeLayerAsync(): Saga<any> {
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );
     if (isZoomStepTooHighForAnnotating) {
+      continue;
+    }
+    if (activeTool === AnnotationToolEnum.MOVE) {
+      // This warning can be helpful when debugging tests.
+      console.warn("Volume actions are ignored since current tool is the move tool.");
       continue;
     }
 
@@ -397,6 +416,7 @@ function* labelWithVoxelBuffer2D(
   // thirdDimensionOfSlice needs to be provided in global coordinates
   const thirdDimensionOfSlice =
     topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+
   applyLabeledVoxelMapToAllMissingResolutions(
     currentLabeledVoxelMap,
     labeledZoomStep,
@@ -410,7 +430,10 @@ function* labelWithVoxelBuffer2D(
   );
 }
 
-function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
+function* copySegmentationLayer(action: Action): Saga<void> {
+  if (action.type !== "COPY_SEGMENTATION_LAYER") {
+    throw new Error("Satisfy flow");
+  }
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -463,7 +486,6 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {
-        cube.labelVoxelInResolution(voxelTargetAddress, templateLabelValue, labeledZoomStep);
         const bucket = cube.getOrCreateBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
         );
@@ -504,6 +526,19 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
       );
     }
   }
+
+  const thirdDim = dimensionIndices[2];
+  applyVoxelMap(
+    labeledVoxelMapOfCopiedVoxel,
+    cube,
+    activeCellId,
+    getFast3DCoordinateHelper(activeViewport, z),
+    1,
+    thirdDim,
+    false,
+    0,
+  );
+
   applyLabeledVoxelMapToAllMissingResolutions(
     labeledVoxelMapOfCopiedVoxel,
     labeledZoomStep,
@@ -556,7 +591,7 @@ export function* floodFill(): Saga<void> {
 
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
 
-    const currentViewportBounding = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
+    const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
 
     const progressCallback = createProgressCallback({
       pauseDelay: 200,
@@ -579,7 +614,7 @@ export function* floodFill(): Saga<void> {
       seedPosition,
       activeCellId,
       dimensionIndices,
-      currentViewportBounding,
+      boundingBoxForFloodFill,
       labeledZoomStep,
       progressCallback,
       fillMode === FillModeEnum._3D,
@@ -638,9 +673,7 @@ export function* floodFill(): Saga<void> {
       yield* put(
         addUserBoundingBoxAction({
           boundingBox: coveredBoundingBox,
-          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-            ",",
-          )}, timestamp=${new Date().getTime()})`,
+          name: getBBoxNameForPartialFloodfill(oldSegmentIdAtSeed, activeCellId, seedPosition),
           color: Utils.getRandomColor(),
           isVisible: true,
         }),
@@ -671,7 +704,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   segmentationCube: DataCube,
   cellId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
-  // if shouldOverwrite is false, a voxel is only overwritten if
+  // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean,
   overwritableValue: number = 0,
@@ -864,7 +897,8 @@ export function* diffVolumeTracing(
 
 function* ensureSegmentExists(
   action:
-    | AddIsosurfaceAction
+    | AddAdHocIsosurfaceAction
+    | AddPrecomputedIsosurfaceAction
     | SetActiveCellAction
     | UpdateTemporarySettingAction
     | ClickSegmentAction,
@@ -883,7 +917,7 @@ function* ensureSegmentExists(
     return;
   }
 
-  if (action.type === "ADD_ISOSURFACE") {
+  if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
     const { seedPosition } = action;
     yield* put(updateSegmentAction(cellId, { somePosition: seedPosition }, layerName));
   } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
@@ -905,7 +939,10 @@ function* ensureSegmentExists(
 }
 
 function* maintainSegmentsMap(): Saga<void> {
-  yield _takeEvery(["ADD_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"], ensureSegmentExists);
+  yield _takeEvery(
+    ["ADD_AD_HOC_ISOSURFACE", "ADD_PRECOMPUTED_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
+    ensureSegmentExists,
+  );
 }
 
 function* getGlobalMousePosition(): Saga<?Vector3> {
@@ -965,6 +1002,17 @@ function* maintainContourGeometry(): Saga<void> {
   }
 }
 
+function* maintainVolumeTransactionEnds(): Saga<void> {
+  // When FINISH_ANNOTATION_STROKE is dispatched, the current volume
+  // transaction has ended. All following UI actions which
+  // mutate buckets should operate on a fresh `bucketsAlreadyInUndoState` set.
+  // Therefore, `markVolumeTransactionEnd` should be called immediately
+  // when FINISH_ANNOTATION_STROKE is dispatched. There should be no waiting
+  // on other operations (such as pending compressions) as it has been the case
+  // before. Otherwise, different undo states would "bleed" into each other.
+  yield _takeEvery("FINISH_ANNOTATION_STROKE", markVolumeTransactionEnd);
+}
+
 export default [
   editVolumeLayerAsync,
   ensureToolIsAllowedInResolution,
@@ -972,5 +1020,7 @@ export default [
   watchVolumeTracingAsync,
   maintainSegmentsMap,
   maintainHoveredSegmentId,
+  listenToMinCut,
   maintainContourGeometry,
+  maintainVolumeTransactionEnds,
 ];

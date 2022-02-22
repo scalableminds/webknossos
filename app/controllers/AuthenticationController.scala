@@ -29,7 +29,7 @@ import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, _}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -384,32 +384,17 @@ class AuthenticationController @Inject()(
   }
 
   def getToken: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    val futureOfFuture: Future[Future[Result]] =
-      combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
-        case Some(token) => Future.successful(Ok(Json.obj("token" -> token.id)))
-        case _ =>
-          combinedAuthenticatorService.createToken(request.identity.loginInfo).map { newToken =>
-            Ok(Json.obj("token" -> newToken.id))
-          }
-      }
     for {
-      resultFuture <- futureOfFuture
-      result <- resultFuture
-    } yield result
+      token <- combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo)
+    } yield Ok(Json.obj("token" -> token.id))
   }
 
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    val futureOfFuture: Future[Future[Result]] =
-      combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
-        case Some(token) =>
-          combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
-        case _ => Future.successful(Ok)
-      }
-
-    for {
-      resultFuture <- futureOfFuture
-      result <- resultFuture
-    } yield result
+    combinedAuthenticatorService.findTokenByLoginInfo(request.identity.loginInfo).flatMap {
+      case Some(token) =>
+        combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
+      case _ => Future.successful(Ok)
+    }
   }
 
   def logout: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>

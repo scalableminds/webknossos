@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
@@ -139,7 +139,7 @@ class SkeletonTracingService @Inject()(
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
+        NamedBoundingBoxProto(newId, Some("task bounding box"), Some(true), Some(getRandomColor), bb)
       }
     } else None
 

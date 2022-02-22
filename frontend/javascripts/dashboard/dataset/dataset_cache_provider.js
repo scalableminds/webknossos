@@ -23,6 +23,7 @@ type Options = {
 type Context = {
   datasets: Array<APIMaybeUnimportedDataset>,
   isLoading: boolean,
+  isChecking: boolean,
   checkDatasets: () => Promise<void>,
   fetchDatasets: (options?: Options) => Promise<void>,
   reloadDataset: (
@@ -54,6 +55,7 @@ export const datasetCache = {
 export const DatasetCacheContext = createContext<Context>({
   datasets: [],
   isLoading: false,
+  isChecking: false,
   fetchDatasets: async () => {},
   checkDatasets: async () => {},
   reloadDataset: async () => {},
@@ -63,6 +65,7 @@ export const DatasetCacheContext = createContext<Context>({
 export default function DatasetCacheProvider({ children }: { children: Node }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [pendingDatasetUpdates, setPendingDatasetUpdates] = useState<{
     [string]: Promise<APIDataset>,
   }>({});
@@ -105,6 +108,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
     if (isLoading) return;
     try {
       setIsLoading(true);
+      setIsChecking(true);
       const datastores = await getDatastores();
       await Promise.all(
         datastores
@@ -117,10 +121,12 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
           ),
       );
       await fetchDatasets({ isCalledFromCheckDatasets: true });
+      setIsChecking(false);
     } catch (error) {
       handleGenericError(error);
     } finally {
       setIsLoading(false);
+      setIsChecking(false);
     }
   }
 
@@ -208,6 +214,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       value={{
         datasets,
         isLoading,
+        isChecking,
         checkDatasets,
         fetchDatasets,
         reloadDataset,

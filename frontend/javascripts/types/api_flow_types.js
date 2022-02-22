@@ -216,6 +216,7 @@ export type APIUser = APIUserBase & {
   +experiences: ExperienceMap,
   +isAdmin: boolean,
   +isDatasetManager: boolean,
+  +isSuperUser: boolean,
   +isActive: boolean,
   +isEditable: boolean,
   +lastActivity: number,
@@ -415,10 +416,19 @@ export type MeshMetaData = {|
   ...RemoteMeshMetaData,
 |};
 
+export type AnnotationViewConfiguration = {
+  layers: {
+    [layerName: string]: {
+      visibility: boolean,
+    },
+  },
+};
+
 type APIAnnotationBase = APIAnnotationCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
+  +viewConfiguration?: ?AnnotationViewConfiguration,
   +settings: APISettings,
   +user?: APIUserBase,
   +meshes: Array<MeshMetaData>,

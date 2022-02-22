@@ -31,11 +31,16 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,
-  globalPositionToBaseBucket,
+  globalPositionToBucketPosition,
+  scaleGlobalPositionWithResolution,
+  zoomedAddressToZoomedPosition,
 } from "oxalis/model/helpers/position_converter";
 import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
@@ -72,11 +77,12 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+  getPosition,
+  getRotation,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
+import { maybeFetchMeshFiles } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
@@ -102,6 +108,7 @@ import Constants, {
   type ControlMode,
   ControlModeEnum,
   OrthoViews,
+  type OrthoView,
   type Vector3,
   type Vector4,
   type AnnotationTool,
@@ -125,6 +132,7 @@ import Store, {
   type VolumeTracing,
   type OxalisState,
 } from "oxalis/store";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import UserLocalStorage from "libs/user_local_storage";
@@ -132,6 +140,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import DataLayer from "oxalis/model/data_layer";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -1001,9 +1010,7 @@ class DataApi {
    */
   async reloadBuckets(layerName: string): Promise<void> {
     await Promise.all(
-      Object.keys(this.model.dataLayers).map(async currentLayerName => {
-        const dataLayer = this.model.dataLayers[currentLayerName];
-
+      Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
             await Model.ensureSavedState();
@@ -1022,7 +1029,7 @@ class DataApi {
     if (hasVolumeTracings(Store.getState().tracing)) {
       await Model.ensureSavedState();
     }
-    _.forEach(this.model.dataLayers, dataLayer => {
+    Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
       dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });
@@ -1219,20 +1226,70 @@ class DataApi {
     return bucket;
   }
 
-  async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType) {
-    const bucketAddresses = this.getBucketAddressesInCuboid(bbox);
+  async getDataFor2DBoundingBox(
+    layerName: string,
+    bbox: BoundingBoxType,
+    _zoomStep: ?number = null,
+  ) {
+    const layer = getLayerByName(Store.getState().dataset, layerName);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+
+    let zoomStep;
+    if (_zoomStep != null) {
+      zoomStep = _zoomStep;
+    } else {
+      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+    }
+
+    const resolutions = resolutionInfo.getDenseResolutions();
+    const bucketAddresses = this.getBucketAddressesInCuboid(bbox, resolutions, zoomStep);
+    if (bucketAddresses.length > 15000) {
+      console.warn(
+        "More than 15000 buckets need to be requested for the given bounding box. Consider passing a smaller bounding box or using another resolution.",
+      );
+    }
     const buckets = await Promise.all(
       bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
     );
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
-    return this.cutOutCuboid(buckets, bbox, elementClass);
+    return this.cutOutCuboid(buckets, bbox, elementClass, resolutions, zoomStep);
   }
 
-  getBucketAddressesInCuboid(bbox: BoundingBoxType): Array<Vector4> {
+  async getViewportData(viewport: OrthoView, layerName: string) {
+    const state = Store.getState();
+
+    const [curX, curY, curZ] = dimensions.transDim(
+      dimensions.roundCoordinate(getPosition(state.flycam)),
+      viewport,
+    );
+    const [halfViewportExtentX, halfViewportExtentY] = getHalfViewportExtentsFromState(
+      state,
+      viewport,
+    );
+
+    const min = dimensions.transDim(
+      V3.sub([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 0]),
+      viewport,
+    );
+    const max = dimensions.transDim(
+      V3.add([curX, curY, curZ], [halfViewportExtentX, halfViewportExtentY, 1]),
+      viewport,
+    );
+
+    const resolutionIndex = getRequestLogZoomStep(state);
+    const cuboid = await this.getDataFor2DBoundingBox(layerName, { min, max }, resolutionIndex);
+    return cuboid;
+  }
+
+  getBucketAddressesInCuboid(
+    bbox: BoundingBoxType,
+    resolutions: Array<Vector3>,
+    zoomStep: number,
+  ): Array<Vector4> {
     const buckets = [];
     const bottomRight = bbox.max;
-    const minBucket = globalPositionToBaseBucket(bbox.min);
-    const topLeft = bucketAddress => bucketPositionToGlobalAddress(bucketAddress, [[1, 1, 1]]);
+    const minBucket = globalPositionToBucketPosition(bbox.min, resolutions, zoomStep);
+    const topLeft = bucketAddress => bucketPositionToGlobalAddress(bucketAddress, resolutions);
     const nextBucketInDim = (bucket, dim) => {
       const copy = bucket.slice();
       copy[dim]++;
@@ -1250,7 +1307,6 @@ class DataApi {
         }
         bucket = nextBucketInDim(prevY, 1);
       }
-
       bucket = nextBucketInDim(prevX, 0);
     }
     return buckets;
@@ -1260,8 +1316,16 @@ class DataApi {
     buckets: Array<Bucket>,
     bbox: BoundingBoxType,
     elementClass: ElementClass,
+    resolutions: Array<Vector3>,
+    zoomStep: number,
   ): $TypedArray {
-    const extent = V3.sub(bbox.max, bbox.min);
+    const resolution = resolutions[zoomStep];
+    // All calculations in this method are in zoomStep-space, so in global coordinates which are divided
+    // by the resolution
+    const topLeft = scaleGlobalPositionWithResolution(bbox.min, resolution);
+    // Ceil the bounding box bottom right instead of flooring, because it is exclusive
+    const bottomRight = scaleGlobalPositionWithResolution(bbox.max, resolution, true);
+    const extent: Vector3 = V3.sub(bottomRight, topLeft);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
     const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
     const bucketWidth = Constants.BUCKET_WIDTH;
@@ -1271,29 +1335,32 @@ class DataApi {
       if (bucket.type === "null") {
         continue;
       }
-      const bucketTopLeft = bucketPositionToGlobalAddress(bucket.zoomedAddress, [[1, 1, 1]]);
-      const x = Math.max(bbox.min[0], bucketTopLeft[0]);
-      let y = Math.max(bbox.min[1], bucketTopLeft[1]);
-      let z = Math.max(bbox.min[2], bucketTopLeft[2]);
+      const bucketTopLeft = zoomedAddressToZoomedPosition(bucket.zoomedAddress);
+      const x = Math.max(topLeft[0], bucketTopLeft[0]);
+      let y = Math.max(topLeft[1], bucketTopLeft[1]);
+      let z = Math.max(topLeft[2], bucketTopLeft[2]);
 
-      const xMax = Math.min(bucketTopLeft[0] + bucketWidth, bbox.max[0]);
-      const yMax = Math.min(bucketTopLeft[1] + bucketWidth, bbox.max[1]);
-      const zMax = Math.min(bucketTopLeft[2] + bucketWidth, bbox.max[2]);
+      const xMax = Math.min(bucketTopLeft[0] + bucketWidth, bottomRight[0]);
+      const yMax = Math.min(bucketTopLeft[1] + bucketWidth, bottomRight[1]);
+      const zMax = Math.min(bucketTopLeft[2] + bucketWidth, bottomRight[2]);
 
       while (z < zMax) {
-        y = Math.max(bbox.min[1], bucketTopLeft[1]);
+        y = Math.max(topLeft[1], bucketTopLeft[1]);
         while (y < yMax) {
           const dataOffset =
             (x % bucketWidth) +
             (y % bucketWidth) * bucketWidth +
             (z % bucketWidth) * bucketWidth * bucketWidth;
-          const rx = x - bbox.min[0];
-          const ry = y - bbox.min[1];
-          const rz = z - bbox.min[2];
+          const rx = x - topLeft[0];
+          const ry = y - topLeft[1];
+          const rz = z - topLeft[2];
 
           const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
-          const data =
-            bucket.type !== "null" ? bucket.getData() : new TypedArrayClass(Constants.BUCKET_SIZE);
+          // Checking for bucket.type !== "null" is not enough, since the bucket
+          // could also be MISSING.
+          const data = bucket.hasData()
+            ? bucket.getData()
+            : new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
@@ -1356,19 +1423,24 @@ class DataApi {
   }
 
   /**
-   * Label voxels with the supplied value.
+   * Label voxels with the supplied value. Note that this method does not mutate
+   * the data immediately, but instead returns a promise (since the data might
+   * have to be downloaded first).
+   *
    * _Volume tracing only!_
    *
    * @example // Set the segmentation id for some voxels to 1337
-   * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
+   * await api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  labelVoxels(voxels: Array<Vector3>, label: number): void {
+  async labelVoxels(voxels: Array<Vector3>, label: number): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
 
-    for (const voxel of voxels) {
-      segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);
-    }
+    await Promise.all(
+      voxels.map(voxel =>
+        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(voxel, label),
+      ),
+    );
 
     segmentationLayer.cube.pushQueue.push();
   }
@@ -1551,9 +1623,9 @@ class DataApi {
    * const availableMeshFiles = await api.data.getAvailableMeshFiles();
    * api.data.setActiveMeshFile(availableMeshFiles[0]);
    *
-   * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
+   * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
-  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
+  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
     if (!effectiveLayerName) {
@@ -1586,7 +1658,9 @@ class DataApi {
       }
     }
 
-    await loadMeshFromFile(segmentId, seedPosition, meshFileName, segmentationLayer, dataset);
+    Store.dispatch(
+      loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+    );
   }
 
   /**
@@ -1598,7 +1672,7 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
+    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition));
   }
 
   /**

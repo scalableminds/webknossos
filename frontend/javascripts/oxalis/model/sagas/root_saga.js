@@ -14,7 +14,8 @@ import { watchMaximumRenderableLayers } from "oxalis/model/sagas/dataset_saga";
 import { watchToolDeselection } from "oxalis/model/sagas/annotation_tool_saga";
 import SettingsSaga from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
-import HistogramSaga from "oxalis/model/sagas/load_histogram_data_saga";
+import loadHistogramDataSaga from "oxalis/model/sagas/load_histogram_data_saga";
+import listenToClipHistogramSaga from "oxalis/model/sagas/clip_histogram_saga";
 import MappingSaga from "oxalis/model/sagas/mapping_saga";
 
 let rootSagaCrashed = false;
@@ -37,7 +38,8 @@ function* restartableSaga(): Saga<void> {
       _call(warnAboutMagRestriction),
       _call(SettingsSaga),
       ...SkeletontracingSagas.map(saga => _call(saga)),
-      _call(HistogramSaga),
+      _call(listenToClipHistogramSaga),
+      _call(loadHistogramDataSaga),
       _call(watchDataRelevantChanges),
       _call(isosurfaceSaga),
       _call(watchTasksAsync),
@@ -54,7 +56,11 @@ function* restartableSaga(): Saga<void> {
     console.error("The sagas crashed because of the following error:", err);
     if (process.env.BABEL_ENV !== "test") {
       ErrorHandling.notify(err, {});
-      toggleErrorHighlighting(true);
+      // Hide potentially old error highlighting which mentions a retry mechanism.
+      toggleErrorHighlighting(false);
+      // Show error highlighting which mentions the permanent error.
+      toggleErrorHighlighting(true, true);
+
       alert(`\
 Internal error.
 Please reload the page to avoid losing data.

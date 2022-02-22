@@ -1,30 +1,108 @@
-/**
- * tracing_settings_view.js
- * @flow
- */
-import { Tooltip } from "antd";
+// @flow
+import { Button, Form, Modal, Tooltip } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
+import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import type { Vector3, Vector6, BoundingBoxType } from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import * as Utils from "libs/utils";
-
+import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { startGlobalizeFloodfillsJob } from "admin/admin_rest_api";
 import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import features from "features";
+
+// NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
+// That way, bboxes created by the floodfill can be detected as such and
+// a job for globalizing floodfills can be started.
+const GLOBALIZE_FLOODFILL_REGEX = /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
+export function getBBoxNameForPartialFloodfill(
+  oldSegmentIdAtSeed: number,
+  activeCellId: number,
+  seedPosition: Vector3,
+) {
+  return `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+    ",",
+  )}, timestamp=${new Date().getTime()})`;
+}
+
+function StartGlobalizeFloodfillsModal({
+  onStartGlobalization,
+  handleClose,
+  activeUser,
+  initialName,
+}) {
+  const handleSubmit = async formValues => {
+    try {
+      await onStartGlobalization(formValues.name);
+      handleClose();
+    } catch (exception) {
+      Toast.info(
+        <React.Fragment>
+          The globilization of the floodfill operation(s) could not be started. Open the browser
+          console for more details.
+        </React.Fragment>,
+      );
+      console.error(exception);
+      return;
+    }
+
+    Toast.info(
+      <React.Fragment>
+        The globilization of the floodfill operation(s) has been started. For large datasets, this
+        may take a while. Closing this tab will not stop the computation.
+        <br />
+        See{" "}
+        <a target="_blank" href="/jobs" rel="noopener noreferrer">
+          Processing Jobs
+        </a>{" "}
+        for an overview of running jobs.
+      </React.Fragment>,
+    );
+  };
+
+  return (
+    <Modal title="Globalize Floodfills" onCancel={handleClose} visible width={500} footer={null}>
+      <p>
+        For this annotation some floodfill operations have not run to completion, because they
+        covered a too large volume. webKnossos can finish these operations via a long-running job.
+        This job will copy the current dataset, apply the changes of the current volume annotation
+        into the volume layer and use the existing bounding boxes as seeds to continue the remaining
+        floodfill operations (i.e., &quot;globalize&quot; them).
+      </p>
+
+      <Form onFinish={handleSubmit} layout="vertical">
+        <DatasetNameFormItem activeUser={activeUser} initialName={initialName} />
+
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+          <Button size="large" type="primary" htmlType="submit">
+            Globalize Floodfills
+          </Button>
+        </div>
+      </Form>
+    </Modal>
+  );
+}
 
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] = useState(null);
+  const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
+
   const tracing = useSelector(state => state.tracing);
   const dataset = useSelector(state => state.dataset);
+  const activeUser = useSelector(state => state.activeUser);
+  const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const { userBoundingBoxes } = getSomeTracing(tracing);
 
   const dispatch = useDispatch();
@@ -60,8 +138,42 @@ export default function BoundingBoxTab() {
     setPosition(center);
   }
 
+  const showGlobalizeFloodfillsButton =
+    features().jobsEnabled &&
+    activeUser != null &&
+    activeSegmentationTracingLayer != null &&
+    userBoundingBoxes.some(bbox => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null);
+
+  const onGlobalizeFloodfills = newName => {
+    if (activeSegmentationTracingLayer == null) {
+      return;
+    }
+    const baseSegmentationName = getBaseSegmentationName(activeSegmentationTracingLayer);
+    startGlobalizeFloodfillsJob(
+      dataset.owningOrganization,
+      dataset.name,
+      newName,
+      baseSegmentationName,
+      tracing.annotationId,
+      tracing.annotationType,
+    );
+  };
   return (
     <div className="padded-tab-content" style={{ minWidth: 300 }}>
+      {showGlobalizeFloodfillsButton ? (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Tooltip title="For this annotation some floodfill operations have not run to completion, because they covered a too large volume. webKnossos can finish these operations via a long-running job.">
+            <Button
+              size="small"
+              style={{ marginBottom: 8 }}
+              onClick={() => setIsGlobalizeFloodfillsModalVisible(true)}
+            >
+              <i className="fas fa-fill-drip" />
+              Globalize Flood-Fills
+            </Button>
+          </Tooltip>
+        </div>
+      ) : null}
       {userBoundingBoxes.length > 0 ? (
         userBoundingBoxes.map(bb => (
           <UserBoundingBoxInput
@@ -103,6 +215,14 @@ export default function BoundingBoxTab() {
           tracing={tracing}
           boundingBox={selectedBoundingBoxForExport.boundingBox}
           handleClose={() => setSelectedBoundingBoxForExport(null)}
+        />
+      ) : null}
+      {isGlobalizeFloodfillsModalVisible ? (
+        <StartGlobalizeFloodfillsModal
+          onStartGlobalization={onGlobalizeFloodfills}
+          activeUser={activeUser}
+          handleClose={() => setIsGlobalizeFloodfillsModalVisible(false)}
+          initialName={`${dataset.name}_with_floodfills`}
         />
       ) : null}
     </div>

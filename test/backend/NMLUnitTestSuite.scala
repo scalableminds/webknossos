@@ -3,9 +3,8 @@ package backend
 import java.io.ByteArrayInputStream
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import models.annotation.FetchedAnnotationLayer
 import models.annotation.nml.{NmlParser, NmlWriter}
+import models.annotation.{FetchedAnnotationLayer, UploadedVolumeLayer}
 import net.liftweb.common.{Box, Full}
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
@@ -23,7 +22,7 @@ class NMLUnitTestSuite extends PlaySpec {
   }
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing)
-    : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] = {
+    : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] = {
     val annotationLayers = List(FetchedAnnotationLayer("dummySkeletonTracingId", None, Left(skeletonTracing), None))
     val nmlEnumarator =
       new NmlWriter().toNmlStream(annotationLayers, None, None, None, "testOrganization", None, None)
@@ -33,7 +32,7 @@ class NMLUnitTestSuite extends PlaySpec {
   }
 
   def isParseSuccessful(
-      parsedTracing: Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)]): Boolean =
+      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)]): Boolean =
     parsedTracing match {
       case Full(tuple) =>
         tuple match {

@@ -10,7 +10,10 @@ import memoizeOne from "memoize-one";
 import type { APISegmentationLayer, APIUser, APIDataset, APIMeshFile } from "types/api_flow_types";
 import type { ExtractReturn } from "libs/type_helpers";
 import { type Vector3, MappingStatusEnum } from "oxalis/constants";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
@@ -31,7 +34,6 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import {
-  loadMeshFromFile,
   maybeFetchMeshFiles,
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -44,7 +46,10 @@ import {
   updateDatasetSettingAction,
   updateTemporarySettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  updateSegmentAction,
+  setActiveCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import DataLayer from "oxalis/model/data_layer";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import Model from "oxalis/model";
@@ -158,17 +163,20 @@ const mapDispatchToProps = (dispatch: Dispatch<*>): * => ({
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
     }
   },
-  changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3, shouldReload: boolean) {
-    if (cellId == null) {
-      return;
-    }
-    dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition, shouldReload));
+  loadAdHocMesh(cellId: number, seedPosition: Vector3) {
+    dispatch(loadAdHocMeshAction(cellId, seedPosition));
+  },
+  loadPrecomputedMesh(cellId: number, seedPosition: Vector3, meshFileName: string) {
+    dispatch(loadPrecomputedMeshAction(cellId, seedPosition, meshFileName));
+  },
+  setActiveCell(segmentId: number, somePosition?: Vector3) {
+    dispatch(setActiveCellAction(segmentId, somePosition));
   },
   setCurrentMeshFile(layerName: string, fileName: string) {
     dispatch(updateCurrentMeshFileAction(layerName, fileName));
   },
-  setPosition(position: Vector3, shouldRefreshIsosurface?: boolean) {
-    dispatch(setPositionAction(position, null, shouldRefreshIsosurface));
+  setPosition(position: Vector3) {
+    dispatch(setPositionAction(position));
   },
   updateSegment(segmentId: number, segmentShape: $Shape<Segment>, layerName: string) {
     dispatch(updateSegmentAction(segmentId, segmentShape, layerName));
@@ -339,21 +347,6 @@ class SegmentsView extends React.Component<Props, State> {
       disabled,
       title,
     };
-  };
-
-  loadPrecomputedMeshForSegment = async (segment: Segment) => {
-    const { dataset, currentMeshFile, visibleSegmentationLayer } = this.props;
-    if (!currentMeshFile || !visibleSegmentationLayer) {
-      return;
-    }
-
-    await loadMeshFromFile(
-      segment.id,
-      segment.somePosition,
-      currentMeshFile.meshFileName,
-      visibleSegmentationLayer,
-      dataset,
-    );
   };
 
   onSelectSegment = (segment: Segment) => {
@@ -620,7 +613,6 @@ class SegmentsView extends React.Component<Props, State> {
                         mapId={mapId}
                         segment={segment}
                         centeredSegmentId={centeredSegmentId}
-                        loadPrecomputedMeshForSegment={this.loadPrecomputedMeshForSegment}
                         selectedSegmentId={this.state.selectedSegmentId}
                         activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                         onSelectSegment={this.onSelectSegment}

@@ -32,7 +32,7 @@ test("Complex convertToDenseResolution", t => {
   ensureMatchingLayerResolutions(dataset);
   const expectedResolutions = {
     "0": [[1, 1, 1], [2, 2, 1], [4, 4, 1], [8, 8, 1], [16, 16, 2], [32, 32, 4]],
-    "1": [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 4]],
+    "1": [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 4], [16, 16, 4], [32, 32, 4]],
   };
   const densify = layer => convertToDenseResolution(layer.resolutions);
 

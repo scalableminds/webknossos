@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Tiff exports are now served from the datastore module to prepare for remote datastores with webknossos-worker. [#5942](https://github.com/scalableminds/webknossos/pull/5942)
 - Added the organization id to the auth token page and organization page. [#5965](https://github.com/scalableminds/webknossos/pull/5965)
 - Added the possibility to cancel running webknossos-worker jobs. [#5946](https://github.com/scalableminds/webknossos/pull/5946)
+- Partially executed floodfills can now be finished by starting a worker job from the bounding box tab (requires a webKnossos instance where jobs are set up). [#5905](https://github.com/scalableminds/webknossos/pull/5905)
 
 ### Changed
 - Improved the UI for automatic suggestions to the datasource properties when editing a dataset. [#5948](https://github.com/scalableminds/webknossos/pull/5948)

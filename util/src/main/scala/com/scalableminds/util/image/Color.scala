@@ -37,7 +37,7 @@ object Color {
             case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.array.invalidContent"))))
           }
       case _ =>
-        JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.expected.point3DArray"))))
+        JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.expected.vec3IntArray"))))
     }
   }
 

@@ -30,7 +30,7 @@ async function fetchAllHistogramsForLayers(
   return histograms;
 }
 
-export default function* loadHistogramData(): Saga<void> {
+export default function* loadHistogramDataSaga(): Saga<void> {
   yield* take("WK_READY");
   // Flow does not understand that Array<DataLayer> is returned for some reason.
   const dataLayers: Array<DataLayer> = (yield* call([Model, Model.getColorLayers]): any);

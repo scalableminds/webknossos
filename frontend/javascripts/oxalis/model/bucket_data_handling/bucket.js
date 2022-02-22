@@ -235,9 +235,9 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
-    this.trigger("bucketCollected");
   }
 
   needsRequest(): boolean {

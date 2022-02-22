@@ -10,7 +10,7 @@ Feel free to [contact us](mailto:hello@webknossos.org) or [create a Pull Request
 
 ## Create a webknossos.org Account
 Signing up for a free account on [webknossos.org](https://webknossos.org) is the easiest and fastest way to get started with webKnossos.
-Either upload one of you own datasets and explore one of the many community datasets.
+Either upload one of your own datasets and explore one of the many community datasets.
 
 The free tier comes with 10GB of storage for private datasets.
 For more data storage, check out the [pricing page for paid plans](https://webknossos.org/pricing) that covers storage costs and provides support services such as dataset conversions.
@@ -19,7 +19,7 @@ If you are looking for on-premise hosting at your institute or custom solutions,
 
 
 ## Explore Published Datasets
-On [webknossos.org](https://webknossos.org) there is already large number of published community datasets available for you to explore.
+[webknossos.org](https://webknossos.org) comes with a large number of published community datasets available for you to explore.
 To get started, navigate to the `Featured Publications` tab on your [dashboard](./dashboard.md).
 There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
@@ -48,14 +48,15 @@ You can also change the size of the viewports to see more details in your data a
 
 ## Your First Annotation
 Click the `Create Annotation` button while in "View" mode to create your first annotation.
-webKnossos will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons or annotate segments as volume annotations.
+webKnossos will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
 
 Depending on the current tool - selectable in the top bar - various actions can be performed.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
-The first tool is the MOVE tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
-In the SKELETON tool, a left mouse click can be used to place markers in the data, called nodes.
+The first tool is the *MOVE* tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
+With the *SKELETON* tool, a left mouse click can be used to place markers in the data, called nodes.
 Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
-The DRAW tool allows to "paint" voxels to create volumetric annotations.
+The *BRUSH* and *TRACE* tools allow to "paint" voxels to create volumetric annotations. 
+For a full rundown on the other annotations tools, such as *ERASER*, *SEGMENT PICKER*, *FILL* please refer to documentation on [skeleton](./skeleton_annotation.md) and [volume](./volume_annotation.md) annotations.
 
 A right mouse click can be used to open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment. 
 Basic movement along the 3rd axis is done with the mouse wheel or by pressing the spacebar keyboard shortcut.
@@ -83,4 +84,4 @@ Feel free to explore more features of webKnossos in this documentation.
 If you need help with webKnossos, feel free to contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the forum](https://forum.image.sc/tag/webknossos).
 scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).
 
-[Read the installation tutorial](./installation.md), if you wish to install webKnossos on your own server.
+[Read the installation tutorial](./installation.md) if you wish to install webKnossos on your server.

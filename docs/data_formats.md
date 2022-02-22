@@ -4,7 +4,7 @@ webKnossos uses several file formats for reading large-scale volumetric image da
 
 The webKnosso-wrap (WKW) container format is used for all internal voxel data representations - both for the raw (microscopy) image datasets and segmentations. Skeleton annotations are saved as NML files. 
 
-Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use custom script based on the [webKnossos Python libray](https://docs.webknossos.org/webknossos-py/index.html).
+Any dataset uploaded to webKnossos.org, will automatically be converted to WKW on upload - given its source file format is supported by webKnossos. Alternatively, you can manually convert your datasets using the [webKnossos Cuber CLI tools](https://docs.webknossos.org/wkcuber/index.html) or use a custom script based on the [webKnossos Python libray](https://docs.webknossos.org/webknossos-py/index.html).
 
 Additionally, webKnossos.org supports connecting and loading data from:
 - Neuroglancer Pre-Computed Dataset stored on Google Cloud
@@ -25,10 +25,10 @@ In particular, the following file formats are supported:
 - KNOSSOS file hierarchy 
 
 #### Single-Layer Image File Sequence
-When uploading multiple image files, these files are sorted numerically and each is interpreted as one section within a 3D dataset.
+When uploading multiple image files, these files are sorted numerically, and each one is interpreted as one section within a 3D dataset.
 Alternatively, the same files can also be uploaded bundled in a single folder (or zip archive).
 
-As an example, the following file structure would create a dataset with one layer which has a z-depth of 3.
+As an example, the following file structure would create a dataset with one layer which has a z-depth of 3:
 
 ```
 dataset_name/
@@ -40,7 +40,7 @@ dataset_name/
 
 #### Multi-Layer Image File Sequence
 The image file sequences explained above can be composed to build multiple [layers](#Layers).
-As an example, the following file structure (note the additional hierarchy level) would create a dataset with two layers (named `color` and `segmentation`).
+For example, the following file structure (note the additional hierarchy level) would create a dataset with two layers (named `color` and `segmentation`):
 
 ```
 dataset_name/
@@ -72,10 +72,10 @@ Please ensure that you import the correct folder (so that all layers of the data
 
 ### Datasets, Cubes, and Buckets
 
-A **dataset** consists of [one or more layers](#layers).
-Since webKnossos deals with 3D imagery, the data is organized in **cubes**.
+A *dataset* consists of [one or more layers](#layers).
+Since webKnossos deals with 3D imagery, the data is organized in *cubes*.
 WKW cubes are 1024^3 voxels in size by default and each cube is stored as one file on disk.
-Each cube contains multiple **buckets** of 32^3 voxel size.
+Each cube contains multiple *buckets* of 32^3 voxel size.
 This is the unit in which the data is streamed to the users' browser.
 
 ![Datasets, Cubes, and Buckets](images/cubes-and-buckets.png)
@@ -87,7 +87,7 @@ A dataset consists of one or more layers.
 For microscopy/CT/MRI data, there is usually a `color` layer that holds the raw grayscale image data.
 Additionally, there may be one or more `segmentation` layers that hold manually or automatically generated volume annotations (one ID per voxel).
 
-A webKnossos dataset can contain several `color` and `segmentation` layers which can be rendered invidiually or overlayed on top of each other. The maxmium number of visible layers depends on your GPU hardare - typically 16 layers.
+A webKnossos dataset can contain several `color` and `segmentation` layers which can be rendered individually or overlayed on top of each other. The maximium number of visible layers depends on your GPU hardware - typically 16 layers.
 
 ![Color and Segmentation Layers](images/datalayers.png)
 
@@ -95,10 +95,10 @@ A webKnossos dataset can contain several `color` and `segmentation` layers which
 
 To enable zooming within huge datasets in webKnossos, dataset layers usually contain multiple magnification steps (also called mipmaps or image pyramids).
 `1` is the magnification step with the highest resolution, i.e. the original data.
-`2` is downsampled by by a factor of two in all dimensions and therefore only is an eighth of the file size of the original data.
+`2` is downsampled by a factor of two in all dimensions and therefore only is an eighth of the file size of the original data.
 Downsampling is done in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, …`
 
-webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimension, but not in `z`.
+webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimensions, but not in `z`.
 
 ![Downsampling the data to improve zooming](images/downsampling.png)
 
@@ -108,8 +108,8 @@ webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is d
 Segmentations in webKnossos are represented by ID maps.
 Every segment or component has its own ID.
 These IDs are stored as the value of the corresponding voxel, just as the grayscale value in the voxels of the color layer.
-`0` is usually interpreted as missing or empty value.
-The underlying datatype limits the maximum number of IDs:
+`0` is usually interpreted as a missing or empty value.
+The underlying data type limits the maximum number of IDs:
 
 | Data Type | Maximum ID                 |
 | --------- | -------------------------- |
@@ -124,10 +124,10 @@ To bring the above concepts together, webKnossos uses [webknossos-wrap (WKW)](ht
 For sparse skeleton-like structures, webKnossos uses [NML](#NML).
 
 ### WKW Datasets
-[webknossos-wrap (WKW)](https://github.com/scalableminds/webknossos-wrap) is a format optimized for large datasets of 3D voxel imagery and supports compression, efficient cutouts, multi-channel and several base datatypes.
+[webknossos-wrap (WKW)](https://github.com/scalableminds/webknossos-wrap) is a format optimized for large datasets of 3D voxel imagery and supports compression, efficient cutouts, multi-channel, and several base datatypes.
 It works well for large datasets and is built with modern file systems in mind.
 Compared to KNOSSOS datasets, it is more efficient because it orders the data within the container for optimal read performance (Morton order).
-WKW is versatile in the image formats it can hold: Grayscale, Multi-Channel, Segmentation, RGB as well as a range of data types (e.g., `uint8`,  `uint16`, `float32`).
+WKW is versatile in the image formats it can hold: Grayscale, Multi-Channel, Segmentation, RGB, as well as a range of data types (e.g., `uint8`,  `uint16`, `float32`).
 Additionally, WKW supports compression for disk space efficiency.
 
 Each layer of a WKW dataset may contain one of the following:
@@ -230,17 +230,17 @@ When using the [webKnossos Cuber](https://github.com/scalableminds/webknossos-li
   + `dataLayers.boundingBox`: The position and size of the data that is contained in this layer. `topLeft` holds the `min_x,min_y,min_z` position, `width` is `max_x - min_x`, `height` is `max_y - min_y` and `depth` is `max_z - min_z`.
 
   + `dataLayers.wkwResolutions`: Holds information about the available magnification steps of the layer.
-    * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g. `1`, `2` or `4`) or a 3-tuple (e.g. `2, 2, 1`) for non-uniform magnifications.
+    * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g., `1`, `2` or `4`) or a 3-tuple (e.g., `2, 2, 1`) for non-uniform magnifications.
     * `dataLayers.wkwResolutions.cubeLength`: The cube size of the WKW cube files. Usually is `1024`.
 
-  + `dataLayers.elementClass`: The underlying datatype of the layer, e.g. `uint8`, `uint16` or `float32`.
+  + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16` or `float32`.
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
   + `dataLayers.dataFormat`: Should be `wkw`.
 
 ### Converting with webKnossos Cuber
 
 #### Image Stacks
-If you have image stacks (e.g. tiff stacks), you can easily convert them with [webKnossos cuber](https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber).
+If you have image stacks, e.g., tiff stacks, you can easily convert them with [webKnossos cuber](https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber).
 The tool expects all image files in a single folder with numbered file names.
 After installing, you can create simple WKW datasets with the following command:
 
@@ -254,7 +254,7 @@ python -m wkcuber \
 
 This snippet converts an image stack that is located at `data/source/color` into a WKW dataset which will be located at `data/target`.
 It will create the `color` layer.
-You need to supply the `scale` parameter which is the size of one voxel in nanometers.
+You need to supply the `scale` parameter, i.e., the size of one voxel in nanometers.
 
 Read the full documentation at [webKnossos cuber](https://github.com/scalableminds/webknossos-libs/tree/master/wkcuber).
 [Please contact us](mailto:hello@webknossos.org) or [write a post](https://forum.image.sc/tag/webknossos), if you have any issues with converting your dataset.
@@ -318,17 +318,17 @@ Groups can be freely nested inside each other.
 
 
 ### ID Mapping Files
-webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerates" files need to be pre-computed and put into a `agglomerates` directory inside a segmentation layer:
+webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into a `agglomerates` directory inside a segmentation layer (self-hosted instance only):
 
 ```
 great_dataset                   # Dataset root
-├─ segmentation                 # Dataset layer (e.g., color, segmentation)
+├─ segmentation                 # Dataset layer (^, color, segmentation)
 │  ├─ agglomerates/             # Magnification step (1, 2, 4, 8, 16 etc.)
 │  │  ├─ my_mapping_file.json   # one or more agglomerate files
 │  │  ├─ different_mapping.json # one agglomerate file per mapping
 ```
 
-webKnossos supports two formats for theese agglomerates:
+webKnossos supports two formats for these agglomerates:
 - JSON
 - HDF5
 

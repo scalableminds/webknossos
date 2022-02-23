@@ -278,9 +278,8 @@ jobs:
           command: curl -X POST --fail https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=$WK_AUTH_TOKEN
       - run:
           name: Run screenshot-tests
-          # TODO: Replace with master before merging
           command: |
-            URL=https://connectomeviewing.webknossos.xyz/ \
+            URL=https://master.webknossos.xyz/ \
             yarn test-screenshot
 
       - store_artifacts:
@@ -294,8 +293,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      # TODO: Remove before merging
-      - nightly
   circleci_nightly:
     jobs:
       - nightly

@@ -22,5 +22,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fix occasionally "disappearing" data. [#6055](https://github.com/scalableminds/webknossos/pull/6055)
 
 ### Removed
+- The previously disabled Import Skeleton Button has been removed. The functionality is available via the context menu for datasets with active ID mappings. [#6073](https://github.com/scalableminds/webknossos/pull/6073)
 
 ### Breaking Changes

@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a bug where deactivated users would still be listed as allowed to access the datasets of their team. [#6070](https://github.com/scalableminds/webknossos/pull/6070)
+- Fix occasionally "disappearing" data. [#6055](https://github.com/scalableminds/webknossos/pull/6055)
 
 ### Removed
 

@@ -25,7 +25,7 @@ test.beforeEach(async t => {
 });
 
 test.serial(
-  "Brushing/Tracing should crash when too many buckets are labeled at once without saving inbetween",
+  "Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving inbetween",
   async t => {
     await t.context.api.tracing.save();
 
@@ -34,16 +34,13 @@ test.serial(
       0,
       0,
     );
-    // webKnossos will start to evict buckets forcefully if too many are dirty at the same time.
-    // This is not ideal, but usually handled by the fact that buckets are regularly saved to the
-    // backend and then marked as not dirty.
-    // This test provokes that webKnossos crashes (a hard crash is only done during testing; in dev/prod
-    // a soft warning is emitted via the devtools).
-    // The corresponding sibling test checks that saving inbetween does not make webKnossos crash.
+    // In earlier versions of webKnossos, buckets could be evicted forcefully when
+    // too many were dirty at the same time. This led to a crash in earlier versions.
+    // Now, the code should not crash, anymore.
     t.plan(2);
     t.false(hasRootSagaCrashed());
     const failedSagaPromise = waitForCondition(hasRootSagaCrashed, 500);
     await Promise.race([testLabelingManyBuckets(t, false), failedSagaPromise]);
-    t.true(hasRootSagaCrashed());
+    t.false(hasRootSagaCrashed());
   },
 );

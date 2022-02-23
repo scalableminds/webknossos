@@ -100,16 +100,16 @@ test("GetBucket should return a NullBucket on getBucket()", t => {
   const { cube } = t.context;
   const bucket = cube.getBucket([0, 0, 0, 0]);
   t.is(bucket.type, "null");
-  t.is(cube.bucketCount, 0);
+  t.is(cube.buckets.length, 0);
 });
 
 test("GetBucket should create a new bucket on getOrCreateBucket()", t => {
   const { cube } = t.context;
-  t.is(cube.bucketCount, 0);
+  t.is(cube.buckets.length, 0);
 
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
   t.is(bucket.type, "data");
-  t.is(cube.bucketCount, 1);
+  t.is(cube.buckets.length, 1);
 });
 
 test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
@@ -117,7 +117,7 @@ test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
   const bucket1 = cube.getOrCreateBucket([0, 0, 0, 0]);
   const bucket2 = cube.getOrCreateBucket([0, 0, 0, 0]);
   t.is(bucket1, bucket2);
-  t.is(cube.bucketCount, 1);
+  t.is(cube.buckets.length, 1);
 });
 
 test("Voxel Labeling should request buckets when temporal buckets are created", t => {
@@ -199,23 +199,21 @@ test("getDataValue() should return the mapping value if available", async t => {
   t.is(cube.getDataValue([1, 1, 1], mapping), 43);
 });
 
-test("Garbage Collection should only keep 3 buckets", t => {
+test("Garbage Collection should only keep 3 buckets when possible", t => {
   const { cube } = t.context;
-  cube.MAXIMUM_BUCKET_COUNT = 3;
-  cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
+  cube.BUCKET_COUNT_SOFT_LIMIT = 3;
 
   cube.getOrCreateBucket([0, 0, 0, 0]);
   cube.getOrCreateBucket([1, 1, 1, 0]);
   cube.getOrCreateBucket([2, 2, 2, 0]);
   cube.getOrCreateBucket([3, 3, 3, 0]);
 
-  t.is(cube.bucketCount, 3);
+  t.is(cube.buckets.length, 3);
 });
 
 test("Garbage Collection should not collect buckets with shouldCollect() == false", t => {
   const { cube } = t.context;
-  cube.MAXIMUM_BUCKET_COUNT = 3;
-  cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
+  cube.BUCKET_COUNT_SOFT_LIMIT = 3;
 
   const b1 = cube.getOrCreateBucket([0, 0, 0, 0]);
   b1.markAsPulled();
@@ -228,6 +226,24 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
 
   const addresses = cube.buckets.map(b => b.zoomedAddress);
   t.deepEqual(addresses, [[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
+});
+
+test("Garbage Collection should grow beyond soft limit if necessary", t => {
+  const { cube } = t.context;
+  cube.BUCKET_COUNT_SOFT_LIMIT = 3;
+
+  const b1 = cube.getOrCreateBucket([0, 0, 0, 0]);
+  const b2 = cube.getOrCreateBucket([1, 1, 1, 0]);
+  const b3 = cube.getOrCreateBucket([2, 2, 2, 0]);
+
+  // No bucket may be collected.
+  [b1, b2, b3].map(b => b.markAsPulled());
+
+  // Allocate a 4th one which should still be possible (will exceed BUCKET_COUNT_SOFT_LIMIT)
+  cube.getOrCreateBucket([3, 3, 3, 0]);
+
+  const addresses = cube.buckets.map(b => b.zoomedAddress);
+  t.deepEqual(addresses, [[0, 0, 0, 0], [1, 1, 1, 0], [2, 2, 2, 0], [3, 3, 3, 0]]);
 });
 
 test("getVoxelIndexByVoxelOffset should return the correct index of a position within a bucket", t => {

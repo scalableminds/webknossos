@@ -37,7 +37,10 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
@@ -79,10 +82,7 @@ import {
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { maybeFetchMeshFiles } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
@@ -140,6 +140,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import DataLayer from "oxalis/model/data_layer";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -1009,9 +1010,7 @@ class DataApi {
    */
   async reloadBuckets(layerName: string): Promise<void> {
     await Promise.all(
-      Object.keys(this.model.dataLayers).map(async currentLayerName => {
-        const dataLayer = this.model.dataLayers[currentLayerName];
-
+      Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
             await Model.ensureSavedState();
@@ -1030,7 +1029,7 @@ class DataApi {
     if (hasVolumeTracings(Store.getState().tracing)) {
       await Model.ensureSavedState();
     }
-    _.forEach(this.model.dataLayers, dataLayer => {
+    Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
       dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });
@@ -1624,9 +1623,9 @@ class DataApi {
    * const availableMeshFiles = await api.data.getAvailableMeshFiles();
    * api.data.setActiveMeshFile(availableMeshFiles[0]);
    *
-   * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
+   * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
-  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
+  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
     if (!effectiveLayerName) {
@@ -1659,7 +1658,9 @@ class DataApi {
       }
     }
 
-    await loadMeshFromFile(segmentId, seedPosition, meshFileName, segmentationLayer, dataset);
+    Store.dispatch(
+      loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+    );
   }
 
   /**
@@ -1671,7 +1672,7 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
+    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition));
   }
 
   /**

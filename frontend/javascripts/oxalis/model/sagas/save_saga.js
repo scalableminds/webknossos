@@ -224,7 +224,12 @@ export function* collectUndoStates(): Saga<void> {
     "REDO",
   ]);
 
+  window.counter = 0;
   while (true) {
+    window.counter++;
+    if (window.counter % 100 === 0) {
+      yield _delay(0);
+    }
     const currentAction = yield* take(actionChannel);
     const {
       skeletonUserAction,
@@ -660,6 +665,7 @@ export function* pushTracingTypeAsync(
     saveQueue = yield* select(state => selectQueue(state, tracingType, tracingId));
     if (saveQueue.length === 0) {
       // Save queue is empty, wait for push event
+      yield _delay(0);
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
     const { forcePush } = yield* race({

@@ -95,6 +95,9 @@ async function clipHistogram(layerName: string, shouldAdjustClipRange: boolean) 
 
 export function handleClipHistogram(action: ClipHistogramAction): void {
   clipHistogram(action.layerName, action.shouldAdjustClipRange);
+  if (action.callback != null) {
+		action.callback();
+	}
 }
 
 export default function* listenToClipHistogramSaga(): Saga<void> {

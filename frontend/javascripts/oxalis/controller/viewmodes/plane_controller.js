@@ -133,12 +133,12 @@ class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => Store.dispatch(createCellAction()),
-      v: guardNotTDViewport(() => {
+      v: () => {
         Store.dispatch(copySegmentationLayerAction());
-      }),
-      "shift + v": guardNotTDViewport(() => {
+      },
+      "shift + v": () => {
         Store.dispatch(copySegmentationLayerAction(true));
-      }),
+      },
     };
   }
 }
@@ -159,16 +159,6 @@ const getMoveValue = timeFactor => {
     constants.FPS
   );
 };
-
-function guardNotTDViewport(guardedFunction) {
-  return () => {
-    const { activeViewport } = Store.getState().viewModeData.plane;
-    if (activeViewport === OrthoViews.TDView) {
-      return undefined;
-    }
-    return guardedFunction();
-  };
-}
 
 function createDelayAwareMoveHandler(multiplier: number) {
   // The multiplier can be used for inverting the direction as well as for

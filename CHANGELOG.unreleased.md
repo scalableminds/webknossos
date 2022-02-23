@@ -19,5 +19,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where deactivated users would still be listed as allowed to access the datasets of their team. [#6070](https://github.com/scalableminds/webknossos/pull/6070)
 
 ### Removed
+- The previously disabled Import Skeleton Button has been removed. The functionality is available via the context menu for datasets with active I mappings. [#6073](https://github.com/scalableminds/webknossos/pull/6073)
 
 ### Breaking Changes

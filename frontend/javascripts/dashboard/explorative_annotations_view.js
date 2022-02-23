@@ -70,7 +70,6 @@ type State = {
   searchQuery: string,
   tags: Array<string>,
   isLoading: boolean,
-  performedInitialFetch: boolean,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -97,19 +96,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     searchQuery: "",
     tags: [],
     isLoading: false,
-    performedInitialFetch: false,
   };
 
   componentDidMount() {
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load(this.props.history), () => this.fetchNextPage(0));
   }
 
   componentDidUpdate(_prevProps, prevState) {
     persistence.persist(this.props.history, this.state);
-    if (
-      this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings ||
-      !this.state.performedInitialFetch
-    ) {
+    if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
       this.fetchNextPage(0);
     }
   }
@@ -119,32 +114,23 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       ? this.state.archivedModeState
       : this.state.unarchivedModeState;
 
-  setModeState = modeShape => {
-    const { shouldShowArchivedTracings } = this.state;
-    this.setState(prevState => {
-      const newSubState = {
-        // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
-        ...prevState[shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"],
-        ...modeShape,
-      };
-      return {
-        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
-        [shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"]: newSubState,
-      };
-    });
-  };
+  setModeState = (modeShape, addToArchivedTracings) =>
+    this.addToShownTracings(modeShape, addToArchivedTracings);
 
-  setOppositeModeState = modeShape => {
-    const { shouldShowArchivedTracings } = this.state;
+  setOppositeModeState = (modeShape, addToArchivedTracings) =>
+    this.addToShownTracings(modeShape, !addToArchivedTracings);
+
+  addToShownTracings = (modeShape, addToArchivedTracings) => {
+    const mode = addToArchivedTracings ? "archivedModeState" : "unarchivedModeState";
     this.setState(prevState => {
       const newSubState = {
         // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
-        ...prevState[shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"],
+        ...prevState[mode],
         ...modeShape,
       };
       return {
         // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
-        [shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"]: newSubState,
+        [mode]: newSubState,
       };
     });
   };
@@ -163,15 +149,18 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
           : await getCompactAnnotations(showArchivedTracings, pageNumber);
 
-      this.setModeState({
-        tracings: previousTracings.concat(tracings),
-        lastLoadedPage: pageNumber,
-        loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
-      });
+      this.setModeState(
+        {
+          tracings: previousTracings.concat(tracings),
+          lastLoadedPage: pageNumber,
+          loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
+        },
+        showArchivedTracings,
+      );
     } catch (error) {
       handleGenericError(error);
     } finally {
-      this.setState({ isLoading: false, performedInitialFetch: true });
+      this.setState({ isLoading: false });
     }
   };
 
@@ -199,17 +188,24 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
 
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
+    const { shouldShowArchivedTracings } = this.state;
 
     if (type === "finish") {
-      this.setModeState({ tracings: newTracings });
-      this.setOppositeModeState({
-        tracings: [newTracing].concat(this.state.archivedModeState.tracings),
-      });
+      this.setModeState({ tracings: newTracings }, shouldShowArchivedTracings);
+      this.setOppositeModeState(
+        {
+          tracings: [newTracing].concat(this.state.archivedModeState.tracings),
+        },
+        shouldShowArchivedTracings,
+      );
     } else {
-      this.setModeState({ tracings: newTracings });
-      this.setOppositeModeState({
-        tracings: [newTracing].concat(this.state.unarchivedModeState.tracings),
-      });
+      this.setModeState({ tracings: newTracings }, shouldShowArchivedTracings);
+      this.setOppositeModeState(
+        {
+          tracings: [newTracing].concat(this.state.unarchivedModeState.tracings),
+        },
+        shouldShowArchivedTracings,
+      );
     }
   };
 
@@ -246,7 +242,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <br />
         </div>
       );
-    } else if (state === "Finished") {
+    } else {
       return (
         <div>
           <AsyncLink
@@ -259,8 +255,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <br />
         </div>
       );
-    } else {
-      return null;
     }
   };
 
@@ -283,7 +277,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       }
     });
 
-    this.setModeState({ tracings: newTracings });
+    this.setModeState({ tracings: newTracings }, this.state.shouldShowArchivedTracings);
 
     editAnnotation(tracing.id, tracing.typ, { name }).then(() => {
       Toast.success(messages["annotation.was_edited"]);

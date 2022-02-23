@@ -272,7 +272,8 @@ const Constants = {
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
-  // The area of the maximum radius (pi * 300 ^ 2) is 282690.
+  // For reference, the area of a large brush size (let's say, 300px) corresponds to
+  // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done
   // during mouse movement, but afterwards. So, a bit of a
   // waiting time should be acceptable.

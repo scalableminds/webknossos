@@ -1,16 +1,16 @@
 // @flow
 import type { Action } from "oxalis/model/actions/actions";
+import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, ActiveMappingInfo } from "oxalis/store";
-import { updateKey, updateKey3, type StateShape1 } from "oxalis/model/helpers/deep_update";
 import { clamp } from "libs/utils";
-import { userSettings } from "types/schemas/user_settings.schema";
 import {
   getLayerByName,
   getSegmentationLayers,
   getVisibleSegmentationLayers,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { MappingStatusEnum } from "oxalis/constants";
+import { updateKey, updateKey3, type StateShape1 } from "oxalis/model/helpers/deep_update";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 //
 // Update helpers
@@ -97,6 +97,10 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         const min = settingSpec.minimum != null ? settingSpec.minimum : -Infinity;
         const max = settingSpec.maximum != null ? settingSpec.maximum : Infinity;
         value = clamp(min, value, max);
+        if (settingSpec.dynamicMaximumFn != null) {
+          const dynamicMaximum = settingSpec.dynamicMaximumFn(state);
+          value = Math.min(value, dynamicMaximum);
+        }
       }
 
       // $FlowIssue[invalid-computed-prop] Flow doesn't check that only numbers will be clamped and https://github.com/facebook/flow/issues/8299

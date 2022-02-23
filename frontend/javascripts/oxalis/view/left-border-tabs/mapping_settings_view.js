@@ -1,6 +1,6 @@
 // @flow
 
-import { Select, Tooltip } from "antd";
+import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -26,8 +26,6 @@ import Model from "oxalis/model";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-import { AsyncButton } from "components/async_clickables";
-import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_handlers";
 
 const { Option, OptGroup } = Select;
 
@@ -159,32 +157,6 @@ class MappingSettingsView extends React.Component<Props, State> {
     }
   };
 
-  renderAgglomerateSkeletonButton = () => {
-    const { mappingName, mappingType } = this.props;
-    const isAgglomerateMapping = mappingType === "HDF5";
-
-    // Only show the option to import a skeleton from an agglomerate file if an agglomerate file mapping is activated.
-    const shouldRender = this.props.isMappingEnabled && mappingName != null && isAgglomerateMapping;
-    const isDisabled = true;
-    const disabledMessage =
-      "Agglomerate Skeletons should now be imported through the context menu or with Shift + Middle Click (if the Skeleton tool is active).";
-
-    return shouldRender ? (
-      <Tooltip title={isDisabled ? disabledMessage : null}>
-        {/* Workaround to fix antd bug, see https://github.com/react-component/tooltip/issues/18#issuecomment-650864750 */}
-        <span style={{ cursor: "help" }}>
-          <AsyncButton
-            onClick={() => loadAgglomerateSkeletonAtPosition(this.props.position)}
-            disabled={isDisabled}
-            style={isDisabled ? { pointerEvents: "none" } : {}}
-          >
-            Import Skeleton for Centered Segment
-          </AsyncButton>
-        </span>
-      </Tooltip>
-    ) : null;
-  };
-
   render() {
     if (!hasSegmentation()) {
       return <div className="padded-tab-content">No segmentation available</div>;
@@ -276,7 +248,6 @@ class MappingSettingsView extends React.Component<Props, State> {
             loading={this.state.isRefreshingMappingList}
           />
         ) : null}
-        {this.renderAgglomerateSkeletonButton()}
       </React.Fragment>
     );
   }

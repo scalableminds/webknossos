@@ -3,7 +3,7 @@ import _ from "lodash";
 import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SaveState } from "oxalis/store";
+import type { OxalisState, SaveState, SaveQueueEntry } from "oxalis/store";
 import type { SetVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -34,7 +34,11 @@ function updateQueueObj(action, oldQueueObj, newQueue) {
 export function getTotalSaveQueueLength(queueObj: $ElementType<SaveState, "queue">) {
   return (
     queueObj.skeleton.length +
-    _.sum(Object.keys(queueObj.volumes).map(volumeKey => queueObj.volumes[volumeKey].length))
+    _.sum(
+      Utils.values(queueObj.volumes).map(
+        (volumeQueue: Array<SaveQueueEntry>) => volumeQueue.length,
+      ),
+    )
   );
 }
 

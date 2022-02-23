@@ -22,11 +22,14 @@ import {
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
   changeUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import {
   deleteEdgeAction,
   mergeTreesAction,
@@ -55,7 +58,6 @@ import {
 } from "oxalis/controller/combinations/segmentation_handlers";
 import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
 import {
-  loadMeshFromFile,
   maybeFetchMeshFiles,
   withMappingActivationConfirmation,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
@@ -559,13 +561,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
         return;
       }
 
-      await loadMeshFromFile(
-        id,
-        globalPosition,
-        currentMeshFile.meshFileName,
-        visibleSegmentationLayer,
-        dataset,
-      );
+      dispatch(loadPrecomputedMeshAction(id, globalPosition, currentMeshFile.meshFileName));
     }
   };
 
@@ -578,7 +574,7 @@ function NoNodeContextMenuOptions(props: NoNodeContextMenuProps) {
       Toast.info("No segment found at the clicked position");
       return;
     }
-    dispatch(changeActiveIsosurfaceCellAction(id, globalPosition, true));
+    dispatch(loadAdHocMeshAction(id, globalPosition));
   };
 
   const isVolumeBasedToolActive = VolumeTools.includes(activeTool);

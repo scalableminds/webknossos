@@ -1,24 +1,28 @@
 // @flow
 import { saveAs } from "file-saver";
+import _ from "lodash";
+import { V3 } from "libs/mjs";
 
 import { sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataLayer } from "types/api_flow_types";
 import {
   ResolutionInfo,
   getResolutionInfo,
   getMappingInfo,
+  getVisibleSegmentationLayer,
+  getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  changeActiveIsosurfaceCellAction,
-  type ChangeActiveIsosurfaceCellAction,
+  type LoadAdHocMeshAction,
+  type LoadPrecomputedMeshAction,
+  type IsosurfaceMappingInfo,
 } from "oxalis/model/actions/segmentation_actions";
-import { type Vector3 } from "oxalis/constants";
-import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { type Vector3, MappingStatusEnum } from "oxalis/constants";
 import {
   removeIsosurfaceAction,
-  addIsosurfaceAction,
-  finishedRefreshingIsosurfacesAction,
+  addAdHocIsosurfaceAction,
+  addPrecomputedIsosurfaceAction,
   finishedLoadingIsosurfaceAction,
   startedLoadingIsosurfaceAction,
   type ImportIsosurfaceFromStlAction,
@@ -29,6 +33,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
+  _actionChannel,
   _takeEvery,
   call,
   _call,
@@ -39,7 +44,12 @@ import {
   take,
 } from "oxalis/model/sagas/effect-generators";
 import { stlIsosurfaceConstants } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
-import { computeIsosurface, sendAnalyticsEvent } from "admin/admin_rest_api";
+import {
+  computeIsosurface,
+  sendAnalyticsEvent,
+  getMeshfileChunksForSegment,
+  getMeshfileChunkData,
+} from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
@@ -55,9 +65,18 @@ import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetraci
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
+import processTaskWithPool from "libs/task_pool";
+import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 
 const MAX_RETRY_COUNT = 5;
 const RETRY_WAIT_TIME = 5000;
+const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 6;
+
+/*
+ *
+ * Ad Hoc Meshes
+ *
+ */
 
 const isosurfacesMapByLayer: { [layerName: string]: Map<number, ThreeDMap<boolean>> } = {};
 const cubeSize = [256, 256, 256];
@@ -130,86 +149,91 @@ function getNeighborPosition(
   return neighboringPosition;
 }
 
-// Since isosurface rendering is only supported in view mode right now
-// (active cell id is only defined in volume annotations, mapping support
-// for datasets is limited in volume tracings etc.), we use another state
-// variable for the "active cell" in view mode. The cell can be changed via
-// shift + click on the isosurface, by clicking on its list entry in the
-// meshes tab or by clicking on the "load isosurface for centered cell" button.
-let currentViewIsosurfaceCellId = 0;
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
 const batchCounterPerSegment: { [key: number]: number } = {};
 const MAXIMUM_BATCH_SIZE = 50;
 
-function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
-  currentViewIsosurfaceCellId = action.cellId;
-  if (action.shouldReload) {
-    yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
-  }
+function* loadAdHocIsosurfaceFromAction(action: LoadAdHocMeshAction): Saga<void> {
+  yield* call(
+    loadAdHocIsosurface,
+    action.seedPosition,
+    action.cellId,
+    false,
+    action.layerName,
+    action.mappingInfo,
+  );
 }
 
-// This function either returns the activeCellId of the current volume tracing
-// or the view-only active cell id
-function* getCurrentCellId(): Saga<number> {
-  const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
-  if (volumeTracing != null) {
-    return volumeTracing.activeCellId;
-  }
-
-  return currentViewIsosurfaceCellId;
-}
-
-function* ensureSuitableIsosurface(
-  maybeFlycamAction: ?FlycamAction,
-  seedPosition?: Vector3,
-  cellId?: number,
+function* loadAdHocIsosurface(
+  seedPosition: Vector3,
+  cellId: number,
   removeExistingIsosurface: boolean = false,
+  layerName?: ?string,
+  maybeMappingInfo?: IsosurfaceMappingInfo,
 ): Saga<void> {
-  const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
-  const layer = Model.getVisibleSegmentationLayer();
-  if (!layer) {
+  const layer =
+    layerName != null ? Model.getLayerByName(layerName) : Model.getVisibleSegmentationLayer();
+
+  if (cellId === 0 || layer == null) {
     return;
   }
 
-  // we need this so precomputed meshes don't get reloaded when the flycam gets moved to their position
-  if (maybeFlycamAction && !maybeFlycamAction.shouldRefreshIsosurface) {
-    return;
-  }
-  if (segmentId === 0 || layer == null) {
-    return;
-  }
-  yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
+  const isosurfaceMappingInfo = yield* call(getIsosurfaceMappingInfo, layer.name, maybeMappingInfo);
+
+  yield* call(
+    loadIsosurfaceForSegmentId,
+    cellId,
+    seedPosition,
+    isosurfaceMappingInfo,
+    removeExistingIsosurface,
+    layer,
+  );
+}
+
+function* getIsosurfaceMappingInfo(
+  layerName: string,
+  maybeMappingInfo: ?IsosurfaceMappingInfo,
+): Saga<IsosurfaceMappingInfo> {
+  const activeMappingByLayer = yield* select(
+    state => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  if (maybeMappingInfo != null) return maybeMappingInfo;
+
+  const mappingInfo = getMappingInfo(activeMappingByLayer, layerName);
+  const isMappingActive = mappingInfo.mappingStatus === MappingStatusEnum.ENABLED;
+  const mappingName = isMappingActive ? mappingInfo.mappingName : null;
+  const mappingType = isMappingActive ? mappingInfo.mappingType : null;
+  return {
+    mappingName,
+    mappingType,
+  };
 }
 
 function* getInfoForIsosurfaceLoading(
   layer: DataLayer,
 ): Saga<{
-  dataset: APIDataset,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
 }> {
-  const dataset = yield* select(state => state.dataset);
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = yield* select(
     state => state.temporaryConfiguration.preferredQualityForMeshAdHocComputation,
   );
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
-  return { dataset, layer, zoomStep, resolutionInfo };
+  return { zoomStep, resolutionInfo };
 }
 
 function* loadIsosurfaceForSegmentId(
   segmentId: number,
-  seedPosition: ?Vector3,
-  removeExistingIsosurface: boolean = false,
+  seedPosition: Vector3,
+  isosurfaceMappingInfo: IsosurfaceMappingInfo,
+  removeExistingIsosurface: boolean,
+  layer: DataLayer,
 ): Saga<void> {
-  const layer = Model.getVisibleSegmentationLayer();
-  if (!layer) {
-    return;
-  }
-  const { dataset, zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading, layer);
+  const { zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading, layer);
 
   batchCounterPerSegment[segmentId] = 0;
 
@@ -220,11 +244,11 @@ function* loadIsosurfaceForSegmentId(
   yield* race({
     loadIsosurfaceWithNeighbors: _call(
       loadIsosurfaceWithNeighbors,
-      dataset,
       layer,
       segmentId,
       seedPosition,
       zoomStep,
+      isosurfaceMappingInfo,
       resolutionInfo,
       removeExistingIsosurface,
     ),
@@ -238,17 +262,16 @@ function* loadIsosurfaceForSegmentId(
 }
 
 function* loadIsosurfaceWithNeighbors(
-  dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
-  seedPosition: ?Vector3,
+  position: Vector3,
   zoomStep: number,
+  isosurfaceMappingInfo: IsosurfaceMappingInfo,
   resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
-  const position =
-    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
+  const { mappingName, mappingType } = isosurfaceMappingInfo;
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
 
@@ -258,7 +281,7 @@ function* loadIsosurfaceWithNeighbors(
       state.localSegmentationData[layer.name].isosurfaces[segmentId] != null,
   );
   if (!hasIsosurface) {
-    yield* put(addIsosurfaceAction(layer.name, segmentId, position, false));
+    yield* put(addAdHocIsosurfaceAction(layer.name, segmentId, position, mappingName, mappingType));
   }
   yield* put(startedLoadingIsosurfaceAction(layer.name, segmentId));
 
@@ -266,11 +289,11 @@ function* loadIsosurfaceWithNeighbors(
     const currentPosition = positionsToRequest.shift();
     const neighbors = yield* call(
       maybeLoadIsosurface,
-      dataset,
       layer,
       segmentId,
       currentPosition,
       zoomStep,
+      isosurfaceMappingInfo,
       resolutionInfo,
       isInitialRequest,
       removeExistingIsosurface && isInitialRequest,
@@ -282,18 +305,31 @@ function* loadIsosurfaceWithNeighbors(
   yield* put(finishedLoadingIsosurfaceAction(layer.name, segmentId));
 }
 
-function hasBatchCounterExceededLimit(segmentId: number): boolean {
-  return (
-    batchCounterPerSegment[segmentId] > (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE)
-  );
+function getAdHocMeshLoadingLimit(): number {
+  return window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE;
 }
 
+function hasBatchCounterExceededLimit(segmentId: number): boolean {
+  return batchCounterPerSegment[segmentId] > getAdHocMeshLoadingLimit();
+}
+
+function _warnAboutAdHocMeshLimit(segmentId: number) {
+  const warning = "Reached ad-hoc mesh loading limit";
+  console.warn(`${warning} for segment ${segmentId}`);
+  ErrorHandling.notify(warning, {
+    segmentId,
+    limit: getAdHocMeshLoadingLimit(),
+  });
+}
+// Avoid warning about the same segment multiple times
+const warnAboutAdHocMeshLimit = _.memoize(_warnAboutAdHocMeshLimit);
+
 function* maybeLoadIsosurface(
-  dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
+  isosurfaceMappingInfo: IsosurfaceMappingInfo,
   resolutionInfo: ResolutionInfo,
   isInitialRequest: boolean,
   removeExistingIsosurface: boolean,
@@ -304,6 +340,7 @@ function* maybeLoadIsosurface(
     return [];
   }
   if (hasBatchCounterExceededLimit(segmentId)) {
+    warnAboutAdHocMeshLimit(segmentId);
     return [];
   }
   batchCounterPerSegment[segmentId]++;
@@ -313,33 +350,29 @@ function* maybeLoadIsosurface(
   const subsamplingStrides = window.__isosurfaceSubsamplingStrides || [4, 4, 4];
   const scale = yield* select(state => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
+  const owningOrganization = yield* select(state => state.dataset.owningOrganization);
+  const datasetName = yield* select(state => state.dataset.name);
   const tracingStoreHost = yield* select(state => state.tracing.tracingStore.url);
-  const activeMappingByLayer = yield* select(
-    state => state.temporaryConfiguration.activeMappingByLayer,
-  );
 
-  const dataStoreUrl = `${dataStoreHost}/data/datasets/${dataset.owningOrganization}/${
-    dataset.name
-  }/layers/${layer.fallbackLayer != null ? layer.fallbackLayer : layer.name}`;
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${owningOrganization}/${datasetName}/layers/${
+    layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
+  }`;
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
   const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
-  const mappingInfo = getMappingInfo(activeMappingByLayer, layer.name);
 
   if (isInitialRequest) {
     sendAnalyticsEvent("request_isosurface", { mode: useDataStore ? "view" : "annotation" });
   }
 
   let retryCount = 0;
-
   while (retryCount < MAX_RETRY_COUNT) {
     try {
       const { buffer: responseBuffer, neighbors } = yield* call(
         computeIsosurface,
         useDataStore ? dataStoreUrl : tracingStoreUrl,
-        mappingInfo,
         {
           position: clippedPosition,
           zoomStep,
@@ -347,6 +380,7 @@ function* maybeLoadIsosurface(
           subsamplingStrides,
           cubeSize,
           scale,
+          ...isosurfaceMappingInfo,
         },
       );
 
@@ -368,6 +402,189 @@ function* maybeLoadIsosurface(
   }
   return [];
 }
+
+function* markEditedCellAsDirty(): Saga<void> {
+  const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
+  if (volumeTracing != null && volumeTracing.fallbackLayer == null) {
+    const activeCellId = volumeTracing.activeCellId;
+    modifiedCells.add(activeCellId);
+  }
+}
+
+function* refreshIsosurfaces(): Saga<void> {
+  yield* put(saveNowAction());
+  // We reload all cells that got modified till the start of reloading.
+  // By that we avoid to remove cells that got annotated during reloading from the modifiedCells set.
+  const currentlyModifiedCells = new Set(modifiedCells);
+  modifiedCells.clear();
+
+  const segmentationLayer = Model.getVisibleSegmentationLayer();
+  if (!segmentationLayer) {
+    return;
+  }
+
+  isosurfacesMapByLayer[segmentationLayer.name] =
+    isosurfacesMapByLayer[segmentationLayer.name] || new Map();
+  const isosurfacesMapForLayer = isosurfacesMapByLayer[segmentationLayer.name];
+  for (const [cellId, threeDMap] of Array.from(isosurfacesMapForLayer.entries())) {
+    if (!currentlyModifiedCells.has(cellId)) {
+      continue;
+    }
+
+    yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, segmentationLayer.name);
+  }
+}
+
+function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
+  const { cellId, layerName } = action;
+
+  const threeDMap = isosurfacesMapByLayer[action.layerName].get(cellId);
+  if (threeDMap == null) return;
+
+  yield* call(_refreshIsosurfaceWithMap, cellId, threeDMap, layerName);
+}
+
+function* _refreshIsosurfaceWithMap(
+  cellId: number,
+  threeDMap: ThreeDMap<boolean>,
+  layerName: string,
+): Saga<void> {
+  const isosurfaceInfo = yield* select(
+    state => state.localSegmentationData[layerName].isosurfaces[cellId],
+  );
+  yield* call(
+    [ErrorHandling, ErrorHandling.assert],
+    !isosurfaceInfo.isPrecomputed,
+    "_refreshIsosurfaceWithMap was called for a precomputed isosurface.",
+  );
+  if (isosurfaceInfo.isPrecomputed) return;
+  const { mappingName, mappingType } = isosurfaceInfo;
+
+  const isosurfacePositions = threeDMap.entries().filter(([value, _position]) => value);
+  if (isosurfacePositions.length === 0) {
+    return;
+  }
+  yield* put(startedLoadingIsosurfaceAction(layerName, cellId));
+  // Remove isosurface from cache.
+  yield* call(removeIsosurface, removeIsosurfaceAction(layerName, cellId), false);
+  // The isosurface should only be removed once after re-fetching the isosurface first position.
+  let shouldBeRemoved = true;
+  for (const [, position] of isosurfacePositions) {
+    // Reload the isosurface at the given position if it isn't already loaded there.
+    // This is done to ensure that every voxel of the isosurface is reloaded.
+    yield* call(loadAdHocIsosurface, position, cellId, shouldBeRemoved, layerName, {
+      mappingName,
+      mappingType,
+    });
+    shouldBeRemoved = false;
+  }
+  yield* put(finishedLoadingIsosurfaceAction(layerName, cellId));
+}
+
+/*
+ *
+ * Precomputed Meshes
+ *
+ */
+
+function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
+  const { cellId, seedPosition, meshFileName, layerName } = action;
+  const layer = yield* select(state =>
+    layerName != null
+      ? getSegmentationLayerByName(state.dataset, layerName)
+      : getVisibleSegmentationLayer(state),
+  );
+  if (layer == null) return;
+
+  // If a REMOVE_ISOSURFACE action is dispatched and consumed
+  // here before loadPrecomputedMeshForSegmentId is finished, the latter saga
+  // should be canceled automatically to avoid populating mesh data even though
+  // the mesh was removed. This is accomplished by redux-saga's race effect.
+  yield* race({
+    loadPrecomputedMeshForSegmentId: _call(
+      loadPrecomputedMeshForSegmentId,
+      cellId,
+      seedPosition,
+      meshFileName,
+      layer,
+    ),
+    cancel: _take(
+      otherAction =>
+        otherAction.type === "REMOVE_ISOSURFACE" &&
+        otherAction.cellId === cellId &&
+        otherAction.layerName === layer.name,
+    ),
+  });
+}
+
+function* loadPrecomputedMeshForSegmentId(
+  id: number,
+  seedPosition: Vector3,
+  meshFileName: string,
+  segmentationLayer: APIDataLayer,
+): Saga<void> {
+  const layerName = segmentationLayer.name;
+  yield* put(addPrecomputedIsosurfaceAction(layerName, id, seedPosition, meshFileName));
+  yield* put(startedLoadingIsosurfaceAction(layerName, id));
+  const dataset = yield* select(state => state.dataset);
+
+  let availableChunks = null;
+  try {
+    availableChunks = yield* call(
+      getMeshfileChunksForSegment,
+      dataset.dataStore.url,
+      dataset,
+      getBaseSegmentationName(segmentationLayer),
+      meshFileName,
+      id,
+    );
+  } catch (exception) {
+    console.warn("Mesh chunk couldn't be loaded due to", exception);
+    Toast.warning(messages["tracing.mesh_listing_failed"]);
+
+    yield* put(finishedLoadingIsosurfaceAction(layerName, id));
+    yield* put(removeIsosurfaceAction(layerName, id));
+    return;
+  }
+
+  // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
+  const sortedAvailableChunks = _.sortBy(availableChunks, chunkPosition =>
+    V3.length(V3.sub(seedPosition, chunkPosition)),
+  );
+  const tasks = sortedAvailableChunks.map(
+    chunkPosition =>
+      function* loadChunk() {
+        const stlData = yield* call(
+          getMeshfileChunkData,
+          dataset.dataStore.url,
+          dataset,
+          getBaseSegmentationName(segmentationLayer),
+          meshFileName,
+          id,
+          chunkPosition,
+        );
+
+        const geometry = yield* call(parseStlBuffer, stlData);
+        const sceneController = yield* call(getSceneController);
+        yield* call([sceneController, sceneController.addIsosurfaceFromGeometry], geometry, id);
+      },
+  );
+
+  try {
+    yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+  } catch (exception) {
+    console.error(exception);
+    Toast.warning("Some mesh objects could not be loaded.");
+  }
+
+  yield* put(finishedLoadingIsosurfaceAction(layerName, id));
+}
+
+/*
+ *
+ * Ad Hoc and Precomputed Meshes
+ *
+ */
 
 function* downloadIsosurfaceCellById(cellName: string, cellId: number): Saga<void> {
   const sceneController = getSceneController();
@@ -405,97 +622,18 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   // TODO: Ideally, persist the seed position in the STL file. As a workaround,
   // we simply use the current position as a seed position.
   const seedPosition = yield* select(state => getFlooredPosition(state.flycam));
-  yield* put(addIsosurfaceAction(layerName, segmentId, seedPosition, true));
+  // TODO: This code is not used currently and it will not be possible to share these
+  // isosurfaces via link.
+  // The mesh file the isosurface was computed from is not known.
+  yield* put(addPrecomputedIsosurfaceAction(layerName, segmentId, seedPosition, "unknown"));
 }
 
-function* removeIsosurface(
-  action: RemoveIsosurfaceAction,
-  removeFromScene: boolean = true,
-): Saga<void> {
+function removeIsosurface(action: RemoveIsosurfaceAction, removeFromScene: boolean = true): void {
   const { layerName, cellId } = action;
   if (removeFromScene) {
     getSceneController().removeIsosurfaceById(cellId);
   }
   removeMapForSegment(layerName, cellId);
-
-  const currentCellId = yield* call(getCurrentCellId);
-  if (cellId === currentCellId) {
-    // Clear the active cell id to avoid that the isosurface is immediately reconstructed
-    // when the position changes.
-    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0], false));
-  }
-}
-
-function* markEditedCellAsDirty(): Saga<void> {
-  const volumeTracing = yield* select(state => getActiveSegmentationTracing(state));
-  if (volumeTracing != null && volumeTracing.fallbackLayer == null) {
-    const activeCellId = volumeTracing.activeCellId;
-    modifiedCells.add(activeCellId);
-  }
-}
-
-function* refreshIsosurfaces(): Saga<void> {
-  yield* put(saveNowAction());
-  // We reload all cells that got modified till the start of reloading.
-  // By that we avoid that removing cells that got annotated during reloading from the modifiedCells set.
-  const currentlyModifiedCells = new Set(modifiedCells);
-  modifiedCells.clear();
-
-  // Also load the Isosurface at the current flycam position.
-  const segmentationLayer = Model.getVisibleSegmentationLayer();
-  if (!segmentationLayer) {
-    return;
-  }
-  // First create an array containing information about all loaded isosurfaces as the map is manipulated within the loop.
-  for (const [cellId, threeDMap] of Array.from(
-    isosurfacesMapByLayer[segmentationLayer.name].entries(),
-  )) {
-    if (!currentlyModifiedCells.has(cellId)) {
-      continue;
-    }
-    const isosurfacePositions = threeDMap.entries().filter(([value, _position]) => value);
-    if (isosurfacePositions.length === 0) {
-      continue;
-    }
-    // Removing Isosurface from cache.
-    yield* call(removeIsosurface, removeIsosurfaceAction(segmentationLayer.name, cellId), false);
-    // The isosurface should only be removed once after re-fetching the isosurface first position.
-    let shouldBeRemoved = true;
-    for (const [, position] of isosurfacePositions) {
-      // Reload the Isosurface at the given position if it isn't already loaded there.
-      // This is done to ensure that every voxel of the isosurface is reloaded.
-      yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
-      shouldBeRemoved = false;
-    }
-  }
-  const position = yield* select(state => getFlooredPosition(state.flycam));
-  const cellIdAtFlycamPosition = segmentationLayer.cube.getDataValue(position);
-  yield* call(ensureSuitableIsosurface, null, position, cellIdAtFlycamPosition);
-  yield* put(finishedRefreshingIsosurfacesAction());
-}
-
-function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
-  const { cellId } = action;
-
-  const threeDMap = isosurfacesMapByLayer[action.layerName].get(cellId);
-  const isosurfacePositions = threeDMap
-    ? threeDMap.entries().filter(([value, _position]) => value)
-    : [];
-  if (isosurfacePositions.length === 0) {
-    return;
-  }
-  yield* put(startedLoadingIsosurfaceAction(action.layerName, cellId));
-  // Removing Isosurface from cache.
-  yield* call(removeIsosurface, removeIsosurfaceAction(action.layerName, cellId), false);
-  // The isosurface should only be removed once after re-fetching the isosurface first position.
-  let shouldBeRemoved = true;
-  for (const [, position] of isosurfacePositions) {
-    // Reload the Isosurface at the given position if it isn't already loaded there.
-    // This is done to ensure that every voxel of the isosurface is reloaded.
-    yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
-    shouldBeRemoved = false;
-  }
-  yield* put(finishedLoadingIsosurfaceAction(action.layerName, cellId));
 }
 
 function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAction): Saga<void> {
@@ -505,9 +643,12 @@ function* handleIsosurfaceVisibilityChange(action: UpdateIsosurfaceVisibilityAct
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
+  // Buffer actions since they might be dispatched before WK_READY
+  const loadAdHocMeshActionChannel = yield _actionChannel("LOAD_AD_HOC_MESH_ACTION");
+  const loadPrecomputedMeshActionChannel = yield _actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   yield* take("WK_READY");
-  yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
-  yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
+  yield _takeEvery(loadAdHocMeshActionChannel, loadAdHocIsosurfaceFromAction);
+  yield _takeEvery(loadPrecomputedMeshActionChannel, loadPrecomputedMesh);
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);

@@ -47,9 +47,9 @@ src/main/scala/rebel.xml
 *.zip
 *.skp
 *.mtl
-public/bower_components
 public/bundle
 public/test-bundle
+public-test/test-bundle
 public/docs
 public/commit.txt
 /knowledge

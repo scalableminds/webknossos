@@ -108,8 +108,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(
-      implicit ctx: DBAccessContext): Fox[List[User]] =
+  def findAllByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     if (teams.isEmpty) Fox.successful(List())
     else
       for {
@@ -117,8 +116,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r <- run(sql"""select #${columnsWithPrefix("u.")}
                          from (select #$columns from #$existingCollectionName where #$accessQuery) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                               and u.isUnlisted = false
-                               and (u.isDeactivated = false or u.isDeactivated = $includeDeactivated)
+                               and not u.isUnlisted
+                               and not u.isDeactivated
                          order by _id""".as[UsersRow])
         parsed <- parseAll(r)
       } yield parsed

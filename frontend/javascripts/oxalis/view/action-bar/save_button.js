@@ -32,6 +32,10 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isStateSaved: boolean,
   showUnsavedWarning: boolean,
+  saveInfo: {
+    compressingBucketCount: number,
+    waitingForCompressionBucketCount: number,
+  },
 };
 
 const SAVE_POLLING_INTERVAL = 1000; // 1s
@@ -53,6 +57,10 @@ class SaveButton extends React.PureComponent<Props, State> {
   state = {
     isStateSaved: false,
     showUnsavedWarning: false,
+    saveInfo: {
+      compressingBucketCount: 0,
+      waitingForCompressionBucketCount: 0,
+    },
   };
 
   componentDidMount() {
@@ -75,9 +83,15 @@ class SaveButton extends React.PureComponent<Props, State> {
       reportUnsavedDurationThresholdExceeded();
     }
 
+    const { compressingBucketCount, waitingForCompressionBucketCount } = Model.getPushQueueStats();
+
     this.setState({
       isStateSaved,
       showUnsavedWarning,
+      saveInfo: {
+        compressingBucketCount,
+        waitingForCompressionBucketCount,
+      },
     });
   };
 
@@ -99,6 +113,10 @@ class SaveButton extends React.PureComponent<Props, State> {
     const { progressFraction } = this.props;
     const { showUnsavedWarning } = this.state;
 
+    const totalBucketsToCompress =
+      this.state.saveInfo.waitingForCompressionBucketCount +
+      this.state.saveInfo.compressingBucketCount;
+
     return (
       <ButtonComponent
         key="save-button"
@@ -108,11 +126,19 @@ class SaveButton extends React.PureComponent<Props, State> {
         className={this.props.className}
         style={{ background: showUnsavedWarning ? "var(--ant-error)" : null }}
       >
-        {this.shouldShowProgress() ? (
-          <span style={{ marginLeft: 8 }}>{Math.floor((progressFraction || 0) * 100)} %</span>
-        ) : (
-          <span className="hide-on-small-screen">Save</span>
-        )}
+        <Tooltip
+          title={
+            totalBucketsToCompress > 0
+              ? `${totalBucketsToCompress} items remaining to compress...`
+              : null
+          }
+        >
+          {this.shouldShowProgress() ? (
+            <span style={{ marginLeft: 8 }}>{Math.floor((progressFraction || 0) * 100)} %</span>
+          ) : (
+            <span className="hide-on-small-screen">Save</span>
+          )}
+        </Tooltip>
         {showUnsavedWarning ? (
           <Tooltip
             visible

@@ -4,26 +4,33 @@ import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { doWithToken } from "admin/admin_rest_api";
-import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getResolutions,
   isSegmentationLayer,
   getByteCountFromLayer,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
-import { updateBucket } from "oxalis/model/sagas/update_actions";
+import { updateBucket, type UpdateAction } from "oxalis/model/sagas/update_actions";
 import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Store, { type DataLayerType, type VolumeTracing } from "oxalis/store";
+import WorkerPool from "libs/worker_pool";
 import constants, { type Vector3, type Vector4, MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
-const byteArrayToLz4Base64 = createWorker(ByteArrayToLz4Base64Worker);
+
+const COMPRESSION_WORKER_COUNT = 2;
+
+const compressionPool = new WorkerPool(
+  () => createWorker(ByteArrayToLz4Base64Worker),
+  COMPRESSION_WORKER_COUNT,
+);
 
 export const REQUEST_TIMEOUT = 60000;
 
@@ -221,17 +228,20 @@ function sliceBufferIntoPieces(
 }
 
 export async function sendToStore(batch: Array<DataBucket>, tracingId: string): Promise<void> {
-  const items = [];
-  for (const bucket of batch) {
-    const data = bucket.getData();
-    const bucketInfo = createSendBucketInfo(
-      bucket.zoomedAddress,
-      getResolutions(Store.getState().dataset),
-    );
-    const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-    // eslint-disable-next-line no-await-in-loop
-    const compressedBase64 = await byteArrayToLz4Base64(byteArray);
-    items.push(updateBucket(bucketInfo, compressedBase64));
-  }
+  const items: Array<UpdateAction> = await Promise.all(
+    batch.map(
+      async (bucket): Promise<UpdateAction> => {
+        const data = bucket.getCopyOfData();
+        const bucketInfo = createSendBucketInfo(
+          bucket.zoomedAddress,
+          getResolutions(Store.getState().dataset),
+        );
+        const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        const compressedBase64 = await compressionPool.submit(byteArray);
+        return updateBucket(bucketInfo, compressedBase64);
+      },
+    ),
+  );
+
   Store.dispatch(pushSaveQueueTransaction(items, "volume", tracingId));
 }

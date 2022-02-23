@@ -317,7 +317,7 @@ class DataCube {
           });
         }
 
-        if (this.buckets.length > 2 * constants.MAXIMUM_BUCKET_COUNT_PER_LAYER) {
+        if (this.buckets.length > 2 * this.BUCKET_COUNT_SOFT_LIMIT) {
           warnAboutTooManyAllocations();
         }
 

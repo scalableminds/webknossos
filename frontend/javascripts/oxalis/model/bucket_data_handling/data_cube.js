@@ -88,8 +88,6 @@ class DataCube {
   resolutionInfo: ResolutionInfo;
   layerName: string;
 
-  dirtyBucketsCount: number;
-
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
   // The bucket array is initialized as an empty array and grows dynamically. If the
@@ -120,41 +118,9 @@ class DataCube {
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
 
-    this.dirtyBucketsCount = 0;
-
-    if (isSegmentation && process.env.BABEL_ENV !== "test") {
-      setInterval(() => {
-        console.log("#######");
-
-        let dirtyBucketsCount = 0;
-        for (let i = 0; i < this.buckets.length; i++) {
-          if (this.buckets[i].dirty) {
-            dirtyBucketsCount++;
-          }
-        }
-
-        let weirdDirtyState = 0;
-        for (let i = 0; i < this.buckets.length; i++) {
-          if (this.buckets[i].dirty && this.buckets[i].dirtyCount === 0) {
-            weirdDirtyState++;
-          }
-        }
-        if (weirdDirtyState > 0) {
-          console.log("weirdDirtyState", weirdDirtyState);
-        }
-
-        console.log("dirtyBucketsCount", dirtyBucketsCount);
-        console.log("this.buckets.length", this.buckets.length);
-      }, 2000);
-    }
-
     _.extend(this, BackboneEvents);
 
     this.cubes = [];
-    if (isSegmentation && process.env.BABEL_ENV !== "test") {
-      // undo
-      this.BUCKET_COUNT_SOFT_LIMIT = Math.floor(this.BUCKET_COUNT_SOFT_LIMIT / 10);
-    }
     this.buckets = [];
 
     // Initializing the cube-arrays with boundaries
@@ -351,7 +317,7 @@ class DataCube {
           });
         }
 
-        if (this.buckets.length > (2 * constants.MAXIMUM_BUCKET_COUNT_PER_LAYER) / 10) {
+        if (this.buckets.length > 2 * constants.MAXIMUM_BUCKET_COUNT_PER_LAYER) {
           warnAboutTooManyAllocations();
         }
 

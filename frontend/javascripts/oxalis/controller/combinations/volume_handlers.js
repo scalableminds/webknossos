@@ -84,7 +84,7 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
   const segmentationCube = layer.cube;
   const segmentationLayerName = layer.name;
 
-  const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+  const renderedZoomStepForCameraPosition = await api.data.getUltimatelyRenderedZoomStepAtPosition(
     segmentationLayerName,
     globalPos,
   );

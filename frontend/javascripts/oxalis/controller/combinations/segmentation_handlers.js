@@ -112,13 +112,13 @@ export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
     segmentation.name,
   );
 
-  const isConnectomeMappingEnabled = hasConnectomeFile(state);
+  const isConnectomeEnabled = hasConnectomeFile(state);
 
-  if (mappingName && isConnectomeMappingEnabled.value) {
+  if (mappingName && isConnectomeEnabled.value) {
     const cellId = await getSegmentIdForPositionAsync(position);
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentation.name, [cellId]));
   } else {
-    Toast.error(isConnectomeMappingEnabled.reason);
+    Toast.error(isConnectomeEnabled.reason);
   }
 }
 

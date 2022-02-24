@@ -491,7 +491,7 @@ class TracingApi {
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
    *
    * @example
-   * api.tracing.getTreeName();
+   * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
   loadAgglomerateSkeletonForSegmentId(segmentId: number) {
     loadAgglomerateSkeletonForSegmentId(segmentId);

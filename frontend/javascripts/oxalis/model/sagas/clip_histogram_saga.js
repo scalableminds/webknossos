@@ -76,30 +76,26 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
   return [lowerClip, upperClip, wiggleRoom];
 }
 
-async function clipHistogram(layerName: string, shouldAdjustClipRange: boolean, callback: any) {
-  const [lowerClip, upperClip, wiggleRoom] = await getClippingValues(layerName);
+async function clipHistogram(action: ClipHistogramAction) {
+  const [lowerClip, upperClip, wiggleRoom] = await getClippingValues(action.layerName);
   if (lowerClip === -1 || upperClip === -1) {
     Toast.warning(
       "The histogram could not be clipped, because the data did not contain any brightness values greater than 0.",
     );
     return;
   }
-  if (!shouldAdjustClipRange) {
-    onThresholdChange(layerName, [lowerClip, upperClip]);
+  if (!action.shouldAdjustClipRange) {
+    onThresholdChange(action.layerName, [lowerClip, upperClip]);
   } else {
-    onThresholdChange(layerName, [lowerClip, upperClip]);
-    Store.dispatch(updateLayerSettingAction(layerName, "min", lowerClip - wiggleRoom));
-    Store.dispatch(updateLayerSettingAction(layerName, "max", upperClip + wiggleRoom));
+    onThresholdChange(action.layerName, [lowerClip, upperClip]);
+    Store.dispatch(updateLayerSettingAction(action.layerName, "min", lowerClip - wiggleRoom));
+    Store.dispatch(updateLayerSettingAction(action.layerName, "max", upperClip + wiggleRoom));
   }
-  if (callback != null) {
-    callback();
+  if (action.callback != null) {
+    action.callback();
   }
-}
-
-export function handleClipHistogram(action: ClipHistogramAction) {
-  clipHistogram(action.layerName, action.shouldAdjustClipRange, action.callback);
 }
 
 export default function* listenToClipHistogramSaga(): Saga<void> {
-  yield _takeEvery("CLIP_HISTOGRAM", handleClipHistogram);
+  yield _takeEvery("CLIP_HISTOGRAM", clipHistogram);
 }

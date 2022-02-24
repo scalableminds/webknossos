@@ -48,7 +48,7 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   loadAgglomerateSkeletonAtPosition(globalPosition);
 }
 
-export function loadAgglomerateSkeletonAtPosition(position: Vector3): void {
+export async function loadAgglomerateSkeletonAtPosition(position: Vector3): Promise<void> {
   const segmentation = Model.getVisibleSegmentationLayer();
   if (!segmentation) {
     return;

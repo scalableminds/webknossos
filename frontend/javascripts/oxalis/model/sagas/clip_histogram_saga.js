@@ -92,8 +92,8 @@ async function clipHistogram(layerName: string, shouldAdjustClipRange: boolean, 
     Store.dispatch(updateLayerSettingAction(layerName, "max", upperClip + wiggleRoom));
   }
   if (callback != null) {
-		callback();
-	}
+    callback();
+  }
 }
 
 export function handleClipHistogram(action: ClipHistogramAction) {

@@ -67,6 +67,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import {
   getLayerBoundaries,
   getLayerByName,
@@ -79,6 +80,7 @@ import {
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
+import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
 import {
   loadMeshFromFile,
   maybeFetchMeshFiles,
@@ -132,7 +134,6 @@ import Store, {
   type VolumeTracing,
   type OxalisState,
 } from "oxalis/store";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import UserLocalStorage from "libs/user_local_storage";
@@ -482,6 +483,17 @@ class TracingApi {
     return getTree(tracing, treeId)
       .map(activeTree => activeTree.name)
       .get();
+  }
+
+  /**
+   * Loads the agglomerate skeleton for the given segment id. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   *
+   * @example
+   * api.tracing.getTreeName();
+   */
+  loadAgglomerateSkeletonForSegmentId(segmentId: number) {
+    loadAgglomerateSkeletonForSegmentId(segmentId);
   }
 
   /**

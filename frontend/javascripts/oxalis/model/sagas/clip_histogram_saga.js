@@ -76,7 +76,7 @@ async function getClippingValues(layerName: string, thresholdRatio: number = 0.0
   return [lowerClip, upperClip, wiggleRoom];
 }
 
-async function clipHistogram(layerName: string, shouldAdjustClipRange: boolean) {
+async function clipHistogram(layerName: string, shouldAdjustClipRange: boolean, callback: any) {
   const [lowerClip, upperClip, wiggleRoom] = await getClippingValues(layerName);
   if (lowerClip === -1 || upperClip === -1) {
     Toast.warning(
@@ -91,13 +91,13 @@ async function clipHistogram(layerName: string, shouldAdjustClipRange: boolean) 
     Store.dispatch(updateLayerSettingAction(layerName, "min", lowerClip - wiggleRoom));
     Store.dispatch(updateLayerSettingAction(layerName, "max", upperClip + wiggleRoom));
   }
+  if (callback != null) {
+		callback();
+	}
 }
 
-export function handleClipHistogram(action: ClipHistogramAction): void {
-  clipHistogram(action.layerName, action.shouldAdjustClipRange);
-  if (action.callback != null) {
-		action.callback();
-	}
+export function handleClipHistogram(action: ClipHistogramAction) {
+  clipHistogram(action.layerName, action.shouldAdjustClipRange, action.callback);
 }
 
 export default function* listenToClipHistogramSaga(): Saga<void> {

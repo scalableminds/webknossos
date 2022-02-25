@@ -23,4 +23,4 @@ The finished analysis will be available as a new dataset from your dashboard. Yo
 ## Custom Analysis
 At the moment, webKnossos can not be used to train a custom classifier itself. This might be something that we add in the future if there is enough interest in this.
 
-If you still require help with automated analysis, image segmentation, object detection etc than feel to [contact us](mailto:hello@webknossos.org). The webKnossos development teams offers [commercial analysis services for](https://webknossos.org/services/automated-segmentation) that. 
+If you are interested in specialized, automated analysis, image segmentation, object detection etc. than feel to [contact us](mailto:hello@webknossos.org). The webKnossos development teams offers [commercial analysis services for](https://webknossos.org/services/automated-segmentation) that. 

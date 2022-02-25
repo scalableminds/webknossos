@@ -54,7 +54,7 @@ Yes, you can. webKnossos allows the download and export of skeleton annotations 
 
 See the [Tooling](./tooling.md) section for a recommendation of Python/MATLAB libraries to work with the webKnossos standard formats.
 
-## Newly Registered Users Don't Show Up
+## Newly registered users don't show up
 
 New user registrations need to be approved by the respective admin of your webKnossos instance.
 

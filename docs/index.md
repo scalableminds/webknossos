@@ -25,7 +25,7 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 * [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](./data_formats.md), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect), and image stacks (converted on upload)
 * [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [3D Mesh Visualization](./mesh_visualization.md)
-* [Documented Python library for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html  )
+* [Documented Python library for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)
 * [Documented frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development

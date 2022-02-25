@@ -26,7 +26,7 @@ webKnossos uses the [WKW-format](./data_formats.md#wkw-datasets) internally to d
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
 
 If your data is not in WKW, you can either:
-- upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. Check the Jobs page for progress or refresh the dashboard page periodically.
+- upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. You can check the progress at the "Jobs" page or the "My Datasets" page in the dashboard (both will update automatically).
 - [Convert](#converting-datasets) your data manually to WKW.
 
 In particular, the following file formats are supported for uploading (and conversion):

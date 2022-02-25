@@ -29,7 +29,7 @@ Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 ![Work with Tasks](./images/dashboard_tasks.png)
 
 ## My Annotations
-This screen lists all your skeleton or volume annotations that you started on a dataset (outside of tasks). Annotation are either created by starting new annotations from the "My Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer. (See [NML files](./data_formats.md#nml) for skeleton annotations.)
+This screen lists all your annotations (skeleton, volume or both) that you started on a dataset (outside of tasks). Annotations are either created by starting new annotations from the "My Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer (see [NML files](./data_formats.md#nml) for skeleton annotations).
 
 Annotations can be resumed, archived (soft "deleted"), and downloaded for offline analysis. 
 You can also add custom tags to annotations to organize and group them. Click one or several of your tags if you want to filter a particular group of annotations. 

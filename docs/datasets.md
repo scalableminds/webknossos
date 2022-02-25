@@ -109,7 +109,7 @@ For manual conversion, we provide the following software tools and libraries:
 - The [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
 - For other file formats, the [Python webKnossos libray](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
-See page on [software tooling](.tooling.md) for more.
+See page on [software tooling](./tooling.md) for more.
 
 ## Configuring Datasets
 You can configure the metadata, permission, and other properties of a dataset at any time. 

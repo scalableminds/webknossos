@@ -35,7 +35,7 @@ webKnossos supports [WKW (optimized), KNOSSOS cubes](./datasets.md), and image s
 
 Smaller datasets can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) CLI tool.
 
-## Can I Host the webKnossos Data in My Own Compute Cluster (on-premise installation)
+## Can I host the webKnossos data in my own compute cluster (on-premise installation)?
 
 webKnossos consists of two components that allow for versatile deployment options:
 1. The webKnossos main component handles user and task management.

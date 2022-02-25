@@ -130,7 +130,7 @@ For each detected layer:
 
 The `Advanced` view lets you edit the underlying [JSON configuration](./data_formats.md#wkw-metadata-by-example) directly. Toggle between the `Advanced` and `Simple` page in the upper right. Advanced mode is only recommended for
 
-webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disc. (Only relevant for self-hosted instances) Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
+webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disk (only relevant for self-hosted instances). Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
 
 ![Dataset Editing: Data Tab](images/dataset_data.png)
 

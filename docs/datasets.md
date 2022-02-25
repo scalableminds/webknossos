@@ -164,7 +164,7 @@ Of course, the defaults can all be overwritten and adjusted once a user opens th
 
 For self-hosted webKnossos instances, there are two ways to set default *View Configuration* settings:
 - in the web UI as described above
-- inside the `datasource_properties.json` on disc
+- inside the `datasource_properties.json` on disk
 
 The *View Configuration* from the web UI takes precedence over the `datasource_properties.json`.
 You don't have to set complete *View Configurations* in either option, as webKnossos will fill missing attributes with sensible defaults.

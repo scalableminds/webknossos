@@ -31,7 +31,7 @@ webKnossos does not allow you to run custom machine learning models on your data
 
 ## How can I use my dataset with webKnossos?
 
-webKnossos supports WKW (Optimized), KNOSSOS cubes](./datasets.md), and image stacks (converted on upload). You can also connect to [Neuroglancer Precomputed dataset hosted in the Google Cloud and to data hosted by a BossDB](https://github.com/scalableminds/webknossos-connect).
+webKnossos supports [WKW (optimized), KNOSSOS cubes](./datasets.md), and image stacks (converted on upload). You can also connect to [Neuroglancer Precomputed dataset hosted in the Google Cloud and to data hosted by a BossDB](https://github.com/scalableminds/webknossos-connect).
 
 Smaller datasets can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) CLI tool.
 

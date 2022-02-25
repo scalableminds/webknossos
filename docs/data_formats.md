@@ -64,7 +64,7 @@ The following file formats can be dragged individually into webKnossos to conver
 - png
 
 #### KNOSSOS file hierarchy
-Datasets saved as KNOSSOS cubes also be converted on [webKnossos](https://webknossos.org).
+Datasets saved as KNOSSOS cubes can also be converted on [webKnossos](https://webknossos.org).
 Please ensure that you import the correct folder (so that all layers of the dataset are contained).
 
 

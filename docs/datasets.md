@@ -37,7 +37,7 @@ In particular, the following file formats are supported for uploading (and conve
 - KNOSSOS file hierarchy 
 - [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](./datasets.md#configuring-datasets) and double-check layer properties, finetune access rights & permission, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](./datasets.md#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
 ### Working with Neuroglancer and BossDB dataset
 On webKnossos.org you can work directly with 

@@ -13,7 +13,7 @@ webKnossos is also a platform for [showcasing datasets](https://webknossos.org) 
 Sign up for a free account on [https://webknossos.org/](https://webknossos.org/) and either upload one of your own datasets, or work with a large selection of published community datasets. 
 
 ## Features
-* Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, etc
+* Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, etc.
 * Fully browser-based user experience. No installation required
 * Efficient 3D data streaming for quick loading speeds
 * Creation/editing of skeleton (line-segments) and 3D volumetric annotations

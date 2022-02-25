@@ -29,7 +29,7 @@ Get in touch if you want to work together on a project resulting in new classifi
 
 webKnossos does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from webKnossos - either manually or scripted [through our Python libarary](./tooling.md) - and do your ML analysis offline and use webKnossos to inspect the results. 
 
-## How Can I Use my Dataset With webKnossos?
+## How can I use my dataset with webKnossos?
 
 webKnossos supports WKW (Optimized), KNOSSOS cubes](./datasets.md), and image stacks (converted on upload). You can also connect to [Neuroglancer Precomputed dataset hosted in the Google Cloud and to data hosted by a BossDB](https://github.com/scalableminds/webknossos-connect).
 

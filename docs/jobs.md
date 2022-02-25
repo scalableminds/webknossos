@@ -11,7 +11,7 @@ Example workflows:
 
 These workflows are executed in background worker tasks as so-called *processing jobs*. 
 
-## Listing Processing Job
+## Listing Processing Jobs
 A list of all past and currently running jobs can be found from the administration menu in the navbar (Admin -> *Processing Jobs*).
 
 Depending on the job workflow you may:

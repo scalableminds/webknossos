@@ -32,7 +32,7 @@ Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 This screen lists all your annotations (skeleton, volume or both) that you started on a dataset (outside of tasks). Annotations are either created by starting new annotations from the "My Datasets" tab, from the webKnossos data viewer, or by uploading an existing annotation from your computer (see [NML files](./data_formats.md#nml) for skeleton annotations).
 
 Annotations can be resumed, archived (like delete, but reversible), and downloaded for offline analysis. 
-You can also add custom tags to annotations to organize and group them. Click one or several of your tags if you want to filter a particular group of annotations. 
+You can also add custom tags to annotations to organize and group them. Click on one or multiple of your tags if you want to filter a particular group of annotations. 
 Each annotation can be renamed to reflect its content.
 
 ![Manage and resume Explorative Annotations](./images/dashboard_annotations.png)

@@ -10,7 +10,7 @@ We also provide intro calls to answer your questions or walk you through the pla
 
 ## I have a very large dataset and need help annotating it
 There are two options to help you with data annotation:
-1. Invite collaborators to your webKnossos organization and assign them sub-volumes of your data for annotation. See the [page on Collaboration for more info](./sharing.md). 
+1. Invite collaborators to your webKnossos organization, set up a project to work on, and assign them sub-volumes of your data for annotation. See the [page on tasks and projects for more info](./tasks.md). 
 
 2. We also offer professional services to help with annotation. We can do both [manual annotations](https://webknossos.org/services/annotations) for your data or apply [automated segmentations](https://webknossos.org/services/automated-segmentation) on large-scale datasets.
 

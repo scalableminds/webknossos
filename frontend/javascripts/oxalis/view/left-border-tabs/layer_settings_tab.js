@@ -62,7 +62,7 @@ import {
   updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
-  clipHistogramAction,
+  dispatchClipHistogramAsync,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
@@ -100,7 +100,7 @@ type DatasetSettingsProps = {|
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => void,
+  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>,
   histogramData: HistogramDataForAllLayers,
   onChangeRadius: (value: number) => void,
   onChangeShowSkeletons: boolean => void,
@@ -260,7 +260,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <Tooltip title={tooltipText}>
-        <VerticalAlignMiddleOutlined
+        <AsyncIconButton
+          icon={<VerticalAlignMiddleOutlined />}
           style={{
             position: "absolute",
             top: 4,
@@ -926,7 +927,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
   onClipHistogram(layerName, shouldAdjustClipRange) {
-    dispatch(clipHistogramAction(layerName, shouldAdjustClipRange));
+    return dispatchClipHistogramAsync(layerName, shouldAdjustClipRange, dispatch);
   },
   onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));

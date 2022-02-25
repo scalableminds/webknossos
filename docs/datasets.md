@@ -195,7 +195,7 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 
 ## Sample Datasets
 
-For convience and testing, we provide a list of sample datasets for webKnossos:
+For convenience and testing, we provide a list of sample datasets for webKnossos:
 
 - Sample_e2006_wkw: https://static.webknossos.org/data/e2006_wkw.zip
 Raw SBEM data and segmentation (sample cutout, 120MB).

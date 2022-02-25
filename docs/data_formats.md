@@ -98,7 +98,7 @@ To enable zooming within huge datasets in webKnossos, dataset layers usually con
 `2` is downsampled by a factor of two in all dimensions and therefore only is an eighth of the file size of the original data.
 Downsampling is done in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, …`
 
-webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimensions, but not in `z`.
+webKnossos also supports non-uniform (anisotropic) downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimensions, but not in `z`.
 
 ![Downsampling the data to improve zooming](images/downsampling.png)
 

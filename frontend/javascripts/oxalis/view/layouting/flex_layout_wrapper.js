@@ -1,49 +1,52 @@
 // @flow
-import * as React from "react";
-import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
-import { connect } from "react-redux";
 import type { Dispatch } from "redux";
+import { Layout, Tooltip } from "antd";
+import { connect } from "react-redux";
+import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
+import * as React from "react";
+import _ from "lodash";
+
+import features from "features";
+import {
+  DEFAULT_LAYOUT_NAME,
+  type LayoutKeys,
+  getTabDescriptorForBorderTab,
+  resetDefaultLayouts,
+} from "oxalis/view/layouting/default_layout_configs";
+import { InputKeyboardNoLoop } from "libs/input";
+import { OrthoViews, ArbitraryViews, BorderTabs, type OrthoView } from "oxalis/constants";
+import { sendAnalyticsEvent } from "admin/admin_rest_api";
+import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
+import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
+import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
+import ConnectomeView from "oxalis/view/right-border-tabs/connectome_tab/connectome_view";
+import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
+import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import InputCatcher from "oxalis/view/input_catcher";
+import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
+import RecordingSwitch from "oxalis/view/recording_switch";
+import SegmentsView from "oxalis/view/right-border-tabs/segments_tab/segments_view";
+import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
+import Statusbar from "oxalis/view/statusbar";
 import Store, {
   type OxalisState,
   type BusyBlockingInfo,
   type BorderOpenStatus,
 } from "oxalis/store";
-import { Layout, Tooltip } from "antd";
-import _ from "lodash";
+import TDViewControls from "oxalis/view/td_view_controls";
 import Toast from "libs/toast";
 import messages from "messages";
-import { setBorderOpenStatusAction } from "oxalis/model/actions/ui_actions";
-import { InputKeyboardNoLoop } from "libs/input";
-import {
-  DEFAULT_LAYOUT_NAME,
-  type LayoutKeys,
-  resetDefaultLayouts,
-} from "oxalis/view/layouting/default_layout_configs";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
-import Statusbar from "oxalis/view/statusbar";
-import { OrthoViews, ArbitraryViews, BorderTabs, type OrthoView } from "oxalis/constants";
-import AbstractTreeTab from "oxalis/view/right-border-tabs/abstract_tree_tab";
-import CommentTabView from "oxalis/view/right-border-tabs/comment_tab/comment_tab_view";
-import DatasetInfoTabView from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import InputCatcher from "oxalis/view/input_catcher";
-import SegmentsView from "oxalis/view/right-border-tabs/segments_tab/segments_view";
-import SkeletonTabView from "oxalis/view/right-border-tabs/skeleton_tab_view";
-import BoundingBoxTab from "oxalis/view/right-border-tabs/bounding_box_tab";
-import RecordingSwitch from "oxalis/view/recording_switch";
-import LayerSettingsTab from "oxalis/view/left-border-tabs/layer_settings_tab";
-import ConnectomeView from "oxalis/view/right-border-tabs/connectome_tab/connectome_view";
-import ControlsAndRenderingSettingsTab from "oxalis/view/left-border-tabs/controls_and_rendering_settings_tab";
-import TDViewControls from "oxalis/view/td_view_controls";
 
-import { sendAnalyticsEvent } from "admin/admin_rest_api";
-import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
-import BorderToggleButton from "../components/border_toggle_button";
 import {
   getMaximizedItemId,
   getBorderOpenStatus,
   adjustModelToBorderOpenStatus,
   getPositionStatusOf,
 } from "./flex_layout_helper";
+import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
+import BorderToggleButton from "../components/border_toggle_button";
 
 const { Footer } = Layout;
 type Model = typeof FlexLayout.Model;
@@ -133,10 +136,60 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     return model;
   }
 
+  adaptModelToConditionalTabs(model: Model) {
+    /*
+     * Currently, this method only adapts the visibility/existence of the
+     * ConnectomeTab. It is controlled by the features attributes in
+     * application.conf (see `optInTabs`).
+     * In the future, this method can be adapted to handle the existence of
+     * tabs, too.
+     */
+
+    const rightBorderId = "right-border-tab-container";
+    const rightBorderModel = model.getNodeById(rightBorderId).getExtraData().model;
+    if (rightBorderModel == null) {
+      return;
+    }
+    const optInTabs: Array<string> = features().optInTabs || [];
+    const showConnectomeTab = optInTabs.indexOf(BorderTabs.ConnectomeView.id) > -1;
+    const connectomeTabDescriptor = getTabDescriptorForBorderTab(BorderTabs.ConnectomeView);
+    const node = rightBorderModel.getNodeById(connectomeTabDescriptor.id);
+
+    if (node && !showConnectomeTab) {
+      // Tab exists, but shouldn't. Delete it.
+      rightBorderModel.doAction(FlexLayout.Actions.deleteTab(connectomeTabDescriptor.id));
+    } else if (!node && showConnectomeTab) {
+      // Tab does not exist, but should. Add it next to the info tab.
+      const datasetInfoTabId = BorderTabs.DatasetInfoTabView.id;
+      const infoTabNode = rightBorderModel.getNodeById(datasetInfoTabId);
+      if (!infoTabNode) {
+        console.warn(`Could not find tab with id=${datasetInfoTabId}.`);
+        return;
+      }
+      const targetId = infoTabNode.getParent().getId();
+
+      rightBorderModel.doAction(
+        FlexLayout.Actions.addNode(
+          connectomeTabDescriptor,
+          targetId,
+          // Don't create a new tab set, but add it to the existing one.
+          FlexLayout.DockLocation.CENTER,
+          -1, // Add it to the end.
+          false, // Don't focus it.
+        ),
+      );
+    }
+  }
+
   updateToModelStateAndAdjustIt(model: Model) {
     this.maximizedItemId = getMaximizedItemId(model);
     adjustModelToBorderOpenStatus(model, this.borderOpenStatusWhenNotMaximized);
     model.setOnAllowDrop(this.allowDrop);
+
+    setTimeout(() => {
+      this.adaptModelToConditionalTabs(model);
+    }, 0);
+
     return model;
   }
 

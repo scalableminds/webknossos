@@ -93,7 +93,13 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 
-export const BorderTabs = {
+export type BorderTabType = {
+  id: string,
+  name: string,
+  description: string,
+  enableRenderOnDemand?: boolean,
+};
+export const BorderTabs: { [key: string]: BorderTabType } = {
   DatasetInfoTabView: {
     id: "DatasetInfoTabView",
     name: "Info",

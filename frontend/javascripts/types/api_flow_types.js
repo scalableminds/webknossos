@@ -570,6 +570,7 @@ export type APIFeatureToggles = {
   +exportTiffMaxVolumeMVx: number,
   +exportTiffMaxEdgeLengthVx: number,
   +defaultToLegacyBindings: boolean,
+  +optInTabs?: Array<string>,
 };
 
 export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;

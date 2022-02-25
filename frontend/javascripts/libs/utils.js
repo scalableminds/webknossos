@@ -29,6 +29,11 @@ export function values<K, V>(o: { [K]: V }): Array<V> {
   return Object.values(o);
 }
 
+export function entries<K, V>(o: { [K]: V }): Array<[K, V]> {
+  // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
+  return Object.entries(o);
+}
+
 export function map2<A, B>(fn: (A, number) => B, tuple: [A, A]): [B, B] {
   const [x, y] = tuple;
   return [fn(x, 0), fn(y, 1)];

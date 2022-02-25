@@ -12,15 +12,17 @@ import type { ExtractReturn } from "libs/type_helpers";
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
 import Constants, {
-  type ControlMode,
-  ControlModeEnum,
-  type ViewMode,
-  OrthoViews,
-  OrthoViewsToName,
-  BorderTabs,
   ArbitraryViews,
   ArbitraryViewsToName,
+  type BorderTabType,
+  BorderTabs,
+  type ControlMode,
+  ControlModeEnum,
+  OrthoViews,
+  OrthoViewsToName,
+  type ViewMode,
 } from "oxalis/constants";
+import * as Utils from "libs/utils";
 
 import type {
   RowOrTabsetNode,
@@ -103,10 +105,15 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
   };
 }
 
-const borderTabs: { [$Keys<typeof BorderTabs>]: Object } = {};
+export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode {
+  const { name, id, enableRenderOnDemand = true } = borderTab;
+  return Tab(name, id, "border-tab", enableRenderOnDemand);
+}
+
+const borderTabs: { [$Keys<typeof BorderTabs>]: TabNode } = {};
 // Flow does not understand that the values must have a name and an id.
-Object.entries(BorderTabs).forEach(([tabKey, { name, id, enableRenderOnDemand = true }]: any) => {
-  borderTabs[tabKey] = Tab(name, id, "border-tab", enableRenderOnDemand);
+Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
+  borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
 
 const OrthoViewports: { [$Keys<typeof OrthoViews>]: Object } = {};

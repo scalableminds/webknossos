@@ -16,7 +16,7 @@ The easiest way to get started with working on your datasets is through the webK
 1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
 2. Provide some metadata information:
   - a *name* 
-  - give access permissions for one or more teams (use `default` team if unsure)
+  - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
   - *scale* of each voxel (in nanometers)
 3. Drag and drop your data into the upload section
 4. Click the *Upload* button

@@ -32,6 +32,11 @@ import {
   deleteSegmentVolumeAction,
   removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
+import {
+  type UpdateTemporarySettingAction,
+  updateTemporarySettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam, SegmentMap } from "oxalis/store";
 import {
@@ -44,6 +49,7 @@ import { diffDiffableMaps } from "libs/diffable_map";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
+  getMaximumBrushSize,
   getRenderableResolutionForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
   getSegmentsForLayer,
@@ -71,10 +77,6 @@ import {
   type SetActiveCellAction,
   type ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import {
-  updateTemporarySettingAction,
-  type UpdateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Constants, {
@@ -1013,6 +1015,32 @@ function* maintainVolumeTransactionEnds(): Saga<void> {
   yield _takeEvery("FINISH_ANNOTATION_STROKE", markVolumeTransactionEnd);
 }
 
+function* ensureValidBrushSize(): Saga<void> {
+  // A valid brush size needs to be ensured in certain events,
+  // since the maximum brush size depends on the available magnifications
+  // of the active volume layer.
+  // Currently, these events are:
+  // - when webKnossos is loaded
+  // - when a layer's visibility is toggled
+
+  function* maybeClampBrushSize(): Saga<void> {
+    const currentBrushSize = yield* select(state => state.userConfiguration.brushSize);
+    const maximumBrushSize = yield* select(state => getMaximumBrushSize(state));
+
+    if (currentBrushSize > maximumBrushSize) {
+      yield* put(updateUserSettingAction("brushSize", maximumBrushSize));
+    }
+  }
+
+  yield _takeLatest(
+    [
+      "WK_READY",
+      action => action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+    ],
+    maybeClampBrushSize,
+  );
+}
+
 export default [
   editVolumeLayerAsync,
   ensureToolIsAllowedInResolution,
@@ -1023,4 +1051,5 @@ export default [
   listenToMinCut,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
+  ensureValidBrushSize,
 ];

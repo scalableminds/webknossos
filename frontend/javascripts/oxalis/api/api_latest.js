@@ -37,10 +37,6 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import {
-  loadAdHocMeshAction,
-  loadPrecomputedMeshAction,
-} from "oxalis/model/actions/segmentation_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
@@ -70,6 +66,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import {
   getLayerBoundaries,
   getLayerByName,
@@ -82,6 +79,11 @@ import {
   getRotation,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
+import {
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
 import { maybeFetchMeshFiles } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -116,6 +118,7 @@ import Constants, {
   TDViewDisplayModeEnum,
   MappingStatusEnum,
 } from "oxalis/constants";
+import DataLayer from "oxalis/model/data_layer";
 import Model, { type OxalisModel } from "oxalis/model";
 import Request from "libs/request";
 import Store, {
@@ -132,7 +135,6 @@ import Store, {
   type VolumeTracing,
   type OxalisState,
 } from "oxalis/store";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import UserLocalStorage from "libs/user_local_storage";
@@ -140,7 +142,6 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import DataLayer from "oxalis/model/data_layer";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -483,6 +484,17 @@ class TracingApi {
     return getTree(tracing, treeId)
       .map(activeTree => activeTree.name)
       .get();
+  }
+
+  /**
+   * Loads the agglomerate skeleton for the given segment id. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   *
+   * @example
+   * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
+   */
+  loadAgglomerateSkeletonForSegmentId(segmentId: number) {
+    loadAgglomerateSkeletonForSegmentId(segmentId);
   }
 
   /**

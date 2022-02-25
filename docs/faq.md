@@ -1,6 +1,6 @@
 # FAQ
 
-## What is the quickest way to get started with webKnossos
+## What is the quickest way to get started with webKnossos?
 Signing up for a free account [webKnossos.org](https://webknossos.org) is the quickest way to get up and running. Create an account and organization, upload your first dataset to work on, and invite co-workers and collaborators to help you with annotation and analysis.
 
 ## I am unsure if webKnossos is for me or how to get started with my data

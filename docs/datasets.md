@@ -144,7 +144,7 @@ Read more in [the Sharing guide](./sharing.md).
 // Todo add image
 
 ### Metadata Tab
-- `Display Name`: A meaningful name for a dataset other than its automatically assigned technical moniker/ID. Displayed in various parts of webKnossos. Especially useful when sharing datasets with outsiders, when you want to "hide" any internal nameing schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
+- `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
 - `Description`: A free-text field for providing more information about your datasets, e.g., authors, paper reference, descriptions, etc. Supports Markdown formatting. The description will be featured in the webKnossos UI when opening a dataset in view mode.
 
 // Todo add image

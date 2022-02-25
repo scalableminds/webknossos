@@ -318,19 +318,22 @@ Groups can be freely nested inside each other.
 
 
 ### ID Mapping Files
-webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into a `agglomerates` directory inside a segmentation layer (self-hosted instance only):
+webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
+
+webKnossos supports two formats for these agglomerates:
+- JSON -> `mappings` directory
+- HDF5 -> `agglomerates` directory
+ (JSON-format) or `agglomerates` directory (HDF5-format) :
 
 ```
 great_dataset                   # Dataset root
 ├─ segmentation                 # Dataset layer (^, color, segmentation)
-│  ├─ agglomerates/             # Magnification step (1, 2, 4, 8, 16 etc.)
+│  ├─ mappings                  # Magnification step (1, 2, 4, 8, 16 etc.)
 │  │  ├─ my_mapping_file.json   # one or more agglomerate files
 │  │  ├─ different_mapping.json # one agglomerate file per mapping
 ```
 
-webKnossos supports two formats for these agglomerates:
-- JSON
-- HDF5
+
 
 #### JSON schema
 All segment IDs belonging to the same super-voxel need to be listed in an array:  

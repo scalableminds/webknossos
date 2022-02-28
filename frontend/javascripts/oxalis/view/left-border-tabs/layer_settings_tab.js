@@ -715,7 +715,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Tooltip title="Open Dialog to Downsample Volume Data">
-        <LinkButton onClick={this.showDownsampleVolumeModal}>
+        <LinkButton onClick={() => this.showDownsampleVolumeModal(volumeTracing)}>
           <img
             src="/assets/images/icon-downsampling.svg"
             style={{

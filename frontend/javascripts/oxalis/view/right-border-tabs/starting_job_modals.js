@@ -285,11 +285,11 @@ export function ApplyMergerModeModal({ handleClose }: Props) {
       handleClose={handleClose}
       jobName="apply merger mode"
       chooseSegmentationLayer
-      jobApiCall={async colorLayerName =>
+      jobApiCall={async segmentationLayer =>
         startApplyMergerModeJob(
           dataset.owningOrganization,
           dataset.name,
-          colorLayerName,
+          segmentationLayer,
           annotationId,
         )
       }

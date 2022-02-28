@@ -6,6 +6,7 @@ import {} from "oxalis/model/actions/settings_actions";
 
 import _ from "lodash";
 
+import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqueue";
 import { type Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
@@ -257,6 +258,22 @@ export class OxalisModel {
       true,
     );
     return storeStateSaved && pushQueuesSaved;
+  }
+
+  getPushQueueStats() {
+    const compressingBucketCount = _.sum(
+      Utils.values(this.dataLayers).map(
+        dataLayer => dataLayer.pushQueue.compressionTaskQueue.tasks.length * COMPRESSING_BATCH_SIZE,
+      ),
+    );
+    const waitingForCompressionBucketCount = _.sum(
+      Utils.values(this.dataLayers).map(dataLayer => dataLayer.pushQueue.pendingQueue.size),
+    );
+
+    return {
+      compressingBucketCount,
+      waitingForCompressionBucketCount,
+    };
   }
 
   forceSave = () => {

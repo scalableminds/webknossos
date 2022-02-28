@@ -161,6 +161,10 @@ As already indicated, the sharing link encodes certain properties, like the curr
         mappingType: MappingType,
         agglomerateIdsToImport?: Array<number>,
       },
+      connectomeInfo?: {
+        connectomeName: string,
+        agglomerateIdsToImport?: Array<number>,
+      }
     },
   };
 

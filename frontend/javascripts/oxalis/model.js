@@ -172,7 +172,7 @@ export class OxalisModel {
     return layer;
   }
 
-  getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
+  getCurrentlyRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
     const state = Store.getState();
     const zoomStep = getRequestLogZoomStep(state);
 
@@ -182,7 +182,25 @@ export class OxalisModel {
 
     // Depending on the zoom value, which magnifications are loaded and other settings,
     // the currently rendered zoom step has to be determined.
-    const renderedZoomStep = cube.getNextUsableZoomStepForPosition(position, zoomStep);
+    const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(position, zoomStep);
+
+    return renderedZoomStep;
+  }
+
+  async getUltimatelyRenderedZoomStepAtPosition(
+    layerName: string,
+    position: Vector3,
+  ): Promise<number> {
+    const state = Store.getState();
+    const zoomStep = getRequestLogZoomStep(state);
+    const cube = this.getCubeByLayerName(layerName);
+
+    // Depending on the zoom value, the available magnifications and other settings,
+    // the ultimately rendered zoom step has to be determined.
+    const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
+      position,
+      zoomStep,
+    );
 
     return renderedZoomStep;
   }
@@ -202,7 +220,7 @@ export class OxalisModel {
 
     const segmentationLayerName = segmentationLayer.name;
     const { cube } = segmentationLayer;
-    const renderedZoomStepForMousePosition = this.getRenderedZoomStepAtPosition(
+    const renderedZoomStepForMousePosition = this.getCurrentlyRenderedZoomStepAtPosition(
       segmentationLayerName,
       globalMousePosition,
     );

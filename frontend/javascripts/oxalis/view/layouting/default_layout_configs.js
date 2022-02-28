@@ -12,15 +12,17 @@ import type { ExtractReturn } from "libs/type_helpers";
 import { getIsInIframe } from "libs/utils";
 import { navbarHeight } from "navbar";
 import Constants, {
-  type ControlMode,
-  ControlModeEnum,
-  type ViewMode,
-  OrthoViews,
-  OrthoViewsToName,
-  BorderTabs,
   ArbitraryViews,
   ArbitraryViewsToName,
+  type BorderTabType,
+  BorderTabs,
+  type ControlMode,
+  ControlModeEnum,
+  OrthoViews,
+  OrthoViewsToName,
+  type ViewMode,
 } from "oxalis/constants";
+import * as Utils from "libs/utils";
 
 import type {
   RowOrTabsetNode,
@@ -69,12 +71,18 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
-function Tab(name: string, id: string, component: string): TabNode {
+function Tab(
+  name: string,
+  id: string,
+  component: string,
+  enableRenderOnDemand: boolean = true,
+): TabNode {
   return {
     type: "tab",
     name,
     component,
     id,
+    enableRenderOnDemand,
   };
 }
 
@@ -97,10 +105,15 @@ function Row(children: Array<RowOrTabsetNode>, weight?: number): RowNode {
   };
 }
 
-const borderTabs: { [$Keys<typeof BorderTabs>]: Object } = {};
+export function getTabDescriptorForBorderTab(borderTab: BorderTabType): TabNode {
+  const { name, id, enableRenderOnDemand = true } = borderTab;
+  return Tab(name, id, "border-tab", enableRenderOnDemand);
+}
+
+const borderTabs: { [$Keys<typeof BorderTabs>]: TabNode } = {};
 // Flow does not understand that the values must have a name and an id.
-Object.entries(BorderTabs).forEach(([tabKey, { name, id }]: any) => {
-  borderTabs[tabKey] = Tab(name, id, "border-tab");
+Utils.entries(BorderTabs).forEach(([tabKey, borderTab]: [string, BorderTabType]) => {
+  borderTabs[tabKey] = getTabDescriptorForBorderTab(borderTab);
 });
 
 const OrthoViewports: { [$Keys<typeof OrthoViews>]: Object } = {};
@@ -211,13 +224,19 @@ const _getDefaultLayouts = () => {
       borderTabs.SegmentsView,
       borderTabs.BoundingBoxTab,
       borderTabs.AbstractTreeTab,
+      borderTabs.ConnectomeView,
     ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );
   const rightBorderWithoutSkeleton = buildBorder(
     "right",
-    [borderTabs.DatasetInfoTabView, borderTabs.BoundingBoxTab, borderTabs.SegmentsView],
+    [
+      borderTabs.DatasetInfoTabView,
+      borderTabs.BoundingBoxTab,
+      borderTabs.SegmentsView,
+      borderTabs.ConnectomeView,
+    ],
     defaultBorderWidth,
     borderIsOpenByDefault,
   );

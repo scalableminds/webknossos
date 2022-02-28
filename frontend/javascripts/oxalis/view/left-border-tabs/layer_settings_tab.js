@@ -168,7 +168,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: -8,
+            right: 0,
+            marginRight: 0,
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         />
@@ -187,7 +188,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 14,
+            right: 22,
+            marginRight: 0,
             cursor: "pointer",
           }}
         />
@@ -204,7 +206,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         style={{
           position: "absolute",
           top: 4,
-          right: 36,
+          right: 44,
+          marginRight: 0,
           cursor: "pointer",
         }}
       />
@@ -240,7 +243,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 36,
+            right: 44,
+            marginRight: 0,
             cursor: "pointer",
             color: isInEditMode ? "var(--ant-primary)" : null,
           }}
@@ -261,7 +265,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 58,
+            right: 66,
+            marginRight: 0,
             cursor: "pointer",
             transform: "rotate(90deg)",
           }}
@@ -538,7 +543,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             style={{
               position: "absolute",
               top: 0,
-              right: -2,
+              right: 0,
               marginTop: 0,
               display: "inline-flex",
             }}

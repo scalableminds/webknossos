@@ -57,8 +57,7 @@ const getLoadPrecomputedMeshMenuItem = (
   layerName,
   mappingInfo,
 ) => {
-  const hasCurrentMeshFile = currentMeshFile != null;
-
+  const mappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
   return (
     <MenuItemWithMappingActivationConfirmation
       onClick={() =>
@@ -67,8 +66,9 @@ const getLoadPrecomputedMeshMenuItem = (
           loadPrecomputedMesh(segment.id, segment.somePosition, currentMeshFile?.meshFileName),
         )
       }
-      disabled={!hasCurrentMeshFile}
-      currentMeshFile={currentMeshFile}
+      disabled={!currentMeshFile}
+      mappingName={mappingName}
+      descriptor="mesh file"
       layerName={layerName}
       mappingInfo={mappingInfo}
     >

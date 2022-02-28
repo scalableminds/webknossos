@@ -1,7 +1,7 @@
 // @flow
 import { Radio, Tooltip, Badge, Space, Popover } from "antd";
 import { useSelector, useDispatch } from "react-redux";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import { LogSliderSetting } from "oxalis/view/components/setting_input_views";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
@@ -29,6 +29,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { ApplyMergerModeModal } from "oxalis/view/right-border-tabs/starting_job_modals";
 import Constants, {
   ToolsWithOverwriteCapabilities,
   type AnnotationTool,
@@ -187,6 +188,7 @@ function AdditionalSkeletonModesButtons() {
   const isMergerModeEnabled = useSelector(
     state => state.temporaryConfiguration.isMergerModeEnabled,
   );
+  const [showApplyMergerModeModal, setShowApplyMergerModeModal] = useState<boolean>(false);
   const isNewNodeNewTreeModeOn = useSelector(state => state.userConfiguration.newNodeNewTree);
   const toggleNewNodeNewTreeMode = () =>
     dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
@@ -222,6 +224,18 @@ function AdditionalSkeletonModesButtons() {
           />
         </ButtonComponent>
       </Tooltip>
+      {isMergerModeEnabled && (
+        <Tooltip title="Apply this merger mode tracing.">
+          <ButtonComponent
+            style={narrowButtonStyle}
+            onClick={() => setShowApplyMergerModeModal(true)}
+            faIcon="fa fa-cogs"
+          />
+        </Tooltip>
+      )}
+      {showApplyMergerModeModal && (
+        <ApplyMergerModeModal handleClose={() => setShowApplyMergerModeModal(false)} />
+      )}
     </React.Fragment>
   );
 }

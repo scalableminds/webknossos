@@ -2,12 +2,16 @@
 import React, { useEffect, useState, type Node } from "react";
 import { type APIDataset, type APIJob } from "types/api_flow_types";
 import { Modal, Select, Button } from "antd";
-import { startNucleiInferralJob, startNeuronInferralJob } from "admin/admin_rest_api";
+import {
+  startNucleiInferralJob,
+  startNeuronInferralJob,
+  startApplyMergerModeJob,
+} from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
-import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
+import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
-import { type OxalisState, type UserBoundingBox } from "oxalis/store";
+import { type UserBoundingBox } from "oxalis/store";
 import { Unicode, type Vector3 } from "oxalis/constants";
 import { capitalizeWords, computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 
@@ -28,23 +32,26 @@ type StartingJobModalProps = {
   jobName: string,
   description: Node,
   isBoundingBoxConfigurable?: boolean,
+  chooseSegmentationLayer?: boolean,
 };
 
 function StartingJobModal(props: StartingJobModalProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
+  const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
   const { dataset, handleClose, jobName, description, jobApiCall } = props;
-  const userBoundingBoxes = useSelector((state: OxalisState) =>
-    getUserBoundingBoxesFromState(state),
-  );
-  const [selectedColorLayerName, setSelectedColorLayerName] = useState<?string>(null);
+  const userBoundingBoxes = useSelector(state => getUserBoundingBoxesFromState(state));
+  const [selectedLayerName, setSelectedLayerName] = useState<?string>(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<?UserBoundingBox>(null);
-  const colorLayerNames = getColorLayers(dataset).map(layer => layer.name);
+  const layerNames = (chooseSegmentationLayer
+    ? getSegmentationLayers(dataset)
+    : getColorLayers(dataset)
+  ).map(layer => layer.name);
   useEffect(() => {
-    if (colorLayerNames.length === 1) {
-      setSelectedColorLayerName(colorLayerNames[0]);
+    if (layerNames.length === 1) {
+      setSelectedLayerName(layerNames[0]);
     }
   });
-  if (colorLayerNames.length < 1) {
+  if (layerNames.length < 1) {
     return null;
   }
   const onChangeBoundingBox = (selectedBBoxId: number) => {
@@ -54,15 +61,15 @@ function StartingJobModal(props: StartingJobModalProps) {
     }
   };
   const startJob = async () => {
-    if (selectedColorLayerName == null) {
+    if (selectedLayerName == null) {
       return;
     }
     try {
       let apiJob;
       if (isBoundingBoxConfigurable) {
-        apiJob = await jobApiCall(selectedColorLayerName, selectedBoundingBox);
+        apiJob = await jobApiCall(selectedLayerName, selectedBoundingBox);
       } else {
-        apiJob = await jobApiCall(selectedColorLayerName);
+        apiJob = await jobApiCall(selectedLayerName);
       }
       if (!apiJob) {
         return;
@@ -87,24 +94,24 @@ function StartingJobModal(props: StartingJobModalProps) {
   };
 
   const ColorLayerSelection = (): Node =>
-    colorLayerNames.length > 1 ? (
+    layerNames.length > 1 ? (
       <React.Fragment>
-        <p>Please select the layer that should be used for the inferral.</p>
+        <p>Please select the layer that should be used for this job.</p>
         <div style={{ textAlign: "center" }}>
           <Select
             showSearch
             style={{ width: 300 }}
             placeholder="Select a color layer"
             optionFilterProp="children"
-            value={selectedColorLayerName}
-            onChange={setSelectedColorLayerName}
+            value={selectedLayerName}
+            onChange={setSelectedLayerName}
             filterOption={(input, option) =>
               option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
           >
-            {colorLayerNames.map(colorLayerName => (
-              <Select.Option key={colorLayerName} value={colorLayerName}>
-                {colorLayerName}
+            {layerNames.map(layerName => (
+              <Select.Option key={layerName} value={layerName}>
+                {layerName}
               </Select.Option>
             ))}
           </Select>
@@ -166,7 +173,7 @@ function StartingJobModal(props: StartingJobModalProps) {
     ) : null;
 
   const hasUnselectedOptions =
-    selectedColorLayerName == null || (isBoundingBoxConfigurable && selectedBoundingBox == null);
+    selectedLayerName == null || (isBoundingBoxConfigurable && selectedBoundingBox == null);
 
   return (
     <Modal
@@ -198,7 +205,7 @@ function StartingJobModal(props: StartingJobModalProps) {
 }
 
 export function NucleiInferralModal({ handleClose }: Props) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useSelector(state => state.dataset);
   return (
     <StartingJobModal
       dataset={dataset}
@@ -229,7 +236,7 @@ export function NucleiInferralModal({ handleClose }: Props) {
 }
 
 export function NeuronInferralModal({ handleClose }: Props) {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dataset = useSelector(state => state.dataset);
   return (
     <StartingJobModal
       dataset={dataset}
@@ -262,6 +269,37 @@ export function NeuronInferralModal({ handleClose }: Props) {
               currently works best with EM data. The best resolution for the process will be chosen
               automatically.
             </b>
+          </p>
+        </>
+      }
+    />
+  );
+}
+
+export function ApplyMergerModeModal({ handleClose }: Props) {
+  const dataset = useSelector(state => state.dataset);
+  const annotationId = useSelector(store => store.tracing.annotationId);
+  return (
+    <StartingJobModal
+      dataset={dataset}
+      handleClose={handleClose}
+      jobName="apply merger mode"
+      chooseSegmentationLayer
+      jobApiCall={async colorLayerName =>
+        startApplyMergerModeJob(
+          dataset.owningOrganization,
+          dataset.name,
+          colorLayerName,
+          annotationId,
+        )
+      }
+      description={
+        <>
+          <p>
+            Start a job that take the current state of this merger mode tracing and apply it to the
+            segmentation layer. This will create a new dataset which contains the merged
+            segmentation layer. If this dataset has more than one segmentation layer, please select
+            the segmentation layer to the merging should be applied to.
           </p>
         </>
       }

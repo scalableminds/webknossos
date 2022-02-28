@@ -1084,6 +1084,20 @@ export function startGlobalizeFloodfillsJob(
   );
 }
 
+export function startApplyMergerModeJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  annotationId: string,
+): Promise<APIJob> {
+  return Request.receiveJSON(
+    `/api/jobs/run/applyMergerMode/${organizationName}/${datasetName}?layerName=${layerName}&annotationId=${annotationId}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {

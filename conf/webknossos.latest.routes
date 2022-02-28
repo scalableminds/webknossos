@@ -209,6 +209,7 @@ POST          /jobs/run/exportTiff/:organizationName/:dataSetName              c
 POST          /jobs/run/inferNuclei/:organizationName/:dataSetName             controllers.JobsController.runInferNucleiJob(organizationName: String, dataSetName: String, layerName: Option[String])
 POST          /jobs/run/inferNeurons/:organizationName/:dataSetName            controllers.JobsController.runInferNeuronsJob(organizationName: String, dataSetName: String, layerName: String, bbox: String)
 POST          /jobs/run/globalizeFloodfills/:organizationName/:dataSetName     controllers.JobsController.runGlobalizeFloodfills(organizationName: String, dataSetName: String, newDataSetName: Option[String], layerName: Option[String], annotationId: Option[String], annotationType: Option[String])
+POST          /jobs/run/applyMergerMode/:organizationName/:dataSetName         controllers.JobsController.runApplyMergerModeJob(organizationName: String, dataSetName: String, layerName: String, annotationId: String)
 GET           /jobs/:id                                                        controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                 controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                 controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)

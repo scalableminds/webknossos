@@ -1,7 +1,7 @@
 # Mesh Visualization
 webKnossos offers two different methods to render and visualize volumetric segmentations as 3D meshes.
 
-1. Load a pre-computed 3D mesh. Meshes can either be (pre-)computed from within webKnossos for a whole dataset or outside of webKnossos with a `mesh file`. These mesh will be instantly available the next time you open this dataset. (quicker mesh loading time)
+1. Load a pre-computed 3D mesh. Meshes can either be (pre-)computed from within webKnossos for a whole dataset or outside of webKnossos with a `mesh file`. These meshes will be instantly available the next time you open this dataset. (quicker mesh loading time)
 2. Compute an ad-hoc mesh of any segmentation layer or volume annotation. These meshes will live-computed any time you request them. (slower mesh loading time)
 
 Mesh will always be rendered in the 3D viewport in the lower right. 

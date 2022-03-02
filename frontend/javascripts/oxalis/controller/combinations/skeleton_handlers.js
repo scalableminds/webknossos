@@ -11,6 +11,7 @@ import {
   type ShowContextMenuFunction,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
+import _ from "lodash";
 
 import { enforce } from "libs/utils";
 import {
@@ -267,10 +268,19 @@ export function maybeGetNodeIdFromPosition(
   isTouch: boolean,
 ): ?number {
   const SceneController = getSceneController();
-  const { skeleton } = SceneController;
-  if (!skeleton) {
+  const { skeletons } = SceneController;
+
+  // Unfortunately, we cannot import the Skeleton class here to set the correct type, due to cyclic dependencies
+  const skeletonsWhichSupportPicking = _.values(skeletons).filter(
+    skeleton => skeleton.supportsPicking,
+  );
+  if (skeletonsWhichSupportPicking.length === 0) {
     return null;
+  } else if (skeletonsWhichSupportPicking.length > 1) {
+    throw Error("Only one skeleton with supportPicking === true is supported for now.");
   }
+
+  const skeleton = skeletonsWhichSupportPicking[0];
 
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.

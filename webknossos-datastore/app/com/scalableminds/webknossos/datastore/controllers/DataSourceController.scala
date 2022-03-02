@@ -30,6 +30,7 @@ class DataSourceController @Inject()(
     sampleDatasetService: SampleDataSourceService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     meshFileService: MeshFileService,
+    connectomeFileService: ConnectomeFileService,
     uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
@@ -423,9 +424,7 @@ Expects:
           } yield {
             if (encoding.contains("gzip")) {
               Ok(data).withHeaders("Content-Encoding" -> "gzip")
-            } else {
-              Ok(data)
-            }
+            } else Ok(data)
           }
         }
       }
@@ -498,6 +497,112 @@ Expects:
               reason = Some("the user wants to delete the dataset")) ?~> "dataSet.delete.failed"
             _ <- dataSourceRepository.cleanUpDataSource(dataSourceId) // also frees the name in the wk-side database
           } yield Ok
+        }
+      }
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def listConnectomeFiles(token: Option[String],
+                          organizationName: String,
+                          dataSetName: String,
+                          dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
+        AllowRemoteOrigin {
+          val connectomeFileNames =
+            connectomeFileService.exploreConnectomeFiles(organizationName, dataSetName, dataLayerName)
+          for {
+            mappingNames <- Fox.serialCombined(connectomeFileNames.toList) { connectomeFileName =>
+              val path = connectomeFileService.connectomeFilePath(organizationName,
+                                                                  dataSetName,
+                                                                  dataLayerName,
+                                                                  connectomeFileName)
+              connectomeFileService.mappingNameForConnectomeFile(path)
+            }
+            connectomesWithMappings = connectomeFileNames
+              .zip(mappingNames)
+              .map(tuple => ConnectomeFileNameWithMappingName(tuple._1, tuple._2))
+          } yield Ok(Json.toJson(connectomesWithMappings))
+        }
+      }
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def getSynapsesForAgglomerates(token: Option[String],
+                                 organizationName: String,
+                                 dataSetName: String,
+                                 dataLayerName: String): Action[ByAgglomerateIdsRequest] =
+    Action.async(validateJson[ByAgglomerateIdsRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
+        AllowRemoteOrigin {
+          for {
+            meshFilePath <- Fox.successful(
+              connectomeFileService
+                .connectomeFilePath(organizationName, dataSetName, dataLayerName, request.body.connectomeFile))
+            synapses <- connectomeFileService.synapsesForAgglomerates(meshFilePath, request.body.agglomerateIds)
+          } yield Ok(Json.toJson(synapses))
+        }
+      }
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def getSynapticPartnerForSynapses(token: Option[String],
+                                    organizationName: String,
+                                    dataSetName: String,
+                                    dataLayerName: String,
+                                    direction: String): Action[BySynapseIdsRequest] =
+    Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
+        AllowRemoteOrigin {
+          for {
+            meshFilePath <- Fox.successful(
+              connectomeFileService
+                .connectomeFilePath(organizationName, dataSetName, dataLayerName, request.body.connectomeFile))
+            agglomerateIds <- connectomeFileService.synapticPartnerForSynapses(meshFilePath,
+                                                                               request.body.synapseIds,
+                                                                               direction)
+          } yield Ok(Json.toJson(agglomerateIds))
+        }
+      }
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def getSynapsePositions(token: Option[String],
+                          organizationName: String,
+                          dataSetName: String,
+                          dataLayerName: String): Action[BySynapseIdsRequest] =
+    Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
+        AllowRemoteOrigin {
+          for {
+            meshFilePath <- Fox.successful(
+              connectomeFileService
+                .connectomeFilePath(organizationName, dataSetName, dataLayerName, request.body.connectomeFile))
+            synapsePositions <- connectomeFileService.positionsForSynapses(meshFilePath, request.body.synapseIds)
+          } yield Ok(Json.toJson(synapsePositions))
+        }
+      }
+    }
+
+  @ApiOperation(hidden = true, value = "")
+  def getSynapseTypes(token: Option[String],
+                      organizationName: String,
+                      dataSetName: String,
+                      dataLayerName: String): Action[BySynapseIdsRequest] =
+    Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        token) {
+        AllowRemoteOrigin {
+          for {
+            meshFilePath <- Fox.successful(
+              connectomeFileService
+                .connectomeFilePath(organizationName, dataSetName, dataLayerName, request.body.connectomeFile))
+            synapseTypes <- connectomeFileService.typesForSynapses(meshFilePath, request.body.synapseIds)
+          } yield Ok(Json.toJson(synapseTypes))
         }
       }
     }

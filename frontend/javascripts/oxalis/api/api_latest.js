@@ -1228,8 +1228,19 @@ class DataApi {
     return dataValue;
   }
 
+  /**
+   * Returns the magnification that is _currently_ rendered at the given position.
+   */
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
-    return this.model.getRenderedZoomStepAtPosition(layerName, position);
+    return this.model.getCurrentlyRenderedZoomStepAtPosition(layerName, position);
+  }
+
+  /**
+   * Returns the maginfication that will _ultimately_ be rendered at the given position, once
+   * all respective buckets are loaded.
+   */
+  getUltimatelyRenderedZoomStepAtPosition(layerName: string, position: Vector3): Promise<number> {
+    return this.model.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {

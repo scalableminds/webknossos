@@ -5,12 +5,12 @@
 
 import * as THREE from "three";
 import _ from "lodash";
+import Maybe from "data.maybe";
 
-import type { SkeletonTracing, Tree, Node, Edge } from "oxalis/store";
+import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import NodeShader, {
   NodeTypes,
@@ -86,7 +86,7 @@ const EdgeBufferHelperType = {
  * Creates and manages the WebGL buffers for drawing skeletons (nodes, edges).
  * Skeletons are not recreated on every store change in spite of the functional
  * react paradigm for performance reasons. Instead we identify more fine granular
- * actions like node cration/deletion/update etc.
+ * actions like node creation/deletion/update etc.
  * Skeletons are stored in single, large buffers regardless of which tree they belong to.
  * Nodes are never deleted but marked as type "INVALID" and not drawn by the shader.
  * @class
@@ -98,17 +98,23 @@ class Skeleton {
   nodes: BufferCollection;
   edges: BufferCollection;
   treeColorTexture: typeof THREE.DataTexture;
+  supportsPicking: boolean;
+  stopStoreListening: () => void;
 
-  constructor() {
+  constructor(
+    skeletonTracingSelectorFn: OxalisState => Maybe<SkeletonTracing>,
+    supportsPicking: boolean,
+  ) {
+    this.supportsPicking = supportsPicking;
     this.rootGroup = new THREE.Group();
     this.pickingNode = new THREE.Object3D();
 
-    getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
+    skeletonTracingSelectorFn(Store.getState()).map(skeletonTracing => {
       this.reset(skeletonTracing);
     });
 
-    Store.subscribe(() => {
-      getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
+    this.stopStoreListening = Store.subscribe(() => {
+      skeletonTracingSelectorFn(Store.getState()).map(skeletonTracing => {
         if (skeletonTracing.tracingId !== this.prevTracing.tracingId) {
           this.reset(skeletonTracing);
         } else {
@@ -116,6 +122,10 @@ class Skeleton {
         }
       });
     });
+  }
+
+  destroy() {
+    this.stopStoreListening();
   }
 
   reset(skeletonTracing: SkeletonTracing) {
@@ -284,7 +294,7 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(this.prevTracing, skeletonTracing);
+    const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
 
     for (const update of diff) {
       switch (update.name) {
@@ -583,7 +593,7 @@ class Skeleton {
   }
 
   /**
-   * Updates a node/edges's color based on the tree color. Colors are stored in
+   * Updates a node/edge's color based on the tree color. Colors are stored in
    * a texture shared between the node and edge shader.
    */
   updateTreeColor(treeId: number, color: Vector3, isVisible: boolean = true) {

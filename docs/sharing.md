@@ -24,7 +24,7 @@ For more control, you can bring up the detailed sharing dialog. The sharing dial
 
 1. `Private`: Only you and your team manager have access to the annotation.
 2. `Internal`: All members of your organization have access to the annotation. 
-3. `Public`: Everybody, regardless their login status, can access this annotation.
+3. `Public`: Everybody with access to the link, regardless their login status, can access this annotation.
 4. (`Team Sharing`: Share this annotation with other organization members on the dashboard in the `Shared Annotations` tab)
 
 In any case, the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.

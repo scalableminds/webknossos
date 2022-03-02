@@ -14,7 +14,7 @@ Regular users can only start or continue annotations and work on tasks.
 [Admins and Team Managers](./users.md#access-rights-roles) also have access to additional administration actions, access-rights management, and advanced dataset properties for each dataset.
 
 ![Dashboard for Team Managers or Admins](./images/dashboard_datasets.png)
-![Dashboard for Regular Users](./images/dashboard_normal_user.png)
+![Dashboard for Regular Users](./images/dashboard_regular_user.png)
 
 ![Video: Community Dataset Gallery & Navigating Through Data](https://www.youtube.com/watch?v=naPL1jfCdOc)
 

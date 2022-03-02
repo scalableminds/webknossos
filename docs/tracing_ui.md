@@ -32,7 +32,7 @@ Clicking on the position or rotation labels copies the values to the clipboard.
 
 ![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
 
-The toolbar further features aöl available navigation and annotation tools for quick access:
+The toolbar further features also available navigation and annotation tools for quick access:
 
 - `Move`: Navigate around the dataset.
 - `Skeleton`: Create skeleton annotations and place nodes. [Read more about skeleton annotations](./skeleton_annotation.md#tools).
@@ -45,7 +45,7 @@ The toolbar further features aöl available navigation and annotation tools for 
 
 Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explaination of all context-sensitve modifiers that are available to some tools.
 
-// todo add image of toolbar
+![The webKnossos navigation and annotation tools](images/tracing_ui_toolbar2.png)
 
 ## Layers and Settings
 The left-hand side panel features both a list of all available data and annotation layers as well as settings menu to fine-tune some parameters of webKnossos.

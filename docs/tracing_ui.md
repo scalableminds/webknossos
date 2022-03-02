@@ -70,7 +70,7 @@ Disabling the visibility, unloads/frees these resources from your GPU hardware a
 //TODO add imaeg of histogram
 
 #### Color and Segmentation Layers
-In addition to the general layer properties mentioned above, `color`and `segmentation` layers come with a number of other settings:
+In addition to the general layer properties mentioned above, `color` and `segmentation` layers come with a number of other settings:
 
 - `Color`: Every `color` layer can be re-colored to make it easily identifiable. By default, all layers have a white overlay, showing the true, raw black & white data. Clicking on the square color indicator brings up your system's color palette to choose from. Note, there is an icon button for inverting all color values in this layer.
 - `Pattern Opacity`: Adjust the visibility of the texture/pattern on each segment. To make segments easier to distinguish and more unique, a pattern is applied to each in addition to its base color. 0% hides the pattern. 100% makes the pattern very prominent. Great for increasing the visual contrast between segments.

@@ -48,7 +48,7 @@ To share a dataset privately, follow these steps:
 To revoke a sharing link in the future, click the `Revoke` button to the right-hand side of the link.
 
 !!! warning
-    Do not enable the `Make dataset publicly accessible` checkbox or otherwise, your dataset will be featured on the front page of your webKnossos instance.
+    Do not enable the `Make dataset publicly accessible` checkbox or otherwise anyone with a link can access this dataset without needing to log in/authenticate.
     Public access rights are not required for private sharing.
 
 ### Public Sharing

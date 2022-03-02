@@ -48,7 +48,18 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   loadAgglomerateSkeletonAtPosition(globalPosition);
 }
 
-export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
+export function loadAgglomerateSkeletonAtPosition(position: Vector3): void {
+  const segmentation = Model.getVisibleSegmentationLayer();
+  if (!segmentation) {
+    return;
+  }
+  const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
+  const segmentId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
+
+  loadAgglomerateSkeletonForSegmentId(segmentId);
+}
+
+export function loadAgglomerateSkeletonForSegmentId(segmentId: number): void {
   const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();
   if (!segmentation) {
@@ -62,11 +73,7 @@ export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
 
   if (mappingName && isAgglomerateMappingEnabled.value) {
-    const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
-
-    const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
-
-    Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, cellId));
+    Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, segmentId));
   } else {
     Toast.error(isAgglomerateMappingEnabled.reason);
   }

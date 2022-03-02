@@ -1,6 +1,11 @@
 // @flow
 import { type Saga, type Task, join, call, fork } from "oxalis/model/sagas/effect-generators";
 
+/*
+  Given an array of async tasks, processTaskWithPool
+  allows to execute at most ${poolSize} tasks concurrently.
+ */
+
 export default function* processTaskWithPool(
   tasks: Array<() => Saga<void>>,
   poolSize: number,

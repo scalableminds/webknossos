@@ -1,7 +1,7 @@
 # FAQ
 
-## What is the quickest way to get started with webKnossos
-Signing up for a free account [webKnossos.org](https://webknossos.org) is the quickest way to get up and running. Create an account and organization, upload your first dataset to work on, and invite co-workers and collaborators to help you with annotation and analysis.
+## What is the quickest way to get started with webKnossos?
+Signing up for a free account [webKnossos.org](https://webknossos.org) is the quickest way to get up and running. Create an account (a new organization is created automatically for you), upload your first dataset to work on, and invite co-workers and collaborators to help you with annotation and analysis.
 
 ## I am unsure if webKnossos is for me or how to get started with my data
 Please feel free to reach out to us for help. We are happy to help you get started with webKnossos and can assist with dataset uploads and conversations as needed. Email us at [hello@webknossos.org](mailto:hello@webknossos.org).
@@ -10,7 +10,7 @@ We also provide intro calls to answer your questions or walk you through the pla
 
 ## I have a very large dataset and need help annotating it
 There are two options to help you with data annotation:
-1. Invite collaborators to your webKnossos organization and assign them sub-volumes of your data for annotation. See the [page on Collaboration for more info](./sharing.md). 
+1. Invite collaborators to your webKnossos organization, set up a project to work on, and assign them sub-volumes of your data for annotation. See the [page on tasks and projects for more info](./tasks.md). 
 
 2. We also offer professional services to help with annotation. We can do both [manual annotations](https://webknossos.org/services/annotations) for your data or apply [automated segmentations](https://webknossos.org/services/automated-segmentation) on large-scale datasets.
 
@@ -29,13 +29,13 @@ Get in touch if you want to work together on a project resulting in new classifi
 
 webKnossos does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from webKnossos - either manually or scripted [through our Python libarary](./tooling.md) - and do your ML analysis offline and use webKnossos to inspect the results. 
 
-## How Can I Use my Dataset With webKnossos?
+## How can I use my dataset with webKnossos?
 
-webKnossos supports WKW (Optimized), KNOSSOS cubes](./datasets.md), and image stacks (converted on upload). You can also connect to [Neuroglancer Precomputed dataset hosted in the Google Cloud and to data hosted by a BossDB](https://github.com/scalableminds/webknossos-connect).
+webKnossos supports [WKW (optimized), KNOSSOS cubes](./datasets.md), and image stacks (converted on upload). You can also connect to [Neuroglancer Precomputed dataset hosted in the Google Cloud and to data hosted by a BossDB](https://github.com/scalableminds/webknossos-connect).
 
-Smaller datasets can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) CLI tool.
+Smaller datasets (up to multiple GB) can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) CLI tool and uploading it via the [webKnossos python package](https://docs.webknossos.org/webknossos-py/examples/upload_image_data.html).
 
-## Can I Host the webKnossos Data in My Own Compute Cluster (on-premise installation)
+## Can I host the webKnossos data in my own compute cluster (on-premise installation)?
 
 webKnossos consists of two components that allow for versatile deployment options:
 1. The webKnossos main component handles user and task management.
@@ -54,7 +54,7 @@ Yes, you can. webKnossos allows the download and export of skeleton annotations 
 
 See the [Tooling](./tooling.md) section for a recommendation of Python/MATLAB libraries to work with the webKnossos standard formats.
 
-## Newly Registered Users Don't Show Up
+## Newly registered users don't show up
 
 New user registrations need to be approved by the respective admin of your webKnossos instance.
 

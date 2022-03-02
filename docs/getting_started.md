@@ -55,11 +55,11 @@ webKnossos will launch the main annotation screen allowing you to navigate your 
 
 Depending on the current tool - selectable in the top bar - various actions can be performed.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
-The first tool is the *MOVE* tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
-With the *SKELETON* tool, a left mouse click can be used to place markers in the data, called nodes.
+The first tool is the *Move* tool which allows navigating the dataset by moving the mouse while holding the left mouse button.
+With the *SKeleton* tool, a left mouse click can be used to place markers in the data, called nodes.
 Additionally, the left mouse button can also be used to navigate around, select or drag nodes.
-The *BRUSH* and *TRACE* tools allow to "paint" voxels to create volumetric annotations. 
-For a full rundown on the other annotations tools, such as *ERASER*, *SEGMENT PICKER*, *FILL* please refer to documentation on [skeleton](./skeleton_annotation.md) and [volume](./volume_annotation.md) annotations.
+The *Brush* and *Trace* tools allow to "paint" voxels to create volumetric annotations. 
+For a full rundown on the other annotations tools, such as *Eraser*, *Segment Picker*, *Fill* please refer to documentation on [skeleton](./skeleton_annotation.md) and [volume](./volume_annotation.md) annotations.
 
 A right mouse click can be used to open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment. 
 Basic movement along the 3rd axis is done with the mouse wheel or by pressing the spacebar keyboard shortcut.

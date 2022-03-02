@@ -49,12 +49,12 @@ To fix split errors see section on flood filling below.
 ![Video: Proof-Reading Volume Annotations](https://www.youtube.com/watch?v=Sq4AuWanK14)
 
 ### Volume Flood Fills
-webKnossos supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabela segment slice-by-slice webKnossos can do this for you. This operation allows you to fix both split and merge errors:
+webKnossos supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, webKnossos can do this for you. This operation allows you to fix both split and merge errors:
 
 - For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute intensive you might be better of with the `Merger Mode`, explained above.
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply to one of the partial segments that you just devided. 
 
-Due to perfomance reasons, 3D flood-fills only work in a small, local bounding box. webKnossos will add bounding box around the affected area. In order to truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a webKnossos job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill` button. Make sure to do all local fill operations first and apply them all at once.
+Due to perfomance reasons, 3D flood-fills only work in a small, local bounding box. webKnossos will add bounding box around the affected area. In order to truly propagate the new segment ID(s) throughout a whole dataset, you can trigger a webKnossos job to apply this change globally. From the `BBox` tab in the right-hand menu, press the "Globalize Flood-Fill" button. Make sure to do all local fill operations first and apply them all at once.
 
 Check the `Processing Jobs` page from the `Admin` menu at the top of the screen to track progress or cancel the operation. The finished, processed dataset will appear as new dataset in your dashboard.
 

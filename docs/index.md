@@ -13,7 +13,7 @@ webKnossos is also a platform for [showcasing datasets](https://webknossos.org) 
 Sign up for a free account on [https://webknossos.org/](https://webknossos.org/) and either upload one of your own datasets, or work with a large selection of published community datasets. 
 
 ## Features
-* Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, etc
+* Exploration of large 3D image datasets as found in electron-microscopy, synchrotron, CT, MRI, etc.
 * Fully browser-based user experience. No installation required
 * Efficient 3D data streaming for quick loading speeds
 * Creation/editing of skeleton (line-segments) and 3D volumetric annotations
@@ -25,7 +25,7 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 * [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](./data_formats.md), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect), and image stacks (converted on upload)
 * [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [3D Mesh Visualization](./mesh_visualization.md)
-* [Documented Python library for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html  )
+* [Documented Python library for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)
 * [Documented frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
@@ -44,7 +44,7 @@ Sign up for a free account on [https://webknossos.org/](https://webknossos.org/)
 webKnossos is built for scientists with support by scientists. Our goal is to make image analysis and data exploration accessible and easy to use. 
 While originally designed for the annotation of electron microscopy of neural circuits, we have seen great projects using it to analyze MRI/CT scans, fluorescences microscopy images, and synchrotron datasets.
 
-webKnossos impact on data annotation in neuroscience and Connectomics has been published in Nature Methods, 2017 and many other [publications](./publications.md):
+webKnossos' impact on data annotation in neuroscience and Connectomics has been published in Nature Methods, 2017 and many other [publications](./publications.md):
 
 > Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
 webKnossos: efficient online 3D data annotation for connectomics.

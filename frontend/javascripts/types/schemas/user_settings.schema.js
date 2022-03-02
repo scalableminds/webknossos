@@ -1,6 +1,7 @@
 // @flow
 import { OverwriteModeEnum, FillModeEnum, TDViewDisplayModeEnum } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
 
 export const userSettings = {
   clippingDistance: { type: "number", minimum: 1, maximum: 12000 },
@@ -32,7 +33,10 @@ export const userSettings = {
   },
   tdViewDisplayDatasetBorders: { type: "boolean" },
   hideTreeRemovalWarning: { type: "boolean" },
-  brushSize: { type: "number", minimum: 1, maximum: 300 },
+  // Note that the `maximum` limit is a theoretical one. An actual upper limit
+  // is computed depending on the existing magnifications. See
+  // getMaximumBrushSize().
+  brushSize: { type: "number", minimum: 1, maximum: 30000, dynamicMaximumFn: getMaximumBrushSize },
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },
   segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },

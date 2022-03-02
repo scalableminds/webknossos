@@ -69,7 +69,7 @@ When the `Skeleton` tool is active, the following modifiers become available:
 Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.
 
-Nodes can be placed by clicking (*Left Click* by default or *Right Click* when *Classic Controls* are enabled in the settings sidebar) in orthogonal mode (the skeleton tool should be selected) or automatically when moving in flight or oblique mode.
+Nodes can be placed by left-clicking in orthogonal mode (the skeleton tool should be selected) or automatically when moving in flight or oblique mode.
 All (global) operations are executed on the currently active node, e.g., adding a comment or node deletion. 
 The active node is always highlighted with a circle around it. 
 Most keyboard shortcuts take the active node into context.
@@ -86,7 +86,7 @@ Any node can be marked as a branch point using the keyboard shortcut "B" or thro
 Branch points are highlighted using a slightly different color.
 All branch points are stored as a first-in, first-out (FIFO) stack. Press "J" to jump to the latest branch point in FIFO-order to continue working from there and remove it from the stack.
 
-## Keyboard Shortcuts for Skeleton Annotations
+## Controls & Keyboard Shortcuts for Skeleton Annotations
 While most operations for working with skeleton annotations are either available through the UI or the context-sensitive right-click menu, some users prefer to use keyboard shortcuts to work very efficiently.
 
 | Key Binding       | Operation                           |
@@ -138,7 +138,8 @@ Common tree operations include splitting and merging trees.
 #### Tree Colors
 A random color is assigned to each tree upon creation.
 Colors can be shuffled for a single tree or for all trees in a skeleton.
-Use the overflow menu under `More` in the `Skeleton` tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors.
+Right-click on a tree to bring up several actions, .e.g `Shuffle Color`. 
+When editing several trees, use the overflow menu under `More` in the `Skeleton` tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors.
 All nodes have the same color as their parent tree and can not be changed individually.
 The active node, branch points, and nodes that have comments assigned to them are highlighted with a slight variation of the tree's color.
 
@@ -199,6 +200,8 @@ Importing a skeleton annotation can be achieved using one of two ways:
 2. To import a skeleton annotation as a completely new webKnossos annotation, drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "My Annotations" section.
 
 ![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](images/tracing_ui_import.png)
+
+If you are looking to import/export annotations through Python code, check out our [webKnossos Python library](./tooling.md ).
 
 ### Merging Skeleton Annotations
 There are two ways for merging annotations:

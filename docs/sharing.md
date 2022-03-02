@@ -24,7 +24,7 @@ For more control, you can bring up the detailed sharing dialog. The sharing dial
 
 1. `Private`: Only you and your team manager have access to the annotation.
 2. `Internal`: All members of your organization have access to the annotation. 
-3. `Public`: Everybody, regardless their login status, can access this annotation.
+3. `Public`: Everybody with access to the link, regardless their login status, can access this annotation.
 4. (`Team Sharing`: Share this annotation with other organization members on the dashboard in the `Shared Annotations` tab)
 
 In any case, the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
@@ -48,7 +48,7 @@ To share a dataset privately, follow these steps:
 To revoke a sharing link in the future, click the `Revoke` button to the right-hand side of the link.
 
 !!! warning
-    Do not enable the `Make dataset publicly accessible` checkbox or otherwise, your dataset will be featured on the front page of your webKnossos instance.
+    Do not enable the `Make dataset publicly accessible` checkbox or otherwise anyone with a link can access this dataset without needing to log in/authenticate.
     Public access rights are not required for private sharing.
 
 ### Public Sharing
@@ -202,16 +202,3 @@ If members of these teams open their [Shared Annotations Dashboard Tab](./dashbo
 ![Video: Connect Publications to Your Dataset](https://www.youtube.com/watch?v=hcm8Jx22DG8)
 
 Dataset sharing allows people outside of your organization or anyone without a webKnossos account to view your datasets and annotations within webKnossos directly from their browser. No additional installation or signup is needed. Anyone with a link can view the data.
-
-
-
-
-
-Shared resources can be accessed through a direct URL or can be featured on a spotlight gallery for showcasing your work.
-[Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
-
-
-
-![Video: Beginner's Guide](https://www.youtube.com/watch?v=jsz0tc3tuKI&t=512s)
-
-![Video: Connect webKnossos with Your Publications](https://www.youtube.com/watch?v=Ut4m6L3nYdY)

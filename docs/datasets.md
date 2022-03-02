@@ -16,7 +16,7 @@ The easiest way to get started with working on your datasets is through the webK
 1. From the *My dataset* tab in the user dashboard, click the *Add Dataset* button.
 2. Provide some metadata information:
   - a *name* 
-  - give access permissions for one or more teams (use `default` team if unsure)
+  - give access permissions for one or more teams (use the `default` team if all members of your organization should be able to see it)
   - *scale* of each voxel (in nanometers)
 3. Drag and drop your data into the upload section
 4. Click the *Upload* button
@@ -26,7 +26,7 @@ webKnossos uses the [WKW-format](./data_formats.md#wkw-datasets) internally to d
 If your data is already in WKW you can simply drag your folder (or zip archive of that folder) into the upload view.
 
 If your data is not in WKW, you can either:
-- upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. Check the Jobs page for progress or refresh the dashboard page periodically.
+- upload the data in a supported file format and webKnossos will automatically convert it to WKW ([webknossos.org](https://webknossos.org) only). Depending on the size of the dataset, the conversion will take some time. You can check the progress at the "Jobs" page or the "My Datasets" page in the dashboard (both will update automatically).
 - [Convert](#converting-datasets) your data manually to WKW.
 
 In particular, the following file formats are supported for uploading (and conversion):
@@ -37,7 +37,7 @@ In particular, the following file formats are supported for uploading (and conve
 - KNOSSOS file hierarchy 
 - [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](./datasets.md#configuring-datasets) and double-check layer properties, finetune access rights & permission, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](./datasets.md#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
 ### Working with Neuroglancer and BossDB dataset
 On webKnossos.org you can work directly with 
@@ -109,7 +109,7 @@ For manual conversion, we provide the following software tools and libraries:
 - The [webKnossos Cuber](https://docs.webknossos.org/wkcuber/index.html) is a CLI tool that can convert many formats to WKW. 
 - For other file formats, the [Python webKnossos libray](https://docs.webknossos.org/webknossos-py/index.html) can be an option for custom scripting.
 
-See page on [software tooling](.tooling.md) for more.
+See page on [software tooling](./tooling.md) for more.
 
 ## Configuring Datasets
 You can configure the metadata, permission, and other properties of a dataset at any time. 
@@ -128,9 +128,9 @@ For each detected layer:
 - `Bounding Box`: The position and extents of the dataset layer in voxel coordinates. The format is `x, y, z, x_size,y_size, z_size` or respectively `min_x, min_y, min_z, (max_x - min_x), (max_y - min_y), (max_z - min_z)`.
 - `Largest Segment ID`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
 
-The `Advanced` view lets you edit the underlying [JSON configuration](./data_formats.md#wkw-metadata-by-example) directly. Toggle between the `Advanced` and `Simple` page in the upper right. Advanced mode is only recommended for
+The `Advanced` view lets you edit the underlying [JSON configuration](./data_formats.md#wkw-metadata-by-example) directly. Toggle between the `Advanced` and `Simple` page in the upper right. Advanced mode is only recommended for low level access to dataset properties and users familiar with the `datasource-properties.json` format.
 
-webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disc. (Only relevant for self-hosted instances) Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
+webKnossos automatically periodically checks and detects changes to a dataset's metadata (`datasource-properties.json`) on disk (only relevant for self-hosted instances). Before applying these suggestions, users can preview all the new settings (as JSON) and inspect just the detected difference (as JSON).
 
 ![Dataset Editing: Data Tab](images/dataset_data.png)
 
@@ -144,7 +144,7 @@ Read more in [the Sharing guide](./sharing.md).
 // Todo add image
 
 ### Metadata Tab
-- `Display Name`: A meaningful name for a dataset other than its automatically assigned technical moniker/ID. Displayed in various parts of webKnossos. Especially useful when sharing datasets with outsiders, when you want to "hide" any internal nameing schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
+- `Display Name`: A meaningful name for a dataset other than its (automatically assigned) technical name which is usually limited by naming rules of file systems. It is displayed in various parts of webKnossos. The display name may contain special characters and can also be changed without invalidating already created sharing URLs. It can also be useful when sharing datasets with outsiders while "hiding" any internal naming schemes or make it more approachable, e.g., `L. Simpson et al.: Full Neuron Segmentation` instead of `neuron_seg_v4_2022`.
 - `Description`: A free-text field for providing more information about your datasets, e.g., authors, paper reference, descriptions, etc. Supports Markdown formatting. The description will be featured in the webKnossos UI when opening a dataset in view mode.
 
 // Todo add image
@@ -164,7 +164,7 @@ Of course, the defaults can all be overwritten and adjusted once a user opens th
 
 For self-hosted webKnossos instances, there are two ways to set default *View Configuration* settings:
 - in the web UI as described above
-- inside the `datasource_properties.json` on disc
+- inside the `datasource_properties.json` on disk
 
 The *View Configuration* from the web UI takes precedence over the `datasource_properties.json`.
 You don't have to set complete *View Configurations* in either option, as webKnossos will fill missing attributes with sensible defaults.
@@ -195,7 +195,7 @@ scalable minds also offers a dataset alignment tool called *Voxelytics Align*.
 
 ## Sample Datasets
 
-For convience and testing, we provide a list of sample datasets for webKnossos:
+For convenience and testing, we provide a list of sample datasets for webKnossos:
 
 - Sample_e2006_wkw: https://static.webknossos.org/data/e2006_wkw.zip
 Raw SBEM data and segmentation (sample cutout, 120MB).

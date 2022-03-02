@@ -64,7 +64,7 @@ The following file formats can be dragged individually into webKnossos to conver
 - png
 
 #### KNOSSOS file hierarchy
-Datasets saved as KNOSSOS cubes also be converted on [webKnossos](https://webknossos.org).
+Datasets saved as KNOSSOS cubes can also be converted on [webKnossos](https://webknossos.org).
 Please ensure that you import the correct folder (so that all layers of the dataset are contained).
 
 
@@ -93,12 +93,12 @@ A webKnossos dataset can contain several `color` and `segmentation` layers which
 
 ### Magnification Steps and Downsampling
 
-To enable zooming within huge datasets in webKnossos, dataset layers usually contain multiple magnification steps (also called mipmaps or image pyramids).
+To enable zooming within huge datasets in webKnossos, dataset layers usually contain multiple magnification steps (also called mipmaps or image pyramids or resolutions).
 `1` is the magnification step with the highest resolution, i.e. the original data.
 `2` is downsampled by a factor of two in all dimensions and therefore only is an eighth of the file size of the original data.
 Downsampling is done in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, …`
 
-webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimensions, but not in `z`.
+webKnossos also supports non-uniform (anisotropic) downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimensions, but not in `z`.
 
 ![Downsampling the data to improve zooming](images/downsampling.png)
 
@@ -318,19 +318,22 @@ Groups can be freely nested inside each other.
 
 
 ### ID Mapping Files
-webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into a `agglomerates` directory inside a segmentation layer (self-hosted instance only):
+webKnossos supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings--on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "agglomerate" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for webKnossos to identify and read them (self-hosted instance only).
+
+webKnossos supports two formats for these agglomerates:
+- JSON -> `mappings` directory
+- HDF5 -> `agglomerates` directory
+ (JSON-format) or `agglomerates` directory (HDF5-format) :
 
 ```
 great_dataset                   # Dataset root
 ├─ segmentation                 # Dataset layer (^, color, segmentation)
-│  ├─ agglomerates/             # Magnification step (1, 2, 4, 8, 16 etc.)
+│  ├─ mappings                  # Magnification step (1, 2, 4, 8, 16 etc.)
 │  │  ├─ my_mapping_file.json   # one or more agglomerate files
 │  │  ├─ different_mapping.json # one agglomerate file per mapping
 ```
 
-webKnossos supports two formats for these agglomerates:
-- JSON
-- HDF5
+
 
 #### JSON schema
 All segment IDs belonging to the same super-voxel need to be listed in an array:  

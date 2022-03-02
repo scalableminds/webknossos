@@ -58,7 +58,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 - `Histogram`: The Histogram displays sampled color values of the dataset on a logarithmic scale. The slider below the Histogram can be used to adjust the dynamic range of the displayed values. In order to increase the contrast of data, reduce the dynamic range. To decrease the contrast, widen the range. In order to increase the brightness, move the range to the left. To decrease the brightness, move the range to the right.
 
     Above the the histogram, there are icon buttons to further adjust the histogram or otherwise interact with the layer:
-        - `pencil`: Manipulate the min/max value of the dynamic range. Clips values above/below these limits. 
+        - `pencil`: Manipulate the min/max value of the histogram range. Clips values above/below these limits. 
         - `vertical line`: Automatically adjust the histogram for best contrast. Contrast estimation is based on the data currently available in your viewport.
         - `circle arrow`: Reload the data from server. Useful if the raw data has been changed on disk and you want to refresh your current session.
         - `scanner`: Navigates the webKnossos camera to a position within the dataset where there is data available for the respective layer. This is especially useful for working with smaller layers - likely segmentations - that might not cover the whole dataset and are hard to find manually. 
@@ -70,7 +70,7 @@ Disabling the visibility, unloads/frees these resources from your GPU hardware a
 //TODO add imaeg of histogram
 
 #### Color and Segmentation Layers
-In addition to the general layer properties mentioned above, `color`and `segmentation` layers come with a number of other settings:
+In addition to the general layer properties mentioned above, `color` and `segmentation` layers come with a number of other settings:
 
 - `Color`: Every `color` layer can be re-colored to make it easily identifiable. By default, all layers have a white overlay, showing the true, raw black & white data. Clicking on the square color indicator brings up your system's color palette to choose from. Note, there is an icon button for inverting all color values in this layer.
 - `Pattern Opacity`: Adjust the visibility of the texture/pattern on each segment. To make segments easier to distinguish and more unique, a pattern is applied to each in addition to its base color. 0% hides the pattern. 100% makes the pattern very prominent. Great for increasing the visual contrast between segments.

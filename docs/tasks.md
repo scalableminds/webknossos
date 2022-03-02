@@ -27,10 +27,8 @@ First, a *Task Type* needs to be created:
 Next, you need to set up a *Project*:
 1. Open the `Projects` screen of the admin section and click on `Add Project`.
 2. Fill out the form to create the *Project*.
-    - Note that you can assign a `Priority` to the Project.
-    - A higher value means that Tasks from this Project will be more likely to be assigned to users.
-    - With the `Time Limit` property, you can specify the expected completion time of a Task Instance.
-    - There will be an email notification if users exceed this limit.
+    - Note that you can assign a `Priority` to the Project. A higher value means that Tasks from this Project will be more likely to be assigned to users.
+    - With the `Time Limit` property, you can specify the expected completion time of a Task Instance. There will be an email notification if users exceed this limit.
 
 ![Create a Project](./images/tasks_project.png)
 

@@ -164,6 +164,10 @@ The information is JSON-encoded in the URL fragment and has the following format
         mappingType: MappingType,
         agglomerateIdsToImport?: Array<number>,
       },
+      connectomeInfo?: {
+        connectomeName: string,
+        agglomerateIdsToImport?: Array<number>,
+      }
     },
   };
 

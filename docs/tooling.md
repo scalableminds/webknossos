@@ -33,6 +33,6 @@ We provide a number of free, open-source libraries and tools alongside webKnosso
 
 
 ## MATLAB NML Functions
-- [https://
-github.com/mhlabCodingTeam/SegEM/tree/master/auxiliaryMethods](https://github.com/mhlabCodingTeam/SegEM/tree/master/auxiliaryMethods)
+- [https://github.com/mhlabCodingTeam/SegEM/tree/master/auxiliaryMethods](https://github.com/mhlabCodingTeam/SegEM/tree/master/auxiliaryMethods)
 - MATLAB utilities and function for working with NML skeletons provided as part of the SegEM publication
+- Developed by [Connectomics Department at Max-Planck-Institute for Brain Research](https://brain.mpg.de/helmstaedter)

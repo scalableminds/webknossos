@@ -55,8 +55,6 @@ To revoke a sharing link in the future, click the `Revoke` button to the right-h
 Public sharing provides access to your dataset to the general public.
 Anyone can access the shared dataset and view it on your webKnossos instance without the need for an account.
 
-![The Dataset Gallery view provides a public showcase of all your published datasets. No webKnossos account is required to view these.](images/spotlight.png)
-
 Public datasets provide an easy and convenient way of sharing your data with outside users after you have successfully published them.
 Outside users can explore your data from the comfort of their browser without needing to sign up for an account.
 

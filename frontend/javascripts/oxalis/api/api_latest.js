@@ -37,7 +37,6 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import { callDeep } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
@@ -67,6 +66,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import {
   getLayerBoundaries,
   getLayerByName,
@@ -80,9 +80,11 @@ import {
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  loadMeshFromFile,
-  maybeFetchMeshFiles,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+  loadAdHocMeshAction,
+  loadPrecomputedMeshAction,
+} from "oxalis/model/actions/segmentation_actions";
+import { loadAgglomerateSkeletonForSegmentId } from "oxalis/controller/combinations/segmentation_handlers";
+import { maybeFetchMeshFiles } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
@@ -116,6 +118,7 @@ import Constants, {
   TDViewDisplayModeEnum,
   MappingStatusEnum,
 } from "oxalis/constants";
+import DataLayer from "oxalis/model/data_layer";
 import Model, { type OxalisModel } from "oxalis/model";
 import Request from "libs/request";
 import Store, {
@@ -132,7 +135,6 @@ import Store, {
   type VolumeTracing,
   type OxalisState,
 } from "oxalis/store";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/automatic_brush_saga";
 import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import UserLocalStorage from "libs/user_local_storage";
@@ -482,6 +484,17 @@ class TracingApi {
     return getTree(tracing, treeId)
       .map(activeTree => activeTree.name)
       .get();
+  }
+
+  /**
+   * Loads the agglomerate skeleton for the given segment id. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   *
+   * @example
+   * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
+   */
+  loadAgglomerateSkeletonForSegmentId(segmentId: number) {
+    loadAgglomerateSkeletonForSegmentId(segmentId);
   }
 
   /**
@@ -1009,9 +1022,7 @@ class DataApi {
    */
   async reloadBuckets(layerName: string): Promise<void> {
     await Promise.all(
-      Object.keys(this.model.dataLayers).map(async currentLayerName => {
-        const dataLayer = this.model.dataLayers[currentLayerName];
-
+      Utils.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
             await Model.ensureSavedState();
@@ -1030,7 +1041,7 @@ class DataApi {
     if (hasVolumeTracings(Store.getState().tracing)) {
       await Model.ensureSavedState();
     }
-    _.forEach(this.model.dataLayers, dataLayer => {
+    Utils.values(this.model.dataLayers).forEach((dataLayer: DataLayer) => {
       dataLayer.cube.collectAllBuckets();
       dataLayer.layerRenderingManager.refresh();
     });
@@ -1217,8 +1228,19 @@ class DataApi {
     return dataValue;
   }
 
+  /**
+   * Returns the magnification that is _currently_ rendered at the given position.
+   */
   getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
-    return this.model.getRenderedZoomStepAtPosition(layerName, position);
+    return this.model.getCurrentlyRenderedZoomStepAtPosition(layerName, position);
+  }
+
+  /**
+   * Returns the maginfication that will _ultimately_ be rendered at the given position, once
+   * all respective buckets are loaded.
+   */
+  getUltimatelyRenderedZoomStepAtPosition(layerName: string, position: Vector3): Promise<number> {
+    return this.model.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
@@ -1233,16 +1255,16 @@ class DataApi {
     _zoomStep: ?number = null,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
 
     let zoomStep;
     if (_zoomStep != null) {
       zoomStep = _zoomStep;
     } else {
-      const resolutionInfo = getResolutionInfo(layer.resolutions);
       zoomStep = resolutionInfo.getClosestExistingIndex(0);
     }
 
-    const { resolutions } = layer;
+    const resolutions = resolutionInfo.getDenseResolutions();
     const bucketAddresses = this.getBucketAddressesInCuboid(bbox, resolutions, zoomStep);
     if (bucketAddresses.length > 15000) {
       console.warn(
@@ -1624,9 +1646,9 @@ class DataApi {
    * const availableMeshFiles = await api.data.getAvailableMeshFiles();
    * api.data.setActiveMeshFile(availableMeshFiles[0]);
    *
-   * await api.data.loadPrecomputedMesh(segmentId, currentPosition);
+   * api.data.loadPrecomputedMesh(segmentId, currentPosition);
    */
-  async loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
+  loadPrecomputedMesh(segmentId: number, seedPosition: Vector3, layerName: ?string) {
     const state = Store.getState();
     const effectiveLayerName = getNameOfRequestedOrVisibleSegmentationLayer(state, layerName);
     if (!effectiveLayerName) {
@@ -1659,7 +1681,9 @@ class DataApi {
       }
     }
 
-    await loadMeshFromFile(segmentId, seedPosition, meshFileName, segmentationLayer, dataset);
+    Store.dispatch(
+      loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+    );
   }
 
   /**
@@ -1671,7 +1695,7 @@ class DataApi {
    * api.data.computeMeshOnDemand(segmentId, currentPosition);
    */
   computeMeshOnDemand(segmentId: number, seedPosition: Vector3) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(segmentId, seedPosition, true));
+    Store.dispatch(loadAdHocMeshAction(segmentId, seedPosition));
   }
 
   /**

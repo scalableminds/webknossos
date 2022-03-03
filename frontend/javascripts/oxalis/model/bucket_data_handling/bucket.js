@@ -129,11 +129,18 @@ export class DataBucket {
   elementClass: ElementClass;
   visualizedMesh: ?Object;
   visualizationColor: number;
+  // If dirty, the bucket's data was potentially edited and needs to be
+  // saved to the server.
+  dirty: boolean;
+  // `dirtyCount` reflects how many pending snapshots of the bucket exist.
+  // A pending snapshot is a snapshot which was either
+  // - not yet saved (after successful saving the dirtyCount is decremented) or
+  // - not yet created by the PushQueue, since the PushQueue creates the snapshots
+  //   in a debounced manner
   dirtyCount: number = 0;
   pendingOperations: Array<(BucketDataArray) => void> = [];
 
   state: BucketStateEnumType;
-  dirty: boolean;
   accessed: boolean;
   data: ?BucketDataArray;
   temporalBucketManager: TemporalBucketManager;
@@ -228,6 +235,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
   }
@@ -359,10 +367,11 @@ export class DataBucket {
     return data;
   }
 
-  setData(newData: BucketDataArray) {
+  setData(newData: BucketDataArray, newPendingOperations: Array<(BucketDataArray) => void>) {
     this.data = newData;
+    this.pendingOperations = newPendingOperations;
     this.dirty = true;
-    this.trigger("bucketLabeled");
+    this.endDataMutation();
   }
 
   uint8ToTypedBuffer(arrayBuffer: ?Uint8Array) {
@@ -706,12 +715,21 @@ export class DataBucket {
       });
       this.cube.pullQueue.pull();
       needsToAwaitBucket = true;
+    } else if (this.isMissing()) {
+      // Awaiting is not necessary.
     }
     if (needsToAwaitBucket) {
       await new Promise(resolve => {
         this.once("bucketLoaded", resolve);
+        this.once("bucketMissing", resolve);
       });
     }
     // Bucket has been loaded by now or was loaded already
+    if (this.isMissing()) {
+      // In the past, ensureLoaded() never returned if the bucket
+      // was MISSING. This log might help to discover potential
+      // bugs which could arise in combination with MISSING buckets.
+      console.warn("Awaited missing bucket.");
+    }
   }
 }

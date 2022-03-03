@@ -184,15 +184,14 @@ function createDelayAwareMoveHandler(multiplier: number) {
     let direction = Math.sign(multiplier);
 
     const { activeViewport } = state.viewModeData.plane;
-    const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
-    const voxelPerSecond =
-      state.userConfiguration.moveValue / state.dataset.dataSource.scale[thirdDim];
-
     if (activeViewport === OrthoViews.TDView) {
       // Nothing should happen then, anyway.
       return 0;
     }
 
+    const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
+    const voxelPerSecond =
+      state.userConfiguration.moveValue / state.dataset.dataSource.scale[thirdDim];
     if (state.userConfiguration.dynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction
       direction *= state.flycam.spaceDirectionOrtho[thirdDim];

@@ -12,6 +12,7 @@ import {
   type APIAnnotationVisibility,
   type APIAnnotationWithTask,
   type APIBuildInfo,
+  type APIConnectomeFile,
   type APIDataSource,
   type APIDataSourceWithMessages,
   type APIDataStore,
@@ -58,13 +59,14 @@ import {
   type TracingType,
   type WkConnectDatasetConfig,
 } from "types/api_flow_types";
-import { ControlModeEnum, type Vector3, type Vector6, MappingStatusEnum } from "oxalis/constants";
+import { ControlModeEnum, type Vector3, type Vector6 } from "oxalis/constants";
 import type {
   DatasetConfiguration,
+  PartialDatasetConfiguration,
   Tracing,
   TraceOrViewCommand,
   AnnotationType,
-  ActiveMappingInfo,
+  MappingType,
   VolumeTracing,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
@@ -1163,7 +1165,7 @@ export async function getDatasetViewConfiguration(
 
 export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
-  datasetConfig: DatasetConfiguration,
+  datasetConfig: PartialDatasetConfiguration,
   options?: RequestOptions = {},
 ): Object {
   return Request.sendJSONReceiveJSON(
@@ -1769,25 +1771,31 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 
 // These parameters are bundled into an object to avoid that the computeIsosurface function
 // receives too many parameters, since this doesn't play well with the saga typings.
-type IsosurfaceRequest = {
+type IsosurfaceRequest = {|
   position: Vector3,
   zoomStep: number,
   segmentId: number,
   subsamplingStrides: Vector3,
   cubeSize: Vector3,
   scale: Vector3,
-};
+  mappingName: ?string,
+  mappingType: ?MappingType,
+|};
 
 export function computeIsosurface(
   requestUrl: string,
-  mappingInfo: ActiveMappingInfo,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const { position, zoomStep, segmentId, subsamplingStrides, cubeSize, scale } = isosurfaceRequest;
-  const mapping =
-    mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED ? mappingInfo.mappingName : undefined;
-  const mappingType =
-    mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED ? mappingInfo.mappingType : undefined;
+  const {
+    position,
+    zoomStep,
+    segmentId,
+    subsamplingStrides,
+    cubeSize,
+    scale,
+    mappingName,
+    mappingType,
+  } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,
@@ -1801,8 +1809,8 @@ export function computeIsosurface(
           zoomStep,
           // Segment to build mesh for
           segmentId,
-          // Name of mapping to apply before building mesh (optional)
-          mapping,
+          // Name and type of mapping to apply before building mesh (optional)
+          mapping: mappingName,
           mappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           subsamplingStrides,
@@ -1830,7 +1838,7 @@ export function getAgglomerateSkeleton(
       }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
-      { useWebworkerForArrayBuffer: false },
+      { useWebworkerForArrayBuffer: false, showErrorToast: false },
     ),
   );
 }
@@ -1896,4 +1904,117 @@ export function getMeshfileChunkData(
     );
     return data;
   });
+}
+
+// ### Connectomes
+
+export function getConnectomeFilesForDatasetLayer(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<Array<APIConnectomeFile>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes?token=${token}`,
+    ),
+  );
+}
+
+export function getSynapsesOfAgglomerates(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  connectomeFile: string,
+  agglomerateIds: Array<number>,
+): Promise<Array<{| in: Array<number>, out: Array<number> |}>> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          agglomerateIds,
+        },
+      },
+    ),
+  );
+}
+
+function getSynapseSourcesOrDestinations(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  connectomeFile: string,
+  synapseIds: Array<number>,
+  srcOrDst: "src" | "dst",
+): Promise<Array<number>> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses/${srcOrDst}?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          synapseIds,
+        },
+      },
+    ),
+  );
+}
+
+export function getSynapseSources(...args: *): Promise<Array<number>> {
+  return getSynapseSourcesOrDestinations(...args, "src");
+}
+
+export function getSynapseDestinations(...args: *): Promise<Array<number>> {
+  return getSynapseSourcesOrDestinations(...args, "dst");
+}
+
+export function getSynapsePositions(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  connectomeFile: string,
+  synapseIds: Array<number>,
+): Promise<Array<Vector3>> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses/positions?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          synapseIds,
+        },
+      },
+    ),
+  );
+}
+
+export function getSynapseTypes(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  connectomeFile: string,
+  synapseIds: Array<number>,
+): Promise<{| synapseTypes: Array<number>, typeToString: Array<string> |}> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/connectomes/synapses/types?token=${token}`,
+      {
+        data: {
+          connectomeFile,
+          synapseIds,
+        },
+      },
+    ),
+  );
 }

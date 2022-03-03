@@ -134,7 +134,7 @@ type UpdateUserBoundingBoxesAction = {|
     boundingBoxes: Array<UserBoundingBoxToServer>,
   |},
 |};
-type UpdateBucketUpdateAction = {|
+export type UpdateBucketUpdateAction = {|
   name: "updateBucket",
   value: SendBucketInfo & {
     base64Data: string,

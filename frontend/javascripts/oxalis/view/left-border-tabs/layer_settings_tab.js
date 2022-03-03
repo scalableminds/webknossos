@@ -62,7 +62,7 @@ import {
   updateUserSettingAction,
   updateDatasetSettingAction,
   updateLayerSettingAction,
-  clipHistogramAction,
+  dispatchClipHistogramAsync,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type Vector3, type ControlMode, ControlModeEnum } from "oxalis/constants";
@@ -100,7 +100,7 @@ type DatasetSettingsProps = {|
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => void,
+  onClipHistogram: (layerName: string, shouldAdjustClipRange: boolean) => Promise<void>,
   histogramData: HistogramDataForAllLayers,
   onChangeRadius: (value: number) => void,
   onChangeShowSkeletons: boolean => void,
@@ -168,7 +168,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: -8,
+            right: 0,
+            marginRight: 0,
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         />
@@ -187,7 +188,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 14,
+            right: 22,
+            marginRight: 0,
             cursor: "pointer",
           }}
         />
@@ -204,7 +206,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         style={{
           position: "absolute",
           top: 4,
-          right: 36,
+          right: 44,
+          marginRight: 0,
           cursor: "pointer",
         }}
       />
@@ -240,7 +243,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           style={{
             position: "absolute",
             top: 4,
-            right: 36,
+            right: 44,
+            marginRight: 0,
             cursor: "pointer",
             color: isInEditMode ? "var(--ant-primary)" : null,
           }}
@@ -256,11 +260,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const tooltipText = `Automatically clip the histogram to enhance contrast. ${editModeAddendum}`;
     return (
       <Tooltip title={tooltipText}>
-        <VerticalAlignMiddleOutlined
+        <AsyncIconButton
+          icon={<VerticalAlignMiddleOutlined />}
           style={{
             position: "absolute",
             top: 4,
-            right: 58,
+            right: 66,
+            marginRight: 0,
             cursor: "pointer",
             transform: "rotate(90deg)",
           }}
@@ -537,7 +543,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             style={{
               position: "absolute",
               top: 0,
-              right: -2,
+              right: 0,
               marginTop: 0,
               display: "inline-flex",
             }}
@@ -714,7 +720,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
     return (
       <Tooltip title="Open Dialog to Downsample Volume Data">
-        <LinkButton onClick={this.showDownsampleVolumeModal}>
+        <LinkButton onClick={() => this.showDownsampleVolumeModal(volumeTracing)}>
           <img
             src="/assets/images/icon-downsampling.svg"
             style={{
@@ -921,7 +927,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
   },
   onClipHistogram(layerName, shouldAdjustClipRange) {
-    dispatch(clipHistogramAction(layerName, shouldAdjustClipRange));
+    return dispatchClipHistogramAsync(layerName, shouldAdjustClipRange, dispatch);
   },
   onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));

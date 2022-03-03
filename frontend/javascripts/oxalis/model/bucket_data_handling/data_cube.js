@@ -6,7 +6,6 @@
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 
-import ErrorHandling from "libs/error_handling";
 import {
   type Bucket,
   DataBucket,
@@ -15,23 +14,28 @@ import {
   NullBucket,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
+import { type ElementClass } from "types/api_flow_types";
+import { type ProgressCallback } from "libs/progress_callback";
+import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
+import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
 import {
   getResolutions,
   ResolutionInfo,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { V3 } from "libs/mjs";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
+import ErrorHandling from "libs/error_handling";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
+import Toast from "libs/toast";
 import constants, {
   type Vector3,
   type Vector4,
@@ -39,9 +43,13 @@ import constants, {
   type LabelMasksByBucketAndW,
   MappingStatusEnum,
 } from "oxalis/constants";
-import { type ElementClass } from "types/api_flow_types";
-import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
-import { type ProgressCallback } from "libs/progress_callback";
+
+const warnAboutTooManyAllocations = _.once(() => {
+  const msg =
+    "webKnossos needed to allocate an unusually large amount of image data. It is advised to save your work and reload the page.";
+  ErrorHandling.notify(new Error(msg));
+  Toast.warning(msg, { sticky: true });
+});
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -65,12 +73,11 @@ const FLOODFILL_VOXEL_THRESHOLD = 5 * 1000000;
 const USE_FLOODFILL_VOXEL_THRESHOLD = false;
 
 class DataCube {
-  MAXIMUM_BUCKET_COUNT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
+  BUCKET_COUNT_SOFT_LIMIT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
-  bucketCount: number = 0;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
@@ -83,9 +90,12 @@ class DataCube {
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
-  // The bucket-arrays are initialized large enough to hold the whole cube. Thus no
-  // expanding is necessary. bucketCount keeps track of how many buckets are currently
-  // in the cube.
+  // The bucket array is initialized as an empty array and grows dynamically. If the
+  // length exceeds BUCKET_COUNT_SOFT_LIMIT, it is tried to garbage-collect an older
+  // bucket when placing a new one. If this does not succeed (happens if all buckets
+  // in a volume annotation layer are dirty), the array grows further.
+  // If the array grows beyond 2 * BUCKET_COUNT_SOFT_LIMIT, the user is warned about
+  // this.
   //
   // Each bucket consists of an access-value, the zoomStep and the actual data.
   // The access-values are used for garbage collection. When a bucket is accessed, its
@@ -111,10 +121,7 @@ class DataCube {
     _.extend(this, BackboneEvents);
 
     this.cubes = [];
-    if (isSegmentation) {
-      this.MAXIMUM_BUCKET_COUNT *= 2;
-    }
-    this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
+    this.buckets = [];
 
     // Initializing the cube-arrays with boundaries
     const cubeBoundary = [
@@ -280,57 +287,59 @@ class DataCube {
   }
 
   markBucketsAsUnneeded(): void {
-    for (let i = 0; i < this.bucketCount; i++) {
+    for (let i = 0; i < this.buckets.length; i++) {
       this.buckets[i].markAsUnneeded();
     }
   }
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
-    if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
-      for (let i = 0; i < this.bucketCount; i++) {
-        this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
+    if (this.buckets.length >= this.BUCKET_COUNT_SOFT_LIMIT) {
+      let foundCollectibleBucket = false;
+
+      for (let i = 0; i < this.buckets.length; i++) {
+        this.bucketIterator = (this.bucketIterator + 1) % this.buckets.length;
         if (this.buckets[this.bucketIterator].shouldCollect()) {
+          foundCollectibleBucket = true;
           break;
         }
       }
 
-      if (!this.buckets[this.bucketIterator].shouldCollect()) {
-        if (process.env.BABEL_ENV === "test") {
-          throw new Error("Bucket was forcefully evicted/garbage-collected.");
+      if (foundCollectibleBucket) {
+        this.collectBucket(this.buckets[this.bucketIterator]);
+      } else {
+        const warnMessage = `More than ${this.buckets.length} buckets needed to be allocated.`;
+        if (this.buckets.length % 100 === 0) {
+          console.warn(warnMessage);
+          ErrorHandling.notify(new Error(warnMessage), {
+            elementClass: this.elementClass,
+            isSegmentation: this.isSegmentation,
+            resolutionInfo: this.resolutionInfo,
+          });
         }
-        const errorMessage =
-          "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.";
-        console.error(errorMessage);
-        ErrorHandling.notify(new Error(errorMessage), {
-          elementClass: this.elementClass,
-          isSegmentation: this.isSegmentation,
-          resolutionInfo: this.resolutionInfo,
-        });
+
+        if (this.buckets.length > 2 * this.BUCKET_COUNT_SOFT_LIMIT) {
+          warnAboutTooManyAllocations();
+        }
+
+        // Effectively, push to `this.buckets` by setting the iterator to
+        // a new index.
+        this.bucketIterator = this.buckets.length;
       }
-
-      this.collectBucket(this.buckets[this.bucketIterator]);
-      this.bucketCount--;
     }
 
-    this.bucketCount++;
-    if (this.buckets[this.bucketIterator]) {
-      this.buckets[this.bucketIterator].trigger("bucketCollected");
-    }
     this.buckets[this.bucketIterator] = bucket;
-    this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
+    // Note that bucketIterator is allowed to point to the next free
+    // slot (i.e., bucketIterator == this.buckets.length).
+    this.bucketIterator = (this.bucketIterator + 1) % (this.buckets.length + 1);
   }
 
   collectAllBuckets(): void {
     this.pullQueue.clear();
     this.pullQueue.abortRequests();
     for (const bucket of this.buckets) {
-      if (bucket != null) {
-        this.collectBucket(bucket);
-        bucket.trigger("bucketCollected");
-      }
+      this.collectBucket(bucket);
     }
     this.buckets = [];
-    this.bucketCount = 0;
     this.bucketIterator = 0;
   }
 
@@ -648,17 +657,24 @@ class DataCube {
     if (bucket.type === "null") {
       return;
     }
-    bucket.setData(data);
-    bucket.pendingOperations = newPendingOperations;
-
-    this.pushQueue.insert(bucket);
+    bucket.setData(data, newPendingOperations);
   }
 
   triggerPushQueue() {
     this.pushQueue.push();
   }
 
-  isZoomStepRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {
+  async isZoomStepUltimatelyRenderableForVoxel(
+    voxel: Vector3,
+    zoomStep: number = 0,
+  ): Promise<boolean> {
+    // Make sure the respective bucket is loaded before checking whether the zoomStep
+    // is currently renderable for this voxel.
+    await this.getLoadedBucket(this.positionToZoomedAddress(voxel, zoomStep));
+    return this.isZoomStepCurrentlyRenderableForVoxel(voxel, zoomStep);
+  }
+
+  isZoomStepCurrentlyRenderableForVoxel(voxel: Vector3, zoomStep: number = 0): boolean {
     // When this method returns false, this means that the next resolution (if it exists)
     // needs to be examined for rendering.
 
@@ -691,13 +707,30 @@ class DataCube {
     return false;
   }
 
-  getNextUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
+  getNextCurrentlyUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
     const resolutions = getResolutions(Store.getState().dataset);
     let usableZoomStep = zoomStep;
     while (
       position &&
       usableZoomStep < resolutions.length - 1 &&
-      !this.isZoomStepRenderableForVoxel(position, usableZoomStep)
+      !this.isZoomStepCurrentlyRenderableForVoxel(position, usableZoomStep)
+    ) {
+      usableZoomStep++;
+    }
+    return usableZoomStep;
+  }
+
+  async getNextUltimatelyUsableZoomStepForPosition(
+    position: Vector3,
+    zoomStep: number,
+  ): Promise<number> {
+    const resolutions = getResolutions(Store.getState().dataset);
+    let usableZoomStep = zoomStep;
+    while (
+      position &&
+      usableZoomStep < resolutions.length - 1 &&
+      // eslint-disable-next-line no-await-in-loop
+      !(await this.isZoomStepUltimatelyRenderableForVoxel(position, usableZoomStep))
     ) {
       usableZoomStep++;
     }
@@ -772,27 +805,10 @@ class DataCube {
   async getLoadedBucket(bucketAddress: Vector4) {
     const bucket = this.getOrCreateBucket(bucketAddress);
 
-    if (bucket.type === "null") {
-      return bucket;
+    if (bucket.type !== "null") {
+      await bucket.ensureLoaded();
     }
 
-    let needsToAwaitBucket = false;
-    if (bucket.isRequested()) {
-      needsToAwaitBucket = true;
-    } else if (bucket.needsRequest()) {
-      this.pullQueue.add({
-        bucket: bucketAddress,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      });
-      this.pullQueue.pull();
-      needsToAwaitBucket = true;
-    }
-    if (needsToAwaitBucket) {
-      await new Promise(resolve => {
-        bucket.on("bucketLoaded", resolve);
-      });
-    }
-    // Bucket has been loaded by now or was loaded already
     return bucket;
   }
 }

@@ -7,6 +7,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
+import Maybe from "data.maybe";
 
 import type { MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
@@ -18,6 +19,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -29,7 +31,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Store, { type UserBoundingBox } from "oxalis/store";
+import Store, { type UserBoundingBox, type OxalisState, type SkeletonTracing } from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
@@ -48,7 +50,7 @@ import { setSceneController } from "./scene_controller_provider";
 const CUBE_COLOR = 0x999999;
 
 class SceneController {
-  skeleton: ?Skeleton;
+  skeletons: { [number]: Skeleton } = {};
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
@@ -132,6 +134,22 @@ class SceneController {
       cube.position.x = position[0] + bucketSize[0] / 2;
       cube.position.y = position[1] + bucketSize[1] / 2;
       cube.position.z = position[2] + bucketSize[2] / 2;
+      this.rootNode.add(cube);
+      return cube;
+    };
+
+    window.addVoxelMesh = (position: Vector3, _cubeLength: Vector3, optColor?: string) => {
+      // Shrink voxels a bit so that it's easier to identify individual voxels.
+      const cubeLength = _cubeLength.map(el => el * 0.9);
+      const boxGeometry = new THREE.BoxGeometry(...cubeLength);
+      const material = new THREE.MeshBasicMaterial({
+        color: optColor || 0xff00ff,
+        opacity: 0.5,
+      });
+      const cube = new THREE.Mesh(boxGeometry, material);
+      cube.position.x = position[0] + cubeLength[0] / 2;
+      cube.position.y = position[1] + cubeLength[1] / 2;
+      cube.position.z = position[2] + cubeLength[2] / 2;
       this.rootNode.add(cube);
       return cube;
     };
@@ -281,8 +299,10 @@ class SceneController {
     this.rootNode.add(this.userBoundingBoxGroup);
     this.userBoundingBoxes = [];
 
+    const state = Store.getState();
+
     // Cubes
-    const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
+    const { lowerBoundary, upperBoundary } = getBoundaries(state.dataset);
     this.datasetBoundingBox = new Cube({
       min: lowerBoundary,
       max: upperBoundary,
@@ -292,17 +312,16 @@ class SceneController {
     });
     this.datasetBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
+    const taskBoundingBox = getSomeTracing(state.tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (Store.getState().tracing.volumes.length > 0) {
+    if (state.tracing.volumes.length > 0) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    if (Store.getState().tracing.skeleton != null) {
-      this.skeleton = new Skeleton();
-      this.rootNode.add(this.skeleton.getRootGroup());
+    if (state.tracing.skeleton != null) {
+      this.addSkeleton(_state => getSkeletonTracing(_state.tracing), true);
     }
 
     this.planes = {
@@ -321,6 +340,27 @@ class SceneController {
 
     // Hide all objects at first, they will be made visible later if needed
     this.stopPlaneMode();
+  }
+
+  addSkeleton(
+    skeletonTracingSelector: OxalisState => Maybe<SkeletonTracing>,
+    supportsPicking: boolean,
+  ): number {
+    const skeleton = new Skeleton(skeletonTracingSelector, supportsPicking);
+    const skeletonGroup = skeleton.getRootGroup();
+
+    this.skeletons[skeletonGroup.id] = skeleton;
+    this.rootNode.add(skeletonGroup);
+    return skeletonGroup.id;
+  }
+
+  removeSkeleton(skeletonId: number) {
+    const skeleton = this.skeletons[skeletonId];
+    const skeletonGroup = skeleton.getRootGroup();
+
+    skeleton.destroy();
+    delete this.skeletons[skeletonId];
+    this.rootNode.remove(skeletonGroup);
   }
 
   buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
@@ -494,9 +534,10 @@ class SceneController {
   }
 
   setSkeletonGroupVisibility(isVisible: boolean) {
-    if (this.skeleton) {
-      this.skeleton.getRootGroup().visible = isVisible;
-    }
+    // $FlowIssue[incompatible-call] remove once https://github.com/facebook/flow/issues/2221 is fixed
+    Object.values(this.skeletons).forEach((skeleton: Skeleton) => {
+      skeleton.getRootGroup().visible = isVisible;
+    });
   }
 
   stopPlaneMode(): void {

@@ -1,7 +1,4 @@
-/**
- * constants.js
- * @flow
- */
+// @flow
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
 export const ViewModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
@@ -96,7 +93,13 @@ export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 
-export const BorderTabs = {
+export type BorderTabType = {
+  id: string,
+  name: string,
+  description: string,
+  enableRenderOnDemand?: boolean,
+};
+export const BorderTabs: { [key: string]: BorderTabType } = {
   DatasetInfoTabView: {
     id: "DatasetInfoTabView",
     name: "Info",
@@ -136,6 +139,16 @@ export const BorderTabs = {
     id: "LayerSettingsTab",
     name: "Layers",
     description: "Change settings of each data layer",
+  },
+  ConnectomeView: {
+    id: "ConnectomeView",
+    name: "Connectome",
+    description: "Explore Connectomes of the Dataset",
+    // Always render the connectome tab in the background, to allow to use its functionality even
+    // if the tab is not visible. For example, when opening a link where agglomerates and synapses
+    // should be loaded automatically. During normal tracing, the performance impact is negligible, because
+    // the connectome tab doesn't do anything, then.
+    enableRenderOnDemand: false,
   },
 };
 
@@ -265,7 +278,8 @@ const Constants = {
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
-  // The area of the maximum radius (pi * 300 ^ 2) is 282690.
+  // For reference, the area of a large brush size (let's say, 300px) corresponds to
+  // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done
   // during mouse movement, but afterwards. So, a bit of a
   // waiting time should be acceptable.
@@ -284,6 +298,8 @@ const Constants = {
   FPS: 50,
 
   DEFAULT_SPHERICAL_CAP_RADIUS: 140,
+
+  DEFAULT_NODE_RADIUS: 1.0,
 
   RESIZE_THROTTLE_TIME: 50,
 

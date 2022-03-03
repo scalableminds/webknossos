@@ -11,6 +11,7 @@ import type {
   APIAllowedMode,
   APIAnnotationType,
   APIAnnotationVisibility,
+  APIConnectomeFile,
   APIDataLayer,
   APIDataStore,
   APIDataset,
@@ -66,6 +67,7 @@ import defaultState from "oxalis/default_state";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 
 export type MutableCommentType = {|
   content: string,
@@ -311,6 +313,13 @@ export type DatasetConfiguration = {|
   +segmentationPatternOpacity: number,
 |};
 
+export type PartialDatasetConfiguration = $Shape<{
+  ...DatasetConfiguration,
+  +layers: {
+    [name: string]: $Shape<DatasetLayerConfiguration>,
+  },
+}>;
+
 export type UserConfiguration = {|
   +autoSaveLayouts: boolean,
   +brushSize: number,
@@ -389,6 +398,7 @@ export type TemporaryConfiguration = {
   },
   +preferredQualityForMeshPrecomputation: number,
   +preferredQualityForMeshAdHocComputation: number,
+  +lastVisibleSegmentationLayerName: ?string,
 };
 
 export type Script = APIScript;
@@ -510,13 +520,34 @@ type UiInformation = {
   +busyBlockingInfo: BusyBlockingInfo,
 };
 
-export type IsosurfaceInformation = {|
+type BaseIsosurfaceInformation = {|
   +segmentId: number,
   +seedPosition: Vector3,
   +isLoading: boolean,
-  +isPrecomputed: boolean,
   +isVisible: boolean,
-  +fileName?: string,
+|};
+
+export type AdHocIsosurfaceInformation = {|
+  ...BaseIsosurfaceInformation,
+  +isPrecomputed: false,
+  +mappingName: ?string,
+  +mappingType: ?MappingType,
+|};
+
+export type PrecomputedIsosurfaceInformation = {|
+  ...BaseIsosurfaceInformation,
+  +isPrecomputed: true,
+  +meshFileName: string,
+|};
+
+export type IsosurfaceInformation = AdHocIsosurfaceInformation | PrecomputedIsosurfaceInformation;
+
+export type ConnectomeData = {|
+  +availableConnectomeFiles: ?Array<APIConnectomeFile>,
+  +currentConnectomeFile: ?APIConnectomeFile,
+  +pendingConnectomeFileName: ?string,
+  +activeAgglomerateIds: Array<number>,
+  +skeleton: ?SkeletonTracing,
 |};
 
 export type OxalisState = {|
@@ -542,6 +573,7 @@ export type OxalisState = {|
       // The `segments` here should only be used for non-annotation volume
       // layers.
       +segments: SegmentMap,
+      +connectomeData: ConnectomeData,
     },
   },
 |};
@@ -562,6 +594,7 @@ const combinedReducers = reduceReducers(
   AnnotationReducer,
   UserReducer,
   UiReducer,
+  ConnectomeReducer,
 );
 
 const store = createStore<OxalisState, Action, Dispatch<*>>(

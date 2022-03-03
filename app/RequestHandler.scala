@@ -37,6 +37,8 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       Some(assets.at(path = "/public", file = path))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
       Some(sitemapController.getSitemap(conf.Http.uri))
+    } else if (request.uri.matches("^/sw\\.(.*)\\.js$") && conf.Features.isDemoInstance) {
+      Some(Action { Ok("").as("text/javascript") })
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
     } else Some(demoProxyController.proxyPageOrMainView)

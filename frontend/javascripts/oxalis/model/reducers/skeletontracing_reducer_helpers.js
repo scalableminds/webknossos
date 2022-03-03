@@ -46,8 +46,6 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
 
-export const DEFAULT_NODE_RADIUS = 1.0;
-
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
   if (state.activeUser) {
@@ -67,7 +65,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
   return `${prefix}${Utils.zeroPad(treeId, 3)}`;
 }
 
-function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
+export function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
   const newMaxNodeId = _.max(_.flatMap(trees, __ => __.nodes.map(n => n.id)));
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
@@ -137,7 +135,7 @@ export function createNode(
   // Use the same radius as current active node or revert to default value
   const radius = activeNodeMaybe
     .map(activeNode => activeNode.radius)
-    .getOrElse(DEFAULT_NODE_RADIUS);
+    .getOrElse(Constants.DEFAULT_NODE_RADIUS);
 
   // Find new node id by increasing the max node id.
   const nextNewId = skeletonTracing.cachedMaxNodeId + 1;
@@ -490,8 +488,7 @@ export function getOrCreateTree(
 
 export function ensureTreeNames(state: OxalisState, trees: MutableTreeMap) {
   // Assign a new tree name for trees without a name
-  // $FlowIssue[incompatible-type] remove once https://github.com/facebook/flow/issues/2221 is fixed
-  for (const tree: MutableTree of Object.values(trees)) {
+  for (const tree of Utils.values(trees)) {
     if (tree.name === "") {
       tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
     }
@@ -587,14 +584,13 @@ export function deleteTree(
   tree: Tree,
 ): Maybe<[TreeMap, ?number, ?number, number]> {
   // Delete tree
-  const newTrees = _.omit(skeletonTracing.trees, tree.treeId.toString());
+  const newTrees = _.omit(skeletonTracing.trees, tree.treeId);
 
   let newActiveTreeId = null;
   let newActiveNodeId = null;
   if (_.size(newTrees) > 0) {
     // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
     newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
-    // Object.keys returns strings and the newActiveNodeId should be an integer
     newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
   }
   const newMaxNodeId = getMaximumNodeId(newTrees);
@@ -620,7 +616,7 @@ export function mergeTrees(
     target: targetNodeId,
   };
 
-  let newTrees = _.omit(trees, sourceTree.treeId.toString());
+  let newTrees = _.omit(trees, sourceTree.treeId);
 
   const newNodes = targetTree.nodes.clone();
   for (const [id, node] of sourceTree.nodes.entries()) {

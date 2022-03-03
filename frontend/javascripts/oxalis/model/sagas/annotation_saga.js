@@ -43,7 +43,7 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
     layers: _.mapValues(layers, layer => ({ isDisabled: layer.isDisabled })),
   };
 
-  // The extra type annotaton is needed here for flow
+  // The extra type annotation is needed here for flow
   const editObject: $Shape<EditableAnnotation> = {
     name: tracing.name,
     visibility: tracing.visibility,

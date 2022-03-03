@@ -80,11 +80,15 @@ export class ResolutionInfo {
   }
 
   getResolutionsWithIndices(): Array<[number, Vector3]> {
-    return Array.from(this.resolutionMap.entries()).map(entry => {
-      const [powerOfTwo, resolution] = entry;
-      const resolutionIndex = Math.log2(powerOfTwo);
-      return [resolutionIndex, resolution];
-    });
+    return _.sortBy(
+      Array.from(this.resolutionMap.entries()).map(entry => {
+        const [powerOfTwo, resolution] = entry;
+        const resolutionIndex = Math.log2(powerOfTwo);
+        return [resolutionIndex, resolution];
+      }),
+      // Sort by resolutionIndex
+      tuple => tuple[0],
+    );
   }
 
   indexToPowerOf2(index: number): number {
@@ -602,6 +606,19 @@ export function getVisibleSegmentationLayer(state: OxalisState): ?APISegmentatio
   const visibleSegmentationLayers = getVisibleSegmentationLayers(state);
   if (visibleSegmentationLayers.length > 0) {
     return visibleSegmentationLayers[0];
+  }
+
+  return null;
+}
+
+export function getVisibleOrLastSegmentationLayer(state: OxalisState): ?APISegmentationLayer {
+  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+  if (visibleSegmentationLayer != null) return visibleSegmentationLayer;
+
+  const lastVisibleSegmentationLayerName =
+    state.temporaryConfiguration.lastVisibleSegmentationLayerName;
+  if (lastVisibleSegmentationLayerName != null) {
+    return getSegmentationLayerByName(state.dataset, lastVisibleSegmentationLayerName);
   }
 
   return null;

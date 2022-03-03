@@ -89,6 +89,8 @@ function consumeBucketsFromArrayBuffer(
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
+      // This tells the bucket collection, that the buckets are necessary for rendering
+      bucket.markAsNeeded();
       bucketsWithPriorities.push({ bucket, priority });
     }
 
@@ -237,6 +239,7 @@ export default class LayerRenderingManager {
 
       pickingPromise.then(
         buffer => {
+          this.cube.markBucketsAsUnneeded();
           const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
             buffer,
             this.cube,
@@ -244,9 +247,6 @@ export default class LayerRenderingManager {
           );
 
           const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-          this.cube.markBucketsAsUnneeded();
-          // This tells the bucket collection, that the buckets are necessary for rendering
-          buckets.forEach(b => b.markAsNeeded());
 
           this.textureBucketManager.setActiveBuckets(
             buckets,

@@ -24,10 +24,10 @@ webKnossos sharing is tightly integrated with user permissions and access rights
  [Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
 
  The easiest way to obtain this sharing link is by clicking the `Share` button in the toolbar at the top of the screen next to the position/coordinate section (*Share icon*). 
- In any case, the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
+ The the sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details below](#sharing_link_format). In other words, a sharing link typically captures your current webKnossos state so that any recipient can take off from the same situation.
 
  Sharing a dataset is useful for multiple scenarios: 
- - You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@webknossos.org)).
+ - You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@webknossos.org)) to create these shortlinks.
  - You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
  - You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
 

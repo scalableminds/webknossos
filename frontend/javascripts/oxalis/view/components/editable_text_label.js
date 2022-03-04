@@ -143,7 +143,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
               <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
                 <EditOutlined
                   className={this.props.markdown ? "flex-item" : null}
-                  style={{iconStyle, marginLeft: 5, display: "inline", whiteSpace: "nowrap"}}
+                  style={{ iconStyle, marginLeft: 5, display: "inline", whiteSpace: "nowrap" }}
                   onClick={evt => {
                     evt.stopPropagation();
                     this.setState({ isEditing: true });

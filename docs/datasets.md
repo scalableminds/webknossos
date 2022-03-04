@@ -37,7 +37,7 @@ In particular, the following file formats are supported for uploading (and conve
 - KNOSSOS file hierarchy 
 - [Read more about the supported file formats and details](./data_formats.md#conversion-with-webknossosorg)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](./datasets.md#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset [Settings](#configuring-datasets) and double-check layer properties, finetune access rights & permissions, or set default values for rendering.
 
 ### Working with Neuroglancer and BossDB dataset
 On webKnossos.org you can work directly with 
@@ -75,7 +75,7 @@ On self-hosted instances, large datasets can be efficiently imported by placing 
 
 Typically webKnossos can infer all the required metadata for a dataset automatically and import datasets automatically on refresh. In some cases, you will need to manually import a dataset and provide more information:
 * On the dashboard, click *Import* for your new dataset
-* Provided the requested properties, such as *scale* and *largestSegmentId*. See the section on [configuring datasets](.datasets.md#configuring-datasets) below for more detailed explanations of these parameters.
+* Provided the requested properties, such as *scale* and *largestSegmentId*. See the section on [configuring datasets](#configuring-datasets) below for more detailed explanations of these parameters.
 
 !!! info
     If you uploaded the dataset along with a `datasource-properties.json` metadata file, the dataset will be imported automatically without any additional manual steps.

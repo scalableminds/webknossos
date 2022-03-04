@@ -77,7 +77,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
   }
 
   render() {
-    const iconStyle = { cursor: "pointer", marginLeft: 5 };
+    const iconStyle = { cursor: "pointer" };
     const margin = this.props.margin != null ? this.props.margin : "0 10px";
 
     const inputComponentProps = {
@@ -122,21 +122,23 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       );
     } else {
       return (
-        <span
-          style={{ margin, display: "inline-block" }}
-          className={this.props.onClick != null ? "clickable-text" : null}
-          onClick={this.props.onClick}
-          onContextMenu={this.props.onContextMenu}
-        >
-          {this.props.markdown ? (
-            <Markdown
-              source={this.props.value}
-              options={{ html: false, breaks: true, linkify: true }}
-              container="span"
-            />
-          ) : (
-            this.props.value
-          )}
+        <span style={{ display: "inline-block" }}>
+          <span
+            style={{ margin, display: "inline-block" }}
+            className={this.props.onClick != null ? "clickable-text" : null}
+            onClick={this.props.onClick}
+            onContextMenu={this.props.onContextMenu}
+          >
+            {this.props.markdown ? (
+              <Markdown
+                source={this.props.value}
+                options={{ html: false, breaks: true, linkify: true }}
+                container="span"
+              />
+            ) : (
+              this.props.value
+            )}
+          </span>
           {this.props.disableEditing ? null : (
             <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
               <EditOutlined

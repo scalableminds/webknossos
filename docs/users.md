@@ -83,10 +83,10 @@ On webKnossos.org, users can either sign up for a webKnossos account by themselv
     ![Send an invite link to new users](./images/users_invite.png)
 
 ## Switching Organizations
-A webKnossos user account can be part of more than one organization, .e.g., when your are invtited to collaborate on projects of another institute, working as a different webKnossos organization.
+A webKnossos user account can be part of more than one organization, .e.g., when your are invited to collaborate on projects of another institute, working as a different webKnossos organization.
 
 If you are part of multiple organizations, you can switch between them from the "User avatar" menu. 
-Click, on your user avatar in the top-right corner of the screen and select an entry from the "Switch Organization" menu.
+Click on your user avatar in the top-right corner of the screen and select an entry from the "Switch Organization" menu.
 webKnossos will quickly reload and switch your account to that organization, i.e. refresh your dashboard, access permissions, annotations, etc. to match your account in the selected organization.
 
 

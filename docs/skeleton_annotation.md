@@ -136,7 +136,7 @@ Common tree operations include splitting and merging trees.
 #### Tree Colors
 A random color is assigned to each tree upon creation.
 Colors can be shuffled for a single tree or for all trees in a skeleton.
-Right-click on a tree to bring up several actions, .e.g `Shuffle Color`. 
+Right-click on a tree to bring up several actions, e.g. `Shuffle Color`. 
 When editing several trees, use the overflow menu under `More` in the `Skeleton` tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors.
 All nodes have the same color as their parent tree and can not be changed individually.
 The active node, branch points, and nodes that have comments assigned to them are highlighted with a slight variation of the tree's color.

@@ -99,7 +99,7 @@ Note, not all control/viewport settings are available in every annotation mode.
 
 - `d/f-Switching`: If d/f switching is disabled, moving through the dataset with `f` will always go *f*orward by *increasing* the coordinate orthogonal to the current slice. Correspondingly, `d` will move backwards by decreasing that coordinate. However, if d/f is enabled, the meaning of "forward" and "backward" will change depending on how you create nodes. For example, when a node is placed at z == 100 and afterwards another node is created at z == 90, z will be *decreased* when going forward.
 
-- `Classic Controls`: Disabled by default to provide the best webKnossos user experience. When enabled, several keyboard shortcuts and mouse interactions change to maintain backward compatibility for long-time users.  See also the section on [Classic Keyboard Controls](./keyboard_shortcuts#Classic_Controls).
+- `Classic Controls`: Disabled by default to provide the best webKnossos user experience. When enabled, several keyboard shortcuts and mouse interactions change to maintain backward compatibility for long-time users.  See also the section on [Classic Keyboard Controls](./keyboard_shortcuts.md#Classic_Controls).
 
 #### Viewport Options / Flight Options
 - `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value, will you show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.
